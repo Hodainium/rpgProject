@@ -28,13 +28,13 @@ No battle, gacha, persistence schema, queue topology or event topic is created h
 
 ### Repository layout created
 ```
-global.json                         # pins the .NET 8 SDK (9.0 is also installed on this machine)
+global.json                         # pins the .NET 10 SDK (10.0.402, rollForward latestFeature; 5/8/9 are also installed)
 Rpg.sln                             # root solution
-Directory.Build.props               # net8.0, nullable, warnings-as-errors, LangVersion
+Directory.Build.props               # net10.0, nullable, warnings-as-errors
 Directory.Packages.props            # central package versions, all pinned exactly
 src/Rpg.Contracts/                  # classlib: wire shapes only, no package dependencies
 src/Rpg.Client/                     # classlib: typed HTTP client over HttpClient; references Rpg.Contracts only
-src/Rpg.GameServerApi/              # ASP.NET Core 8 minimal API; references Rpg.Contracts
+src/Rpg.GameServerApi/              # ASP.NET Core 10 minimal API; references Rpg.Contracts
 tests/Rpg.Contracts.Tests/          # xUnit: JSON golden vectors, purity guards
 tests/Rpg.GameServerApi.Tests/      # xUnit: WebApplicationFactory + Testcontainers, driven through Rpg.Client
 client-godot/rpgDemo.csproj         # Godot.NET.Sdk, matching the pinned editor build; references Rpg.Client
@@ -128,7 +128,7 @@ public static class RpgJson
 ```
 - The server registers `RpgJson.Options` for minimal-API JSON (`ConfigureHttpJsonOptions`), so wire output and client
   parsing cannot drift.
-- `Rpg.Contracts` has **zero** package references and targets `net8.0`. No game logic, as CLAUDE.md requires.
+- `Rpg.Contracts` has **zero** package references and targets `net10.0` (or `net8.0` under the fallback in Decisions §4). No game logic, as CLAUDE.md requires.
 - **Error envelope:** 4xx responses use ASP.NET Core's built-in `ProblemDetails` (`AddProblemDetails()`). No custom
   error DTO is added yet. The verdict shape with `errorCode` 2002 belongs to slice 3, where it is used.
 
@@ -206,3 +206,7 @@ runs these by default.
    `Sdk="Godot.NET.Sdk/4.7.2"`, pinned exactly; it must change in lockstep with the editor and the verifier image.
 2. **Docker is required for `dotnet test`.** Server tests run by default with no filter or skip; without Docker they fail visibly.
 3. **Prerelease OpenTelemetry Prometheus exporter**, pinned, versus `prometheus-net` (stable but not OpenTelemetry). Chosen: OpenTelemetry, because it fits the pitch.
+4. **.NET 10 (LTS, supported to Nov 2028)** for every project, replacing .NET 8 (support ends 2026-11-10).
+   **First implementation step:** prove Godot 4.7.2 builds and runs a `net10.0` project headless
+   (`Godot_v4.7.2-stable_mono_win64_console.exe --headless`). **Fallback if it can't:** `rpgDemo.csproj`, `Rpg.Contracts`
+   and `Rpg.Client` target `net8.0`; `Rpg.GameServerApi` and the tests stay on `net10.0`. Record the outcome here.

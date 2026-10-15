@@ -1,4 +1,5 @@
 Create a technical specification in `specs/$ARGUMENTS.md`.
+If `specs/$ARGUMENTS.md` already exists, stop: do not overwrite it. Say so and suggest editing it directly (tell Claude what to change) or `/sync-spec $ARGUMENTS` after implementation.
 Include the sections below. Mark a section "N/A: <reason>" when it doesn't apply; do not add infrastructure the feature doesn't need.
 1. **Purpose & enterprise mapping**: what the feature does, and which backend components it actually uses (see `README.md`).
 2. **Sequence flow**: step-by-step data flow from the Godot client → ASP.NET Core endpoint → the stores and brokers involved.

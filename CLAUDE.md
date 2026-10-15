@@ -1,4 +1,4 @@
-# Project: Turn-Based RPG Distributed System Demo (.NET 8 + Godot 4.7 + GodotGAS)
+# Project: Turn-Based RPG Distributed System Demo (.NET 10 + Godot 4.7 + GodotGAS)
 
 An HSR-style offline battle / server verification loop, used as a frontend and traffic generator for a
 distributed backend. The enterprise-system mapping behind each component is in `README.md`.
@@ -19,12 +19,12 @@ verification, exactly-once reward effects, outbox-based event publication and en
 Do not describe or code against components listed as empty as though they exist. Update this table when that changes.
 
 ## Planned components
-- **`src/Rpg.GameServerApi`**: ASP.NET Core 8 REST API. `POST /api/v1/battle/start`, `POST /api/v1/battle/verify`,
+- **`src/Rpg.GameServerApi`**: ASP.NET Core 10 REST API. `POST /api/v1/battle/start`, `POST /api/v1/battle/verify`,
   `GET /api/v1/battle/{id}/result`, `POST /api/v1/gacha/pull`.
-- **`src/Rpg.Contracts`**: .NET 8 class library holding only the wire contracts: HTTP request/response `record` DTOs and
+- **`src/Rpg.Contracts`**: .NET 10 class library holding only the wire contracts: HTTP request/response `record` DTOs and
   queue/event message schemas. Referenced by the server and `Rpg.Client`.
   **No game logic of any kind:** no combat, no RNG, no stats or formulas.
-- **`src/Rpg.Client`**: .NET 8 class library, the client's HTTP layer: a typed wrapper over `HttpClient` using
+- **`src/Rpg.Client`**: .NET 10 class library, the client's HTTP layer: a typed wrapper over `HttpClient` using
   `Rpg.Contracts` DTOs. Referenced by the Godot project. No Godot dependency, no game logic.
 - **Verifier workers**: headless Godot 4.7.2 .NET containers running the `client-godot` project. They consume
   verification jobs from RabbitMQ.

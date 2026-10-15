@@ -1,7 +1,7 @@
 # Turn-Based RPG Distributed System Demo
 
 An HSR-style turn-based battle client (Godot 4.7 + GodotGAS) that runs battles offline and submits them to a
-.NET 8 backend for verification. Its real purpose is to produce traffic for a distributed backend that mirrors
+.NET 10 backend for verification. Its real purpose is to produce traffic for a distributed backend that mirrors
 enterprise infrastructure patterns.
 
 Every battle is a versioned distributed workflow with transactional checkout, at-least-once replay verification,
@@ -10,7 +10,7 @@ exactly-once reward effects, outbox-based event publication and end-to-end obser
 ## Enterprise mapping
 | Component | Tech here | Analogous to | Fit |
 |---|---|---|---|
-| Service layer | ASP.NET Core 8 REST (`src/Rpg.GameServerApi`) | BAS-style services: contracts, request context, deadlines | Conceptual |
+| Service layer | ASP.NET Core 10 REST (`src/Rpg.GameServerApi`) | BAS-style services: contracts, request context, deadlines | Conceptual |
 | Replay verifiers | Headless Godot worker pool | Versioned calculation workers in a managed compute pool | Architectural, not technological |
 | Work queues | RabbitMQ | BlazingMQ | Strong |
 | Event log | Redpanda (Kafka API) | BMS Kafka | Strong |
