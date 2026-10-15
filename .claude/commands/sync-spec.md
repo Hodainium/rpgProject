@@ -5,7 +5,7 @@ scenes or resources.
 1. **Read the spec(s)**, then what they describe as it actually exists:
    - Contracts: `src/Rpg.Contracts/` records (fields, types, names).
    - Server: endpoints, status codes, Postgres tables and migrations, Redis keys and TTLs, RabbitMQ queues and
-     routing keys, Redpanda topics and event schemas, outbox, and metrics in `src/Rpg.BasServer/`.
+     routing keys, Redpanda topics and event schemas, outbox, and metrics in `src/Rpg.GameServerApi/`.
    - Godot: the GodotGAS tag registry, AttributeSets, `GameplayEffect` `.tres` files, ExecCalcs, abilities, the turn
      manager, and the headless verifier entry point in `client-godot/`.
    - Tests: which of the spec's failure scenarios and golden vectors actually have tests.

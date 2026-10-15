@@ -70,7 +70,7 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "127.0.0.1:9090:9090"
-    # Lets the container reach Rpg.BasServer running on the host (needed on Linux).
+    # Lets the container reach Rpg.GameServerApi running on the host (needed on Linux).
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

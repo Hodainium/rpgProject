@@ -18,7 +18,7 @@ Also remind me to **Save All** in the Godot editor first, and to accept its "rel
 ## Order, with gates
 1. **Contracts:** add or update C# `record` DTOs in `src/Rpg.Contracts/`. Wire shapes only, never game logic.
 2. **Server:** Postgres migrations, endpoints, Redis caching and locks, RabbitMQ publishers and consumers, outbox and
-   relay in `src/Rpg.BasServer/`, but only what the spec lists. Add tests for every failure scenario the spec covers.
+   relay in `src/Rpg.GameServerApi/`, but only what the spec lists. Add tests for every failure scenario the spec covers.
    **Gate:** `dotnet build` and `dotnet test` pass at the repo root.
 3. **Stop and summarize** what was built and tested. Ask before starting Godot work.
 4. **Godot (after approval):** system code goes in `client-godot/combat/` and `tests/fixtures/`. Changes to my folders

@@ -10,7 +10,7 @@ exactly-once reward effects, outbox-based event publication and end-to-end obser
 ## Enterprise mapping
 | Component | Tech here | Analogous to | Fit |
 |---|---|---|---|
-| Service layer | ASP.NET Core 8 REST (`src/Rpg.BasServer`) | BAS-style services: contracts, request context, deadlines | Conceptual |
+| Service layer | ASP.NET Core 8 REST (`src/Rpg.GameServerApi`) | BAS-style services: contracts, request context, deadlines | Conceptual |
 | Replay verifiers | Headless Godot worker pool | Versioned calculation workers in a managed compute pool | Architectural, not technological |
 | Work queues | RabbitMQ | BlazingMQ | Strong |
 | Event log | Redpanda (Kafka API) | BMS Kafka | Strong |

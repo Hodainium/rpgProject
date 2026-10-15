@@ -9,7 +9,7 @@ verification, exactly-once reward effects, outbox-based event publication and en
 | Path | Status |
 |---|---|
 | `client-godot/` | Godot 4.7 .NET project, GodotGAS v1.1.2 addon enabled. Empty ownership folders (`combat/`, `content/`, `presentation/`, `tests/fixtures/`). No scenes, no `.csproj` yet. |
-| `src/Rpg.Contracts/`, `src/Rpg.BasServer/` | **Empty.** No `.sln` exists yet. |
+| `src/Rpg.Contracts/`, `src/Rpg.GameServerApi/` | **Empty.** No `.sln` exists yet. |
 | `load-test/`, `web-dashboard/` | **Empty.** |
 | `specs/combat-design.md` | Design notes: attributes, tags, damage formula. Not yet built in GodotGAS. |
 | `specs/roadmap.md` | **Build order: slices 0–9 and design breaks. Read it to know what's next; mark slices done there.** |
@@ -19,11 +19,13 @@ verification, exactly-once reward effects, outbox-based event publication and en
 Do not describe or code against components listed as empty as though they exist. Update this table when that changes.
 
 ## Planned components
-- **`src/Rpg.BasServer`**: ASP.NET Core 8 REST API. `POST /api/v1/battle/start`, `POST /api/v1/battle/verify`,
+- **`src/Rpg.GameServerApi`**: ASP.NET Core 8 REST API. `POST /api/v1/battle/start`, `POST /api/v1/battle/verify`,
   `GET /api/v1/battle/{id}/result`, `POST /api/v1/gacha/pull`.
 - **`src/Rpg.Contracts`**: .NET 8 class library holding only the wire contracts: HTTP request/response `record` DTOs and
-  queue/event message schemas. Referenced by the server and the Godot client's C# HTTP layer.
+  queue/event message schemas. Referenced by the server and `Rpg.Client`.
   **No game logic of any kind:** no combat, no RNG, no stats or formulas.
+- **`src/Rpg.Client`**: .NET 8 class library, the client's HTTP layer: a typed wrapper over `HttpClient` using
+  `Rpg.Contracts` DTOs. Referenced by the Godot project. No Godot dependency, no game logic.
 - **Verifier workers**: headless Godot 4.7.2 .NET containers running the `client-godot` project. They consume
   verification jobs from RabbitMQ.
 - **PostgreSQL**: the source of truth for player state, inventory, currency, pity counters, battle sessions

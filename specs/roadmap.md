@@ -6,7 +6,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 ## Where we are
 | Slice | Status | Date |
 |---|---|---|
-| 0. `project-skeleton` | ⏭️ Next | |
+| 0. `project-skeleton` | 📝 Spec written | 2026-10-14 |
 | 1. `combat-replay-core` | ⬜ Not started | |
 | 2. `battle-checkout` | ⬜ Not started | |
 | 3. `battle-verify` | ⬜ Not started | |
@@ -30,6 +30,7 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 
 ### Change log
 - 2026-10-14: Roadmap created (slices 0–9, four suggested design breaks).
+- 2026-10-14: Server renamed `Rpg.BasServer` → `Rpg.GameServerApi`; client HTTP layer moved to its own library `src/Rpg.Client`.
 
 
 ## Design tuning: any time, not just in breaks
@@ -45,7 +46,7 @@ The "design breaks" below are only suggestions for when there is something new t
 ## Slices
 
 ### 0. `project-skeleton`
-`.sln`, `Rpg.Contracts`, `Rpg.BasServer` (`/health` only), test projects, Godot `.csproj`. Server connects to the
+`.sln`, `Rpg.Contracts`, `Rpg.Client`, `Rpg.GameServerApi` (`/health` only), test projects, Godot `.csproj`. Server connects to the
 compose stack (Postgres, Redis, RabbitMQ). Baseline OpenTelemetry and Prometheus `/metrics` wiring.
 Done when `dotnet build` and `dotnet test` pass at the root; update the CLAUDE.md status table.
 

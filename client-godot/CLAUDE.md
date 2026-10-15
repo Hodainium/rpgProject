@@ -30,7 +30,7 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
 ## 1. Language split
 - **GDScript (GodotGAS):** all combat: `AbilitySystemComponent` nodes, `GameplayAbility` scripts,
   `GameplayExecutionCalculation` scripts, `GameplayEffect` resources, `GameplayCue`s, the turn manager, and the seeded RNG.
-- **C# (.NET):** networking only. HTTP calls to `Rpg.BasServer` using DTOs from `Rpg.Contracts`, and
+- **C# (.NET):** networking only. HTTP calls to `Rpg.GameServerApi` go through `src/Rpg.Client` (DTOs from `Rpg.Contracts`), and
   serialization of the action log for submission. Never put combat math or RNG in C#.
   *Not created yet*; the client has no `.csproj` until the first C# script is added.
 
