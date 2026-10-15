@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "ask": [
+      "Edit(./client-godot/content/**)",
+      "Edit(./client-godot/presentation/**)",
+      "Edit(./client-godot/godot_gas/**)"
+    ],
+    "deny": [
+      "Edit(./client-godot/addons/GodotGAS/**)",
+      "Read(./**/.env)",
+      "Read(./infra/data/**)",
+      "Read(./client-godot/.godot/**)",
+      "Read(./**/bin/**)",
+      "Read(./**/obj/**)",
+      "Read(./**/node_modules/**)",
+      "Read(./client-godot/addons/GodotGAS/icons/**)"
+    ]
+  }
+}

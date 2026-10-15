@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  # Rpg.BasServer runs on the host during dev. Keep this port in sync with
+  # src/Rpg.BasServer/Properties/launchSettings.json once the project exists.
+  - job_name: 'rpg-bas-server'
+    static_configs:
+      - targets: ['host.docker.internal:5000']

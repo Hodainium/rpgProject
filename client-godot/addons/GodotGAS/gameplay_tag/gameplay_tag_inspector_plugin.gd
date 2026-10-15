@@ -1,0 +1,47 @@
+## Custom inspector plugin for the GodotGAS framework.
+##
+## Intercepts exported properties configured with the custom hint "gas::tag" 
+## and replaces their default inspector UI with the custom GameplayTagEditorProperty.
+##
+## @meta_addon: GodotGAS
+## @meta_author: YulRun (https://YulRun.Dev)
+## @meta_license: MIT
+
+@tool
+@icon("res://addons/GodotGAS/icons/godot_gas_asc.svg")
+extends EditorInspectorPlugin
+
+## The preloaded custom editor property script used for tag selection.
+const GameplayTagEditorProperty = preload("res://addons/GodotGAS/gameplay_tag/gameplay_tag_editor_property.gd")
+
+const HINT_STRING_DELIMITER: = ","
+const HINT_STRING_GAS_TAG: = "gas::tag"
+
+
+#region Inspector Parsing
+## Native Godot virtual to determine if this plugin handles the current object.
+func _can_handle(object: Object) -> bool:
+	# We want to look at any object/resource editing tags
+	return true
+
+
+## Native Godot virtual that intercepts property rendering to inject custom UI.
+func _parse_property(object: Object, type: Variant.Type, name: String, hint_type: PropertyHint, hint_string: String, usage_flags: int, wide: bool) -> bool:
+	if hint_type != PROPERTY_HINT_NONE:
+		return false
+
+	var hint_string_args: = hint_string.split(HINT_STRING_DELIMITER)
+	var matched: = HINT_STRING_GAS_TAG in hint_string_args
+
+	if matched:
+		match type:
+			TYPE_ARRAY, \
+			TYPE_PACKED_STRING_ARRAY, \
+			TYPE_STRING, \
+			TYPE_STRING_NAME:
+				var editor_property = GameplayTagEditorProperty.new(type)
+				add_property_editor(name, editor_property)
+				return true # Tells Godot to skip rendering the default input field
+
+	return false
+#endregion

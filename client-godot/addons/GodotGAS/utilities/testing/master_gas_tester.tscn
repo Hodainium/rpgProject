@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dmahh66l7oj77"]
+
+[ext_resource type="Script" uid="uid://cje5kas01dd6m" path="res://addons/GodotGAS/utilities/testing/master_gas_tester.gd" id="1_stjah"]
+
+[node name="MasterGasTester" type="Node" unique_id=1896759206]
+script = ExtResource("1_stjah")
