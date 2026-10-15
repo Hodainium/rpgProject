@@ -12,6 +12,8 @@ verification, exactly-once reward effects, outbox-based event publication and en
 | `src/Rpg.Contracts/`, `src/Rpg.BasServer/` | **Empty.** No `.sln` exists yet. |
 | `load-test/`, `web-dashboard/` | **Empty.** |
 | `specs/combat-design.md` | Design notes: attributes, tags, damage formula. Not yet built in GodotGAS. |
+| `specs/roadmap.md` | **Build order: slices 0–9 and design breaks. Read it to know what's next; mark slices done there.** |
+| `.gitattributes` | Root: LF everywhere (CRLF only for `.sln`/`.ps1`/`.cmd`/`.bat`), binaries marked. |
 | `infra/docker-compose.yml` | Postgres, Redis, RabbitMQ, Redpanda; Prometheus + Grafana under the `observability` profile. |
 
 Do not describe or code against components listed as empty as though they exist. Update this table when that changes.
