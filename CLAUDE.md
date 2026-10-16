@@ -9,7 +9,7 @@ verification, exactly-once reward effects, outbox-based event publication and en
 | Path | Status |
 |---|---|
 | `client-godot/` | Godot 4.7 .NET project, GodotGAS v1.1.2 addon enabled. Empty ownership folders (`combat/`, `content/`, `presentation/`, `tests/fixtures/`). No scenes, no `.csproj` yet. |
-| `src/Rpg.Contracts/`, `src/Rpg.GameServerApi/` | **Empty.** No `.sln` exists yet. |
+| `src/Rpg.Contracts/`, `src/Rpg.GameServerApi/` | **Empty.** No solution file exists yet. |
 | `load-test/`, `web-dashboard/` | **Empty.** |
 | `specs/combat-design.md` | Design notes: attributes, tags, damage formula. Not yet built in GodotGAS. |
 | `specs/roadmap.md` | **Build order: slices 0–9 and design breaks. Read it to know what's next; mark slices done there.** |

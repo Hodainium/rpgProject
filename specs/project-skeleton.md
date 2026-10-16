@@ -29,7 +29,7 @@ No battle, gacha, persistence schema, queue topology or event topic is created h
 ### Repository layout created
 ```
 global.json                         # pins the .NET 10 SDK (10.0.402, rollForward latestFeature; 5/8/9 are also installed)
-Rpg.sln                             # root solution
+Rpg.slnx                            # root solution (.NET 10 SDK default XML format)
 Directory.Build.props               # net10.0, nullable, warnings-as-errors
 Directory.Packages.props            # central package versions, all pinned exactly
 src/Rpg.Contracts/                  # classlib: wire shapes only, no package dependencies
@@ -45,7 +45,7 @@ references `Rpg.Client`, and neither library references Godot.
   involved. `Rpg.Client` is only a few typed methods (route + DTO) on top of it. Keeping it outside Godot means `dotnet test`
   exercises the real client against the real server without launching Godot. Godot's `HTTPRequest` would need a scene-tree
   node and returns untyped dictionaries instead of the `Rpg.Contracts` records.
-- `rpgDemo.csproj` is included in `Rpg.sln`, so the root build catches contract breaks in the client too.
+- `rpgDemo.csproj` is included in `Rpg.slnx`, so the root build catches contract breaks in the client too.
   Godot also keeps its own `client-godot/rpgDemo.sln` for the editor; both reference the same `.csproj`.
 - The CLAUDE.md "Current state" table and `specs/roadmap.md` are updated when the slice lands.
 
@@ -146,7 +146,7 @@ No acceptance scenario from the root CLAUDE.md is completed by this slice. It se
 | RabbitMQ down | `/health/ready` → **503 Unhealthy**; the client auto-recovers when the broker returns | `/verify` (slice 3) cannot accept work without the broker | `Ready_Returns503_WhenRabbitUnreachable`, `Ready_RecoversAfterRabbitRestart` |
 | Any dependency down at startup | Server still starts; readiness reflects reality | Lets you start services in any order and supports chaos tests later | `Server_Starts_WithNoDependencies` |
 | Slow dependency | Each check has its own timeout (above), so one hang cannot stall the probe | Probes must answer quickly | covered by the 503 tests (unreachable host + timeout) |
-| Malformed request | 400 `ProblemDetails` | Error contract: 4xx only for malformed or unauthorized requests | `UnknownRoute_Returns404ProblemDetails` |
+| Unknown route | 404 `ProblemDetails` | Error contract: 4xx only for malformed or unauthorized requests. No endpoint takes a request body yet, so 400 validation arrives in slice 2 with `/battle/start` | `UnknownRoute_Returns404ProblemDetails` |
 
 Idempotency, retries and dead-lettering: N/A, no writes or queues in this slice.
 
