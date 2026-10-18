@@ -47,7 +47,7 @@ The "design breaks" below are only suggestions for when there is something new t
 ## Slices
 
 ### 0. `project-skeleton`
-`.sln`, `Rpg.Contracts`, `Rpg.Client`, `Rpg.GameServerApi` (`/health` only), test projects, Godot `.csproj`. Server connects to the
+`Rpg.slnx`, `Rpg.Contracts`, `Rpg.Client`, `Rpg.GameServerApi` (`/health` only), test projects, Godot `.csproj`. Server connects to the
 compose stack (Postgres, Redis, RabbitMQ). Baseline OpenTelemetry and Prometheus `/metrics` wiring.
 Done when `dotnet build` and `dotnet test` pass at the root; update the CLAUDE.md status table.
 
