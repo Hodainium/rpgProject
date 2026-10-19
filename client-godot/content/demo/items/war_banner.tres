@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_iupfr"]
+[ext_resource type="Resource" path="res://content/demo/effects/war_banner.tres" id="2_onu6e"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_v7bpq"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_mx6vo"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_kj1e1"]
+
+[sub_resource type="Resource" id="Resource_b8k8r"]
+script = ExtResource("3_v7bpq")
+effects = Array[ExtResource("1_iupfr")]([ExtResource("2_onu6e")])
+
+[resource]
+script = ExtResource("5_kj1e1")
+id = &"demo.item.war_banner"
+display_name = "War Banner"
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+price = 8
+grants = SubResource("Resource_b8k8r")
+applies_to = 1

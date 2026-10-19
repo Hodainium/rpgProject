@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Loadout" format=3]
+
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="1_jtyj5"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_rqqmt"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="3_u5gq6"]
+
+[resource]
+script = ExtResource("3_u5gq6")
+id = &"demo.loadout.hardened"
+stats_x100 = Dictionary[String, int]({
+"def": 40000
+})

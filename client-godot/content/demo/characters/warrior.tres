@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/strike.tscn" id="1_abaht"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_4hcp5"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="3_y2yup"]
+[ext_resource type="Resource" path="res://content/demo/equipment/iron_sword.tres" id="4_n36gw"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_q3tle"]
+[ext_resource type="Resource" path="res://content/demo/items/phoenix_feather.tres" id="6_1dbq5"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="7_pl6q8"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ice_blast.tscn" id="8_r4oa6"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="9_t641j"]
+
+[sub_resource type="Resource" id="Resource_xidmk"]
+script = ExtResource("7_pl6q8")
+skills = Array[PackedScene]([ExtResource("8_r4oa6")])
+items = Array[ExtResource("5_q3tle")]([ExtResource("6_1dbq5")])
+equipment = Array[ExtResource("3_y2yup")]([ExtResource("4_n36gw")])
+
+[resource]
+script = ExtResource("9_t641j")
+learnable_skills = Array[PackedScene]([ExtResource("8_r4oa6")])
+id = &"demo.character.warrior"
+attribute_set = ExtResource("2_4hcp5")
+abilities = Array[PackedScene]([ExtResource("1_abaht")])
+display_name = "Warrior"
+display_color = Color(0.27450982, 0.50980395, 0.7058824, 1)
+tags = Array[StringName]([&"Character.Warrior"])
+default_loadout = SubResource("Resource_xidmk")
+stats_x100 = Dictionary[String, int]({
+"atk": 50000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 30000,
+"energy": 0,
+"hp": 100000,
+"max_hp": 100000,
+"max_mp": 6000,
+"mp": 6000,
+"spd": 10000,
+"toughness": 30000
+})

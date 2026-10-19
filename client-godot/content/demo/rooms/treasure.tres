@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_gv880"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_k1h1r"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="3_1aqmp"]
+
+[sub_resource type="Resource" id="Resource_hrs0h"]
+script = ExtResource("1_gv880")
+cell = Vector2i(2, 2)
+
+[sub_resource type="Resource" id="Resource_sp3ln"]
+script = ExtResource("1_gv880")
+cell = Vector2i(2, 4)
+slot = 2
+
+[sub_resource type="Resource" id="Resource_agehj"]
+script = ExtResource("1_gv880")
+cell = Vector2i(1, 1)
+slot = 3
+
+[sub_resource type="Resource" id="Resource_qltj2"]
+script = ExtResource("1_gv880")
+cell = Vector2i(1, 5)
+slot = 4
+
+[sub_resource type="Resource" id="Resource_pxmn0"]
+script = ExtResource("2_k1h1r")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_emrmb"]
+script = ExtResource("1_gv880")
+cell = Vector2i(6, 3)
+kind = 3
+item_query = SubResource("Resource_pxmn0")
+
+[resource]
+script = ExtResource("3_1aqmp")
+id = &"demo.room.treasure"
+display_name = "Treasure room"
+tags = Array[StringName]([&"Room.Type.Treasure", &"Chapter.Demo"])
+placements = Array[ExtResource("1_gv880")]([SubResource("Resource_hrs0h"), SubResource("Resource_sp3ln"), SubResource("Resource_agehj"), SubResource("Resource_qltj2"), SubResource("Resource_emrmb")])

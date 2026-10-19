@@ -1,0 +1,74 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_tq7g2"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_8p7l8"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_33qn0"]
+[ext_resource type="Script" path="res://game/defs/conditions/coins_at_least.gd" id="4_jwe58"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_rtgkw"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_coins.gd" id="6_c3smr"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="7_n8q38"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="8_hy45y"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="9_mqhgf"]
+[ext_resource type="Resource" path="res://content/demo/encounters/mixed.tres" id="10_4lbjv"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="11_0xsou"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="12_to0n3"]
+
+[sub_resource type="Resource" id="Resource_vwkbh"]
+script = ExtResource("4_jwe58")
+amount = 5
+
+[sub_resource type="Resource" id="Resource_2hqsa"]
+script = ExtResource("6_c3smr")
+amount = 5
+
+[sub_resource type="Resource" id="Resource_4h53f"]
+script = ExtResource("7_n8q38")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_qcg6s"]
+script = ExtResource("8_hy45y")
+item_query = SubResource("Resource_4h53f")
+
+[sub_resource type="Resource" id="Resource_a6hop"]
+script = ExtResource("9_mqhgf")
+page = 1
+
+[sub_resource type="Resource" id="Resource_ng6ri"]
+script = ExtResource("2_8p7l8")
+label = "Pay 5 coins"
+conditions = Array[ExtResource("3_33qn0")]([SubResource("Resource_vwkbh")])
+outcomes = Array[ExtResource("5_rtgkw")]([SubResource("Resource_2hqsa"), SubResource("Resource_qcg6s"), SubResource("Resource_a6hop")])
+
+[sub_resource type="Resource" id="Resource_wka6k"]
+script = ExtResource("11_0xsou")
+encounter = ExtResource("10_4lbjv")
+
+[sub_resource type="Resource" id="Resource_bgotn"]
+script = ExtResource("2_8p7l8")
+label = "Rob him"
+outcomes = Array[ExtResource("5_rtgkw")]([SubResource("Resource_wka6k")])
+
+[sub_resource type="Resource" id="Resource_urgsr"]
+script = ExtResource("2_8p7l8")
+label = "Walk away"
+
+[sub_resource type="Resource" id="Resource_uhw67"]
+script = ExtResource("1_tq7g2")
+text = "A hooded figure offers a trinket for 5 coins."
+choices = Array[ExtResource("2_8p7l8")]([SubResource("Resource_ng6ri"), SubResource("Resource_bgotn"), SubResource("Resource_urgsr")])
+
+[sub_resource type="Resource" id="Resource_ignbn"]
+script = ExtResource("2_8p7l8")
+label = "Continue"
+
+[sub_resource type="Resource" id="Resource_ioe82"]
+script = ExtResource("1_tq7g2")
+text = "He pockets the coins and vanishes."
+choices = Array[ExtResource("2_8p7l8")]([SubResource("Resource_ignbn")])
+
+[resource]
+script = ExtResource("12_to0n3")
+id = &"demo.event.merchant"
+display_name = "Shady merchant"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_tq7g2")]([SubResource("Resource_uhw67"), SubResource("Resource_ioe82")])

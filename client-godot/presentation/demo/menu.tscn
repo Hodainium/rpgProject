@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/menu.gd" id="1_o55tq"]
+
+[node name="Menu" type="Control" unique_id=1049310410]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_o55tq")

@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_aqmo0"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_bu8aa"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_n5vy3"]
+[ext_resource type="Animation" path="res://content/demo/animations/ice_blast.tres" id="4_pgwa2"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_ice.tres" id="5_aohra"]
+
+[sub_resource type="Resource" id="Resource_q35ep"]
+script = ExtResource("2_bu8aa")
+id = &"blast"
+effect = ExtResource("3_n5vy3")
+damage_mode = 2
+targets = 1
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 12000
+
+[sub_resource type="Resource" id="Resource_0kopl"]
+script = ExtResource("2_bu8aa")
+id = &"chill"
+effect = ExtResource("3_n5vy3")
+damage_mode = 2
+targets = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 5000
+
+[node name="IceBlast" type="Node" unique_id=755833307]
+script = ExtResource("1_aqmo0")
+targeting = 2
+executions = Array[ExtResource("2_bu8aa")]([SubResource("Resource_q35ep"), SubResource("Resource_0kopl")])
+animation = ExtResource("4_pgwa2")
+ability_tag = &"Ability.IceBlast"
+cost_effect = ExtResource("5_aohra")

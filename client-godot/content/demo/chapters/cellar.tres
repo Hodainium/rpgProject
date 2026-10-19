@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="ChapterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_xxgg0"]
+[ext_resource type="Resource" path="res://content/demo/floor_rules/small.tres" id="2_8elbe"]
+[ext_resource type="Resource" path="res://content/demo/scaling/basic.tres" id="3_wmwdw"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="4_u4uja"]
+
+[sub_resource type="Resource" id="Resource_uq0h0"]
+script = ExtResource("1_xxgg0")
+require_all_tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Demo"])
+
+[sub_resource type="Resource" id="Resource_gl7xy"]
+script = ExtResource("1_xxgg0")
+require_all_tags = Array[StringName]([&"Chapter.Demo"])
+ignore_tags = Array[StringName]([&"Encounter.Boss"])
+
+[sub_resource type="Resource" id="Resource_1ds8i"]
+script = ExtResource("1_xxgg0")
+require_all_tags = Array[StringName]([&"Event.Demo"])
+
+[sub_resource type="Resource" id="Resource_1u8sn"]
+script = ExtResource("1_xxgg0")
+require_all_tags = Array[StringName]([&"Chapter.Demo"])
+
+[resource]
+script = ExtResource("4_u4uja")
+id = &"demo.chapter.cellar"
+display_name = "The Cellar"
+tags = Array[StringName]([&"Chapter.Demo"])
+room_query = SubResource("Resource_1u8sn")
+encounter_query = SubResource("Resource_gl7xy")
+boss_encounter_query = SubResource("Resource_uq0h0")
+event_query = SubResource("Resource_1ds8i")
+floor_gen_rules = ExtResource("2_8elbe")
+scaling = ExtResource("3_wmwdw")

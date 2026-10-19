@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_berav"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_hhj3m"]
+
+[resource]
+script = ExtResource("2_hhj3m")
+id = &"demo.item.satchel"
+display_name = "Satchel"
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Common"])
+price = 6
+extra_use_slots = 1

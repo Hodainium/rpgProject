@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_75l4e"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_brblm"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_tct2h"]
+[ext_resource type="Animation" path="res://content/demo/animations/frost_ember.tres" id="4_ekkgv"]
+
+[sub_resource type="Resource" id="Resource_iohyo"]
+script = ExtResource("2_brblm")
+id = &"burn"
+effect = ExtResource("3_tct2h")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 6000
+
+[node name="FrostEmber" type="Node" unique_id=165250761]
+script = ExtResource("1_75l4e")
+executions = Array[ExtResource("2_brblm")]([SubResource("Resource_iohyo")])
+animation = ExtResource("4_ekkgv")
+ability_tag = &"Ability.Passive.FrostEmber"
+trigger_event_tag = &"Event.Damage.Dealt.Ice"

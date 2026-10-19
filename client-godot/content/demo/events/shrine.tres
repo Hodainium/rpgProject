@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_2ir3n"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_uey31"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_x5s5o"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_uwrxs"]
+[ext_resource type="Resource" path="res://content/demo/effects/heal.tres" id="5_i0fuw"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="6_ss5vx"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="7_kkdpy"]
+
+[sub_resource type="Resource" id="Resource_n2vo7"]
+script = ExtResource("6_ss5vx")
+effect = ExtResource("5_i0fuw")
+
+[sub_resource type="Resource" id="Resource_41ryn"]
+script = ExtResource("2_uey31")
+label = "Pray (heal 300 HP)"
+outcomes = Array[ExtResource("4_uwrxs")]([SubResource("Resource_n2vo7")])
+
+[sub_resource type="Resource" id="Resource_27tmu"]
+script = ExtResource("2_uey31")
+label = "Leave"
+
+[sub_resource type="Resource" id="Resource_o4kbd"]
+script = ExtResource("1_2ir3n")
+text = "A cracked shrine hums softly."
+choices = Array[ExtResource("2_uey31")]([SubResource("Resource_41ryn"), SubResource("Resource_27tmu")])
+
+[resource]
+script = ExtResource("7_kkdpy")
+id = &"demo.event.shrine"
+display_name = "Old shrine"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_2ir3n")]([SubResource("Resource_o4kbd")])

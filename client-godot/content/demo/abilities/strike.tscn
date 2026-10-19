@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_efcy5"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_0m7rn"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_308ie"]
+[ext_resource type="Animation" path="res://content/demo/animations/strike.tres" id="4_vvujh"]
+
+[sub_resource type="Resource" id="Resource_1e2y8"]
+script = ExtResource("2_0m7rn")
+id = &"hit"
+effect = ExtResource("3_308ie")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+
+[node name="Strike" type="Node" unique_id=2029591556]
+script = ExtResource("1_efcy5")
+executions = Array[ExtResource("2_0m7rn")]([SubResource("Resource_1e2y8")])
+animation = ExtResource("4_vvujh")
+ability_tag = &"Ability.Strike"

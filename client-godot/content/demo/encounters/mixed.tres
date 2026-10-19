@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_anrvu"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_swm53"]
+[ext_resource type="Resource" path="res://content/demo/enemies/slime.tres" id="3_nv2dy"]
+[ext_resource type="Resource" path="res://content/demo/enemies/bat.tres" id="4_tqxq3"]
+
+[sub_resource type="Resource" id="Resource_pmqv6"]
+script = ExtResource("2_swm53")
+enemy = ExtResource("3_nv2dy")
+
+[sub_resource type="Resource" id="Resource_ei0vq"]
+script = ExtResource("2_swm53")
+enemy = ExtResource("4_tqxq3")
+
+[resource]
+script = ExtResource("1_anrvu")
+id = &"demo.encounter.mixed"
+display_name = "Slime and bat"
+tags = Array[StringName]([&"Chapter.Demo"])
+slots = Array[ExtResource("2_swm53")]([SubResource("Resource_pmqv6"), SubResource("Resource_ei0vq")])

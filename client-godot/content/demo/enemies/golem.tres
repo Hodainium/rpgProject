@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/crush.tscn" id="1_nh0lt"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bite.tscn" id="2_buk2u"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_1to3b"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="4_hwwiu"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="5_fjat6"]
+
+[resource]
+script = ExtResource("4_hwwiu")
+id = &"demo.enemy.golem"
+attribute_set = ExtResource("3_1to3b")
+abilities = Array[PackedScene]([ExtResource("1_nh0lt"), ExtResource("2_buk2u")])
+display_name = "Golem"
+display_color = Color(0.54509807, 0.27058825, 0.07450981, 1)
+tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Golem"])
+stats_x100 = Dictionary[String, int]({
+"atk": 32000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 30000,
+"hp": 200000,
+"max_hp": 200000,
+"spd": 8000,
+"toughness": 30000
+})

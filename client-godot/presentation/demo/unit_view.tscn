@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/unit_view.gd" id="1_53j81"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_4cba5"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[node name="UnitView" type="Node3D" unique_id=2103050273]
+script = ExtResource("1_53j81")
+
+[node name="Body" type="MeshInstance3D" parent="." unique_id=1735412159]
+mesh = SubResource("BoxMesh_4cba5")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=100904298]
+
+[node name="Label" type="Label3D" parent="." unique_id=1244796314]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+billboard = 1
+font_size = 24

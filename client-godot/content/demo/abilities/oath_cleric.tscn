@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_y6t7i"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_f78bm"]
+[ext_resource type="Resource" path="res://content/demo/effects/potion_heal.tres" id="3_y8ig2"]
+[ext_resource type="Animation" path="res://content/demo/animations/oath_cleric.tres" id="4_kgst3"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_16lxw"]
+
+[sub_resource type="Resource" id="Resource_2ioup"]
+script = ExtResource("2_f78bm")
+id = &"oath"
+effect = ExtResource("3_y8ig2")
+
+[sub_resource type="Resource" id="Resource_ll8yv"]
+script = ExtResource("5_16lxw")
+require_all_tags = Array[StringName]([&"Character.Cleric"])
+
+[node name="OathCleric" type="Node" unique_id=1093167225]
+script = ExtResource("1_y6t7i")
+targeting = 4
+executions = Array[ExtResource("2_f78bm")]([SubResource("Resource_2ioup")])
+animation = ExtResource("4_kgst3")
+ability_tag = &"Ability.Oath.Cleric"
+activation_query = SubResource("Resource_ll8yv")
+trigger_event_tag = &"Event.Battle.Start"

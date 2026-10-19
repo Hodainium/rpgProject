@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_gjr7v"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_yi62s"]
+[ext_resource type="Resource" path="res://content/demo/effects/heal.tres" id="3_ekkm5"]
+[ext_resource type="Animation" path="res://content/demo/animations/heal.tres" id="4_rnocn"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_heal.tres" id="5_gpxk2"]
+
+[sub_resource type="Resource" id="Resource_0hxt3"]
+script = ExtResource("2_yi62s")
+id = &"heal"
+effect = ExtResource("3_ekkm5")
+
+[node name="Heal" type="Node" unique_id=866891359]
+script = ExtResource("1_gjr7v")
+targeting = 3
+executions = Array[ExtResource("2_yi62s")]([SubResource("Resource_0hxt3")])
+animation = ExtResource("4_rnocn")
+ability_tag = &"Ability.Heal"
+cost_effect = ExtResource("5_gpxk2")

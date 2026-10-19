@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_2k776"]
+[ext_resource type="Resource" path="res://content/demo/effects/whetstone.tres" id="2_ejtux"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_7y8w8"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_71ej6"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_nb6ur"]
+
+[sub_resource type="Resource" id="Resource_tbsju"]
+script = ExtResource("3_7y8w8")
+effects = Array[ExtResource("1_2k776")]([ExtResource("2_ejtux")])
+
+[resource]
+script = ExtResource("5_nb6ur")
+id = &"demo.item.whetstone"
+display_name = "Whetstone"
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+price = 6
+grants = SubResource("Resource_tbsju")

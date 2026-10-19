@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_jnukx"]
+[ext_resource type="Resource" path="res://content/demo/effects/iron_sword.tres" id="2_vpfha"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_b2wwf"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_a3qd0"]
+
+[sub_resource type="Resource" id="Resource_wt8mu"]
+script = ExtResource("3_b2wwf")
+effects = Array[ExtResource("1_jnukx")]([ExtResource("2_vpfha")])
+
+[resource]
+script = ExtResource("4_a3qd0")
+id = &"demo.equipment.iron_sword"
+display_name = "Iron Sword"
+slot = &"Equipment.Slot.Weapon"
+grants = SubResource("Resource_wt8mu")

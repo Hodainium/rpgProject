@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/frost_ember.tscn" id="1_3qmp8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_dyjbg"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ssm4g"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_inaua"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_o2u1x"]
+
+[sub_resource type="Resource" id="Resource_n1wrh"]
+script = ExtResource("3_ssm4g")
+abilities = Array[PackedScene]([ExtResource("1_3qmp8")])
+
+[resource]
+script = ExtResource("5_o2u1x")
+id = &"demo.item.frost_ember_charm"
+display_name = "Frost-Ember Charm"
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 8
+grants = SubResource("Resource_n1wrh")

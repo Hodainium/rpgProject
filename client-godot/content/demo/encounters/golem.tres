@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_nnfem"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_guaok"]
+[ext_resource type="Resource" path="res://content/demo/enemies/golem.tres" id="3_vyx2v"]
+
+[sub_resource type="Resource" id="Resource_r67ve"]
+script = ExtResource("2_guaok")
+enemy = ExtResource("3_vyx2v")
+
+[resource]
+script = ExtResource("1_nnfem")
+id = &"demo.encounter.golem"
+display_name = "The Golem"
+tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Demo"])
+slots = Array[ExtResource("2_guaok")]([SubResource("Resource_r67ve")])

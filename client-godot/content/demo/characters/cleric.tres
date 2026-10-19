@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/strike.tscn" id="1_qi6ye"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/heal.tscn" id="2_ixx4u"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_ouh10"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_rq1dg"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_2mrxd"]
+[ext_resource type="Resource" path="res://content/demo/items/potion.tres" id="6_djwlh"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="7_m2hih"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="8_o24qk"]
+
+[sub_resource type="Resource" id="Resource_ud7a5"]
+script = ExtResource("7_m2hih")
+items = Array[ExtResource("5_2mrxd")]([ExtResource("6_djwlh")])
+
+[resource]
+script = ExtResource("8_o24qk")
+id = &"demo.character.cleric"
+attribute_set = ExtResource("3_ouh10")
+abilities = Array[PackedScene]([ExtResource("1_qi6ye"), ExtResource("2_ixx4u")])
+display_name = "Cleric"
+display_color = Color(0.18039216, 0.54509807, 0.34117648, 1)
+tags = Array[StringName]([&"Character.Cleric"])
+default_loadout = SubResource("Resource_ud7a5")
+stats_x100 = Dictionary[String, int]({
+"atk": 35000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 25000,
+"energy": 0,
+"hp": 80000,
+"max_hp": 80000,
+"max_mp": 10000,
+"mp": 10000,
+"spd": 11000,
+"toughness": 30000
+})

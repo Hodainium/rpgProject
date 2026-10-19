@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_senix"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="2_0othl"]
+
+[sub_resource type="Resource" id="Resource_hrs0h"]
+script = ExtResource("1_senix")
+cell = Vector2i(2, 2)
+
+[sub_resource type="Resource" id="Resource_sp3ln"]
+script = ExtResource("1_senix")
+cell = Vector2i(2, 4)
+slot = 2
+
+[sub_resource type="Resource" id="Resource_agehj"]
+script = ExtResource("1_senix")
+cell = Vector2i(1, 1)
+slot = 3
+
+[sub_resource type="Resource" id="Resource_qltj2"]
+script = ExtResource("1_senix")
+cell = Vector2i(1, 5)
+slot = 4
+
+[sub_resource type="Resource" id="Resource_bn1oc"]
+script = ExtResource("1_senix")
+cell = Vector2i(6, 3)
+kind = 2
+
+[resource]
+script = ExtResource("2_0othl")
+id = &"demo.room.nook"
+display_name = "Quiet nook"
+tags = Array[StringName]([&"Room.Type.Normal", &"Chapter.Demo"])
+content_mode = 4
+placements = Array[ExtResource("1_senix")]([SubResource("Resource_hrs0h"), SubResource("Resource_sp3ln"), SubResource("Resource_agehj"), SubResource("Resource_qltj2"), SubResource("Resource_bn1oc")])

@@ -1,0 +1,51 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_xwcn1"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_h4ict"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="3_1cxjm"]
+
+[sub_resource type="Resource" id="Resource_hrs0h"]
+script = ExtResource("1_xwcn1")
+cell = Vector2i(2, 2)
+
+[sub_resource type="Resource" id="Resource_sp3ln"]
+script = ExtResource("1_xwcn1")
+cell = Vector2i(2, 4)
+slot = 2
+
+[sub_resource type="Resource" id="Resource_agehj"]
+script = ExtResource("1_xwcn1")
+cell = Vector2i(1, 1)
+slot = 3
+
+[sub_resource type="Resource" id="Resource_qltj2"]
+script = ExtResource("1_xwcn1")
+cell = Vector2i(1, 5)
+slot = 4
+
+[sub_resource type="Resource" id="Resource_i32c7"]
+script = ExtResource("2_h4ict")
+require_all_tags = Array[StringName]([&"Pool.Shop"])
+
+[sub_resource type="Resource" id="Resource_8ym6j"]
+script = ExtResource("1_xwcn1")
+cell = Vector2i(5, 3)
+kind = 4
+item_query = SubResource("Resource_i32c7")
+
+[sub_resource type="Resource" id="Resource_rrc1y"]
+script = ExtResource("2_h4ict")
+require_all_tags = Array[StringName]([&"Pool.Shop"])
+
+[sub_resource type="Resource" id="Resource_npcfk"]
+script = ExtResource("1_xwcn1")
+cell = Vector2i(7, 3)
+kind = 4
+item_query = SubResource("Resource_rrc1y")
+
+[resource]
+script = ExtResource("3_1cxjm")
+id = &"demo.room.shop"
+display_name = "Shop"
+tags = Array[StringName]([&"Room.Type.Shop", &"Chapter.Demo"])
+placements = Array[ExtResource("1_xwcn1")]([SubResource("Resource_hrs0h"), SubResource("Resource_sp3ln"), SubResource("Resource_agehj"), SubResource("Resource_qltj2"), SubResource("Resource_8ym6j"), SubResource("Resource_npcfk")])

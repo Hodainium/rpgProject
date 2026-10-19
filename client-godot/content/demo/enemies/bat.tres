@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bite.tscn" id="1_516rm"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_brqa1"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="3_i52vf"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="4_3cngg"]
+[ext_resource type="Resource" path="res://content/demo/variants/elite.tres" id="5_kfc82"]
+
+[resource]
+script = ExtResource("3_i52vf")
+variants = Array[ExtResource("4_3cngg")]([ExtResource("5_kfc82")])
+id = &"demo.enemy.bat"
+attribute_set = ExtResource("2_brqa1")
+abilities = Array[PackedScene]([ExtResource("1_516rm")])
+display_name = "Bat"
+display_color = Color(0.5764706, 0.4392157, 0.85882354, 1)
+tags = Array[StringName]([&"Enemy.Type.Bat"])
+stats_x100 = Dictionary[String, int]({
+"atk": 26000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 5000,
+"hp": 25000,
+"max_hp": 25000,
+"spd": 13000,
+"toughness": 30000
+})

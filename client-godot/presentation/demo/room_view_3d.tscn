@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/room_view_3d.gd" id="1_n6ydd"]
+
+[node name="RoomView3d" type="Node3D" unique_id=250227885]
+script = ExtResource("1_n6ydd")

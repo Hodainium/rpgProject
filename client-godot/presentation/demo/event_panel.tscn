@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/event_panel.gd" id="1_54hkx"]
+
+[node name="EventPanel" type="Control" unique_id=1572900936]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_54hkx")

@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_prnax"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_5wc6c"]
+[ext_resource type="Resource" path="res://content/demo/enemies/slime.tres" id="3_p3gfm"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_lot7v"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_aoq74"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="6_jmqff"]
+
+[sub_resource type="Resource" id="Resource_nthal"]
+script = ExtResource("2_5wc6c")
+enemy = ExtResource("3_p3gfm")
+
+[sub_resource type="Resource" id="Resource_c80x6"]
+script = ExtResource("6_jmqff")
+stats_x100 = Dictionary[String, int]({
+"atk": 30000
+})
+
+[sub_resource type="Resource" id="Resource_6yosy"]
+script = ExtResource("2_5wc6c")
+enemy = ExtResource("3_p3gfm")
+loadout = SubResource("Resource_c80x6")
+
+[resource]
+script = ExtResource("1_prnax")
+id = &"demo.encounter.slime_pair"
+display_name = "Slime pair"
+tags = Array[StringName]([&"Chapter.Demo"])
+slots = Array[ExtResource("2_5wc6c")]([SubResource("Resource_nthal"), SubResource("Resource_6yosy")])

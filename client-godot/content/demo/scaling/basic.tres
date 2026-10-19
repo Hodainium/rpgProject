@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ScalingRules" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_1amli"]
+[ext_resource type="Resource" path="res://content/demo/effects/scale_depth_0.tres" id="2_rf3ak"]
+[ext_resource type="Resource" path="res://content/demo/effects/scale_depth_1.tres" id="3_hvtkp"]
+[ext_resource type="Script" path="res://game/defs/scaling_rules.gd" id="4_k13af"]
+
+[resource]
+script = ExtResource("4_k13af")
+id = &"demo.scaling.basic"
+enemy_effects_by_depth = Array[ExtResource("1_1amli")]([ExtResource("2_rf3ak"), ExtResource("3_hvtkp")])
+elite_chance_x100 = 2000
+coin_drop_chance_x100 = 8000

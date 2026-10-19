@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/battle_panel.gd" id="1_2k6lu"]
+
+[node name="BattlePanel" type="Control" unique_id=1757133133]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_2k6lu")

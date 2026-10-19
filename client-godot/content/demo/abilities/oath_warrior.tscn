@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_i0jcc"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_mfdkr"]
+[ext_resource type="Resource" path="res://content/demo/effects/whetstone.tres" id="3_ufg0j"]
+[ext_resource type="Animation" path="res://content/demo/animations/oath_warrior.tres" id="4_k00oy"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_rsfjc"]
+
+[sub_resource type="Resource" id="Resource_ffe7v"]
+script = ExtResource("2_mfdkr")
+id = &"oath"
+effect = ExtResource("3_ufg0j")
+
+[sub_resource type="Resource" id="Resource_w1rg0"]
+script = ExtResource("5_rsfjc")
+require_all_tags = Array[StringName]([&"Character.Warrior"])
+
+[node name="OathWarrior" type="Node" unique_id=415169953]
+script = ExtResource("1_i0jcc")
+targeting = 5
+executions = Array[ExtResource("2_mfdkr")]([SubResource("Resource_ffe7v")])
+animation = ExtResource("4_k00oy")
+ability_tag = &"Ability.Oath.Warrior"
+activation_query = SubResource("Resource_w1rg0")
+trigger_event_tag = &"Event.Battle.Start"
