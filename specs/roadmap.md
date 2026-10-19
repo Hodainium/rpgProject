@@ -8,11 +8,12 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 |---|---|---|
 | 0. `project-skeleton` | ✅ Done | 2026-10-19 |
 | 1. `combat-replay-core` | ✅ Done | 2026-10-19 |
-| 1b. `game-skeleton` | ⏭️ Next | |
+| 1b. `game-skeleton` | 📝 Spec written | 2026-10-19 |
 | 1c. `dev-tools` | ⬜ Not started | |
 | 1d. `items-and-loadouts` | ⬜ Not started | |
 | 1e. `playable-demo` | ⬜ Not started | |
 | 2. `battle-checkout` | ⬜ Not started | |
+| 2b. `run-authority` | ⬜ Not started | |
 | 3. `battle-verify` | ⬜ Not started | |
 | 4. `settlement-outbox` | ⬜ Not started | |
 | 5. `gacha` | ⬜ Not started | |
@@ -42,6 +43,8 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   separate game-design chat.
 - 2026-10-19: Split 1b into 1b `game-skeleton`, 1c `dev-tools`, 1d `items-and-loadouts`, 1e `playable-demo`, at the
   user's request, following the game design outline in `specs/design/game-design.md`.
+- 2026-10-19: Added slice 2b `run-authority` (authentication; server-owned run state; batched battles plus quick
+  authenticated messages for out-of-battle actions) and a system-design pass after 1d, at the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -95,11 +98,27 @@ Glue and polish so a short multi-floor run can be played start to finish with th
 > 🧭 After 1b, a system-design pass: plan what the run adds that the wire contracts and backend don't support yet
 > (run seed and RNG streams, run log, carried-over HP/MP, items, scaling and variants in the battle snapshot), and fold
 > it into 1d and slices 2–9.
+>
+> 🧭 After 1d, a second system-design pass: every run feature that changes player state (items granted, purchases,
+> item/skill use outside battle, coins) gets a wire contract, designed for slice 2b `run-authority`.
 
 ### 2. `battle-checkout`
 Contracts DTOs; Postgres schema (players, `battle_sessions` with seed, snapshot, `ruleset_version`); `POST /battle/start`;
 Redis cache (30-min TTL) with Postgres fallback (**scenario 4**); `ruleset_version` hash computation; Godot client HTTP
 layer calls start and runs the battle locally.
+
+### 2b. `run-authority`
+**Purpose:** the server owns player state. Anything that changes it is an authenticated request; nothing is trusted
+from the client alone.
+- **Authentication** for every player-state endpoint (including `/battle/start` and `/battle/verify`): player identity
+  on each request (bearer token; a dev token issuer until a real identity provider).
+- **Server-issued run seed** at run start; the run's state lives in Postgres.
+- **Two message styles:** battles stay **batched** (the whole action log is verified asynchronously, slice 3), while
+  out-of-battle actions are **quick messages**: small, synchronous, authenticated commands (use an item or skill, take
+  an item, buy in a shop, event choice) with an `Idempotency-Key` and a per-run sequence number so retries and
+  reordering are safe. The server checks each one against the run's seeded state.
+- Contracts come from the system-design pass after 1d. Placed after slice 2 because it needs the players table and
+  Postgres from `battle-checkout`.
 
 ### 3. `battle-verify`
 `POST /verify` + `Idempotency-Key` → RabbitMQ job → `202`. Headless Godot verifier worker container replays the log and

@@ -61,7 +61,7 @@ A roguelike run in the shape of *The Binding of Isaac*, with *Honkai: Star Rail*
 Not GAS: coins, gems, map state, unlocks. They are run/meta state, not unit stats.
 
 ## 3. Content assets
-`★` = in scope for the first slice (rooms, layout, battles, sample events). The rest is defined now so the shapes don't
+`★` = in scope for the first slice (rooms, layout, battles, sample events); `1d` = needs battle snapshot v2. The rest is defined now so the shapes don't
 change later, but built in later slices.
 
 ### Rooms and floors
@@ -71,7 +71,7 @@ change later, but built in later slices.
 | Room `content` | One of: a fixed `EncounterDefinition`; an encounter tag query (pick at generation); a fixed or queried `EventDefinition`; none (empty/treasure/shop rooms use their placements) | ★ |
 | `Placement` | grid cell (whole-number x, y), `kind` (enemy spawn, interactable, pickup, event trigger, item pedestal, shop slot), and kind-specific data (enemy + loadout override, item pool query, price…) | ★ |
 | `ChapterDefinition` | `id`, `name`, room query, encounter query, boss encounter query, item pool overrides, `ScalingRules` ref, skin/palette ref, music | ★ |
-| `ScalingRules` | enemy stat multipliers by floor depth, coin drop chances, elite chance | ★ |
+| `ScalingRules` | enemy stat multipliers by floor depth, coin drop chances, elite chance | 1d |
 | `FloorGenRules` | target room count (as a function of depth), required special rooms (1 boss, 1 treasure, 1 shop, 1 secret…), dead-end rules, max grid size | ★ |
 | `RunStructure` | ordered floor slots, each with candidate chapters (alt paths), plus floor-level rule flags such as "rooms pull from every chapter" (Delirium) | ★ |
 | `FloorLayout` | hand-made floor: a grid of room ids/positions. Loaded instead of generating, for testing | ★ |
@@ -85,9 +85,9 @@ where special rooms go (Isaac rule: boss = farthest dead end).
 |---|---|---|
 | `UnitDefinition` (exists) | `id`, AttributeSet, base stats, abilities, brain | ✅ |
 | `CharacterDefinition` | wraps a `UnitDefinition`: `name`, portrait, default `Loadout`, signature (Birthright-like) item id, unlock condition | ★ |
-| `EnemyDefinition` | wraps a `UnitDefinition`: `tags` (`Enemy.Type.*`, `Enemy.Boss`), default `Loadout`, allowed variants. **Bosses are normal enemies tagged `Enemy.Boss`** | ★ |
+| `EnemyDefinition` | wraps a `UnitDefinition`: `tags` (`Enemy.Type.*`, `Enemy.Boss`), default `Loadout`, allowed variants. **Bosses are normal enemies tagged `Enemy.Boss`** | 1d |
 | `EnemyVariant` | elite/champion: stat multipliers, extra abilities/effects, skin/palette ref, reward bonus | later |
-| `Loadout` | abilities, passive effects, stat overrides, (characters) equipment | ★ |
+| `Loadout` | abilities, passive effects, stat overrides, (characters) equipment | 1d |
 | `EncounterDefinition` (exists, extended) | `tags` (chapters, difficulty, `Encounter.Boss`), `weight`, list of slots: enemy + optional loadout override (asset or inline) + optional variant | ★ |
 
 ### Events, items, equipment, economy
@@ -129,6 +129,10 @@ loadout overrides. Two consequences:
    rooms you enter, out-of-battle item and spell use) go into a **run log**, like the battle action log.
    Same rules as combat: integer math only, seeded `RandomNumberGenerator` only, stable iteration order (sorted ids).
    Verifying runs on the server is *not* planned yet; this just keeps the door open at no extra cost.
+3. **The server owns player state** (slice 2b `run-authority`). Anything that changes it (items granted, purchases,
+   coins, item/skill use outside battle) is an **authenticated** request. Battles are **batched**: the whole action log
+   is sent once and verified asynchronously, because that's efficient. Out-of-battle actions are **quick messages**:
+   small synchronous commands with an idempotency key and a per-run sequence number, checked against the seeded run.
 
 ## 6. Dev tools
 | Tool | What it does |
