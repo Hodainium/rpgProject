@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="UnitDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/sweep.tscn" id="1_6kjf1"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="2_gvqnu"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_attribute_set.gd" id="3_rjlr4"]
+[ext_resource type="Script" path="res://combat/unit_definition.gd" id="4_lsidl"]
+
+[resource]
+script = ExtResource("4_lsidl")
+id = &"fixture.unit.sweeper"
+attribute_set = ExtResource("3_rjlr4")
+abilities = Array[PackedScene]([ExtResource("1_6kjf1"), ExtResource("2_gvqnu")])
+stats_x100 = Dictionary[String, int]({
+"ATK": 42000,
+"CritDmg": 5000,
+"CritRate": 1000,
+"DEF": 25000,
+"HP": 90000,
+"MaxHP": 90000,
+"SPD": 11000
+})

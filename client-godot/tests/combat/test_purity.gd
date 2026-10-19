@@ -1,0 +1,60 @@
+## Purity guards: determinism rules that are easiest to break by accident (spec "Unit tests", "Purity guards").
+extends TestCase
+
+const COMBAT: String = "res://combat/"
+
+
+static func _sources(directory: String) -> PackedStringArray:
+	var found := PackedStringArray()
+	for name in ResourceLoader.list_directory(directory):
+		if name.ends_with("/"):
+			found.append_array(_sources(directory + name))
+		elif name.ends_with(".gd") or name.ends_with(".tres") or name.ends_with(".tscn"):
+			found.append(directory + name)
+	return found
+
+
+static func _code_lines(path: String) -> PackedStringArray:
+	var lines := PackedStringArray()
+	for line in FileAccess.get_file_as_string(path).split("\n"):
+		var code := line.split("#")[0]  # ignore comments and doc comments
+		if code.strip_edges() != "":
+			lines.append(code)
+	return lines
+
+
+func _forbid(directories: Array, pattern: String, what: String, allowed: Array = []) -> void:
+	var regex := RegEx.create_from_string(pattern)
+	for directory in directories:
+		for path in _sources(directory):
+			if not path.ends_with(".gd") or allowed.has(path):
+				continue
+			for line in _code_lines(path):
+				check(regex.search(line) == null, "%s in %s: %s" % [what, path, line.strip_edges()])
+
+
+func test_no_global_or_extra_randomness() -> void:
+	_forbid([COMBAT, FIXTURES], "\\b(randf|randi|randomize|randf_range|randfn)\\s*\\(", "global RNG")
+	_forbid([COMBAT, FIXTURES], "RandomNumberGenerator\\.new\\s*\\(", "extra RNG instance", [COMBAT + "battle.gd"])
+
+
+func test_no_platform_dependent_math() -> void:
+	_forbid([COMBAT, FIXTURES + "exec_calcs/"], "(?<![A-Za-z_.])(pow|sqrt|exp|log|sin|cos|tan|atan2|posmod)\\s*\\(",
+		"math-library function")
+
+
+func test_advance_turn_is_never_called() -> void:
+	_forbid([COMBAT, FIXTURES], "\\.advance_turn\\s*\\(", "GodotGAS advance_turn (use CombatASC.turn_start/turn_end)")
+
+
+func test_fixtures_never_reference_content() -> void:
+	for path in _sources(FIXTURES):
+		check(not FileAccess.get_file_as_string(path).contains("res://content/"), "%s references res://content/" % path)
+
+
+func test_fixture_effects_are_turn_based_or_instant() -> void:
+	for name in ResourceLoader.list_directory(FIXTURES + "effects"):
+		var effect := load(FIXTURES + "effects/" + name) as GameplayEffect
+		check(effect.policy != GameplayEffect.DurationPolicy.DURATION, "%s uses real-time DURATION" % name)
+		check(effect.period <= 0.0 or effect.policy == GameplayEffect.DurationPolicy.TURN_BASED,
+			"%s has a real-time period" % name)

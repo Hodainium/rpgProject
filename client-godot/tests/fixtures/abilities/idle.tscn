@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_bm5ec"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_lco3t"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/noop.tres" id="3_p85es"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/idle.tres" id="4_hwrg7"]
+
+[sub_resource type="Resource" id="Resource_pxldc"]
+script = ExtResource("2_lco3t")
+id = &"idle"
+effect = ExtResource("3_p85es")
+
+[node name="Idle" type="Node" unique_id=2053807812]
+script = ExtResource("1_bm5ec")
+targeting = 5
+executions = Array[ExtResource("2_lco3t")]([SubResource("Resource_pxldc")])
+animation = ExtResource("4_hwrg7")
+ability_tag = &"Fixture.Ability.Idle"

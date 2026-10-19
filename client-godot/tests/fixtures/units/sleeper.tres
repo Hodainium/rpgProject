@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="UnitDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/sleepy.tscn" id="1_nntor"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_attribute_set.gd" id="2_dh7i6"]
+[ext_resource type="Script" path="res://combat/unit_definition.gd" id="3_kux3s"]
+
+[resource]
+script = ExtResource("3_kux3s")
+id = &"fixture.unit.sleeper"
+attribute_set = ExtResource("2_dh7i6")
+abilities = Array[PackedScene]([ExtResource("1_nntor")])
+stats_x100 = Dictionary[String, int]({
+"ATK": 50000,
+"CritDmg": 5000,
+"CritRate": 500,
+"DEF": 30000,
+"HP": 100000,
+"MaxHP": 100000,
+"SPD": 10000
+})

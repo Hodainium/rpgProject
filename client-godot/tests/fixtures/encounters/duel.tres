@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/unit_definition.gd" id="1_5swia"]
+[ext_resource type="Resource" path="res://tests/fixtures/units/dummy.tres" id="2_yv8lx"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="3_t86bg"]
+
+[resource]
+script = ExtResource("3_t86bg")
+id = &"fixture.encounter.duel"
+enemies = Array[ExtResource("1_5swia")]([ExtResource("2_yv8lx")])

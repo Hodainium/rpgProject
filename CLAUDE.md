@@ -8,12 +8,14 @@ verification, exactly-once reward effects, outbox-based event publication and en
 ## Current state (keep this section truthful)
 | Path | Status |
 |---|---|
-| `client-godot/` | Godot 4.7.2 .NET project, GodotGAS v1.1.2 addon enabled. `rpgDemo.csproj` (`net10.0`, references `Rpg.Client`), no C# scripts. Empty ownership folders (`combat/`, `content/`, `presentation/`, `tests/fixtures/`). No scenes. |
+| `client-godot/` | Godot 4.7.2 .NET project, GodotGAS v1.1.2 addon enabled. `rpgDemo.csproj` (`net10.0`, references `Rpg.Client`), no C# scripts. `content/` and `presentation/` are still **empty** (no real units, abilities or scenes yet). |
+| `client-godot/combat/` | Deterministic battle kernel (spec `combat-replay-core`): turn order, `CombatASC` effect timing, execution tables driven by animation `execute` keys, ×100 fixed-point, state hash v1, recorder, headless replay runner (`combat/headless/replay_main.tscn`). Proven on fixtures only. |
+| `client-godot/tests/` | In-house GDScript test runner (`run_tests.tscn`, 52 tests), frozen fixtures and golden replays in `tests/fixtures/`. |
 | `Rpg.slnx` + `global.json` | Root solution (all projects below plus `rpgDemo.csproj`). .NET SDK 10.0.402; tests run on Microsoft.Testing.Platform. Package versions pinned in `Directory.Packages.props`. |
-| `src/Rpg.Contracts/` | `ServerInfoResponse`, `RpgJson` (shared JSON options). No battle/gacha DTOs yet. |
+| `src/Rpg.Contracts/` | `ServerInfoResponse`, `RpgJson`, and battle wire shapes in `Battle/` (`BattleSnapshot`, `ActionLog`, `ReplayRequest`, `ReplayResult`, `MismatchReason`). No gacha DTOs yet. |
 | `src/Rpg.Client/` | `GameServerClient.GetInfoAsync` only. |
 | `src/Rpg.GameServerApi/` | Skeleton only: `/api/v1/info`, `/health/live`, `/health/ready`, `/metrics` on port 5000. Connects to Postgres/Redis/RabbitMQ for readiness; **no tables, queues, topics or battle/gacha endpoints yet.** |
-| `tests/` | `Rpg.Contracts.Tests` (golden JSON, purity guards), `Rpg.GameServerApi.Tests` (Testcontainers; **Docker required**). |
+| `tests/` | `Rpg.Contracts.Tests` (golden JSON, purity guards, battle contracts cross-checked against the Godot golden files), `Rpg.GameServerApi.Tests` (Testcontainers; **Docker required**). |
 | `load-test/`, `web-dashboard/` | **Empty.** |
 | `specs/design/` | Design intent (not slice specs). `combat-design.md`: attributes, tags, damage formula. Not yet built in GodotGAS. |
 | `specs/roadmap.md` | **Build order: slices 0–9 and design breaks. Read it to know what's next; mark slices done there.** |
@@ -57,7 +59,9 @@ Do not describe or code against components listed as empty as though they exist.
 - **Outbox:** events reach Redpanda only through an outbox relay. Never publish directly from request or worker code.
 - **Ruleset versioning:** `ruleset_version` (Godot build + content hash) is recorded at checkout and carried on every
   job and event. Only one verifier version runs for now; routing to the matching version is a later milestone.
-- Still to be specified before battle code: the replay log schema, the state hash, and turn order and battle content.
+- **Replay log, state hash and turn order are specified and built** (`specs/combat-replay-core.md`): HSR-style action
+  value; party decisions only in the log, enemy turns re-simulated; checkpoint hash per party action; state hash v1;
+  every rejection is 2002 with a `MismatchReason`. Real battle **content** is still to be designed (design break 1).
 
 ## Error contract
 A replay mismatch is a **verdict**, not an HTTP status on `/verify`. `GET /battle/{id}/result` returns
@@ -90,5 +94,7 @@ Each must have a spec and an automated test before the workflow counts as done:
 - Slice cycle: `/spec` → `/implement` → commit `feat:` → user tuning → commit `design:` → `/sync-spec` → commit `spec:`.
 
 ## Build & test
-- Once a solution exists: `dotnet build` and `dotnet test` from the repo root must pass before touching Godot scenes.
+- `dotnet build` and `dotnet test` from the repo root must pass before touching Godot scenes.
+- Godot system tests: `H:\Godot\Godot_v4.7.2-stable_mono_win64_console.exe --headless --path client-godot res://tests/run_tests.tscn`
+  (details in `client-godot/CLAUDE.md` section 4). Both suites must pass for a slice to count as done.
 - Infra: `cd infra && docker compose up -d` (add `--profile observability` for Prometheus/Grafana). Secrets in `infra/.env` (see `.env.example`).

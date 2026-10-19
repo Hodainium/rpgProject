@@ -1,0 +1,37 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ycjbw"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_fvo0n"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_4t881"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/combo.tres" id="4_t11xs"]
+
+[sub_resource type="Resource" id="Resource_pkk8e"]
+script = ExtResource("2_fvo0n")
+id = &"slash_light"
+effect = ExtResource("3_4t881")
+damage_mode = 2
+targets = 1
+multiplier_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_fmes8"]
+script = ExtResource("2_fvo0n")
+id = &"slash_heavy"
+effect = ExtResource("3_4t881")
+damage_mode = 2
+targets = 1
+multiplier_x100 = 12000
+
+[sub_resource type="Resource" id="Resource_vfui5"]
+script = ExtResource("2_fvo0n")
+id = &"shockwave"
+effect = ExtResource("3_4t881")
+damage_mode = 1
+targets = 2
+flat_damage_x100 = 8050
+
+[node name="Combo" type="Node" unique_id=1573799870]
+script = ExtResource("1_ycjbw")
+targeting = 2
+executions = Array[ExtResource("2_fvo0n")]([SubResource("Resource_pkk8e"), SubResource("Resource_fmes8"), SubResource("Resource_vfui5")])
+animation = ExtResource("4_t11xs")
+ability_tag = &"Fixture.Ability.Combo"

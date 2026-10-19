@@ -7,8 +7,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | Slice | Status | Date |
 |---|---|---|
 | 0. `project-skeleton` | ✅ Done | 2026-10-19 |
-| 1. `combat-replay-core` | 📝 Spec written | 2026-10-19 |
-| 1b. `game-skeleton` | ⬜ Not started (spec in a separate game-design chat) | |
+| 1. `combat-replay-core` | ✅ Done | 2026-10-19 |
+| 1b. `game-skeleton` | ⏭️ Next (spec in a separate game-design chat) | |
 | 2. `battle-checkout` | ⬜ Not started | |
 | 3. `battle-verify` | ⬜ Not started | |
 | 4. `settlement-outbox` | ⬜ Not started | |

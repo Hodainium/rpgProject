@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UnitDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/idle.tscn" id="1_o6xgy"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_attribute_set.gd" id="2_y83fi"]
+[ext_resource type="Script" path="res://combat/unit_definition.gd" id="3_o4cvr"]
+
+[resource]
+script = ExtResource("3_o4cvr")
+id = &"fixture.unit.pacifist"
+attribute_set = ExtResource("2_y83fi")
+abilities = Array[PackedScene]([ExtResource("1_o6xgy")])
+stats_x100 = Dictionary[String, int]({
+"ATK": 0,
+"DEF": 0,
+"HP": 500000,
+"MaxHP": 500000,
+"SPD": 10000
+})

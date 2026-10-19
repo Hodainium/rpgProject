@@ -38,8 +38,8 @@ RawDmg         = BaseDmg × DefMultiplier%
 if Roll() < Attacker.CritRate%:
     RawDmg = RawDmg × (100 + Attacker.CritDmg)%
 ```
-Example: ATK 500, SkillMultiplier 150, target DEF 300 → BaseDmg 750, DefMultiplier 76.92%, RawDmg 576.9;
-on a crit with CritDmg 50 → 865.35.
+Example: ATK 500, SkillMultiplier 150, target DEF 300 → BaseDmg 750, DefMultiplier 76.93% (the DEF part,
+23.0769%, truncates to 23.07%), RawDmg 576.97; on a crit with CritDmg 50 → 865.45.
 
 ## Not yet designed
 Per-ability execution tables (multipliers and hit timing), Energy gain and Ultimate gating, Toughness damage and break,

@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_nf265"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_hn1dc"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_ipnae"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/slam.tres" id="4_lvjri"]
+
+[sub_resource type="Resource" id="Resource_jg6od"]
+script = ExtResource("2_hn1dc")
+id = &"slam_main"
+effect = ExtResource("3_ipnae")
+damage_mode = 2
+targets = 1
+multiplier_x100 = 8000
+
+[sub_resource type="Resource" id="Resource_5ex6c"]
+script = ExtResource("2_hn1dc")
+id = &"slam_splash"
+effect = ExtResource("3_ipnae")
+damage_mode = 2
+targets = 2
+multiplier_x100 = 4000
+
+[node name="Slam" type="Node" unique_id=1402521804]
+script = ExtResource("1_nf265")
+targeting = 2
+executions = Array[ExtResource("2_hn1dc")]([SubResource("Resource_jg6od"), SubResource("Resource_5ex6c")])
+animation = ExtResource("4_lvjri")
+ability_tag = &"Fixture.Ability.Slam"

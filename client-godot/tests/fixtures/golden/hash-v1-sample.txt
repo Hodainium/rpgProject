@@ -1,0 +1,12 @@
+hash-v1
+turn=3
+rng=12345678901234
+outcome=Ongoing
+unit=E1|alive=1|av=2500
+attr=E1|HP|80000|76533
+attr=E1|SPD|9000|9000
+tag=E1|Fixture.Status.Weakened|1
+effect=E1|res://tests/fixtures/effects/weaken.tres|1|1|0
+unit=P1|alive=1|av=0
+attr=P1|HP|100000|100000
+attr=P1|SPD|10000|10000

@@ -1,6 +1,6 @@
 # Spec: combat-replay-core (slice 1)
 
-Status: 📝 Reviewed, ready to implement · Roadmap: slice 1 · Date: 2026-10-19
+Status: ✅ Done (2026-10-19) · Roadmap: slice 1 · Date: 2026-10-19
 
 ## 1. Purpose & enterprise mapping
 Build the deterministic battle kernel that both the player's client and the server's verifier run, and pin down the
@@ -373,7 +373,7 @@ and the runner's wall time (a `rpg_replay_duration_seconds` histogram, measured 
 
 ### Test runner (GDScript)
 A small in-house runner, `client-godot/tests/run_tests.gd` (system), run with
-`godot --headless --path client-godot --script res://tests/run_tests.gd`. It discovers `res://tests/**/test_*.gd`,
+`godot --headless --path client-godot res://tests/run_tests.tscn` (a scene, see implementation decision 9). It discovers `res://tests/**/test_*.gd`,
 runs every `test_*` method, prints results and exits non-zero on any failure. No new addon.
 
 ### Fixture content (`client-godot/tests/fixtures/`, frozen, never references `content/`)
@@ -383,7 +383,7 @@ runs every `test_*` method, prints results and exits non-zero on any failure. No
 - ExecCalc `FixtureDamage`: the integer formula from `specs/design/combat-design.md` including the RNG crit roll, so
   every replay exercises the RNG, with `BaseDmg` taken from the `Data.Damage.Flat` / `Data.Damage.Multiplier`
   SetByCaller values when a row sets them.
-- `fixture.ability.combo`: the 3-hit example above, with a saved fixture `Animation` resource carrying the `execute` keys.
+- `fixture.ability.combo`: the combo example above (4 executions), with a saved fixture `Animation` resource carrying the `execute` keys.
 - Encounters: `fixture.encounter.duel` (1v1), `fixture.encounter.squad` (3v3), `fixture.encounter.stalemate`
   (nobody can deal damage, for the turn limit).
 - Tags use the `Fixture.*` namespace and are **not** added to your tag registry (GodotGAS only uses the registry in
@@ -432,12 +432,13 @@ byte for byte (except `engineVersion`, which is checked separately against the p
 - `Seed` round-trips as a string; `ErrorCode` is 2002 on every rejected golden.
 
 ### Done when
-- [ ] `godot --headless ... --script res://tests/run_tests.gd` passes, and the project loads headless with no errors.
-- [ ] Every golden replays identically in a fresh process, run twice.
-- [ ] `dotnet build` and `dotnet test` pass at the root (C# golden cross-checks).
-- [ ] No files changed in `content/`, `presentation/` or `godot_gas/`.
-- [ ] CLAUDE.md "Current state" and "Battle workflow decisions" updated (replay log, state hash and turn order are now specified).
-- [ ] `client-godot/CLAUDE.md` section 3 updated: abilities may await **only** the presentation gate (executions), never timers
+- [x] `godot --headless --path client-godot res://tests/run_tests.tscn` passes (52 tests), and the project loads headless
+  with no errors. (A scene, not `--script`: see implementation decision 9.)
+- [x] Every golden replays identically in a fresh process, run twice.
+- [x] `dotnet build` and `dotnet test` pass at the root (C# golden cross-checks).
+- [x] No files changed in `content/`, `presentation/` or `godot_gas/`.
+- [x] CLAUDE.md "Current state" and "Battle workflow decisions" updated (replay log, state hash and turn order are now specified).
+- [x] `client-godot/CLAUDE.md` section 3 updated: abilities may await **only** the presentation gate (executions), never timers
   or animation tasks directly; `advance_turn()` is replaced by `CombatASC.turn_start()`/`turn_end()`.
 
 ## Files this slice creates (all system-owned)
@@ -466,3 +467,30 @@ tests/Rpg.Contracts.Tests/BattleContractTests.cs
 - **C# battle records now:** `Rpg.Contracts.Battle` is added in this slice, so the golden files lock the GDScript and C#
   shapes together from day one.
 - **Test runner:** in-house (`tests/run_tests.gd`, no new addon). Tests are plain GDScript, so moving to gdUnit4 later is cheap.
+
+## Decisions made during implementation (2026-10-19)
+1. **Godot runs `net10.0`:** proven in slice 0; no change.
+2. **`BattleOutcome.Ongoing`** added to the C# enum: a rejected `ReplayResult` stops mid-battle, so its `outcome` is
+   `Ongoing`. It only appears in rejected results.
+3. **`WireJson`** (`combat/wire_json.gd`): Godot parses every JSON number as a float and would write `1.0` back,
+   which the C# records' `int` fields reject (caught by the C# golden cross-check). All contract JSON Godot writes goes
+   through `WireJson.stringify`, which writes whole numbers as integers.
+4. **`engineVersion`** is the build identifier Godot prints at startup, e.g. `4.7.2.stable.mono.official.ed1daf0bf`
+   (`Engine.get_version_info()["string"]` omits `mono`). The golden test checks it starts with `4.7.2.stable.mono`.
+5. **One effect spec per target** in `Battle.resolve_execution`: GodotGAS's `apply_effect_to_targets` shares one spec
+   across targets, and a turn-based effect keeps its spec, so a debuff on two enemies would share one countdown.
+6. **Party targets for `PRIMARY` rows without a primary** (`ALL_*` abilities): the first unit of the target list.
+7. **Death checks** run after turn start (DoT ticks) and after turn end; executions skip targets already at 0 HP.
+   When the last enemy and the last party unit fall together, `Victory` is checked first.
+8. **`HeadlessGate`** is the `PresentationGate` base behaviour under an explicit name; `ClientGate` is driven by
+   presentation (`release_execution`, `release_finished`, `skip`).
+9. **Tests run as a scene** (`res://tests/run_tests.tscn`), not `--script`: GodotGAS needs its `GameplayCueManager`
+   autoload, which `--script` mode doesn't load. The runner counts a test file that fails to compile as a failure.
+10. **Fixture content is generated** by `tests/tools/build_fixtures.tscn` through `ResourceSaver`, so the `.tres`/`.tscn`
+    files are exactly what Godot writes; values are entered as a designer would type them. Brute HP is 3000 so the squad
+    golden runs 27 turns and uses every party ability (haste SPD change, guard self-buff, poison DoT, weaken debuff).
+11. **Scripted test player** (`tests/scripted_controller.gd`): each unit rotates through its own abilities; targets are
+    picked by turn number. It never touches the battle RNG.
+12. **Godot 4.7.2 GDScript workarounds** (pinned by tests): a class's own enum and `Class.Enum` are different types (pass
+    as `int`); collecting, sorting and reading arrays in one static function corrupted entries, so `ExecutionReader` splits
+    them; a static method Callable from a static function passed bad arguments to `sort_custom`, so a lambda is used.

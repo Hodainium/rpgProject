@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="UnitDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/haste.tscn" id="1_4k7ih"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/weaken.tscn" id="2_qmh2g"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="3_2iirj"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_attribute_set.gd" id="4_ypfpb"]
+[ext_resource type="Script" path="res://combat/unit_definition.gd" id="5_mulqy"]
+
+[resource]
+script = ExtResource("5_mulqy")
+id = &"fixture.unit.support"
+attribute_set = ExtResource("4_ypfpb")
+abilities = Array[PackedScene]([ExtResource("1_4k7ih"), ExtResource("2_qmh2g"), ExtResource("3_2iirj")])
+stats_x100 = Dictionary[String, int]({
+"ATK": 30000,
+"CritDmg": 5000,
+"CritRate": 500,
+"DEF": 28000,
+"HP": 85000,
+"MaxHP": 85000,
+"SPD": 12000
+})

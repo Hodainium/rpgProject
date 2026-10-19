@@ -7,7 +7,8 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
 ## 0. Ownership: the user's design work is protected
 | Folder | Owner | What lives there |
 |---|---|---|
-| `combat/` | System (Claude) | Turn manager, replay runner, state hash, RNG wrapper, headless entry point. No balance numbers. |
+| `combat/` | System (Claude) | Battle kernel (spec `combat-replay-core`): `Battle`, `TurnManager`, `CombatASC`, `BattleAbility`, `ExecutionRow`, gates, recorder, state hasher, replay runner, headless entry `combat/headless/replay_main.tscn`. No balance numbers. |
+| `tests/` (except `fixtures/`) | System (Claude) | In-house test runner `run_tests.tscn`, `TestCase`, system tests in `tests/combat/`, fixture builder `tests/tools/`. |
 | `content/` | **User** | Abilities, `GameplayEffect` `.tres`, ExecCalcs, characters, cue definitions, balance values. |
 | `presentation/` | **User** | Battle scenes, UI, VFX, animation, flare. Listens to `combat/` signals and never changes combat state. |
 | `godot_gas/` | **User** (via GodotGAS dashboard) | Tag registry, attribute drafts, generated files. |
@@ -51,11 +52,14 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
 - Never assign `AttributeData.base_value`/`current_value` directly during gameplay. Use an instant effect.
 
 ## 3. Determinism rules for combat
-- **Turn-based durations only:** use `DurationPolicy.TURN_BASED` (`duration_turns`, `tick_on_turn_start`) and drive it
-  with `asc.advance_turn()` from the turn manager. Never use `DURATION` or real-time `period` on combat effects;
-  those run on `_process(delta)`.
-- **Combat state must not wait on presentation:** do not put `task_wait_delay`, `task_play_animation` or other
-  awaits *before* effects are applied in combat abilities. Apply effects first, then play visuals or cues.
+- **Turn-based durations only:** use `DurationPolicy.TURN_BASED` (`duration_turns`, `period`, `tick_on_turn_start`).
+  The battle drives them through `CombatASC.turn_start()` (DoTs/HoTs tick) and `turn_end()` (buffs/debuffs count
+  down); never call GodotGAS's `advance_turn()`. Never use `DURATION` or real-time `period` on combat effects; those
+  run on `_process(delta)`.
+- **Abilities await only the presentation gate:** a `BattleAbility` resolves its execution sequence (read from its
+  animation's `execute` keys) and awaits nothing but `battle.gate` between executions. Never `task_wait_delay`,
+  `task_play_animation`, timers or signals in combat abilities: in replay that is a runner error (`ContentAwaitedFrame`).
+  Animation `execute` keys only release the gate; they never apply effects, change attributes or draw from the RNG.
 - **Avoid concurrent activation in combat:** `asc.try_activate_abilities_by_tag()` does not await the abilities
   it starts, so passives triggered by events can interleave. Activate combat abilities one at a time with `await`.
 - **Fixed-point ×100, whole numbers only:** designers type values with up to 2 decimals (`150` = 150%, `80.5`); authoring
@@ -69,3 +73,20 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
   the server-issued seed. Never use the global `randf()`/`randi()`/`randomize()`, and never create other RNG instances in combat.
   Percentage rolls use `rng.randi_range(0, 9999) < chance` (chance stored ×100, so 5.25% = `525`); avoid `randf()`, which goes through floats.
   Every roll is part of the replay, so the number and order of rolls must depend only on combat state, never on visuals or timing.
+- **Contract JSON goes through `WireJson.stringify`:** Godot parses every JSON number as a float; `WireJson` writes whole
+  numbers as integers so the C# records can read them.
+
+## 4. Running tests and replays
+- **System tests:** `godot --headless --path client-godot res://tests/run_tests.tscn` (add `-- --filter <text>` to
+  narrow). They run as a **scene**, not with `--script`: GodotGAS needs its `GameplayCueManager` autoload, which
+  `--script` mode doesn't load. A test file that fails to compile counts as a failure.
+- **Goldens:** regenerate only on purpose with `-- --update-goldens --filter test_golden`, then rerun the C# tests
+  (`BattleGoldenTests` cross-checks the same files).
+- **Fixtures:** `res://tests/tools/build_fixtures.tscn` rebuilds `tests/fixtures/`; rerun only when fixtures must change.
+- **Replay one battle:** `godot --headless --path client-godot res://combat/headless/replay_main.tscn -- --in req.json
+  --out result.json [--content-root res://content/]`; exit code 0 Verified, 2 Rejected (2002), 1 runner error.
+- After adding or renaming a `class_name` script, run `godot --headless --path client-godot --import` once so the
+  global class cache is current.
+- **Godot 4.7.2 GDScript quirks hit here:** inside a class, its own enum `Side` and `BattleUnit.Side` count as different
+  types (pass enums as `int`); building, sorting and reading arrays in one static function corrupted entries (see
+  `ExecutionReader`); a static method Callable from a static function passed bad arguments to `sort_custom` (use a lambda).

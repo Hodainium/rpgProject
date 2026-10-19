@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_xehhj"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_q5a61"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/guard.tres" id="3_mt8by"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/guard.tres" id="4_fw0mn"]
+
+[sub_resource type="Resource" id="Resource_76gf5"]
+script = ExtResource("2_q5a61")
+id = &"buff"
+effect = ExtResource("3_mt8by")
+
+[node name="Guard" type="Node" unique_id=712864437]
+script = ExtResource("1_xehhj")
+targeting = 5
+executions = Array[ExtResource("2_q5a61")]([SubResource("Resource_76gf5")])
+animation = ExtResource("4_fw0mn")
+ability_tag = &"Fixture.Ability.Guard"

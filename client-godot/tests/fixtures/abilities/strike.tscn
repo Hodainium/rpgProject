@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_mkulv"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_vt0hu"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_ux5nk"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/strike.tres" id="4_7tqpu"]
+
+[sub_resource type="Resource" id="Resource_jv7aq"]
+script = ExtResource("2_vt0hu")
+id = &"hit"
+effect = ExtResource("3_ux5nk")
+damage_mode = 2
+
+[node name="Strike" type="Node" unique_id=1404820095]
+script = ExtResource("1_mkulv")
+executions = Array[ExtResource("2_vt0hu")]([SubResource("Resource_jv7aq")])
+animation = ExtResource("4_7tqpu")
+ability_tag = &"Fixture.Ability.Strike"
