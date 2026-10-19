@@ -10,6 +10,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1. `combat-replay-core` | ✅ Done | 2026-10-19 |
 | 1b. `game-skeleton` | 🔨 Implemented, awaiting review | 2026-10-19 |
 | 1c. `dev-tools` | ⬜ Not started | |
+| 1c2. `item-pass` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `battle-checkout` | ⬜ Not started | |
 | 2b. `run-authority` | ⬜ Not started | |
@@ -51,6 +52,8 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   tags and the AttributeSet in `godot_gas/`) so the hand-made structure is visible early; 1d grows it. At the user's request.
 - 2026-10-19: Kept `dev-tools` (1c) before `playable-demo` (1d). Building the demo with the tools is expected to expose
   limits and wrong assumptions in them; fixing those is part of 1d's scope. At the user's request.
+- 2026-10-19: Added 1c2 `item-pass` after the dev tools: more items, tested with the console's `give` command
+  instead of a temporary in-demo button. At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -97,6 +100,11 @@ Minimal clickable flow on placeholder (graybox) screens, proven on test fixtures
 any state, catch broken content at once.
 Isaac-style console, 3D room editor with "Play this room", floor layout editor, seed runner / generation viewer,
 content validator (runs as a test), short seed codes, room sizes and shapes.
+
+### 1c2. `item-pass`
+**Purpose:** a wider item set, built and tested with the 1c tools (the console's `give <item>` makes every item
+testable at once instead of waiting for treasure and shop rolls). More stat, damage-type, triggered and usable items on
+the existing item mechanics; new mechanics only if an item needs one. Content work in the user's folders.
 
 ### 1d. `playable-demo`
 **Purpose:** a short run playable start to finish, to show people, and the first real test of the dev tools.
