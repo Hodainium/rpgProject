@@ -16,7 +16,16 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
 | `addons/GodotGAS/` | Vendored | Never edited by anyone; upgrade only by replacing the whole addon. |
 
 - `content/`, `presentation/` and `godot_gas/` have `ask` permission rules: every edit there prompts the user.
-  Create files there only when a spec needs them, and edit them with minimal `Edit`s. Never replace a whole file with `Write`, and never
+  Create files there only when a spec needs them or the user asks, and edit them with minimal `Edit`s.
+- **Design help on request:** when the user asks Claude to create abilities, effects, rooms, encounters or other content:
+  - New files: fine. List every path created, and every value Claude picked (so the user knows what to playtest).
+  - Existing files: **always ask first, in chat**, before changing anything, even when the request implies the change.
+    Show each value as `old → new` and name the content that uses that file (other abilities, units, encounters).
+    Change only what was agreed: no "while I'm here" tweaks, no reformatting, no reordering.
+  - Never delete, rename or move a design file without explicit confirmation.
+  - Start from a clean git tree so the result is one reviewable diff. Leave it uncommitted for the user to playtest;
+    commit as `design:` only when asked.
+  - Reason: small tuning changes cause hard-to-find bugs and need extensive playtesting. Never replace a whole file with `Write`, and never
   remove values, functions, nodes or cues you didn't add in this task. **Never change these folders through shell
   commands** (sed, mv, rm, redirection, or scripts), which would bypass the permission prompt.
 - If system code needs something from a design file (a new signal, field or tag), propose the exact change and say why.

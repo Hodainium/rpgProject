@@ -19,7 +19,9 @@ Number notation: values are written as designers type them, with up to 2 decimal
 | SPD | 100 | 1 | – |
 | CritRate (%) | 5 | 0 | 100 |
 | CritDmg (%) | 50 | 0 | – |
-| Energy | 0 | 0 | 100 |
+| MP | 100 | 0 | MaxMP |
+| MaxMP | 100 | 0 | – |
+| Energy (ult charge) | 0 | 0 | 100 |
 | Toughness | 300 | 0 | 300 |
 
 ## Gameplay tags

@@ -8,7 +8,10 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 |---|---|---|
 | 0. `project-skeleton` | ✅ Done | 2026-10-19 |
 | 1. `combat-replay-core` | ✅ Done | 2026-10-19 |
-| 1b. `game-skeleton` | ⏭️ Next (spec in a separate game-design chat) | |
+| 1b. `game-skeleton` | ⏭️ Next | |
+| 1c. `dev-tools` | ⬜ Not started | |
+| 1d. `items-and-loadouts` | ⬜ Not started | |
+| 1e. `playable-demo` | ⬜ Not started | |
 | 2. `battle-checkout` | ⬜ Not started | |
 | 3. `battle-verify` | ⬜ Not started | |
 | 4. `settlement-outbox` | ⬜ Not started | |
@@ -37,6 +40,8 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-10-19: Added slice 1b `game-skeleton` (the Godot game's bare bones) after slice 1 and before slice 2, at the
   user's request: having the game's structure in place first helps the rest of development. To be specced in a
   separate game-design chat.
+- 2026-10-19: Split 1b into 1b `game-skeleton`, 1c `dev-tools`, 1d `items-and-loadouts`, 1e `playable-demo`, at the
+  user's request, following the game design outline in `specs/design/game-design.md`.
 
 
 ## Design tuning: any time, not just in breaks
@@ -65,9 +70,31 @@ Golden determinism tests on `tests/fixtures/` content only.
 > and speed tuning; a battle scene in `presentation/` that plays back sim events.
 
 ### 1b. `game-skeleton`
-The Godot game's bare bones, built before the backend slices so the rest of development has a real game to plug into.
-Scope to be defined in its own spec, written in a separate game-design chat. That spec must say which parts are system
-code and which land in the user's folders (`presentation/`, `content/`), per the ownership rules in `client-godot/CLAUDE.md`.
+**Purpose:** a real run you can click through, where every room, floor and encounter comes from data in `content/`,
+so making the game becomes filling in data files. GAS-first (`specs/design/game-design.md` section 2a).
+Design in `specs/design/game-design.md`. Asset classes (rooms, chapters, scaling, floor-gen rules, run structure,
+hand-made floor layouts, characters, enemies, loadouts, encounters, sample events). Seeded Isaac-style floor generator
+with separate RNG streams and a run log. Run state. Minimal flow: menu → pick 1–4 characters → floor map → click a room →
+battle (existing kernel, isolated) or sample event → boss → next floor. Basic 3D room scene. Generator determinism tests.
+The spec says which parts are system code and which land in `content/`/`presentation/`.
+
+### 1c. `dev-tools`
+**Purpose:** fast content iteration: build a room and play it in seconds, jump to any state, catch broken content at once.
+Isaac-style console, 3D room editor with "Play this room", floor layout editor, seed runner / generation viewer,
+content validator (runs as a test).
+
+### 1d. `items-and-loadouts`
+**Purpose:** what makes each run different (the Isaac half). Also the slice that extends the battle wire contract.
+Items (passive/active, pools, triggered passives), equipment, shops and treasure rooms, HP/MP carry-over into battles,
+out-of-battle item and spell use, `BattleSnapshot` schema v2 (touches `combat/`, `Rpg.Contracts` and goldens).
+
+### 1e. `playable-demo`
+**Purpose:** a short run playable start to finish, to show people; slices 2–9 then plug into a real game.
+Glue and polish so a short multi-floor run can be played start to finish with the user's content.
+
+> 🧭 After 1b, a system-design pass: plan what the run adds that the wire contracts and backend don't support yet
+> (run seed and RNG streams, run log, carried-over HP/MP, items, scaling and variants in the battle snapshot), and fold
+> it into 1d and slices 2–9.
 
 ### 2. `battle-checkout`
 Contracts DTOs; Postgres schema (players, `battle_sessions` with seed, snapshot, `ruleset_version`); `POST /battle/start`;
