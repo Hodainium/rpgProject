@@ -52,7 +52,7 @@ A roguelike run in the shape of *The Binding of Isaac*, with *Honkai: Star Rail*
 | Stat bonus from equipment/items, floor scaling, elite buffs | **Infinite `GameplayEffect`** with modifiers (multiply/add) | Floor scaling = one effect applied to every enemy at battle start, chosen by `ScalingRules` per depth. No custom stat math anywhere. |
 | HP/MP carried between battles | Snapshot values → initial attribute values at battle start | Battles stay fresh ASCs (replay rule), seeded from run state. |
 | Skill MP cost, ultimate cost | **Cost effect** on the ability (`check_ability_cost`) | Ult gated by `Energy`, spells by `MP`. |
-| Item triggers ("on follow-up attack…", "when Ice damage is dealt…") | **Gameplay events** (`send_gameplay_event`) + passive abilities that listen for them | Event tags like `Event.Attack.FollowUp`, `Event.Damage.Dealt.Ice`. Deterministic dispatch order in `combat/` (slice 1d). |
+| Item triggers ("on follow-up attack…", "when Ice damage is dealt…") | **Gameplay events** (`send_gameplay_event`) + passive abilities that listen for them | Event tags like `Event.Attack.FollowUp`, `Event.Damage.Dealt.Ice`. Deterministic dispatch order in `combat/` (slice 1b). |
 | "Usable in battle / in the dungeon" | **Tags** on the ability + activation tag requirements (`State.InBattle`, `State.InDungeon`) | Same ability resource in both places. |
 | Out-of-battle spells and active items | A **dungeon ASC per character**, built from run state, same effects as in battle; results written back to run state | Uses the run's RNG stream, recorded in the run log. |
 | Room types, chapters, pools, rarity, enemy types, `Enemy.Boss` | **Gameplay tags** in the one GodotGAS tag registry; pools are `GameplayTagQuery` resources | One vocabulary for combat and world content. |
@@ -61,7 +61,7 @@ A roguelike run in the shape of *The Binding of Isaac*, with *Honkai: Star Rail*
 Not GAS: coins, gems, map state, unlocks. They are run/meta state, not unit stats.
 
 ## 3. Content assets
-`★` = in scope for the first slice (rooms, layout, battles, sample events); `1d` = needs battle snapshot v2. The rest is defined now so the shapes don't
+`★` = in scope for 1b `game-skeleton`; `later` = after the skeleton (hub, gacha, meta). The rest is defined now so the shapes don't
 change later, but built in later slices.
 
 ### Rooms and floors
@@ -71,7 +71,7 @@ change later, but built in later slices.
 | Room `content` | One of: a fixed `EncounterDefinition`; an encounter tag query (pick at generation); a fixed or queried `EventDefinition`; none (empty/treasure/shop rooms use their placements) | ★ |
 | `Placement` | grid cell (whole-number x, y), `kind` (enemy spawn, interactable, pickup, event trigger, item pedestal, shop slot), and kind-specific data (enemy + loadout override, item pool query, price…) | ★ |
 | `ChapterDefinition` | `id`, `name`, room query, encounter query, boss encounter query, item pool overrides, `ScalingRules` ref, skin/palette ref, music | ★ |
-| `ScalingRules` | enemy stat multipliers by floor depth, coin drop chances, elite chance | 1d |
+| `ScalingRules` | enemy stat multipliers by floor depth, coin drop chances, elite chance | ★ |
 | `FloorGenRules` | target room count (as a function of depth), required special rooms (1 boss, 1 treasure, 1 shop, 1 secret…), dead-end rules, max grid size | ★ |
 | `RunStructure` | ordered floor slots, each with candidate chapters (alt paths), plus floor-level rule flags such as "rooms pull from every chapter" (Delirium) | ★ |
 | `FloorLayout` | hand-made floor: a grid of room ids/positions. Loaded instead of generating, for testing | ★ |
@@ -84,19 +84,19 @@ where special rooms go (Isaac rule: boss = farthest dead end).
 | Asset | Key fields | |
 |---|---|---|
 | `UnitDefinition` (exists) | `id`, AttributeSet, base stats, abilities, brain | ✅ |
-| `CharacterDefinition` | wraps a `UnitDefinition`: `name`, portrait, default `Loadout`, signature (Birthright-like) item id, unlock condition | ★ |
-| `EnemyDefinition` | wraps a `UnitDefinition`: `tags` (`Enemy.Type.*`, `Enemy.Boss`), default `Loadout`, allowed variants. **Bosses are normal enemies tagged `Enemy.Boss`** | 1d |
-| `EnemyVariant` | elite/champion: stat multipliers, extra abilities/effects, skin/palette ref, reward bonus | later |
-| `Loadout` | abilities, passive effects, stat overrides, (characters) equipment | 1d |
+| `CharacterDefinition` | extends `UnitDefinition`: `name`, portrait, default `Loadout`, signature (Birthright-like) item id, unlock condition | ★ |
+| `EnemyDefinition` | extends `UnitDefinition`: `tags` (`Enemy.Type.*`, `Enemy.Boss`), default `Loadout`, allowed variants. **Bosses are normal enemies tagged `Enemy.Boss`** | ★ |
+| `EnemyVariant` | elite/champion: stat multipliers, extra abilities/effects, skin/palette ref, reward bonus | ★ |
+| `Loadout` | abilities, passive effects, stat overrides, (characters) equipment | ★ |
 | `EncounterDefinition` (exists, extended) | `tags` (chapters, difficulty, `Encounter.Boss`), `weight`, list of slots: enemy + optional loadout override (asset or inline) + optional variant | ★ |
 
 ### Events, items, equipment, economy
 | Asset | Key fields | |
 |---|---|---|
-| `EventDefinition` | `tags`, pages of text, choices with conditions (coins ≥ X, has item, character in party) and **outcomes** | ★ (sample events) |
-| `RunOutcome` | small reusable ops: gain/lose coins, heal/damage the party (%), give item (id or pool query), start encounter, go to page, remove item | ★ (a few) |
-| `ItemDefinition` | `id`, `name`, icon, mesh, `rarity`, `kind` (passive/active), `tags` (pools: `Pool.Treasure/Shop/Boss/Secret`), `price`, character restriction, **granted battle abilities and effects**, run hooks, active charge | later |
-| `EquipmentDefinition` | slot, stat modifiers, optional granted ability | later |
+| `EventDefinition` | `tags`, pages of text, choices with conditions (coins ≥ X, has item, character in party) and **outcomes** | ★ |
+| `RunOutcome` | small reusable ops: gain/lose coins, heal/damage the party (%), give item (id or pool query), start encounter, go to page, remove item | ★ |
+| `ItemDefinition` | `id`, `name`, icon, mesh, `rarity`, `kind` (passive/active), `tags` (pools: `Pool.Treasure/Shop/Boss/Secret`), `price`, character restriction, **granted battle abilities and effects**, run hooks, active charge | ★ |
+| `EquipmentDefinition` | slot, stat modifiers, optional granted ability | ★ |
 | `CompletionMark` | character × (boss or run win) → gems | later |
 
 **How items work in combat:** an item is a bundle of GodotGAS abilities and effects granted to the holder (or the whole
@@ -143,13 +143,13 @@ loadout overrides. Two consequences:
 | **Seed runner / gen viewer** | Enter a seed, see the generated floors as a map without playing; regenerate many seeds to tune `FloorGenRules`. |
 | **Content validator** | Finds dangling ids, duplicate ids, queries that match nothing (a chapter with no boss rooms), rooms whose doors can't be satisfied. Runs as a test, so broken content shows up immediately. |
 
-## 7. Suggested slice split
+## 7. Slice split (revised 2026-10-19)
 | Slice | Scope |
 |---|---|
-| **1b `game-skeleton`** | Asset classes for rooms, floors, chapters, scaling, encounters, characters/enemies, loadouts, events (sample outcomes only). Seeded floor generator (Isaac-style) plus `FloorLayout` loading. Run state. Minimal flow: menu → pick 1–4 characters → floor map → enter rooms → battle (existing kernel, isolated) or sample event → boss → next floor. Generator determinism tests. |
-| **1c `dev-tools`** | Console, room editor, floor layout editor, seed runner, content validator. |
-| **1d `items-and-loadouts`** | Items, equipment, shops/treasure rooms, run carry-over into battles, snapshot v2, triggered passives. |
-| **1e `playable-demo`** | Glue and polish so a short run can be played start to finish with your content. |
+| **1b `game-skeleton`** | Every mechanic in sections 3–5 except the hub, gacha and completion marks: world and run, units, loadouts, variants, scaling, items, equipment, shops, events, carry-over, out-of-battle actions, snapshot v2. Proven on test fixtures with placeholder screens. |
+| 🧭 system-design pass | Wire contracts for everything that changes player state (slice 2b `run-authority`). |
+| **1c `dev-tools`** | Console, room editor, floor layout editor, seed runner, content validator. Only for mechanics that exist. |
+| **1d `playable-demo`** | Demo content (coloured cubes) built with the tools, plus fixing whatever the tools turn out to get wrong. |
 
 ## 8. Decided (2026-10-19)
 - MP is magic points; every character has HP, MP and ult charge. HP and MP carry over between battles.

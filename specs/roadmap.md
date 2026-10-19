@@ -10,8 +10,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1. `combat-replay-core` | ✅ Done | 2026-10-19 |
 | 1b. `game-skeleton` | 📝 Spec written | 2026-10-19 |
 | 1c. `dev-tools` | ⬜ Not started | |
-| 1d. `items-and-loadouts` | ⬜ Not started | |
-| 1e. `playable-demo` | ⬜ Not started | |
+| 1d. `playable-demo` | ⬜ Not started | |
 | 2. `battle-checkout` | ⬜ Not started | |
 | 2b. `run-authority` | ⬜ Not started | |
 | 3. `battle-verify` | ⬜ Not started | |
@@ -45,6 +44,11 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   user's request, following the game design outline in `specs/design/game-design.md`.
 - 2026-10-19: Added slice 2b `run-authority` (authentication; server-owned run state; batched battles plus quick
   authenticated messages for out-of-battle actions) and a system-design pass after 1d, at the user's request.
+- 2026-10-19: Merged `items-and-loadouts` into 1b `game-skeleton` (all game mechanics before any tooling; no tools for
+  mechanics that don't exist yet). Order is now 1b skeleton → system-design pass → 1c dev tools → 1d playable demo.
+  The demo content moved from 1b to 1d. At the user's request.
+- 2026-10-19: Kept `dev-tools` (1c) before `playable-demo` (1d). Building the demo with the tools is expected to expose
+  limits and wrong assumptions in them; fixing those is part of 1d's scope. At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -73,34 +77,30 @@ Golden determinism tests on `tests/fixtures/` content only.
 > and speed tuning; a battle scene in `presentation/` that plays back sim events.
 
 ### 1b. `game-skeleton`
-**Purpose:** a real run you can click through, where every room, floor and encounter comes from data in `content/`,
-so making the game becomes filling in data files. GAS-first (`specs/design/game-design.md` section 2a).
-Design in `specs/design/game-design.md`. Asset classes (rooms, chapters, scaling, floor-gen rules, run structure,
-hand-made floor layouts, characters, enemies, loadouts, encounters, sample events). Seeded Isaac-style floor generator
-with separate RNG streams and a run log. Run state. Minimal flow: menu → pick 1–4 characters → floor map → click a room →
-battle (existing kernel, isolated) or sample event → boss → next floor. Basic 3D room scene. Generator determinism tests.
-The spec says which parts are system code and which land in `content/`/`presentation/`.
-
-### 1c. `dev-tools`
-**Purpose:** fast content iteration: build a room and play it in seconds, jump to any state, catch broken content at once.
-Isaac-style console, 3D room editor with "Play this room", floor layout editor, seed runner / generation viewer,
-content validator (runs as a test).
-
-### 1d. `items-and-loadouts`
-**Purpose:** what makes each run different (the Isaac half). Also the slice that extends the battle wire contract.
-Items (passive/active, pools, triggered passives), equipment, shops and treasure rooms, HP/MP carry-over into battles,
+**Purpose:** every game mechanic laid out as data before any tooling is built, so making the game becomes filling in
+data files. GAS-first (`specs/design/game-design.md` section 2a). Spec: `specs/game-skeleton.md`.
+World and run: rooms, chapters, floor-gen rules, run structure, hand-made floor layouts, Isaac-style seeded floor
+generator, RNG streams, run state and run log. Units: characters and enemies (subclasses of `UnitDefinition`),
+loadouts with encounter and placement overrides, elite variants, floor scaling. Items (passive/active, pools,
+character-specific, triggered passives), equipment, shops and treasure rooms, coin drops, events. HP/MP carry-over,
 out-of-battle item and spell use, `BattleSnapshot` schema v2 (touches `combat/`, `Rpg.Contracts` and goldens).
-
-### 1e. `playable-demo`
-**Purpose:** a short run playable start to finish, to show people; slices 2–9 then plug into a real game.
-Glue and polish so a short multi-floor run can be played start to finish with the user's content.
+Minimal clickable flow on placeholder (graybox) screens, proven on test fixtures.
 
 > 🧭 After 1b, a system-design pass: plan what the run adds that the wire contracts and backend don't support yet
-> (run seed and RNG streams, run log, carried-over HP/MP, items, scaling and variants in the battle snapshot), and fold
-> it into 1d and slices 2–9.
->
-> 🧭 After 1d, a second system-design pass: every run feature that changes player state (items granted, purchases,
-> item/skill use outside battle, coins) gets a wire contract, designed for slice 2b `run-authority`.
+> (run seed and RNG streams, run log, item grants, purchases, out-of-battle actions, snapshot v2 on the server side),
+> designed for slice 2b `run-authority` and folded into slices 2–9.
+
+### 1c. `dev-tools`
+**Purpose:** fast content iteration, built only for mechanics that exist: build a room and play it in seconds, jump to
+any state, catch broken content at once.
+Isaac-style console, 3D room editor with "Play this room", floor layout editor, seed runner / generation viewer,
+content validator (runs as a test), short seed codes, room sizes and shapes.
+
+### 1d. `playable-demo`
+**Purpose:** a short run playable start to finish, to show people, and the first real test of the dev tools.
+Demo content in `content/`, built with the 1c tools: coloured-cube units whose ability animations jump, spin or flash;
+demo AttributeSet and tags made the GodotGAS way; a short run through battles, an event, a treasure room, a shop and a
+boss. **Includes adjusting the dev tools** wherever building the demo exposes limits or wrong assumptions in them.
 
 ### 2. `battle-checkout`
 Contracts DTOs; Postgres schema (players, `battle_sessions` with seed, snapshot, `ruleset_version`); `POST /battle/start`;
@@ -117,7 +117,7 @@ from the client alone.
   out-of-battle actions are **quick messages**: small, synchronous, authenticated commands (use an item or skill, take
   an item, buy in a shop, event choice) with an `Idempotency-Key` and a per-run sequence number so retries and
   reordering are safe. The server checks each one against the run's seeded state.
-- Contracts come from the system-design pass after 1d. Placed after slice 2 because it needs the players table and
+- Contracts come from the system-design pass after 1b. Placed after slice 2 because it needs the players table and
   Postgres from `battle-checkout`.
 
 ### 3. `battle-verify`

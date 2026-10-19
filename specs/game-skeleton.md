@@ -1,322 +1,412 @@
 # Spec: game-skeleton (slice 1b)
 
-Status: 📝 Spec written, reviewed 2026-10-19 · Roadmap: slice 1b · Date: 2026-10-19
-Design intent: `specs/design/game-design.md` (asset model, GAS mapping in section 2a, seeds in section 5).
+Status: 📝 Spec written (rewritten after the merge), reviewed 2026-10-19 · Roadmap: slice 1b · Date: 2026-10-19
+Design intent: `specs/design/game-design.md` (asset model in section 3, GAS mapping in section 2a, seeds and server in section 5).
 
 ## 1. Purpose & enterprise mapping
-Build the bones of the run: the data asset types for the world, a seeded Isaac-style floor generator, run state with a
-run log, and a minimal clickable flow that strings together the battle kernel from slice 1:
+Lay out **every game mechanic as data** before any tooling exists, so making the game becomes filling in data files:
+
+- **World and run:** rooms, chapters, floor-generation rules, run structure, hand-made floor layouts; an Isaac-style
+  seeded floor generator; RNG streams; run state, run log and run hash.
+- **Units:** characters and enemies, loadouts (with encounter and placement overrides), elite variants, floor scaling.
+- **Items and economy:** items held by characters, passive or usable, with pools, rarity and character-specific items;
+  usable items are GAS abilities (in battle and on the map, with a cooldown or single use); triggered passives;
+  equipment; treasure rooms, shops and coin drops; events with conditions and outcomes.
+- **Carry-over, death and revive:** HP, MP and ult charge always persist between battles. Dead party members stay dead
+  until something revives them; the revive mechanic itself is built now (content that revives comes later).
+  Spells and usable items work outside battle too.
+- **Battle snapshot v2,** so a battle can carry all of the above and still replay deterministically.
+- A minimal clickable flow on **placeholder (graybox) screens**, proven on **test fixtures only**:
 
 ```
-main menu (pick 1–4 characters, optional seed) → floor map → click a room → battle or event → back to the map
-→ boss room → next floor → … → last boss → run won        (party wiped → run lost)        → main menu
+menu (pick 1–4 characters, optional seed) → floor map → click a room → battle / event / treasure / shop → back to the map
+→ boss → next floor → … → last boss → run won        (whole party dead → run lost)        → menu
 ```
 
-After this slice, adding a room, encounter, event, chapter or floor rule is creating a `.tres` file with the right tags.
-No code changes are needed for new content.
-
-**Scope line: nothing in this slice changes how a battle plays out.** Battles stay isolated, built from a v1
-`BattleSnapshot` exactly as in slice 1 (full HP every battle, no items, no scaling). Everything that would change battle
-numbers (loadouts and overrides, enemy definitions and variants, floor scaling, HP/MP carry-over) needs snapshot v2 and
-moves to the system-design pass and slice 1d. That keeps this slice from touching `combat/`, the state hash or the goldens.
+Built only for mechanics that exist: no hub, gacha, completion marks, in-room walking, dev tools or demo content
+(dev tools are slice 1c, demo content slice 1d). There is never any walking: you see a screen and battle, pick the next
+room on the map, or choose in an event.
 
 | Component | Used in this slice | How |
 |---|---|---|
-| `client-godot/game/` | ✅ new | World asset classes, content index, tag matching, seed derivation, floor generator, run state/log, run controller |
-| `client-godot/game/graybox/` | ✅ new | Throwaway system UI (menu, map, 3D room box, battle panel, event panel) so the flow is playable before `presentation/` exists |
-| `client-godot/combat/` | ✅ unchanged | Battles run through `Battle.setup()` / `run()` with a v1 snapshot; `ActionRecorder` logs the party's choices |
-| `client-godot/tests/` | ✅ | New `tests/game/` system tests; new world fixtures under `tests/fixtures/` |
-| `content/` | ✅ new files only | A tiny demo run (section 3.6), created at the user's request. Never edits existing files. |
-| `godot_gas/` | ✅ additions only | Demo attributes (draft + dashboard-generated AttributeSet) and demo tags added to the registry. Nothing removed. |
-| `presentation/` | ❌ | Untouched. Graybox views stand in until the user's scenes replace them. |
-| `Rpg.Contracts`, server, Postgres, Redis, RabbitMQ, Redpanda | ❌ | N/A: the run is local. Wire shapes for runs come from the system-design pass after this slice. |
+| `client-godot/game/` | ✅ new | World, unit-extension, item and event asset classes; generator; run state/log/hash; run controller; field (out-of-battle) actions |
+| `client-godot/game/graybox/` | ✅ new | Throwaway system screens: menu, map, 3D room box, battle panel, event panel, pickup/shop panel, party panel |
+| `client-godot/combat/` | ✅ changed | Snapshot v2 setup (loadouts, items, equipment, variants, scaling, carry-over), ability sets, deterministic trigger dispatch, field mode. Snapshot v1 still works unchanged. |
+| `client-godot/tests/` | ✅ | `tests/game/` system tests; world, unit and item fixtures; new goldens |
+| `Rpg.Contracts` | ✅ changed | `BattleSnapshot` v2 fields (all optional, so v1 JSON still binds) |
+| `content/`, `presentation/`, `godot_gas/` | ❌ | Untouched. Demo content is slice 1d. |
+| Server, Postgres, Redis, RabbitMQ, Redpanda | ❌ | N/A: the run is local. The system-design pass after this slice plans the wire side (slice 2b `run-authority`). |
 
-**Enterprise mapping:** the run is a *client-side workflow driven by a seeded, replayable event log*. The generator is a
-pure function `(seed, content) → floor`, like a deterministic batch job whose output can be recomputed for audit, and
-the run log is the event-sourced record of the user's decisions. This is what lets the server verify whole runs later.
+**Enterprise mapping:** the run is a *client-side workflow driven by a seeded, replayable event log*: the generator is
+a pure function `(seed, content) → floor`, the run log is the event-sourced record of the player's decisions, and the
+battle snapshot is the versioned input document to the calculation library. Snapshot v2 is a backward-compatible
+schema evolution (optional fields, v1 documents still valid), the same discipline a service applies to a public API.
 
 ## 2. Sequence flow
-No client → server traffic in this slice. Everything happens in one Godot process.
+No client → server traffic. Everything happens in one Godot process.
 
 ```
 GameMain (game/game_main.tscn, project main scene)
- ├─ GameContent.new(content_root)            scan rooms/, chapters/, floor_rules/, runs/, events/, characters/,
- │                                           layouts/ (+ units/ and encounters/ via ContentIndex), recursive, sorted by path
- ├─ menu view ── start(party ids, seed text) ─▶ RunController.start_run()
- │                                              RunState{seed, party, coins 0, floor 0}, RunLog []
+ ├─ ContentIndex(content_root)                 every content folder (3.1), recursive, sorted by path, indexed by id
+ ├─ menu ── start(party character ids, seed text) ─▶ RunController.start_run()
+ │           RunState{seed, party (full HP/MP from a field context, starting items), coins 0, floor 0}, RunLog []
  │
  ├─ RunController.enter_floor(n)
- │    chapter  ← RunStructure.floors[n].chapters, picked with stream "floor/<n>/chapter"
- │    FloorMap ← FloorLayout (hand-made, if the slot has one) or FloorGenerator.generate(chapter, rules, depth n, seeds)
- │    map view shows the start room as visited
+ │    chapter ← RunStructure.floors[n].chapters (stream floor/<n>/chapter)
+ │    FloorMap ← FloorLayout (hand-made) or FloorGenerator.generate(...)        rooms + resolved content per cell:
+ │                encounter → enemies resolved (default loadout → encounter override → placement override, elite rolls)
+ │                event, item pedestals, shop slots → resolved from their pools
+ │    items' on_floor_start outcomes run
  │
- ├─ map view ── enter_room(cell) ─▶ RunController (checks: cell is adjacent to a visited cell)
- │    log {enter_room, floor, cell}; mark visited
- │    room content:
- │      encounter → room view (3D box, enemies on their spawn cells) → battle view
- │                  snapshot v1 {battleId "<runId>/f<n>/c<cell>", seed = per-room combat seed, encounterId, party}
- │                  Battle.setup() + run(controller) with ActionRecorder; ClientGate driven by the battle view
- │                  log {battle, battleId, outcome, finalHash, actionLog}
- │                  Victory → room cleared;  Defeat or TurnLimit → run lost
- │      event     → event view: page text + choices whose conditions hold
- │                  choose(i) → log {choose, page, choice}; outcomes run in order (coins, go to page, start encounter, end)
- │      none      → room cleared on entry (start room; treasure/shop placeholders until slice 1d)
- │    boss room cleared → "next floor" → enter_floor(n + 1), or run won after the last floor slot
- └─ run end view → back to the menu
+ ├─ map ── enter_room(cell) ─▶ RunController           (cell must be adjacent to a visited cell)
+ │    log {enter_room}; mark visited
+ │    battle room  → room view (3D box, enemy cubes on spawn cells) → battle panel
+ │                   snapshot v2 {battleId, seed (room's combat stream), encounterId, party (every member, dead ones
+ │                   at 0 HP, with hp/mp/energy, loadout, equipment, held items + readiness), enemies, scalingId + depth}
+ │                   Battle.setup() + run(); triggered passives fire through the trigger queue (3.4)
+ │                   log {battle, battleId, outcome, finalHash, actionLog}; read back HP/MP/energy and alive/dead;
+ │                   items used in the battle (from the action log) are consumed or start their cooldown
+ │                   Victory → cleared: coin drop roll, items' on_room_cleared, pedestals unlock, item cooldowns tick
+ │                   Defeat/TurnLimit → run lost
+ │    event room   → event panel: choose(i) → log {choose}; outcomes run in order (coins, party effects, items, page, battle)
+ │    treasure/shop/boss reward → pickup panel: take / buy (placement, receiving character) → log {take|buy}; on_pickup
+ │    boss cleared → next floor (or run won after the last floor)
+ │
+ ├─ party panel, any time on the map: use(ability, actor, target): a character's spell or a held item's use ability
+ │    FieldContext (Battle in field mode, party only, tag State.InField) → effect → read back HP/MP/energy, revives
+ │    log {field, actor, ability, target, item?, resultHash}
+ └─ run end → menu
 ```
 
-The graybox views only **call** `RunController` methods and **listen** to its signals (`floor_entered`, `room_entered`,
-`battle_requested`, `event_page_shown`, `room_cleared`, `run_ended`). `RunController` holds no UI. `presentation/` can
-later replace any graybox view by assigning its own scene to `GameMain`'s exported view slots.
+Graybox screens only **call** `RunController` methods and **listen** to its signals (`floor_entered`, `room_entered`,
+`battle_requested`, `event_page_shown`, `pickups_shown`, `party_changed`, `room_cleared`, `run_ended`).
+`RunController` holds no UI. Your `presentation/` scenes can later replace any graybox screen through `GameMain`'s
+exported view slots, one at a time.
 
 ## 3. Data contracts
 
-### 3.1 Content asset classes (system code in `game/defs/`; designers fill them in `content/`)
-Every asset has `id: StringName` (unique per type), `display_name: String` and, where it is pooled, `tags: Array[StringName]`
-(GodotGAS tag picker, `@export_custom(PROPERTY_HINT_NONE, "gas::tag")`). Weights and chances are typed as decimals and
-stored ×100 (`Fixed.from_typed`). Counts and grid cells are plain integers. No asset contains a tag literal the code
-depends on: the tags that mean "start room", "boss room" etc. are themselves fields of `FloorGenRules`.
+### 3.1 Content asset classes
+Conventions for every asset: `id: StringName` (unique per type), `display_name`, and `tags: Array[StringName]` where it
+is pooled (GodotGAS tag picker). Weights and chances are typed as decimals and stored ×100 (`Fixed.from_typed`).
+Counts, prices and grid cells are plain integers. **No tag the code depends on is a hard-coded content tag**; the few
+system tags are listed in 3.6. "Asset or inline" means the field takes either a saved `.tres` (reusable) or a
+sub-resource created in place in the inspector (one-off). Godot supports both on the same field.
 
+**GAS building block (in `combat/`)**
 | Class | Fields |
 |---|---|
-| `RoomDefinition` | `id`, `display_name`, `tags` (room type + chapters), `doors` (flags N/E/S/W: sides that *may* have a door), `min_doors` (1 = can be a dead end), `weight`, `content_mode` (`NONE`, `ENCOUNTER`, `ENCOUNTER_QUERY`, `EVENT`, `EVENT_QUERY`), `encounter`, `event`, `content_query` (`GameplayTagQuery`; empty = use the chapter's query), `placements: Array[RoomPlacement]` |
-| `RoomPlacement` | `cell: Vector2i` (inside the 13×7 room grid), `kind` (`PLAYER_SPAWN`, `ENEMY_SPAWN`, `EVENT_PROP`), `slot: int` (party slot or encounter enemy index, 1-based). More kinds (pickups, pedestals, shop slots, interactables) arrive with 1c/1d. Missing spawns fall back to a default formation. |
-| `EncounterDefinition` (exists in `combat/`, extended) | add `display_name`, `tags`, `weight`. Combat fields unchanged, so battles and hashes don't change. |
-| `EventDefinition` | `id`, `display_name`, `tags`, `weight`, `pages: Array[EventPage]` (page 0 is the first) |
-| `EventPage` | `text` (multiline), `choices: Array[EventChoice]` |
-| `EventChoice` | `label`, `conditions: Array[RunCondition]` (all must hold, otherwise the choice is shown disabled), `outcomes: Array[RunOutcome]` (run in order) |
-| `RunCondition` (base) | `holds(run) -> bool`. Built in: `CoinsAtLeast(amount)`, `HasCharacter(character)`. Content may add subclasses, as with ExecCalcs. |
-| `RunOutcome` (base) | `apply(run) -> void`. Built in: `GainCoins(amount)`, `LoseCoins(amount)` (floors at 0), `GoToPage(index)`, `StartEncounter(encounter)`, `EndEvent`. Content may add subclasses. Heal/damage and items come with 1d. |
-| `CharacterDefinition` | `id`, `display_name`, `unit: UnitDefinition`, `portrait: Texture2D`, `selectable: bool` (unlocks/gacha later) |
-| `ChapterDefinition` | `id`, `display_name`, `tags` (the chapter's own tag, e.g. `Chapter.Basement`), `room_query`, `encounter_query`, `boss_encounter_query`, `event_query` (all `GameplayTagQuery`), `floor_gen_rules: FloorGenRules` |
-| `FloorGenRules` | `grid_size: Vector2i` (default 9×8), `base_rooms`, `rooms_per_depth`, `random_extra_rooms`, `max_rooms`, `branch_chance` (typed %, default 50), `max_attempts` (default 100), `start_room_tag`, `normal_room_tag`, `boss_room_tag`, `special_room_tags: Array[StringName]` (one dead end each, in order) |
-| `RunStructure` | `id`, `display_name`, `floors: Array[FloorSlot]` |
-| `FloorSlot` | `chapters: Array[ChapterDefinition]` (one picked per run: alt paths), `rooms_from_any_chapter: bool` (Delirium-style), `layout: FloorLayout` (optional: use this hand-made floor instead of generating) |
-| `FloorLayout` | `id`, `display_name`, `start: Vector2i`, `cells: Array[FloorLayoutCell]` |
-| `FloorLayoutCell` | `cell: Vector2i`, `room: RoomDefinition`, `encounter` / `event` (optional overrides of the room's content), `role` (`NORMAL`, `START`, `BOSS`, `SPECIAL`) |
+| `AbilitySet` | `abilities: Array[PackedScene]` (each a `BattleAbility`), `effects: Array[GameplayEffect]` (infinite effects applied at battle start; must be saved `.tres` files, as the state hash requires), `tags: Array[StringName]` (loose tags on the unit). Lyra's AbilitySet: granted together, gone together. |
 
-Content folders scanned under the content root: `rooms/`, `chapters/`, `floor_rules/`, `runs/`, `events/`,
-`characters/`, `layouts/`, plus `units/` and `encounters/` through the existing `ContentIndex`. Subfolders are allowed
-(e.g. `rooms/basement/`). The run uses the single `RunStructure` in `runs/`; more than one is a content problem until
-the hub can choose (later).
+**Units (subclasses of the existing `UnitDefinition`, so combat sees them as units)**
+| Class | Fields |
+|---|---|
+| `UnitDefinition` (exists, extended) | add `display_name`, `display_color: Color` (graybox cube), `tags` (granted as loose tags in battle, e.g. `Enemy.Boss`), `default_loadout: Loadout` |
+| `CharacterDefinition extends UnitDefinition` | `portrait: Texture2D`, `selectable: bool`, `signature_item: ItemDefinition` (Birthright-like; only in pools when this character is in the party) |
+| `EnemyDefinition extends UnitDefinition` | `variants: Array[EnemyVariant]` (which elite variants this enemy can roll) |
+| `Loadout` | `id`, `grants: AbilitySet`, `stats: Dictionary` (typed overrides of the unit's base stats, stored ×100), `equipment: Array[EquipmentDefinition]` (characters' starting gear) |
+| `EnemyVariant` | `id`, `display_name`, `grants: AbilitySet`, `display_color`, `coin_bonus` |
+| `EquipmentDefinition` | `id`, `display_name`, `icon`, `slot: StringName` (a tag such as `Equipment.Slot.Weapon`; one item per slot), `grants: AbilitySet` |
+| `EncounterDefinition` (exists, changed) | add `display_name`, `tags`, `weight`; `enemies` becomes `slots: Array[EncounterSlot]` |
+| `EncounterSlot` | `enemy: UnitDefinition`, `loadout: Loadout` (optional override, asset or inline), `variant: EnemyVariant` (optional: forces this variant) |
 
-**Tag pools (GAS-first):** pools are GodotGAS `GameplayTagQuery` resources, the same ones abilities use.
-`GameplayTagQuery.matches()` only accepts an ASC, so `TagMatch.matches(query, tags: Array[StringName])` evaluates the same
-five fields with the same rules against a plain tag list, including parent matching (`Chapter` matches
-`Chapter.Basement`). A test runs every case through both `TagMatch` and the addon's `matches()` on a throwaway ASC, so the
-two can never disagree. An empty query matches everything.
+**Loadout precedence** (resolved by the game when the floor is generated, then frozen in the snapshot):
+enemy's `default_loadout` → encounter slot's `loadout` → room placement's `loadout`. The last non-empty one wins and
+replaces the earlier one entirely. A unit's own `abilities` and `stats` are its base kit and always apply; the loadout
+adds to them (its stats override base stats).
+
+**World**
+| Class | Fields |
+|---|---|
+| `RoomDefinition` | `id`, `display_name`, `tags` (room type + chapters), `doors` (flags N/E/S/W that *may* have a door), `min_doors` (1 = can be a dead end), `weight`, `content_mode` (`NONE`, `ENCOUNTER`, `ENCOUNTER_QUERY`, `EVENT`, `EVENT_QUERY`), `encounter`, `event`, `content_query` (empty = the chapter's query), `placements: Array[RoomPlacement]` |
+| `RoomPlacement` | `cell: Vector2i` (13 × 7 room grid), `kind` (`PLAYER_SPAWN`, `ENEMY_SPAWN`, `EVENT_PROP`, `ITEM_PEDESTAL`, `SHOP_SLOT`), `slot` (party slot or encounter slot, 1-based), `loadout` (enemy spawns: optional override), `item` (fixed item) or `item_query` (pool), `price` (shop slots: optional override; −1 = the item's price) |
+| `ChapterDefinition` | `id`, `display_name`, `tags`, `room_query`, `encounter_query`, `boss_encounter_query`, `event_query`, `floor_gen_rules`, `scaling: ScalingRules` |
+| `ScalingRules` | `id`, `enemy_effects_by_depth: Array[GameplayEffect]` (index = depth; past the end the last one applies; empty = none), `elite_chance` (%), `coin_drop_chance` (%), `coin_drop_min`, `coin_drop_max` |
+| `FloorGenRules` | `grid_size` (default 9×8), `base_rooms`, `rooms_per_depth`, `random_extra_rooms`, `max_rooms`, `branch_chance` (%, default 50), `max_attempts` (default 100), `start_room_tag`, `normal_room_tag`, `boss_room_tag`, `special_room_tags` (one dead end each: e.g. treasure, shop) |
+| `RunStructure` | `id`, `display_name`, `floors: Array[FloorSlot]`, `fallback_item: ItemDefinition` (when a pool is empty) |
+| `FloorSlot` | `chapters` (one picked per run), `rooms_from_any_chapter` (Delirium-style), `layout: FloorLayout` (optional hand-made floor) |
+| `FloorLayout` / `FloorLayoutCell` | `id`, `start`, `cells`: `{cell, room, role (NORMAL, START, BOSS, SPECIAL), encounter / event overrides}` |
+
+**Items**
+| Class | Fields |
+|---|---|
+| `ItemDefinition` | `id`, `display_name`, `icon: Texture2D`, `mesh: Mesh`, `tags` (pools such as `Pool.Treasure`, rarity such as `Item.Rarity.Rare`), `weight`, `price`, `kind` (`PASSIVE`, `USABLE`), `character: CharacterDefinition` (optional restriction: only this character can hold it), `grants: AbilitySet` + `applies_to` (`HOLDER` or `PARTY`), `use_ability: PackedScene` (`USABLE` only: a `BattleAbility`, so its targeting decides one, several or blast), `use_mode` (`CONSUMABLE`: gone after one use; `COOLDOWN`: ready again after `cooldown_battles` won battles), `extra_active_slots` (e.g. 1 for a Schoolbag-like item), `on_pickup`, `on_floor_start`, `on_room_cleared: Array[RunOutcome]` |
+
+**Holding items:** every item is held by one character. Passive items are unlimited; usable items need a free active
+slot (one per character, plus any `extra_active_slots` from items they hold). Taking an item asks which character gets
+it (a restricted item goes to its character). A character's usable items are just more abilities on that character,
+in battle and on the map. **Unlocks:** `Unlocks.is_unlocked(item)` is a stub that always says yes, until gacha exists.
+
+**Events**
+| Class | Fields |
+|---|---|
+| `EventDefinition` / `EventPage` / `EventChoice` | `id`, `display_name`, `tags`, `weight`, `pages` (page 0 first); page `text`, `choices`; choice `label`, `conditions`, `outcomes` |
+| `RunCondition` (base, `holds(run)`) | `CoinsAtLeast(amount)`, `HasCharacter(character)`, `HasItem(item)`. Content can add subclasses, as with ExecCalcs. |
+| `RunOutcome` (base, `apply(run)`) | `GainCoins`, `LoseCoins` (never below 0), `ApplyPartyEffect(effect, include_dead)` (a GameplayEffect on party members through the field context: heals, damage, MP, ult charge, revives), `GiveItem(item or item_query, character)`, `RemoveItem(item)`, `GiveEquipment(equipment, character)`, `GoToPage(index)`, `StartEncounter(encounter)`, `EndEvent`. Content can add subclasses. |
+
+Content folders under the content root (subfolders allowed): `units/`, `characters/`, `enemies/`, `loadouts/`,
+`variants/`, `equipment/`, `items/`, `encounters/`, `events/`, `rooms/`, `chapters/`, `scaling/`, `floor_rules/`,
+`runs/`, `layouts/`. `ContentIndex` (exists) grows to index all of them, recursively. The run uses the single
+`RunStructure` in `runs/` (the hub picks one later).
+
+**Tag pools:** pools are GodotGAS `GameplayTagQuery` resources, the same as for abilities. The addon's `matches()` only
+accepts an ASC, so `TagMatch.matches(query, tags)` evaluates the same five fields with the same rules (including parent
+matching) against a plain tag list. A test runs every case through both, so they can't disagree.
 
 ### 3.2 Floor generation (Isaac-style, integers and seeded RNG only)
-Input: `ChapterDefinition`, its `FloorGenRules`, depth `n` (0-based), `rooms_from_any_chapter`, the per-floor seeds.
-Output: `FloorMap` = cells `{cell, room id, role, content id, doors}` plus the start cell. Cells are visited in
-**index order** (`y * width + x`) wherever order matters. Isaac generator, adapted:
+Cells are visited in **index order** (`y × width + x`) wherever order matters.
 
-1. `target = min(max_rooms, base_rooms + rooms_per_depth × n + layout_rng.randi_range(0, random_extra_rooms))`.
-2. Start at the centre cell `(width / 2, height / 2)`. Breadth-first queue. For each queued cell, look at the neighbours
-   in the order N, E, S, W. Skip a neighbour if it is outside the grid, already filled, the target is reached, it already
-   has more than one filled neighbour (no loops, no 2×2 blobs), or the `branch_chance` roll fails
-   (`layout_rng.randi_range(0, 9999) >= branch_chance`). Otherwise fill it and queue it.
-3. If the queue empties before reaching `target`, or there are fewer dead ends than `1 + special_room_tags.size()`, start
-   a new attempt on the same RNG. After `max_attempts` failures, generation fails with a content problem naming the rules.
-4. **Dead end:** a filled cell other than the start with exactly one filled neighbour.
-   **Boss:** the dead end with the greatest breadth-first distance from the start (ties: lowest index).
-   **Special rooms:** for each tag in `special_room_tags`, in order, one of the remaining dead ends picked with
-   `layout_rng` from the list sorted by index. Every other cell is normal; the start cell is the start room.
-5. **Room choice**, per cell in index order, with `rooms_rng`. The cell's door mask is the set of sides with a filled
-   neighbour. Candidates are rooms that
-   - have the role's type tag (`start_room_tag`, `normal_room_tag`, `boss_room_tag` or the special tag),
-   - match the chapter's `room_query` (with `rooms_from_any_chapter`: any chapter's `room_query` in the `RunStructure`),
-   - have `doors` covering the mask, and
-   - have `min_doors` no greater than the number of doors in the mask.
-   Candidates are sorted by id and picked by weight (`randi_range(0, total − 1)`). No candidates → content problem naming
-   the cell, role, door mask and chapter.
-6. **Content**, per cell in index order, with `content_rng`: a fixed encounter or event is used as is. A query picks from
-   encounters/events matching `content_query` (or the chapter's `encounter_query`/`event_query`, or
-   `boss_encounter_query` for the boss room), sorted by id, by weight. Resolved at generation, so a seed fully determines
-   a floor before you set foot in it (Isaac behaviour).
+1. `target = min(max_rooms, base_rooms + rooms_per_depth × depth + layout_rng.randi_range(0, random_extra_rooms))`.
+2. Start at the centre cell. Breadth-first queue; neighbours in the order N, E, S, W. Skip a neighbour if it is outside
+   the grid, filled, the target is reached, it already has more than one filled neighbour (no loops), or the branch
+   roll fails (`randi_range(0, 9999) >= branch_chance`). Otherwise fill and queue it.
+3. Retry on the same RNG if the queue empties before `target` or there are fewer dead ends than `1 + special_room_tags.size()`.
+   After `max_attempts`, fail with a content problem naming the rules.
+4. Dead end: a filled cell other than the start with one filled neighbour. Boss: the farthest dead end (BFS distance;
+   ties: lowest index). Special rooms: per tag in order, one remaining dead end picked with `layout_rng`.
+5. **Room choice** per cell with `rooms_rng`: candidates have the role's type tag, match the chapter's `room_query`
+   (any chapter's with `rooms_from_any_chapter`), have `doors` covering the cell's door mask and `min_doors` ≤ its door
+   count. Sorted by id, picked by weight. No candidates → content problem naming the cell, role, mask and chapter.
+6. **Content** per cell with `content_rng`: fixed content as is; queries pick by weight from sorted matches (boss room:
+   `boss_encounter_query`). For each enemy slot of a non-boss encounter: elite roll (`elite_chance`), then a variant
+   picked from the enemy's `variants` (a slot's fixed `variant` always applies). Loadouts resolved by precedence (3.1).
+7. **Pickups** per cell with the room's loot stream: each `ITEM_PEDESTAL` / `SHOP_SLOT` resolves its item: fixed, or
+   picked by weight from items matching `item_query` and unlocked, excluding items held or already placed this run,
+   and character-restricted items whose character isn't in the party. Empty pool → `fallback_item`.
 
-A hand-made `FloorLayout` skips steps 1–5 and takes its cells as given (it still gets content picks for rooms that use a
-query). Layouts are checked when loaded: cells inside the grid, connected, exactly one start and one boss.
+A hand-made `FloorLayout` skips steps 1–5 (checked on load: connected, in the grid, one start, one boss).
 
 ### 3.3 Seeds and RNG streams
-Seeds are decimal strings of non-negative int64, as in `BattleSnapshot`. `RunSeeds.derive(parent: int, label: String) -> int`:
+Seeds are decimal strings of non-negative int64. `RunSeeds.derive(parent, label)`:
+`rng.seed = parent ^ label.hash(); return ((rng.randi() & 0x7FFFFFFF) << 32) | rng.randi()`. Godot's own code, the same
+on every platform; pinned by a golden vector.
+
+| Stream (label under the run seed) | Used for |
+|---|---|
+| `floor/<n>/chapter`, `/layout`, `/rooms`, `/content` | steps above |
+| `floor/<n>/loot/<cell>` | pickups in that room (step 7) |
+| `floor/<n>/combat/<cell>` | that room's battle seed |
+| `floor/<n>/drop/<cell>` | the coin drop when that room is cleared |
+| `floor/<n>/field/<k>` | the k-th out-of-battle action on floor n |
+| `floor/<n>/event/<cell>` | reserved for random event outcomes |
+
+The order you explore in never changes another room or a later floor. The only non-seeded draw: the menu picks a new
+run seed with Godot's global RNG when the field is empty, and shows it.
+
+### 3.4 Battle changes (`combat/`)
+**Snapshot v2 setup**, per unit, in unit-id order, each step in a fixed order:
+1. Base stats, then the loadout's stat overrides (`initialize_attribute_overrides`, Max* first, as today).
+2. Grant abilities: unit's own, loadout's, equipment's (by slot tag), items' (party-wide items from every holder, then
+   the unit's own held items, in pickup order; a usable item's `use_ability` only if the item is ready), variant's.
+   An ability tag the unit already has is skipped (reported once as a content warning); effects stack.
+3. Apply infinite effects in the same order, then the floor-scaling effect for `depth` (enemies only).
+4. Add loose tags: unit's tags, then each ability set's tags.
+5. Carry-over: set `HP`, `MP` and `Energy` from the snapshot; clamps in the AttributeSet apply. A member at 0 HP starts dead.
+A v1 snapshot runs exactly the old path, so every slice 1 golden still matches.
+
+**Usable items in battle:** a held item's `use_ability` is an ordinary party action, so it goes in the action log like
+any skill and replays the same way. After it runs once, the battle blocks it for the rest of the battle (a GAS tag
+the system adds, which the ability can't activate under). After the battle the game reads the action log to consume
+the item or start its cooldown.
+
+**Death and revive (v2 snapshots):** a dead unit keeps its node and ASC, gets the loose tag `State.Dead`, leaves the
+turn queue, and loses its temporary effects (buffs, debuffs, DoTs); infinite ability-set effects (items, equipment)
+stay. New targeting modes `SINGLE_DEAD_ALLY` and `ALL_DEAD_ALLIES` reach only dead allies (other modes skip them). When
+an effect lifts a dead unit's `HP` above 0, the battle revives it: `State.Dead` removed, back in the turn queue with a
+fresh action value. Revives use only GAS effects, so a revive item, spell or (later) interactable is content.
+v1 snapshots keep slice 1's death handling unchanged.
+
+**Triggered passives (GAS-first, deterministic).** Designers use GodotGAS's own `trigger_event_tag` on a
+`BattleAbility`. GodotGAS activates triggered abilities immediately without awaiting them, which breaks determinism
+(`client-godot/CLAUDE.md` section 3), so `CombatASC` overrides `send_gameplay_event`: it still emits the signal, but
+enqueues the matching abilities (grant order) on the battle's **trigger queue** instead of activating them. The battle
+drains the queue in FIFO order, awaiting each activation, after every execution and after turn start/end. Triggers
+caused by triggered abilities join the back of the queue; a chain deeper than 10 stops (deterministically) with a
+content warning. Triggered activations aren't in the action log; they're re-simulated.
+Events the battle sends (code-known tags, 3.6): `Event.Battle.Start` (all units, before turn 1), `Event.Turn.Start` /
+`Event.Turn.End` (actor), `Event.Damage.Dealt` (source) and `Event.Damage.Taken` (target) after each damaging hit,
+`Event.Unit.Died` (every living unit). `ExecutionRow` gains `tags`; for a row tagged `Damage.Type.Ice` the battle also
+sends `Event.Damage.Dealt.Ice` / `Event.Damage.Taken.Ice`, so "extra Fire damage when you deal Ice damage" is pure data.
+GodotGAS's own effect `event_tags` still fire, through the same queue. Payload: `{source, target, amount, row, tags}`.
+A triggered single-target ability aims at the event's other unit if it's a valid target, else the first valid one by slot.
+
+**Field mode** (out-of-battle actions): `Battle.setup_field(party snapshot)` builds the party exactly as steps 1–5 with
+no enemies and no turn loop, adds the loose tag `State.InField` to every unit, and `perform(actor, ability, target)`
+activates one ability. Abilities choose where they work with GodotGAS's `activation_query`: require `State.InField`
+for dungeon-only, ignore it for battle-only. Only ally targeting (`SELF`, `SINGLE_ALLY`, `ALL_ALLIES`,
+`SINGLE_DEAD_ALLY`, `ALL_DEAD_ALLIES`) is usable in the field. Usable items work exactly as in battle (the holder is
+the actor). Afterwards the game reads HP/MP/energy and revives back into run state.
+
+### 3.5 Wire shapes (`Rpg.Contracts.Battle`, JSON camelCase)
+All new fields are optional, so v1 JSON binds unchanged and every existing golden still passes.
+```csharp
+public sealed record BattleSnapshot(
+    int SchemaVersion,                                   // 1 or 2
+    string BattleId,
+    string Seed,
+    string EncounterId,
+    IReadOnlyList<PartyMemberSnapshot> Party,
+    IReadOnlyList<EnemySnapshot>? Enemies = null,        // v2: resolved slots; null = the encounter's own slots
+    string? ScalingId = null,                            // v2
+    int? Depth = null);                                  // v2: 0-based floor depth for scaling
+
+public sealed record PartyMemberSnapshot(
+    int Slot, string UnitDefId, int Level,
+    int? Hp = null, int? Mp = null, int? Energy = null,  // v2: carried values, ×100 like the attributes; null = full/default
+    string? LoadoutRef = null,                           // v2: loadout id, or "<ownerId>#<n>" for an inline loadout
+    IReadOnlyList<string>? EquipmentIds = null,          // v2
+    IReadOnlyList<HeldItemSnapshot>? Items = null);      // v2: items this member holds, in pickup order
+
+public sealed record HeldItemSnapshot(string ItemId, bool Ready);   // Ready: a usable item off cooldown
+
+public sealed record EnemySnapshot(int Slot, string UnitDefId, string? LoadoutRef, string? VariantId);
 ```
-rng := RandomNumberGenerator.new(); rng.seed = parent ^ label.hash()
-return ((rng.randi() & 0x7FFFFFFF) << 32) | rng.randi()     # non-negative int63
-```
-`String.hash()` and `RandomNumberGenerator` are Godot's own code, so this is the same on Windows and Linux. A golden
-vector pins it.
+The server still stores ids only; Godot derives every number from content. Inline loadouts are referenced as
+`<encounterId>#<slot>` or `<roomId>#<placement index>`, which `ContentIndex` resolves. Dead members are in the
+snapshot with `Hp` 0, so they can be revived mid-battle. The run log and run state stay local in this slice; their C# records come from the
+system-design pass (slice 2b).
 
-| Stream | Seed | Used for |
-|---|---|---|
-| `floor/<n>/chapter` | `derive(run, …)` | picking the chapter for floor slot `n` |
-| `floor/<n>/layout` | `derive(run, …)` | steps 1–4 |
-| `floor/<n>/rooms` | `derive(run, …)` | step 5 |
-| `floor/<n>/content` | `derive(run, …)` | step 6 |
-| `floor/<n>/combat/<cell index>` | `derive(run, …)` | the battle seed for that room (does not depend on the order rooms are visited) |
-| `floor/<n>/event/<cell index>` | `derive(run, …)` | reserved for random event outcomes (none built in yet) |
+### 3.6 Run state, run log, run hash, system tags
+- `RunState`: `run_id`, `seed`, `run_structure_id`, `party` (slot → `{character id, level, hp, mp, energy, alive,
+  loadout ref, equipment by slot, held items with cooldowns}`), `coins`, `seen_items`, `pickup_order`,
+  `floor_index`, `chapter_id`, `map` (cells with resolved content, `visited`, `cleared`, pickups taken),
+  `field_actions_on_floor`, `status`.
+- `RunLog` entries in order: `enter_room`, `battle` (with the slice 1 `ActionLog`), `choose`, `take`, `buy`, `field`,
+  `next_floor`.
+- `RunHasher`: sorted `key=value` lines → SHA-256, like state hash v1. For determinism tests only; not a wire format yet.
+- **System tags the code uses** (you add them to your registry when you want them in the picker; the code doesn't need
+  the registry): `State.InField`, `State.Dead`, `Event.Battle.Start`, `Event.Turn.Start`, `Event.Turn.End`, `Event.Damage.Dealt`,
+  `Event.Damage.Taken`, `Event.Unit.Died`, and the prefix `Damage.Type.`.
 
-Because each stream is separate, the order in which you explore never changes a later floor or another room's battle.
-**The one non-seeded draw:** the menu picks a new run seed with Godot's global RNG when the seed field is empty. It is
-shown on screen so the run can be replayed. (Later the server will issue run seeds.)
+### 3.7 Graybox screens (system code, throwaway)
+Menu (character toggles, seed field, content-root switch), map (Isaac visibility: visited and adjacent cells, role
+icons), 3D room (13 × 7 box, door gaps, units as cubes in `display_color` on their spawn cells, pedestals and shop slots
+as small cubes with the item's mesh or icon), battle panel (HP/MP/energy, abilities and usable items disabled when
+their cost or tags fail, targets including dead allies for revives, Skip toggle; ability animations play on the cube
+when they animate `Body`, otherwise a default hop), event panel, pickup/shop panel (with a "give to" character picker),
+party panel (HP/MP, dead marker, items with cooldowns, active slots, equipment, field abilities).
 
-### 3.4 Run state, run log and run hash (local only in this slice)
-- `RunState`: `run_id`, `seed`, `run_structure_id`, `party` (slot → character id, 1–4), `coins`, `floor_index`,
-  `chapter_id`, `map` (the `FloorMap` plus `visited`/`cleared` per cell), `current_cell`, `status` (`ACTIVE`, `WON`, `LOST`).
-- `RunLog` entries, appended in order: `{enter_room, floor, cell}`, `{battle, floor, cell, battleId, outcome, finalHash,
-  actionLog}` (the slice 1 `ActionLog` shape), `{choose, floor, cell, page, choice}`, `{next_floor, floor}`.
-- `RunHasher.hash(state)`: sorted `key=value` lines → SHA-256, same style as state hash v1. Integers only, ids as
-  strings, cells by index. Used by the determinism tests; not a wire format yet.
-
-Snapshot v1 for each battle: `{schemaVersion: 1, battleId, seed (the room's combat stream), encounterId, party: [{slot,
-unitDefId: character.unit.id, level: 1}]}`. This is exactly what `/battle/start` will freeze in slice 2.
-
-### 3.5 Demo content (new files in the user's folders, at the user's request)
-A deliberately tiny run whose only job is to prove the data-driven GAS pipeline end to end: **one floor, start to boss,
-several battles in a row and one event.** Everything goes through GodotGAS assets, so once this works the user can tune
-and add content by hand. Values are placeholders, chosen to be easy to read rather than balanced; every file and value
-is listed in the implementation summary for playtesting.
-
-- **AttributeSet** `DemoAttributeSet` with HP, MaxHP, MP, MaxMP, ATK, DEF, SPD, CritRate, CritDmg, Energy, Toughness
-  (defaults and clamps from `specs/design/combat-design.md`). Made the GodotGAS way: a set in the dashboard draft
-  (`godot_gas/attributes_draft.cfg`), compiled by the dashboard's generator into `godot_gas/attributes/`. If the
-  generator can't be driven headless, the user clicks Generate once. Clamps live in the generated set's
-  `pre_attribute_change` hook if the generator supports it, otherwise in a thin subclass in `content/`.
-- **Tags** added to `godot_gas/tag_registry.tres` (append only; `gameplay_tags.gd` regenerated through the dashboard):
-  `Room.Type.Start`, `Room.Type.Normal`, `Room.Type.Boss`, `Room.Type.Treasure`, `Room.Type.Shop`, `Room.Type.Secret`,
-  `Chapter.Demo`, `Encounter.Boss`, `Event.Demo`, `Ability.Basic.Strike`, `Ability.Skill.Blast`, `Ability.Enemy.Bite`,
-  `Ability.Enemy.Crush`. (The GodotGAS `Example.*` tags stay; deleting them needs an explicit yes first.)
-- **GAS content:** an `ExecCalc_StandardDamage` (the formula in `combat-design.md`, ×100 integer math via `Fixed`),
-  a damage effect, an MP cost effect (instant, `MP −` the cost) used as the skill's GAS cost.
-- **Abilities** (each a `BattleAbility` scene + animation with `execute` keys): character *Strike* (single target),
-  character *Blast* (blast targeting, costs MP), enemy *Bite* (single), boss *Crush* (all party).
-- **Units:** 2 characters (`demo.unit.knight`, `demo.unit.mage`) wrapped by `CharacterDefinition`s; 2 enemies
-  (`demo.unit.slime`, `demo.unit.bat`) and 1 boss (`demo.unit.golem`), all with the default `EnemyBrain`.
-- **Encounters:** 3 normal (tagged `Chapter.Demo`), 1 boss (tagged `Chapter.Demo`, `Encounter.Boss`).
-- **Events:** 2, tagged `Event.Demo` (e.g. "a coin on the floor": take it / leave it; "a sleeping bat": sneak past /
-  fight it with `StartEncounter`).
-- **World:** chapter `demo.chapter`, `FloorGenRules` for 6–7 rooms with no special rooms, start room, boss room and three
-  normal rooms (all-doors, two-door and dead-end variants so every door mask has a candidate), one event room, and a
-  one-floor `RunStructure`.
-
-- **Look: coloured cubes.** Every unit is a cube in its own colour (`display_color`, a new metadata field on
-  `UnitDefinition`; not read by combat and not in the state hash). Each ability's animation moves the acting cube so you
-  can see which move ran: *Strike* jumps, *Blast* spins, *Bite* flashes, *Crush* jumps and spins. The same animation
-  carries the `execute` keys, so this also proves the animation → execution pipeline from slice 1 with real timing.
-
-Folders: `content/{attributes,abilities,animations,effects,exec_calcs,units,characters,encounters,events,rooms,chapters,floor_rules,runs}/`.
-`content/` stays the user's: after this slice the demo files are theirs to tune, rename or delete.
-
-### 3.6 Graybox views (system code, throwaway)
-- **Menu:** selectable characters as toggles (max 4, slot = click order), seed field, content-root switch
-  (`res://content/` or `res://tests/fixtures/`, remembered in `user://`), Start.
-- **Map:** the floor grid. Visited cells, plus cells adjacent to a visited cell, are drawn (unvisited ones show their
-  role icon: boss, special); adjacent ones are clickable. Revisiting a cleared room is allowed and does nothing.
-- **Room (3D):** a 13 × 7-unit box (1 unit per cell), with door gaps on the sides in the cell's door mask. Units are
-  cubes on their spawn cells in their `display_color` (grey if unset); an event prop is a yellow cube. The battle starts
-  as soon as the room appears, in the same 3D room.
-- **Unit view:** `UnitView` (Node3D) with a `Body` (`MeshInstance3D`, cube) and an `AnimationPlayer`. Ability animations
-  animate `Body:position`, `Body:rotation`, `Body:scale` or `Body:transparency` (flash). Their `execute` keys call
-  `ClientGate.release_execution()`, and the animation's end calls `release_finished()`.
-- **Battle panel** (overlay): unit list with HP and MP, the acting party unit's abilities (disabled when the cost can't be
-  paid), target buttons, and a Skip toggle (`ClientGate.skip()`) to run animations instantly. Enemy turns run automatically.
-- **Event panel:** page text, choice buttons (disabled when conditions fail).
-- **Run end:** won/lost, seed, floors reached → menu.
+### RabbitMQ / Redpanda / Redis
+N/A: no backend in this slice.
 
 ## 4. Failure modes
-None of the root `CLAUDE.md` acceptance scenarios is in scope: there is no server, queue or store yet. This slice lays
-the groundwork for scenarios 5 and 6 at run level (seeded, logged, hashed). Local failure modes:
+None of the root `CLAUDE.md` acceptance scenarios is in scope (no server). This slice prepares scenarios 5 and 6: a
+v2 battle replays deterministically with all run modifiers, and its content is identified by ids. Local failure modes:
 
 | Case | Behaviour | Test |
 |---|---|---|
-| Duplicate id, or a file of the wrong class in a content folder | `GameContent.problems` lists it; the menu shows the problems and won't start | `test_game_content_problems` |
-| A required tag query matches nothing (no boss rooms for a chapter, no encounters) | Generation fails with a message naming the chapter, role and query | `test_generation_no_candidates` |
-| Rules can't be met (too few dead ends within `max_attempts`) | Generation fails naming the `FloorGenRules` | `test_generation_attempts_exhausted` |
-| Invalid hand-made layout (disconnected, no boss, cell outside the grid) | Load fails naming the layout and cell | `test_layout_validation` |
-| Seed text not a non-negative int64 | Menu rejects it | `test_seed_parse` |
-| Click on a cell that isn't adjacent to a visited cell | `enter_room` refuses and logs nothing | `test_run_navigation` |
-| Battle runner error (content error inside combat) | Run stops with the runner error shown; not counted as a loss | `test_run_battle_runner_error` |
-| Defeat or turn limit | Run status `LOST` | `test_run_lost` |
+| Duplicate id or wrong class in a content folder | `ContentIndex.problems`; the menu shows them and won't start | `test_content_problems` |
+| A required pool matches nothing | Generation fails naming chapter, role and query (item pools fall back to `fallback_item`) | `test_generation_no_candidates` |
+| Rules can't be met in `max_attempts` | Generation fails naming the rules | `test_generation_attempts_exhausted` |
+| Invalid hand-made layout | Load fails naming the layout and cell | `test_layout_validation` |
+| Unknown loadout, item, variant, equipment or scaling id in a v2 snapshot | Runner error (exit 1), as for an unknown unit today; not 2002 | `test_snapshot_v2_unknown_ids` |
+| Tampered v2 battle (action log edited) | `Rejected` 2002 with the usual `MismatchReason`, exactly as v1 | `test_snapshot_v2_tamper` |
+| Trigger chain deeper than 10 | Stops at the same point every time; content warning | `test_trigger_chain_cap` |
+| Item grants an ability the unit already has | Skipped, warning, battle continues | `test_duplicate_ability_grant` |
+| Field action that isn't allowed (battle-only ability, enemy targeting, cost unaffordable, item on cooldown, dead actor) | Refused, nothing logged | `test_field_refusals` |
+| Buying without enough coins, taking a taken pickup, a usable item with no free active slot, clicking a non-adjacent cell | Refused, nothing logged | `test_run_refusals` |
+| Battle runner error | Run stops with the error shown; not a loss | `test_run_battle_runner_error` |
+| Whole party dead (battle, or a field/event effect) | Run `LOST` | `test_run_lost` |
 
 ## 5. Observability
-N/A: no server or metrics in this slice. The run end view shows the seed and the run hash, and the game prints the seed
-and each floor's generation attempt count to the Godot log for debugging.
+N/A: no server or metrics. The run-end screen shows the seed and run hash; the Godot log gets the seed, generation
+attempt counts and content warnings.
 
 ## 6. Test plan
-All tests run in the existing in-house runner (`res://tests/run_tests.tscn`) against **fixtures only**. Content in
-`content/` can never fail them.
+All tests run in `res://tests/run_tests.tscn` on **fixtures only**; `content/` can never fail them.
 
-### Fixtures (new, generated by `tests/tools/build_fixtures.tscn`, frozen)
-`tests/fixtures/{rooms,chapters,floor_rules,runs,events,characters,layouts}/`: two chapters (`fixture.chapter.a`, `.b`)
-tagged `Fixture.Chapter.A/B`; rooms for each role, with door masks covering every case, including one-door dead ends
-and a multi-chapter room tagged with both chapters; three fixture characters wrapping the existing fixture units;
-encounters tagged for pools (the existing encounters get tags and weights); two events (one with a condition and a
-`StartEncounter` outcome); a 2-floor `RunStructure`; one hand-made `FloorLayout`. Fixture tags live under `Fixture.*`
-and are not added to the user's tag registry (`TagMatch` doesn't need the registry).
+### Fixtures (generated by `tests/tools/build_fixtures.tscn`, frozen)
+Existing fixture encounters move to `slots` (same units, so slice 1 goldens don't change). New: two chapters, rooms for
+every role and door mask (dead ends, a multi-chapter room, a treasure room, a shop, a boss room with a reward
+pedestal), three `CharacterDefinition`s and two `EnemyDefinition`s built from the existing fixture units, a loadout
+(asset) plus inline overrides on an encounter and a placement, an elite variant, scaling rules for two depths, items
+(a passive stat item for the holder, a party-wide passive, a character-restricted item, a triggered passive on
+`Event.Damage.Dealt.Ice`, a consumable revive item, a cooldown heal item with blast targeting, a Schoolbag-like
+`extra_active_slots` item, an item with `on_room_cleared`), one equipment piece, two events, a 2-floor `RunStructure`, a hand-made layout.
+A fixture field ability (heal, `SINGLE_ALLY`, costs MP, requires `State.InField`). Fixture tags live under `Fixture.*`.
 
-### Unit tests (`tests/game/`)
+### Unit tests (`tests/game/` and `tests/combat/`)
 | Test | Proves |
 |---|---|
-| `test_tag_match` | `TagMatch` agrees with `GameplayTagQuery.matches()` on an ASC for every field, parent matching and the empty query |
-| `test_seed_derive` | golden vector: fixed `(parent, label)` → fixed output; outputs non-negative; different labels differ |
-| `test_generation_deterministic` | same seed → identical `FloorMap` twice, and in a fresh process (golden map hash) |
-| `test_generation_rules` | over 200 seeds: room count in range, connected, start at the centre, boss is the farthest dead end, every special tag placed once on a dead end, no cell with ≥ 2×2 filled neighbours, every room's `doors` covers its mask and `min_doors` holds |
-| `test_generation_pools` | rooms only come from the chapter's query; `rooms_from_any_chapter` draws from both chapters; a multi-chapter room appears under both |
-| `test_generation_no_candidates`, `test_generation_attempts_exhausted`, `test_layout_validation` | failure messages from section 4 |
-| `test_streams_independent` | visiting rooms in different orders gives the same battle seeds and the same next floor |
-| `test_layout_load` | a hand-made layout loads as given; query rooms still get content |
-| `test_event_flow` | conditions disable choices; outcomes run in order; `GoToPage`, coins never below 0, `StartEncounter` starts a battle |
-| `test_run_navigation`, `test_run_lost`, `test_run_battle_runner_error` | section 4 |
-| `test_run_scripted` | a scripted player (the slice 1 `ScriptedController` for battles, fixed choices for events) plays the fixture run to the end twice: identical `RunLog` and run hash; golden run hash |
-| `test_game_content_problems`, `test_seed_parse` | section 4 |
+| `test_tag_match` | `TagMatch` agrees with `GameplayTagQuery.matches()` on every field, parent matching, the empty query |
+| `test_seed_derive` | golden vector; non-negative; labels independent |
+| `test_generation_deterministic` / `_rules` / `_pools` | same map twice and in a fresh process; over 200 seeds every Isaac rule in 3.2 holds; pools respect chapters and Delirium mode |
+| `test_streams_independent` | different exploration orders → same battle seeds, pickups and next floor |
+| `test_layout_load`, `test_layout_validation` | hand-made floors |
+| `test_loadout_precedence` | default → encounter → placement; asset and inline; base kit always present |
+| `test_elites_and_scaling` | elite rolls are seeded; variant grants and scaling effects show up in the battle's attributes |
+| `test_snapshot_v1_unchanged` | every slice 1 golden replays identically through the new setup path |
+| `test_snapshot_v2_golden` | a v2 battle with loadout, equipment, items, variant, scaling and carry-over replays to its golden hash, twice and in a fresh process |
+| `test_trigger_order`, `test_trigger_chain_cap` | triggered passives fire in queue order, awaited, identical on replay; Ice → Fire item works from data alone |
+| `test_carry_over` | HP/MP/energy flow battle → run state → next battle; dead members stay dead across battles |
+| `test_death_and_revive` | dead units keep item effects, leave the queue, can only be targeted by dead-ally modes; a revive mid-battle and in the field brings them back; v1 death unchanged |
+| `test_usable_items` | used in battle (logged, replayed, blocked for the rest of the battle) and on the map; consumable removed; cooldown counts won battles; extra active slots |
+| `test_field_actions`, `test_field_refusals` | heal in the field, MP spent, item cooldowns respected |
+| `test_item_pools` | no repeats, held items excluded, character restriction, unlock stub consulted, fallback item; holder vs party-wide grants |
+| `test_items_hooks` | `on_pickup`, `on_floor_start`, `on_room_cleared`; `RemoveItem` removes its grants from the next battle |
+| `test_shop_and_treasure`, `test_coin_drops` | prices, coins never negative, seeded drops including elite bonus |
+| `test_event_flow` | conditions, outcome order, `ApplyPartyEffect` through GAS, `StartEncounter` |
+| `test_run_navigation`, `test_run_refusals`, `test_run_lost`, `test_run_battle_runner_error` | section 4 |
+| `test_run_scripted` | a scripted player plays the fixture run to the end twice: identical run log and run hash; golden |
+| `test_content_problems`, `test_seed_parse`, `test_duplicate_ability_grant`, `test_snapshot_v2_unknown_ids`, `test_snapshot_v2_tamper` | section 4 |
 
 ### Golden vectors (`tests/fixtures/golden/`)
-`seed_derive.json`, `floor_<seed>.json` (generated map for two seeds), `run_scripted.json` (final run hash and log
-length). Regenerated only on purpose with `--update-goldens`, as in slice 1.
+`seed_derive.json`, `floor_<seed>.json` (two seeds), `battle_v2.json` (a v2 `ReplayRequest` and its `ReplayResult`),
+`run_scripted.json`. Regenerated only on purpose with `--update-goldens`.
+
+### C# (`tests/Rpg.Contracts.Tests`)
+`battle_v2.json` binds to the v2 records and round-trips; every v1 golden still binds (optional fields null).
 
 ### Done when
-- [ ] `godot --headless --path client-godot res://tests/run_tests.tscn` passes (the 52 slice 1 tests plus the new ones).
-- [ ] `dotnet build` and `dotnet test` pass at the root (unchanged C# side; the battle goldens still match).
-- [ ] With the fixtures content root, the project opens to the menu and a full 2-floor fixture run can be played by
-      clicking, won and lost.
-- [ ] With the `content/` root, the demo run plays from the start room through several battles and an event to the boss
-      and a win, and losing ends the run.
-- [ ] A test loads the demo content with `GameContent` and reports no problems, and generates its floor for 50 seeds
-      without errors (smoke test only; it never asserts balance, so tuning can't fail it).
-- [ ] Only new files in `content/`; `godot_gas/` changes are additions; `presentation/` untouched; slice 1 goldens unchanged.
-- [ ] Root `CLAUDE.md` status table, `client-godot/CLAUDE.md` section 0 (`game/` ownership row) and the roadmap updated.
+- [ ] Godot system tests pass (the 52 slice 1 tests plus the new ones); slice 1 goldens unchanged.
+- [ ] `dotnet build` and `dotnet test` pass at the root.
+- [ ] With the fixtures content root, a full 2-floor run can be played by clicking: battles with carry-over, an elite,
+      an event, a treasure room, a shop, a field heal, a usable item in battle and on the map, a death and a revive,
+      a triggered passive, the boss, a win and a loss.
+- [ ] `content/`, `presentation/` and `godot_gas/` untouched.
+- [ ] Root `CLAUDE.md` status table, `client-godot/CLAUDE.md` (section 0 `game/` row; section 3 trigger-queue and
+      field-mode rules) and the roadmap updated.
 
-## Files this slice creates (system-owned unless noted)
+### Suggested implementation order (one slice, four checkpoints, tests green at each)
+A. World and run on v1 battles (3.1 world, 3.2 steps 1–6, 3.3, run state/log, graybox map/room/battle/event).
+B. Units and snapshot v2 (subclasses, ability sets, loadouts, variants, scaling, carry-over, C# records, v2 golden).
+C. Triggers, death and revive, field mode, usable items (trigger queue, battle events, field context).
+D. Items and economy (pools, pickups, treasure, shop, drops, hooks, equipment, remaining outcomes) and the full scripted run.
+
+## Files this slice creates or changes (all system-owned)
 ```
-client-godot/game/game_main.gd(.tscn), game_content.gd, tag_match.gd, run_seeds.gd, floor_generator.gd, floor_map.gd,
-                  floor_layout_loader.gd, run_state.gd, run_log.gd, run_hasher.gd, run_controller.gd
-client-godot/game/defs/room_definition.gd, room_placement.gd, chapter_definition.gd, floor_gen_rules.gd,
-                       run_structure.gd, floor_slot.gd, floor_layout.gd, floor_layout_cell.gd, character_definition.gd,
-                       event_definition.gd, event_page.gd, event_choice.gd
-client-godot/game/defs/conditions/run_condition.gd, coins_at_least.gd, has_character.gd
-client-godot/game/defs/outcomes/run_outcome.gd, gain_coins.gd, lose_coins.gd, go_to_page.gd, start_encounter.gd, end_event.gd
-client-godot/game/graybox/menu, map_view, room_view_3d, battle_panel, event_panel, run_end_view (.gd/.tscn)
-client-godot/tests/game/test_*.gd
-client-godot/tests/fixtures/{rooms,chapters,floor_rules,runs,events,characters,layouts}/..., golden/{seed_derive,floor_*,run_scripted}.json
+client-godot/game/          game_main, tag_match, run_seeds, floor_generator, floor_map, floor_layout_loader,
+                            encounter_resolver, pickup_resolver, run_state, run_log, run_hasher, run_controller, field_context
+client-godot/game/defs/     character_definition, enemy_definition, loadout, enemy_variant, equipment_definition,
+                            item_definition, unlocks (stub), room_definition, room_placement, chapter_definition, scaling_rules,
+                            floor_gen_rules, run_structure, floor_slot, floor_layout, floor_layout_cell,
+                            event_definition, event_page, event_choice, conditions/*, outcomes/*
+client-godot/game/graybox/  menu, map_view, room_view_3d, unit_view, battle_panel, event_panel, pickup_panel, party_panel, run_end_view
+client-godot/combat/        new: ability_set.gd, encounter_slot.gd, trigger_queue.gd
+                            changed: battle.gd (v2 setup, trigger draining, events, field mode), battle_unit.gd,
+                            combat_asc.gd (send_gameplay_event override), unit_definition.gd, encounter_definition.gd,
+                            execution_row.gd (tags), content_index.gd (all folders, recursive, inline refs)
+client-godot/tests/         game/test_*.gd, combat/test_* (new), tools/build_fixtures.gd, fixtures/..., golden/...
+src/Rpg.Contracts/Battle/   BattleSnapshot.cs (v2 fields), EnemySnapshot.cs
+tests/Rpg.Contracts.Tests/  v2 golden cross-check
+client-godot/project.godot  main scene → res://game/game_main.tscn
 ```
-Created in the user's folders: the demo set in section 3.5 under `content/`, `godot_gas/attributes_draft.cfg`,
-`godot_gas/attributes/` (generated). Added to: `godot_gas/tag_registry.tres`, `godot_gas/gameplay_tags.gd` (regenerated).
-Changed: `combat/encounter_definition.gd` (three metadata fields), `combat/unit_definition.gd` (`display_color` metadata), `tests/tools/build_fixtures.gd` (world fixtures,
-tags on fixture encounters), `project.godot` (main scene → `res://game/game_main.tscn`).
 
 ## Decisions (review, 2026-10-19)
-1. **Battle-changing features wait for snapshot v2.** Loadouts and overrides, `EnemyDefinition`/`Enemy.Boss` granted as
-   tags, variants, floor scaling and HP/MP carry-over move to the system-design pass and 1d. Bosses are boss
-   *encounters* here (chosen by `boss_encounter_query`). The ★ marks in `game-design.md` section 3 are updated to match.
-2. **Both test data and a demo.** The menu's content-root switch runs the fixture world; Claude also builds the tiny demo
-   run in `content/` (section 3.5). The user may tune or replace anything in it.
-3. **Map navigation, Isaac rules:** enter any room adjacent to one you've visited; revisit cleared rooms; no fleeing.
-4. **Seeds are decimal int64 strings** for now; an Isaac-style short seed code is a display format for 1c.
-5. **Room grid fixed at 13 × 7**, rooms 1×1 on the map; sizes and shapes come with the room editor in 1c.
-6. **AttributeSet:** Claude creates it through the GodotGAS draft and generator; the user tunes it later in the dashboard.
-7. **Tag registry:** Claude may add tags; removing any tag needs the user's explicit yes first.
-8. **Graybox views are system code in `game/graybox/`,** replaceable one at a time via `GameMain`'s exported view scenes.
-9. **Coins exist in run state;** only events change them in this slice. Drops and shops come in 1d.
-10. **Server authority comes later** (roadmap slice 2b `run-authority`): the local run log and seeded streams here are
-    shaped so each out-of-battle action can become an authenticated quick message, and each battle a batched log.
-11. **Demo look:** coloured cubes; ability animations jump, spin or flash the acting cube and drive the execution timing.
+1. **Characters and enemies subclass `UnitDefinition`** (not wrappers): one file per unit, combat code and fixtures keep
+   working, and later fields appear on existing files with no migration.
+2. **Usable items are abilities on the character who holds them,** used in battle and on the map like skills. Each is
+   either a single-use consumable or has a cooldown counted in won battles. Their targeting (one, several, blast) is
+   the ability's own.
+3. **Ult charge always carries over.** To set it by hand, use a GAS effect from an event (`ApplyPartyEffect`).
+4. **Dead characters stay dead until revived.** The revive mechanic (dead state, dead-ally targeting, revive by GAS
+   effect, in battle and on the map) is built now; revive items and interactable objects are content for later.
+5. **Items are held by one character.** Passives apply to the holder or the whole party (`applies_to`); usable items
+   target whoever their ability targets.
+6. **One active slot per character;** an item can add slots (`extra_active_slots`, like Isaac's Schoolbag).
+7. **Every item is in the pools,** behind a stub unlock check that always says yes until gacha exists. No item twice per run.
+8. **Coins are added directly** on room clear. **No walking in this design:** screens only (battle, map, event).
+9. **Equipment comes from loadouts and the `GiveEquipment` outcome;** a gear inventory comes with the hub.
+10. **Trigger dispatch** goes through a `CombatASC` override of `send_gameplay_event` (FIFO queue, awaited, chain cap
+    10), so designers keep using GodotGAS's normal `trigger_event_tag`. A test pins the addon behaviour it relies on.
+11. Carried over: Isaac map rules (no fleeing), numeric seeds, fixed 13 × 7 rooms, graybox screens as replaceable
+    system code, server authority in slice 2b, dev tools in slice 1c, then the demo (coloured cubes) in 1d.
