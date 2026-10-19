@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/cues/sound_cue.gd" id="1_cue"]
+[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Damage2.wav" id="2_hit"]
+
+[node name="HitCue" type="Node"]
+script = ExtResource("1_cue")
+destroy_delay = 1.0
+
+[node name="Player" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2_hit")

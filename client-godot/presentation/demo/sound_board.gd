@@ -1,0 +1,60 @@
+## Demo sound board: UI sounds and run/battle stingers. Each sound is a child AudioStreamPlayer named after its use
+## (swap the stream in sound_board.tscn to change it). Other sounds live elsewhere, the GAS way:
+##   ability sounds  → an audio track on the ability's animation (content/demo/animations/), on the cube's Audio node;
+##   hit sounds      → GameplayCue Cue.Sfx.Hit (godot_gas/cue_registry.tres), listed on the damage effect.
+## Screens play one with get_tree().call_group("sound_board", "play", "Item"). A button with metadata sound = "back"
+## plays Back instead of Confirm.
+extends Node
+
+var _main: GameMain
+
+
+func setup(main: GameMain) -> void:
+	_main = main
+	add_to_group("sound_board")
+	_hook_all(get_tree().root)
+	get_tree().node_added.connect(_on_node_added)
+	main.run_changed.connect(_bind)
+	main.battle_prepared.connect(_on_battle_prepared)
+
+
+func play(sound_name: String) -> void:
+	var player := get_node_or_null(sound_name) as AudioStreamPlayer
+	if player != null and player.stream != null:
+		player.play()
+
+
+func _bind(run: RunController) -> void:
+	run.room_entered.connect(func(_cell): play("Move"))
+	run.battle_started.connect(_on_battle_started)
+
+
+func _on_battle_prepared(recorder: ActionRecorder, _gate: ViewGate) -> void:
+	recorder.action_rejected.connect(func(_unit, _reason, _detail): play("Refused"))
+
+
+func _on_battle_started(battle: Battle) -> void:
+	play("BattleStart")
+	battle.unit_died.connect(func(_unit): play("Death"))
+
+
+func _hook_all(node: Node) -> void:
+	_on_node_added(node)
+	for child in node.get_children():
+		_hook_all(child)
+
+
+func _on_node_added(node: Node) -> void:
+	if node is BaseButton and not node.has_meta("_sound_hooked"):
+		node.set_meta("_sound_hooked", true)
+		node.mouse_entered.connect(_on_hover.bind(node))
+		node.pressed.connect(_on_pressed.bind(node))
+
+
+func _on_hover(button: BaseButton) -> void:
+	if not button.disabled:
+		play("Hover")
+
+
+func _on_pressed(button: BaseButton) -> void:
+	play("Back" if button.get_meta("sound", "") == "back" else "Confirm")

@@ -113,6 +113,7 @@ func _on_ability_pressed(unit: BattleUnit, ability: BattleAbility) -> void:
 		_actions.add_child(button)
 	var back := Button.new()
 	back.text = "Back"
+	back.set_meta("sound", "back")
 	back.pressed.connect(_show_abilities.bind(unit))
 	_actions.add_child(back)
 

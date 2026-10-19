@@ -2,6 +2,13 @@
 
 [ext_resource type="Script" uid="uid://c31mycy3sv3aq" path="res://addons/GodotGAS/cues/gameplay_cue_entry.gd" id="1_eumo4"]
 [ext_resource type="Script" uid="uid://dkt21eabd45kx" path="res://addons/GodotGAS/cues/gameplay_cue_registry.gd" id="2_bcoe5"]
+[ext_resource type="PackedScene" path="res://presentation/demo/cues/hit_cue.tscn" id="3_hit"]
+
+[sub_resource type="Resource" id="Resource_hit"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Hit"
+scene = ExtResource("3_hit")
 
 [resource]
 script = ExtResource("2_bcoe5")
+entries = Array[ExtResource("1_eumo4")]([SubResource("Resource_hit")])

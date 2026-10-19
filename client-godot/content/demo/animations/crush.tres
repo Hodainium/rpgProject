@@ -1,5 +1,7 @@
 [gd_resource type="Animation" format=3]
 
+[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Earth6.wav" id="1_sfx"]
+
 [resource]
 resource_name = "crush"
 tracks/0/type = "value"
@@ -43,3 +45,16 @@ tracks/2/keys = {
 "method": &"execute"
 }]
 }
+tracks/3/type = "audio"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Audio")
+tracks/3/keys = {
+"clips": [{
+"end_offset": 0.0,
+"start_offset": 0.0,
+"stream": ExtResource("1_sfx")
+}],
+"times": PackedFloat32Array(0.3)
+}
+tracks/3/use_blend = true

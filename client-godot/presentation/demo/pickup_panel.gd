@@ -65,4 +65,5 @@ func _take(placement: int, picker: OptionButton) -> void:
 	var problem := _main.run.take(placement, picker.get_item_id(picker.selected))
 	if problem != "":
 		_main.show_message(problem)
+	get_tree().call_group("sound_board", "play", "Refused" if problem != "" else "Item")
 	_refresh()

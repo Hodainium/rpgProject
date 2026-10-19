@@ -1,5 +1,7 @@
 [gd_resource type="Animation" format=3]
 
+[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Recovery7.wav" id="1_sfx"]
+
 [resource]
 resource_name = "potion"
 length = 0.5
@@ -29,3 +31,16 @@ tracks/1/keys = {
 "method": &"execute"
 }]
 }
+tracks/2/type = "audio"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Audio")
+tracks/2/keys = {
+"clips": [{
+"end_offset": 0.0,
+"start_offset": 0.0,
+"stream": ExtResource("1_sfx")
+}],
+"times": PackedFloat32Array(0)
+}
+tracks/2/use_blend = true
