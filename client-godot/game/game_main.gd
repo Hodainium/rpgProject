@@ -28,6 +28,8 @@ const CONTENT_ROOTS: Array[String] = ["res://content/", "res://tests/fixtures/"]
 @export var pickup_panel: PackedScene
 @export var party_panel: PackedScene
 @export var run_end_view: PackedScene
+## UI sounds and stingers (a Node with setup(main)); ability and hit sounds come from animations and GameplayCues.
+@export var sound_board: PackedScene
 
 var content_root: String = CONTENT_ROOTS[0]
 var content: ContentIndex
@@ -52,7 +54,7 @@ func _ready() -> void:
 	var room := _view(room_view, "room_view_3d", missing)
 	if room != null:
 		_add_view(room.instantiate(), world)
-	for pair in [[menu_view, "menu"], [map_view, "map_view"], [battle_panel, "battle_panel"], [event_panel, "event_panel"],
+	for pair in [[sound_board, "sound_board"], [menu_view, "menu"], [map_view, "map_view"], [battle_panel, "battle_panel"], [event_panel, "event_panel"],
 			[pickup_panel, "pickup_panel"], [party_panel, "party_panel"], [run_end_view, "run_end_view"]]:
 		var scene := _view(pair[0], pair[1], missing)
 		if scene != null:

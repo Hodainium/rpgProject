@@ -62,8 +62,12 @@ func _ready() -> void:
 		print("  unused      %s" % tag)
 
 	if OS.get_cmdline_user_args().has("--add-missing") and not missing.is_empty():
+		var uid := ResourceLoader.get_resource_uid(registry_path)
 		for tag in missing:
 			registry.add_tag(String(tag))  # validates, sorts, saves the registry and regenerates the constants
+		# A headless save drops the file's uid header; keep the one the editor gave it.
+		if uid != ResourceUID.INVALID_ID:
+			ResourceSaver.set_uid(registry_path, uid)
 		print("sync_tags: added %d tag(s) to %s" % [missing.size(), registry_path])
 		missing.clear()
 	GameplayTagGenerator.generate_tags_file(registry.tags)
