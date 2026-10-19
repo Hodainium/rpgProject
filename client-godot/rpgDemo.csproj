@@ -1,0 +1,14 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <!-- Pinned to the editor and verifier build (spec project-skeleton, Decisions 1). Change all three together. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>rpgDemo</RootNamespace>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- C# here is networking only; Rpg.Client brings Rpg.Contracts with it. No combat logic in C#. -->
+    <ProjectReference Include="..\src\Rpg.Client\Rpg.Client.csproj" />
+  </ItemGroup>
+</Project>

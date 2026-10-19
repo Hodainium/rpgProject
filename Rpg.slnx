@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/client-godot/">
+    <Project Path="client-godot/rpgDemo.csproj">
+      <BuildType Project="Debug" />
+    </Project>
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Rpg.Client/Rpg.Client.csproj" />
+    <Project Path="src/Rpg.Contracts/Rpg.Contracts.csproj" />
+    <Project Path="src/Rpg.GameServerApi/Rpg.GameServerApi.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Rpg.Contracts.Tests/Rpg.Contracts.Tests.csproj" />
+    <Project Path="tests/Rpg.GameServerApi.Tests/Rpg.GameServerApi.Tests.csproj" />
+  </Folder>
+</Solution>

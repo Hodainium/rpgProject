@@ -6,8 +6,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 ## Where we are
 | Slice | Status | Date |
 |---|---|---|
-| 0. `project-skeleton` | 📝 Spec written | 2026-10-14 |
-| 1. `combat-replay-core` | ⬜ Not started | |
+| 0. `project-skeleton` | ✅ Done | 2026-10-19 |
+| 1. `combat-replay-core` | ⏭️ Next | |
 | 2. `battle-checkout` | ⬜ Not started | |
 | 3. `battle-verify` | ⬜ Not started | |
 | 4. `settlement-outbox` | ⬜ Not started | |

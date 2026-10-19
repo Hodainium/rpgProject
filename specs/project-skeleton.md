@@ -1,6 +1,6 @@
 # Spec: project-skeleton (slice 0)
 
-Status: 📝 Reviewed, ready to implement · Roadmap: slice 0 · Date: 2026-10-14
+Status: ✅ Done (2026-10-19) · Roadmap: slice 0 · Date: 2026-10-14
 
 ## 1. Purpose & enterprise mapping
 Create the .NET solution and prove that every build and runtime connection works end to end before any game or workflow
@@ -38,6 +38,8 @@ src/Rpg.GameServerApi/              # ASP.NET Core 10 minimal API; references Rp
 tests/Rpg.Contracts.Tests/          # xUnit: JSON golden vectors, purity guards
 tests/Rpg.GameServerApi.Tests/      # xUnit: WebApplicationFactory + Testcontainers, driven through Rpg.Client
 client-godot/rpgDemo.csproj         # Godot.NET.Sdk, matching the pinned editor build; references Rpg.Client
+client-godot/Directory.Build.props  # empty: shields Godot from the root build settings
+client-godot/Directory.Packages.props # opts Godot out of central package management (its SDK pins its own packages)
 ```
 Dependency direction: `Rpg.Contracts` ← `Rpg.Client` ← Godot, and `Rpg.Contracts` ← `Rpg.GameServerApi`. The server never
 references `Rpg.Client`, and neither library references Godot.
@@ -94,9 +96,9 @@ Grafana ──PromQL──▶ Prometheus
 ### Configuration keys
 | Key | Dev default (`appsettings.Development.json`) | Secret? |
 |---|---|---|
-| `ConnectionStrings:Postgres` | `Host=localhost;Port=5432;Database=rpg_db;Username=postgres` (password via user-secrets) | password |
-| `ConnectionStrings:Redis` | `localhost:6379,abortConnect=false` | no |
-| `RabbitMq:Uri` | `amqp://rpg@localhost:5672/` (password via user-secrets) | password |
+| `ConnectionStrings:Postgres` | `Host=127.0.0.1;Port=5432;Database=rpg_db;Username=postgres` (password via user-secrets) | password |
+| `ConnectionStrings:Redis` | `127.0.0.1:6379,abortConnect=false` | no |
+| `RabbitMq:Uri` | `amqp://rpg@127.0.0.1:5672/` (password via user-secrets) | password |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset → no trace export | no |
 
 ## 3. Data contracts
@@ -183,7 +185,7 @@ same images as `infra/docker-compose.yml`. Docker Desktop is already a project p
 runs these by default.
 - `Live_Returns200_Always`
 - `Ready_Returns200Healthy_WhenAllUp`
-- `Ready_Returns503_WhenPostgresUnreachable` (container stopped)
+- `Ready_Returns503_WhenPostgresUnreachable` (connection string points at a closed port)
 - `Ready_ReportsDegraded_WhenRedisUnreachable`
 - `Ready_Returns503_WhenRabbitUnreachable` and `Ready_RecoversAfterRabbitRestart`
 - `Server_Starts_WithNoDependencies` (connection strings point at closed ports)
@@ -196,10 +198,10 @@ runs these by default.
 - `dotnet build` at the root compiles `rpgDemo.csproj` with its `Rpg.Client` reference. Nothing runs in Godot this slice.
 
 ### Done when
-- [ ] `dotnet build` and `dotnet test` pass at the root (with Docker running).
-- [ ] `docker compose --profile observability up -d` plus the running server shows target `rpg-game-server-api` **UP** in Prometheus.
-- [ ] `rpg_dependency_health` is queryable in Grafana Explore.
-- [ ] CLAUDE.md status table, `client-godot/CLAUDE.md` language split and `specs/roadmap.md` updated.
+- [x] `dotnet build` and `dotnet test` pass at the root (with Docker running).
+- [x] `docker compose --profile observability up -d` plus the running server shows target `rpg-game-server-api` **UP** in Prometheus.
+- [x] `rpg_dependency_health` is queryable in Grafana Explore.
+- [x] CLAUDE.md status table, `client-godot/CLAUDE.md` language split and `specs/roadmap.md` updated.
 
 ## Decisions (resolved in review, 2026-10-14)
 1. **Godot build:** `Godot_v4.7.2-stable_mono_win64` (local editor at `H:\Godot\`). `rpgDemo.csproj` uses
@@ -209,4 +211,16 @@ runs these by default.
 4. **.NET 10 (LTS, supported to Nov 2028)** for every project, replacing .NET 8 (support ends 2026-11-10).
    **First implementation step:** prove Godot 4.7.2 builds and runs a `net10.0` project headless
    (`Godot_v4.7.2-stable_mono_win64_console.exe --headless`). **Fallback if it can't:** `rpgDemo.csproj`, `Rpg.Contracts`
-   and `Rpg.Client` target `net8.0`; `Rpg.GameServerApi` and the tests stay on `net10.0`. Record the outcome here.
+   and `Rpg.Client` target `net8.0`; `Rpg.GameServerApi` and the tests stay on `net10.0`.
+   **Outcome (2026-10-18):** Godot 4.7.2 built and ran a `net10.0` probe headless (`.NET 10.0.13`). All projects use
+   `net10.0`; the fallback was not needed.
+
+## Decisions made during implementation (2026-10-18)
+5. **Relaxed JSON escaping** in `RpgJson`: `+`, `<`, `&` and non-ASCII are written literally instead of `\uXXXX`
+   (the golden vector caught `0.1.0+f81f7ac`). Safe because these payloads are never embedded in HTML.
+6. **Microsoft.Testing.Platform:** xUnit v3 on the .NET 10 SDK requires it; `global.json` opts in. `dotnet test` at the
+   root is unchanged for the user.
+7. **RabbitMQ shutdown is idempotent:** closing an already-closed connection is tolerated (it made tests flaky).
+8. **Dev addresses use `127.0.0.1`, not `localhost`:** on Windows, `localhost` tries IPv6 `::1` first. Compose binds
+   ports to IPv4 `127.0.0.1` only, so each connect waits ~2 s for the IPv6 refusal, which exactly consumed the 2 s
+   Postgres health-check timeout in the first live run.

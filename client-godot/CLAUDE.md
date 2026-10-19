@@ -32,7 +32,8 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
   `GameplayExecutionCalculation` scripts, `GameplayEffect` resources, `GameplayCue`s, the turn manager, and the seeded RNG.
 - **C# (.NET):** networking only. HTTP calls to `Rpg.GameServerApi` go through `src/Rpg.Client` (DTOs from `Rpg.Contracts`), and
   serialization of the action log for submission. Never put combat math or RNG in C#.
-  *Not created yet*; the client has no `.csproj` until the first C# script is added.
+  `rpgDemo.csproj` (`Godot.NET.Sdk/4.7.2`, `net10.0`) references `src/Rpg.Client`; no C# scripts yet. The local
+  `Directory.Build.props`/`Directory.Packages.props` deliberately shield it from the repo-root build settings.
 
 ## 2. GodotGAS conventions (verified against addon source)
 - **Generated files:** `res://godot_gas/gameplay_tags.gd` and the AttributeSet scripts in `res://godot_gas/attributes/`

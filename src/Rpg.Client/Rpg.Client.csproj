@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The client's HTTP layer. References Rpg.Contracts only: no Godot, no server, no game logic. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Rpg.Contracts\Rpg.Contracts.csproj" />
+  </ItemGroup>
+</Project>

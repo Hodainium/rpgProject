@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Rpg.Contracts\Rpg.Contracts.csproj" />
+    <!-- Only for the Rpg.Client purity guard. -->
+    <ProjectReference Include="..\..\src\Rpg.Client\Rpg.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <None Include="golden\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,10 @@
+<Project>
+  <!-- Shared settings for every .NET project under the repo root except client-godot/ (it has its own props). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+</Project>

@@ -8,8 +8,12 @@ verification, exactly-once reward effects, outbox-based event publication and en
 ## Current state (keep this section truthful)
 | Path | Status |
 |---|---|
-| `client-godot/` | Godot 4.7 .NET project, GodotGAS v1.1.2 addon enabled. Empty ownership folders (`combat/`, `content/`, `presentation/`, `tests/fixtures/`). No scenes, no `.csproj` yet. |
-| `src/Rpg.Contracts/`, `src/Rpg.GameServerApi/` | **Empty.** No solution file exists yet. |
+| `client-godot/` | Godot 4.7.2 .NET project, GodotGAS v1.1.2 addon enabled. `rpgDemo.csproj` (`net10.0`, references `Rpg.Client`), no C# scripts. Empty ownership folders (`combat/`, `content/`, `presentation/`, `tests/fixtures/`). No scenes. |
+| `Rpg.slnx` + `global.json` | Root solution (all projects below plus `rpgDemo.csproj`). .NET SDK 10.0.402; tests run on Microsoft.Testing.Platform. Package versions pinned in `Directory.Packages.props`. |
+| `src/Rpg.Contracts/` | `ServerInfoResponse`, `RpgJson` (shared JSON options). No battle/gacha DTOs yet. |
+| `src/Rpg.Client/` | `GameServerClient.GetInfoAsync` only. |
+| `src/Rpg.GameServerApi/` | Skeleton only: `/api/v1/info`, `/health/live`, `/health/ready`, `/metrics` on port 5000. Connects to Postgres/Redis/RabbitMQ for readiness; **no tables, queues, topics or battle/gacha endpoints yet.** |
+| `tests/` | `Rpg.Contracts.Tests` (golden JSON, purity guards), `Rpg.GameServerApi.Tests` (Testcontainers; **Docker required**). |
 | `load-test/`, `web-dashboard/` | **Empty.** |
 | `specs/combat-design.md` | Design notes: attributes, tags, damage formula. Not yet built in GodotGAS. |
 | `specs/roadmap.md` | **Build order: slices 0–9 and design breaks. Read it to know what's next; mark slices done there.** |

@@ -1,0 +1,6 @@
+<Project>
+  <!-- Opts the Godot project out of the repo's central package management: Godot.NET.Sdk pins its own packages. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>
