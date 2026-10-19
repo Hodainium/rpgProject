@@ -8,6 +8,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 |---|---|---|
 | 0. `project-skeleton` | ✅ Done | 2026-10-19 |
 | 1. `combat-replay-core` | 📝 Spec written | 2026-10-19 |
+| 1b. `game-skeleton` | ⬜ Not started (spec in a separate game-design chat) | |
 | 2. `battle-checkout` | ⬜ Not started | |
 | 3. `battle-verify` | ⬜ Not started | |
 | 4. `settlement-outbox` | ⬜ Not started | |
@@ -33,6 +34,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-10-14: Server renamed `Rpg.BasServer` → `Rpg.GameServerApi`; client HTTP layer moved to its own library `src/Rpg.Client`.
 - 2026-10-14: Target .NET 10 LTS instead of .NET 8 (support ends 2026-11-10); Godot fallback recorded in the project-skeleton spec.
 - 2026-10-19: Design notes moved to `specs/design/` (`combat-design.md`); slice specs stay at the top of `specs/`.
+- 2026-10-19: Added slice 1b `game-skeleton` (the Godot game's bare bones) after slice 1 and before slice 2, at the
+  user's request: having the game's structure in place first helps the rest of development. To be specced in a
+  separate game-design chat.
 
 
 ## Design tuning: any time, not just in breaks
@@ -59,6 +63,11 @@ Golden determinism tests on `tests/fixtures/` content only.
 
 > 🎨 Suggested design break 1, combat feel: characters, enemies, abilities and effects in `content/`; damage formula
 > and speed tuning; a battle scene in `presentation/` that plays back sim events.
+
+### 1b. `game-skeleton`
+The Godot game's bare bones, built before the backend slices so the rest of development has a real game to plug into.
+Scope to be defined in its own spec, written in a separate game-design chat. That spec must say which parts are system
+code and which land in the user's folders (`presentation/`, `content/`), per the ownership rules in `client-godot/CLAUDE.md`.
 
 ### 2. `battle-checkout`
 Contracts DTOs; Postgres schema (players, `battle_sessions` with seed, snapshot, `ruleset_version`); `POST /battle/start`;

@@ -4,8 +4,10 @@ Design intent only. **GodotGAS resources in `client-godot/` are the source of tr
 exists in Godot (tag registry, AttributeSet, effects, ExecCalcs), the Godot version wins and this file is just
 a description of it. Do not generate code from this file mechanically.
 
-Math policy: integers and basis points (`10000 = 100.00%`). RNG: the battle's seeded Godot `RandomNumberGenerator`.
-`RollBasisPoints()` below means `rng.randi_range(0, 9999)`.
+Number notation: values are written as designers type them, with up to 2 decimals (`150` = 150%, `5.25` = 5.25%,
+`80.5` flat). Combat stores every value ×100 as a whole number and uses integer math only; see "Number format" in
+`specs/combat-replay-core.md`. RNG: the battle's seeded Godot `RandomNumberGenerator`.
+`Roll()` below means a percentage roll with 2-decimal precision (`rng.randi_range(0, 9999)` against the stored value).
 
 ## Attributes
 | Name | Default | Min | Max |
@@ -15,8 +17,8 @@ Math policy: integers and basis points (`10000 = 100.00%`). RNG: the battle's se
 | ATK | 500 | 0 | – |
 | DEF | 300 | 0 | – |
 | SPD | 100 | 1 | – |
-| CritRateBp | 500 | 0 | 10000 |
-| CritDmgBp | 5000 | 0 | – |
+| CritRate (%) | 5 | 0 | 100 |
+| CritDmg (%) | 50 | 0 | – |
 | Energy | 0 | 0 | 100 |
 | Toughness | 300 | 0 | 300 |
 
@@ -27,14 +29,19 @@ Math policy: integers and basis points (`10000 = 100.00%`). RNG: the battle's se
 - Cues: `Cue.VFX.SlashImpact`, `Cue.VFX.StarfallExplosion`
 
 ## ExecCalc_StandardDamage
-All divisions are integer divisions, truncating toward zero (`int()`).
+Written in designer terms; the implementation does the same math on the ×100 whole numbers, truncating toward zero.
+`SkillMultiplier` (%) or a flat amount comes from the ability's execution-table row (`SCALED` / `FLAT`).
 ```text
-BaseDmg         = (Attacker.ATK * SkillMultiplierBp) / 10000
-DefMultiplierBp = 10000 - (Target.DEF * 10000) / (Target.DEF + 1000)
-RawDmg          = (BaseDmg * DefMultiplierBp) / 10000
-if RollBasisPoints() < Attacker.CritRateBp:
-    RawDmg = (RawDmg * (10000 + Attacker.CritDmgBp)) / 10000
+BaseDmg        = Attacker.ATK × SkillMultiplier%          # or the row's flat damage
+DefMultiplier% = 100 − (Target.DEF × 100) / (Target.DEF + 1000)
+RawDmg         = BaseDmg × DefMultiplier%
+if Roll() < Attacker.CritRate%:
+    RawDmg = RawDmg × (100 + Attacker.CritDmg)%
 ```
+Example: ATK 500, SkillMultiplier 150, target DEF 300 → BaseDmg 750, DefMultiplier 76.92%, RawDmg 576.9;
+on a crit with CritDmg 50 → 865.35.
 
 ## Not yet designed
-Skill multipliers, turn order (action value), Energy gain and Ultimate gating, Toughness damage and break, buff and debuff magnitudes and durations.
+Per-ability execution tables (multipliers and hit timing), Energy gain and Ultimate gating, Toughness damage and break,
+buff and debuff magnitudes and durations. (Turn order, action value and effect timing are specified in
+`specs/combat-replay-core.md`.)
