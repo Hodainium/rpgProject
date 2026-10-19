@@ -9,3 +9,4 @@ destroy_delay = 1.0
 
 [node name="Player" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("2_hit")
+volume_db = -4.5

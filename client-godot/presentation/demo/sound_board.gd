@@ -25,8 +25,14 @@ func play(sound_name: String) -> void:
 
 
 func _bind(run: RunController) -> void:
-	run.room_entered.connect(func(_cell): play("Move"))
+	run.room_entered.connect(func(_cell): _play_move.call_deferred(run))
 	run.battle_started.connect(_on_battle_started)
+
+
+## The room sound waits until enter_room is done: a room that starts a battle plays BattleStart instead.
+func _play_move(run: RunController) -> void:
+	if is_instance_valid(run) and run.pending_battle.is_empty():
+		play("Move")
 
 
 func _on_battle_prepared(recorder: ActionRecorder, _gate: ViewGate) -> void:
