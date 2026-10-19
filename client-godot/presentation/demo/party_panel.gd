@@ -4,6 +4,7 @@ extends Control
 
 var _main: GameMain
 var _busy: bool = false
+var _battle: Battle
 
 @onready var _members: VBoxContainer = %Members
 @onready var _field: HFlowContainer = %Field
@@ -20,6 +21,16 @@ func _bind(run: RunController) -> void:
 	for changed in [run.party_changed, run.floor_entered, run.room_entered, run.room_cleared, run.battle_requested,
 			run.battle_finished, run.event_page_shown]:
 		changed.connect(func(_a = null, _b = null): _refresh.call_deferred())
+	run.battle_started.connect(_on_battle_started)
+	run.battle_finished.connect(func(_outcome): _battle = null)
+
+
+## During a battle the panel shows the fighting units' live values, updated after every action.
+func _on_battle_started(battle: Battle) -> void:
+	_battle = battle
+	battle.turn_started.connect(func(_unit, _turn): _refresh.call_deferred())
+	battle.execution_resolved.connect(func(_unit, _row, _targets): _refresh.call_deferred())
+	_refresh.call_deferred()
 
 
 func _refresh() -> void:
@@ -29,14 +40,19 @@ func _refresh() -> void:
 		return
 	for child in _members.get_children() + _field.get_children():
 		child.queue_free()
+	var battle := _battle if is_instance_valid(_battle) else null
+	var stats := run.party_stats() if battle == null else {}
 	for member in run.state.party:
 		var character: UnitDefinition = run.content.units.get(member["character"])
+		var unit := battle.unit_by_id(StringName("P%d" % member["slot"])) if battle != null else null
+		var values: Dictionary = RunController.unit_stats(unit) if unit != null else stats.get(member["slot"], {})
+		var alive: bool = unit.alive if unit != null else member["alive"]
 		var label := Label.new()
 		var lines := PackedStringArray()
-		lines.append("%d. %s%s   HP %d%s%s" % [member["slot"], character.display_name if character != null else member["character"],
-			"  [DEAD]" if not member["alive"] else "", member["hp"] / 100,
-			"  MP %d" % (member["mp"] / 100) if member["mp"] != null else "",
-			"  Ult %d" % (member["energy"] / 100) if member["energy"] != null else ""])
+		lines.append("%d. %s%s   %s%s%s" % [member["slot"], character.display_name if character != null else member["character"],
+			"  [DEAD]" if not alive else "", _pair("HP", values, BattleUnit.HP, BattleUnit.MAX_HP),
+			_pair("  MP", values, BattleUnit.MP, BattleUnit.MAX_MP),
+			_pair("  Ult", values, BattleUnit.ENERGY, BattleUnit.MAX_ENERGY)])
 		var held := PackedStringArray()
 		for item_id in member["items"]:
 			held.append(_item_name(item_id))
@@ -62,6 +78,15 @@ func _refresh() -> void:
 		else:
 			for target in option["targets"]:
 				_field.add_child(_button("%s -> %d" % [title, target], option["slot"], option["ability"], target))
+
+
+## "HP 669/1000" (values are ×100); just the current value when the set has no maximum; "" when absent.
+static func _pair(title: String, values: Dictionary, current: String, maximum: String) -> String:
+	if not values.has(current):
+		return ""
+	if not values.has(maximum):
+		return "%s %d" % [title, values[current] / 100]
+	return "%s %d/%d" % [title, values[current] / 100, values[maximum] / 100]
 
 
 func _button(text: String, slot: int, ability: StringName, target: int) -> Button:
