@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_7utbg"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_q0plk"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_charge_hit.tres" id="3_06i2m"]
+[ext_resource type="Animation" path="res://content/demo/animations/ult_charge_hit.tres" id="4_6dy7k"]
+
+[sub_resource type="Resource" id="Resource_iqgtd"]
+script = ExtResource("2_q0plk")
+id = &"charge"
+effect = ExtResource("3_06i2m")
+
+[node name="UltChargeHit" type="Node" unique_id=591486450]
+script = ExtResource("1_7utbg")
+targeting = 5
+executions = Array[ExtResource("2_q0plk")]([SubResource("Resource_iqgtd")])
+animation = ExtResource("4_6dy7k")
+ability_tag = &"Ability.Passive.Ultcharge.Hit"
+trigger_event_tag = &"Event.Damage.Taken"

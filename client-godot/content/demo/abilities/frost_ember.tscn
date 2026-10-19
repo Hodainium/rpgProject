@@ -17,5 +17,5 @@ flat_damage_x100 = 6000
 script = ExtResource("1_75l4e")
 executions = Array[ExtResource("2_brblm")]([SubResource("Resource_iohyo")])
 animation = ExtResource("4_ekkgv")
-ability_tag = &"Ability.Passive.FrostEmber"
+ability_tag = &"Ability.Passive.Frostember"
 trigger_event_tag = &"Event.Damage.Dealt.Ice"

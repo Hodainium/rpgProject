@@ -29,5 +29,5 @@ script = ExtResource("1_aqmo0")
 targeting = 2
 executions = Array[ExtResource("2_bu8aa")]([SubResource("Resource_q35ep"), SubResource("Resource_0kopl")])
 animation = ExtResource("4_pgwa2")
-ability_tag = &"Ability.IceBlast"
+ability_tag = &"Ability.Iceblast"
 cost_effect = ExtResource("5_aohra")

@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_q6ee8"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_cdaos"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_qjktu"]
+[ext_resource type="Animation" path="res://content/demo/animations/cleave.tres" id="4_iak2l"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="5_cdjsw"]
+
+[sub_resource type="Resource" id="Resource_oygwf"]
+script = ExtResource("2_cdaos")
+id = &"cleave"
+effect = ExtResource("3_qjktu")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 20000
+
+[node name="Cleave" type="Node" unique_id=389555525]
+script = ExtResource("1_q6ee8")
+targeting = 1
+executions = Array[ExtResource("2_cdaos")]([SubResource("Resource_oygwf")])
+animation = ExtResource("4_iak2l")
+ability_tag = &"Ability.Ult.Cleave"
+cost_effect = ExtResource("5_cdjsw")

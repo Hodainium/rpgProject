@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_0jexu"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_f217b"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_charge.tres" id="3_82d2u"]
+[ext_resource type="Animation" path="res://content/demo/animations/ult_charge.tres" id="4_n5njh"]
+
+[sub_resource type="Resource" id="Resource_oypu7"]
+script = ExtResource("2_f217b")
+id = &"charge"
+effect = ExtResource("3_82d2u")
+
+[node name="UltCharge" type="Node" unique_id=1422115903]
+script = ExtResource("1_0jexu")
+targeting = 5
+executions = Array[ExtResource("2_f217b")]([SubResource("Resource_oypu7")])
+animation = ExtResource("4_n5njh")
+ability_tag = &"Ability.Passive.Ultcharge.Action"
+trigger_event_tag = &"Event.Ability.Used"
