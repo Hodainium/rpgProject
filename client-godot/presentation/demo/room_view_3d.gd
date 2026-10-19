@@ -74,6 +74,8 @@ func _build() -> void:
 			character)
 		view.set_stats("%s\nHP %d" % [_name(character), member["hp"] / 100])
 		view.set_dead(not member["alive"])
+		# Same id as in battle, so a starting battle replaces this cube instead of drawing a second one on top.
+		_views[StringName("P%d" % member["slot"])] = view
 	if room == null:
 		return
 	for number in room.placements.size():
