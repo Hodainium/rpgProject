@@ -4,5 +4,72 @@
 
 [node name="BattlePanel" type="Control" unique_id=1757133133]
 layout_mode = 3
-anchors_preset = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 script = ExtResource("1_2k6lu")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 44
+
+[node name="Panel" type="PanelContainer" parent="Margin"]
+layout_mode = 2
+size_flags_vertical = 8
+
+[node name="Inner" type="MarginContainer" parent="Margin/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Columns" type="HBoxContainer" parent="Margin/Panel/Inner"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Stats" type="Label" parent="Margin/Panel/Inner/Columns"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+
+[node name="Right" type="VBoxContainer" parent="Margin/Panel/Inner/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Toggles" type="HBoxContainer" parent="Margin/Panel/Inner/Columns/Right"]
+layout_mode = 2
+
+[node name="Turn" type="Label" parent="Margin/Panel/Inner/Columns/Right/Toggles"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Skip" type="CheckBox" parent="Margin/Panel/Inner/Columns/Right/Toggles"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Skip animations"
+
+[node name="Auto" type="CheckBox" parent="Margin/Panel/Inner/Columns/Right/Toggles"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Auto"
+
+[node name="Actions" type="HFlowContainer" parent="Margin/Panel/Inner/Columns/Right"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_vertical = 3

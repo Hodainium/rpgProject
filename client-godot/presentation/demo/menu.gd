@@ -2,53 +2,20 @@
 extends Control
 
 var _main: GameMain
-var _root_picker: OptionButton
-var _characters: VBoxContainer
-var _seed: LineEdit
-var _error: Label
+
+@onready var _root_picker: OptionButton = %ContentRoot
+@onready var _characters: VBoxContainer = %Characters
+@onready var _seed: LineEdit = %Seed
+@onready var _error: Label = %Error
 
 
 func setup(main: GameMain) -> void:
 	_main = main
-	set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	var panel := PanelContainer.new()
-	panel.set_anchors_and_offsets_preset(PRESET_CENTER)
-	panel.custom_minimum_size = Vector2(420, 0)
-	panel.position = Vector2(-210, -200)
-	add_child(panel)
-	var box := VBoxContainer.new()
-	panel.add_child(box)
-	var title := Label.new()
-	title.text = "Run demo"
-	title.add_theme_font_size_override("font_size", 28)
-	box.add_child(title)
-	_root_picker = OptionButton.new()
 	for path in GameMain.CONTENT_ROOTS:
 		_root_picker.add_item("Content: " + path)
 	_root_picker.item_selected.connect(func(index): _main.set_content_root(GameMain.CONTENT_ROOTS[index]))
-	box.add_child(_root_picker)
-	box.add_child(_label("Party (1-4):"))
-	_characters = VBoxContainer.new()
-	box.add_child(_characters)
-	var seed_row := HBoxContainer.new()
-	seed_row.add_child(_label("Seed:"))
-	_seed = LineEdit.new()
-	_seed.text = "1"
-	_seed.size_flags_horizontal = SIZE_EXPAND_FILL
-	seed_row.add_child(_seed)
-	var dice := Button.new()
-	dice.text = "Random"
-	dice.pressed.connect(func(): _seed.text = str(randi()))
-	seed_row.add_child(dice)
-	box.add_child(seed_row)
-	var start := Button.new()
-	start.text = "Start run"
-	start.pressed.connect(_start)
-	box.add_child(start)
-	_error = _label("")
-	_error.modulate = Color.SALMON
-	_error.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(_error)
+	%Random.pressed.connect(func(): _seed.text = str(randi()))
+	%Start.pressed.connect(_start)
 	main.mode_changed.connect(func(mode): visible = mode == "menu")
 	main.content_changed.connect(_fill)
 	_fill(main.content)
@@ -81,9 +48,3 @@ func _start() -> void:
 		if toggle is CheckBox and toggle.button_pressed and not toggle.is_queued_for_deletion():
 			ids.append(toggle.get_meta("id"))
 	_error.text = _main.start_run(ids, _seed.text.strip_edges())
-
-
-func _label(text: String) -> Label:
-	var label := Label.new()
-	label.text = text
-	return label

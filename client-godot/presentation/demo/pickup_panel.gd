@@ -2,18 +2,12 @@
 extends Control
 
 var _main: GameMain
-var _rows: VBoxContainer
+
+@onready var _rows: VBoxContainer = %Rows
 
 
 func setup(main: GameMain) -> void:
 	_main = main
-	set_anchors_and_offsets_preset(PRESET_CENTER_RIGHT)
-	position = Vector2(-420, -60)
-	var panel := PanelContainer.new()
-	add_child(panel)
-	_rows = VBoxContainer.new()
-	_rows.custom_minimum_size = Vector2(400, 0)
-	panel.add_child(_rows)
 	main.run_changed.connect(_bind)
 	main.mode_changed.connect(func(_mode): _refresh())
 	visible = false

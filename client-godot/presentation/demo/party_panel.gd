@@ -3,27 +3,14 @@
 extends Control
 
 var _main: GameMain
-var _members: VBoxContainer
-var _field: HFlowContainer
 var _busy: bool = false
+
+@onready var _members: VBoxContainer = %Members
+@onready var _field: HFlowContainer = %Field
 
 
 func setup(main: GameMain) -> void:
 	_main = main
-	set_anchors_and_offsets_preset(PRESET_TOP_LEFT)
-	position = Vector2(8, 8)
-	var panel := PanelContainer.new()
-	add_child(panel)
-	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(380, 0)
-	panel.add_child(box)
-	_members = VBoxContainer.new()
-	box.add_child(_members)
-	var field_title := Label.new()
-	field_title.text = "On the map:"
-	box.add_child(field_title)
-	_field = HFlowContainer.new()
-	box.add_child(_field)
 	main.run_changed.connect(_bind)
 	main.mode_changed.connect(func(_mode): _refresh())
 	visible = false

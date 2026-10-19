@@ -2,29 +2,14 @@
 extends Control
 
 var _main: GameMain
-var _title: Label
-var _text: Label
-var _choices: VBoxContainer
+
+@onready var _title: Label = %Title
+@onready var _text: Label = %Text
+@onready var _choices: VBoxContainer = %Choices
 
 
 func setup(main: GameMain) -> void:
 	_main = main
-	set_anchors_and_offsets_preset(PRESET_CENTER_LEFT)
-	position = Vector2(16, -120)
-	custom_minimum_size = Vector2(360, 0)
-	var panel := PanelContainer.new()
-	add_child(panel)
-	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(360, 0)
-	panel.add_child(box)
-	_title = Label.new()
-	_title.add_theme_font_size_override("font_size", 20)
-	box.add_child(_title)
-	_text = Label.new()
-	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(_text)
-	_choices = VBoxContainer.new()
-	box.add_child(_choices)
 	main.run_changed.connect(_bind)
 	main.mode_changed.connect(func(_mode): _refresh())
 	visible = false

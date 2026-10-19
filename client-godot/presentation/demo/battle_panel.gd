@@ -6,48 +6,37 @@ var _main: GameMain
 var _recorder: ActionRecorder
 var _gate: ViewGate
 var _battle: Battle
-var _stats: Label
-var _turn: Label
-var _actions: HFlowContainer
-var _skip: CheckBox
-var _auto: CheckBox
+## The party unit waiting for the player's pick, or null.
+var _waiting: BattleUnit
+
+@onready var _stats: Label = %Stats
+@onready var _turn: Label = %Turn
+@onready var _actions: HFlowContainer = %Actions
+@onready var _skip: CheckBox = %Skip
+@onready var _auto: CheckBox = %Auto
 
 
 func setup(main: GameMain) -> void:
 	_main = main
-	set_anchors_and_offsets_preset(PRESET_BOTTOM_WIDE)
-	offset_top = -220
-	offset_bottom = -32
-	var panel := PanelContainer.new()
-	panel.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	add_child(panel)
-	var columns := HBoxContainer.new()
-	panel.add_child(columns)
-	_stats = Label.new()
-	_stats.custom_minimum_size = Vector2(380, 0)
-	columns.add_child(_stats)
-	var right := VBoxContainer.new()
-	right.size_flags_horizontal = SIZE_EXPAND_FILL
-	columns.add_child(right)
-	var toggles := HBoxContainer.new()
-	_turn = Label.new()
-	_turn.size_flags_horizontal = SIZE_EXPAND_FILL
-	toggles.add_child(_turn)
-	_skip = CheckBox.new()
-	_skip.text = "Skip animations"
 	_skip.toggled.connect(_on_skip_toggled)
-	toggles.add_child(_skip)
-	_auto = CheckBox.new()
-	_auto.text = "Auto"
-	toggles.add_child(_auto)
-	right.add_child(toggles)
-	_actions = HFlowContainer.new()
-	_actions.size_flags_vertical = SIZE_EXPAND_FILL
-	right.add_child(_actions)
+	_auto.toggled.connect(_on_auto_toggled)
 	main.run_changed.connect(_bind)
 	main.battle_prepared.connect(_on_battle_prepared)
 	main.mode_changed.connect(func(_mode): _update_visible())
 	visible = false
+
+
+## The battle refused the pick and waits for another one: show the choices again.
+func _on_action_rejected(unit_id: StringName, reason: String, detail: String) -> void:
+	_main.show_message("%s: %s" % [reason, detail])
+	_waiting = _battle.unit_by_id(unit_id)
+	_show_abilities(_waiting)
+
+
+## Turning Auto on also acts for the unit that is already waiting.
+func _on_auto_toggled(on: bool) -> void:
+	if on and _waiting != null and _battle != null:
+		_auto_pick(_waiting)
 
 
 func _on_skip_toggled(on: bool) -> void:
@@ -65,7 +54,7 @@ func _on_battle_prepared(recorder: ActionRecorder, gate: ViewGate) -> void:
 	_gate = gate
 	_gate.skip_all = _skip.button_pressed
 	_recorder.action_requested.connect(_on_action_requested)
-	_recorder.action_rejected.connect(func(_id, reason, detail): _main.show_message("%s: %s" % [reason, detail]))
+	_recorder.action_rejected.connect(_on_action_rejected)
 
 
 func _on_battle_started(battle: Battle) -> void:
@@ -78,6 +67,7 @@ func _on_battle_started(battle: Battle) -> void:
 
 func _on_battle_finished(outcome: String) -> void:
 	_battle = null
+	_waiting = null
 	_clear_actions()
 	_main.show_message("Battle: " + outcome)
 	_update_visible()
@@ -89,6 +79,7 @@ func _update_visible() -> void:
 
 func _on_action_requested(unit_id: StringName, turn: int) -> void:
 	var unit := _battle.unit_by_id(unit_id)
+	_waiting = unit
 	_turn.text = "Turn %d: %s" % [turn, _name(unit)]
 	_refresh_stats()
 	if _auto.button_pressed:
@@ -127,6 +118,7 @@ func _on_ability_pressed(unit: BattleUnit, ability: BattleAbility) -> void:
 
 
 func _submit(ability: BattleAbility, target_id: StringName) -> void:
+	_waiting = null
 	_clear_actions()
 	_recorder.submit_action(ability.ability_tag, target_id)
 
