@@ -92,10 +92,12 @@ In slice 3 the verifier worker wraps this command; nothing here knows about Rabb
 GodotGAS's `advance_turn()` ticks DoTs and counts down every turn-based effect in one call. To get "DoTs at turn start,
 buffs at turn end", every unit uses `CombatASC` (system, `combat/combat_asc.gd`), a subclass of GodotGAS's
 `AbilitySystemComponent`. The addon itself is not edited.
+
 | Method | Affects | Does |
 |---|---|---|
 | `turn_start()` | `TURN_BASED` effects with `period > 0` (DoTs/HoTs) | Tick (cues, events, math, as `advance_turn` does), then `remaining_turns -= 1`, remove at 0 |
 | `turn_end()` | `TURN_BASED` effects with `period == 0` (buffs/debuffs) | `remaining_turns -= 1`, remove at 0 |
+
 - **Whose turn:** an effect counts down on the turns of the unit it is **on**, not the unit that applied it.
 - **Applied during the owner's own turn** (e.g. a self-buff): that turn's `turn_end()` does **not** count it down, so
   "2 turns" means your next two turns, as in HSR. `CombatASC` records the turn each effect was applied on to do this.
@@ -105,6 +107,7 @@ buffs at turn end", every unit uses `CombatASC` (system, `combat/combat_asc.gd`)
 - `advance_turn()` is never called in combat.
 
 **What `duration_turns` means when you author effects** (`policy = TURN_BASED`):
+
 | You make | Set | Result |
 |---|---|---|
 | Self-buff cast on your turn | `period = 0`, `duration_turns = 2` | Active through the end of your next 2 turns |
@@ -115,6 +118,7 @@ buffs at turn end", every unit uses `CombatASC` (system, `combat/combat_asc.gd`)
 ### Number format: fixed-point ×100
 **Every number a designer types is stored ×100 as a whole number.** Designers write values as they mean them, with up to
 two decimals; combat only ever sees whole numbers in hundredths.
+
 | You type | Meaning | Stored / used in combat |
 |---|---|---|
 | `500` | ATK 500 | `50000` |
@@ -122,6 +126,7 @@ two decimals; combat only ever sees whole numbers in hundredths.
 | `150` | 150% multiplier | `15000` |
 | `5.25` | 5.25% crit rate | `525` |
 | `62.537` | (3rd decimal dropped) | `6253` |
+
 - **Converted once, at edit time.** Our authoring fields (`ExecutionRow`, `UnitDefinition` stats, `CombatModifier`)
   show and accept decimals in the inspector but save the whole number in the `.tres`. Nothing is converted during a battle.
   The conversion is exact: `int(roundi(typed * 1000) / 10)`, so `0.29` becomes `29`, never `28`, and digits after the
@@ -150,7 +155,7 @@ AttributeSet must have both. All other attributes are content. Every attribute v
   combat creates an RNG or uses the global `randf()`/`randi()`/`randomize()`.
 - ExecCalcs and the enemy brain reach it with `BattleContext.rng_for(node)`, which walks up from the unit to its
   `Battle` ancestor. No autoload or static state, so several battles can run one after another in one process.
-- Basis-point rolls: `rng.randi_range(0, 9999)`. The RNG's final `state` is part of the state hash, so any extra or
+- Percentage rolls: `rng.randi_range(0, 9999) < chance` (see Number format). The RNG's final `state` is part of the state hash, so any extra or
   missing draw shows up as a mismatch.
 
 ### Execution table and animation events (Dark Souls-style)
@@ -158,6 +163,7 @@ An ability's **execution table** says *what* each hit does; its **animation** sa
 row it uses. Hitboxes are out of scope; targets come from the ability's targeting.
 
 **Execution table.** `BattleAbility.executions: Array[ExecutionRow]`. Each `ExecutionRow` (Resource):
+
 | Field | Meaning |
 |---|---|
 | `id: StringName` | Name the animation refers to, e.g. `&"slash_heavy"`. Unique within the ability. |
@@ -223,6 +229,7 @@ order (slot ascending), so a client can't reorder targets to change the result.
 
 ### 3.1 Content resource classes (system, in `combat/`)
 These are the shapes your content will fill in during design break 1. They contain no numbers.
+
 | Class | Fields |
 |---|---|
 | `UnitDefinition` (Resource) | `id: StringName`, `attribute_set: AttributeSet`, `abilities: Array[PackedScene]` (each a `BattleAbility`), `brain: EnemyBrain` (enemies only) |
@@ -332,6 +339,7 @@ effect=<id>|<resource_path>|<remaining_turns>|<stack_count>|<suppressed 0|1>   #
 N/A: no queues, topics or keys in this slice.
 
 ## 4. Failure modes
+
 | Situation | Behaviour | Test |
 |---|---|---|
 | Same inputs twice, same process | Identical final hash and identical checkpoint sequence | `test_determinism_same_process` |
@@ -407,6 +415,7 @@ runs every `test_*` method, prints results and exits non-zero on any failure. No
   policy or real-time `period` on fixture effects.
 
 ### Golden vectors (`client-godot/tests/fixtures/golden/`)
+
 | File | Proves |
 |---|---|
 | `duel-seed-1.json` / `duel-seed-1.result.json` | Smallest full battle: request in, expected `ReplayResult` out |
