@@ -52,6 +52,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   tags and the AttributeSet in `godot_gas/`) so the hand-made structure is visible early; 1d grows it. At the user's request.
 - 2026-10-19: Kept `dev-tools` (1c) before `playable-demo` (1d). Building the demo with the tools is expected to expose
   limits and wrong assumptions in them; fixing those is part of 1d's scope. At the user's request.
+- 2026-10-19: The system-design pass writes one spec, `specs/server-authority.md`, split into Part A (slice 2
+  `battle-checkout`: sessions, Postgres, Redis) and Part B (slice 2b `run-authority`: auth, run state, items), built in
+  that order. Both are client ↔ server work and share contracts. At the user's request.
 - 2026-10-19: Added 1c2 `item-pass` after the dev tools: more items, tested with the console's `give` command
   instead of a temporary in-demo button. At the user's request.
 
@@ -92,8 +95,14 @@ out-of-battle item and spell use, `BattleSnapshot` schema v2 (touches `combat/`,
 Minimal clickable flow on placeholder (graybox) screens, proven on test fixtures.
 
 > 🧭 After 1b, a system-design pass: plan what the run adds that the wire contracts and backend don't support yet
-> (run seed and RNG streams, run log, item grants, purchases, out-of-battle actions, snapshot v2 on the server side),
-> designed for slice 2b `run-authority` and folded into slices 2–9.
+> (run seed and RNG streams, run log, item grants, purchases, out-of-battle actions, snapshot v2 on the server side).
+> **It writes one spec, `specs/server-authority.md`, in two parts that are built in order:** Part A = slice 2
+> `battle-checkout` (sessions, Postgres, Redis), Part B = slice 2b `run-authority` (auth, run state, items). One spec
+> so the contracts, schema and auth model are designed once; two parts so each build stays small and testable.
+> **The spec opens with an authority map:** every piece of state and every action, marked as **server-authoritative**
+> (the server decides; the client asks), **server-verified** (the client runs it, the server replays or checks it), or
+> **client-only** (presentation and preferences, never trusted, never sent). Both parts are built from that map.
+> Later slices (3–9) pick up what it leaves for them.
 
 ### 1c. `dev-tools`
 **Purpose:** fast content iteration, built only for mechanics that exist: build a room and play it in seconds, jump to
@@ -112,13 +121,17 @@ Grows 1b's example set (`content/demo/`, `presentation/demo/`) into the full dem
 demo AttributeSet and tags made the GodotGAS way; a short run through battles, an event, a treasure room, a shop and a
 boss. **Includes adjusting the dev tools** wherever building the demo exposes limits or wrong assumptions in them.
 
-### 2. `battle-checkout`
-Contracts DTOs; Postgres schema (players, `battle_sessions` with seed, snapshot, `ruleset_version`); `POST /battle/start`;
+### 2. `battle-checkout` (Part A of `specs/server-authority.md`)
+**First hookup to the server: sessions, SQL, Redis.** **Every battle starts with a handshake:** the client asks to
+start (run, room); the server answers with the battle's conditions (battle id, seed, the full `BattleSnapshot`: party
+from the server's run state, enemies, loadouts, variants, scaling, `ruleset_version`) and records the session. The
+client doesn't start the battle until it has that answer, plays exactly those conditions locally, then submits the
+action log for verification (slice 3). Contracts DTOs; Postgres schema (players, `battle_sessions` with seed, snapshot, `ruleset_version`); `POST /battle/start`;
 Redis cache (30-min TTL) with Postgres fallback (**scenario 4**); `ruleset_version` hash computation; Godot client HTTP
 layer calls start and runs the battle locally.
 
-### 2b. `run-authority`
-**Purpose:** the server owns player state. Anything that changes it is an authenticated request; nothing is trusted
+### 2b. `run-authority` (Part B of `specs/server-authority.md`)
+**Second part: auth, run state, items.** **Purpose:** the server owns player state. Anything that changes it is an authenticated request; nothing is trusted
 from the client alone.
 - **Authentication** for every player-state endpoint (including `/battle/start` and `/battle/verify`): player identity
   on each request (bearer token; a dev token issuer until a real identity provider).
@@ -127,8 +140,8 @@ from the client alone.
   out-of-battle actions are **quick messages**: small, synchronous, authenticated commands (use an item or skill, take
   an item, buy in a shop, event choice) with an `Idempotency-Key` and a per-run sequence number so retries and
   reordering are safe. The server checks each one against the run's seeded state.
-- Contracts come from the system-design pass after 1b. Placed after slice 2 because it needs the players table and
-  Postgres from `battle-checkout`.
+- Designed with slice 2 in the same spec. Built after it because it needs the players table and Postgres from
+  `battle-checkout`; `/battle/start` then builds the party snapshot from the server's run state, not the client's.
 
 ### 3. `battle-verify`
 `POST /verify` + `Idempotency-Key` → RabbitMQ job → `202`. Headless Godot verifier worker container replays the log and
