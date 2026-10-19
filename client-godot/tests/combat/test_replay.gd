@@ -131,7 +131,7 @@ func test_zero_frame_rule() -> void:
 func test_malformed_input() -> void:
 	var good: Dictionary = await record(snapshot("duel", [[1, "striker"]]))
 	var bad_version := copy(good)
-	bad_version["snapshot"]["schemaVersion"] = 2
+	bad_version["snapshot"]["schemaVersion"] = 3  # 1 and 2 are valid (spec game-skeleton 3.5)
 	var missing_field := copy(good)
 	missing_field["actionLog"]["actions"][0].erase("checkpoint")
 	var bad_seed := copy(good)

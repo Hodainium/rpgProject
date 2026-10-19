@@ -10,11 +10,11 @@ id = &"fixture.unit.dummy"
 attribute_set = ExtResource("2_8560y")
 abilities = Array[PackedScene]([ExtResource("1_a36oy")])
 stats_x100 = Dictionary[String, int]({
-"ATK": 30000,
-"CritDmg": 5000,
-"CritRate": 500,
-"DEF": 20000,
-"HP": 80000,
-"MaxHP": 80000,
-"SPD": 9000
+"atk": 30000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 20000,
+"hp": 80000,
+"max_hp": 80000,
+"spd": 9000
 })

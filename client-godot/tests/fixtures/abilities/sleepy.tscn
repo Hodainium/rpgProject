@@ -11,7 +11,7 @@ id = &"hit"
 effect = ExtResource("3_a7366")
 damage_mode = 2
 
-[node name="Sleepy" type="Node" unique_id=71721750]
+[node name="Sleepy" type="Node" unique_id=461947872]
 script = ExtResource("1_5cqio")
 executions = Array[ExtResource("2_owoao")]([SubResource("Resource_eso51")])
 animation = ExtResource("4_ixf42")

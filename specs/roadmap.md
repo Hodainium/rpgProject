@@ -8,7 +8,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 |---|---|---|
 | 0. `project-skeleton` | ✅ Done | 2026-10-19 |
 | 1. `combat-replay-core` | ✅ Done | 2026-10-19 |
-| 1b. `game-skeleton` | 📝 Spec written | 2026-10-19 |
+| 1b. `game-skeleton` | 🔨 Implemented, awaiting review | 2026-10-19 |
 | 1c. `dev-tools` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `battle-checkout` | ⬜ Not started | |
@@ -47,6 +47,8 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-10-19: Merged `items-and-loadouts` into 1b `game-skeleton` (all game mechanics before any tooling; no tools for
   mechanics that don't exist yet). Order is now 1b skeleton → system-design pass → 1c dev tools → 1d playable demo.
   The demo content moved from 1b to 1d. At the user's request.
+- 2026-10-19: 1b also creates a small example set in the user's folders (`content/demo/`, `presentation/demo/`, real
+  tags and the AttributeSet in `godot_gas/`) so the hand-made structure is visible early; 1d grows it. At the user's request.
 - 2026-10-19: Kept `dev-tools` (1c) before `playable-demo` (1d). Building the demo with the tools is expected to expose
   limits and wrong assumptions in them; fixing those is part of 1d's scope. At the user's request.
 
@@ -98,7 +100,7 @@ content validator (runs as a test), short seed codes, room sizes and shapes.
 
 ### 1d. `playable-demo`
 **Purpose:** a short run playable start to finish, to show people, and the first real test of the dev tools.
-Demo content in `content/`, built with the 1c tools: coloured-cube units whose ability animations jump, spin or flash;
+Grows 1b's example set (`content/demo/`, `presentation/demo/`) into the full demo, built with the 1c tools: coloured-cube units whose ability animations jump, spin or flash;
 demo AttributeSet and tags made the GodotGAS way; a short run through battles, an event, a treasure room, a shop and a
 boss. **Includes adjusting the dev tools** wherever building the demo exposes limits or wrong assumptions in them.
 

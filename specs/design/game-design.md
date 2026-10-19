@@ -16,7 +16,7 @@ A roguelike run in the shape of *The Binding of Isaac*, with *Honkai: Star Rail*
 - You bring **1 to 4 characters**. Each has **HP, MP (magic points) and ult charge** (the `Energy` attribute in
   `combat-design.md`). **HP and MP carry over** between battles; buffs, debuffs and DoTs do not.
 - **Coins** are the run currency: scarce, with low prices (an item costs about 20).
-- **Items** work like Isaac items: passive or active, with a rarity, drawn from pools; some are character-specific (like Birthright).
+- **Items** work like Isaac items: passive or active, with a rarity, drawn from pools; a rare one or two act differently per holder (like Birthright), through abilities gated on character tags.
   Items are **unlocked through gacha**, like characters: a run's item pools only contain items you have unlocked.
 - **Active items and characters' spells/moves can be used in the dungeon, outside battle** (e.g. heal between rooms).
 - **Equipment** is per character, like HSR Light Cones/relics, kept simple at first.
@@ -46,7 +46,7 @@ A roguelike run in the shape of *The Binding of Isaac*, with *Honkai: Star Rail*
 ## 2a. How the game maps onto GodotGAS (the UE5/Lyra way)
 | Game concept | GAS concept | Notes |
 |---|---|---|
-| HP, MaxHP, **MP, MaxMP**, ATK, DEF, SPD, CritRate, CritDmg, **ult charge** (`Energy`), Toughness | **AttributeSet** (made in the GodotGAS dashboard, user-owned) | One shared set for characters and enemies, so any effect works on anyone. Clamps live in `pre_attribute_change`. |
+| hp, max_hp, **mp, max_mp**, atk, def, spd, crit_rate, crit_dmg, **ult charge** (`energy`, `max_energy`), toughness, max_toughness | **AttributeSet** (made in the GodotGAS dashboard, user-owned) | One shared set for characters and enemies, so any effect works on anyone. Clamps live in `pre_attribute_change`. |
 | A character's or enemy's starting stats | `UnitDefinition.stats` → `initialize_attribute_overrides` | The DataTable/"init stats" pattern from UE5: values per unit, typed in the inspector. Already built. |
 | `Loadout`, item, equipment, elite variant | **Ability set** (Lyra's `AbilitySet`): abilities + effects + tags granted together, with handles so they can be removed together | One system code class; an item is "an ability set you hold", equipment is "an ability set in a slot". |
 | Stat bonus from equipment/items, floor scaling, elite buffs | **Infinite `GameplayEffect`** with modifiers (multiply/add) | Floor scaling = one effect applied to every enemy at battle start, chosen by `ScalingRules` per depth. No custom stat math anywhere. |
@@ -84,7 +84,7 @@ where special rooms go (Isaac rule: boss = farthest dead end).
 | Asset | Key fields | |
 |---|---|---|
 | `UnitDefinition` (exists) | `id`, AttributeSet, base stats, abilities, brain | ✅ |
-| `CharacterDefinition` | extends `UnitDefinition`: `name`, portrait, default `Loadout`, signature (Birthright-like) item id, unlock condition | ★ |
+| `CharacterDefinition` | extends `UnitDefinition`: `name`, portrait, default `Loadout`, `Character.<Name>` tag, unlock condition | ★ |
 | `EnemyDefinition` | extends `UnitDefinition`: `tags` (`Enemy.Type.*`, `Enemy.Boss`), default `Loadout`, allowed variants. **Bosses are normal enemies tagged `Enemy.Boss`** | ★ |
 | `EnemyVariant` | elite/champion: stat multipliers, extra abilities/effects, skin/palette ref, reward bonus | ★ |
 | `Loadout` | abilities, passive effects, stat overrides, (characters) equipment | ★ |
@@ -95,7 +95,7 @@ where special rooms go (Isaac rule: boss = farthest dead end).
 |---|---|---|
 | `EventDefinition` | `tags`, pages of text, choices with conditions (coins ≥ X, has item, character in party) and **outcomes** | ★ |
 | `RunOutcome` | small reusable ops: gain/lose coins, heal/damage the party (%), give item (id or pool query), start encounter, go to page, remove item | ★ |
-| `ItemDefinition` | `id`, `name`, icon, mesh, `rarity`, `kind` (passive/active), `tags` (pools: `Pool.Treasure/Shop/Boss/Secret`), `price`, character restriction, **granted battle abilities and effects**, run hooks, active charge | ★ |
+| `ItemDefinition` | `id`, `name`, icon, mesh, `rarity`, `kind` (passive/active), `tags` (pools: `Pool.Treasure/Shop/Boss/Secret`), `price`, **granted battle abilities and effects**, run hooks, active charge | ★ |
 | `EquipmentDefinition` | slot, stat modifiers, optional granted ability | ★ |
 | `CompletionMark` | character × (boss or run win) → gems | later |
 
@@ -158,6 +158,12 @@ loadout overrides. Two consequences:
 - Active items and character spells work outside battle too.
 - Items and characters are unlocked through gacha in a hub (hub and gacha come later).
 - Everything is seeded (section 5). Slice split as in section 7.
+- Loadout = starting kit only; a character's inventory (learned skills, passive items, 1–2 use slots, equipment,
+  HP/MP/ult charge) is its run state, captured when each battle starts; other stats are re-derived. Inventory lives in
+  Postgres once the server owns run state (slice 2b).
+- Language split: GDScript for anything touching GodotGAS or authored in the editor (combat, content, run layer, dev
+  tools, UI that reads GAS values); C# for the backend, server sync, save/load, physics/movement and other heavy work
+  with no GAS dependency. Details: `client-godot/CLAUDE.md` section 1.
 
 ## 9. Open questions
 1. **The twist on Isaac's generation:** to be decided after `game-skeleton`.

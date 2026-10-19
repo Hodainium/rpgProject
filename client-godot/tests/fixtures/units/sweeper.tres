@@ -11,11 +11,11 @@ id = &"fixture.unit.sweeper"
 attribute_set = ExtResource("3_rjlr4")
 abilities = Array[PackedScene]([ExtResource("1_6kjf1"), ExtResource("2_gvqnu")])
 stats_x100 = Dictionary[String, int]({
-"ATK": 42000,
-"CritDmg": 5000,
-"CritRate": 1000,
-"DEF": 25000,
-"HP": 90000,
-"MaxHP": 90000,
-"SPD": 11000
+"atk": 42000,
+"crit_dmg": 5000,
+"crit_rate": 1000,
+"def": 25000,
+"hp": 90000,
+"max_hp": 90000,
+"spd": 11000
 })

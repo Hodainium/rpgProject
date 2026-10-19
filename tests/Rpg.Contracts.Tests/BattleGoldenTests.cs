@@ -54,8 +54,8 @@ public class BattleGoldenTests
     [Fact]
     public void GoldenSet_IsComplete()
     {
-        Assert.Equal(3, Requests().Count);
-        Assert.Equal(3, Results().Count);
+        Assert.Equal(4, Requests().Count);
+        Assert.Equal(4, Results().Count);
     }
 
     private static TheoryData<string> Files(Func<string, bool> filter)

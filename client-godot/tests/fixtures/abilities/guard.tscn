@@ -10,7 +10,7 @@ script = ExtResource("2_q5a61")
 id = &"buff"
 effect = ExtResource("3_mt8by")
 
-[node name="Guard" type="Node" unique_id=712864437]
+[node name="Guard" type="Node" unique_id=590956163]
 script = ExtResource("1_xehhj")
 targeting = 5
 executions = Array[ExtResource("2_q5a61")]([SubResource("Resource_76gf5")])

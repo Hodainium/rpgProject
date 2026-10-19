@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_mtg4m"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="2_2w1pc"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="3_dkokf"]
+
+[sub_resource type="Resource" id="Resource_d8jai"]
+script = ExtResource("2_2w1pc")
+
+[resource]
+script = ExtResource("3_dkokf")
+id = &"fixture.item.lucky_coin"
+display_name = "Lucky Coin"
+tags = Array[StringName]([&"Fixture.Pool.Boss"])
+price = 3
+on_room_cleared = Array[ExtResource("1_mtg4m")]([SubResource("Resource_d8jai")])

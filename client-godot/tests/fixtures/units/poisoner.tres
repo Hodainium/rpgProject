@@ -11,11 +11,11 @@ id = &"fixture.unit.poisoner"
 attribute_set = ExtResource("3_ljidp")
 abilities = Array[PackedScene]([ExtResource("1_tycn1"), ExtResource("2_xmy78")])
 stats_x100 = Dictionary[String, int]({
-"ATK": 38000,
-"CritDmg": 6000,
-"CritRate": 750,
-"DEF": 26000,
-"HP": 88000,
-"MaxHP": 88000,
-"SPD": 9550
+"atk": 38000,
+"crit_dmg": 6000,
+"crit_rate": 750,
+"def": 26000,
+"hp": 88000,
+"max_hp": 88000,
+"spd": 9550
 })

@@ -11,11 +11,11 @@ id = &"fixture.unit.brute"
 attribute_set = ExtResource("3_slepd")
 abilities = Array[PackedScene]([ExtResource("1_s1e7o"), ExtResource("2_6djjg")])
 stats_x100 = Dictionary[String, int]({
-"ATK": 35000,
-"CritDmg": 5000,
-"CritRate": 500,
-"DEF": 35000,
-"HP": 300000,
-"MaxHP": 300000,
-"SPD": 10500
+"atk": 35000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 35000,
+"hp": 300000,
+"max_hp": 300000,
+"spd": 10500
 })

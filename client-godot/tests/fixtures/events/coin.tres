@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_kp5iv"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_awym7"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_q3pno"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_6nik2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="5_t7nbt"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="6_p78nx"]
+
+[sub_resource type="Resource" id="Resource_txrm1"]
+script = ExtResource("5_t7nbt")
+amount = 5
+
+[sub_resource type="Resource" id="Resource_aeyq6"]
+script = ExtResource("2_awym7")
+label = "Take it"
+outcomes = Array[ExtResource("4_6nik2")]([SubResource("Resource_txrm1")])
+
+[sub_resource type="Resource" id="Resource_24yhq"]
+script = ExtResource("2_awym7")
+label = "Leave it"
+
+[sub_resource type="Resource" id="Resource_kc25c"]
+script = ExtResource("1_kp5iv")
+text = "A coin glints on the floor."
+choices = Array[ExtResource("2_awym7")]([SubResource("Resource_aeyq6"), SubResource("Resource_24yhq")])
+
+[resource]
+script = ExtResource("6_p78nx")
+id = &"fixture.event.coin"
+display_name = "A coin"
+tags = Array[StringName]([&"Fixture.Event"])
+pages = Array[ExtResource("1_kp5iv")]([SubResource("Resource_kc25c")])

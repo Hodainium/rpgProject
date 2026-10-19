@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_026nq"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_tesyj"]
+[ext_resource type="Resource" path="res://tests/fixtures/enemies/grunt.tres" id="3_b2yhm"]
+
+[sub_resource type="Resource" id="Resource_t6agv"]
+script = ExtResource("2_tesyj")
+enemy = ExtResource("3_b2yhm")
+
+[resource]
+script = ExtResource("1_026nq")
+id = &"fixture.encounter.lone"
+display_name = "Lone"
+tags = Array[StringName]([&"Fixture.Chapter.A"])
+slots = Array[ExtResource("2_tesyj")]([SubResource("Resource_t6agv")])

@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/haste.tscn" id="1_u228o"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="2_tpey7"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="3_rhvlm"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_6oc5e"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_85oce"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="6_sdmiv"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/mend.tscn" id="7_ienmu"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="8_vib03"]
+
+[sub_resource type="Resource" id="Resource_dsctg"]
+script = ExtResource("6_sdmiv")
+skills = Array[PackedScene]([ExtResource("7_ienmu")])
+
+[resource]
+script = ExtResource("8_vib03")
+learnable_skills = Array[PackedScene]([ExtResource("7_ienmu")])
+id = &"fixture.character.medic"
+attribute_set = ExtResource("3_rhvlm")
+abilities = Array[PackedScene]([ExtResource("1_u228o"), ExtResource("2_tpey7")])
+display_name = "Medic"
+display_color = Color(0.18039216, 0.54509807, 0.34117648, 1)
+tags = Array[StringName]([&"Fixture.Character.Medic"])
+default_loadout = SubResource("Resource_dsctg")
+stats_x100 = Dictionary[String, int]({
+"atk": 30000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 28000,
+"energy": 0,
+"hp": 85000,
+"max_hp": 85000,
+"max_mp": 10000,
+"mp": 10000,
+"spd": 12000
+})

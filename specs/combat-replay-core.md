@@ -377,7 +377,8 @@ A small in-house runner, `client-godot/tests/run_tests.gd` (system), run with
 runs every `test_*` method, prints results and exits non-zero on any failure. No new addon.
 
 ### Fixture content (`client-godot/tests/fixtures/`, frozen, never references `content/`)
-- `FixtureAttributeSet` with `HP`, `MaxHP`, `ATK`, `DEF`, `SPD`, `CritRate`, `CritDmg` (all stored ×100), with clamps.
+- `FixtureAttributeSet` with `hp`, `max_hp`, `atk`, `def`, `spd`, `crit_rate`, `crit_dmg` (all stored ×100), with clamps
+  (snake_case since 2026-10-19; the goldens were re-recorded then, hashes only).
 - Units: `fixture.unit.striker` (single-target hit), `fixture.unit.sweeper` (ALL_ENEMIES), `fixture.unit.support`
   (SPD buff on an ally), `fixture.unit.dummy` (enemy with default brain), `fixture.unit.poisoner` (turn-based DoT).
 - ExecCalc `FixtureDamage`: the integer formula from `specs/design/combat-design.md` including the RNG crit roll, so

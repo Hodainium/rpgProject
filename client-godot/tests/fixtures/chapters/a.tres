@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="ChapterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_lp47t"]
+[ext_resource type="Resource" path="res://tests/fixtures/floor_rules/small.tres" id="2_x77x5"]
+[ext_resource type="Resource" path="res://tests/fixtures/scaling/a.tres" id="3_bep7p"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="4_n87f4"]
+
+[sub_resource type="Resource" id="Resource_7nwy2"]
+script = ExtResource("1_lp47t")
+require_all_tags = Array[StringName]([&"Fixture.Encounter.Boss", &"Fixture.Chapter.A"])
+
+[sub_resource type="Resource" id="Resource_sreq4"]
+script = ExtResource("1_lp47t")
+require_all_tags = Array[StringName]([&"Fixture.Chapter.A"])
+ignore_tags = Array[StringName]([&"Fixture.Encounter.Boss"])
+
+[sub_resource type="Resource" id="Resource_oshoa"]
+script = ExtResource("1_lp47t")
+require_all_tags = Array[StringName]([&"Fixture.Event"])
+
+[sub_resource type="Resource" id="Resource_llnej"]
+script = ExtResource("1_lp47t")
+require_all_tags = Array[StringName]([&"Fixture.Chapter.A"])
+
+[resource]
+script = ExtResource("4_n87f4")
+id = &"fixture.chapter.a"
+display_name = "Chapter A"
+tags = Array[StringName]([&"Fixture.Chapter.A"])
+room_query = SubResource("Resource_llnej")
+encounter_query = SubResource("Resource_sreq4")
+boss_encounter_query = SubResource("Resource_7nwy2")
+event_query = SubResource("Resource_oshoa")
+floor_gen_rules = ExtResource("2_x77x5")
+scaling = ExtResource("3_bep7p")

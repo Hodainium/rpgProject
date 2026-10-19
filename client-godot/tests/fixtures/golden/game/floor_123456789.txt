@@ -1,0 +1,7 @@
+map=9x8|start=40|boss=13
+cell=13|boss||fixture.room.throne|4|encounter|fixture.encounter.boss||1:fixture.enemy.chief:<null>:<null>,2:fixture.enemy.grunt:<null>:<null>|3:fixture.item.satchel:0:0|0|0
+cell=22|normal||fixture.room.shrine|7|event||fixture.event.coin|||0|0
+cell=23|special|Fixture.Room.Type.Treasure|fixture.room.vault|8|none||||1:fixture.item.banner:0:0|0|0
+cell=30|special|Fixture.Room.Type.Shop|fixture.room.market|2|none||||1:fixture.item.flask:3:0,2:fixture.item.feather:3:0,3:fixture.item.crumb:1:0|0|0
+cell=31|normal||fixture.room.shrine|13|event||fixture.event.coin|||0|0
+cell=40|start||fixture.room.start|1|none|||||0|0

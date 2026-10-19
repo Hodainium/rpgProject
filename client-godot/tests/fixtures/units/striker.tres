@@ -12,11 +12,11 @@ id = &"fixture.unit.striker"
 attribute_set = ExtResource("4_80dba")
 abilities = Array[PackedScene]([ExtResource("1_i0w0k"), ExtResource("2_kw7tn"), ExtResource("3_fkuc7")])
 stats_x100 = Dictionary[String, int]({
-"ATK": 50000,
-"CritDmg": 5000,
-"CritRate": 500,
-"DEF": 30000,
-"HP": 100000,
-"MaxHP": 100000,
-"SPD": 10000
+"atk": 50000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 30000,
+"hp": 100000,
+"max_hp": 100000,
+"spd": 10000
 })

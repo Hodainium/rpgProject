@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_aymfo"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_h1gje"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/flask.tscn" id="3_ud57y"]
+
+[resource]
+script = ExtResource("2_h1gje")
+id = &"fixture.item.flask"
+display_name = "Flask"
+tags = Array[StringName]([&"Fixture.Pool.Shop"])
+price = 3
+kind = 1
+use_ability = ExtResource("3_ud57y")
+use_mode = 1

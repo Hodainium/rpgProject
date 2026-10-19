@@ -12,7 +12,7 @@ effect = ExtResource("3_e2wry")
 damage_mode = 2
 multiplier_x100 = 6000
 
-[node name="Sweep" type="Node" unique_id=352377747]
+[node name="Sweep" type="Node" unique_id=832396978]
 script = ExtResource("1_i6gom")
 targeting = 1
 executions = Array[ExtResource("2_tcxhm")]([SubResource("Resource_ss8d8")])

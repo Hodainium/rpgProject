@@ -16,7 +16,7 @@ func test_canonical_lines_shape() -> void:
 	eq(lines[2], "rng=%d" % battle.rng.state, "rng line")
 	eq(lines[3], "outcome=Ongoing", "outcome line")
 	eq(lines[4], "unit=E1|alive=1|av=11111", "enemies sort before party; SPD 90 -> 111.11 AV")
-	check(lines.has("attr=P1|ATK|50000|50000"), "attributes stored x100")
+	check(lines.has("attr=P1|atk|50000|50000"), "attributes stored x100")
 
 
 func test_same_seed_same_hash_different_seed_different_hash() -> void:
@@ -48,7 +48,7 @@ func test_tag_insertion_order_does_not_matter() -> void:
 
 func test_non_integer_attribute() -> void:
 	var battle := new_battle(snapshot("duel", [[1, "striker"]]))
-	battle.unit_by_id(&"P1").asc.get_attribute("ATK").current_value = 50000.5
+	battle.unit_by_id(&"P1").asc.get_attribute("atk").current_value = 50000.5
 	var result := StateHasher.compute(battle)
 	check(String(result["error"]).begins_with("NonIntegerAttribute"), "fractional attribute is a runner error: " + result["error"])
 	eq(result["hash"], "", "no hash for an unhashable state")

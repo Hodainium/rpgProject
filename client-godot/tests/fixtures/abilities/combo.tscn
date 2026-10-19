@@ -29,7 +29,7 @@ damage_mode = 1
 targets = 2
 flat_damage_x100 = 8050
 
-[node name="Combo" type="Node" unique_id=1573799870]
+[node name="Combo" type="Node" unique_id=350459967]
 script = ExtResource("1_ycjbw")
 targeting = 2
 executions = Array[ExtResource("2_fvo0n")]([SubResource("Resource_pkk8e"), SubResource("Resource_fmes8"), SubResource("Resource_vfui5")])

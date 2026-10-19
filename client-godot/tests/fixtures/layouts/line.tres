@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="FloorLayout" format=3]
+
+[ext_resource type="Script" path="res://game/defs/floor_layout_cell.gd" id="1_qjw7n"]
+[ext_resource type="Resource" path="res://tests/fixtures/rooms/start.tres" id="2_42kg0"]
+[ext_resource type="Resource" path="res://tests/fixtures/rooms/cross.tres" id="3_d4igx"]
+[ext_resource type="Resource" path="res://tests/fixtures/rooms/vault.tres" id="4_3813q"]
+[ext_resource type="Resource" path="res://tests/fixtures/rooms/throne.tres" id="5_3380i"]
+[ext_resource type="Script" path="res://game/defs/floor_layout.gd" id="6_0ha4b"]
+
+[sub_resource type="Resource" id="Resource_lkojq"]
+script = ExtResource("1_qjw7n")
+cell = Vector2i(3, 4)
+room = ExtResource("2_42kg0")
+role = 1
+
+[sub_resource type="Resource" id="Resource_crafn"]
+script = ExtResource("1_qjw7n")
+cell = Vector2i(4, 4)
+room = ExtResource("3_d4igx")
+
+[sub_resource type="Resource" id="Resource_14flh"]
+script = ExtResource("1_qjw7n")
+cell = Vector2i(4, 3)
+room = ExtResource("4_3813q")
+role = 3
+
+[sub_resource type="Resource" id="Resource_d0o5v"]
+script = ExtResource("1_qjw7n")
+cell = Vector2i(5, 4)
+room = ExtResource("5_3380i")
+role = 2
+
+[resource]
+script = ExtResource("6_0ha4b")
+id = &"fixture.layout.line"
+display_name = "A short line"
+cells = Array[ExtResource("1_qjw7n")]([SubResource("Resource_lkojq"), SubResource("Resource_crafn"), SubResource("Resource_14flh"), SubResource("Resource_d0o5v")])

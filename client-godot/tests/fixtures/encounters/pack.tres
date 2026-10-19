@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_lg6k8"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_jsybf"]
+[ext_resource type="Resource" path="res://tests/fixtures/enemies/grunt.tres" id="3_u7vuh"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_es2v0"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_ux3k1"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="6_lnc5s"]
+
+[sub_resource type="Resource" id="Resource_1r4o3"]
+script = ExtResource("2_jsybf")
+enemy = ExtResource("3_u7vuh")
+
+[sub_resource type="Resource" id="Resource_n2cdn"]
+script = ExtResource("6_lnc5s")
+stats_x100 = Dictionary[String, int]({
+"atk": 40000
+})
+
+[sub_resource type="Resource" id="Resource_bxmkg"]
+script = ExtResource("2_jsybf")
+enemy = ExtResource("3_u7vuh")
+loadout = SubResource("Resource_n2cdn")
+
+[resource]
+script = ExtResource("1_lg6k8")
+id = &"fixture.encounter.pack"
+display_name = "Pack"
+tags = Array[StringName]([&"Fixture.Chapter.A", &"Fixture.Chapter.B"])
+slots = Array[ExtResource("2_jsybf")]([SubResource("Resource_1r4o3"), SubResource("Resource_bxmkg")])

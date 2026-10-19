@@ -60,7 +60,7 @@ func test_combat_modifier_magnitudes() -> void:
 
 func test_unit_definition_stats_save_x100() -> void:
 	var unit := UnitDefinition.new()
-	unit.stats = {"ATK": 500.0, "CritRate": 5.25}
-	eq(unit.stats_x100["ATK"], 50000, "ATK stored")
-	eq(unit.stats_x100["CritRate"], 525, "CritRate stored")
-	eq(unit.stats["CritRate"], 5.25, "CritRate shown as typed")
+	unit.stats = {"atk": 500.0, "crit_rate": 5.25}
+	eq(unit.stats_x100["atk"], 50000, "ATK stored")
+	eq(unit.stats_x100["crit_rate"], 525, "CritRate stored")
+	eq(unit.stats["crit_rate"], 5.25, "CritRate shown as typed")

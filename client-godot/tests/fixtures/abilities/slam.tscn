@@ -21,7 +21,7 @@ damage_mode = 2
 targets = 2
 multiplier_x100 = 4000
 
-[node name="Slam" type="Node" unique_id=1402521804]
+[node name="Slam" type="Node" unique_id=243008988]
 script = ExtResource("1_nf265")
 targeting = 2
 executions = Array[ExtResource("2_hn1dc")]([SubResource("Resource_jg6od"), SubResource("Resource_5ex6c")])

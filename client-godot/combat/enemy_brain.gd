@@ -8,7 +8,7 @@ extends Resource
 
 ## Returns {"ability": StringName, "target": StringName or &""}. An empty ability means the unit passes its turn.
 func choose(unit: BattleUnit, battle: Battle) -> Dictionary:
-	for ability in unit.abilities():
+	for ability in unit.action_abilities():
 		if not unit.asc.can_activate_ability(ability):
 			continue
 		var target: StringName = &""

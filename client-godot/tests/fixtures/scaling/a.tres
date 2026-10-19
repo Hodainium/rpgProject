@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ScalingRules" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_gttx5"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/scale_1.tres" id="2_ono1x"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/scale_2.tres" id="3_dfv4c"]
+[ext_resource type="Script" path="res://game/defs/scaling_rules.gd" id="4_l53rv"]
+
+[resource]
+script = ExtResource("4_l53rv")
+id = &"fixture.scaling.a"
+enemy_effects_by_depth = Array[ExtResource("1_gttx5")]([ExtResource("2_ono1x"), ExtResource("3_dfv4c")])
+coin_drop_max = 2
+elite_chance_x100 = 3000
+coin_drop_chance_x100 = 10000

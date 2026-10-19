@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_acs55"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_etu6v"]
+
+[resource]
+script = ExtResource("2_etu6v")
+id = &"fixture.item.crumb"
+display_name = "Crumb"
+price = 3

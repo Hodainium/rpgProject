@@ -10,7 +10,7 @@ script = ExtResource("2_lco3t")
 id = &"idle"
 effect = ExtResource("3_p85es")
 
-[node name="Idle" type="Node" unique_id=2053807812]
+[node name="Idle" type="Node" unique_id=169576563]
 script = ExtResource("1_bm5ec")
 targeting = 5
 executions = Array[ExtResource("2_lco3t")]([SubResource("Resource_pxldc")])

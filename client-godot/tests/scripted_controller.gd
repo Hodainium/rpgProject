@@ -11,7 +11,7 @@ var _uses: Dictionary = {}  # unit id -> actions taken
 
 
 func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
-	var abilities := unit.abilities()
+	var abilities := unit.action_abilities()
 	var used: int = _uses.get(unit.unit_id, 0)
 	_uses[unit.unit_id] = used + 1
 	for offset in abilities.size():

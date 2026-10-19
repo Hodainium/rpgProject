@@ -13,6 +13,8 @@ enum Targeting {
 	SINGLE_ALLY,   ## One unit on the actor's side (may be the actor).
 	ALL_ALLIES,    ## Every living unit on the actor's side.
 	SELF,          ## The actor.
+	SINGLE_DEAD_ALLY,  ## One dead unit on the actor's side (revives). v2 battles and the field only.
+	ALL_DEAD_ALLIES,   ## Every dead unit on the actor's side.
 }
 
 @export var targeting: Targeting = Targeting.SINGLE_ENEMY
@@ -24,7 +26,22 @@ enum Targeting {
 
 ## True when this targeting needs a target unit id in the action.
 func needs_target() -> bool:
-	return targeting in [Targeting.SINGLE_ENEMY, Targeting.BLAST_ENEMY, Targeting.SINGLE_ALLY]
+	return targeting in [Targeting.SINGLE_ENEMY, Targeting.BLAST_ENEMY, Targeting.SINGLE_ALLY, Targeting.SINGLE_DEAD_ALLY]
+
+
+## True for SINGLE_DEAD_ALLY / ALL_DEAD_ALLIES: the ability reaches only dead allies.
+func targets_dead() -> bool:
+	return targeting in [Targeting.SINGLE_DEAD_ALLY, Targeting.ALL_DEAD_ALLIES]
+
+
+## True for enemy targeting (not usable in the field, where there are no enemies).
+func targets_enemies() -> bool:
+	return targeting in [Targeting.SINGLE_ENEMY, Targeting.BLAST_ENEMY, Targeting.ALL_ENEMIES]
+
+
+## A passive that fires from a gameplay event (GodotGAS trigger_event_tag). Never chosen as an action.
+func is_triggered() -> bool:
+	return trigger_event_tag != &""
 
 
 func row_by_id(row_id: StringName) -> ExecutionRow:

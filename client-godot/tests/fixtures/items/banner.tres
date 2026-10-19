@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_is5e2"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/banner.tres" id="2_3jku4"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ayvgl"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_psdic"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_8mdvt"]
+
+[sub_resource type="Resource" id="Resource_hbge5"]
+script = ExtResource("3_ayvgl")
+effects = Array[ExtResource("1_is5e2")]([ExtResource("2_3jku4")])
+
+[resource]
+script = ExtResource("5_8mdvt")
+id = &"fixture.item.banner"
+display_name = "Banner"
+tags = Array[StringName]([&"Fixture.Pool.Treasure", &"Fixture.Pool.Shop"])
+price = 3
+grants = SubResource("Resource_hbge5")
+applies_to = 1

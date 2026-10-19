@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/claw.tscn" id="1_m564u"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_02st4"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="3_d8lcm"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="4_cti72"]
+[ext_resource type="Resource" path="res://tests/fixtures/variants/elite.tres" id="5_nq1os"]
+
+[resource]
+script = ExtResource("3_d8lcm")
+variants = Array[ExtResource("4_cti72")]([ExtResource("5_nq1os")])
+id = &"fixture.enemy.grunt"
+attribute_set = ExtResource("2_02st4")
+abilities = Array[PackedScene]([ExtResource("1_m564u")])
+display_name = "Grunt"
+display_color = Color(0.8039216, 0.36078432, 0.36078432, 1)
+stats_x100 = Dictionary[String, int]({
+"atk": 25000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 15000,
+"hp": 60000,
+"max_hp": 60000,
+"spd": 9000
+})

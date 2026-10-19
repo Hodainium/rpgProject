@@ -39,6 +39,47 @@ public class BattleContractTests
     }
 
     [Fact]
+    public void SnapshotV1_OmitsEveryV2Field()
+    {
+        var json = JsonSerializer.Serialize(SampleRequest.Snapshot, RpgJson.Options);
+
+        Assert.Equal(
+            """{"schemaVersion":1,"battleId":"b-1","seed":"9223372036854775807","encounterId":"fixture.encounter.duel","party":[{"slot":1,"unitDefId":"fixture.unit.striker","level":1}]}""",
+            json);
+    }
+
+    [Fact]
+    public void SnapshotV2_SerializesToTheSpecShape_AndRoundTrips()
+    {
+        var snapshot = new BattleSnapshot(2, "run-1/f0/c40", "42", "fixture.encounter.duel",
+            [new PartyMemberSnapshot(1, "fixture.character.striker", 1, Hp: 0, Mp: 5000, Energy: 2000,
+                Skills: ["Fixture.Ability.Heal"], EquipmentIds: ["fixture.equipment.blade"],
+                Items: ["fixture.item.whetstone"], UseSlots: [new UseSlotSnapshot("fixture.item.revive", false)])],
+            Enemies: [new EnemySnapshot(1, "fixture.enemy.brute", "fixture.encounter.duel#1", null)],
+            ScalingId: "fixture.scaling.a",
+            Depth: 1);
+        const string expected =
+            """{"schemaVersion":2,"battleId":"run-1/f0/c40","seed":"42","encounterId":"fixture.encounter.duel","party":[{"slot":1,"unitDefId":"fixture.character.striker","level":1,"hp":0,"mp":5000,"energy":2000,"skills":["Fixture.Ability.Heal"],"equipmentIds":["fixture.equipment.blade"],"items":["fixture.item.whetstone"],"useSlots":[{"itemId":"fixture.item.revive","ready":false}]}],"enemies":[{"slot":1,"unitDefId":"fixture.enemy.brute","loadoutRef":"fixture.encounter.duel#1","variantId":null}],"scalingId":"fixture.scaling.a","depth":1}""";
+
+        Assert.Equal(expected, JsonSerializer.Serialize(snapshot, RpgJson.Options));
+        var parsed = JsonSerializer.Deserialize<BattleSnapshot>(expected, RpgJson.Options)!;
+        Assert.Equal(0, parsed.Party[0].Hp);
+        Assert.Equal(expected, JsonSerializer.Serialize(parsed, RpgJson.Options));
+    }
+
+    [Fact]
+    public void SnapshotV1Json_BindsWithV2FieldsNull()
+    {
+        var parsed = JsonSerializer.Deserialize<ReplayRequest>(SampleRequestJson, RpgJson.Options)!;
+
+        Assert.Null(parsed.Snapshot.Enemies);
+        Assert.Null(parsed.Snapshot.Depth);
+        Assert.Null(parsed.Snapshot.Party[0].Hp);
+        Assert.Null(parsed.Snapshot.Party[0].Items);
+        Assert.Null(parsed.Snapshot.Party[0].UseSlots);
+    }
+
+    [Fact]
     public void RejectedResult_CarriesErrorCode2002_AndReasonAsString()
     {
         var result = new ReplayResult(1, "b-1", ReplayVerdict.Rejected, ReplayErrors.ReplayMismatchCode,

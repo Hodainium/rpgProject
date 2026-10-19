@@ -61,7 +61,7 @@ func _hit(mode: ExecutionRow.DamageMode, typed: float) -> int:
 	var battle := new_battle(snapshot("duel", [[1, "striker"]]))
 	var striker := battle.unit_by_id(&"P1")
 	var dummy := battle.unit_by_id(&"E1")
-	striker.asc.initialize_attribute_overrides({"CritRate": 0.0})
+	striker.asc.initialize_attribute_overrides({"crit_rate": 0.0})
 	var row := ExecutionRow.new()
 	row.id = &"hit"
 	row.effect = load(FIXTURES + "effects/damage.tres")
@@ -71,9 +71,9 @@ func _hit(mode: ExecutionRow.DamageMode, typed: float) -> int:
 	elif mode == ExecutionRow.DamageMode.SCALED:
 		row.multiplier = typed
 	var targets: Array[BattleUnit] = [dummy]
-	var before := dummy.stat("HP")
+	var before := dummy.stat("hp")
 	battle.resolve_execution(striker, striker.abilities()[0], row, {"primary": dummy, "targets": targets})
-	return before - dummy.stat("HP")
+	return before - dummy.stat("hp")
 
 
 func test_damage_modes() -> void:

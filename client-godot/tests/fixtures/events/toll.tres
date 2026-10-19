@@ -1,0 +1,67 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_wf0dq"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_ukf8y"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_8knys"]
+[ext_resource type="Script" path="res://game/defs/conditions/coins_at_least.gd" id="4_appn0"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_vvg7l"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_coins.gd" id="6_gwj06"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="7_fhvqe"]
+[ext_resource type="Resource" path="res://tests/fixtures/encounters/lone.tres" id="8_ar64w"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="9_orriy"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/heal.tres" id="10_c10s7"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="11_ux8lj"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="12_p6tc6"]
+
+[sub_resource type="Resource" id="Resource_a2wro"]
+script = ExtResource("4_appn0")
+amount = 3
+
+[sub_resource type="Resource" id="Resource_p8rkv"]
+script = ExtResource("6_gwj06")
+amount = 3
+
+[sub_resource type="Resource" id="Resource_w73i6"]
+script = ExtResource("7_fhvqe")
+page = 1
+
+[sub_resource type="Resource" id="Resource_r2c2y"]
+script = ExtResource("2_ukf8y")
+label = "Pay"
+conditions = Array[ExtResource("3_8knys")]([SubResource("Resource_a2wro")])
+outcomes = Array[ExtResource("5_vvg7l")]([SubResource("Resource_p8rkv"), SubResource("Resource_w73i6")])
+
+[sub_resource type="Resource" id="Resource_3cv6c"]
+script = ExtResource("9_orriy")
+encounter = ExtResource("8_ar64w")
+
+[sub_resource type="Resource" id="Resource_unnyc"]
+script = ExtResource("2_ukf8y")
+label = "Fight"
+outcomes = Array[ExtResource("5_vvg7l")]([SubResource("Resource_3cv6c")])
+
+[sub_resource type="Resource" id="Resource_lhin5"]
+script = ExtResource("1_wf0dq")
+text = "A guard wants 3 coins."
+choices = Array[ExtResource("2_ukf8y")]([SubResource("Resource_r2c2y"), SubResource("Resource_unnyc")])
+
+[sub_resource type="Resource" id="Resource_8u2xk"]
+script = ExtResource("11_ux8lj")
+effect = ExtResource("10_c10s7")
+
+[sub_resource type="Resource" id="Resource_gpcmi"]
+script = ExtResource("2_ukf8y")
+label = "Rest"
+outcomes = Array[ExtResource("5_vvg7l")]([SubResource("Resource_8u2xk")])
+
+[sub_resource type="Resource" id="Resource_4jenl"]
+script = ExtResource("1_wf0dq")
+text = "He lets you rest."
+choices = Array[ExtResource("2_ukf8y")]([SubResource("Resource_gpcmi")])
+
+[resource]
+script = ExtResource("12_p6tc6")
+id = &"fixture.event.toll"
+display_name = "The toll"
+tags = Array[StringName]([&"Fixture.Event"])
+pages = Array[ExtResource("1_wf0dq")]([SubResource("Resource_lhin5"), SubResource("Resource_4jenl")])

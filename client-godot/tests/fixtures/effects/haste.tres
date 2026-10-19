@@ -8,7 +8,7 @@
 [sub_resource type="Resource" id="Resource_f6y22"]
 script = ExtResource("3_i841w")
 value_x100 = 2000
-attribute_name = "SPD"
+attribute_name = "spd"
 operation = 1
 
 [resource]

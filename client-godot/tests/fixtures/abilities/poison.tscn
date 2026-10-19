@@ -18,7 +18,7 @@ script = ExtResource("2_wsma0")
 id = &"dot"
 effect = ExtResource("4_4m7kn")
 
-[node name="Poison" type="Node" unique_id=1680304295]
+[node name="Poison" type="Node" unique_id=842732076]
 script = ExtResource("1_x4f8a")
 executions = Array[ExtResource("2_wsma0")]([SubResource("Resource_vgesf"), SubResource("Resource_lhxyf")])
 animation = ExtResource("5_87028")

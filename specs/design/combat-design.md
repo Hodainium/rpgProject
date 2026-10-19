@@ -12,17 +12,21 @@ Number notation: values are written as designers type them, with up to 2 decimal
 ## Attributes
 | Name | Default | Min | Max |
 |---|---|---|---|
-| HP | 1000 | 0 | MaxHP |
-| MaxHP | 1000 | 1 | – |
-| ATK | 500 | 0 | – |
-| DEF | 300 | 0 | – |
-| SPD | 100 | 1 | – |
-| CritRate (%) | 5 | 0 | 100 |
-| CritDmg (%) | 50 | 0 | – |
-| MP | 100 | 0 | MaxMP |
-| MaxMP | 100 | 0 | – |
-| Energy (ult charge) | 0 | 0 | 100 |
-| Toughness | 300 | 0 | 300 |
+| hp | 1000 | 0 | max_hp |
+| max_hp | 1000 | 1 | – |
+| atk | 500 | 0 | – |
+| def | 300 | 0 | – |
+| spd | 100 | 1 | – |
+| crit_rate (%) | 5 | 0 | 100 |
+| crit_dmg (%) | 50 | 0 | – |
+| mp | 100 | 0 | max_mp |
+| max_mp | 100 | 0 | – |
+| energy (ult charge) | 0 | 0 | max_energy |
+| max_energy | 100 | 0 | – |
+| toughness | 300 | 0 | max_toughness |
+| max_toughness | 300 | 0 | – |
+
+Names are snake_case, as the GodotGAS dashboard writes them; it generates the `x ≤ max_x` clamps itself (2026-10-19).
 
 ## Gameplay tags
 - Abilities: `Ability.Basic.Slash`, `Ability.Skill.Starfall`, `Ability.Ultimate.NovaBurst`
@@ -34,11 +38,11 @@ Number notation: values are written as designers type them, with up to 2 decimal
 Written in designer terms; the implementation does the same math on the ×100 whole numbers, truncating toward zero.
 `SkillMultiplier` (%) or a flat amount comes from the ability's execution-table row (`SCALED` / `FLAT`).
 ```text
-BaseDmg        = Attacker.ATK × SkillMultiplier%          # or the row's flat damage
-DefMultiplier% = 100 − (Target.DEF × 100) / (Target.DEF + 1000)
+BaseDmg        = Attacker.atk × SkillMultiplier%          # or the row's flat damage
+DefMultiplier% = 100 − (Target.def × 100) / (Target.def + 1000)
 RawDmg         = BaseDmg × DefMultiplier%
-if Roll() < Attacker.CritRate%:
-    RawDmg = RawDmg × (100 + Attacker.CritDmg)%
+if Roll() < Attacker.crit_rate%:
+    RawDmg = RawDmg × (100 + Attacker.crit_dmg)%
 ```
 Example: ATK 500, SkillMultiplier 150, target DEF 300 → BaseDmg 750, DefMultiplier 76.93% (the DEF part,
 23.0769%, truncates to 23.07%), RawDmg 576.97; on a crit with CritDmg 50 → 865.45.

@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_qw37n"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_r826i"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/heal.tres" id="3_wuaeg"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/crest_medic.tres" id="4_nsjqa"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_ypgwx"]
+
+[sub_resource type="Resource" id="Resource_kxjt7"]
+script = ExtResource("2_r826i")
+id = &"heal"
+effect = ExtResource("3_wuaeg")
+
+[sub_resource type="Resource" id="Resource_ieyw7"]
+script = ExtResource("5_ypgwx")
+require_all_tags = Array[StringName]([&"Fixture.Character.Medic"])
+
+[node name="CrestMedic" type="Node" unique_id=718874336]
+script = ExtResource("1_qw37n")
+targeting = 4
+executions = Array[ExtResource("2_r826i")]([SubResource("Resource_kxjt7")])
+animation = ExtResource("4_nsjqa")
+ability_tag = &"Fixture.Ability.CrestMedic"
+activation_query = SubResource("Resource_ieyw7")
+trigger_event_tag = &"Event.Battle.Start"

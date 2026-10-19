@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_ub1cr"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="2_tkwnp"]
+
+[sub_resource type="Resource" id="Resource_ogxy8"]
+script = ExtResource("1_ub1cr")
+cell = Vector2i(3, 3)
+
+[sub_resource type="Resource" id="Resource_85odu"]
+script = ExtResource("1_ub1cr")
+cell = Vector2i(9, 3)
+kind = 1
+
+[resource]
+script = ExtResource("2_tkwnp")
+id = &"fixture.room.cross"
+display_name = "Cross"
+tags = Array[StringName]([&"Fixture.Room.Type.Normal", &"Fixture.Chapter.A", &"Fixture.Chapter.B"])
+content_mode = 2
+placements = Array[ExtResource("1_ub1cr")]([SubResource("Resource_ogxy8"), SubResource("Resource_85odu")])

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/crest_knight.tscn" id="1_40sxx"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/crest_medic.tscn" id="2_d6xkj"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_ag3te"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_36xxb"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_oj5rv"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_fcm5h"]
+
+[sub_resource type="Resource" id="Resource_m2pg8"]
+script = ExtResource("4_36xxb")
+abilities = Array[PackedScene]([ExtResource("1_40sxx"), ExtResource("2_d6xkj")])
+
+[resource]
+script = ExtResource("6_fcm5h")
+id = &"fixture.item.crest"
+display_name = "Crest"
+tags = Array[StringName]([&"Fixture.Pool.Treasure"])
+price = 3
+grants = SubResource("Resource_m2pg8")

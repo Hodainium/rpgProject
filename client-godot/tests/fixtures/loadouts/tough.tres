@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Loadout" format=3]
+
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="1_qayxb"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_ikwfy"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="3_t6c43"]
+
+[resource]
+script = ExtResource("3_t6c43")
+id = &"fixture.loadout.tough"
+stats_x100 = Dictionary[String, int]({
+"def": 50000
+})

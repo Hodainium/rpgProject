@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_7n8ml"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/whetstone.tres" id="2_pvag2"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_untg0"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_gh7ot"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_7f6tl"]
+
+[sub_resource type="Resource" id="Resource_ktkxs"]
+script = ExtResource("3_untg0")
+effects = Array[ExtResource("1_7n8ml")]([ExtResource("2_pvag2")])
+
+[resource]
+script = ExtResource("5_7f6tl")
+id = &"fixture.item.whetstone"
+display_name = "Whetstone"
+tags = Array[StringName]([&"Fixture.Pool.Treasure"])
+price = 3
+grants = SubResource("Resource_ktkxs")

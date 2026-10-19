@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/tools/sync_tags.gd" id="1"]
+
+[node name="SyncTags" type="Node"]
+script = ExtResource("1")

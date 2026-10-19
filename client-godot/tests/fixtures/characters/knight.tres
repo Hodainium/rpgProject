@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_xwjtn"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/combo.tscn" id="2_tpo6q"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/guard.tscn" id="3_eb56c"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="4_1p7dh"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="5_svwy8"]
+[ext_resource type="Resource" path="res://tests/fixtures/equipment/blade.tres" id="6_1tgxo"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="7_g5tin"]
+[ext_resource type="Resource" path="res://tests/fixtures/items/feather.tres" id="8_teann"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="9_u1rni"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/frost.tscn" id="10_cajn0"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/mend.tscn" id="11_8osrq"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_o0vu7"]
+
+[sub_resource type="Resource" id="Resource_7kf34"]
+script = ExtResource("9_u1rni")
+skills = Array[PackedScene]([ExtResource("10_cajn0")])
+items = Array[ExtResource("7_g5tin")]([ExtResource("8_teann")])
+equipment = Array[ExtResource("5_svwy8")]([ExtResource("6_1tgxo")])
+
+[resource]
+script = ExtResource("12_o0vu7")
+learnable_skills = Array[PackedScene]([ExtResource("10_cajn0"), ExtResource("11_8osrq")])
+id = &"fixture.character.knight"
+attribute_set = ExtResource("4_1p7dh")
+abilities = Array[PackedScene]([ExtResource("1_xwjtn"), ExtResource("2_tpo6q"), ExtResource("3_eb56c")])
+display_name = "Knight"
+display_color = Color(0.27450982, 0.50980395, 0.7058824, 1)
+tags = Array[StringName]([&"Fixture.Character.Knight"])
+default_loadout = SubResource("Resource_7kf34")
+stats_x100 = Dictionary[String, int]({
+"atk": 50000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 30000,
+"energy": 0,
+"hp": 100000,
+"max_hp": 100000,
+"max_mp": 10000,
+"mp": 10000,
+"spd": 10000
+})

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="EnemyVariant" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_n3igf"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/elite.tres" id="2_45frq"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_mjtwx"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="4_0bdo7"]
+
+[sub_resource type="Resource" id="Resource_1nvst"]
+script = ExtResource("3_mjtwx")
+effects = Array[ExtResource("1_n3igf")]([ExtResource("2_45frq")])
+
+[resource]
+script = ExtResource("4_0bdo7")
+id = &"fixture.variant.elite"
+display_name = "Elite"
+grants = SubResource("Resource_1nvst")
+display_color = Color(1, 0.84313726, 0, 1)
+coin_bonus = 2

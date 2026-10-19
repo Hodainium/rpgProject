@@ -28,6 +28,9 @@ const DAMAGE_MULTIPLIER_TAG: StringName = &"Data.Damage.Multiplier"
 @export var effect: GameplayEffect
 @export var damage_mode: DamageMode = DamageMode.USE_EFFECT
 @export var targets: Targets = Targets.ALL
+## Spec game-skeleton 3.4: e.g. Damage.Type.Ice. A damaging hit also sends Event.Damage.Dealt.Ice /
+## Event.Damage.Taken.Ice, so triggered passives can react to a damage type with no code.
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var tags: Array[StringName] = []
 
 ## Flat damage as typed (e.g. 80.5), used when damage_mode is FLAT. Editor-only view of flat_damage_x100.
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR) var flat_damage: float:

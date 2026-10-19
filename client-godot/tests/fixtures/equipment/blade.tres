@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_igk85"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/blade.tres" id="2_3tbg6"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_0d5qw"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_x171i"]
+
+[sub_resource type="Resource" id="Resource_pjwl6"]
+script = ExtResource("3_0d5qw")
+effects = Array[ExtResource("1_igk85")]([ExtResource("2_3tbg6")])
+
+[resource]
+script = ExtResource("4_x171i")
+id = &"fixture.equipment.blade"
+display_name = "Blade"
+slot = &"Fixture.Equipment.Slot.Weapon"
+grants = SubResource("Resource_pjwl6")

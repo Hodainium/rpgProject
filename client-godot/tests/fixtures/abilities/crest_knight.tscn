@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_vdrvl"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_3ql1m"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/whetstone.tres" id="3_bltds"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/crest_knight.tres" id="4_p0mbu"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_s0spo"]
+
+[sub_resource type="Resource" id="Resource_i2414"]
+script = ExtResource("2_3ql1m")
+id = &"buff"
+effect = ExtResource("3_bltds")
+
+[sub_resource type="Resource" id="Resource_xt46x"]
+script = ExtResource("5_s0spo")
+require_all_tags = Array[StringName]([&"Fixture.Character.Knight"])
+
+[node name="CrestKnight" type="Node" unique_id=1479839178]
+script = ExtResource("1_vdrvl")
+targeting = 5
+executions = Array[ExtResource("2_3ql1m")]([SubResource("Resource_i2414")])
+animation = ExtResource("4_p0mbu")
+ability_tag = &"Fixture.Ability.CrestKnight"
+activation_query = SubResource("Resource_xt46x")
+trigger_event_tag = &"Event.Battle.Start"

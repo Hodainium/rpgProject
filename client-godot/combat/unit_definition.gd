@@ -11,8 +11,16 @@ extends Resource
 @export var abilities: Array[PackedScene] = []
 ## Enemies only. Null uses the default EnemyBrain.
 @export var brain: EnemyBrain
+## Spec game-skeleton: shown in menus and the placeholder screens. Not read by combat.
+@export var display_name: String = ""
+## Colour of the unit's cube in the placeholder screens. Not read by combat, not in the state hash.
+@export var display_color: Color = Color(0.6, 0.6, 0.6)
+## Loose tags on the unit in v2 battles (e.g. Enemy.Boss), and pool tags for the game.
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var tags: Array[StringName] = []
+## The loadout used unless an encounter slot or room placement overrides it.
+@export var default_loadout: Loadout
 
-## Stats as typed, with up to 2 decimals (e.g. {"ATK": 500, "CritRate": 5.25}). Editor-only view of stats_x100.
+## Stats as typed, with up to 2 decimals (e.g. {"atk": 500, "crit_rate": 5.25}). Editor-only view of stats_x100.
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR) var stats: Dictionary[String, float]:
 	get:
 		var typed: Dictionary[String, float] = {}

@@ -11,6 +11,8 @@ static func _scenarios() -> Dictionary:
 	return {
 		"duel-seed-1": snapshot("duel", [[1, "sweeper"]], "1"),  # weak hits: several turns, the enemy acts too
 		"squad-seed-42": squad_snapshot("42"),
+		# Spec game-skeleton 3.5: inventory capture, enemy loadouts, elite, scaling, carry-over, a dead member.
+		"run-v2-seed-7": preload("res://tests/combat/test_battle_v2.gd").v2_snapshot("7"),
 	}
 
 
@@ -22,7 +24,7 @@ func test_golden_replays() -> void:
 		if name.ends_with(".json") and not name.ends_with(".result.json"):
 			requests.append(name.trim_suffix(".json"))
 	requests.sort()
-	eq(Array(requests), ["duel-seed-1", "squad-seed-42", "squad-seed-42-tampered-target"], "golden set")
+	eq(Array(requests), ["duel-seed-1", "run-v2-seed-7", "squad-seed-42", "squad-seed-42-tampered-target"], "golden set")
 	for name in requests:
 		var expected := FileAccess.get_file_as_string(GOLDEN + name + ".result.json")
 		for run in 2:

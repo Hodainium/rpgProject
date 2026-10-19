@@ -3,7 +3,7 @@
 ##   BaseDmg        = ATK × multiplier%      (row SCALED override; default 100%)  or the row's FLAT damage
 ##   DefMultiplier% = 100% − DEF × 100% / (DEF + 1000)
 ##   RawDmg         = BaseDmg × DefMultiplier%
-##   crit: rng.randi_range(0, 9999) < CritRate  →  RawDmg × (100% + CritDmg)
+##   crit: rng.randi_range(0, 9999) < crit_rate  →  RawDmg × (100% + crit_dmg)
 ##
 ## Draws exactly one RNG value per hit, so every replay exercises the battle RNG.
 class_name FixtureDamage
@@ -15,10 +15,10 @@ const DEF_CONSTANT: int = 100000  # 1000.00
 @warning_ignore("integer_division")
 func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Dictionary:
 	var source := BattleContext.source_asc(spec)
-	var atk := int(source.get_attribute("ATK").current_value)
-	var def := int(target_asc.get_attribute("DEF").current_value)
-	var crit_rate := int(source.get_attribute("CritRate").current_value)
-	var crit_dmg := int(source.get_attribute("CritDmg").current_value)
+	var atk := int(source.get_attribute("atk").current_value)
+	var def := int(target_asc.get_attribute("def").current_value)
+	var crit_rate := int(source.get_attribute("crit_rate").current_value)
+	var crit_dmg := int(source.get_attribute("crit_dmg").current_value)
 
 	var base: int
 	if spec.set_by_caller_magnitudes.has(ExecutionRow.DAMAGE_FLAT_TAG):
@@ -31,4 +31,4 @@ func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Di
 	var damage := Fixed.pct(base, def_multiplier)
 	if BattleContext.rng_for(target_asc).randi_range(0, 9999) < crit_rate:
 		damage = Fixed.pct(damage, Fixed.ONE_HUNDRED_PERCENT + crit_dmg)
-	return {"HP": float(-damage)}
+	return {"hp": float(-damage)}

@@ -18,7 +18,7 @@ script = ExtResource("2_dqogx")
 id = &"debuff"
 effect = ExtResource("4_xnttx")
 
-[node name="Weaken" type="Node" unique_id=1023381105]
+[node name="Weaken" type="Node" unique_id=1368528048]
 script = ExtResource("1_nxrsp")
 executions = Array[ExtResource("2_dqogx")]([SubResource("Resource_q5v5h"), SubResource("Resource_nbnto")])
 animation = ExtResource("5_g4rhe")

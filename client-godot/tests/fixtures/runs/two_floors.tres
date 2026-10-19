@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="RunStructure" format=3]
+
+[ext_resource type="Resource" path="res://tests/fixtures/items/crumb.tres" id="1_eic6g"]
+[ext_resource type="Script" path="res://game/defs/floor_slot.gd" id="2_2gnkg"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="3_gjlvi"]
+[ext_resource type="Resource" path="res://tests/fixtures/chapters/a.tres" id="4_m8don"]
+[ext_resource type="Resource" path="res://tests/fixtures/chapters/b.tres" id="5_y0cf6"]
+[ext_resource type="Script" path="res://game/defs/run_structure.gd" id="6_o1ie6"]
+
+[sub_resource type="Resource" id="Resource_ffxpi"]
+script = ExtResource("2_2gnkg")
+chapters = Array[ExtResource("3_gjlvi")]([ExtResource("4_m8don")])
+
+[sub_resource type="Resource" id="Resource_tskm8"]
+script = ExtResource("2_2gnkg")
+chapters = Array[ExtResource("3_gjlvi")]([ExtResource("4_m8don"), ExtResource("5_y0cf6")])
+
+[resource]
+script = ExtResource("6_o1ie6")
+id = &"fixture.run.two_floors"
+display_name = "Two floors"
+floors = Array[ExtResource("2_2gnkg")]([SubResource("Resource_ffxpi"), SubResource("Resource_tskm8")])
+fallback_item = ExtResource("1_eic6g")

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_balsa"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_lc6i5"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/feather.tscn" id="3_0xbbc"]
+
+[resource]
+script = ExtResource("2_lc6i5")
+id = &"fixture.item.feather"
+display_name = "Feather"
+tags = Array[StringName]([&"Fixture.Pool.Shop"])
+price = 3
+kind = 1
+use_ability = ExtResource("3_0xbbc")

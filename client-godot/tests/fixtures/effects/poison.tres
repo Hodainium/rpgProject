@@ -8,7 +8,7 @@
 [sub_resource type="Resource" id="Resource_ywrqw"]
 script = ExtResource("3_ornw2")
 value_x100 = -3000
-attribute_name = "HP"
+attribute_name = "hp"
 
 [resource]
 script = ExtResource("4_4vo0w")

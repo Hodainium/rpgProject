@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ember.tscn" id="1_w27pj"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_at8ec"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_t020v"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_ln5bt"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_l4y62"]
+
+[sub_resource type="Resource" id="Resource_b3orv"]
+script = ExtResource("3_t020v")
+abilities = Array[PackedScene]([ExtResource("1_w27pj")])
+
+[resource]
+script = ExtResource("5_l4y62")
+id = &"fixture.item.ember_charm"
+display_name = "Ember Charm"
+tags = Array[StringName]([&"Fixture.Pool.Treasure"])
+price = 3
+grants = SubResource("Resource_b3orv")

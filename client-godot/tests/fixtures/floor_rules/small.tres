@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="FloorGenRules" format=3]
+
+[ext_resource type="Script" path="res://game/defs/floor_gen_rules.gd" id="1_5ejd1"]
+
+[resource]
+script = ExtResource("1_5ejd1")
+id = &"fixture.rules.small"
+base_rooms = 5
+rooms_per_depth = 1
+random_extra_rooms = 1
+max_rooms = 10
+start_room_tag = &"Fixture.Room.Type.Start"
+normal_room_tag = &"Fixture.Room.Type.Normal"
+boss_room_tag = &"Fixture.Room.Type.Boss"
+special_room_tags = Array[StringName]([&"Fixture.Room.Type.Treasure", &"Fixture.Room.Type.Shop"])

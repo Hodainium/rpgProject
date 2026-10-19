@@ -6,6 +6,8 @@ class_name ReplayRunner
 extends RefCounted
 
 const SCHEMA_VERSION: int = 1
+## Snapshot schema versions the runner accepts (spec game-skeleton 3.5: v2 adds the run fields).
+const SNAPSHOT_SCHEMA_VERSIONS: Array[int] = [1, 2]
 const EXIT_VERIFIED: int = 0
 const EXIT_RUNNER_ERROR: int = 1
 const EXIT_REJECTED: int = 2
@@ -121,9 +123,10 @@ func _validate_request(request: Dictionary) -> String:
 		return "request needs snapshot and actionLog objects"
 	var snapshot: Dictionary = request["snapshot"]
 	var action_log: Dictionary = request["actionLog"]
-	for part in [snapshot, action_log]:
-		if int(part.get("schemaVersion", 0)) != SCHEMA_VERSION:
-			return "unsupported schemaVersion %s (expected %d)" % [part.get("schemaVersion"), SCHEMA_VERSION]
+	if int(action_log.get("schemaVersion", 0)) != SCHEMA_VERSION:
+		return "unsupported actionLog schemaVersion %s (expected %d)" % [action_log.get("schemaVersion"), SCHEMA_VERSION]
+	if not int(snapshot.get("schemaVersion", 0)) in SNAPSHOT_SCHEMA_VERSIONS:
+		return "unsupported snapshot schemaVersion %s (expected one of %s)" % [snapshot.get("schemaVersion"), SNAPSHOT_SCHEMA_VERSIONS]
 	if not action_log.get("actions") is Array or not snapshot.get("party") is Array:
 		return "actionLog.actions and snapshot.party must be arrays"
 	for entry in action_log["actions"]:

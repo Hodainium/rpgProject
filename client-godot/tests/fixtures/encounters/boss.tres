@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_s886e"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_mnhr0"]
+[ext_resource type="Resource" path="res://tests/fixtures/enemies/chief.tres" id="3_sb7bf"]
+[ext_resource type="Resource" path="res://tests/fixtures/enemies/grunt.tres" id="4_l1uje"]
+
+[sub_resource type="Resource" id="Resource_s68u6"]
+script = ExtResource("2_mnhr0")
+enemy = ExtResource("3_sb7bf")
+
+[sub_resource type="Resource" id="Resource_2jkem"]
+script = ExtResource("2_mnhr0")
+enemy = ExtResource("4_l1uje")
+
+[resource]
+script = ExtResource("1_s886e")
+id = &"fixture.encounter.boss"
+display_name = "Boss"
+tags = Array[StringName]([&"Fixture.Encounter.Boss", &"Fixture.Chapter.A", &"Fixture.Chapter.B"])
+slots = Array[ExtResource("2_mnhr0")]([SubResource("Resource_s68u6"), SubResource("Resource_2jkem")])

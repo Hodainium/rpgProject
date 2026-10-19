@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_owrxb"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_bj2ft"]
+
+[resource]
+script = ExtResource("2_bj2ft")
+id = &"fixture.item.satchel"
+display_name = "Satchel"
+tags = Array[StringName]([&"Fixture.Pool.Boss"])
+price = 3
+extra_use_slots = 1

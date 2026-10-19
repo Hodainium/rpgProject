@@ -11,7 +11,7 @@ id = &"hit"
 effect = ExtResource("3_ux5nk")
 damage_mode = 2
 
-[node name="Strike" type="Node" unique_id=1404820095]
+[node name="Strike" type="Node" unique_id=1933697684]
 script = ExtResource("1_mkulv")
 executions = Array[ExtResource("2_vt0hu")]([SubResource("Resource_jv7aq")])
 animation = ExtResource("4_7tqpu")

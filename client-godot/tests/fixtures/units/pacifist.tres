@@ -10,9 +10,9 @@ id = &"fixture.unit.pacifist"
 attribute_set = ExtResource("2_y83fi")
 abilities = Array[PackedScene]([ExtResource("1_o6xgy")])
 stats_x100 = Dictionary[String, int]({
-"ATK": 0,
-"DEF": 0,
-"HP": 500000,
-"MaxHP": 500000,
-"SPD": 10000
+"atk": 0,
+"def": 0,
+"hp": 500000,
+"max_hp": 500000,
+"spd": 10000
 })

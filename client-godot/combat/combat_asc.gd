@@ -6,8 +6,12 @@
 ## - Whole-number snap: attribute values produced by GodotGAS's float aggregation are snapped to whole numbers,
 ##   so percentage modifiers stay deterministic (spec "Number format").
 ##
-## Relies on addon internals (_active_effects, _evaluate_spec, _commit_spec_math, _trigger_effect_events,
-## _aggregate_attribute_value, _calculate_base_targets). tests/combat/test_combat_asc.gd pins that behaviour.
+## - Deterministic triggers (spec game-skeleton 3.4): inside a battle, abilities whose trigger_event_tag matches a
+##   gameplay event are queued on the battle's TriggerQueue instead of being activated at once without an await.
+##
+## Relies on addon internals (_active_effects, _active_abilities, _evaluate_spec, _commit_spec_math,
+## _trigger_effect_events, _aggregate_attribute_value, _calculate_base_targets). tests/combat/test_combat_asc.gd and
+## tests/combat/test_triggers.gd pin that behaviour.
 class_name CombatASC
 extends AbilitySystemComponent
 
@@ -55,6 +59,21 @@ func turn_end() -> void:
 			remove_active_effect(active_effect)
 	_skip_countdown.clear()
 	_in_own_turn = false
+
+
+## Same announcement as GodotGAS, but triggered abilities go on the battle's queue (grant order) instead of running now.
+## Outside a battle (no Battle ancestor) the addon's own behaviour applies.
+func send_gameplay_event(event_tag: StringName, payload: Variant = null) -> void:
+	if event_tag == &"":
+		return
+	var battle := BattleContext.battle_for(self)
+	if battle == null:
+		super(event_tag, payload)
+		return
+	gameplay_event_received.emit(event_tag, payload)
+	for ability in _active_abilities:
+		if ability is BattleAbility and ability.trigger_event_tag == event_tag:
+			battle.triggers.push(get_parent(), ability, event_tag, payload)
 
 
 func _on_active_effect_added(active_effect: ActiveGameplayEffect) -> void:
