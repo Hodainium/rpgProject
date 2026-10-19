@@ -15,7 +15,7 @@ verification, exactly-once reward effects, outbox-based event publication and en
 | `src/Rpg.GameServerApi/` | Skeleton only: `/api/v1/info`, `/health/live`, `/health/ready`, `/metrics` on port 5000. Connects to Postgres/Redis/RabbitMQ for readiness; **no tables, queues, topics or battle/gacha endpoints yet.** |
 | `tests/` | `Rpg.Contracts.Tests` (golden JSON, purity guards), `Rpg.GameServerApi.Tests` (Testcontainers; **Docker required**). |
 | `load-test/`, `web-dashboard/` | **Empty.** |
-| `specs/combat-design.md` | Design notes: attributes, tags, damage formula. Not yet built in GodotGAS. |
+| `specs/design/` | Design intent (not slice specs). `combat-design.md`: attributes, tags, damage formula. Not yet built in GodotGAS. |
 | `specs/roadmap.md` | **Build order: slices 0–9 and design breaks. Read it to know what's next; mark slices done there.** |
 | `.gitattributes` | Root: LF everywhere (CRLF only for `.sln`/`.ps1`/`.cmd`/`.bat`), binaries marked. |
 | `infra/docker-compose.yml` | Postgres, Redis, RabbitMQ, Redpanda; Prometheus + Grafana under the `observability` profile. |

@@ -32,6 +32,7 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-10-14: Roadmap created (slices 0–9, four suggested design breaks).
 - 2026-10-14: Server renamed `Rpg.BasServer` → `Rpg.GameServerApi`; client HTTP layer moved to its own library `src/Rpg.Client`.
 - 2026-10-14: Target .NET 10 LTS instead of .NET 8 (support ends 2026-11-10); Godot fallback recorded in the project-skeleton spec.
+- 2026-10-19: Design notes moved to `specs/design/` (`combat-design.md`); slice specs stay at the top of `specs/`.
 
 
 ## Design tuning: any time, not just in breaks
