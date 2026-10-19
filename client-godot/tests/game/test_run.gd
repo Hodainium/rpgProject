@@ -199,6 +199,66 @@ func test_items_hooks_and_remove() -> void:
 	check(not lucky.battle_snapshot()["party"][0]["items"].has("fixture.item.whetstone"), "RemoveItem drops its grants")
 
 
+## Spec 3.1: enemy loadouts resolve default → encounter slot → room placement, the last one set wins.
+func test_loadout_precedence() -> void:
+	var run := _start()
+	var generator := FloorGenerator.new(run.content, run.structure, 1, 0)
+	var tough: Loadout = run.content.loadouts[&"fixture.loadout.tough"]
+	var enemy := EnemyDefinition.new()
+	enemy.id = &"test.enemy"
+	enemy.default_loadout = Loadout.new()  # inline default
+	var encounter := EncounterDefinition.new()
+	encounter.id = &"test.encounter"
+	for loadout in [null, Loadout.new()]:  # slot 1: default only; slot 2: inline encounter override
+		var slot := EncounterSlot.new()
+		slot.enemy = enemy
+		slot.loadout = loadout
+		encounter.slots.append(slot)
+	var plain: Array = generator.resolve_enemies(encounter, null, true, null, RunSeeds.rng(1, "t"))
+	eq([plain[0]["loadoutRef"], plain[1]["loadoutRef"]], ["test.enemy#default", "test.encounter#2"],
+		"the encounter's slot override beats the enemy's default")
+	var room := RoomDefinition.new()
+	room.id = &"test.room"
+	var spawn := RoomPlacement.new()
+	spawn.kind = RoomPlacement.Kind.ENEMY_SPAWN
+	spawn.slot = 2
+	spawn.loadout = tough
+	room.placements.append(spawn)
+	var placed: Array = generator.resolve_enemies(encounter, room, true, null, RunSeeds.rng(1, "t"))
+	eq([placed[0]["loadoutRef"], placed[1]["loadoutRef"]], ["test.enemy#default", "fixture.loadout.tough"],
+		"the room placement beats the encounter (an asset loadout is referenced by its id)")
+
+
+## Spec 3.1 items: on_pickup runs when an item is received, on_floor_start when each floor begins.
+func test_items_pickup_and_floor_hooks() -> void:
+	var content := ContentIndex.new(FIXTURES)  # own index: the test adds an item to it
+	var bonus := GainCoins.new()
+	bonus.amount = 3
+	var item := ItemDefinition.new()
+	item.id = &"test.item.hooks"
+	item.on_pickup.assign([bonus])
+	item.on_floor_start.assign([bonus])
+	content.items[item.id] = item
+	var run := RunController.new()
+	host.add_child(run)
+	_runs.append(run)
+	eq(run.start_run(content, ["fixture.character.knight"], "7"), "", "run starts")
+	run.give_item(item, null, null)
+	eq(run.state.coins, 3, "on_pickup ran")
+	run.state.boss_cleared = true
+	eq(run.next_floor(), "", "next floor")
+	eq(run.state.coins, 6, "on_floor_start ran")
+
+
+## Spec section 4: a usable item on cooldown is refused on the map, and nothing is logged.
+func test_cooling_item_refused_on_map() -> void:
+	var run := _start()
+	run.state.member(1)["use_slots"] = [{"item": &"fixture.item.flask", "cooldown": 1}]
+	var logged := run.run_log.size()
+	check(not (await run.use_field(1, &"Fixture.Ability.Flask")).is_empty(), "a cooling item can't be used")
+	eq([run.run_log.size(), run.state.member(1)["use_slots"][0]["cooldown"]], [logged, 1], "nothing changed")
+
+
 func test_shop_and_treasure() -> void:
 	var run := _start()
 	var market := _cell_with_room(run, "fixture.room.market")
@@ -303,6 +363,14 @@ func test_content_problems() -> void:
 		_runs.append(run)
 		var error := run.start_run(case[0], case[1], case[2])
 		check(error.contains(case[3]), "'%s' expected, got '%s'" % [case[3], error])
+
+
+## Spec "Done when": the 2-floor fixture run can be won (seed 11: both bosses beaten, run Won on the last floor).
+func test_run_won() -> void:
+	var run := _start("11")
+	await RunPlayer.play(run)
+	eq([run.state.status, run.state.floor_index, run.runner_error], [RunState.WON, 1, ""], "the fixture run is won on floor 2")
+	eq(run.run_log[-1], {"type": "end", "status": RunState.WON}, "the win is logged")
 
 
 func test_run_scripted() -> void:

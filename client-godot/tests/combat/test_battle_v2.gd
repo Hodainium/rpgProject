@@ -169,20 +169,75 @@ func _energy_effect(amount_x100: int) -> GameplayEffect:
 
 
 ## An in-memory ability with one USE_EFFECT row (or SCALED for the damage effect) and its execute key.
-func _runtime_ability(tag: StringName, targeting: BattleAbility.Targeting, effect: GameplayEffect) -> BattleAbility:
+func _runtime_ability(tag: StringName, targeting: BattleAbility.Targeting, effect: GameplayEffect,
+		row_id: StringName = &"go") -> BattleAbility:
 	var ability := BattleAbility.new()
 	ability.ability_tag = tag
 	ability.targeting = targeting
 	var row := ExecutionRow.new()
-	row.id = &"go"
+	row.id = row_id
 	row.effect = effect
 	row.damage_mode = ExecutionRow.DamageMode.SCALED if effect.executions.size() > 0 else ExecutionRow.DamageMode.USE_EFFECT
 	ability.executions = [row]
 	var animation := Animation.new()
 	var track := animation.add_track(Animation.TYPE_METHOD)
-	animation.track_insert_key(track, 0.1, {"method": &"execute", "args": [&"go"]})
+	animation.track_insert_key(track, 0.1, {"method": &"execute", "args": [row_id]})
 	ability.animation = animation
 	return ability
+
+
+## Spec 3.4: triggers run in queue order: grant order on one unit, then event order across units (Dealt before Taken).
+func test_trigger_order() -> void:
+	var battle := new_battle(v2_snapshot())
+	var knight := battle.unit_by_id(&"P1")
+	var target := battle.unit_by_id(&"E2")
+	var noop: GameplayEffect = load(FIXTURES + "effects/noop.tres")
+	for spec in [[knight, &"Test.Ability.First", &"first", Battle.EVENT_DAMAGE_DEALT],
+			[knight, &"Test.Ability.Second", &"second", Battle.EVENT_DAMAGE_DEALT],
+			[target, &"Test.Ability.Hurt", &"hurt", Battle.EVENT_DAMAGE_TAKEN]]:
+		var ability := _runtime_ability(spec[1], BattleAbility.Targeting.SELF, noop, spec[2])
+		ability.trigger_event_tag = spec[3]
+		spec[0].asc.add_child(ability)
+	var order := []
+	battle.execution_resolved.connect(func(_unit, row_id, _targets): order.append(row_id))
+	await battle._activate(knight, knight.ability_by_tag(&"Fixture.Ability.Strike"), target)
+	order.clear()
+	await battle._drain_triggers()
+	eq(order, [&"first", &"second", &"hurt"], "grant order on the dealer, then the target's Taken trigger")
+
+
+## Spec section 4: an unknown variant, equipment or scaling id is a runner error, not a 2002.
+func test_unknown_variant_equipment_scaling() -> void:
+	for change in [["enemies", 0, "variantId", "fixture.variant.nope", "variant"],
+			["party", 0, "equipmentIds", ["fixture.equipment.nope"], "equipment"]]:
+		var bad := v2_snapshot()
+		bad[change[0]][change[1]][change[2]] = change[3]
+		var broken := Battle.new()
+		host.add_child(broken)
+		_battles.append(broken)
+		check(broken.setup(bad, fixtures()).contains(change[4]), "unknown %s is a runner error" % change[4])
+	var bad_scaling := v2_snapshot()
+	bad_scaling["scalingId"] = "fixture.scaling.nope"
+	var broken_scaling := Battle.new()
+	host.add_child(broken_scaling)
+	_battles.append(broken_scaling)
+	check(broken_scaling.setup(bad_scaling, fixtures()).contains("scaling"), "unknown scaling is a runner error")
+
+
+## Spec 3.4 / section 4: an ability that ignores State.Infield is battle-only; the map refuses it.
+func test_battle_only_ability_refused_in_field() -> void:
+	var field := Battle.new()
+	host.add_child(field)
+	_battles.append(field)
+	field.setup_field(v2_snapshot(), fixtures())
+	var medic := field.unit_by_id(&"P2")
+	var rally := _runtime_ability(&"Test.Ability.Rally", BattleAbility.Targeting.SELF, load(FIXTURES + "effects/noop.tres"))
+	rally.activation_query = GameplayTagQuery.new()
+	rally.activation_query.ignore_tags.assign([Battle.IN_FIELD_TAG])
+	medic.asc.add_child(rally)
+	var hp_before := medic.stat(BattleUnit.HP)
+	check(not (await field.perform(&"P2", &"Test.Ability.Rally")).is_empty(), "a battle-only ability is refused on the map")
+	eq(medic.stat(BattleUnit.HP), hp_before, "nothing changed")
 
 
 func test_trigger_chain_cap() -> void:
