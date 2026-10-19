@@ -77,7 +77,7 @@ GameMain (game/game_main.tscn, project main scene)
  │    boss cleared → next floor (or run won after the last floor)
  │
  ├─ party panel, any time on the map: use(ability, actor, target): a character's spell or a held item's use ability
- │    FieldContext (Battle in field mode, party only, tag State.InField) → effect → read back HP/MP/energy, revives
+ │    FieldContext (Battle in field mode, party only, tag State.Infield) → effect → read back HP/MP/energy, revives
  │    log {field, actor, ability, target, item?, resultHash}
  └─ run end → menu
 ```
@@ -247,8 +247,8 @@ GodotGAS's own effect `event_tags` still fire, through the same queue. Payload: 
 A triggered single-target ability aims at the event's other unit if it's a valid target, else the first valid one by slot.
 
 **Field mode** (out-of-battle actions): `Battle.setup_field(party snapshot)` builds the party exactly as steps 1–5 with
-no enemies and no turn loop, adds the loose tag `State.InField` to every unit, and `perform(actor, ability, target)`
-activates one ability. Abilities choose where they work with GodotGAS's `activation_query`: require `State.InField`
+no enemies and no turn loop, adds the loose tag `State.Infield` to every unit, and `perform(actor, ability, target)`
+activates one ability. Abilities choose where they work with GodotGAS's `activation_query`: require `State.Infield`
 for dungeon-only, ignore it for battle-only. Only ally targeting (`SELF`, `SINGLE_ALLY`, `ALL_ALLIES`,
 `SINGLE_DEAD_ALLY`, `ALL_DEAD_ALLIES`) is usable in the field. Usable items work exactly as in battle (the holder is
 the actor). Afterwards the game reads HP/MP/energy and revives back into run state.
@@ -296,8 +296,8 @@ system-design pass (slice 2b).
   `next_floor`.
 - `RunHasher`: sorted `key=value` lines → SHA-256, like state hash v1. For determinism tests only; not a wire format yet.
 - **System tags the code uses** (you add them to your registry when you want them in the picker; the code doesn't need
-  the registry): `State.InField`, `State.Dead`, `Event.Battle.Start`, `Event.Turn.Start`, `Event.Turn.End`, `Event.Damage.Dealt`,
-  `Event.Damage.Taken`, `Event.Unit.Died`, and the prefix `Damage.Type.`.
+  the registry): `State.Infield`, `State.Dead`, `Event.Battle.Start`, `Event.Turn.Start`, `Event.Turn.End`, `Event.Damage.Dealt`,
+  `Event.Damage.Taken`, `Event.Unit.Died`, `Event.Ability.Used` (added 2026-10-19, see decision 15), and the prefix `Damage.Type.`.
 
 ### 3.7 Placeholder screens (`presentation/demo/`)
 Menu (character toggles, seed field, content-root switch), map (Isaac visibility: visited and adjacent cells, role
@@ -369,7 +369,7 @@ pedestal), three `CharacterDefinition`s and two `EnemyDefinition`s built from th
 (a passive stat item for the holder, a party-wide passive, one Birthright-like item (an effect per character tag), a triggered passive on
 `Event.Damage.Dealt.Ice`, a consumable revive item, a cooldown heal item with blast targeting, a Schoolbag-like
 `extra_use_slots` item, an item with `on_room_cleared`), one equipment piece, two events, a 2-floor `RunStructure`, a hand-made layout.
-A fixture field ability (heal, `SINGLE_ALLY`, costs MP, requires `State.InField`). Fixture tags live under `Fixture.*`.
+A fixture field ability (heal, `SINGLE_ALLY`, costs MP, requires `State.Infield`). Fixture tags live under `Fixture.*`.
 
 ### Unit tests (`tests/game/` and `tests/combat/`)
 | Test | Proves |
@@ -512,3 +512,16 @@ unit_view, battle_panel, event_panel, pickup_panel, party_panel, run_end_view), 
 14. **Tag checkpoint tool** (`game/tools/sync_tags.tscn`, user request 2026-10-19): Godot, not a hand edit, regenerates
     `gameplay_tags.gd` (GodotGAS's `GameplayTagGenerator`) and reports content/system tags missing from the registry,
     badly formatted tags, and unused registered tags. It only adds to the registry with `--add-missing`.
+15. **Ult charge through GAS** (user request 2026-10-19): the battle sends `Event.Ability.Used` to a unit after each
+    action it takes (not triggered passives, not map actions). A character's charge listener is a triggered passive on
+    that event applying an instant `energy` gain; an ult's `cost_effect` spends `energy`, so GodotGAS's own cost check
+    blocks it until the bar is full and the cost empties it. Tags carry no values, so the bar is the `energy`
+    attribute (`max_energy` 100), not a tag. Test: `test_ult_charge_and_cost`. Demo: +25 per action; Warrior Cleave
+    (all enemies, 200%), Cleric Sanctuary (party +400 HP).
+16. **Tag segments follow the GodotGAS dashboard** (user decision 2026-10-19): `add_tag()` re-capitalises each segment
+    to `Xxxx`, so tags are written that way (`State.Infield`, `Ability.Iceblast`, `Ability.Passive.Ultcharge.Action`), never
+    camel-case inside a segment. `sync_tags` warns about any tag the dashboard would rename and adds missing tags
+    exactly as written (not through `add_tag()`). The rename changed only hash values in `run_scripted.json`.
+    Words stay apart through real hierarchy only (`Ability.Passive.Ultcharge.Action` / `.Hit`: a query on
+    `Ability.Passive.Ultcharge` matches both ult charge listeners, as intended); no fake parents like `State.In.Field`.
+    Long names get a better word instead (`Ability.Item.Revive`).

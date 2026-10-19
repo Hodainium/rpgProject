@@ -47,7 +47,12 @@ if Roll() < Attacker.crit_rate%:
 Example: ATK 500, SkillMultiplier 150, target DEF 300 → BaseDmg 750, DefMultiplier 76.93% (the DEF part,
 23.0769%, truncates to 23.07%), RawDmg 576.97; on a crit with CritDmg 50 → 865.45.
 
+## Ult charge (energy)
+Each ability a character uses in battle fires `Event.Ability.Used`; a triggered listener ability adds `energy` (demo:
++25, so an ult every 4 actions). An ult's cost is 100 `energy`: GAS won't activate it on a partial bar and the cost
+empties it. Charge carries between battles. Not yet: per-ability charge amounts, charge from taking hits, out-of-turn ults.
+
 ## Not yet designed
-Per-ability execution tables (multipliers and hit timing), Energy gain and Ultimate gating, Toughness damage and break,
+Per-ability execution tables (multipliers and hit timing), Toughness damage and break,
 buff and debuff magnitudes and durations. (Turn order, action value and effect timing are specified in
 `specs/combat-replay-core.md`.)
