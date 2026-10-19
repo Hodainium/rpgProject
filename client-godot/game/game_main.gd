@@ -59,10 +59,13 @@ func _ready() -> void:
 			_add_view(scene.instantiate(), ui)
 	_message = Label.new()
 	_message.name = "Message"
-	_message.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	_message.offset_top = -28
 	_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	ui.add_child(_message)
+	_message.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_message.offset_left = 8
+	_message.offset_top = -28
+	_message.offset_right = -8
+	_message.offset_bottom = -4
 	if not missing.is_empty():
 		show_message("Missing screens: %s. Run res://game/tools/build_demo.tscn once, or set them on GameMain."
 			% ", ".join(missing))
