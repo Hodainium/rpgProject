@@ -77,7 +77,9 @@ Each must have a spec and an automated test before the workflow counts as done:
 ## Spec-Driven Development
 1. Write or update a spec in `specs/<feature>.md` (use `/spec`) before implementing a feature.
 2. Client↔server contracts are C# `record` DTOs in `src/Rpg.Contracts/`, defined before endpoint code.
-3. Combat math policy: integers / basis points (`10000 = 100.00%`), seeded RNG only.
+3. Combat number policy: **every number a designer types is stored ×100 as a whole number** (up to 2 decimals:
+   `500` → `50000`, `150`% → `15000`, `80.5` → `8050`), converted once at edit time. Combat uses only integer
+   `+ − × ÷` (no `pow`/`sqrt`/etc.) and the seeded RNG. Details: `specs/combat-replay-core.md`, "Number format".
 4. **GodotGAS resources are the single source of truth** for combat data: the tag registry, AttributeSets, effect `.tres` files and ExecCalcs.
    Tune values there. Specs describe intent and don't duplicate numbers that already live in Godot.
 
