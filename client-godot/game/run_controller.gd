@@ -443,6 +443,33 @@ func can_hold(slot: int, item: ItemDefinition) -> String:
 	return ""
 
 
+## For screens: each member's current and maximum hp/mp/energy (×100), read through GAS so item and equipment bonuses
+## count. slot -> {attribute name -> value}; attributes the set doesn't have are left out.
+func party_stats() -> Dictionary:
+	var stats := {}
+	if not _active():
+		return stats
+	var battle := _field_battle(0)
+	if battle == null:
+		return stats
+	for member in state.party:
+		var unit := battle.unit_by_id(StringName("P%d" % member["slot"]))
+		if unit != null:
+			stats[member["slot"]] = unit_stats(unit)
+	battle.free()
+	return stats
+
+
+## A unit's current and maximum hp/mp/energy (×100), for screens.
+static func unit_stats(unit: BattleUnit) -> Dictionary:
+	var stats := {}
+	for attribute_name in [BattleUnit.HP, BattleUnit.MAX_HP, BattleUnit.MP, BattleUnit.MAX_MP, BattleUnit.ENERGY,
+			BattleUnit.MAX_ENERGY]:
+		if unit.asc.has_attribute(attribute_name):
+			stats[attribute_name] = unit.stat(attribute_name)
+	return stats
+
+
 func use_capacity(slot: int) -> int:
 	return _use_capacity(state.member(slot))
 

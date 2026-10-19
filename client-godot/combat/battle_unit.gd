@@ -11,6 +11,7 @@ const MP: String = "mp"
 const MAX_MP: String = "max_mp"
 const SPD: String = "spd"
 const ENERGY: String = "energy"
+const MAX_ENERGY: String = "max_energy"
 ## Loose tag on dead units in v2 battles and the field (spec game-skeleton 3.4).
 const DEAD_TAG: StringName = &"State.Dead"
 
