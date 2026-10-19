@@ -14,8 +14,8 @@ const CONTENT_ROOT: String = "res://content/"
 const TAG_HINT: String = "gas::tag"
 ## Tags the code reads or sends by name (spec game-skeleton 3.6, combat-replay-core).
 const SYSTEM_TAGS: Array[StringName] = [
-	&"State.Dead", &"State.InField", &"Event.Battle.Start", &"Event.Turn.Start", &"Event.Turn.End",
-	&"Event.Damage.Dealt", &"Event.Damage.Taken", &"Event.Unit.Died",
+	&"State.Dead", &"State.Infield", &"Event.Battle.Start", &"Event.Turn.Start", &"Event.Turn.End",
+	&"Event.Damage.Dealt", &"Event.Damage.Taken", &"Event.Unit.Died", &"Event.Ability.Used",
 	&"Data.Damage.Flat", &"Data.Damage.Multiplier",
 ]
 const FORMAT: String = "^([A-Z][a-zA-Z0-9]*)(\\.[A-Z][a-zA-Z0-9]*)*$"
@@ -60,11 +60,18 @@ func _ready() -> void:
 		print("  MISSING     %s  (%s)" % [tag, ", ".join(_used[tag])])
 	for tag in unused:
 		print("  unused      %s" % tag)
+	for tag in names:
+		if _dashboard_form(tag) != String(tag):
+			print("  DASHBOARD   %s would become %s if typed into the GodotGAS dashboard" % [tag, _dashboard_form(tag)])
 
 	if OS.get_cmdline_user_args().has("--add-missing") and not missing.is_empty():
 		var uid := ResourceLoader.get_resource_uid(registry_path)
+		# Not registry.add_tag(): it re-capitalises every segment (UltCharge -> Ultcharge), which would register a
+		# different tag than the content uses. The format was already checked above; sort like add_tag does.
 		for tag in missing:
-			registry.add_tag(String(tag))  # validates, sorts, saves the registry and regenerates the constants
+			registry.tags.append(tag)
+		registry.tags.sort_custom(func(a, b): return String(a) < String(b))
+		ResourceSaver.save(registry, registry_path)
 		# A headless save drops the file's uid header; keep the one the editor gave it.
 		if uid != ResourceUID.INVALID_ID:
 			ResourceSaver.set_uid(registry_path, uid)
@@ -78,6 +85,15 @@ func _ready() -> void:
 ## needs its own entry; its parent does not cover it).
 func _is_registered(tag: StringName, registered: Dictionary) -> bool:
 	return registered.has(tag)
+
+
+## What GameplayTagRegistry.add_tag() (the dashboard) turns a tag into: each segment "Xxxx" (first letter upper,
+## the rest lower).
+static func _dashboard_form(tag: StringName) -> String:
+	var parts := PackedStringArray()
+	for part in String(tag).split("."):
+		parts.append(part.substr(0, 1).to_upper() + part.substr(1).to_lower())
+	return ".".join(parts)
 
 
 func _scan(directory: String) -> void:

@@ -557,7 +557,7 @@ func use_field(slot: int, ability_tag: StringName, target_slot: int = 0) -> Arra
 	return []
 
 
-## A field-mode Battle built from the party's run state (party only, State.InField on every unit).
+## A field-mode Battle built from the party's run state (party only, State.Infield on every unit).
 func _field_battle(seed_value: int, full: bool = false) -> Battle:
 	var battle := Battle.new()
 	battle.name = "FieldBattle"

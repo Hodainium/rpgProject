@@ -123,6 +123,68 @@ func test_item_effect_depends_on_holder() -> void:
 	eq((await replay(request)).get("verdict"), "Verified", "the crest's battle-start triggers replay")
 
 
+## Ult charge (2026-10-19): Event.Ability.Used feeds a triggered energy listener; an ult's cost is energy, so GAS
+## blocks it until the bar is full and empties it on use. Map actions don't charge.
+func test_ult_charge_and_cost() -> void:
+	var battle := new_battle(v2_snapshot())
+	var knight := battle.unit_by_id(&"P1")  # carries energy 1000 (10%)
+	var listener := _runtime_ability(&"Test.Ability.UltCharge", BattleAbility.Targeting.SELF, _energy_effect(2500))
+	listener.trigger_event_tag = Battle.EVENT_ABILITY_USED
+	knight.asc.add_child(listener)
+	var ult := _runtime_ability(&"Test.Ability.Ult", BattleAbility.Targeting.SINGLE_ENEMY, load(FIXTURES + "effects/damage.tres"))
+	ult.cost_effect = _energy_effect(-10000)
+	knight.asc.add_child(ult)
+	check(not knight.asc.can_activate_ability(ult), "the ult needs a full bar")
+	await battle._activate(knight, knight.ability_by_tag(&"Fixture.Ability.Strike"), battle.unit_by_id(&"E2"))
+	await battle._drain_triggers()
+	eq(knight.stat(BattleUnit.ENERGY), 3500, "using an ability charges the bar")
+	knight.asc.initialize_attribute_overrides({BattleUnit.ENERGY: 10000.0})
+	check(knight.asc.can_activate_ability(ult), "a full bar unlocks the ult")
+	await battle._activate(knight, ult, battle.unit_by_id(&"E2"))
+	await battle._drain_triggers()
+	eq(knight.stat(BattleUnit.ENERGY), 2500, "the ult spends the bar, then charges like any ability")
+
+	var field := Battle.new()
+	host.add_child(field)
+	_battles.append(field)
+	field.setup_field(v2_snapshot(), fixtures())
+	var medic := field.unit_by_id(&"P2")
+	var map_listener := _runtime_ability(&"Test.Ability.UltCharge", BattleAbility.Targeting.SELF, _energy_effect(2500))
+	map_listener.trigger_event_tag = Battle.EVENT_ABILITY_USED
+	medic.asc.add_child(map_listener)
+	await field.perform(&"P2", &"Fixture.Ability.Mend", &"P2")
+	await field._drain_triggers()
+	eq(medic.stat(BattleUnit.ENERGY), 3000, "map actions don't charge the ult")
+
+
+func _energy_effect(amount_x100: int) -> GameplayEffect:
+	var effect := GameplayEffect.new()
+	effect.policy = GameplayEffect.DurationPolicy.INSTANT
+	var modifier := CombatModifier.new()
+	modifier.attribute_name = BattleUnit.ENERGY
+	modifier.operation = GameplayEffectModifier.Operation.ADD
+	modifier.value_x100 = amount_x100
+	effect.modifiers.append(modifier)
+	return effect
+
+
+## An in-memory ability with one USE_EFFECT row (or SCALED for the damage effect) and its execute key.
+func _runtime_ability(tag: StringName, targeting: BattleAbility.Targeting, effect: GameplayEffect) -> BattleAbility:
+	var ability := BattleAbility.new()
+	ability.ability_tag = tag
+	ability.targeting = targeting
+	var row := ExecutionRow.new()
+	row.id = &"go"
+	row.effect = effect
+	row.damage_mode = ExecutionRow.DamageMode.SCALED if effect.executions.size() > 0 else ExecutionRow.DamageMode.USE_EFFECT
+	ability.executions = [row]
+	var animation := Animation.new()
+	var track := animation.add_track(Animation.TYPE_METHOD)
+	animation.track_insert_key(track, 0.1, {"method": &"execute", "args": [&"go"]})
+	ability.animation = animation
+	return ability
+
+
 func test_trigger_chain_cap() -> void:
 	var battle := new_battle(v2_snapshot())
 	var knight := battle.unit_by_id(&"P1")
@@ -175,7 +237,7 @@ func test_field_mode() -> void:
 	_battles.append(battle)
 	eq(battle.setup_field(snap, fixtures()), "", "field setup")
 	var knight := battle.unit_by_id(&"P1")
-	check(knight.asc.has_tag_exact(Battle.IN_FIELD_TAG), "field units carry State.InField")
+	check(knight.asc.has_tag_exact(Battle.IN_FIELD_TAG), "field units carry State.Infield")
 	eq(await battle.perform(&"P1", &"Fixture.Ability.Strike", &"P2"), ["InvalidTarget",
 		"Fixture.Ability.Strike targets enemies; there are none outside battle"], "no enemy targeting in the field")
 	eq(await battle.perform(&"P3", &"Fixture.Ability.Strike"), ["DeadActor", "P3 can't act"], "the dead can't act")

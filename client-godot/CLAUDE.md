@@ -102,8 +102,8 @@ from C#.**
   after battle start, turn start, each action and turn end, awaiting each one. Never activate abilities from signal
   handlers. Triggered abilities are never actions (`action_abilities()` skips them).
 - **Field mode (out of battle) is a Battle too:** `Battle.setup_field` builds the party only, tags every unit
-  `State.InField`, and `perform()` / `apply_to_units()` change it through GAS; the run reads HP/MP/ult charge back.
-  Map-only spells use an activation query requiring `State.InField`. Run-level randomness uses only `RunSeeds` streams
+  `State.Infield`, and `perform()` / `apply_to_units()` change it through GAS; the run reads HP/MP/ult charge back.
+  Map-only spells use an activation query requiring `State.Infield`. Run-level randomness uses only `RunSeeds` streams
   (`floor/<n>/...`), never the battle RNG or global `randi()`.
 - **Contract JSON goes through `WireJson.stringify`:** Godot parses every JSON number as a float; `WireJson` writes whole
   numbers as integers so the C# records can read them.

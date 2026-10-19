@@ -233,7 +233,7 @@ func _build_run_world() -> void:
 	_ability("ember", "Fixture.Ability.Ember", B.SINGLE_ENEMY, [_row("burn", "damage", D.FLAT, 50, T.ALL, fire)],
 		[[0.2, "burn"]], [], null, {"trigger": &"Event.Damage.Dealt.Ice"})
 	_ability("mend", "Fixture.Ability.Mend", B.SINGLE_ALLY, [_row("heal", "heal", D.USE_EFFECT, 0, T.ALL)], [[0.3, "heal"]],
-		[], null, {"cost": _effects["mp_cost"], "query": _query([&"State.InField"])})
+		[], null, {"cost": _effects["mp_cost"], "query": _query([&"State.Infield"])})
 	_ability("flask", "Fixture.Ability.Flask", B.ALL_ALLIES, [_row("heal", "heal", D.USE_EFFECT, 0, T.ALL)], [[0.3, "heal"]])
 	_ability("feather", "Fixture.Ability.Feather", B.SINGLE_DEAD_ALLY, [_row("revive", "revive", D.USE_EFFECT, 0, T.ALL)],
 		[[0.3, "revive"]])

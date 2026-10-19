@@ -31,10 +31,13 @@ const EVENT_TURN_END: StringName = &"Event.Turn.End"
 const EVENT_DAMAGE_DEALT: StringName = &"Event.Damage.Dealt"
 const EVENT_DAMAGE_TAKEN: StringName = &"Event.Damage.Taken"
 const EVENT_UNIT_DIED: StringName = &"Event.Unit.Died"
+## Sent to a unit after it uses an ability as its action in battle (not triggered passives, not on the map).
+## Payload: {"source", "target": the unit, "ability": the ability tag}. Ult charge listens to it.
+const EVENT_ABILITY_USED: StringName = &"Event.Ability.Used"
 ## A row tagged Damage.Type.<X> also sends Event.Damage.Dealt.<X> / Event.Damage.Taken.<X>.
 const DAMAGE_TYPE_PREFIX: String = "Damage.Type."
 ## Loose tag on every unit in field mode; abilities use it in their activation_query (map-only / battle-only).
-const IN_FIELD_TAG: StringName = &"State.InField"
+const IN_FIELD_TAG: StringName = &"State.Infield"
 
 ## The battle's single seeded RNG. Combat draws from nothing else.
 var rng := RandomNumberGenerator.new()
@@ -89,7 +92,7 @@ func setup(snapshot: Dictionary, content: ContentIndex, presentation_gate: Prese
 
 
 ## Field mode (spec game-skeleton 3.4): builds only the party from a v2 snapshot (no encounter, no turn loop) and tags
-## every unit State.InField. Run single actions with perform().
+## every unit State.Infield. Run single actions with perform().
 func setup_field(snapshot: Dictionary, content: ContentIndex, presentation_gate: PresentationGate = null) -> String:
 	assert(is_inside_tree(), "Battle.setup_field: add the Battle to the scene tree first")
 	field_mode = true
@@ -486,6 +489,8 @@ func _activate(actor: BattleUnit, ability: BattleAbility, target: BattleUnit) ->
 	payload["battle"] = self
 	payload["unit"] = actor
 	var activated: bool = await ability.try_activate(payload)
+	if activated and not field_mode:
+		actor.asc.send_gameplay_event(EVENT_ABILITY_USED, {"source": actor, "target": actor, "ability": tag})
 	if activated and actor.item_abilities.has(tag):
 		used_items.append({"unit": actor.unit_id, "item": actor.item_abilities[tag]})
 		actor.item_abilities.erase(tag)

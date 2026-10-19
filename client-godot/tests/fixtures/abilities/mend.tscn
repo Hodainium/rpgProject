@@ -14,7 +14,7 @@ effect = ExtResource("3_dbqd3")
 
 [sub_resource type="Resource" id="Resource_d8taf"]
 script = ExtResource("5_pg2g1")
-require_all_tags = Array[StringName]([&"State.InField"])
+require_all_tags = Array[StringName]([&"State.Infield"])
 
 [node name="Mend" type="Node" unique_id=292930169]
 script = ExtResource("1_05h8g")
