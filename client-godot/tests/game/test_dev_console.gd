@@ -346,8 +346,12 @@ func test_console_effect() -> void:
 	var run: RunController = session[0].run
 	var log_size: int = run.run_log.size()
 	var not_effect := await _run(session, "effect res://tests/fixtures/rooms/cross.tres")
-	check(not not_effect["ok"] and not_effect["text"].contains("GameplayEffect"), "a room file is refused: " + not_effect["text"])
-	check(not (await _run(session, "effect res://nope.tres"))["ok"], "a missing file is refused")
+	check(not not_effect["ok"] and not_effect["text"].contains("it is a RoomDefinition, not a GameplayEffect"),
+		"a room file is refused, saying what it is: " + not_effect["text"])
+	var missing := await _run(session, "effect res://nope.tres")
+	check(not missing["ok"] and missing["text"].contains("could not open effect res://nope.tres: no such file"),
+		"a missing file is refused, saying so: " + missing["text"])
+	check((await _run(session, "effect"))["text"].begins_with("usage:"), "no argument → the usage")
 	eq(run.run_log.size(), log_size, "nothing logged")
 	var atk := _stat(run, 1, "atk")
 	await _ok(session, "effect res://tests/fixtures/effects/whetstone.tres 1")

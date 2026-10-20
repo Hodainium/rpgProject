@@ -463,7 +463,7 @@ failure modes:
 | `give` with no one able to hold the item | Refused before anything changes, not logged (not lost, unlike an event gift) | `test_console_battle_edges` |
 | `stat` for an attribute the AttributeSet doesn't have | Refused, listing the attributes that have dev items | `test_console_cheats` |
 | `give` / `stat` during a battle | Applied to run state; takes effect from the next battle or field action (said in the reply) | `test_console_battle_edges` |
-| `effect` in battle, or with a file that isn't a `GameplayEffect` | Refused with the usage, nothing logged | `test_console_effect` |
+| `effect` in battle, or with a file that isn't a `GameplayEffect` | Refused, and nothing goes in the run log. The reply says why: "could not open effect <path>: no such file", "could not use <path> as an effect: it is a RoomDefinition, not a GameplayEffect", or the usage when no path is given | `test_console_effect` |
 | `spawn item` in a room not yet cleared | Added; takeable once the room is cleared, like any pickup | `test_console_cheats` (cleared room only) |
 | Dev items leaking into pools or generation | Impossible: pools skip the `Dev` tag | `test_dev_items_never_pooled` |
 | A snapshot holding a dev item replayed | Setup stops with the runner error "unknown item 'dev.up.…'" (the verifier's index has no dev items); never verifies | `test_replay_rejects_dev_item` |
