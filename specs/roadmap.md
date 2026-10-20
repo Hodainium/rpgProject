@@ -9,7 +9,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 0. `project-skeleton` | ✅ Done | 2026-10-19 |
 | 1. `combat-replay-core` | ✅ Done | 2026-10-19 |
 | 1b. `game-skeleton` | ✅ Done | 2026-10-19 |
-| 1c. `dev-tools` | ⬜ Not started | |
+| 1c. `dev-tools` | ⏭️ Next (the system-design pass is done: `server-authority` spec, `design/run-authority-decisions.md`) | |
 | 1c2. `item-pass` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
