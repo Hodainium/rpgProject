@@ -253,7 +253,7 @@ identities (`unitDefId`, `level`) and Godot derives everything else from content
 ```csharp
 namespace Rpg.Contracts.Battle;
 
-/// Frozen at checkout (slice 2). Seed is a decimal string: int64 is not safe as a JSON number in browsers.
+/// The conditions a battle was played under, uploaded in the run's action log (slice 2b). Seed is a decimal string: int64 is not safe as a JSON number in browsers.
 public sealed record BattleSnapshot(
     int SchemaVersion,                       // 1
     string BattleId,

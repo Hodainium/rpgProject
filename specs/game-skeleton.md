@@ -486,7 +486,8 @@ unit_view, battle_panel, event_panel, pickup_panel, party_panel, run_end_view, s
     charge). Other stats are re-derived, so permanent changes must be items or equipment. Enemies are initialized from
     a loadout each battle, recorded as a `LoadoutRef` (a loadout id or `<ownerId>#<n>` for an inline one).
 14. **Inventory storage:** local `RunState` in this slice; Postgres from slice 2b (run inventory) and with gacha
-    (account inventory). The server then builds the party capture at `/battle/start`.
+    (account inventory). The party capture stays a client claim, uploaded with each battle and checked by run replay
+    (slice 4a; `specs/server-authority.md`).
 
 ## Decisions made during implementation (2026-10-19)
 1. **v1 JSON unchanged by construction:** every v2-only field on the C# records carries

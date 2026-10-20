@@ -132,7 +132,9 @@ loadout overrides. Two consequences:
 3. **The server owns player state** (slice 2b `run-authority`). Anything that changes it (items granted, purchases,
    coins, item/skill use outside battle) is an **authenticated** request. Battles are **batched**: the whole action log
    is sent once and verified asynchronously, because that's efficient. Out-of-battle actions are **quick messages**:
-   small synchronous commands with an idempotency key and a per-run sequence number, checked against the seeded run.
+   small commands with a per-run sequence number, idempotent by that number. Since 2026-10-20 they are **async**: the
+   client gets a whole floor's seed at the stairs, plays the floor offline, uploads its log in ordered batches, and
+   the server verifies it later by replay (`specs/roadmap.md` "Run authority model", `specs/server-authority.md`).
 
 ## 6. Dev tools
 | Tool | What it does |
@@ -167,4 +169,31 @@ loadout overrides. Two consequences:
 
 ## 9. Open questions
 1. **The twist on Isaac's generation:** to be decided after `game-skeleton`.
-2. **Does ult charge carry over between battles** (like HP/MP), or reset each battle?
+2. ~~Does ult charge carry over between battles?~~ **Decided:** yes, like HP/MP (game-skeleton decision 3); charged
+   by the character's own actions and by hits taken (game-skeleton decision 15).
+
+## 10. Player analytics and live monitoring (dashboard)
+Goal: understand how the game is played and how the service is doing. General behaviour, not tuning prices per player:
+which characters and parties people play, what they pick up, what they decide in events, which moves they use, what
+each gacha banner earns, and how many players are online or in a battle right now.
+
+**Every player action is logged.** The server already stores them in order (runs and their quick messages, battle
+sessions, and from slice 3 each battle's action log). Analytics only reads and aggregates that log; nothing extra is
+computed on the client. Aggregates can be filtered to **verified** runs and battles.
+
+| Area | Metrics |
+|---|---|
+| **Live (right now)** | players online, players in a battle, runs in progress, battles started per minute |
+| **Characters and parties** | most played characters, most common parties, win rate and floor reached per character and party |
+| **Moves** | most used abilities, ults and usable items (in battle and on the map) |
+| **Items** | most picked-up items (treasure, shop, boss rewards, event gifts), which characters end up holding them |
+| **Events** | the decisions made on each event page |
+| **Runs** | runs started and finished, how far they get, where they end (floor, room, encounter), run length |
+| **Encounters** | wins and losses per encounter, how often elites appear |
+| **Gacha (slice 5)** | pulls and currency spent per banner, i.e. what each banner earns; what comes out of it |
+| **Health** | the operational side (latency, errors, queue age, verification rejections) stays in Prometheus/Grafana |
+
+Live counts are plain aggregate numbers, so they can be Prometheus gauges; anything broken down by character, item,
+move or event lives in the analytics tables instead (unbounded ids never become Prometheus labels).
+The pipeline (events through the outbox to Redpanda, projections into Postgres, a read API, dashboard pages) is
+roadmap slice `game-analytics` plus the dashboard slice.

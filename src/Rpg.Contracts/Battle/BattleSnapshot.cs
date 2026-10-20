@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Rpg.Contracts.Battle;
 
 /// <summary>
-/// Frozen at checkout (slice 2). Identities only: Godot derives every stat from content, so no game logic lives here.
+/// The conditions a battle was played under, uploaded in the run's action log (slice 2b). Identities only: Godot derives every stat from content, so no game logic lives here.
 /// Schema v2 (spec game-skeleton, section 3.5) adds optional run fields; they are omitted from the JSON when null, so
 /// a v1 document binds and re-serializes unchanged.
 /// </summary>

@@ -12,10 +12,12 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c. `dev-tools` | ⬜ Not started | |
 | 1c2. `item-pass` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
-| 2. `battle-checkout` | ⬜ Not started | |
-| 2b. `run-authority` | ⬜ Not started | |
+| 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
+| 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
 | 3. `battle-verify` | ⬜ Not started | |
 | 4. `settlement-outbox` | ⬜ Not started | |
+| 4a. `run-verify` | ⬜ Not started | |
+| 4b. `game-analytics` | ⬜ Not started | |
 | 5. `gacha` | ⬜ Not started | |
 | 6. `observability` | ⬜ Not started | |
 | 7. `live-dashboard` | ⬜ Not started | |
@@ -55,8 +57,23 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-10-19: The system-design pass writes one spec, `specs/server-authority.md`, split into Part A (slice 2
   `battle-checkout`: sessions, Postgres, Redis) and Part B (slice 2b `run-authority`: auth, run state, items), built in
   that order. Both are client ↔ server work and share contracts. At the user's request.
+- 2026-10-19: Added 4b `game-analytics` (after the outbox, which it needs) and live-monitoring and player-analytics
+  pages in slice 7: players online and in battle, most played characters and parties, most used moves, items picked
+  up, event decisions, gacha banner earnings (general behaviour, not per-player pricing). Root `CLAUDE.md`,
+  `README.md` and `game-design.md` now describe the roguelike, not only battles. At the user's request.
 - 2026-10-19: Added 1c2 `item-pass` after the dev tools: more items, tested with the console's `give` command
   instead of a temporary in-demo button. At the user's request.
+- 2026-10-20: Run authority model decided (section "Run authority model" below): the client gets a whole floor at a
+  time and plays it offline; every action inside it is async and server-verified; only floor changes, run start/resume
+  and account actions block. Battles inside a floor no longer need a blocking handshake (seeds come from the floor),
+  so `server-authority` Parts A and B are to be revised. Added 3b `run-verify` (segment jobs, parallel verification,
+  floor fan-in, rollback). Placed nine Redis uses in their slices (presence, rate limiting, floor read model,
+  verdict cache, work locks, live counters, leaderboards, SignalR backplane, gacha banner cache). At the user's request.
+- 2026-10-20: A won run ends **blocking** (no victory screen before the server verifies the run); a death ends async.
+  Local saves added; without one, resume rebuilds the run from the server's acknowledged log. At the user's request.
+- 2026-10-20: `server-authority` revised for the floor model. Slice 2 renamed `battle-checkout` → `run-checkout` (runs
+  and floor seeds; the blocking battle handshake is gone). 3b `run-verify` moved after the outbox and renumbered 4a:
+  it publishes floor verdicts and anti-cheat events and its run-end gate settles rewards. At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -68,6 +85,73 @@ The "design breaks" below are only suggestions for when there is something new t
   may be rejected with 2002. That's expected in dev.
 - Commit tuning on its own as `design:`, separate from `feat:` commits. Running `/sync-spec` afterwards keeps specs truthful.
 - Before Claude runs `/implement`, the tree should be clean (commit or stash design work first) and the Godot editor saved.
+
+## Run authority model (decided 2026-10-20)
+**The client gets a whole floor at a time and plays it offline.** Every action on the floor is applied at once,
+logged in order, uploaded when there's a connection, and verified asynchronously by headless Godot. The server is
+authoritative over the *outcome* (verdicts, rollback, rewards), not over each step as it happens. A player on the
+subway can play a floor between stops and fetch the next one at the next stop.
+
+- **Floor seed:** `HMAC(serverSecret, runId, floor)`, issued at the stairs. Stateless, the same on retry, and
+  recomputable by any worker. Everything on the floor (layout, contents, shop stock, events, battle seeds) comes from
+  it. The client never gets a seed for a floor it hasn't reached.
+- **Verification in parallel:** the floor log is cut into **steps**: *segments* (out-of-battle actions between
+  battles) and *battles*. Each step is its own job, starting from the state the client **claimed** at that point, so
+  all of a floor's jobs run in parallel. A fan-in aggregator then checks the **links**: each step's start hash must
+  equal the previous step's verified end hash. A floor is valid when every step **and** every link is valid.
+- **Bounded lead (gates):** the client may be at most one floor ahead of the last verified floor. A rejected step or
+  a broken link rolls the run back to the last valid checkpoint and writes an anti-cheat event through the outbox.
+  Rewards that leave the run wait for the whole run to be verified.
+- **Accepted cheat:** a modded client can see the whole current floor (and every battle seed on it) and play it
+  perfectly. Every action it sends is legal, so replay can't reject it; statistical detection (4b) may flag it later.
+  Copying a local save to retry a battle before it uploads is the same cheat (hindsight on a known seed), so it's
+  accepted too. Once an action is acknowledged it can't be redone: a different action at the same seq is 409 `1103`.
+- **Local saves and the server's copy:** the server's acknowledged log is the run's truth; a local save is a cache of
+  it plus the pending tail. A run is event-sourced, so the server never needs game rules to restore one: the client
+  rebuilds the state by replaying the log (from the run start in 2b, from the last verified snapshot once 4a exists).
+  If the save and the server disagree (played on another device, an old save restored), the server wins and the save
+  is discarded.
+
+### Client action policy
+**Blocking** = the server must answer before the action completes (needs a connection).
+**Async** = applied locally at once, sent as an ordered idempotent quick message (queued while offline), verified
+later by a worker; the server's verdict is final. **Free** = client-only, never sent, never trusted.
+
+| Action | Policy | Verified by | Notes |
+|---|---|---|---|
+| Sign in / dev token | Blocking | | |
+| Start a run | Blocking | | Server creates the run and issues floor 1's seed |
+| Resume a run | Blocking | | With a local save: the server confirms it (same run, its acknowledged log is a prefix of the save's), then the client uploads what's still pending. Without one (new device, wiped save): the client downloads the last verified checkpoint plus the acknowledged actions after it and replays them locally |
+| **Take the stairs (next floor)** | **Blocking** | | Gate: this floor's log fully uploaded and the previous floor verified; returns the next floor's seed. Hidden behind the transition |
+| Enter a room / move on the map | Async | segment job | Adjacency and the room's contents checked against the floor regenerated from its seed |
+| Event choice | Async | segment job | Outcome comes from the floor seed |
+| Item pickup (take) | Async | segment job | Item must be on offer in that room and not taken yet |
+| Shop purchase | Async | segment job | Item in stock, enough coins |
+| Field item or skill use | Async | segment job | |
+| Battle start | Async | battle job + link check | Seed from the floor seed; the encounter must match the room's (floor read model) |
+| Battle turns and result | Async | battle job | Action log replayed; mismatch → 2002 |
+| **End the run (win)** | **Blocking** | run fan-in | The victory screen appears only after the server has verified every floor; rewards settle in the same step. A short "Verifying run…" screen covers it (usually only the last floor is still pending). Offline: the run waits at that screen until a connection. Rejected: rollback to the last valid checkpoint, no victory |
+| End the run (death) | Async | run fan-in | The defeat screen shows at once; nothing is paid out, so there's nothing to protect |
+| Save locally | Free | | `user://` save of the run state, the floor seed and the unsent action queue. A convenience copy: the server's acknowledged log always wins |
+| Gacha pull, spending currency, account inventory | Blocking | | Server RNG and server state; settled through RabbitMQ and the outbox |
+| Animations, sounds, camera, Auto/Skip, menus, settings, inspecting items, the map view | Free | | |
+
+### Redis plan
+Redis is never the source of correctness: every entry can be lost and rebuilt from Postgres or the event log.
+
+| Use | Redis structure | Slice |
+|---|---|---|
+| Run summary cache (scenario 4), delete-on-write cache-aside | string, 30-min TTL | 2 |
+| Battle session cache | string, 30-min TTL | 2b |
+| **Live presence** ("players online") | sorted set player → last seen; `ZCOUNT` over 5 min, `ZREMRANGEBYSCORE` to trim | 2b |
+| **Per-player rate limiting** (actions, run starts) | token bucket or sliding window in a Lua script | 2b (tripped by Locust in 8) |
+| **Verdict cache** for `GET …/result` polling | string, written after the settlement commit | 3 |
+| **Work-deduplication locks** (`lock:battle:{id}`, per-step locks) | `SET NX` with TTL; Postgres unique constraints still guarantee exactly-once | 3, 4a |
+| **Floor read model** (floor hash, room → encounter and offers, written when a floor's entry step is verified) | hash per run and floor | 4a |
+| **Live analytics counters** (items picked today, most played party this hour) | `HINCRBY` / sorted sets, fed from Redpanda; Postgres keeps the history | 4b |
+| **Leaderboards** (fastest clear, deepest floor per character; **verified runs only**) | sorted sets, fed from Redpanda, rebuildable from Postgres | 4b (shown in 7) |
+| **Gacha banner cache** (active banners, rates, pool) | string/hash, invalidated when a banner changes | 5 |
+| **SignalR backplane** (a verdict reaches whichever API instance holds the player's socket) | pub/sub; the demo runs two API replicas | 7 |
 
 ## Slices
 
@@ -97,7 +181,7 @@ Minimal clickable flow on placeholder (graybox) screens, proven on test fixtures
 > 🧭 After 1b, a system-design pass: plan what the run adds that the wire contracts and backend don't support yet
 > (run seed and RNG streams, run log, item grants, purchases, out-of-battle actions, snapshot v2 on the server side).
 > **It writes one spec, `specs/server-authority.md`, in two parts that are built in order:** Part A = slice 2
-> `battle-checkout` (sessions, Postgres, Redis), Part B = slice 2b `run-authority` (auth, run state, items). One spec
+> `run-checkout` (runs, floor seeds, Postgres, Redis), Part B = slice 2b `run-authority` (auth, run state, items). One spec
 > so the contracts, schema and auth model are designed once; two parts so each build stays small and testable.
 > **The spec opens with an authority map:** every piece of state and every action, marked as **server-authoritative**
 > (the server decides; the client asks), **server-verified** (the client runs it, the server replays or checks it), or
@@ -121,55 +205,90 @@ Grows 1b's example set (`content/demo/`, `presentation/demo/`) into the full dem
 demo AttributeSet and tags made the GodotGAS way; a short run through battles, an event, a treasure room, a shop and a
 boss. **Includes adjusting the dev tools** wherever building the demo exposes limits or wrong assumptions in them.
 
-### 2. `battle-checkout` (Part A of `specs/server-authority.md`)
-**First hookup to the server: sessions, SQL, Redis.** **Every battle starts with a handshake:** the client asks to
-start (run, room); the server answers with the battle's conditions (battle id, seed, the full `BattleSnapshot`: party
-from the server's run state, enemies, loadouts, variants, scaling, `ruleset_version`) and records the session. The
-client doesn't start the battle until it has that answer, plays exactly those conditions locally, then submits the
-action log for verification (slice 3). Contracts DTOs; Postgres schema (players, `battle_sessions` with seed, snapshot, `ruleset_version`); `POST /battle/start`;
-Redis cache (30-min TTL) with Postgres fallback (**scenario 4**); `ruleset_version` hash computation; Godot client HTTP
-layer calls start and runs the battle locally.
+### 2. `run-checkout` (Part A of `specs/server-authority.md`)
+**First hookup to the server: runs, floor seeds, SQL, Redis.** The server starts a run and issues **floor seeds**
+(HMAC of a server secret, the run id and the floor): floor 0 at run start, each next floor at the stairs. The client
+generates and plays each floor offline from its seed. Contracts DTOs; SQL migration runner; Postgres schema
+(`players`, `runs`, `run_floors`); `POST /runs`, `POST /runs/{id}/floors/{n}`, `GET /runs/current`, `GET /runs/{id}`;
+Redis run-summary cache, delete-on-write, with Postgres fallback (**scenario 4**); `ruleset_version` hash computation;
+`ServerBridge` + `ServerLink`; the client's **seed source** (local mode byte-identical to today). No action upload yet.
 
 ### 2b. `run-authority` (Part B of `specs/server-authority.md`)
-**Second part: auth, run state, items.** **Purpose:** the server owns player state. Anything that changes it is an authenticated request; nothing is trusted
-from the client alone.
-- **Authentication** for every player-state endpoint (including `/battle/start` and `/battle/verify`): player identity
-  on each request (bearer token; a dev token issuer until a real identity provider).
-- **Server-issued run seed** at run start; the run's state lives in Postgres.
-- **Two message styles:** battles stay **batched** (the whole action log is verified asynchronously, slice 3), while
-  out-of-battle actions are **quick messages**: small, synchronous, authenticated commands (use an item or skill, take
-  an item, buy in a shop, event choice) with an `Idempotency-Key` and a per-run sequence number so retries and
-  reordering are safe. The server checks each one against the run's seeded state.
-- Designed with slice 2 in the same spec. Built after it because it needs the players table and Postgres from
-  `battle-checkout`; `/battle/start` then builds the party snapshot from the server's run state, not the client's.
+**Auth, the action log, saves.** **Purpose:** the server owns the record of everything the player does; nothing is
+trusted until verified.
+- **Authentication** (bearer token; a dev token issuer until a real identity provider) on every player-state endpoint.
+- **Every in-floor action is an async quick message**, battles included: applied locally at once, queued while
+  offline, uploaded in ordered, idempotent batches (`(runId, seq)`), with a claimed **state snapshot** at each
+  checkpoint (`start_run`, battle pending, `battle`, `next_floor`) so 4a can verify a floor's steps in parallel.
+  Battles become `battle_sessions` rows on upload.
+- **Gates:** the stairs need the floor's log fully uploaded; a won run blocks on "Verifying run…"
+  (`Run:AutoApproveWins` stands in until 4a).
+- **Local saves** and **resume without a save** (latest checkpoint snapshot + replay of the accepted tail on the
+  client); the server's log always wins.
+- Redis: **live presence** (sorted sets, heartbeat for "in battle"), **per-player rate limiting** (Lua token bucket,
+  fails open), battle session cache.
 
 ### 3. `battle-verify`
-`POST /verify` + `Idempotency-Key` → RabbitMQ job → `202`. Headless Godot verifier worker container replays the log and
-writes a verdict. `GET /battle/{id}/result`. Retries, DLQ, `lock:battle:{id}`.
-**Scenario 1** (duplicate verify), **scenario 5** (tampered log → 2002).
+A battle submitted in the run log (conditions + action log) → RabbitMQ job. Headless Godot verifier worker container
+replays it and writes a verdict. `GET /runs/{id}/battles/{seq}` shows it. Retries, DLQ, `lock:battle:{id}`.
+**Scenario 1** (duplicate submission), **scenario 5** (tampered log → 2002).
+Redis: **verdict cache** for result polling (written after the commit) and **work-deduplication locks** (`SET NX` + TTL).
 
 ### 4. `settlement-outbox`
 Reward settlement + outbox row in one Postgres transaction, then ack; unique constraint makes redelivery a no-op.
 Outbox relay → Redpanda. **Scenario 2** (killed before ack), **scenario 3** (Redpanda down).
 
+### 4a. `run-verify`
+**Purpose:** verify whole floors in parallel and keep the client within one floor of the server
+("Run authority model"). Comes after the outbox because it publishes `FloorVerified` and anti-cheat events and the
+run-end gate settles rewards. Same Godot verifier image, separate queues with their own worker pools:
+`verify.battle` and `verify.segment` (out-of-battle actions from a claimed snapshot, including floor generation at
+`next_floor`). A C# fan-in aggregator (process manager, idempotent, state in Postgres) checks the links between steps
+and emits the floor verdict through the outbox. The `1107` stairs gate (at most one unverified floor), the real
+**run-end verdict** (removes `Run:AutoApproveWins`), `Rejected` + rollback to the last valid checkpoint, resume from
+the latest *verified* checkpoint, verdicts pushed to the client, anti-cheat events, and the **floor read model** in
+Redis (written when a floor's entry step is verified). Floor N+1 can't be generated ahead of time: its item pools
+depend on what was seen and held on floor N.
+
 > 🎨 Suggested design break 2, reward loop: payouts, post-battle results screen, progression pacing, more encounters.
+
+### 4b. `game-analytics`
+**Purpose:** understand how the game is played (`specs/design/game-design.md` section 10): general player
+behaviour, not per-player pricing. Run and battle events (run started and ended, room entered, item picked up, event
+decision, field use, battle started and its moves and result) published through the slice 4 outbox to Redpanda; a
+consumer projects them into Postgres analytics tables (idempotent by event id, rebuildable from the topic); a read API
+for aggregates: most played characters and parties, most used moves, most picked-up items and who holds them, event
+decisions, how far runs get, encounter wins and losses, each filterable to verified runs. Gacha banner earnings join
+in slice 5. No item, character or move ids as Prometheus labels.
+Redis: **live analytics counters** (`HINCRBY` / sorted sets fed from Redpanda, for the live tiles; Postgres keeps the
+history) and **leaderboards** (sorted sets, fastest clear and deepest floor per character, **verified runs only**,
+rebuildable from Postgres). A Redpanda consumer for **anomaly flags** (too-perfect play, abandon rate, inhuman action
+speed) feeds a delayed review queue, not instant bans.
 
 ### 5. `gacha`
 `POST /gacha/pull`; pity counters and currency in Postgres; settlement via RabbitMQ; events through the outbox.
 Spec must decide where gacha RNG lives (server-authoritative, separate from combat RNG) and say so explicitly.
+Redis: **gacha banner cache** (active banners, rates and pools; Postgres is the source; invalidated when a banner changes).
 
 > 🎨 Suggested design break 3, gacha feel: banners, rates, pity curve, pull animation, new pullable characters.
 
 ### 6. `observability`
 End-to-end traces HTTP → RabbitMQ → worker → outbox → Redpanda. Metrics: verify latency, queue age,
-`error_code="2002"` rejections, outbox lag. Grafana dashboards provisioned as code.
+`error_code="2002"` rejections, outbox lag, battles started and verified per minute. Grafana dashboards provisioned
+as code, including **battles per minute against server load** (CPU, memory, latency, queue age) on one panel.
 
 ### 7. `live-dashboard`
 SignalR hub pushing verdicts to client and browser. React/TS `web-dashboard` live feed: battles, gacha, anti-cheat alerts.
+**Live monitoring** (players online, players in a battle, runs in progress, service health) and **player analytics
+pages** over the `game-analytics` read API: characters and parties, moves, items picked up, event decisions, runs,
+encounters, gacha banner earnings, leaderboards.
+Redis **SignalR backplane** (pub/sub) so a verdict reaches whichever API instance holds the socket; the compose demo
+runs two API replicas behind a load balancer.
 
 ### 8. `load-and-chaos`
 Locust profiles (`/stress`); scripted chaos runs for scenarios 2, 3, 4; **scenario 7** (spike → backpressure →
-recovery in Grafana). This is the demo.
+recovery in Grafana). This is the demo. Locust also trips the 2b rate limiter, and a slow verifier pool shows up as
+players waiting at the stairs gate.
 
 ### 9. `ruleset-versioning` (later milestone)
 Multiple verifier versions; jobs routed by `ruleset_version`. **Scenario 6** (ruleset changes while a battle is open).
