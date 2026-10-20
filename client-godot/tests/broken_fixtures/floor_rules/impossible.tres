@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="FloorGenRules" format=3]
+
+[ext_resource type="Script" path="res://game/defs/floor_gen_rules.gd" id="1_y7spn"]
+
+[resource]
+script = ExtResource("1_y7spn")
+id = &"broken.rules.impossible"
+grid_size = Vector2i(3, 3)
+base_rooms = 30
+max_rooms = 30
+max_attempts = 3

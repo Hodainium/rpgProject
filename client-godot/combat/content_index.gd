@@ -27,36 +27,75 @@ var problems := PackedStringArray()
 
 func _init(content_root: String) -> void:
 	root = content_root.trim_suffix("/")
+	if root == "":
+		return
 	for path in _resource_paths(root):
-		var resource := load(path)
-		if resource is UnitDefinition:
-			_add(units, "unit", resource, path)
-			if resource is CharacterDefinition:
-				characters[resource.id] = resource
-		elif resource is EncounterDefinition:
-			_add(encounters, "encounter", resource, path)
-		elif resource is Loadout:
-			_add(loadouts, "loadout", resource, path)
-		elif resource is EnemyVariant:
-			_add(variants, "variant", resource, path)
-		elif resource is EquipmentDefinition:
-			_add(equipment, "equipment", resource, path)
-		elif resource is ItemDefinition:
-			_add(items, "item", resource, path)
-		elif resource is EventDefinition:
-			_add(events, "event", resource, path)
-		elif resource is RoomDefinition:
-			_add(rooms, "room", resource, path)
-		elif resource is ChapterDefinition:
-			_add(chapters, "chapter", resource, path)
-		elif resource is ScalingRules:
-			_add(scaling, "scaling", resource, path)
-		elif resource is FloorGenRules:
-			_add(floor_rules, "floor rules", resource, path)
-		elif resource is RunStructure:
-			_add(runs, "run structure", resource, path)
-		elif resource is FloorLayout:
-			_add(layouts, "layout", resource, path)
+		_index(load(path), path)
+
+
+## Indexes a second folder too (the dev content, spec dev-tools 3.3), with the same duplicate-id rules.
+func add_root(extra_root: String) -> void:
+	for path in _resource_paths(extra_root.trim_suffix("/")):
+		_index(load(path), path)
+
+
+## A copy that also holds `resources` (added, or replacing the same id), for a sandbox playing an unsaved room, a
+## room outside the content root or an encounter built in memory (spec dev-tools 2.2). This index is unchanged.
+func overlay(resources: Array) -> ContentIndex:
+	var copy := ContentIndex.new("")
+	copy.root = root
+	for name in ["units", "characters", "encounters", "loadouts", "variants", "equipment", "items", "events", "rooms",
+			"chapters", "scaling", "floor_rules", "runs", "layouts"]:
+		copy.set(name, get(name).duplicate())
+	copy.problems = problems.duplicate()
+	for resource in resources:
+		if resource != null:
+			copy._index(resource, resource.resource_path, true)
+	return copy
+
+
+## Files a resource of a content class under its id (other classes are ignored). `replace` overwrites an existing id
+## instead of reporting a duplicate.
+func _index(resource: Resource, path: String, replace: bool = false) -> void:
+	var entry := _table_for(resource)
+	if entry.is_empty():
+		return
+	if replace:
+		entry[0].erase(resource.get("id"))
+	_add(entry[0], entry[1], resource, path)
+	if resource is CharacterDefinition and entry[0].get(resource.id) == resource:
+		characters[resource.id] = resource
+
+
+## [table, kind name] for a content resource, or [] for any other class.
+func _table_for(resource: Resource) -> Array:
+	if resource is UnitDefinition:
+		return [units, "unit"]
+	if resource is EncounterDefinition:
+		return [encounters, "encounter"]
+	if resource is Loadout:
+		return [loadouts, "loadout"]
+	if resource is EnemyVariant:
+		return [variants, "variant"]
+	if resource is EquipmentDefinition:
+		return [equipment, "equipment"]
+	if resource is ItemDefinition:
+		return [items, "item"]
+	if resource is EventDefinition:
+		return [events, "event"]
+	if resource is RoomDefinition:
+		return [rooms, "room"]
+	if resource is ChapterDefinition:
+		return [chapters, "chapter"]
+	if resource is ScalingRules:
+		return [scaling, "scaling"]
+	if resource is FloorGenRules:
+		return [floor_rules, "floor rules"]
+	if resource is RunStructure:
+		return [runs, "run structure"]
+	if resource is FloorLayout:
+		return [layouts, "layout"]
+	return []
 
 
 ## Resolves a LoadoutRef (spec game-skeleton 3.5): a loadout id, or "<ownerId>#<n>" for the loadout typed inline into

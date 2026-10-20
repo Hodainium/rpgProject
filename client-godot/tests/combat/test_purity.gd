@@ -58,3 +58,17 @@ func test_fixture_effects_are_turn_based_or_instant() -> void:
 		check(effect.policy != GameplayEffect.DurationPolicy.DURATION, "%s uses real-time DURATION" % name)
 		check(effect.period <= 0.0 or effect.policy == GameplayEffect.DurationPolicy.TURN_BASED,
 			"%s has a real-time period" % name)
+
+
+## Dev tools (spec dev-tools 3.2): combat never reaches into the console or the dev content.
+func test_combat_never_references_dev_tools() -> void:
+	_forbid([COMBAT], "res://game/dev|\\bDev\\.|DevConsole|DevContext|RunController", "dev tools in combat")
+
+
+## The Dev autoload is inert headless: no console UI, no input (so the verifier never runs dev code).
+func test_dev_inert_headless() -> void:
+	var dev := host.get_node_or_null("/root/Dev")
+	check(dev != null, "the Dev autoload exists")
+	if dev != null and DisplayServer.get_name() == "headless":
+		eq(dev.get_child_count(), 0, "no console UI headless")
+		check(not dev.is_processing_input(), "no input handling headless")

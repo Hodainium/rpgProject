@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_b8r5d"]
+[ext_resource type="Resource" path="res://game/dev/content/effects/dev_up_max_energy.tres" id="2_4xd4g"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_7d2ha"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_nxdvx"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_cvtih"]
+
+[sub_resource type="Resource" id="Resource_j2p72"]
+script = ExtResource("3_7d2ha")
+effects = Array[ExtResource("1_b8r5d")]([ExtResource("2_4xd4g")])
+
+[resource]
+script = ExtResource("5_cvtih")
+id = &"dev.up.max_energy"
+display_name = "DEV +10 max_energy"
+tags = Array[StringName]([&"Dev"])
+price = 0
+grants = SubResource("Resource_j2p72")

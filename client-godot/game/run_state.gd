@@ -32,6 +32,15 @@ var gifts_on_floor: int = 0
 ## The open event: {"cell": int, "event": StringName, "page": int}, or empty.
 var event: Dictionary = {}
 var status: String = ACTIVE
+## Dev tools (spec dev-tools 3.4): a cheat or a sandbox happened in this run. Hashed only when true, so it can never pass
+## as a clean run, and clean runs hash exactly as before.
+var dev: bool = false
+## A sandbox run (one room or one hand-made floor); never a next floor.
+var sandbox: bool = false
+## The console's `reveal`: the map view shows every room. A view flag, not hashed.
+var revealed: bool = false
+## Dev commands so far; the k-th one draws from the stream "dev/<k>".
+var dev_commands: int = 0
 
 
 func member(slot: int) -> Dictionary:
@@ -110,6 +119,8 @@ func canonical_lines() -> PackedStringArray:
 			",".join(entry["items"]), ",".join(slots), ",".join(gear)])
 	if map != null:
 		lines.append_array(map.canonical_lines())
+	if dev:
+		lines.append("dev=1")
 	return lines
 
 

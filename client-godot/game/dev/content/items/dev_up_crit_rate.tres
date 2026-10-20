@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_qbe4a"]
+[ext_resource type="Resource" path="res://game/dev/content/effects/dev_up_crit_rate.tres" id="2_qdk2q"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_23thu"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_wq81x"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_scei5"]
+
+[sub_resource type="Resource" id="Resource_3aloc"]
+script = ExtResource("3_23thu")
+effects = Array[ExtResource("1_qbe4a")]([ExtResource("2_qdk2q")])
+
+[resource]
+script = ExtResource("5_scei5")
+id = &"dev.up.crit_rate"
+display_name = "DEV +5 crit_rate"
+tags = Array[StringName]([&"Dev"])
+price = 0
+grants = SubResource("Resource_3aloc")

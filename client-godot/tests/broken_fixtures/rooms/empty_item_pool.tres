@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_makhx"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_7glhl"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="3_x131p"]
+
+[sub_resource type="Resource" id="Resource_pf6es"]
+script = ExtResource("2_7glhl")
+require_all_tags = Array[StringName]([&"Broken.Pool.Nothing"])
+
+[sub_resource type="Resource" id="Resource_3jh2s"]
+script = ExtResource("1_makhx")
+cell = Vector2i(6, 3)
+kind = 3
+item_query = SubResource("Resource_pf6es")
+
+[resource]
+script = ExtResource("3_x131p")
+id = &"broken.room.empty_item_pool"
+tags = Array[StringName]([&"Broken.Room"])
+placements = Array[ExtResource("1_makhx")]([SubResource("Resource_3jh2s")])

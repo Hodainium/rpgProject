@@ -6,6 +6,9 @@
 class_name FloorGenerator
 extends RefCounted
 
+## Items tagged Dev (the dev stat items, spec dev-tools 3.3) are never in a pool.
+const DEV_TAG: StringName = &"Dev"
+
 var content: ContentIndex
 var run_structure: RunStructure
 var run_seed: int
@@ -99,39 +102,88 @@ func generate(chapter: ChapterDefinition, any_chapter: bool, pools: Dictionary) 
 
 ## A hand-made floor (steps 6-7 only). Checked: cells inside the grid, connected, one start and one boss.
 func from_layout(layout: FloorLayout, chapter: ChapterDefinition, pools: Dictionary) -> Dictionary:
+	var built := layout_map(layout)
+	if built["error"] != "":
+		return _error(built["error"])
+	return _resolve(built["map"], chapter, pools, built["overrides"])
+
+
+## A one-room floor for the sandbox (spec dev-tools 2.2): the room is the start cell; its role comes from its tags
+## against the chapter's rules (boss tag → boss, a special tag → special). Content resolves as on a real floor (steps
+## 6-7), with an optional encounter or event override.
+func single_room(room: RoomDefinition, chapter: ChapterDefinition, pools: Dictionary,
+		encounter: EncounterDefinition = null, event: EventDefinition = null) -> Dictionary:
+	var map := FloorMap.new(Vector2i(1, 1))
+	_fill(map, 0)
+	map.start = 0
+	map.cells[0]["room"] = room.id
+	var rules := chapter.floor_gen_rules
+	if rules != null and TagMatch.has(room.tags, rules.boss_room_tag):
+		map.boss = 0
+		map.cells[0]["role"] = FloorMap.ROLE_BOSS
+	elif rules != null and rules.special_room_tags.any(func(tag: StringName) -> bool: return TagMatch.has(room.tags, tag)):
+		map.cells[0]["role"] = FloorMap.ROLE_SPECIAL
+	var overrides := {}
+	if encounter != null or event != null:
+		var override := FloorLayoutCell.new()
+		override.room = room
+		override.encounter = encounter
+		override.event = event
+		overrides[0] = override
+	return _resolve(map, chapter, pools, overrides)
+
+
+## Everything from_layout checks, plus that every room's doors cover its neighbours (spec dev-tools 3.7, bad_layout).
+## "" when the layout is valid, else the problem.
+static func check_layout(layout: FloorLayout) -> String:
+	var built := layout_map(layout)
+	if built["error"] != "":
+		return built["error"]
+	var map: FloorMap = built["map"]
+	for index in map.sorted_indices():
+		var room: RoomDefinition = built["overrides"][index].room
+		if not room.fits(map.cells[index]["doors"]):
+			return "layout %s: room %s at %s has no door for a neighbour (needs %d, has %d)" \
+				% [layout.id, room.id, map.cell_of(index), map.cells[index]["doors"], room.doors]
+	return ""
+
+
+## The layout's cells as a FloorMap: {"map", "overrides": index -> FloorLayoutCell, "error"}.
+static func layout_map(layout: FloorLayout) -> Dictionary:
 	var map := FloorMap.new(layout.grid_size)
 	var overrides := {}
+	var failed := func(message: String) -> Dictionary: return {"map": null, "overrides": {}, "error": message}
 	for entry in layout.cells:
 		if entry == null or entry.room == null:
-			return _error("layout %s: a cell has no room" % layout.id)
+			return failed.call("layout %s: a cell has no room" % layout.id)
 		if not map.inside(entry.cell):
-			return _error("layout %s: cell %s is outside the %s grid" % [layout.id, entry.cell, layout.grid_size])
+			return failed.call("layout %s: cell %s is outside the %s grid" % [layout.id, entry.cell, layout.grid_size])
 		var index := map.index_of(entry.cell)
 		if map.cells.has(index):
-			return _error("layout %s: cell %s is used twice" % [layout.id, entry.cell])
+			return failed.call("layout %s: cell %s is used twice" % [layout.id, entry.cell])
 		_fill(map, index)
 		map.cells[index]["room"] = entry.room.id
 		overrides[index] = entry
 		match entry.role:
 			FloorLayoutCell.Role.START:
 				if map.start != -1:
-					return _error("layout %s: more than one start" % layout.id)
+					return failed.call("layout %s: more than one start" % layout.id)
 				map.start = index
 				map.cells[index]["role"] = FloorMap.ROLE_START
 			FloorLayoutCell.Role.BOSS:
 				if map.boss != -1:
-					return _error("layout %s: more than one boss" % layout.id)
+					return failed.call("layout %s: more than one boss" % layout.id)
 				map.boss = index
 				map.cells[index]["role"] = FloorMap.ROLE_BOSS
 			FloorLayoutCell.Role.SPECIAL:
 				map.cells[index]["role"] = FloorMap.ROLE_SPECIAL
 	if map.start == -1 or map.boss == -1:
-		return _error("layout %s needs exactly one start and one boss" % layout.id)
+		return failed.call("layout %s needs exactly one start and one boss" % layout.id)
 	if map.distances().size() != map.cells.size():
-		return _error("layout %s: not every cell is connected to the start" % layout.id)
+		return failed.call("layout %s: not every cell is connected to the start" % layout.id)
 	for index in map.sorted_indices():
 		map.cells[index]["doors"] = map.door_mask(index)
-	return _resolve(map, chapter, pools, overrides)
+	return {"map": map, "overrides": overrides, "error": ""}
 
 
 ## Steps 6 (content) and 7 (pickups).
@@ -242,7 +294,7 @@ func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNum
 	var candidates: Array = []
 	for item_id in _sorted_ids(content.items):
 		var item: ItemDefinition = content.items[item_id]
-		if not Unlocks.is_unlocked(item) or not TagMatch.matches(query, item.tags):
+		if not Unlocks.is_unlocked(item) or not TagMatch.matches(query, item.tags) or TagMatch.has(item.tags, DEV_TAG):
 			continue
 		if pools.get("held", []).has(item_id) or pools.get("seen", []).has(item_id):
 			continue

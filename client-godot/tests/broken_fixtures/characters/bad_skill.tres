@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_uv45o"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_j1b5e"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="3_varyl"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="4_gbkgd"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="5_08r1e"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/sweep.tscn" id="6_quf2w"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="7_32o0p"]
+
+[sub_resource type="Resource" id="Resource_iwt8v"]
+script = ExtResource("5_08r1e")
+skills = Array[PackedScene]([ExtResource("6_quf2w")])
+
+[resource]
+script = ExtResource("7_32o0p")
+id = &"broken.character.bad_skill"
+attribute_set = ExtResource("2_j1b5e")
+abilities = Array[PackedScene]([ExtResource("1_uv45o")])
+default_loadout = SubResource("Resource_iwt8v")

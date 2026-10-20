@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_4pled"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_n6b7b"]
+
+[resource]
+script = ExtResource("1_4pled")
+id = &"broken.encounter.incomplete"

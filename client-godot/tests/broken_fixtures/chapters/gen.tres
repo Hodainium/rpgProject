@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ChapterDefinition" format=3]
+
+[ext_resource type="Resource" path="res://tests/broken_fixtures/floor_rules/impossible.tres" id="1_i6hpc"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_18qlv"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/scaling/basic.tres" id="3_8ljxf"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="4_nwyc4"]
+
+[sub_resource type="Resource" id="Resource_k7tj6"]
+script = ExtResource("2_18qlv")
+require_all_tags = Array[StringName]([&"Broken.Gen"])
+
+[resource]
+script = ExtResource("4_nwyc4")
+id = &"broken.chapter.gen"
+room_query = SubResource("Resource_k7tj6")
+floor_gen_rules = ExtResource("1_i6hpc")
+scaling = ExtResource("3_8ljxf")

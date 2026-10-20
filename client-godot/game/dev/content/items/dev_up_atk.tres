@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_6liba"]
+[ext_resource type="Resource" path="res://game/dev/content/effects/dev_up_atk.tres" id="2_esa2n"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_d1omy"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_jovje"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_rwkdt"]
+
+[sub_resource type="Resource" id="Resource_u7hf5"]
+script = ExtResource("3_d1omy")
+effects = Array[ExtResource("1_6liba")]([ExtResource("2_esa2n")])
+
+[resource]
+script = ExtResource("5_rwkdt")
+id = &"dev.up.atk"
+display_name = "DEV +10 atk"
+tags = Array[StringName]([&"Dev"])
+price = 0
+grants = SubResource("Resource_u7hf5")

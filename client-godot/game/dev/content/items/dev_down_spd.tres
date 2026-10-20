@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_sn8fb"]
+[ext_resource type="Resource" path="res://game/dev/content/effects/dev_down_spd.tres" id="2_m57sq"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_yum64"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_ndb2n"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_5abps"]
+
+[sub_resource type="Resource" id="Resource_xw0cd"]
+script = ExtResource("3_yum64")
+effects = Array[ExtResource("1_sn8fb")]([ExtResource("2_m57sq")])
+
+[resource]
+script = ExtResource("5_5abps")
+id = &"dev.down.spd"
+display_name = "DEV -10 spd"
+tags = Array[StringName]([&"Dev"])
+price = 0
+grants = SubResource("Resource_xw0cd")

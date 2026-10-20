@@ -20,6 +20,8 @@ signal room_cleared(cell: int)
 signal run_ended(status: String)
 ## Errors and content warnings for the screens and the Godot log.
 signal message(text: String)
+## The console's `reveal` (spec dev-tools 3.2): the map view should show every room.
+signal map_revealed
 
 var content: ContentIndex
 var structure: RunStructure
@@ -28,6 +30,8 @@ var run_log: Array[Dictionary] = []
 var warnings := PackedStringArray()
 ## Set when content is broken mid-run (a runner error). The run stops; it is not a loss.
 var runner_error: String = ""
+## Local mode: battles accept dev decisions (spec dev-tools 3.6). Slice 2 turns it off when connected.
+var allow_dev: bool = true
 ## The battle waiting for fight(): {"cell", "encounter", "enemies", "label"}.
 var pending_battle: Dictionary = {}
 
@@ -38,8 +42,74 @@ var _directive_encounter: EncounterDefinition
 
 # --- Run and floors -------------------------------------------------------------------------------------------------
 
-## Starts a run with 1-4 characters (ids of CharacterDefinitions) and a seed typed as a decimal string.
+## Starts a run with 1-4 characters (ids of CharacterDefinitions) and a seed typed as a decimal string or seed code.
 func start_run(content_index: ContentIndex, character_ids: Array, seed_text: String) -> String:
+	var error := _begin_run(content_index, character_ids, seed_text)
+	if error != "":
+		return error
+	run_started.emit()
+	return enter_floor(0)
+
+
+## Plays one room or one hand-made floor (spec dev-tools 2.2) with a fresh party. Unsaved or in-memory content in the
+## request is played as it is (through a ContentIndex overlay); the run is marked dev and sandbox.
+func start_sandbox(content_index: ContentIndex, request: SandboxRequest) -> String:
+	var extra: Array = []
+	for resource in [request.room, request.encounter, request.event, request.layout]:
+		if resource != null and resource.get("id") != &"":
+			extra.append(resource)
+	if request.room == null and request.layout == null:
+		return _stop("a sandbox needs a room or a layout")
+	if request.room != null and request.room.id == &"":
+		return _stop("the room needs an id before it can be played")
+	var error := _begin_run(content_index.overlay(extra), request.party, str(request.seed))
+	if error != "":
+		return error
+	state.sandbox = true
+	state.dev = true
+	run_log.append({"type": "sandbox", "room": String(request.room.id) if request.room != null else "",
+		"layout": String(request.layout.id) if request.layout != null else "", "depth": request.depth,
+		"chapter": String(request.chapter_id), "seed": str(request.seed)})
+	run_started.emit()
+	return enter_sandbox_floor(request)
+
+
+## Replaces the current floor with a sandbox floor (the console's `room` / `layout` inside a running game, or a new
+## sandbox run). Party and inventory are kept.
+func enter_sandbox_floor(request: SandboxRequest) -> String:
+	var chapter := _sandbox_chapter(request)
+	if chapter == null:
+		return _stop("the content has no chapter for the sandbox")
+	_reset_floor(request.depth, chapter)
+	var pools := _pools()
+	var generator := FloorGenerator.new(content, structure, state.run_seed, request.depth)
+	var result: Dictionary
+	if request.layout != null:
+		result = generator.from_layout(request.layout, chapter, pools)
+	else:
+		result = generator.single_room(request.room, chapter, pools, request.encounter, request.event)
+	if result["error"] != "":
+		return _stop("sandbox: %s" % result["error"])
+	_install_floor(result["map"], pools, request.layout != null)
+	if request.room != null and runner_error == "":
+		_enter_cell(state.map.start)
+	return runner_error
+
+
+func _sandbox_chapter(request: SandboxRequest) -> ChapterDefinition:
+	if request.chapter_id != &"":
+		return content.chapters.get(request.chapter_id)
+	var ids := content.chapters.keys()
+	ids.sort_custom(func(a, b) -> bool: return String(a) < String(b))
+	if request.room != null:
+		for id in ids:
+			if TagMatch.matches(content.chapters[id].room_query, request.room.tags):
+				return content.chapters[id]
+	return content.chapters[ids[0]] if not ids.is_empty() else null
+
+
+## Everything start_run does before the first floor: checks, run state, party from default loadouts, the start_run entry.
+func _begin_run(content_index: ContentIndex, character_ids: Array, seed_text: String) -> String:
 	content = content_index
 	if not content.problems.is_empty():
 		return _stop("content problems: " + "; ".join(content.problems))
@@ -50,7 +120,7 @@ func start_run(content_index: ContentIndex, character_ids: Array, seed_text: Str
 		return _stop("run structure %s has no floors" % structure.id)
 	var seed_value := RunSeeds.parse(seed_text)
 	if seed_value < 0:
-		return _stop("the seed must be a whole number from 0 to 9223372036854775807, got '%s'" % seed_text)
+		return _stop("the seed must be a whole number from 0 to 9223372036854775807 or a seed code, got '%s'" % seed_text)
 	if character_ids.is_empty() or character_ids.size() > 4:
 		return _stop("pick 1 to 4 characters")
 	state = RunState.new()
@@ -67,8 +137,7 @@ func start_run(content_index: ContentIndex, character_ids: Array, seed_text: Str
 	if runner_error != "":
 		return runner_error
 	run_log.append({"type": "start_run", "seed": str(seed_value), "party": character_ids.duplicate()})
-	run_started.emit()
-	return enter_floor(0)
+	return ""
 
 
 ## The character's loadout seeds its run state once (spec 3.1): learned skills, items, equipment.
@@ -110,13 +179,7 @@ func enter_floor(floor_index: int) -> String:
 		return _stop("floor %d of %s has no chapters" % [floor_index, structure.id])
 	var chapter_rng := RunSeeds.rng(state.run_seed, "floor/%d/chapter" % floor_index)
 	var chapter: ChapterDefinition = slot.chapters[chapter_rng.randi_range(0, slot.chapters.size() - 1)]
-	state.floor_index = floor_index
-	state.chapter_id = chapter.id
-	state.field_actions_on_floor = 0
-	state.gifts_on_floor = 0
-	state.boss_cleared = false
-	state.event = {}
-	pending_battle = {}
+	_reset_floor(floor_index, chapter)
 	var pools := _pools()
 	var generator := FloorGenerator.new(content, structure, state.run_seed, floor_index)
 	var result: Dictionary
@@ -126,21 +189,37 @@ func enter_floor(floor_index: int) -> String:
 		result = generator.generate(chapter, slot.rooms_from_any_chapter, pools)
 	if result["error"] != "":
 		return _stop("floor %d: %s" % [floor_index, result["error"]])
+	_install_floor(result["map"], pools, true)
+	return runner_error
+
+
+func _reset_floor(floor_index: int, chapter: ChapterDefinition) -> void:
+	state.floor_index = floor_index
+	state.chapter_id = chapter.id
+	state.field_actions_on_floor = 0
+	state.gifts_on_floor = 0
+	state.boss_cleared = false
+	state.event = {}
+	pending_battle = {}
+
+
+## The generated map becomes the current floor; the start cell is visited (and cleared, except a sandbox room, whose
+## content plays when it is entered).
+func _install_floor(map: FloorMap, pools: Dictionary, clear_start: bool) -> void:
 	state.seen_items.assign(pools["seen"])
-	state.map = result["map"]
+	state.map = map
 	state.current_cell = state.map.start
 	state.map.cells[state.map.start]["visited"] = true
-	state.map.cells[state.map.start]["cleared"] = true
+	state.map.cells[state.map.start]["cleared"] = clear_start
 	print("RunController: seed %d, floor %d (%s), %d rooms, %d generation attempt(s)"
-		% [state.run_seed, floor_index, chapter.id, state.map.cells.size(), state.map.attempts])
+		% [state.run_seed, state.floor_index, state.chapter_id, state.map.cells.size(), state.map.attempts])
 	_run_hooks("on_floor_start")
-	floor_entered.emit(floor_index)
-	return runner_error
+	floor_entered.emit(state.floor_index)
 
 
 ## After the boss: the next floor, or the run is won after the last one (that happens in _clear_room).
 func next_floor() -> String:
-	if not _active() or not state.boss_cleared or state.floor_index + 1 >= structure.floors.size():
+	if not _active() or not state.boss_cleared or state.floor_index + 1 >= structure.floors.size() or state.sandbox:
 		return "the next floor is not open"
 	run_log.append({"type": "next_floor", "floor": state.floor_index})
 	return enter_floor(state.floor_index + 1)
@@ -172,6 +251,12 @@ func enter_room(index: int) -> String:
 	if not can_enter(index):
 		return "can't enter that room now"
 	run_log.append({"type": "enter_room", "floor": state.floor_index, "cell": index})
+	_enter_cell(index)
+	return ""
+
+
+## Moves into a cell and plays what it holds (battle, event, pickups), or clears it.
+func _enter_cell(index: int) -> void:
 	state.current_cell = index
 	var data: Dictionary = state.map.cells[index]
 	data["visited"] = true
@@ -179,7 +264,7 @@ func enter_room(index: int) -> String:
 	if data["cleared"]:
 		if not data["pickups"].is_empty():
 			pickups_shown.emit(index)
-		return ""
+		return
 	var room_content: Dictionary = data["content"]
 	match room_content["kind"]:
 		"encounter":
@@ -191,7 +276,6 @@ func enter_room(index: int) -> String:
 			event_page_shown.emit(room_content["event"], 0)
 		_:
 			_clear_room(index, false)
-	return ""
 
 
 func current_room() -> RoomDefinition:
@@ -228,6 +312,7 @@ func fight(controller: Object, gate: PresentationGate = null) -> String:
 	battle.name = "RunBattle"
 	add_child(battle)
 	var error := battle.setup(snapshot, content, gate)
+	battle.allow_dev = allow_dev
 	if error != "":
 		battle.queue_free()
 		return _stop("battle %s: %s" % [snapshot["battleId"], error])
@@ -326,7 +411,7 @@ func _clear_room(index: int, after_battle: bool) -> void:
 	party_changed.emit()
 	if not data["pickups"].is_empty():
 		pickups_shown.emit(index)
-	if state.boss_cleared and is_last_floor() and _active():
+	if state.boss_cleared and is_last_floor() and _active() and not state.sandbox:
 		_end(RunState.WON)
 
 
@@ -590,6 +675,11 @@ func add_coins(amount: int) -> void:
 
 ## Applies a GameplayEffect to party members through GAS (heals, damage, MP, ult charge; with include_dead, revives).
 func apply_party_effect(effect: GameplayEffect, include_dead: bool) -> void:
+	apply_member_effect(effect, [], include_dead)
+
+
+## apply_party_effect for some members only (`slots` empty = everyone), through the same field context.
+func apply_member_effect(effect: GameplayEffect, slots: Array, include_dead: bool) -> void:
 	if effect == null:
 		return
 	var battle := _field_battle(0)
@@ -597,7 +687,7 @@ func apply_party_effect(effect: GameplayEffect, include_dead: bool) -> void:
 		return
 	var ids: Array[StringName] = []
 	for member in state.party:
-		if member["alive"] or include_dead:
+		if (member["alive"] or include_dead) and (slots.is_empty() or slots.has(member["slot"])):
 			ids.append(StringName("P%d" % member["slot"]))
 	battle.apply_to_units(effect, ids)
 	_read_back(battle)
@@ -667,6 +757,208 @@ func event_start_encounter(encounter: EncounterDefinition) -> void:
 	if encounter != null:
 		_directive = "encounter"
 		_directive_encounter = encounter
+
+
+# --- Dev tools (spec dev-tools 3.2-3.4) ------------------------------------------------------------------------------
+# Every cheat checks first, then logs itself with dev_log() (run marked dev, its own dev/<k> stream), then acts through
+# the normal run code: units change through GAS (effects, items), the run through the methods above.
+
+const DEV_CONTENT: String = "res://game/dev/content/"
+
+
+## Logs a cheat and returns the RNG stream it may draw from ("dev/<k>"); no other stream is ever touched.
+func dev_log(command: String, args: Array) -> RandomNumberGenerator:
+	run_log.append({"type": "dev", "command": command, "args": args.map(func(arg) -> String: return str(arg))})
+	var stream := RunSeeds.rng(state.run_seed, "dev/%d" % state.dev_commands)
+	state.dev_commands += 1
+	state.dev = true
+	return stream
+
+
+## A dev effect file (dev_kill, dev_heal, dev_revive).
+static func dev_effect(name: String) -> GameplayEffect:
+	var path := DEV_CONTENT + "effects/%s.tres" % name
+	return load(path) if ResourceLoader.exists(path) else null
+
+
+## The item to `slot` (0 = the first member who can hold it), as if picked up.
+func dev_give(item: ItemDefinition, slot: int) -> String:
+	if not _active():
+		return "no run"
+	slot = slot if slot > 0 else _first_holder(item)
+	var problem := can_hold(slot, item) if slot > 0 else "nobody can hold %s" % item.id
+	if problem != "":
+		return problem
+	dev_log("give", [item.id, slot])
+	_receive_item(slot, item)
+	return ""
+
+
+func dev_remove(item: ItemDefinition) -> String:
+	if not _active() or state.holder_of(item.id) == 0:
+		return "nobody holds %s" % item.id
+	dev_log("remove", [item.id])
+	remove_item(item)
+	return ""
+
+
+func dev_equip(piece: EquipmentDefinition, slot: int) -> String:
+	if not _active():
+		return "no run"
+	var member := state.member(slot if slot > 0 else state.party[0]["slot"])
+	if member.is_empty():
+		return "no member in slot %d" % slot
+	dev_log("equip", [piece.id, member["slot"]])
+	give_equipment(piece, content.characters.get(member["character"]))
+	return ""
+
+
+func dev_coins(amount: int) -> String:
+	if not _active():
+		return "no run"
+	dev_log("coins", [amount])
+	add_coins(amount)
+	return ""
+
+
+## heal / revive / effect out of battle: the effect on living (or dead) members through the field context.
+func dev_apply(command: String, effect: GameplayEffect, slots: Array, include_dead: bool) -> String:
+	if not _active():
+		return "no run"
+	if not pending_battle.is_empty():
+		return "not during a battle"
+	if effect == null:
+		return "no effect"
+	dev_log(command, [effect.resource_path] + slots)
+	apply_member_effect(effect, slots, include_dead)
+	return ""
+
+
+## `count` dev stat items for `attribute` (negative = downs) to `slot` (0 = the first living member).
+func dev_stat(attribute_name: String, count: int, slot: int) -> String:
+	if not _active():
+		return "no run"
+	if count == 0:
+		return "a count of 0 does nothing"
+	var item: ItemDefinition = content.items.get(StringName("dev.%s.%s" % ["up" if count > 0 else "down", attribute_name]))
+	if item == null:
+		return "no dev stat item for '%s' (is the dev content loaded?)" % attribute_name
+	slot = slot if slot > 0 else _first_holder(item)
+	var problem := can_hold(slot, item) if slot > 0 else "nobody can hold %s" % item.id
+	if problem != "":
+		return problem
+	dev_log("stat", [attribute_name, count, slot])
+	for index in absi(count):
+		_place_item(state.member(slot), item)
+	party_changed.emit()
+	return ""
+
+
+func dev_win() -> String:
+	if not _active():
+		return "no run"
+	dev_log("win", [])
+	pending_battle = {}
+	_end(RunState.WON)
+	return ""
+
+
+## Enters floor `floor_index` (0-based) of the run structure; party and inventory are kept.
+func dev_stage(floor_index: int) -> String:
+	if not _active():
+		return "no run"
+	if floor_index < 0 or floor_index >= structure.floors.size():
+		return "floors are 0 to %d" % (structure.floors.size() - 1)
+	dev_log("stage", [floor_index])
+	state.sandbox = false
+	return enter_floor(floor_index)
+
+
+## Replaces the current floor with a sandbox floor (one room or one layout); party and inventory are kept.
+func dev_sandbox(request: SandboxRequest) -> String:
+	if not _active():
+		return "no run"
+	var extra: Array = []
+	for resource in [request.room, request.layout, request.encounter]:
+		if resource != null and not _indexed(resource):
+			extra.append(resource)
+	if not extra.is_empty():
+		content = content.overlay(extra)
+	dev_log("room" if request.room != null else "layout",
+		[request.room.id if request.room != null else request.layout.id])
+	state.sandbox = true
+	return enter_sandbox_floor(request)
+
+
+## Starts a battle with `encounter` in the current room (like an event's StartEncounter).
+func dev_spawn(encounter: EncounterDefinition) -> String:
+	if not _active() or not pending_battle.is_empty() or not state.event.is_empty():
+		return "not now (finish the battle or event first)"
+	var stream := dev_log("spawn", [encounter.id])
+	if content.encounters.get(encounter.id) != encounter:
+		content = content.overlay([encounter])
+	var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index)
+	pending_battle = {"cell": state.current_cell, "encounter": encounter.id,
+		"enemies": generator.resolve_enemies(encounter, current_room(), false, chapter().scaling, stream),
+		"label": "/dev%d" % (state.dev_commands - 1)}
+	state.map.cells[state.current_cell]["content"]["enemies"] = pending_battle["enemies"]
+	battle_requested.emit(battle_snapshot())
+	return ""
+
+
+## Adds a pickup to the current room (price 0 = free pedestal); `item` null picks one from `pool_tag` on dev/<k>.
+func dev_spawn_item(item: ItemDefinition, pool_tag: StringName, price: int) -> String:
+	if not _active():
+		return "no run"
+	var stream := dev_log("spawn item" if item != null else "spawn pool", [item.id if item != null else pool_tag, price])
+	if item == null:
+		var query := GameplayTagQuery.new()
+		query.require_all_tags.assign([pool_tag])
+		var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index)
+		item = generator.pick_item(null, query, stream, _pools())
+		if item == null:
+			return "no item in the pool %s" % pool_tag
+	var data: Dictionary = state.map.cells[state.current_cell]
+	var number: int = 1000 + data["pickups"].filter(func(pickup) -> bool: return pickup["placement"] >= 1000).size()
+	data["pickups"].append({"placement": number, "item": item.id, "price": maxi(price, 0), "taken": false})
+	state.seen_items.append(item.id)
+	if data["cleared"]:
+		pickups_shown.emit(state.current_cell)
+	return ""
+
+
+func dev_reveal() -> String:
+	if not _active():
+		return "no run"
+	dev_log("reveal", [])
+	state.revealed = true
+	map_revealed.emit()
+	return ""
+
+
+## kill / heal in battle: queued on the recorder, applied by the battle at the next party decision.
+func dev_battle(command: String, effect: GameplayEffect, targets: String, recorder: ActionRecorder) -> String:
+	if pending_battle.is_empty() or recorder == null:
+		return "only in a battle"
+	if effect == null:
+		return "no effect"
+	dev_log(command, [targets])
+	recorder.submit_dev(StringName("Dev." + command.capitalize()), effect, targets)
+	return ""
+
+
+func _first_holder(item: ItemDefinition) -> int:
+	for member in state.party:
+		if can_hold(member["slot"], item) == "":
+			return member["slot"]
+	return 0
+
+
+func _indexed(resource: Resource) -> bool:
+	for table in [content.rooms, content.layouts, content.encounters]:
+		if table.get(resource.get("id")) == resource:
+			return true
+	return false
 
 
 # --- Helpers ---------------------------------------------------------------------------------------------------------

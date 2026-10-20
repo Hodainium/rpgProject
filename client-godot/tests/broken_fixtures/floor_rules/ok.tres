@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="FloorGenRules" format=3]
+
+[ext_resource type="Script" path="res://game/defs/floor_gen_rules.gd" id="1_xon4w"]
+
+[resource]
+script = ExtResource("1_xon4w")
+id = &"broken.rules.ok"

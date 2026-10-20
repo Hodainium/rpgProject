@@ -18,6 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 GameplayCueManager="*res://addons/GodotGAS/managers/gameplay_cue_manager.gd"
+Dev="*res://game/dev/dev.gd"
 
 [display]
 
@@ -32,7 +33,7 @@ project/assembly_name="rpgDemo"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/GodotGAS/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotGAS/plugin.cfg", "res://addons/rpg_dev/plugin.cfg")
 
 [physics]
 

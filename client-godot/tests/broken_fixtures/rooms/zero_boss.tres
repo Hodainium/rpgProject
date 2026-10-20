@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_ckkmf"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="2_gg06r"]
+
+[resource]
+script = ExtResource("2_gg06r")
+id = &"broken.room.zero_boss"
+tags = Array[StringName]([&"Broken.Zero", &"Room.Type.Boss"])
+weight_x100 = 0

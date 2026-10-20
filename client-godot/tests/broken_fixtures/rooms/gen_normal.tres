@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_ima16"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="2_3pqeo"]
+
+[resource]
+script = ExtResource("2_3pqeo")
+id = &"broken.room.gen_normal"
+tags = Array[StringName]([&"Broken.Gen", &"Room.Type.Normal"])

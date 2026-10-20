@@ -12,7 +12,10 @@ signal action_rejected(unit_id: StringName, reason: String, detail: String)
 signal _submitted
 
 var entries: Array[Dictionary] = []
+## The unit whose decision is awaited (&"" while no party decision is pending).
+var waiting_for: StringName = &""
 var _pending: Dictionary = {}
+var _dev: Array[Dictionary] = []
 
 
 ## Called by presentation with the player's choice. target_id is &"" for SELF / ALL_* abilities.
@@ -21,12 +24,28 @@ func submit_action(ability_tag: StringName, target_id: StringName = &"") -> void
 	_submitted.emit()
 
 
+## A dev decision (spec dev-tools 3.6): `name` is Dev.Kill or Dev.Heal, `effect` the GameplayEffect to apply, `targets`
+## "enemies", "party" or a party slot. Taken at the next party decision; Battle applies it only with allow_dev.
+func submit_dev(name: StringName, effect: GameplayEffect, targets: String) -> void:
+	_dev.append({"dev": name, "effect": effect, "targets": targets})
+	_submitted.emit()
+
+
+## Dev decisions not taken yet (dropped by the caller when the battle ends first).
+func pending_dev() -> int:
+	return _dev.size()
+
+
 func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 	_pending = {}
+	if not _dev.is_empty():
+		return _dev.pop_front()
+	waiting_for = unit.unit_id
 	action_requested.emit(unit.unit_id, battle.turn)
-	while _pending.is_empty():
+	while _pending.is_empty() and _dev.is_empty():
 		await _submitted
-	return _pending
+	waiting_for = &""
+	return _pending if not _pending.is_empty() else _dev.pop_front()
 
 
 func on_invalid(_battle: Battle, unit: BattleUnit, reason: String, detail: String) -> bool:

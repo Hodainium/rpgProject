@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_wsn7v"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="2_euvie"]
+
+[sub_resource type="Resource" id="Resource_gle6u"]
+script = ExtResource("1_wsn7v")
+cell = Vector2i(1, 3)
+price = 5
+
+[resource]
+script = ExtResource("2_euvie")
+id = &"broken.room.placement_kind"
+tags = Array[StringName]([&"Broken.Room"])
+placements = Array[ExtResource("1_wsn7v")]([SubResource("Resource_gle6u")])

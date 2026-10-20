@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_pmtyw"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_krwll"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/enemies/grunt.tres" id="3_vjvx1"]
+[ext_resource type="Resource" path="res://tests/fixtures/loadouts/tough.tres" id="4_myueb"]
+
+[sub_resource type="Resource" id="Resource_lpypv"]
+script = ExtResource("2_krwll")
+enemy = ExtResource("3_vjvx1")
+loadout = ExtResource("4_myueb")
+
+[resource]
+script = ExtResource("1_pmtyw")
+id = &"broken.encounter.bad_loadout_ref"
+slots = Array[ExtResource("2_krwll")]([SubResource("Resource_lpypv")])

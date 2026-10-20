@@ -61,6 +61,9 @@ var triggers := TriggerQueue.new()
 var content_warnings := PackedStringArray()
 ## Usable items used in this battle, in order: [{"unit": unit id, "item": item id}].
 var used_items: Array[Dictionary] = []
+## Dev decisions (spec dev-tools 3.6) are applied only when set: the run sets it in local mode; replay never does, so a
+## logged dev decision is an IllegalAbility (2002) there.
+var allow_dev: bool = false
 
 var _units: Array[BattleUnit] = []  # sorted by unit id
 var _started: bool = false
@@ -172,7 +175,10 @@ func _party_kit(member: Dictionary, definition: UnitDefinition, content: Content
 		grants.append({"set": piece.grants})
 	grants.append_array(party_sets)
 	for item_id in _list(member, "items"):
-		var item: ItemDefinition = content.items[StringName(str(item_id))]
+		var item: ItemDefinition = content.items.get(StringName(str(item_id)))
+		if item == null:
+			_fail("unknown item '%s'" % item_id)
+			return {}
 		if item.applies_to == ItemDefinition.AppliesTo.HOLDER:
 			grants.append({"set": item.grants})
 	for use_slot in _list(member, "useSlots"):
@@ -383,6 +389,26 @@ func validate_action(actor: BattleUnit, choice: Dictionary) -> Array:
 	return []
 
 
+## A dev decision (spec dev-tools 3.6): its GameplayEffect on the chosen living units through GAS, then the usual
+## trigger, death and end handling. Logged as an ordinary action entry ({"ability": Dev.*, "target": targets}); it
+## doesn't use up the actor's turn.
+func _apply_dev(actor: BattleUnit, choice: Dictionary, controller: Object) -> void:
+	var targets := str(choice.get("targets", "enemies"))
+	var ids: Array[StringName] = []
+	for unit in _units:
+		if not unit.alive:
+			continue
+		if (targets == "enemies" and not unit.is_party()) or (targets == "party" and unit.is_party()) 				or (targets.is_valid_int() and unit.unit_id == StringName("P" + targets)):
+			ids.append(unit.unit_id)
+	if choice.get("effect") is GameplayEffect:
+		apply_to_units(choice["effect"], ids)
+	await _drain_triggers()
+	_check_deaths()
+	_check_end()
+	controller.after_party_turn(self, actor, {"ability": StringName(str(choice["dev"])), "target": StringName(targets)},
+		state_hash())
+
+
 ## Applies one execution-table row (called by BattleAbility for each entry of its execution sequence).
 func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionRow, action: Dictionary) -> void:
 	if row == null or row.effect == null:
@@ -453,6 +479,11 @@ func _take_action(actor: BattleUnit, controller: Object) -> Dictionary:
 			choice = await controller.choose(self, actor)
 			if not is_running():
 				return {}
+			if choice.has("dev") and allow_dev:
+				await _apply_dev(actor, choice, controller)
+				if not is_running():
+					return {}
+				continue
 			var problem := validate_action(actor, choice)
 			if problem.is_empty():
 				break

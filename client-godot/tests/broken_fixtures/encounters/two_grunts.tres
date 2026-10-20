@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_5ok7h"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_jplxx"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/enemies/grunt.tres" id="3_eewdm"]
+
+[sub_resource type="Resource" id="Resource_ysrod"]
+script = ExtResource("2_jplxx")
+enemy = ExtResource("3_eewdm")
+
+[sub_resource type="Resource" id="Resource_1akrv"]
+script = ExtResource("2_jplxx")
+enemy = ExtResource("3_eewdm")
+
+[resource]
+script = ExtResource("1_5ok7h")
+id = &"broken.encounter.two_grunts"
+slots = Array[ExtResource("2_jplxx")]([SubResource("Resource_ysrod"), SubResource("Resource_1akrv")])

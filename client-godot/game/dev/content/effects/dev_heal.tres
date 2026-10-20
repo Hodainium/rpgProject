@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_4iv3e"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_3sknh"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_vfa1q"]
+
+[sub_resource type="Resource" id="Resource_ph32i"]
+script = ExtResource("2_3sknh")
+attribute_name = "hp"
+operation = 4
+magnitude_calculation = 2
+attribute_source = 1
+backing_attribute_name = "max_hp"
+
+[sub_resource type="Resource" id="Resource_fu74q"]
+script = ExtResource("2_3sknh")
+attribute_name = "mp"
+operation = 4
+magnitude_calculation = 2
+attribute_source = 1
+backing_attribute_name = "max_mp"
+
+[resource]
+script = ExtResource("3_vfa1q")
+modifiers = Array[ExtResource("2_3sknh")]([SubResource("Resource_ph32i"), SubResource("Resource_fu74q")])

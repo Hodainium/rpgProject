@@ -14,6 +14,8 @@ signal run_changed(run: RunController)
 ## A battle is about to start: the battle panel drives `recorder`, the room view animates through `gate`.
 signal battle_prepared(recorder: ActionRecorder, gate: ViewGate)
 signal content_changed(content: ContentIndex)
+## A sandbox run (spec dev-tools 2.2) was left through the run-end screen.
+signal sandbox_closed
 
 const VIEW_DIR: String = "res://presentation/demo/"
 const SETTINGS_PATH: String = "user://game_main.cfg"
@@ -35,11 +37,16 @@ var content_root: String = CONTENT_ROOTS[0]
 var content: ContentIndex
 var run: RunController
 var mode: String = "menu"
+## The current battle's recorder (the party's input), for the dev console's battle commands.
+var recorder: ActionRecorder
+## Abilities resolve without waiting for their animations (the dev script runner).
+var skip_animations: bool = false
 
 var _message: Label
 
 
 func _ready() -> void:
+	add_to_group("game_main")
 	var settings := ConfigFile.new()
 	if settings.load(SETTINGS_PATH) == OK:
 		content_root = settings.get_value("game", "content_root", content_root)
@@ -87,6 +94,10 @@ func set_content_root(path: String) -> void:
 
 func load_content() -> void:
 	content = ContentIndex.new(content_root)
+	# The console's dev stat items (spec dev-tools 3.3), only while cheats are allowed; never in a pool.
+	var dev := get_node_or_null("/root/Dev")
+	if dev != null and dev.cheats_allowed() and DirAccess.dir_exists_absolute(RunController.DEV_CONTENT):
+		content.add_root(RunController.DEV_CONTENT)
 	if not content.problems.is_empty():
 		show_message("Content problems in %s: %s" % [content_root, "; ".join(content.problems)])
 	content_changed.emit(content)
@@ -94,6 +105,23 @@ func load_content() -> void:
 
 ## Starts a run with the chosen characters (ids) and a seed typed as a decimal string. "" or the error.
 func start_run(character_ids: Array, seed_text: String) -> String:
+	_new_run()
+	var error := run.start_run(content, character_ids, seed_text)
+	if error != "":
+		set_mode("end")
+	return error
+
+
+## Plays one room or hand-made floor (spec dev-tools 2.2). "" or the error.
+func start_sandbox(request: SandboxRequest) -> String:
+	_new_run()
+	var error := run.start_sandbox(content, request)
+	if error != "":
+		set_mode("end")
+	return error
+
+
+func _new_run() -> void:
 	if run != null:
 		run.queue_free()
 	run = RunController.new()
@@ -105,13 +133,11 @@ func start_run(character_ids: Array, seed_text: String) -> String:
 	show_message("")
 	run_changed.emit(run)
 	set_mode("run")
-	var error := run.start_run(content, character_ids, seed_text)
-	if error != "":
-		set_mode("end")
-	return error
 
 
 func back_to_menu() -> void:
+	if run != null and run.state != null and run.state.sandbox:
+		sandbox_closed.emit()
 	set_mode("menu")
 
 
@@ -128,9 +154,11 @@ func show_message(text: String) -> void:
 
 
 func _on_battle_requested(_snapshot: Dictionary) -> void:
-	var recorder := ActionRecorder.new()
+	recorder = ActionRecorder.new()
 	var gate := ViewGate.new()
 	battle_prepared.emit(recorder, gate)
+	if skip_animations:
+		gate.skip_all = true
 	await get_tree().process_frame
 	await run.fight(recorder, gate)
 

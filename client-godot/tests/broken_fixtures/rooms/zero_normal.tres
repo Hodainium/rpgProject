@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_56c4b"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="2_l5fcp"]
+
+[resource]
+script = ExtResource("2_l5fcp")
+id = &"broken.room.zero_normal"
+tags = Array[StringName]([&"Broken.Zero", &"Room.Type.Normal"])
+weight_x100 = 0

@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_mtl07"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_ma2jc"]
+
+[resource]
+script = ExtResource("2_ma2jc")
+id = &"broken.item.fallback"
