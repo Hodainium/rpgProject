@@ -9,6 +9,7 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
 |---|---|---|
 | `combat/` | System (Claude) | Battle kernel (spec `combat-replay-core`): `Battle`, `TurnManager`, `CombatASC`, `BattleAbility`, `ExecutionRow`, gates, recorder, state hasher, replay runner, headless entry `combat/headless/replay_main.tscn`. No balance numbers. |
 | `game/` | System (Claude) | Run layer (spec `game-skeleton`): content types in `defs/`, floor generator, `RunState`, `RunController`, `GameMain` shell (main scene), `ViewGate`, one-time example-set builder `tools/build_demo.tscn`. No balance numbers. |
+| `game/dev/`, `addons/rpg_dev/` | System (Claude) | Dev tools (spec `dev-tools`): console and its commands, sandbox, validator, templates, room grid ops, seed runner, Play entry scene, dev content (`game/dev/content/`); our editor plugin (dock, room grid, Play buttons). |
 | `tests/` (except `fixtures/`) | System (Claude) | In-house test runner `run_tests.tscn`, `TestCase`, system tests in `tests/combat/` and `tests/game/`, fixture builder `tests/tools/`. |
 | `content/` | **User** | Abilities, `GameplayEffect` `.tres`, ExecCalcs, characters, cue definitions, balance values. |
 | `presentation/` | **User** | Battle scenes, UI, VFX, animation, flare. Listens to `combat/` signals and never changes combat state. |
@@ -127,3 +128,25 @@ from C#.**
 - **Godot 4.7.2 GDScript quirks hit here:** inside a class, its own enum `Side` and `BattleUnit.Side` count as different
   types (pass enums as `int`); building, sorting and reading arrays in one static function corrupted entries (see
   `ExecutionReader`); a static method Callable from a static function passed bad arguments to `sort_custom` (use a lambda).
+
+## 5. Dev tools (spec `dev-tools`): how Claude uses and extends them
+- **Every tool works without a window.** Each editor button has a console command running the same code (`create`,
+  `grid`, `play`, `validate`), checked by `test_tool_parity` in `tests/game/test_dev_console.gd`. A new tool or
+  button must ship with its command (add it to that test).
+- **Play the game headless** with the script runner: one console command per line in a text file, then
+  `godot --headless --path client-godot --quit-after 100000 res://game/tools/dev_run.tscn -- --script <file>
+  --out <state.json> [--content-root res://tests/fixtures/] [--commands <folder>] [--manual]`. Battles run on auto
+  unless `--manual` (then `act`). Exit 0 ok, 2 a command failed (named), 1 tool error. `--window --shots <dir>` (no
+  `--headless`) lets `shot <name>` save screenshots.
+- **Add a command:** copy `game/dev/commands/_template.gd` (one file, found automatically; give it a test). For a
+  one-off check, write it in the scratchpad and pass `--commands <folder>`: it is copied to `user://dev_commands/` and
+  leaves nothing in the repo. Commands change units through GAS (effects, items) and the run through `RunController`
+  (cheats: its `dev_*` methods, or `run.dev_log()` first). If a command needs a hook the run layer lacks, add a small
+  method to system code, never to content.
+- **Never point `create`, `grid ... save` or the dock at `res://content/` on Claude's own initiative.** Test on
+  `user://` copies or fixtures; the user's files change only through `Edit`/`Write` and their permission prompt.
+- **Check content:** `res://game/tools/validate_content.tscn` (exit 3 on content errors) and the `test_content_valid`
+  content test. Seed statistics: `res://game/tools/seed_report.tscn -- --count 1000 --floor 0`.
+- Rebuild generated dev and test data only on purpose: `game/tools/build_dev_content.tscn` (dev effects and stat items),
+  `tests/tools/build_broken_fixtures.tscn` (validator fixtures).
+

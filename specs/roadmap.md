@@ -9,7 +9,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 0. `project-skeleton` | ✅ Done | 2026-10-19 |
 | 1. `combat-replay-core` | ✅ Done | 2026-10-19 |
 | 1b. `game-skeleton` | ✅ Done | 2026-10-19 |
-| 1c. `dev-tools` | 📝 Spec written (`specs/dev-tools.md`), awaiting review | 2026-10-20 |
+| 1c. `dev-tools` | ✅ Done (spec synced; remaining work listed in `specs/dev-tools.md`) | 2026-10-20 |
 | 1c2. `item-pass` | ⬜ Not started | |
 | 1c3. `animation-sets` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |

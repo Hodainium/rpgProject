@@ -1,6 +1,6 @@
 # Spec: dev-tools (slice 1c)
 
-Status: 📝 Spec written, awaiting review · Roadmap: slice 1c · Date: 2026-10-20
+Status: ✅ Done (synced with the implementation 2026-10-20) · Roadmap: slice 1c · Date: 2026-10-20
 Design intent: `specs/design/game-design.md` section 6 (tool list). Builds on `specs/game-skeleton.md` (content types,
 generator, run layer). Server boundary: `specs/server-authority.md` section 0 (dev tools are **client-only** and
 disabled when connected).
@@ -54,11 +54,11 @@ drive every tool through the script runner (2.6), and **any future tool or edito
 | `client-godot/addons/rpg_dev/` | ✅ new | Our own Godot editor plugin: the dock, the room grid and Play buttons in the inspector (system-owned; never touches `addons/GodotGAS/`) |
 | `client-godot/game/` | ✅ changed | Seed codes in `RunSeeds`; dev entries and sandbox in `RunController`/`RunState`; `FloorGenerator.check_layout` and single-room resolve; `GameMain` sandbox mode |
 | `client-godot/game/tools/` | ✅ new | `seed_report.tscn` (headless seed statistics), `validate_content.tscn` (headless validator) |
-| `client-godot/combat/` | ✅ small change | `Battle` accepts a dev decision (apply an effect: `kill`, `heal`) only when `allow_dev` is set; `ContentIndex` extra root and `find_item` |
+| `client-godot/combat/` | ✅ small change | `Battle` accepts a dev decision (apply an effect: `kill`, `heal`) only when `allow_dev` is set; `ActionRecorder.submit_dev`; `ContentIndex.add_root` (dev content) and `overlay` (sandbox) |
 | `client-godot/tests/` | ✅ | New system tests, a broken-content fixture root, new goldens |
-| `project.godot` | ✅ changed | Autoload `Dev` (console host), input action `dev_console`, plugin `rpg_dev` enabled |
+| `project.godot` | ✅ changed | Autoload `Dev` (console host; it registers the `dev_console` input action at start), plugin `rpg_dev` enabled |
 | `content/` | ✏️ written **by Godot when you save**, and by the dock when you click Create (a new file only; never overwrites) | Claude never uses the dock or the grid to write your folders; tests write only to `user://` |
-| `presentation/demo/` | ✏️ two proposed small edits, each asked first (section 3.9) | Menu (Random fills a seed code), map view (`reveal`) |
+| `presentation/demo/` | ✏️ two small edits, approved (section 3.9) | Menu (Random fills a seed code), map view (`reveal`) |
 | `Rpg.Contracts`, server, Postgres, Redis, RabbitMQ, Redpanda | ❌ | N/A: dev tools are client-only (`server-authority` section 0). Nothing they do is ever sent or rewarded. |
 
 **Enterprise mapping:** this is the *developer-experience and data-quality* layer that a production data platform
@@ -82,9 +82,9 @@ any scene ── key `dev_console` (backtick, physical key) ─▶ Dev (autoload
      DevConsole.execute(line)
        tokens ← split on spaces ("quoted args" allowed)
        command ← registry[tokens[0]]                       registry = every DevCommand in res://game/dev/commands/
-       cheat and not Dev.cheats_allowed()  → "cheats are off while connected"
-       ctx ← DevContext{ game: first node in group "game_main" (or null), run: game.run, content: game.content }
-       command.run(ctx, args) → text shown in the console and printed to stdout
+       cheat and not console.cheats_allowed  → "cheats are off while connected"
+       ctx ← DevContext{ game: first node in group "game_main" (or null), run, content (the run's), battle, recorder }
+       command.run(ctx, args) → {ok, text}: shown in the console and printed to stdout (ok = false after ctx.fail())
          cheat commands call RunController.dev_*(...)
            RunController appends {"type":"dev","command":"give","args":["sword","2"]} to run_log
            state.dev = true                          run hash gains "dev=1" (only when true: goldens unchanged)
@@ -107,37 +107,40 @@ caller ─ GameMain.start_sandbox(SandboxRequest) ─▶ RunController.start_san
   party dead → run lost; run-end view's button → GameMain emits sandbox_closed (instead of returning to the menu)
 ```
 Inside a running game, the console's `room <id>` replaces the current floor with a sandbox floor and keeps the party
-and inventory (it's a `dev` entry, not a new run). With no run active it starts a sandbox run with the party last
-picked in the menu.
+and inventory (it's a `dev` entry, not a new run). With no run active it starts a sandbox run with the Play settings'
+party (else the first two selectable characters, `PlayRequest.party_for`). Unsaved rooms, rooms outside the content
+root and encounters built in memory are played through `ContentIndex.overlay()`, a copy of the index; the shared
+index is never changed. A sandbox room's start cell is not pre-cleared (its content plays); a layout's start is.
 
 ### 2.3 New content dock
 ```
 Godot editor ── dock "RPG Content" (addons/rpg_dev)
   type ▾ (character, enemy, encounter, loadout, room, item, event) · id · folder (default: the last one used,
   first time res://content/demo/<type folder>/)
-  Create → template (3.8) with the id → ResourceSaver.save(<folder>/<id>.tres) → EditorInterface.edit_resource(it)
-           refused if the id is already used by that type (ContentIndex) or the file exists
-  Validate → ContentValidator over res://content/ → issue list; clicking one opens its file
-  Play settings: party, seed, depth, chapter (user://dev_tools.cfg), used by every Play button
+  Create → template (3.8) with the id → ResourceSaver.save(<folder>/<last id segment>.tres) → edit_resource(it)
+           (demo.enemy.slime → slime.tres); refused if the id is already used by that type or the file exists
+  Validate → ContentValidator over the content root → issue list; double-click one to open its file
+  Play settings: party, seed, depth, chapter, content root (user://dev_tools.cfg, [play]), used by every Play button
 ```
 
 ### 2.4 Room grid and Play buttons
 ```
 select a RoomDefinition in Godot → EditorInspectorPlugin adds, above its normal fields:
-  palette: player spawn 1–4, enemy spawn 1–n, event prop, item pedestal, shop slot, eraser
+  palette: Player, Enemy, Prop, Pedestal, Shop, Erase, Select, and a slot number (party or encounter slot)
   13 × 7 grid: click paints the selected kind into that cell (one placement per cell; painting replaces);
-               the eraser removes; four edge buttons toggle the doors
+               Erase removes; four edge buttons toggle the doors
   each click = one RoomGridOps call wrapped in EditorUndoRedoManager (Ctrl+Z works); Godot marks the file
                unsaved and Ctrl+S saves it, like any inspector edit
-  clicking a placement selects it in the room's Placements list, where its other fields (item, item query,
-               loadout, price) are edited in the normal inspector
+  Select + click a placement opens it in the inspector, where its other fields (item, item query, loadout,
+               price) are edited; the inspector's back arrow returns to the room
   under the grid: ContentValidator.check_room(room), live
 Play (on rooms, encounters, enemies, characters, layouts):
-  save the resource → write user://dev_play.cfg {kind, path, party, seed, depth, chapter}
+  save the resource → write user://dev_play.cfg {kind, target: its path} (settings come from dev_tools.cfg)
   → EditorInterface.play_custom_scene("res://game/dev/play_main.tscn")
   play_main.tscn: GameMain with its usual screens, then a sandbox (2.2) from the request:
     room → that room · layout → that floor
-    encounter → the first battle room (by id) of the request's chapter, with the encounter as its override
+    encounter → the first normal battle room (by id) of the chapter (else any room with an enemy spawn), with the
+                encounter as its override
     enemy → the same room with a one-slot encounter built in memory around the enemy
     character → a new normal run with that character in slot 1 (plus the saved party)
 ```
@@ -152,21 +155,29 @@ seed_runner.tscn
                 with prices), generation attempts; "Play this seed" starts a normal run
   many seeds: from seed S, count N (default 100), floor n
               → SeedReport: failures (seed + error, click to view), attempts min/avg/max, rooms min/avg/max,
-                dead ends, and frequency tables for rooms, encounters, events, elites, items
-              rules panel: edit a copy of the chapter's FloorGenRules live and re-run; Save writes the rules file
+                dead ends, and frequency tables for rooms, encounters, events, elites, items (failures listed,
+                not clickable)
+              rules panel: base rooms, rooms per depth, random extra rooms, max rooms and branch % on a copy of the
+                floor's first chapter's FloorGenRules; re-run live; Save writes the rules file
+  "Back to the game" returns to game_main.tscn
 game/tools/seed_report.tscn -- --content-root res://content/ --from 1 --count 1000 --floor 0 --out report.json
               same SeedReport as JSON, for tuning outside the editor and for the golden test
 ```
 
 ### 2.6 Script runner (headless play, for tests and for Claude)
 ```
-game/tools/dev_run.tscn -- --content-root res://content/ --script run.txt --out state.json [--seed K7QP2M9X]
-                           [--party warrior,cleric] [--window --shots shots/] [--commands <folder>]
+game/tools/dev_run.tscn -- --script run.txt [--out state.json] [--content-root res://content/] [--manual]
+                           [--window --shots shots/] [--commands <folder>]
   --commands: copies the folder's *.gd into user://dev_commands/ first, so a script can use throwaway commands
-  GameMain without screens (headless) → for each line of run.txt: DevConsole.execute(line), echo "> line" + reply
-  battles: `auto` picks each party action with the battle panel's Auto rule; no presentation gate waits
-  → state.json: {seed, status, floor, cell, coins, party (read through GAS: hp/mp/energy and maxima), items,
-     run hash, dev flag, warnings, every command with its reply}; exit 0, 2 if a command failed, 1 tool error
+  GameMain with its screens, animations skipped (skip_animations) → for each line (blank and # lines skipped):
+     DevConsole.execute(line), echo "> line" + reply, then wait for any battle to finish
+  battles: on auto (DevConsole's copy of the battle panel's rule: first usable ability, first valid target);
+     --manual: the runner stops waiting when a party member waits, for `act`
+  start a run with `new <ids> [seed]` (there are no --seed / --party options)
+  → state.json (DevReport.state_of): {seed, seedDecimal, status, floor, chapter, cell, coins, party (read through
+     GAS: hp/mp/energy and maxima, items, use slots, equipment, skills), event, battle, dev, sandbox, runHash,
+     warnings, runnerError, commands: [{line, command, ok, reply}], failed: ["line n: ..."]}
+  exit 0, 2 if a command failed, 1 tool error
   --window: runs with rendering (no --headless) so `shot <name>` saves the viewport to <shots>/<name>.png
 ```
 Play commands (3.2) are not cheats: a script that only plays leaves the run clean, with the same run hash as the
@@ -205,30 +216,36 @@ var usage: String               # "give <item> [slot]"
 var help: String                # one line
 var cheat: bool                 # changes run state → logged as dev, refused when cheats are off
 var arg_kinds: Array[String]    # per position, for autocomplete: "item", "equipment", "encounter", "event", "room",
-                                # "layout", "character", "chapter", "command", "slot", "floor", "int", "seed", "text"
-func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply; "" = done silently
+                                # "layout", "character", "unit", "chapter", "command", "slot", "attribute",
+                                # "play_kind", "type", "grid_op", "place", "side", "target", "ability", "on_off",
+                                # "int", "seed", "text"
+func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply (may await); errors: return ctx.fail(why)
 ```
-- **Registry:** `DevConsole` loads every `*.gd` in `res://game/dev/commands/` (sorted by path) whose script extends
-  `DevCommand`; a duplicate name is a startup warning, the first one wins. Adding a command = adding one file.
+- **Registry:** `DevConsole` loads every `*.gd` in `res://game/dev/commands/` (sorted by path, files starting with
+  `_` skipped) whose script extends `DevCommand`; a duplicate name is a startup warning, the first one wins. Adding a command = adding one file.
   In debug builds it also loads `user://dev_commands/*.gd` after the built-in ones: **throwaway commands** that never
   touch the repo (for example one Claude writes to check one thing). A throwaway command can't replace a built-in
   name.
 - **Writing a command** (also in `client-godot/DEV_TOOLS.md` and `client-godot/CLAUDE.md`): copy
   `game/dev/commands/_template.gd`, set `name`, `usage`, `help`, `cheat`, `arg_kinds`, and fill in `run()`.
-  `DevContext` gives `game` (`GameMain`), `run` (`RunController`, null outside a run), `content` (`ContentIndex`),
-  `battle` (the running `Battle` or null), `recorder` (its `ActionRecorder`), and helpers `arg_item(args, i)`,
-  `arg_slot(...)` and so on, which return a value or a ready-made error reply. Rules: change units through GAS
+  `DevContext` gives `game` (`GameMain`), `run` (`RunController`, null outside a run), `content` (the run's
+  `ContentIndex`), `battle` (the running `Battle` or null), `recorder` (its `ActionRecorder`), `console`, and helpers:
+  `need_run()` (why there is no active run, or ""), `arg_int(args, i, fallback)` (null when not a whole number),
+  `find(kind, id or path)` (null and `error` with the closest ids), `table_of(kind)`, `fail(message)`. Rules: change units through GAS
   (effects, items), change the run through `RunController` (a cheat calls `run.dev_log(name, args)` first, which
   logs it, sets `dev` and returns the `dev/<k>` stream for any randomness), and never draw from another stream. If a
   command needs something the run layer doesn't expose yet, add a small method to the system code; never to content.
   Permanent commands get a test; throwaway ones don't.
 - **Autocomplete:** Tab completes the command name, then the current argument from its kind (content ids sorted, from
   the current `ContentIndex`; slots from the party); repeated Tab cycles; a list shows when there are several.
-- **History:** Up/Down; the last 50 lines in `user://dev_console_history.txt`.
+- **History:** Up/Down; the last 50 lines in `user://dev_console_history.txt` (`keep_history` off for the script
+  runner and tests).
 - **Output:** scrollback in the console and `print()` to stdout (so headless runs and tests see it).
-- **`Dev` autoload** (`game/dev/dev.gd`): hosts the console; `cheats_allowed()` is true in local mode (slice 2 makes
-  it `not ServerLink.connected`). It is **inert** when `DisplayServer.get_name() == "headless"` or in a release build
-  (`not OS.is_debug_build()`): no input handling, no UI, so the headless verifier never runs dev code.
+- **`Dev` autoload** (`game/dev/dev.gd`): hosts the console (UI built in code; it registers the `dev_console`
+  action, backtick by physical key, if the project has none); `cheats_allowed()` is `OS.is_debug_build()` (slice 2
+  adds `and not ServerLink.connected`). It is **inert** when `DisplayServer.get_name() == "headless"` or in a release
+  build: no input handling, no UI, so the headless verifier never runs dev code. Battles' auto play lives in
+  `DevConsole` (`auto_battle`, attached to GameMain's `battle_prepared`).
 - `GameMain` adds itself to the group `game_main` (one line); that is how commands find the run. Nothing in
   `combat/` references `game/dev/` (purity test).
 
@@ -238,9 +255,9 @@ func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply; "" =
 | Command | Cheat | Does |
 |---|---|---|
 | `help [command]` | | Lists commands, or one command's usage |
-| `new <party ids> [seed]` | | Starts a run (play command, like the menu) |
+| `new <id,id,...> [seed]` | | Starts a run (play command, like the menu); a seed code may be typed with its space |
 | `state [json]` | | Prints floor, cell, coins, party (HP/MP/ult charge and maxima read through GAS), items, use slots, equipment, open event or battle |
-| `map [json]` | | Prints the floor as text: role, room id, content, visited/cleared per cell, which cells can be entered |
+| `map` | | Prints the floor as text: index, cell, role, room id, content, pickups, visited/cleared, ENTER where you can go |
 | `enter <cell>` | | `enter_room` (play command) |
 | `choose <choice>` | | Event choice, 0-based like everything in the console (play command) |
 | `take <placement> <slot>` | | Take or buy a pickup (play command) |
@@ -250,28 +267,28 @@ func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply; "" =
 | `shot <name>` | | Saves the viewport as a PNG (`user://shots/` or the runner's `--shots` folder); needs a window |
 | `clear` | | Clears the scrollback |
 | `validate [errors]` | | Runs the validator on the current content root; prints counts and issues |
-| `seed [seed]` | | No argument: prints the run's seed (code and decimal) and copies it to the clipboard. With one: starts a new run with the same party and that seed (not a cheat: it's a fresh run) |
-| `give <item> [slot]` | ✅ | A `GiveItem` outcome with that item: held like a picked-up item, so its `AbilitySet` is granted through GAS at every battle start and in the field (a usable item needs a free use slot) |
-| `remove <item>` | ✅ | A `RemoveItem` outcome |
-| `equip <equipment> [slot]` | ✅ | A `GiveEquipment` outcome (its `AbilitySet` granted through GAS like any equipment) |
+| `seed [seed]` | | No argument: prints the run's seed (code and decimal) and copies it to the clipboard. With one (a code may keep its space): starts a new run with the same party and that seed (not a cheat: it's a fresh run) |
+| `give <item> [slot]` | ✅ | `dev_give`: the item received as if picked up (`_receive_item`, the path pickups and `GiveItem` use), so its `AbilitySet` is granted through GAS at every battle start and in the field (a usable item needs a free use slot) |
+| `remove <item>` | ✅ | `dev_remove` → `remove_item` (what `RemoveItem` calls) |
+| `equip <equipment> [slot]` | ✅ | `dev_equip` → `give_equipment` (what `GiveEquipment` calls; granted through GAS like any equipment) |
 | `stat <attribute> [count] [slot]` | ✅ | Gives `count` (default 1; negative = downs) **dev stat items** for that attribute (3.3): each is an item whose `AbilitySet` holds one infinite GAS modifier, so the bonus is re-derived through GAS every battle, stacks per copy and shows in the party panel. Never a number written into run state |
 | `effect <effect path> [slot]` | ✅ | Applies any `GameplayEffect` `.tres` (yours or a dev one) to living members (or one) in the field context, like an `ApplyPartyEffect` outcome. Out of battle only. Instant effects stick (HP, MP, ult charge); lasting ones end with the field context, as for any out-of-battle effect: use `stat` or `give` for something permanent |
-| `coins <n>` | ✅ | A `GainCoins` / `LoseCoins` outcome (coins are run state, not a unit attribute; this is what an event does) |
+| `coins <n>` | ✅ | `dev_coins` → `add_coins` (what `GainCoins` / `LoseCoins` call; coins are run state, not a unit attribute) |
 | `heal [slot]` | ✅ | `game/dev/content/effects/dev_heal.tres` (instant: `hp` and `mp` set to `max_hp` / `max_mp`, attribute-based) on living members. Out of battle through the field context; in battle as a dev decision (3.6) |
-| `revive [slot]` | ✅ | `dev_revive.tres` (instant, `hp` to 1) on dead members through the field context, the way a revive item works |
+| `revive [slot]` | ✅ | `dev_revive.tres` (instant, `hp` to 1) on dead members through the field context, the way a revive item works; refused when nobody is dead |
 | `kill [enemies\|party\|<slot>]` | ✅ | In battle only. Queued; at the next party decision the battle applies `dev_kill.tres` (instant, `hp` to 0) through GAS, then the usual death and end checks (3.6) |
 | `win` | ✅ | Ends the run as Won (tests the run-end screen; run status, not a unit change) |
 | `stage <floor>` | ✅ | Enters floor `<floor>` (0-based) of the run structure (party and inventory kept) |
 | `room <room>` | ✅ | Sandbox floor with that room (2.2) |
 | `layout <layout>` | ✅ | Sandbox floor from that layout |
 | `spawn <encounter>` | ✅ | Starts a battle with that encounter in the current room (like an event's `StartEncounter`; enemies resolved with the floor's scaling, elite rolls from `dev/<k>`) |
-| `spawn item <item> [price]` | ✅ | Adds a pickup to the current room (price 0 = free pedestal, else a shop slot). Taken with the normal Take/Buy, so pickup rules, `on_pickup` and the "give to" picker are the real ones. Usable after the room is cleared, like any pickup |
+| `spawn item <item> [price]` | ✅ | Adds a pickup to the current room (price 0 = free pedestal, else a shop slot), numbered from 1000 and added to the run's seen items. Taken with the normal Take/Buy, so pickup rules, `on_pickup` and the "give to" picker are the real ones. Usable after the room is cleared, like any pickup |
 | `spawn pool <tag> [price]` | ✅ | Same, with the item picked by weight from unlocked items carrying `<tag>` (same pick as a pedestal's `item_query`, on `dev/<k>`) |
 | `reveal` | ✅ | Sets `state.revealed`; `RunController` emits `map_revealed`; the map view shows every room |
 | `seeds` | | Opens the seed runner (so the user's menu needs no Dev button) |
 | `create <type> <id> [folder]` | | The dock's Create: a new asset from its template (refuses existing ids and files) |
 | `grid <room> <op> …` | | The room grid without a window: `paint`, `erase`, `door`, `show`, `save` on a room loaded by id or path (edits an in-memory copy until `save`) |
-| `play <kind> <id or path>` | | A Play button: the same sandbox for a room, encounter, enemy, character or layout |
+| `play <kind> <id or path>` | | A Play button: the same sandbox for a room, encounter, enemy, character or layout (a room opened with `grid` plays its unsaved copy) |
 
 ### 3.3 Dev commands go through GAS
 A dev command is **a content action without a content file**: it builds the same object content would use and runs it
@@ -285,21 +302,24 @@ through the same code. Nothing writes a unit's numbers directly.
 | Where the run is | `RunController` (floors, rooms, sandbox, run end) | `stage`, `room`, `layout`, `spawn`, `win`, `reveal` |
 
 To make that possible, `RunController.apply_party_effect` gains an optional slot list (`apply_member_effect(effect,
-slots, include_dead)`), the same field-context path with fewer targets.
+slots, include_dead)`), the same field-context path with fewer targets. The dev methods on `RunController`:
+`dev_log`, `dev_give`, `dev_remove`, `dev_equip`, `dev_coins`, `dev_apply` (heal / revive / effect), `dev_stat`,
+`dev_win`, `dev_stage`, `dev_sandbox`, `dev_spawn`, `dev_spawn_item`, `dev_reveal`, `dev_battle` (kill / heal in
+battle); each checks first, then logs, then acts. `RunController.allow_dev` (true in local mode) is copied to battles.
 
 **Dev content** (`res://game/dev/content/`, system-owned, built by `game/tools/build_dev_content.tscn`):
-- `effects/dev_heal.tres`, `dev_revive.tres`, `dev_kill.tres` (instant, on the shared `hp` / `mp` attributes).
-- **Dev stat items**, one up and one down per attribute a character keeps between battles: `dev_up_<attr>` /
-  `dev_down_<attr>` for `max_hp`, `max_mp`, `atk`, `def`, `spd`, `crit_rate`, `crit_dmg`, `max_energy`. Each is a
+- `effects/dev_heal.tres`, `dev_revive.tres`, `dev_kill.tres`: instant, plain `GameplayEffectModifier` OVERRIDEs on
+  the shared `hp` / `mp` attributes (heal reads the target's `max_hp` / `max_mp`, attribute-based).
+- **Dev stat items**, one up and one down per attribute a character keeps between battles: ids `dev.up.<attr>` /
+  `dev.down.<attr>` (files `items/dev_up_<attr>.tres`, effects `effects/dev_up_<attr>.tres`) for `max_hp`, `max_mp`, `atk`, `def`, `spd`, `crit_rate`, `crit_dmg`, `max_energy`. Each is a
   `PASSIVE` `ItemDefinition` (`applies_to` `HOLDER`, tag `Dev`) whose `AbilitySet` holds one saved infinite
   `GameplayEffect` with one additive modifier of one **step**: `max_hp` 100, `max_mp` 50, `atk` / `def` / `spd` 10,
   `crit_rate` / `crit_dmg` 5 %, `max_energy` 10 (typed values, stored ×100). `stat atk 3` = three `dev_up_atk`
   copies = +30 ATK, stacking because ability-set effects stack (game-skeleton 3.4).
-- `ContentIndex` loads this folder as an **extra root** only when `Dev.cheats_allowed()`, into its own `dev_items`
-  table: dev items are **never in any pool** (queries never see them, so no generation or golden can change), and
-  `ContentIndex.find_item(id)` looks in `items` then `dev_items` (the battle and the run use it instead of
-  `items[id]`). The headless verifier never loads the folder, so a battle snapshot holding a dev item can never
-  verify.
+- `GameMain.load_content` adds this folder with `ContentIndex.add_root` only while `Dev.cheats_allowed()`. Dev items
+  sit in the normal `items` table (so battles, the run and your screens find them as usual) and are **never in any
+  pool**: `FloorGenerator.pick_item` skips items tagged `Dev` (`FloorGenerator.DEV_TAG`), so no generation or golden
+  can change. The headless verifier never loads the folder, so a battle snapshot holding a dev item can't verify.
 - Attribute names come from your `UnitAttributeSet`; if one is renamed, the validator reports the dev effect
   (`dangling_ref`) and `stat` refuses that attribute.
 
@@ -332,7 +352,9 @@ otherwise normal), so a boss room resolves `boss_encounter_query` as in a real f
 - `ActionRecorder.submit_dev(name: StringName, effect: GameplayEffect, targets: String)`, where `name` is `Dev.Kill`
   or `Dev.Heal` and the effect is the matching dev effect (3.3), passed in by the run so `combat/` never references
   `game/dev/`. The next `choose()` returns `{"dev": name, "effect": effect, "targets": "enemies" | "party" |
-  "<slot>"}` instead of waiting for the player.
+  "<slot>"}` instead of waiting for the player. `ActionRecorder.waiting_for` names the unit whose decision is
+  awaited (for `act` and auto play); `pending_dev()` counts queued dev decisions. A decision still queued when the
+  battle ends stays on that recorder and is simply never applied (each battle gets a new recorder).
 - `Battle._take_action`: a `dev` choice with `allow_dev` applies the effect to the chosen units with
   `apply_to_units` (GAS, the same call event effects use), drains the trigger queue, runs `_check_deaths` /
   `_check_end` as after an action, and records an ordinary `ActionEntry`: `{"turn", "actor", "ability": <name>,
@@ -354,7 +376,8 @@ var path: String       # resource path (+ "::field[index]")
 var message: String    # names the content, the field and what's wrong
 ```
 `ContentValidator.validate(content, {"generate_seeds": 20})` returns issues sorted by (severity, path, code).
-`check_room(room, content)` and `check_layout(layout, content)` run the subsets the room grid and Play need.
+`check_room(room, content)` (content may be null: references then aren't resolved) and `check_layout(layout,
+content)` run the subsets the room grid and Play need. `report()` and `error_count()` format results.
 
 | Code | Severity | Finds |
 |---|---|---|
@@ -370,11 +393,13 @@ var message: String    # names the content, the field and what's wrong
 | `placement_outside` | error | A placement cell outside the 13 × 7 grid |
 | `placement_overlap` | error | Two placements on one cell |
 | `spawn_mismatch` | warning | A room with a fixed encounter has fewer enemy spawns than encounter slots; a room with an encounter has no player spawn |
-| `placement_kind` | warning | Shop slots in a room whose tags aren't a shop type, pedestals in a battle room, `price` on a non-shop slot |
+| `placement_kind` | warning | A field that doesn't belong to the placement's kind: a `price` on anything but a shop slot, an item or item query on anything but a pedestal or shop slot, a loadout on anything but an enemy spawn |
 | `bad_layout` | error | Everything `FloorGenerator.check_layout` refuses: not connected, not exactly one start and one boss, outside the grid, doors don't fit |
 | `bad_event` | error | `GoToPage` out of range; a page with no choices |
 | `bad_item` | error | `USABLE` without `use_ability`; `COOLDOWN` with `cooldown_battles` 0 |
-| `unknown_tag` | warning | A `gas::tag` value not in the registry (the check `sync_tags.tscn` already does, shared) |
+| `unknown_tag` | warning | A `gas::tag` value not in the registry (the same check as `sync_tags.tscn`, walked over the content index) |
+| `reserved_tag` | error | Content using the reserved prefix `Dev.` (dev decisions, 3.6) |
+| `incomplete` | warning | What a new asset still needs: a unit with no abilities, an encounter with no slots |
 | `generation_fails` | error | With `generate_seeds` > 0: a floor slot that fails to generate for one of seeds 1..N (names the seed and the error) |
 
 Balance is never checked: tuning can't fail the validator.
@@ -411,7 +436,7 @@ returns a new resource; the dock saves it.
   `EditorInterface.play_custom_scene` exists. Not covered headless: actually launching Play (checked by hand at
   implementation).
 
-### 3.9 Proposed edits to your `presentation/demo/` files (asked one by one at implementation)
+### 3.9 Edits to your `presentation/demo/` files (approved 2026-10-20, done)
 | File | Change | Why |
 |---|---|---|
 | `menu.gd` | Random fills `RunSeeds.random_code()` instead of `str(randi())` | Seed codes |
@@ -429,21 +454,23 @@ failure modes:
 
 | Case | Behaviour | Test |
 |---|---|---|
-| Unknown command or wrong arguments | Reply with the usage; nothing changes, nothing logged | `test_console_errors` |
-| Cheat while cheats are off | Refused, nothing logged | `test_console_cheats_off` |
-| Unknown content id in a command | "no item 'x'" plus the closest ids; nothing changes | `test_console_errors` |
-| `kill` outside a battle | Refused with a reason | `test_console_kill` |
-| `kill` while an enemy is acting | Queued until the next party decision; dropped with a message if the battle ends first | `test_console_kill` |
-| `give` with no one able to hold the item | Refused before the outcome runs (not lost, unlike an event gift) | `test_console_give` |
-| `stat` for an attribute the AttributeSet doesn't have | Refused, listing the attributes that have dev items | `test_console_stat` |
-| `give` / `stat` during a battle | Applied to run state; takes effect from the next battle or field action (said in the reply) | `test_console_stat` |
-| `effect` in battle, or with a file that isn't a `GameplayEffect` | Refused | `test_console_effect` |
-| `spawn item` in a room not yet cleared | Added; takeable once the room is cleared, like any pickup | `test_console_spawn_item` |
-| Dev items leaking into pools or generation | Impossible: separate `dev_items` table no query sees; proven with goldens and a pool test | `test_dev_items_never_pooled` |
-| A snapshot holding a dev item replayed | Fails: the verifier's index has no dev items | `test_replay_rejects_dev_item` |
+| Unknown command or wrong arguments | Reply with the usage; nothing changes, nothing logged | `test_console_errors_and_cheats_off` |
+| Cheat while cheats are off | Refused, nothing logged | `test_console_errors_and_cheats_off` |
+| Unknown content id in a command | "no item 'x'" plus the closest ids; nothing changes | `test_console_errors_and_cheats_off` |
+| `kill` outside a battle | Refused with a reason | `test_console_spawn_and_kill` |
+| `kill` while an enemy is acting | Queued until the next party decision (one still queued when the battle ends is never applied) | `test_console_spawn_and_kill` (at a party decision); the enemy-turn case is untested |
+| `kill <slot>` | That member dies through GAS; the battle goes on and the same actor is asked again (no turn used) | `test_console_battle_edges` |
+| `give` with no one able to hold the item | Refused before anything changes, not logged (not lost, unlike an event gift) | `test_console_battle_edges` |
+| `stat` for an attribute the AttributeSet doesn't have | Refused, listing the attributes that have dev items | `test_console_cheats` |
+| `give` / `stat` during a battle | Applied to run state; takes effect from the next battle or field action (said in the reply) | `test_console_battle_edges` |
+| `effect` in battle, or with a file that isn't a `GameplayEffect` | Refused with the usage, nothing logged | `test_console_effect` |
+| `spawn item` in a room not yet cleared | Added; takeable once the room is cleared, like any pickup | `test_console_cheats` (cleared room only) |
+| Dev items leaking into pools or generation | Impossible: pools skip the `Dev` tag | `test_dev_items_never_pooled` |
+| A snapshot holding a dev item replayed | Setup stops with the runner error "unknown item 'dev.up.…'" (the verifier's index has no dev items); never verifies | `test_replay_rejects_dev_item` |
 | A dev command changing later rooms or floors | Impossible by construction (`dev/<k>` stream); proven | `test_dev_streams_isolated` |
 | A battle log with a dev entry replayed | Rejected, 2002 `IllegalAbility` | `test_replay_rejects_dev_battle` |
-| `Dev` autoload in the headless verifier | Inert; every replay golden unchanged | existing goldens + `test_dev_inert_headless` |
+| `Dev` autoload in the headless verifier | Inert; every replay golden unchanged | existing goldens + `test_dev_inert_headless` (`tests/combat/test_purity.gd`) |
+| A tool script with a parse error that no test loads | Caught: every script under `res://game/` must compile | `test_game_scripts_compile` |
 | A command file that fails to load or duplicates a name | Startup warning naming the file; other commands work | `test_console_registry` |
 | Bad seed code (typo, wrong length, bad check) | Refused with "not a seed" | `test_seed_codes` |
 | Dock: id already used, or the file exists | Refused, naming the existing file; nothing written | `test_content_templates` |
@@ -465,7 +492,7 @@ No Prometheus metrics: nothing runs on the server. Local signals instead:
 All in the Godot suite (`tests/game/` unless noted), on `tests/fixtures/` only, except the one content test.
 
 ### Fixtures
-- **Broken content root** `tests/broken_fixtures/` (frozen, built by `tests/tools/build_fixtures.tscn`): one file per
+- **Broken content root** `tests/broken_fixtures/` (frozen, built by `tests/tools/build_broken_fixtures.tscn`): one file per
   validator code, each named after it (`rooms/doors_unsatisfiable.tres`, …). Separate root, because `ContentIndex`
   scans `tests/fixtures/` recursively and must keep seeing valid content.
 - Nothing is added to `tests/fixtures/` that a fixture chapter's queries could match, so no existing golden changes.
@@ -473,34 +500,38 @@ All in the Godot suite (`tests/game/` unless noted), on `tests/fixtures/` only, 
 ### Unit and system tests
 | Test | Proves |
 |---|---|
-| `test_seed_codes` | Golden vectors (seed ↔ code), round trip for 1000 seeds, normalisation (lower case, spaces, `-`, `O/I/L`), every single-character substitution at every position is refused, decimal parsing unchanged, `display()` |
+| `test_seed_codes_*` (golden, round trip, normalisation, refuse typos, decimals unchanged) | Golden vectors (seed ↔ code), round trip for 1000 seeds, normalisation (lower case, spaces, `-`, `O/I/L`), every single-character substitution at every position is refused, decimal parsing unchanged, `display()` |
 | `test_console_registry` | Every file in `game/dev/commands/` loads; names unique; every command has usage and help; a test-only command file is picked up without code changes; a command in `user://dev_commands/` is loaded in debug, can't shadow a built-in, and is ignored in a release build; `_template.gd` itself is not registered |
-| `test_console_autocomplete` | Command names; argument completion by kind from fixture ids, sorted; Tab cycling |
-| `test_console_errors` / `test_console_cheats_off` | Section 4 rows; run log and hash unchanged afterwards |
-| `test_console_give`, `_remove`, `_equip`, `_coins`, `_heal`, `_revive`, `_stage`, `_spawn`, `_win`, `_reveal` | Each command's effect on fixture run state, its `dev` log entry, `dev=1` in the hash; `stage 0` is the first floor; `heal`/`revive` change HP only through the field context (no direct writes: the run state's HP equals what GAS read back) |
-| `test_console_stat` | `stat atk 3 1` → three `dev_up_atk` items on slot 1; `party_stats()` (read through GAS) and the next battle's ATK are +30 typed (3000 stored); `stat atk -1` lowers it; unknown attribute refused; mid-battle reply |
-| `test_console_effect` | A fixture instant effect changes HP/MP through the field context; a lasting one is gone afterwards; refused in battle and for non-effects |
-| `test_console_spawn_item` | `spawn item` / `spawn pool` add a pickup; Take and Buy work through `take()` with coins, `on_pickup` and use-slot rules; `spawn pool` is deterministic per `dev/<k>` |
-| `test_dev_items_never_pooled` | With the dev root loaded, every fixture floor golden and the scripted-run golden are unchanged, and no query matches a dev item |
-| `test_replay_rejects_dev_item` (`tests/combat/`) | A snapshot whose party holds `dev_up_atk`, replayed without the dev root, does not verify |
-| `test_console_kill` | Kill enemies → Victory through normal death handling (death triggers fire, coin drop and cooldowns as after a real win); kill party → Lost; kill one slot → battle goes on, same actor asked again; refused outside a battle; queued during an enemy turn |
-| `test_dev_streams_isolated` | A run with `give`/`spawn` mid-floor has the same next floor (canonical map lines) as without |
-| `test_dev_run_replays` | Replaying a dev run's log (commands included) twice gives the same run hash |
-| `test_scripted_run_unchanged` | The existing scripted-run golden still matches (no `dev` line) |
-| `test_replay_rejects_dev_battle` (`tests/combat/`) | A log with a `dev` entry → Rejected, 2002, `IllegalAbility` |
-| `test_dev_inert_headless` | Under `--headless` the `Dev` autoload has no children and handles no input |
-| `test_purity` (extended, `tests/combat/`) | `combat/` never references `game/dev/` or `Dev` |
-| `test_sandbox_room` | Each fixture room type in a sandbox: battle room fights, event shows, shop sells, boss resolves the boss query; hash golden for (room, seed 7, party, depth 0) |
-| `test_sandbox_layout` | The fixture layouts play as floor 0 in a sandbox |
-| `test_content_validator` | Fixtures: zero errors. Broken root: exactly the expected (code, path) pairs, nothing else |
+| `test_console_autocomplete` | Command names; argument completion by kind from fixture ids, sorted (Tab cycling is UI only: manual) |
+| `test_console_errors_and_cheats_off` | Section 4 rows; run log and hash unchanged afterwards |
+| `test_console_play_commands_stay_clean` | `new`, `map`, `enter`, `state` never mark the run; the same choices made directly on `RunController` give the same run hash |
+| `test_console_cheats` | `give`, `remove`, `equip`, `coins` (never below 0), `stat` (three `dev.up.atk` items = +30 ATK read through GAS, a down item lowers it, an unknown attribute refused), `effect` (an instant effect sticks), `heal` (back to max through GAS), a death through `dev_kill.tres` and `revive` (1 HP), `reveal`, `spawn item` / `spawn pool` and buying the spawned slot with `take`, `stage 1`, `win`; every cheat logged, `dev=1` in the hash |
+| `test_console_spawn_and_kill` | `kill` refused outside a battle; `spawn` fights on auto; with auto off, `kill` ends the battle as a Victory through normal death handling, logged as an ordinary `Dev.Kill` action entry; `kill party` → Lost |
+| `test_console_create_grid_play` | `create` writes a template and never overwrites; `grid show/paint/door` edit a copy; `play room` plays the unsaved copy; `grid save` writes it; `play enemy`, `play character` |
+| `test_console_seed_codes` | `new` and `seed` take a code typed with its space; a bad code is refused |
+| `test_dev_streams_isolated` | A run with `coins`, `stat` and a spawned fight (dev content loaded) has the same next floor (canonical map lines) as without |
+| `test_dev_run_replays` | The same dev commands twice give the same run hash |
+| `test_dev_kill_through_gas`, `test_dev_decision_needs_allow_dev`, `test_replay_rejects_dev_battle` (`tests/combat/test_dev_battle.gd`) | A dev kill applies through GAS and is logged as `Dev.Kill`; without `allow_dev` nothing is applied; a log with a dev entry → Rejected, 2002, `IllegalAbility` |
+| `test_combat_never_references_dev_tools`, `test_dev_inert_headless` (`tests/combat/test_purity.gd`) | `combat/` never references `game/dev/`, `Dev.`, `DevConsole`, `RunController`; under `--headless` the `Dev` autoload has no children and handles no input |
+| `test_console_effect` | A room file or a missing file is refused (no script error, nothing logged); a lasting effect ends with the field context; refused during a battle |
+| `test_console_battle_edges` | `give` refused (and not logged) when no one can hold a usable item; `give` / `stat` mid-battle say they apply from the next battle; `kill <slot>` kills that member, the battle goes on, the same actor is asked again, logged as `Dev.Kill` with its target |
+| `test_replay_rejects_dev_item` (`tests/combat/test_dev_battle.gd`) | A snapshot holding `dev.up.atk`, replayed on the fixtures without dev content, stops with "unknown item" and never verifies |
+| `test_dev_items_never_pooled` | With the dev content loaded, floors for seeds 1..20 are unchanged, and a match-everything pool never picks a dev item in 200 draws |
+| `test_game_scripts_compile` | Every script under `res://game/` compiles |
+| `test_sandbox_room` | Each fixture room type in a sandbox: battle room fights, event shows, shop sells, boss resolves the boss query and never ends the run as won; no next floor; hash golden for (room, seed 7, party, depth 0); deterministic |
+| `test_sandbox_unsaved_room` | An unsaved room plays from memory; the shared content index is untouched |
+| `test_sandbox_layout` | The fixture layout plays as floor 0 in a sandbox, start cleared |
+| `test_check_layout` | `FloorGenerator.check_layout` accepts the fixture layout and refuses a broken copy |
+| `test_content_validator_fixtures_clean`, `_broken_root`, `_room_check` | Fixtures: zero errors. Broken root: every expected error (code, file), no unexpected error, the expected warnings and some `unknown_tag`. `check_room` works without a content index |
 | `test_content_valid` *(content test)* | `ContentValidator` over `res://content/` with 20 generation seeds: no errors (warnings printed). Like content goldens, a failure means your content is broken, not the system; skipped if `content/` has no run structure |
-| `test_seed_report` | `SeedReport` for fixture seeds 1..50, floor 0, equals `golden/game/seed_report.json` |
+| `test_seed_report` | `SeedReport` for fixture seeds 1..50, floor 0, equals `golden/game/seed_report.json`; no failures |
+| `test_seed_report_matches_a_run`, `test_seed_report_rules_copy` | One seed shows the same rooms as a real run's floor; floor 1 generates after floor 0; tuned rules are used on a copy, the original untouched |
 | `test_content_templates` | Every template, saved to `user://` and loaded through a `ContentIndex`, has its id and the expected defaults; character and enemy stats hold every attribute of the set; the validator reports only the listed "fill this in" issues; refusing a used id or existing file |
 | `test_room_grid_ops` | Paint each kind, replace, erase, toggle each door, on a fixture room copy; `check_room` after each |
-| `test_play_request` | `play_main` with each request kind on fixtures starts the right sandbox (room, encounter, enemy, character, layout); no request → menu; the request is consumed |
-| `test_tool_parity` | Every dock and inspector action has its command (the parity table), and both paths give the same result: `create` vs the dock's create function, `grid` ops vs `RoomGridOps`, `play` vs a `play_main` request, on fixtures and `user://` only |
-| `test_dev_script_runner` | A script of play commands only replays the fixture scripted run and ends with **the scripted-run golden's hash** and no dev flag; a script with a cheat sets the flag; a failing command gives exit 2 and names the line |
-| `test_dev_tool_scenes` | Each tool scene (console, seed runner, `play_main`) instantiates with the fixture root and runs 10 frames without errors (needs `--quit-after`) |
+| `test_play_request` | `PlayRequest.build` for each kind on fixtures (room, encounter in a battle room, enemy as a one-slot encounter, character in slot 1, layout, by path); unknown ids and wrong kinds refused; the request file is read once and deleted |
+| `test_tool_parity` | Every dock and inspector action has its command (the parity table); the inspector's undoable grid results equal what `grid` applies (the dock's Create and `create` share `ContentTemplates.save_new`) |
+| `test_dev_script_runner` | The runner as a separate headless process on fixtures: exit 0 and a JSON with every command and the dev flag; a failing command → exit 2, naming the line (clean play is proven by `test_console_play_commands_stay_clean`) |
+| `test_dev_tool_scenes` | The seed runner and `play_main` scenes open with their scripts compiled and run 10 frames (the console has no scene) |
 
 ### Golden vectors
 `golden/game/seed_codes.json` (seed ↔ code pairs incl. 0, 1, 2^35 − 1), `seed_report.json`, `sandbox_room.json`.
@@ -510,7 +541,9 @@ Existing goldens must not change; any diff there is a bug in this slice.
 N/A: no contract changes.
 
 ### Done when
-`dotnet build` / `dotnet test` and the Godot suite pass; `test_content_valid` passes on your `content/`; by hand, in
+Met 2026-10-20: `dotnet build` / `dotnet test` and the Godot suite (136 tests) pass; `test_content_valid` passes on
+your `content/` (0 errors, 0 warnings). Checked in the editor by a headless probe on a copy of the project (dock
+loads, grid appears on a room, paint and undo, Create with all 13 stats, Validate); still to try by hand, in
 the Godot editor: create an enemy, an encounter using it and a room with the dock; paint the room on the grid
 (Ctrl+Z works); press Play on each and land in the right fight; a seed code typed in the menu starts the same run
 every time; the console's `give` works in a running game.
@@ -521,35 +554,38 @@ every time; the console's `give` works in a running game.
    Play buttons.
 3. Console, `Dev` autoload, play commands and the script runner, cheats, dev log entries, battle dev decision.
 4. Seed runner (model + headless report, then the scene).
-5. The proposed `presentation/demo/` edits.
+5. The approved `presentation/demo/` edits.
 
 ## Files this slice creates or changes (system-owned unless noted)
 ```
-client-godot/project.godot                    autoload Dev, input action dev_console
+client-godot/project.godot                    autoload Dev, plugin rpg_dev enabled
 client-godot/game/run_seeds.gd                seed codes
-client-godot/game/run_state.gd                dev, sandbox, revealed
-client-godot/game/run_controller.gd           dev_* methods, apply_member_effect, start_sandbox, map_revealed, allow_dev
-client-godot/game/game_main.gd                group game_main, start_sandbox, sandbox_closed
-client-godot/game/floor_generator.gd          check_layout (shared with from_layout), single-room resolve for the sandbox
-client-godot/game/dev/                        dev.gd (autoload), dev_console.gd/.tscn, dev_command.gd, dev_context.gd,
-                                              sandbox_request.gd, commands/*.gd, content_validator.gd,
-                                              validation_issue.gd, seed_report.gd, seed_runner.gd/.tscn,
-                                              content_templates.gd, room_grid_ops.gd, play_main.gd/.tscn
-client-godot/addons/rpg_dev/                  plugin.cfg, plugin.gd, content_dock.gd/.tscn, room_inspector.gd,
-                                              play_button_inspector.gd
-client-godot/game/tools/seed_report.tscn, validate_content.tscn, build_dev_content.tscn, dev_run.tscn
+client-godot/game/run_state.gd                dev, sandbox, revealed, dev_commands
+client-godot/game/run_controller.gd           start_sandbox / enter_sandbox_floor, dev_* methods, apply_member_effect,
+                                              map_revealed, allow_dev
+client-godot/game/game_main.gd                group game_main, start_sandbox, sandbox_closed, recorder, skip_animations,
+                                              dev content root
+client-godot/game/floor_generator.gd          layout_map / check_layout (shared with from_layout), single_room, DEV_TAG
+client-godot/game/dev/                        dev.gd (autoload), dev_console.gd, dev_command.gd, dev_context.gd,
+                                              dev_report.gd, sandbox_request.gd, play_request.gd, play_main.gd/.tscn,
+                                              commands/*.gd (35 + _template.gd), content_validator.gd,
+                                              validation_issue.gd, content_templates.gd, room_grid_ops.gd,
+                                              seed_report.gd, seed_runner.gd/.tscn
 client-godot/game/dev/content/                dev effects and dev stat items (3.3), built by build_dev_content
-client-godot/combat/battle.gd, action_recorder.gd   dev decision, allow_dev
-client-godot/combat/content_index.gd           extra root, dev_items, find_item (battle and run use it)
-client-godot/tests/game/test_*.gd             section 6
-client-godot/tests/broken_fixtures/           new root
-client-godot/tests/fixtures/golden/game/      new goldens
-client-godot/tests/tools/build_fixtures.gd    builds the broken fixtures
-client-godot/presentation/demo/               (yours) the edits in 3.9, each asked first
+client-godot/addons/rpg_dev/                  plugin.cfg, plugin.gd, content_dock.gd, rpg_inspector.gd, room_grid.gd
+client-godot/game/tools/                      seed_report, validate_content, build_dev_content, dev_run (.gd/.tscn)
+client-godot/combat/battle.gd, action_recorder.gd   dev decision, allow_dev, submit_dev, waiting_for
+client-godot/combat/content_index.gd           add_root (dev content), overlay (sandbox), _index / _table_for
+client-godot/tests/game/                      test_seed_codes, test_content_validator, test_dev_content,
+                                              test_dev_console, test_seed_runner, test_scripts_compile
+client-godot/tests/combat/                    test_dev_battle; test_purity extended
+client-godot/tests/broken_fixtures/           new root, built by tests/tools/build_broken_fixtures.tscn
+client-godot/tests/fixtures/golden/game/      seed_codes.json, sandbox_room.json, seed_report.json
+client-godot/presentation/demo/               (yours) menu.gd, map_view.gd: the edits in 3.9, approved
 specs/roadmap.md, CLAUDE.md, client-godot/CLAUDE.md   status, current-state table, ownership row for game/dev/
 ```
 
-## Decisions (proposed, for review)
+## Decisions (review, 2026-10-20)
 1. **Godot's inspector is the editor** (2026-10-20, at the user's request: data-driven, don't over-engineer). We add
    only a create-from-template dock, a room grid and Play buttons as a small editor plugin of our own. Godot keeps
    doing saving, undo and every field. (Replaces the earlier in-game editor screens.)
@@ -569,6 +605,28 @@ specs/roadmap.md, CLAUDE.md, client-godot/CLAUDE.md   status, current-state tabl
    coins and run status stay plain run-state code through the existing RunOutcomes.
 9. **Items in rooms stay placements** (2026-10-20): pedestals and shop slots, with a fixed item or a pool query; a
    pedestal in a battle room unlocks when the fight is won. No encounter drop table.
+
+## Decisions made during implementation (2026-10-20)
+10. **Dev items live in the normal `items` table** (loaded with `ContentIndex.add_root`) and pools skip the `Dev` tag,
+    instead of a separate `dev_items` table and `find_item`: battles, the run and the user's screens find them with no
+    lookup changes, and generation still never sees them.
+11. **`placement_kind` checks fields, not room tags:** spotting a shop room would need a hard-coded content tag, and a
+    pedestal in a battle room is valid (it unlocks on the win).
+12. **Two more validator codes:** `incomplete` ("fill this in", for new assets) and `reserved_tag` (`Dev.*`).
+13. **The `dev_console` action is registered by the `Dev` autoload** at start (backtick by physical key) rather than
+    stored in `project.godot`, so it works without editing project input settings.
+14. **UI built in code** (console overlay, dock, inspector panels): no `.tscn` files to keep in sync.
+15. **The script runner runs GameMain with its screens** (animations skipped), so `shot` captures the real game, and has
+    no `--seed` / `--party` (`new` does both).
+16. **Templates read stats from the nearest `@tool` attribute set in the editor** (a hand-written subclass such as
+    `DemoUnitAttributes` can't be instantiated there).
+
+## Remaining work
+- **Untested:** `kill` queued during an enemy turn (hard to time headless); throwaway commands ignored in a release
+  build (needs a release build: manual); Tab cycling in the console overlay (UI: manual).
+- Fixed after the sync (2026-10-20): `effect` with a non-GameplayEffect file now refuses instead of raising a script
+  error; `Battle` setup reports an unknown held item as a runner error ("unknown item 'x'") instead of crashing, like
+  unknown equipment and use-slot items already did.
 
 ## Later (not in this slice)
 - **Floor layout grid** in the inspector (the same add-on for `FloorLayout`: assign rooms and roles to map cells).
