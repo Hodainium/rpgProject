@@ -9,8 +9,9 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 0. `project-skeleton` | ✅ Done | 2026-10-19 |
 | 1. `combat-replay-core` | ✅ Done | 2026-10-19 |
 | 1b. `game-skeleton` | ✅ Done | 2026-10-19 |
-| 1c. `dev-tools` | ⏭️ Next (the system-design pass is done: `server-authority` spec, `design/run-authority-decisions.md`) | |
+| 1c. `dev-tools` | 📝 Spec written (`specs/dev-tools.md`), awaiting review | 2026-10-20 |
 | 1c2. `item-pass` | ⬜ Not started | |
+| 1c3. `animation-sets` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
 | 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
@@ -74,6 +75,11 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-10-20: `server-authority` revised for the floor model. Slice 2 renamed `battle-checkout` → `run-checkout` (runs
   and floor seeds; the blocking battle handshake is gone). 3b `run-verify` moved after the outbox and renumbered 4a:
   it publishes floor verdicts and anti-cheat events and its run-end gate settles rewards. At the user's request.
+- 2026-10-20: Room sizes and shapes taken out of 1c `dev-tools` (not a priority; rooms stay 1×1 for now). At the
+  user's request.
+- 2026-10-20: Added 1c3 `animation-sets` after the item pass and before the demo: a unit animation set with slots
+  (idle, walk, hit, block, death…), one AnimationTree shared by characters and enemies, and ability animations as
+  montages. The demo's characters and enemies are then built on it. At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -192,12 +198,22 @@ Minimal clickable flow on placeholder (graybox) screens, proven on test fixtures
 **Purpose:** fast content iteration, built only for mechanics that exist: build a room and play it in seconds, jump to
 any state, catch broken content at once.
 Isaac-style console, 3D room editor with "Play this room", floor layout editor, seed runner / generation viewer,
-content validator (runs as a test), short seed codes, room sizes and shapes.
+content validator (runs as a test), short seed codes. Rooms stay 1×1 (room sizes and shapes deferred).
 
 ### 1c2. `item-pass`
 **Purpose:** a wider item set, built and tested with the 1c tools (the console's `give <item>` makes every item
 testable at once instead of waiting for treasure and shop rolls). More stat, damage-type, triggered and usable items on
 the existing item mechanics; new mechanics only if an item needs one. Content work in the user's folders.
+
+### 1c3. `animation-sets`
+**Purpose:** a new character or enemy slots in by dragging animations into named slots, instead of hand-wiring each one.
+- **Animation set** (presentation resource, one per unit, referenced from `UnitDefinition` so characters and enemies
+  share it): slots such as idle, walk, hit react, block, death, victory and a generic cast.
+- **One AnimationTree for every unit:** a state machine for the slots plus a montage slot on top, where the casting
+  ability's own animation plays (its `execute` keys still time the hits, so combat and replay are unchanged).
+- Shared animations across models through Godot's humanoid skeleton profile and bone maps.
+- Presentation only: combat stays animation-free and the headless verifier never plays any. The 1c content templates
+  get an empty animation set; Play shows it.
 
 ### 1d. `playable-demo`
 **Purpose:** a short run playable start to finish, to show people, and the first real test of the dev tools.
