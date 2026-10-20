@@ -24,7 +24,8 @@ func _on_mode(mode: String) -> void:
 
 
 func _bind(run: RunController) -> void:
-	for changed in [run.floor_entered, run.room_entered, run.room_cleared, run.battle_finished, run.party_changed]:
+	for changed in [run.floor_entered, run.room_entered, run.room_cleared, run.battle_finished, run.party_changed,
+			run.map_revealed]:
 		changed.connect(func(_a = null): _refresh())
 
 
@@ -43,7 +44,7 @@ func _refresh() -> void:
 	_grid.columns = map.size.x
 	for index in map.size.x * map.size.y:
 		var data: Dictionary = map.cells.get(index, {})
-		var known: bool = not data.is_empty() and (data["visited"]
+		var known: bool = not data.is_empty() and (run.state.revealed or data["visited"]
 			or map.neighbours(index).any(func(n): return map.cells[n]["visited"]))
 		if not known:
 			var spacer := Control.new()

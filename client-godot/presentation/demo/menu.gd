@@ -14,7 +14,7 @@ func setup(main: GameMain) -> void:
 	for path in GameMain.CONTENT_ROOTS:
 		_root_picker.add_item("Content: " + path)
 	_root_picker.item_selected.connect(func(index): _main.set_content_root(GameMain.CONTENT_ROOTS[index]))
-	%Random.pressed.connect(func(): _seed.text = str(randi()))
+	%Random.pressed.connect(func(): _seed.text = RunSeeds.random_code())
 	%Start.pressed.connect(_start)
 	main.mode_changed.connect(func(mode): visible = mode == "menu")
 	main.content_changed.connect(_fill)
