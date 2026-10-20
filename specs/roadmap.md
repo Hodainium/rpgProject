@@ -10,8 +10,9 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1. `combat-replay-core` | ✅ Done | 2026-10-19 |
 | 1b. `game-skeleton` | ✅ Done | 2026-10-19 |
 | 1c. `dev-tools` | ✅ Done (spec synced; remaining work listed in `specs/dev-tools.md`) | 2026-10-20 |
-| 1c2. `item-pass` | ⬜ Not started | |
+| 1c2. `item-pass` | 📝 Spec written (`specs/item-pass.md`) | 2026-10-20 |
 | 1c3. `animation-sets` | ⬜ Not started | |
+| 1c4. `ult-interrupts` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
 | 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
@@ -80,6 +81,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-10-20: Added 1c3 `animation-sets` after the item pass and before the demo: a unit animation set with slots
   (idle, walk, hit, block, death…), one AnimationTree shared by characters and enemies, and ability animations as
   montages. The demo's characters and enemies are then built on it. At the user's request.
+- 2026-10-20: 1c2 `item-pass` grew: hit tags (crit, weakness, break, follow-up), HSR toughness and break with a
+  Persona-style One More, armor slots with an armor inventory. Added 1c4 `ult-interrupts` (ults at any time, HSR) as
+  its own later slice. At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -214,6 +218,12 @@ the existing item mechanics; new mechanics only if an item needs one. Content wo
 - Shared animations across models through Godot's humanoid skeleton profile and bone maps.
 - Presentation only: combat stays animation-free and the headless verifier never plays any. The 1c content templates
   get an empty animation set; Play shows it.
+
+### 1c4. `ult-interrupts`
+**Purpose:** ults can be used at any time, as in Honkai: Star Rail: a character with a full ult charge can cast it
+between any two actions (including during an enemy's turn order), not only on its own turn. Needs the action log to
+record an ult at the point it was cast and the replay to honour it (`specs/combat-replay-core.md` already leaves
+room for ultimates that interrupt). Builds on 1c2's break and One More rules.
 
 ### 1d. `playable-demo`
 **Purpose:** a short run playable start to finish, to show people, and the first real test of the dev tools.
