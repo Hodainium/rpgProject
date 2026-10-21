@@ -15,14 +15,25 @@ static func state_of(run: RunController) -> Dictionary:
 			"stats": stats.get(member["slot"], {}), "items": _strings(member["items"]),
 			"useSlots": member["use_slots"].map(func(slot) -> String: return "%s:%d" % [slot["item"], slot["cooldown"]]),
 			"equipment": member["equipment"].values().map(func(id) -> String: return String(id)),
+			"gear": _gear(run, member),
 			"skills": _strings(member["skills"])})
 	return {
 		"seed": RunSeeds.display(state.run_seed), "seedDecimal": str(state.run_seed), "status": state.status,
 		"floor": state.floor_index, "chapter": String(state.chapter_id), "cell": state.current_cell, "coins": state.coins,
 		"party": party, "event": state.event.duplicate(), "battle": not run.pending_battle.is_empty(),
+		"armor": _strings(state.armor), "lastBattle": run.battle_log.duplicate(true),
 		"dev": state.dev, "sandbox": state.sandbox, "runHash": state.run_hash(),
 		"warnings": Array(run.warnings), "runnerError": run.runner_error,
 	}
+
+
+## Spec item-pass 3.5: every equipment slot of the run, filled or not: {slot tag: equipment id or null}.
+static func _gear(run: RunController, member: Dictionary) -> Dictionary:
+	var gear := {}
+	for slot_tag in run.equipment_slots():
+		var piece: Variant = member["equipment"].get(slot_tag)
+		gear[String(slot_tag)] = String(piece) if piece != null else null
+	return gear
 
 
 static func state_text(run: RunController) -> String:
@@ -39,6 +50,8 @@ static func state_text(run: RunController) -> String:
 			member["character"], "" if member["alive"] else "DEAD", _typed(stats, "hp"), _typed(stats, "max_hp"),
 			_typed(stats, "mp"), _typed(stats, "max_mp"), _typed(stats, "energy"), _typed(stats, "max_energy"),
 			", ".join(member["items"]), ", ".join(member["useSlots"]), ", ".join(member["equipment"])])
+	if not data["armor"].is_empty():
+		lines.append("  armor inventory [%s]" % ", ".join(data["armor"]))
 	if data["battle"]:
 		lines.append("  in battle")
 	if not data["event"].is_empty():
@@ -65,7 +78,8 @@ static func map_text(run: RunController) -> String:
 		var pickups := PackedStringArray()
 		for pickup in data["pickups"]:
 			if not pickup["taken"]:
-				pickups.append("%d:%s%s" % [pickup["placement"], pickup["item"],
+				pickups.append("%d:%s%s%s" % [pickup["placement"], pickup["item"],
+					" [armor]" if pickup.get("kind", "") == FloorGenerator.EQUIPMENT_KIND else "",
 					"($%d)" % pickup["price"] if pickup["price"] > 0 else ""])
 		lines.append("  %2d %s %-7s %-24s %-28s %s%s%s%s" % [index, data["cell"], data["role"], data["room"], what,
 			"visited " if data["visited"] else "", "cleared " if data["cleared"] else "",

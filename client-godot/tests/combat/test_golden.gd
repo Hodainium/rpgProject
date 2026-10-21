@@ -13,6 +13,9 @@ static func _scenarios() -> Dictionary:
 		"squad-seed-42": squad_snapshot("42"),
 		# Spec game-skeleton 3.5: inventory capture, enemy loadouts, elite, scaling, carry-over, a dead member.
 		"run-v2-seed-7": preload("res://tests/combat/test_battle_v2.gd").v2_snapshot("7"),
+		# Spec item-pass: weakness hits, breaks, One More actions ("extra": true), a follow-up passive.
+		"break-seed-11": preload("res://tests/combat/test_item_pass_combat.gd").break_snapshot("brittle_pair",
+			["fixture.item.chaser_charm"], "11"),
 	}
 
 
@@ -24,7 +27,8 @@ func test_golden_replays() -> void:
 		if name.ends_with(".json") and not name.ends_with(".result.json"):
 			requests.append(name.trim_suffix(".json"))
 	requests.sort()
-	eq(Array(requests), ["duel-seed-1", "run-v2-seed-7", "squad-seed-42", "squad-seed-42-tampered-target"], "golden set")
+	eq(Array(requests), ["break-seed-11", "duel-seed-1", "run-v2-seed-7", "squad-seed-42", "squad-seed-42-tampered-target"],
+		"golden set")
 	for name in requests:
 		var expected := FileAccess.get_file_as_string(GOLDEN + name + ".result.json")
 		for run in 2:

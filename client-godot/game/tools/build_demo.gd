@@ -212,8 +212,9 @@ func _row(id: String, effect_name: String, mode: ExecutionRow.DamageMode, typed:
 	return row
 
 
-## extras: "cost": effect name, "query": GameplayTagQuery, "trigger": StringName,
-## "sound": [file in SOUNDS without .wav, time, volume dB] (an audio track on the cube's Audio node plus its volume).
+## extras: "cost": effect name, "query": GameplayTagQuery, "trigger": StringName, "asset_tags": Array (e.g.
+## Ability.Type.FollowUp), "sound": [file in SOUNDS without .wav, time, volume dB] (an audio track on the cube's Audio
+## node plus its volume).
 func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, rows: Array, animation: Animation,
 		execute_keys: Array, extras: Dictionary = {}) -> void:
 	var track := animation.add_track(Animation.TYPE_METHOD)
@@ -244,6 +245,7 @@ func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, row
 		ability.cost_effect = _r["effects/" + extras["cost"]] if extras.has("cost") else null
 		ability.activation_query = extras.get("query")
 		ability.trigger_event_tag = extras.get("trigger", &"")
+		ability.asset_tags.assign(extras.get("asset_tags", []))
 		_pack(path, ability)
 	_r["abilities/" + name] = load(path)
 

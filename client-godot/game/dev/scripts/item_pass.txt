@@ -1,0 +1,41 @@
+# Item-pass smoke run (spec item-pass 6): the new demo items and armor on the demo party, then three fights on auto.
+# godot --headless --path client-godot --quit-after 200000 res://game/tools/dev_run.tscn -- --script res://game/dev/scripts/item_pass.txt --out <state.json>
+# The JSON's lastBattle lists hits with their hit tags (Critical, Weakness, Break, FollowUp), triggers, breaks and One More.
+# Usable items beyond one slot (bombs, Ether, Rally Horn, Smelling Salts, Analyzer Lens) are covered by test_demo_items.
+new demo.character.warrior,demo.character.cleric 11
+room demo.room.start
+give demo.item.satchel 1
+give demo.item.fire_bomb 1
+give demo.item.hunters_mark 1
+give demo.item.frost_needle 1
+give demo.item.thorn_mail 1
+give demo.item.cinder_glove 1
+give demo.item.breakers_oath 1
+give demo.item.encore_ribbon 1
+give demo.item.vampire_fang 1
+give demo.item.bounty_mark 1
+give demo.item.shatter_hammer 1
+give demo.item.predators_fang 1
+give demo.item.hourglass 2
+give demo.item.battle_horn 2
+give demo.item.sharp_eye 2
+give demo.item.executioners_seal 2
+give demo.item.scholars_tome 2
+give demo.item.momentum_charm 2
+give demo.item.glass_heart 2
+give demo.item.war_drum 2
+give demo.item.guardian_totem 2
+give demo.item.heart_locket 2
+equip demo.equipment.leather_cap 1
+equip demo.equipment.chain_vest 1
+equip demo.equipment.hunters_gloves 1
+equip demo.equipment.swift_boots 1
+equip demo.equipment.ember_pendant 1
+equip demo.equipment.seers_circlet 2
+equip demo.equipment.mage_robe 2
+equip demo.equipment.duelists_band 2
+state
+spawn demo.encounter.slime_pair
+spawn demo.encounter.bat_swarm
+spawn demo.encounter.golem
+state json

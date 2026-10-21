@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_7xxco"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_n6b42"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_g7evq"]
+
+[resource]
+script = ExtResource("3_g7evq")
+policy = 3
+duration_turns = 2
+granted_tags = Array[StringName]([&"Weakness.Fire"])

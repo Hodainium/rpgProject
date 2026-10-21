@@ -34,4 +34,4 @@ func on_invalid(_battle: Battle, unit: BattleUnit, reason: String, detail: Strin
 
 
 func after_party_turn(battle: Battle, unit: BattleUnit, action: Dictionary, checkpoint: String) -> void:
-	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, checkpoint))
+	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, checkpoint, battle.extra_action))

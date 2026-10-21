@@ -19,8 +19,11 @@ var run_seed: int = 0
 var run_structure_id: StringName = &""
 var party: Array[Dictionary] = []
 var coins: int = 0
-## Every item placed or given this run (no item appears twice).
+## Every item placed or given this run (no item appears twice). Equipment offered on pedestals is listed here too.
 var seen_items: Array[StringName] = []
+## Spec item-pass 3.5: the party's armor inventory, equipment ids in pickup order. Pieces found in the run land here
+## and are equipped from here; they are never dropped. Hashed only when not empty.
+var armor: Array[StringName] = []
 var floor_index: int = 0
 var chapter_id: StringName = &""
 var map: FloorMap
@@ -79,6 +82,16 @@ func held_items() -> Array[StringName]:
 	return result
 
 
+## Every piece of equipment the party has: equipped by anyone, or in the armor inventory.
+func held_equipment() -> Array[StringName]:
+	var result: Array[StringName] = []
+	for entry in party:
+		for tag in entry["equipment"]:
+			result.append(entry["equipment"][tag])
+	result.append_array(armor)
+	return result
+
+
 func party_characters() -> Array[StringName]:
 	var result: Array[StringName] = []
 	for entry in party:
@@ -117,6 +130,8 @@ func canonical_lines() -> PackedStringArray:
 		lines.append("member=%d|%s|%d|%s|%s|%s|%d|%s|%s|%s|%s" % [entry["slot"], entry["character"], entry["level"],
 			entry["hp"], entry["mp"], entry["energy"], 1 if entry["alive"] else 0, ",".join(entry["skills"]),
 			",".join(entry["items"]), ",".join(slots), ",".join(gear)])
+	if not armor.is_empty():
+		lines.append("armor=%s" % ",".join(armor))
 	if map != null:
 		lines.append_array(map.canonical_lines())
 	if dev:

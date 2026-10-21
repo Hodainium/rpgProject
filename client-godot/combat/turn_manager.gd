@@ -54,6 +54,12 @@ func reset(actor: BattleUnit) -> void:
 		av[actor] = full_av(actor)
 
 
+## HSR action delay (spec item-pass 3.2): pushes the unit back by `percent` (stored ×100) of its full action value.
+func delay(unit: BattleUnit, percent: int) -> void:
+	if av.has(unit):
+		av[unit] += Fixed.pct(full_av(unit), percent)
+
+
 ## SPD changed mid-cycle: rescale the remaining distance, av = av * old / new (integer division).
 @warning_ignore("integer_division")
 func on_spd_changed(unit: BattleUnit, old_spd: float, new_spd: float) -> void:

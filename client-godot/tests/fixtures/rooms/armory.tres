@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_ppcsf"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_ngnma"]
+[ext_resource type="Resource" path="res://tests/fixtures/equipment/mail.tres" id="3_vb1d0"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="4_cuwjv"]
+
+[sub_resource type="Resource" id="Resource_yo8gf"]
+script = ExtResource("2_ngnma")
+require_all_tags = Array[StringName]([&"Fixture.Pool.Armory"])
+
+[sub_resource type="Resource" id="Resource_l1spj"]
+script = ExtResource("1_ppcsf")
+cell = Vector2i(3, 3)
+kind = 3
+item_query = SubResource("Resource_yo8gf")
+
+[sub_resource type="Resource" id="Resource_c8x2c"]
+script = ExtResource("2_ngnma")
+require_all_tags = Array[StringName]([&"Fixture.Pool.Armory"])
+
+[sub_resource type="Resource" id="Resource_w8ixh"]
+script = ExtResource("1_ppcsf")
+cell = Vector2i(5, 3)
+kind = 3
+item_query = SubResource("Resource_c8x2c")
+
+[sub_resource type="Resource" id="Resource_4ujc1"]
+script = ExtResource("2_ngnma")
+require_all_tags = Array[StringName]([&"Fixture.Pool.Armory"])
+
+[sub_resource type="Resource" id="Resource_u52ob"]
+script = ExtResource("1_ppcsf")
+cell = Vector2i(7, 3)
+kind = 3
+item_query = SubResource("Resource_4ujc1")
+
+[sub_resource type="Resource" id="Resource_djqjm"]
+script = ExtResource("1_ppcsf")
+cell = Vector2i(9, 3)
+kind = 4
+equipment = ExtResource("3_vb1d0")
+
+[resource]
+script = ExtResource("4_cuwjv")
+id = &"fixture.room.armory"
+display_name = "Armory"
+tags = Array[StringName]([&"Fixture.Room.Type.Treasure"])
+placements = Array[ExtResource("1_ppcsf")]([SubResource("Resource_l1spj"), SubResource("Resource_w8ixh"), SubResource("Resource_u52ob"), SubResource("Resource_djqjm")])

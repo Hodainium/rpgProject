@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_i3huk"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_ab5dr"]
+[ext_resource type="Resource" path="res://tests/fixtures/enemies/brittle.tres" id="3_1k27r"]
+
+[sub_resource type="Resource" id="Resource_utkox"]
+script = ExtResource("2_ab5dr")
+enemy = ExtResource("3_1k27r")
+
+[resource]
+script = ExtResource("1_i3huk")
+id = &"fixture.encounter.brittle_one"
+display_name = "Brittle One"
+slots = Array[ExtResource("2_ab5dr")]([SubResource("Resource_utkox")])

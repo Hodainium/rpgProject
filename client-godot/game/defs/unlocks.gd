@@ -3,5 +3,6 @@ class_name Unlocks
 extends RefCounted
 
 
-static func is_unlocked(_item: ItemDefinition) -> bool:
+## An ItemDefinition or (spec item-pass 3.5) an EquipmentDefinition.
+static func is_unlocked(_pickup: Resource) -> bool:
 	return true

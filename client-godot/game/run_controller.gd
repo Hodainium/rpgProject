@@ -34,6 +34,10 @@ var runner_error: String = ""
 var allow_dev: bool = true
 ## The battle waiting for fight(): {"cell", "encounter", "enemies", "label"}.
 var pending_battle: Dictionary = {}
+## The last battle's events (see _record_battle), for the dev report.
+var battle_log: Array[Dictionary] = []
+## The item whose run hook is running (null otherwise); an empty RemoveItem in a hook removes it.
+var hook_item: ItemDefinition
 
 var _directive: String = ""
 var _directive_page: int = 0
@@ -317,6 +321,7 @@ func fight(controller: Object, gate: PresentationGate = null) -> String:
 		battle.queue_free()
 		return _stop("battle %s: %s" % [snapshot["battleId"], error])
 	battle_started.emit(battle)
+	_record_battle(battle)
 	await battle.run(controller)
 	if battle.runner_error != "":
 		var message_text := battle.runner_error
@@ -340,6 +345,22 @@ func fight(controller: Object, gate: PresentationGate = null) -> String:
 	else:
 		_end(RunState.LOST)
 	return ""
+
+
+## What happened in the last battle, for the dev report (spec item-pass 3.1): hits with their hit tags, triggered
+## passives, breaks, recoveries, One More actions and deaths, in order. Presentation-free; never part of the run hash.
+func _record_battle(battle: Battle) -> void:
+	battle_log.clear()
+	battle.damage_dealt.connect(func(source, target, amount, hit_tags):
+		battle_log.append({"event": "hit", "source": String(source), "target": String(target), "amount": amount,
+			"hitTags": _strings(hit_tags)}))
+	battle.trigger_activated.connect(func(unit, ability, event):
+		battle_log.append({"event": "trigger", "unit": String(unit), "ability": String(ability), "on": String(event)}))
+	battle.unit_broken.connect(func(unit, breaker):
+		battle_log.append({"event": "break", "unit": String(unit), "by": String(breaker)}))
+	battle.unit_recovered.connect(func(unit): battle_log.append({"event": "recover", "unit": String(unit)}))
+	battle.one_more_started.connect(func(unit): battle_log.append({"event": "oneMore", "unit": String(unit)}))
+	battle.unit_died.connect(func(unit): battle_log.append({"event": "death", "unit": String(unit)}))
 
 
 ## The party's run state as BattleSnapshot party members (spec 3.5). `full` leaves HP/MP null (= full).
@@ -503,6 +524,14 @@ func take(placement: int, slot: int) -> String:
 			return "already taken"
 		if pickup["price"] > state.coins:
 			return "not enough coins"
+		if pickup.get("kind", "") == FloorGenerator.EQUIPMENT_KIND:
+			# Spec item-pass 3.5: armor always goes into the armor inventory; nobody has to hold it.
+			state.coins -= pickup["price"]
+			pickup["taken"] = true
+			run_log.append({"type": "buy" if pickup["price"] > 0 else "take", "floor": state.floor_index,
+				"cell": state.current_cell, "placement": placement, "kind": FloorGenerator.EQUIPMENT_KIND})
+			_receive_equipment(content.equipment[pickup["item"]])
+			return ""
 		var item: ItemDefinition = content.items[pickup["item"]]
 		var problem := can_hold(slot, item)
 		if problem != "":
@@ -572,9 +601,12 @@ func _receive_item(slot: int, item: ItemDefinition) -> void:
 	_place_item(state.member(slot), item)
 	if not state.seen_items.has(item.id):
 		state.seen_items.append(item.id)
+	var outer := hook_item  # a hook that gives an item (Mystery Box) is still running after this one
+	hook_item = item
 	for outcome in item.on_pickup:
 		if outcome != null:
 			outcome.apply(self)
+	hook_item = outer
 	party_changed.emit()
 
 
@@ -583,6 +615,75 @@ func _place_item(member: Dictionary, item: ItemDefinition) -> void:
 		member["use_slots"].append({"item": item.id, "cooldown": 0})
 	else:
 		member["items"].append(item.id)
+
+
+# --- Armor (spec item-pass 3.5) --------------------------------------------------------------------------------------
+
+## The run's equipment slots in display order: the run structure's list, or (when it lists none) every slot in use.
+func equipment_slots() -> Array[StringName]:
+	var slots: Array[StringName] = []
+	if structure != null and not structure.equipment_slots.is_empty():
+		slots.assign(structure.equipment_slots)
+		return slots
+	if state == null:
+		return slots
+	for piece_id in state.held_equipment():
+		var piece: EquipmentDefinition = content.equipment.get(piece_id)
+		if piece != null and not slots.has(piece.slot):
+			slots.append(piece.slot)
+	slots.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
+	return slots
+
+
+## Equips a piece from the armor inventory on the member in `slot` (alive or dead; gear applies when revived). The
+## piece already in that equipment slot goes back to the inventory. Map only; logged.
+func equip(slot: int, piece_id: StringName) -> String:
+	if not _active() or not pending_battle.is_empty():
+		return "not now"
+	var member := state.member(slot)
+	if member.is_empty():
+		return "no member in slot %d" % slot
+	if not state.armor.has(piece_id):
+		return "%s is not in the armor inventory" % piece_id
+	var piece: EquipmentDefinition = content.equipment.get(piece_id)
+	if piece == null:
+		return "unknown equipment %s" % piece_id
+	run_log.append({"type": "equip", "floor": state.floor_index, "slot": slot, "equipment": String(piece_id)})
+	state.armor.erase(piece_id)
+	_wear(member, piece)
+	return ""
+
+
+## Takes the piece off the member's equipment slot `slot_tag` and puts it back in the armor inventory. Map only; logged.
+func unequip(slot: int, slot_tag: StringName) -> String:
+	if not _active() or not pending_battle.is_empty():
+		return "not now"
+	var member := state.member(slot)
+	if member.is_empty():
+		return "no member in slot %d" % slot
+	if not member["equipment"].has(slot_tag):
+		return "%s has nothing in %s" % [member["character"], slot_tag]
+	run_log.append({"type": "unequip", "floor": state.floor_index, "slot": slot, "equipment_slot": String(slot_tag)})
+	state.armor.append(member["equipment"][slot_tag])
+	member["equipment"].erase(slot_tag)
+	party_changed.emit()
+	return ""
+
+
+func _receive_equipment(piece: EquipmentDefinition) -> void:
+	state.armor.append(piece.id)
+	if not state.seen_items.has(piece.id):
+		state.seen_items.append(piece.id)
+	party_changed.emit()
+
+
+## Puts the piece in its slot; whatever was there goes back to the armor inventory.
+func _wear(member: Dictionary, piece: EquipmentDefinition) -> void:
+	var replaced: Variant = member["equipment"].get(piece.slot)
+	if replaced != null and replaced != piece.id:
+		state.armor.append(replaced)
+	member["equipment"][piece.slot] = piece.id
+	party_changed.emit()
 
 
 # --- Out-of-battle actions (field mode) -----------------------------------------------------------------------------
@@ -740,8 +841,7 @@ func give_equipment(piece: EquipmentDefinition, character: CharacterDefinition) 
 				slot = member["slot"]
 				break
 	if slot != 0:
-		state.member(slot)["equipment"][piece.slot] = piece.id
-		party_changed.emit()
+		_wear(state.member(slot), piece)
 
 
 func event_go_to_page(page: int) -> void:
@@ -906,8 +1006,9 @@ func dev_spawn(encounter: EncounterDefinition) -> String:
 	return ""
 
 
-## Adds a pickup to the current room (price 0 = free pedestal); `item` null picks one from `pool_tag` on dev/<k>.
-func dev_spawn_item(item: ItemDefinition, pool_tag: StringName, price: int) -> String:
+## Adds a pickup to the current room (price 0 = free pedestal); `item` (an item or a piece of equipment) null picks one
+## from `pool_tag` on dev/<k>, items and equipment together as pedestals do.
+func dev_spawn_item(item: Resource, pool_tag: StringName, price: int) -> String:
 	if not _active():
 		return "no run"
 	var stream := dev_log("spawn item" if item != null else "spawn pool", [item.id if item != null else pool_tag, price])
@@ -915,12 +1016,12 @@ func dev_spawn_item(item: ItemDefinition, pool_tag: StringName, price: int) -> S
 		var query := GameplayTagQuery.new()
 		query.require_all_tags.assign([pool_tag])
 		var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index)
-		item = generator.pick_item(null, query, stream, _pools())
+		item = generator.pick_pickup(null, null, query, stream, _pools())
 		if item == null:
 			return "no item in the pool %s" % pool_tag
 	var data: Dictionary = state.map.cells[state.current_cell]
 	var number: int = 1000 + data["pickups"].filter(func(pickup) -> bool: return pickup["placement"] >= 1000).size()
-	data["pickups"].append({"placement": number, "item": item.id, "price": maxi(price, 0), "taken": false})
+	data["pickups"].append(FloorGenerator.pickup_entry(number, item, maxi(price, 0)))
 	state.seen_items.append(item.id)
 	if data["cleared"]:
 		pickups_shown.emit(state.current_cell)
@@ -969,13 +1070,16 @@ func _run_hooks(kind: String) -> void:
 		for use_slot in member["use_slots"]:
 			held.append(use_slot["item"])
 		for item_id in held:
-			for outcome in content.items[item_id].get(kind):
+			hook_item = content.items[item_id]
+			for outcome in hook_item.get(kind):
 				if outcome != null and _active():
 					outcome.apply(self)
+			hook_item = null
 
 
 func _pools() -> Dictionary:
-	return {"party": state.party_characters(), "held": state.held_items(), "seen": state.seen_items.duplicate()}
+	return {"party": state.party_characters(), "held": state.held_items() + state.held_equipment(),
+		"seen": state.seen_items.duplicate()}
 
 
 func _active() -> bool:

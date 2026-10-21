@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Rpg.Contracts.Battle;
 
 /// <summary>Produced by the client's ActionRecorder. Only party decisions; enemy turns are re-derived by the replay.</summary>
@@ -14,7 +16,15 @@ public sealed record ActionLog(
 /// <param name="Ability">The BattleAbility's ability tag.</param>
 /// <param name="Target">Primary target unit id ("E1", "P2"), or null for SELF / ALL_* abilities.</param>
 /// <param name="Checkpoint">State hash at the end of this turn.</param>
-public sealed record ActionEntry(int Turn, string Actor, string Ability, string? Target, string Checkpoint);
+/// <param name="Extra">True for a One More action (spec item-pass 3.2: the actor broke a unit and acts again);
+/// omitted otherwise, so logs without one are unchanged.</param>
+public sealed record ActionEntry(
+    int Turn,
+    string Actor,
+    string Ability,
+    string? Target,
+    string Checkpoint,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Extra = null);
 
 /// <summary>Input of the headless replay runner (slice 3 hands this to the verifier).</summary>
 public sealed record ReplayRequest(BattleSnapshot Snapshot, ActionLog ActionLog);

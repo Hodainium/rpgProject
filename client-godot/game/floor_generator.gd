@@ -8,6 +8,8 @@ extends RefCounted
 
 ## Items tagged Dev (the dev stat items, spec dev-tools 3.3) are never in a pool.
 const DEV_TAG: StringName = &"Dev"
+## A pickup's "kind" when it is a piece of equipment (spec item-pass 3.5).
+const EQUIPMENT_KIND: String = "equipment"
 
 var content: ContentIndex
 var run_structure: RunStructure
@@ -205,14 +207,14 @@ func _resolve(map: FloorMap, chapter: ChapterDefinition, pools: Dictionary, over
 			var placement: RoomPlacement = room.placements[number]
 			if placement == null or not placement.kind in [RoomPlacement.Kind.ITEM_PEDESTAL, RoomPlacement.Kind.SHOP_SLOT]:
 				continue
-			var item := pick_item(placement.item, placement.item_query, loot_rng, pools)
-			if item == null:
+			var picked := pick_pickup(placement.item, placement.equipment, placement.item_query, loot_rng, pools)
+			if picked == null:
 				continue
-			pools["seen"].append(item.id)
+			pools["seen"].append(picked.id)
 			var price := 0
 			if placement.kind == RoomPlacement.Kind.SHOP_SLOT:
-				price = placement.price if placement.price >= 0 else item.price
-			data["pickups"].append({"placement": number + 1, "item": item.id, "price": price, "taken": false})
+				price = placement.price if placement.price >= 0 else picked.price
+			data["pickups"].append(pickup_entry(number + 1, picked, price))
 	return {"map": map, "error": ""}
 
 
@@ -303,6 +305,41 @@ func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNum
 	if picked == null and run_structure != null:
 		picked = run_structure.fallback_item
 	return picked
+
+
+## Spec item-pass 3.5: what a pedestal or shop slot offers. A fixed item or piece, else one pick from the items and
+## the equipment matching the query together (items first, then equipment, each by id, so content without pooled
+## equipment picks exactly as before). Falls back to the run structure's fallback_item.
+func pick_pickup(fixed_item: ItemDefinition, fixed_equipment: EquipmentDefinition, query: GameplayTagQuery,
+		stream: RandomNumberGenerator, pools: Dictionary) -> Resource:
+	if fixed_item != null:
+		return fixed_item
+	if fixed_equipment != null:
+		return fixed_equipment
+	var candidates: Array = []
+	for table in [content.items, content.equipment]:
+		for id in _sorted_ids(table):
+			var entry: Resource = table[id]
+			if not Unlocks.is_unlocked(entry) or not TagMatch.matches(query, entry.tags) or TagMatch.has(entry.tags, DEV_TAG):
+				continue
+			if table == content.equipment and entry.tags.is_empty():
+				continue  # unpooled equipment (loadouts, events) is never offered
+			if pools.get("held", []).has(id) or pools.get("seen", []).has(id):
+				continue
+			candidates.append(entry)
+	var picked: Resource = RunSeeds.pick_weighted(stream, candidates)
+	if picked == null and run_structure != null:
+		picked = run_structure.fallback_item
+	return picked
+
+
+## A room pickup: {"placement", "item": the item or equipment id, "price", "taken"}, plus "kind": "equipment" for a
+## piece of equipment (items carry no kind, so their pickups, hashes and goldens are unchanged).
+static func pickup_entry(placement: int, picked: Resource, price: int) -> Dictionary:
+	var entry := {"placement": placement, "item": picked.id, "price": price, "taken": false}
+	if picked is EquipmentDefinition:
+		entry["kind"] = EQUIPMENT_KIND
+	return entry
 
 
 func _in_chapter(room: RoomDefinition, chapter: ChapterDefinition, any_chapter: bool) -> bool:

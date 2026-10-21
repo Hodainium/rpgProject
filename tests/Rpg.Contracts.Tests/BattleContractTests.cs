@@ -68,6 +68,18 @@ public class BattleContractTests
     }
 
     [Fact]
+    public void ActionEntry_WritesExtraOnlyForOneMore()
+    {
+        var oneMore = new ActionEntry(4, "P1", "Fixture.Ability.Strike", "E2", "ab12", Extra: true);
+        const string expected =
+            """{"turn":4,"actor":"P1","ability":"Fixture.Ability.Strike","target":"E2","checkpoint":"ab12","extra":true}""";
+
+        Assert.Equal(expected, JsonSerializer.Serialize(oneMore, RpgJson.Options));
+        Assert.True(JsonSerializer.Deserialize<ActionEntry>(expected, RpgJson.Options)!.Extra);
+        Assert.DoesNotContain("extra", JsonSerializer.Serialize(SampleRequest.ActionLog, RpgJson.Options));
+    }
+
+    [Fact]
     public void SnapshotV1Json_BindsWithV2FieldsNull()
     {
         var parsed = JsonSerializer.Deserialize<ReplayRequest>(SampleRequestJson, RpgJson.Options)!;

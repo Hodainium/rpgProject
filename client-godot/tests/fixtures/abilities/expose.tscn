@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_fj1y7"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_44ayw"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/exposed.tres" id="3_gtoop"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/expose.tres" id="4_dc31w"]
+
+[sub_resource type="Resource" id="Resource_u6pqv"]
+script = ExtResource("2_44ayw")
+id = &"debuff"
+effect = ExtResource("3_gtoop")
+
+[node name="Expose" type="Node" unique_id=1875481092]
+script = ExtResource("1_fj1y7")
+executions = Array[ExtResource("2_44ayw")]([SubResource("Resource_u6pqv")])
+animation = ExtResource("4_dc31w")
+ability_tag = &"Fixture.Ability.Expose"

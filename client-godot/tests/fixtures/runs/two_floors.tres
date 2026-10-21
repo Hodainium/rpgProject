@@ -21,3 +21,4 @@ id = &"fixture.run.two_floors"
 display_name = "Two floors"
 floors = Array[ExtResource("2_2gnkg")]([SubResource("Resource_ffxpi"), SubResource("Resource_tskm8")])
 fallback_item = ExtResource("1_eic6g")
+equipment_slots = Array[StringName]([&"Fixture.Equipment.Slot.Weapon", &"Fixture.Equipment.Slot.Head", &"Fixture.Equipment.Slot.Body"])

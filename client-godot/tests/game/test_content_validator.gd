@@ -12,10 +12,12 @@ const EXPECTED_ERRORS: Array = [
 	["placement_overlap", "rooms/placement_overlap.tres"], ["bad_event", "events/bad_event.tres"],
 	["bad_layout", "layouts/bad_layout.tres"], ["empty_query", "chapters/empty_query.tres"],
 	["zero_weights", "chapters/zero_weights.tres"], ["generation_fails", "runs/run.tres"],
+	["bad_equipment", "equipment/bad_equipment.tres"], ["placement_both", "rooms/placement_both.tres"],
 ]
 const EXPECTED_WARNINGS: Array = [
 	["incomplete", "encounters/incomplete.tres"], ["empty_item_pool", "rooms/empty_item_pool.tres"],
 	["placement_kind", "rooms/placement_kind.tres"], ["spawn_mismatch", "rooms/spawn_mismatch.tres"],
+	["no_description", "items/fallback.tres"], ["trigger_unregistered", "items/trigger_unregistered.tres"],
 ]
 
 
@@ -55,6 +57,22 @@ func test_content_validator_room_check() -> void:
 	room.placements.append(outside)
 	var codes := ContentValidator.check_room(room, null).map(func(issue): return issue.code)
 	check(codes.has("placement_outside"), "the room check sees a placement outside the grid, without a content index")
+
+
+## Spec item-pass 3.5: a slot no run structure lists (the fixture run lists its slots), checked without a broken file.
+func test_content_validator_equipment_slot() -> void:
+	var validator := ContentValidator.new(fixtures())
+	var piece := EquipmentDefinition.new()
+	piece.id = &"test.equipment.tail"
+	piece.description = "A slot nobody offers."
+	piece.slot = &"Equipment.Slot.Tail"
+	validator._check_equipment(piece)
+	eq(validator.issues.map(func(issue): return issue.code), ["bad_equipment_slot"], "an unlisted slot is an error")
+	validator.issues.clear()
+	var listed: Array = fixtures().runs.values().filter(func(run): return not run.equipment_slots.is_empty())
+	piece.slot = listed[0].equipment_slots[0]
+	validator._check_equipment(piece)
+	eq(validator.issues.size(), 0, "a listed slot is fine")
 
 
 ## Content test (like content goldens): a failure means the content under res://content/ is broken, not the system.

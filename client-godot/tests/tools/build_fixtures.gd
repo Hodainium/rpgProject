@@ -1,6 +1,7 @@
 ## Builds the frozen fixture content under res://tests/fixtures/ (system-owned, never references res://content/).
-## Run once, then commit the output; regenerating changes resource uids, so only rerun when fixtures must change:
-##   godot --headless --path client-godot res://tests/tools/build_fixtures.tscn
+##   godot --headless --path client-godot res://tests/tools/build_fixtures.tscn [-- --rebuild]
+## Files that already exist are loaded, not rewritten, so adding fixtures leaves the frozen ones (and their uids)
+## untouched. --rebuild rewrites everything, which changes resource uids: only when existing fixtures must change.
 ## Values are typed as designers would (Fixed.from_typed converts them ×100), to exercise the authoring format.
 extends Node
 
@@ -9,6 +10,7 @@ const DAMAGE_SCRIPT := preload("res://tests/fixtures/exec_calcs/fixture_damage.g
 const SLEEPY_SCRIPT := preload("res://tests/fixtures/abilities/sleepy_ability.gd")
 const ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_attribute_set.gd")
 const RUN_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_run_attribute_set.gd")
+const BREAK_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_break_attribute_set.gd")
 ## Run-world folders (spec game-skeleton 6, "Fixtures").
 const WORLD_DIRECTORIES: Array[String] = ["characters", "enemies", "loadouts", "variants", "equipment", "items", "events",
 	"rooms", "chapters", "scaling", "floor_rules", "runs", "layouts"]
@@ -17,9 +19,12 @@ var _effects := {}
 var _abilities := {}
 var _units := {}
 var _world := {}
+var _rebuild := false
+var _written := 0
 
 
 func _ready() -> void:
+	_rebuild = OS.get_cmdline_user_args().has("--rebuild")
 	for directory in ["effects", "animations", "abilities", "units", "encounters"] + WORLD_DIRECTORIES:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ROOT + directory))
 	_build_effects()
@@ -27,8 +32,20 @@ func _ready() -> void:
 	_build_units()
 	_build_encounters()
 	_build_run_world()
-	print("Fixtures built under ", ROOT)
+	_build_item_pass()
+	print("Fixtures under %s: %d file(s) written" % [ROOT, _written])
 	get_tree().quit(0)
+
+
+## True when `path` should be (re)written; otherwise the existing file is kept and loaded.
+func _should_write(path: String) -> bool:
+	return _rebuild or not ResourceLoader.exists(path)
+
+
+func _save(resource: Resource, path: String) -> void:
+	if _should_write(path):
+		_check(ResourceSaver.save(resource, path), path)
+		_written += 1
 
 
 func _build_effects() -> void:
@@ -71,7 +88,7 @@ func _modifier(attribute_name: String, operation: GameplayEffectModifier.Operati
 
 func _save_effect(name: String, effect: GameplayEffect) -> void:
 	var path := ROOT + "effects/%s.tres" % name
-	_check(ResourceSaver.save(effect, path), path)
+	_save(effect, path)
 	_effects[name] = load(path)
 
 
@@ -125,9 +142,14 @@ func _row(id: String, effect_name: String, mode: ExecutionRow.DamageMode, typed:
 	return row
 
 
-## extras (run-world abilities): "cost": GameplayEffect, "query": GameplayTagQuery, "trigger": StringName.
+## extras (run-world abilities): "cost": GameplayEffect, "query": GameplayTagQuery, "trigger": StringName,
+## "asset_tags": Array (e.g. Ability.Type.FollowUp).
 func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, rows: Array, execute_keys: Array,
 		other_keys: Array = [], script: Script = null, extras: Dictionary = {}) -> void:
+	var path := ROOT + "abilities/%s.tscn" % name
+	if not _should_write(path):
+		_abilities[name] = load(path)
+		return
 	var animation := Animation.new()
 	animation.resource_name = name
 	animation.length = 1.5
@@ -139,6 +161,7 @@ func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, row
 		animation.track_insert_key(track, key[0], {"method": StringName(key[1]), "args": [key[2]]})
 	var animation_path := ROOT + "animations/%s.tres" % name
 	_check(ResourceSaver.save(animation, animation_path), animation_path)
+	_written += 1
 
 	var ability: BattleAbility = script.new() if script else BattleAbility.new()
 	ability.name = name.to_pascal_case()
@@ -151,10 +174,10 @@ func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, row
 	ability.cost_effect = extras.get("cost")
 	ability.activation_query = extras.get("query")
 	ability.trigger_event_tag = extras.get("trigger", &"")
+	ability.asset_tags.assign(extras.get("asset_tags", []))
 	var scene := PackedScene.new()
 	scene.pack(ability)
-	var path := ROOT + "abilities/%s.tscn" % name
-	_check(ResourceSaver.save(scene, path), path)
+	_save(scene, path)
 	ability.free()
 	_abilities[name] = load(path)
 
@@ -186,7 +209,7 @@ func _unit(name: String, core: Dictionary, extra: Dictionary, ability_names: Arr
 		scenes.append(_abilities[ability_name])
 	unit.abilities = scenes
 	var path := ROOT + "units/%s.tres" % name
-	_check(ResourceSaver.save(unit, path), path)
+	_save(unit, path)
 	_units[name] = load(path)
 
 
@@ -206,7 +229,7 @@ func _encounter(name: String, enemy_names: Array) -> void:
 		slots.append(slot)
 	encounter.slots = slots
 	var path := ROOT + "encounters/%s.tres" % name
-	_check(ResourceSaver.save(encounter, path), path)
+	_save(encounter, path)
 
 
 ## The run world (spec game-skeleton section 6, "Fixtures"). Tags live under Fixture.* and need no registry.
@@ -392,6 +415,7 @@ func _build_run_world() -> void:
 	var second := FloorSlot.new()
 	second.chapters.assign([_world["chapters/a"], _world["chapters/b"]])
 	run.floors.assign([first, second])
+	run.equipment_slots.assign([&"Fixture.Equipment.Slot.Weapon", &"Fixture.Equipment.Slot.Head", &"Fixture.Equipment.Slot.Body"])
 	_save_world("runs", "two_floors", run)
 	var layout := FloorLayout.new()
 	layout.id = &"fixture.layout.line"
@@ -403,6 +427,90 @@ func _build_run_world() -> void:
 		_layout_cell(Vector2i(5, 4), "throne", FloorLayoutCell.Role.BOSS),
 	])
 	_save_world("layouts", "line", layout)
+
+
+## Spec item-pass: weakness, toughness and break, follow-ups. Nothing here carries a pool or chapter tag, so floor
+## generation (and its goldens) never sees it.
+func _build_item_pass() -> void:
+	var D := ExecutionRow.DamageMode
+	var T := ExecutionRow.Targets
+	var B := BattleAbility.Targeting
+	var fire := [&"Damage.Type.Fire"]
+	var follow_up := {"asset_tags": [BattleAbility.FOLLOW_UP_TAG]}
+
+	# "Exposed": weak to Fire for 2 turns, through the effect's granted tags.
+	var exposed := GameplayEffect.new()
+	exposed.policy = GameplayEffect.DurationPolicy.TURN_BASED
+	exposed.duration_turns = 2
+	exposed.granted_tags.assign([&"Weakness.Fire"])
+	_save_effect("exposed", exposed)
+	_save_effect("energy_up", _instant("energy", 10))
+
+	var slash := _row("hit", "damage", D.SCALED, 50, T.ALL, fire)
+	slash.toughness_x100 = Fixed.from_typed(30)
+	_ability("fire_slash", "Fixture.Ability.FireSlash", B.SINGLE_ENEMY, [slash], [[0.3, "hit"]])
+	var wave := _row("hit", "damage", D.SCALED, 30, T.ALL, fire)
+	wave.toughness_x100 = Fixed.from_typed(30)
+	_ability("fire_wave", "Fixture.Ability.FireWave", B.ALL_ENEMIES, [wave], [[0.3, "hit"]])
+	_ability("expose", "Fixture.Ability.Expose", B.SINGLE_ENEMY, [_row("debuff", "exposed", D.USE_EFFECT, 0, T.ALL)],
+		[[0.3, "debuff"]])
+	# Follow-ups: one on weakness hits (typeless, so it can't break), one on crits (Fire, so it can).
+	_ability("chaser", "Fixture.Ability.Chaser", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 10, T.ALL)], [[0.2, "hit"]],
+		[], null, follow_up.merged({"trigger": &"Event.Damage.Dealt.Weakness"}))
+	var burn := _row("hit", "damage", D.FLAT, 10, T.ALL, fire)
+	burn.toughness_x100 = Fixed.from_typed(30)
+	_ability("burn_chaser", "Fixture.Ability.BurnChaser", B.SINGLE_ENEMY, [burn], [[0.2, "hit"]],
+		[], null, follow_up.merged({"trigger": &"Event.Damage.Dealt.Critical"}))
+	_ability("momentum", "Fixture.Ability.Momentum", B.SELF, [_row("charge", "energy_up", D.USE_EFFECT, 0, T.ALL)],
+		[[0.1, "charge"]], [], null, {"trigger": &"Event.Attack.FollowUp"})
+
+	_item("chaser_charm", [], ItemDefinition.Kind.PASSIVE, _ability_set(["chaser", "momentum"], []))
+	_item("burn_charm", [], ItemDefinition.Kind.PASSIVE, _ability_set(["burn_chaser"], []))
+
+	var break_stats := {"weakness_dmg": 150, "toughness_dmg": 0, "broken_dmg": 0}
+	var duelist := CharacterDefinition.new()
+	_fill_unit(duelist, "fixture.character.duelist", {"max_hp": 1000, "hp": 1000, "atk": 500, "def": 300, "spd": 100,
+		"crit_rate": 0, "crit_dmg": 50, "max_mp": 100, "mp": 100, "energy": 0, "max_toughness": 0, "toughness": 0},
+		break_stats, ["fire_slash", "fire_wave", "strike", "expose"], Color.ORANGE_RED, BREAK_ATTRIBUTE_SET)
+	duelist.tags.assign([&"Fixture.Character.Duelist"])
+	_save_world("characters", "duelist", duelist)
+	var brittle := EnemyDefinition.new()
+	_fill_unit(brittle, "fixture.enemy.brittle", {"max_hp": 3000, "hp": 3000, "atk": 100, "def": 0, "spd": 80,
+		"crit_rate": 0, "crit_dmg": 50, "max_mp": 0, "mp": 0, "energy": 0, "max_toughness": 30, "toughness": 30},
+		{"weakness_dmg": 200, "toughness_dmg": 0, "broken_dmg": 0}, ["claw"], Color.SANDY_BROWN, BREAK_ATTRIBUTE_SET)
+	brittle.tags.assign([&"Weakness.Fire"])
+	_save_world("enemies", "brittle", brittle)
+	_world_encounter("brittle_one", [], [["brittle", null]], 1)
+	_world_encounter("brittle_pair", [], [["brittle", null], ["brittle", null]], 1)
+
+	# Armor (spec item-pass 3.5): pooled pieces and a pooled item under Fixture.Pool.Armory, offered only by the armory
+	# room, which carries no chapter tag (sandbox only), so generated floors never change.
+	var armory_pool := [&"Fixture.Pool.Armory"]
+	_armor("helm", "Fixture.Equipment.Slot.Head", armory_pool, ["banner"])
+	_armor("cap", "Fixture.Equipment.Slot.Head", armory_pool, ["whetstone"])
+	_armor("mail", "Fixture.Equipment.Slot.Body", [], [])  # not pooled: only the shelf's fixed offer
+	_item("armory_ring", armory_pool, ItemDefinition.Kind.PASSIVE, null)
+	var placements := []
+	for x in [3, 5, 7]:
+		var pedestal := _placement(Vector2i(x, 3), RoomPlacement.Kind.ITEM_PEDESTAL, 1)
+		pedestal.item_query = _query(armory_pool)
+		placements.append(pedestal)
+	var shelf := _placement(Vector2i(9, 3), RoomPlacement.Kind.SHOP_SLOT, 1)
+	shelf.equipment = _world["equipment/mail"]
+	placements.append(shelf)
+	_room("armory", [&"Fixture.Room.Type.Treasure"], 15, 1, RoomDefinition.ContentMode.NONE, placements)
+
+
+func _armor(name: String, slot: String, tags: Array, effect_names: Array) -> void:
+	var piece := EquipmentDefinition.new()
+	piece.id = StringName("fixture.equipment." + name)
+	piece.display_name = name.capitalize()
+	piece.description = "Fixture armor: %s." % name
+	piece.slot = StringName(slot)
+	piece.tags.assign(tags)
+	piece.price = 2
+	piece.grants = _ability_set([], effect_names)
+	_save_world("equipment", name, piece)
 
 
 func _instant(attribute_name: String, typed: float) -> GameplayEffect:
@@ -467,11 +575,12 @@ func _enemy(name: String, core: Dictionary, ability_names: Array, tags: Array, c
 	_save_world("enemies", name, enemy)
 
 
-func _fill_unit(unit: UnitDefinition, id: String, core: Dictionary, extra: Dictionary, ability_names: Array, color: Color) -> void:
+func _fill_unit(unit: UnitDefinition, id: String, core: Dictionary, extra: Dictionary, ability_names: Array, color: Color,
+		attribute_set: Script = RUN_ATTRIBUTE_SET) -> void:
 	unit.id = StringName(id)
 	unit.display_name = id.get_slice(".", 2).capitalize()
 	unit.display_color = color
-	unit.attribute_set = RUN_ATTRIBUTE_SET
+	unit.attribute_set = attribute_set
 	var stats: Dictionary[String, int] = {}
 	for source in [core, extra]:
 		for attribute_name in source:
@@ -562,7 +671,7 @@ func _layout_cell(cell: Vector2i, room_name: String, role: FloorLayoutCell.Role)
 
 func _save_world(directory: String, name: String, resource: Resource) -> Resource:
 	var path := ROOT + "%s/%s.tres" % [directory, name]
-	_check(ResourceSaver.save(resource, path), path)
+	_save(resource, path)
 	_world["%s/%s" % [directory, name]] = load(path)
 	return _world["%s/%s" % [directory, name]]
 

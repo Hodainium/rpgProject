@@ -8,3 +8,6 @@ extends Resource
 @export var floors: Array[FloorSlot] = []
 ## Given when an item pool has nothing left (Isaac's Breakfast).
 @export var fallback_item: ItemDefinition
+## The equipment slots characters have in this run, in display order (spec item-pass 3.5): tags such as
+## Equipment.Slot.Weapon, Equipment.Slot.Head. A new slot is one more tag here; no code.
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var equipment_slots: Array[StringName] = []

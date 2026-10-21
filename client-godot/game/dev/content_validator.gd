@@ -10,10 +10,16 @@ const TAG_HINT: String = "gas::tag"
 ## Tag prefix reserved for dev decisions in battle logs (spec dev-tools 3.6).
 const RESERVED_TAG_PREFIX: String = "Dev."
 const SINGLE_DOOR_MASKS: Array[int] = [1, 2, 4, 8]
+## Spec item-pass 3.5: a trigger in one of the battle's event families must be an event the battle sends (typos such as
+## Event.Damage.Delt never fire). Other triggers (e.g. an effect's own event_tags) aren't checked.
+const BATTLE_EVENT_PREFIXES: Array[String] = ["Event.Damage.", "Event.Unit.", "Event.Battle.", "Event.Turn.",
+	"Event.Ability.", "Event.Attack."]
 
 var content: ContentIndex
 var issues: Array[ValidationIssue] = []
 var _visited: Dictionary = {}
+var _known_events: Dictionary = {}
+var _triggers: Dictionary = {}  # PackedScene -> trigger_event_tag
 
 
 func _init(content_index: ContentIndex) -> void:
@@ -37,7 +43,7 @@ static func validate(content_index: ContentIndex, options: Dictionary = {}) -> A
 	for id in _sorted(content_index.items):
 		validator._check_item(content_index.items[id])
 	for id in _sorted(content_index.equipment):
-		validator._check_ability_set(content_index.equipment[id].grants, content_index.equipment[id].resource_path + "::grants")
+		validator._check_equipment(content_index.equipment[id])
 	for id in _sorted(content_index.events):
 		validator._check_event(content_index.events[id])
 	for id in _sorted(content_index.layouts):
@@ -110,6 +116,42 @@ func _check_skill_scene(scene: PackedScene, path: String, owner: StringName) -> 
 		_error("dangling_ref", path, "%s has an empty ability entry" % owner)
 	elif SkillTags.tag_of(scene) == &"":
 		_error("bad_skill", path, "%s is not a BattleAbility scene" % scene.resource_path)
+	else:
+		var trigger := _trigger_of(scene)
+		if BATTLE_EVENT_PREFIXES.any(func(prefix: String) -> bool: return String(trigger).begins_with(prefix)) \
+				and not _battle_events().has(trigger):
+			_warning("trigger_unregistered", path, "%s triggers on %s, which the battle never sends" % [scene.resource_path, trigger])
+
+
+func _trigger_of(scene: PackedScene) -> StringName:
+	if not _triggers.has(scene):
+		var ability := scene.instantiate() as BattleAbility
+		_triggers[scene] = ability.trigger_event_tag if ability != null else &""
+		if ability != null:
+			ability.free()
+	return _triggers[scene]
+
+
+## Every event the battle can send: its fixed events, plus Event.Damage.Dealt/Taken.<X> for each Damage.Type.<X> and
+## Hit.<X> in the tag registry (and the hit tags the battle injects itself).
+func _battle_events() -> Dictionary:
+	if not _known_events.is_empty():
+		return _known_events
+	for tag in [Battle.EVENT_BATTLE_START, Battle.EVENT_TURN_START, Battle.EVENT_TURN_END, Battle.EVENT_DAMAGE_DEALT,
+			Battle.EVENT_DAMAGE_TAKEN, Battle.EVENT_UNIT_DIED, Battle.EVENT_ABILITY_USED, Battle.EVENT_ATTACK_FOLLOW_UP,
+			Battle.EVENT_UNIT_KILLED, Battle.EVENT_ONE_MORE]:
+		_known_events[tag] = true
+	var kinds: Array = [Battle.HIT_BREAK, Battle.HIT_FOLLOW_UP]
+	var registry: GameplayTagRegistry = load(SETTINGS.get_registry_tag_path())
+	if registry != null:
+		kinds.append_array(registry.tags)
+	for tag in kinds:
+		for prefix in [Battle.DAMAGE_TYPE_PREFIX, Battle.HIT_TAG_PREFIX]:
+			if String(tag).begins_with(prefix):
+				var suffix := String(tag).trim_prefix(prefix)
+				_known_events[StringName("%s.%s" % [Battle.EVENT_DAMAGE_DEALT, suffix])] = true
+				_known_events[StringName("%s.%s" % [Battle.EVENT_DAMAGE_TAKEN, suffix])] = true
+	return _known_events
 
 
 ## A loadout (a saved file, or inline on `unit`).
@@ -201,11 +243,14 @@ func _check_room(room: RoomDefinition) -> void:
 			RoomPlacement.Kind.PLAYER_SPAWN:
 				player_spawns += 1
 			RoomPlacement.Kind.ITEM_PEDESTAL, RoomPlacement.Kind.SHOP_SLOT:
-				if placement.item == null and placement.item_query != null and content != null:
+				if placement.item == null and placement.equipment == null and placement.item_query != null and content != null:
 					_check_item_pool(placement.item_query, where + ".item_query")
+		if placement.item != null and placement.equipment != null:
+			_error("placement_both", where, "a placement offers one thing: an item or a piece of equipment, not both")
 		if placement.price >= 0 and placement.kind != K.SHOP_SLOT:
 			_warning("placement_kind", where, "a price only matters on a shop slot")
-		if (placement.item != null or placement.item_query != null) and not placement.kind in [K.ITEM_PEDESTAL, K.SHOP_SLOT]:
+		if (placement.item != null or placement.equipment != null or placement.item_query != null) \
+				and not placement.kind in [K.ITEM_PEDESTAL, K.SHOP_SLOT]:
 			_warning("placement_kind", where, "an item only matters on an item pedestal or shop slot")
 		if placement.loadout != null and placement.kind != K.ENEMY_SPAWN:
 			_warning("placement_kind", where, "a loadout only matters on an enemy spawn")
@@ -221,6 +266,9 @@ func _check_room(room: RoomDefinition) -> void:
 func _check_item_pool(query: GameplayTagQuery, where: String) -> void:
 	for id in content.items:
 		if TagMatch.matches(query, content.items[id].tags):
+			return
+	for id in content.equipment:
+		if not content.equipment[id].tags.is_empty() and TagMatch.matches(query, content.equipment[id].tags):
 			return
 	if _has_fallback_item():
 		_warning("empty_item_pool", where, "no item matches this pool; the run's fallback_item is used")
@@ -298,8 +346,30 @@ func _check_weight(resource: Resource, path: String) -> void:
 		_error("zero_weights", path + "::weight", "a negative weight")
 
 
+## Spec item-pass 3.5: a slot, and one the run structures offer (when any lists its slots); pickup fields as for items.
+func _check_equipment(piece: EquipmentDefinition) -> void:
+	var path := piece.resource_path
+	if piece.slot == &"":
+		_error("bad_equipment", path + "::slot", "%s has no slot" % piece.id)
+	else:
+		var listed := false
+		var any_list := false
+		for id in content.runs:
+			var slots: Array[StringName] = content.runs[id].equipment_slots
+			any_list = any_list or not slots.is_empty()
+			listed = listed or slots.has(piece.slot)
+		if any_list and not listed:
+			_error("bad_equipment_slot", path + "::slot", "%s's slot %s is in no run structure's equipment_slots" % [piece.id, piece.slot])
+	if piece.description == "":
+		_warning("no_description", path + "::description", "%s has no description" % piece.id)
+	_check_weight(piece, path)
+	_check_ability_set(piece.grants, path + "::grants")
+
+
 func _check_item(item: ItemDefinition) -> void:
 	var path := item.resource_path
+	if item.description == "" and not TagMatch.has(item.tags, FloorGenerator.DEV_TAG):
+		_warning("no_description", path + "::description", "%s has no description" % item.id)
 	if item.kind == ItemDefinition.Kind.USABLE:
 		if item.use_ability == null:
 			_error("bad_item", path + "::use_ability", "%s is USABLE but has no use_ability" % item.id)

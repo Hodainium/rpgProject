@@ -5,7 +5,7 @@ extends DevCommand
 func _init() -> void:
 	name = "take"
 	usage = "take <placement> <slot>"
-	help = "Takes or buys pickup <placement> for party member <slot>."
+	help = "Takes or buys pickup <placement> for party member <slot> (armor goes to the armor inventory; slot ignored)."
 	cheat = false
 	arg_kinds.assign(["int", "slot"])
 

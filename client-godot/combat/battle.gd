@@ -17,6 +17,13 @@ signal execution_resolved(unit_id: StringName, row_id: StringName, target_ids: A
 signal unit_died(unit_id: StringName)
 signal unit_revived(unit_id: StringName)
 signal battle_ended(outcome: String, final_hash: String)
+## Spec item-pass: a damaging hit with its Hit.* tags (Critical, Weakness, Break, FollowUp…), for presentation.
+signal damage_dealt(source_id: StringName, target_id: StringName, amount: int, hit_tags: Array[StringName])
+## A triggered passive activated (logged by the dev report so a headless check can see it fire).
+signal trigger_activated(unit_id: StringName, ability_tag: StringName, event_tag: StringName)
+signal unit_broken(unit_id: StringName, breaker_id: StringName)
+signal unit_recovered(unit_id: StringName)
+signal one_more_started(unit_id: StringName)
 
 const TURN_LIMIT: int = 1000
 const ONGOING: String = "Ongoing"
@@ -36,6 +43,23 @@ const EVENT_UNIT_DIED: StringName = &"Event.Unit.Died"
 const EVENT_ABILITY_USED: StringName = &"Event.Ability.Used"
 ## A row tagged Damage.Type.<X> also sends Event.Damage.Dealt.<X> / Event.Damage.Taken.<X>.
 const DAMAGE_TYPE_PREFIX: String = "Damage.Type."
+## Spec item-pass 3.1: every Hit.<X> tag on a hit's spec (injected by the ExecCalc or the battle) also sends
+## Event.Damage.Dealt.<X> / Event.Damage.Taken.<X>. The battle never keeps a list of hit kinds.
+const HIT_TAG_PREFIX: String = "Hit."
+const HIT_BREAK: StringName = &"Hit.Break"
+const HIT_FOLLOW_UP: StringName = &"Hit.FollowUp"
+## Sent to a follow-up's unit after it fires. Payload: {"source", "target": its primary target, "ability"}.
+const EVENT_ATTACK_FOLLOW_UP: StringName = &"Event.Attack.FollowUp"
+## Sent to the unit whose effect last lowered a dead unit's HP. Payload: {"source": killer, "target": the dead unit}.
+const EVENT_UNIT_KILLED: StringName = &"Event.Unit.Killed"
+## Sent to a unit as its One More action starts. Payload: {"source", "target": the unit}.
+const EVENT_ONE_MORE: StringName = &"Event.Battle.OneMore"
+## Spec item-pass 3.2 (HSR break): a unit whose toughness a hit empties is Broken until its next turn starts.
+const BROKEN_TAG: StringName = &"State.Broken"
+const TOUGHNESS: String = "toughness"
+const MAX_TOUGHNESS: String = "max_toughness"
+## A Broken unit's action is delayed by this share of its full action value (25.00%).
+const BREAK_DELAY: int = 2500
 ## Loose tag on every unit in field mode; abilities use it in their activation_query (map-only / battle-only).
 const IN_FIELD_TAG: StringName = &"State.Infield"
 
@@ -64,8 +88,15 @@ var used_items: Array[Dictionary] = []
 ## Dev decisions (spec dev-tools 3.6) are applied only when set: the run sets it in local mode; replay never does, so a
 ## logged dev decision is an IllegalAbility (2002) there.
 var allow_dev: bool = false
+## Spec item-pass 3.2: units owed a One More (they broke a unit), in break order; each acts once more before the turn
+## queue moves on. Hashed (only when not empty).
+var one_more_queue: Array[BattleUnit] = []
+## True while the current decision is a One More action; the log entry carries "extra": true.
+var extra_action: bool = false
 
 var _units: Array[BattleUnit] = []  # sorted by unit id
+## Instant effect that refills a recovering unit's toughness (amount by SetByCaller); built in code, never persisted.
+var _refill_effect: GameplayEffect
 var _started: bool = false
 
 
@@ -314,11 +345,18 @@ func run(controller: Object) -> void:
 		_check_deaths()
 		_check_end()
 	while is_running():
+		if not one_more_queue.is_empty():
+			var owed: BattleUnit = one_more_queue.pop_front()
+			if owed.alive:
+				await _extra_action(owed, controller)
+			continue
 		var actor := turn_manager.next_actor()
 		turn_manager.elapse(actor)
 		turn += 1
 		turn_started.emit(actor.unit_id, turn)
 
+		if actor.asc.has_tag_exact(BROKEN_TAG):
+			_recover(actor)
 		actor.asc.turn_start()
 		actor.asc.send_gameplay_event(EVENT_TURN_START, {"source": actor, "target": actor})
 		await _drain_triggers()
@@ -355,6 +393,67 @@ func run(controller: Object) -> void:
 	if runner_error == "":
 		final_hash = state_hash()
 	battle_ended.emit(outcome, final_hash)
+
+
+## Spec item-pass 3.2 (One More): the unit acts again at once, outside the turn order. It gets its own turn number (so
+## the log entry is unique), no turn_start/turn_end ticks and no action value change; it can take any action.
+func _extra_action(unit: BattleUnit, controller: Object) -> void:
+	turn += 1
+	extra_action = true
+	turn_started.emit(unit.unit_id, turn)
+	one_more_started.emit(unit.unit_id)
+	unit.asc.begin_extra_action()
+	unit.asc.send_gameplay_event(EVENT_ONE_MORE, {"source": unit, "target": unit})
+	await _drain_triggers()
+	_check_deaths()
+	_check_end()
+	var action: Dictionary = {}
+	if unit.alive and outcome == ONGOING:
+		action = await _take_action(unit, controller)
+		if is_running() or outcome != ONGOING:
+			await _drain_triggers()
+	unit.asc.end_extra_action()
+	if not is_running() and outcome == ONGOING:
+		extra_action = false
+		return
+	_check_deaths()
+	_check_end()
+	if outcome == ONGOING and turn >= TURN_LIMIT:
+		outcome = TURN_LIMIT_OUTCOME
+	if unit.is_party() and not action.is_empty():
+		var checkpoint := state_hash()
+		if runner_error == "":
+			controller.after_party_turn(self, unit, action, checkpoint)
+	extra_action = false
+
+
+## A hit emptied the target's toughness: Broken (a GAS tag content can query), its action delayed, and the unit that
+## broke it owed a One More.
+func _break(target: BattleUnit, breaker: BattleUnit) -> void:
+	target.asc.add_tag(BROKEN_TAG)
+	turn_manager.delay(target, BREAK_DELAY)
+	if not one_more_queue.has(breaker):
+		one_more_queue.append(breaker)
+	unit_broken.emit(target.unit_id, breaker.unit_id)
+
+
+## At a Broken unit's next turn start: toughness back to its maximum (through an instant effect), Broken removed.
+func _recover(unit: BattleUnit) -> void:
+	var missing := unit.stat(MAX_TOUGHNESS) - unit.stat(TOUGHNESS)
+	if missing > 0:
+		if _refill_effect == null:
+			_refill_effect = GameplayEffect.new()
+			_refill_effect.policy = GameplayEffect.DurationPolicy.INSTANT
+			var modifier := GameplayEffectModifier.new()
+			modifier.attribute_name = TOUGHNESS
+			modifier.magnitude_calculation = GameplayEffectModifier.MagnitudeCalculationType.SET_BY_CALLER
+			modifier.set_by_caller_tag = ExecutionRow.TOUGHNESS_TAG
+			_refill_effect.modifiers.append(modifier)
+		var spec := GameplayEffectSpec.new(_refill_effect, GameplayEffectContext.new(unit, unit), unit.level)
+		spec.set_set_by_caller_magnitude(ExecutionRow.TOUGHNESS_TAG, float(missing))
+		unit.asc.apply_effect_spec(spec)
+	unit.asc.clear_tag(BROKEN_TAG)
+	unit_recovered.emit(unit.unit_id)
 
 
 ## Units an ability could target, in slot order: living ones, or for the dead-ally modes only dead allies.
@@ -436,25 +535,36 @@ func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionR
 		elif not target.is_up():
 			continue
 		var hp_before := target.stat(BattleUnit.HP)
+		var toughness_before := target.stat(TOUGHNESS)
 		# One spec per target: turn-based effects keep their spec, so sharing one would share the countdown.
 		var context := GameplayEffectContext.new(unit, unit)
 		context.target_data.append_node(target)
 		var spec := GameplayEffectSpec.new(row.effect, context, ability.ability_level)
 		row.apply_override(spec)
+		if ability.is_follow_up():
+			spec.inject_tag(HIT_FOLLOW_UP)
 		unit.asc.apply_effect_spec_to_target(spec, target.asc)
 		hit_ids.append(target.unit_id)
+		# A break needs the target to survive the hit (a killing blow is just a kill).
+		if toughness_before > 0 and target.stat(TOUGHNESS) <= 0 and target.stat(BattleUnit.HP) > 0 \
+				and not target.asc.has_tag_exact(BROKEN_TAG) and not field_mode:
+			_break(target, unit)
+			spec.inject_tag(HIT_BREAK)
 		var damage := hp_before - target.stat(BattleUnit.HP)
 		if damage > 0:
-			_send_damage_events(unit, target, damage, row)
+			_send_damage_events(unit, target, damage, row, spec)
 	execution_resolved.emit(unit.unit_id, row.id, hit_ids)
 	if schema_version >= 2:
 		_check_revives()
 
 
-## Event.Damage.Dealt (source) and Event.Damage.Taken (target), plus .<X> for each Damage.Type.<X> row tag.
-## Only queues triggers; they run when the battle drains the queue.
-func _send_damage_events(source: BattleUnit, target: BattleUnit, damage: int, row: ExecutionRow) -> void:
-	var payload := {"source": source, "target": target, "amount": damage, "row": row.id, "tags": row.tags}
+## Event.Damage.Dealt (source) and Event.Damage.Taken (target), plus .<X> for each Damage.Type.<X> row tag, then
+## .<X> for each Hit.<X> tag on the spec (sorted). Only queues triggers; they run when the battle drains the queue.
+func _send_damage_events(source: BattleUnit, target: BattleUnit, damage: int, row: ExecutionRow,
+		spec: GameplayEffectSpec) -> void:
+	var hit_tags := Battle.hit_tags_of(spec)
+	var payload := {"source": source, "target": target, "amount": damage, "row": row.id, "tags": row.tags,
+		"hit_tags": hit_tags}
 	source.asc.send_gameplay_event(EVENT_DAMAGE_DEALT, payload)
 	target.asc.send_gameplay_event(EVENT_DAMAGE_TAKEN, payload)
 	for tag in row.tags:
@@ -462,6 +572,21 @@ func _send_damage_events(source: BattleUnit, target: BattleUnit, damage: int, ro
 			var damage_type := String(tag).trim_prefix(DAMAGE_TYPE_PREFIX)
 			source.asc.send_gameplay_event(StringName("%s.%s" % [EVENT_DAMAGE_DEALT, damage_type]), payload)
 			target.asc.send_gameplay_event(StringName("%s.%s" % [EVENT_DAMAGE_TAKEN, damage_type]), payload)
+	for tag in hit_tags:
+		var hit_kind := String(tag).trim_prefix(HIT_TAG_PREFIX)
+		source.asc.send_gameplay_event(StringName("%s.%s" % [EVENT_DAMAGE_DEALT, hit_kind]), payload)
+		target.asc.send_gameplay_event(StringName("%s.%s" % [EVENT_DAMAGE_TAKEN, hit_kind]), payload)
+	damage_dealt.emit(source.unit_id, target.unit_id, damage, hit_tags)
+
+
+## The spec's Hit.* tags in sorted order (the order their events are sent in).
+static func hit_tags_of(spec: GameplayEffectSpec) -> Array[StringName]:
+	var result: Array[StringName] = []
+	for tag in spec.dynamic_tags:
+		if String(tag).begins_with(HIT_TAG_PREFIX):
+			result.append(tag)
+	result.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
+	return result
 
 
 ## State hash v1 of the current state. Sets runner_error when the state can't be hashed.
@@ -620,9 +745,21 @@ func _check_deaths() -> void:
 			died.append(unit)
 	if schema_version >= 2:
 		for dead in died:
+			var killer := _killer_of(dead)
 			for unit in _units:
 				if unit.alive:
-					unit.asc.send_gameplay_event(EVENT_UNIT_DIED, {"source": dead, "target": dead})
+					unit.asc.send_gameplay_event(EVENT_UNIT_DIED, {"source": dead, "target": dead, "instigator": killer})
+		# Spec item-pass 3.1: then each living killer gets Event.Unit.Killed, in unit order.
+		for dead in died:
+			var killer := _killer_of(dead)
+			if killer != null and killer.alive:
+				killer.asc.send_gameplay_event(EVENT_UNIT_KILLED, {"source": killer, "target": dead})
+
+
+## The unit whose effect last lowered `dead`'s HP, or null (none, or the unit itself, e.g. a dev kill).
+static func _killer_of(dead: BattleUnit) -> BattleUnit:
+	var killer := dead.last_hit_by
+	return killer if killer != null and killer != dead else null
 
 
 ## v2 death: State.Dead, and temporary effects (buffs, debuffs, DoTs) are dropped. Infinite effects from items and
@@ -634,6 +771,7 @@ func _lay_down(unit: BattleUnit) -> void:
 			unit.asc.remove_active_effect(active_effect)
 	if not unit.asc.has_tag_exact(BattleUnit.DEAD_TAG):
 		unit.asc.add_tag(BattleUnit.DEAD_TAG)
+	unit.asc.clear_tag(BROKEN_TAG)
 
 
 ## v2: a dead unit whose HP an effect raised above 0 comes back, with a fresh action value.
@@ -641,6 +779,7 @@ func _check_revives() -> void:
 	for unit in _units:
 		if not unit.alive and unit.stat(BattleUnit.HP) > 0:
 			unit.alive = true
+			unit.last_hit_by = null
 			unit.asc.clear_tag(BattleUnit.DEAD_TAG)
 			if not field_mode:
 				turn_manager.add(unit)
@@ -661,6 +800,10 @@ func _drain_triggers() -> void:
 		var ability: BattleAbility = entry["ability"]
 		if not is_instance_valid(ability) or not unit.is_up() or not unit.asc.can_activate_ability(ability):
 			continue
+		# Spec item-pass 3.1 (HSR): a follow-up never fires from a follow-up's own hit, so follow-ups can't feed each other.
+		if ability.is_follow_up() and entry["payload"] is Dictionary \
+				and Array(entry["payload"].get("hit_tags", [])).has(HIT_FOLLOW_UP):
+			continue
 		var target := _trigger_target(unit, ability, entry["payload"])
 		if ability.needs_target() and target == null:
 			continue
@@ -668,7 +811,13 @@ func _drain_triggers() -> void:
 		payload["battle"] = self
 		payload["unit"] = unit
 		payload["event"] = entry["payload"]
-		await ability.try_activate(payload)
+		var activated: bool = await ability.try_activate(payload)
+		if not activated:
+			continue
+		trigger_activated.emit(unit.unit_id, ability.ability_tag, StringName(entry["event_tag"]))
+		if ability.is_follow_up():
+			var aimed: BattleUnit = payload["primary"] if payload["primary"] != null else unit
+			unit.asc.send_gameplay_event(EVENT_ATTACK_FOLLOW_UP, {"source": unit, "target": aimed, "ability": ability.ability_tag})
 	triggers.draining = false
 	triggers.current_depth = 0
 
@@ -707,10 +856,13 @@ func _check_end() -> void:
 		outcome = DEFEAT
 
 
-func _on_attribute_changed(attribute_name: String, old_value: float, new_value: float, _spec: GameplayEffectSpec,
+func _on_attribute_changed(attribute_name: String, old_value: float, new_value: float, spec: GameplayEffectSpec,
 		unit: BattleUnit) -> void:
 	if attribute_name == BattleUnit.SPD:
 		turn_manager.on_spd_changed(unit, old_value, new_value)
+	elif attribute_name == BattleUnit.HP and new_value < old_value and spec != null and spec.context != null:
+		# The unit itself counts too (a dev kill, an HP cost), so an earlier attacker isn't credited with that death.
+		unit.last_hit_by = spec.context.instigator as BattleUnit
 
 
 func _fail(message: String) -> String:

@@ -17,7 +17,14 @@ enum Targeting {
 	ALL_DEAD_ALLIES,   ## Every dead unit on the actor's side.
 }
 
+## A triggered ability with this asset tag is a follow-up attack (spec item-pass 3.1): its hits carry Hit.FollowUp and
+## the battle sends Event.Attack.FollowUp when it fires. It is still a passive: never an action, never logged.
+const FOLLOW_UP_TAG: StringName = &"Ability.Type.FollowUp"
+
 @export var targeting: Targeting = Targeting.SINGLE_ENEMY
+## Tags describing the ability itself (UE GAS's AbilityTags, which GodotGAS lacks), e.g. Ability.Type.FollowUp.
+## Unlike activation_owned_tags they are never added to the unit.
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var asset_tags: Array[StringName] = []
 ## What each hit does. The animation decides which rows run, how often and when.
 @export var executions: Array[ExecutionRow] = []
 ## Required. Its `execute(&"<row id>")` method-track keys are the source of truth for the execution sequence.
@@ -42,6 +49,11 @@ func targets_enemies() -> bool:
 ## A passive that fires from a gameplay event (GodotGAS trigger_event_tag). Never chosen as an action.
 func is_triggered() -> bool:
 	return trigger_event_tag != &""
+
+
+## A triggered passive tagged Ability.Type.FollowUp.
+func is_follow_up() -> bool:
+	return is_triggered() and asset_tags.has(FOLLOW_UP_TAG)
 
 
 func row_by_id(row_id: StringName) -> ExecutionRow:

@@ -54,7 +54,7 @@ func on_invalid(_battle: Battle, unit: BattleUnit, reason: String, detail: Strin
 
 
 func after_party_turn(battle: Battle, unit: BattleUnit, action: Dictionary, checkpoint: String) -> void:
-	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, checkpoint))
+	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, checkpoint, battle.extra_action))
 
 
 ## The ActionLog JSON shape (Rpg.Contracts.Battle.ActionLog), field order matching the C# record.
@@ -62,15 +62,19 @@ func action_log(battle: Battle) -> Dictionary:
 	return ActionRecorder.build_log(entries, battle.outcome, battle.final_hash)
 
 
-static func entry(turn: int, unit_id: StringName, action: Dictionary, checkpoint: String) -> Dictionary:
+## `extra`: a One More action (spec item-pass 3.2). The key is written only then, so other logs are unchanged.
+static func entry(turn: int, unit_id: StringName, action: Dictionary, checkpoint: String, extra: bool = false) -> Dictionary:
 	var target := StringName(str(action.get("target", "")))
-	return {
+	var result := {
 		"turn": turn,
 		"actor": String(unit_id),
 		"ability": String(action["ability"]),
 		"target": null if target == &"" else String(target),
 		"checkpoint": checkpoint,
 	}
+	if extra:
+		result["extra"] = true
+	return result
 
 
 static func build_log(log_entries: Array[Dictionary], outcome: String, final_hash: String) -> Dictionary:

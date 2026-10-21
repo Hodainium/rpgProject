@@ -17,6 +17,10 @@ const SYSTEM_TAGS: Array[StringName] = [
 	&"State.Dead", &"State.Infield", &"Event.Battle.Start", &"Event.Turn.Start", &"Event.Turn.End",
 	&"Event.Damage.Dealt", &"Event.Damage.Taken", &"Event.Unit.Died", &"Event.Ability.Used",
 	&"Data.Damage.Flat", &"Data.Damage.Multiplier",
+	# Spec item-pass: breaks, One More, follow-ups, kills, and the hit tags the battle itself injects.
+	&"State.Broken", &"Ability.Type.FollowUp", &"Data.Toughness", &"Hit.Break", &"Hit.FollowUp",
+	&"Event.Attack.FollowUp", &"Event.Unit.Killed", &"Event.Battle.OneMore",
+	&"Event.Damage.Dealt.Break", &"Event.Damage.Taken.Break", &"Event.Damage.Dealt.FollowUp", &"Event.Damage.Taken.FollowUp",
 ]
 const FORMAT: String = "^([A-Z][a-zA-Z0-9]*)(\\.[A-Z][a-zA-Z0-9]*)*$"
 

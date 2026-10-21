@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/burn_chaser.tscn" id="1_4qnvg"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_yubrn"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_gnm0g"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_of4gg"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_bsb1x"]
+
+[sub_resource type="Resource" id="Resource_yckhp"]
+script = ExtResource("3_gnm0g")
+abilities = Array[PackedScene]([ExtResource("1_4qnvg")])
+
+[resource]
+script = ExtResource("5_bsb1x")
+id = &"fixture.item.burn_charm"
+display_name = "Burn Charm"
+price = 3
+grants = SubResource("Resource_yckhp")

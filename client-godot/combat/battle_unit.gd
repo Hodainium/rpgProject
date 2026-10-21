@@ -26,6 +26,9 @@ var alive: bool = true
 var item_abilities: Dictionary = {}
 ## Content warnings raised while building the unit (e.g. a duplicate ability tag skipped).
 var warnings := PackedStringArray()
+## The unit whose effect last lowered this unit's HP (a hit or a DoT tick), for Event.Unit.Killed (spec item-pass 3.1).
+## Not hashed: replay recomputes it, and it changes nothing the hash covers.
+var last_hit_by: BattleUnit = null
 
 
 ## Builds the unit under `parent` (which must be inside the scene tree so GodotGAS's _ready hooks run).
@@ -128,6 +131,9 @@ func _apply_carry(carry: Dictionary) -> void:
 			values[pair[0]] = asc.get_attribute(pair[1]).current_value
 	if asc.has_attribute(ENERGY) and carry.get(ENERGY) != null:
 		values[ENERGY] = float(carry[ENERGY])
+	# Spec item-pass 3.3: toughness always starts full, after bonuses (an elite's extra toughness counts).
+	if asc.has_attribute(Battle.TOUGHNESS) and asc.has_attribute(Battle.MAX_TOUGHNESS):
+		values[Battle.TOUGHNESS] = asc.get_attribute(Battle.MAX_TOUGHNESS).current_value
 	asc.initialize_attribute_overrides(values)
 
 

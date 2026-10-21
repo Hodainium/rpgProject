@@ -24,6 +24,12 @@ static func canonical_lines(battle: Battle) -> Dictionary:
 		"rng=%d" % battle.rng.state,
 		"outcome=%s" % battle.outcome,
 	])
+	# Spec item-pass 3.2: One More actions still owed. Only when there are some, so every existing hash is unchanged.
+	if not battle.one_more_queue.is_empty():
+		var owed := PackedStringArray()
+		for unit in battle.one_more_queue:
+			owed.append(String(unit.unit_id))
+		lines.append("extra=%s" % ",".join(owed))
 	for unit in battle.units():  # sorted by unit id
 		var id := String(unit.unit_id)
 		lines.append("unit=%s|alive=%d|av=%d" % [id, 1 if unit.alive else 0, battle.turn_manager.av.get(unit, 0)])

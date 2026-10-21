@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_jp46j"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/whetstone.tres" id="2_kvdjh"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_hell0"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_51rp4"]
+
+[sub_resource type="Resource" id="Resource_dc8om"]
+script = ExtResource("3_hell0")
+effects = Array[ExtResource("1_jp46j")]([ExtResource("2_kvdjh")])
+
+[resource]
+script = ExtResource("4_51rp4")
+id = &"fixture.equipment.cap"
+display_name = "Cap"
+description = "Fixture armor: cap."
+slot = &"Fixture.Equipment.Slot.Head"
+grants = SubResource("Resource_dc8om")
+tags = Array[StringName]([&"Fixture.Pool.Armory"])
+price = 2

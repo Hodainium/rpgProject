@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/fire_slash.tscn" id="1_j5dqj"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/fire_wave.tscn" id="2_gnt5u"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="3_56ch3"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/expose.tscn" id="4_0oag6"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_break_attribute_set.gd" id="5_c74ry"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="6_dxrwi"]
+
+[resource]
+script = ExtResource("6_dxrwi")
+id = &"fixture.character.duelist"
+attribute_set = ExtResource("5_c74ry")
+abilities = Array[PackedScene]([ExtResource("1_j5dqj"), ExtResource("2_gnt5u"), ExtResource("3_56ch3"), ExtResource("4_0oag6")])
+display_name = "Duelist"
+display_color = Color(1, 0.27058825, 0, 1)
+tags = Array[StringName]([&"Fixture.Character.Duelist"])
+stats_x100 = Dictionary[String, int]({
+"atk": 50000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 30000,
+"energy": 0,
+"hp": 100000,
+"max_hp": 100000,
+"max_mp": 10000,
+"max_toughness": 0,
+"mp": 10000,
+"spd": 10000,
+"toughness": 0,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

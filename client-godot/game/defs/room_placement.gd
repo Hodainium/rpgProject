@@ -17,8 +17,10 @@ enum Kind {
 @export var slot: int = 1
 ## ENEMY_SPAWN: optional loadout override (a file, or inline: referenced as "<roomId>#<placement number>").
 @export var loadout: Loadout
-## ITEM_PEDESTAL / SHOP_SLOT: a fixed item, or a pool to pick from.
+## ITEM_PEDESTAL / SHOP_SLOT: a fixed item, a fixed piece of equipment, or a pool to pick from (the query matches
+## items and equipment together; spec item-pass 3.5).
 @export var item: ItemDefinition
+@export var equipment: EquipmentDefinition
 @export var item_query: GameplayTagQuery
 ## SHOP_SLOT: price override; -1 uses the item's price.
 @export var price: int = -1

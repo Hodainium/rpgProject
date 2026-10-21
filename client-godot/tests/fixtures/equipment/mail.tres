@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_v6mfv"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="2_2shji"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="3_ec07e"]
+
+[sub_resource type="Resource" id="Resource_vdfok"]
+script = ExtResource("2_2shji")
+
+[resource]
+script = ExtResource("3_ec07e")
+id = &"fixture.equipment.mail"
+display_name = "Mail"
+description = "Fixture armor: mail."
+slot = &"Fixture.Equipment.Slot.Body"
+grants = SubResource("Resource_vdfok")
+price = 2

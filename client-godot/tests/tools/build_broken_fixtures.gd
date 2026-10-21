@@ -1,19 +1,22 @@
 ## Builds the broken content root res://tests/broken_fixtures/ (spec dev-tools 6, "Fixtures"): one file per
 ## ContentValidator code, each named after it. A separate root, because ContentIndex scans tests/fixtures/ recursively.
 ## Reuses fixture abilities and the fixture attribute set; never references res://content/. Run once, then commit:
-##   godot --headless --path client-godot --quit-after 600 res://tests/tools/build_broken_fixtures.tscn
+##   godot --headless --path client-godot --quit-after 600 res://tests/tools/build_broken_fixtures.tscn [-- --rebuild]
+## Existing files are loaded, not rewritten (so adding a case keeps the others' uids); --rebuild rewrites everything.
 extends Node
 
 const ROOT := "res://tests/broken_fixtures/"
 const FIXTURES := "res://tests/fixtures/"
 const ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_run_attribute_set.gd")
 const DIRECTORIES: Array[String] = ["characters", "enemies", "encounters", "items", "events", "rooms", "chapters",
-	"scaling", "floor_rules", "runs", "layouts"]
+	"scaling", "floor_rules", "runs", "layouts", "equipment", "abilities"]
 
 var _saved := {}
+var _rebuild := false
 
 
 func _ready() -> void:
+	_rebuild = OS.get_cmdline_user_args().has("--rebuild")
 	for directory in DIRECTORIES:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ROOT + directory))
 	var strike: PackedScene = load(FIXTURES + "abilities/strike.tscn")
@@ -129,6 +132,29 @@ func _ready() -> void:
 	run.floors.append(slot)
 	run.fallback_item = fallback
 	_save("runs", "run", run)
+
+	# Spec item-pass: equipment without a slot, a placement offering an item and equipment, a trigger typo.
+	var no_slot := EquipmentDefinition.new()
+	no_slot.id = &"broken.equipment.bad_equipment"
+	no_slot = _save("equipment", "bad_equipment", no_slot)
+	var both := _placement(Vector2i(6, 3), P.ITEM_PEDESTAL)
+	both.item = fallback
+	both.equipment = no_slot
+	_save("rooms", "placement_both", _room("placement_both", [&"Broken.Room"], [both]))
+	var typo_path := ROOT + "abilities/trigger_unregistered.tscn"
+	if _rebuild or not ResourceLoader.exists(typo_path):
+		var typo := strike.instantiate() as BattleAbility
+		typo.ability_tag = &"Broken.Ability.Typo"
+		typo.trigger_event_tag = &"Event.Damage.Delt"
+		var scene := PackedScene.new()
+		scene.pack(typo)
+		ResourceSaver.save(scene, typo_path)
+		typo.free()
+	var typo_set := AbilitySet.new()
+	typo_set.abilities.append(load(typo_path))
+	var typo_item := _item("broken.item.trigger_unregistered", [])
+	typo_item.grants = typo_set
+	_save("items", "trigger_unregistered", typo_item)
 	print("Broken fixtures built under ", ROOT)
 	get_tree().quit(0)
 
@@ -188,8 +214,9 @@ func _chapter(name: String, tag: StringName, rules: FloorGenRules, scaling: Scal
 
 func _save(directory: String, name: String, resource: Resource) -> Resource:
 	var path := ROOT + "%s/%s.tres" % [directory, name]
-	var error := ResourceSaver.save(resource, path)
-	if error != OK:
-		push_error("build_broken_fixtures: could not save %s (%s)" % [path, error_string(error)])
+	if _rebuild or not ResourceLoader.exists(path):
+		var error := ResourceSaver.save(resource, path)
+		if error != OK:
+			push_error("build_broken_fixtures: could not save %s (%s)" % [path, error_string(error)])
 	_saved[path] = load(path)
 	return _saved[path]

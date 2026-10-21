@@ -61,6 +61,16 @@ func turn_end() -> void:
 	_in_own_turn = false
 
 
+## A One More action (spec item-pass 3.2) counts as the unit's own turn for effects it applies, so a self-buff from it
+## also skips one countdown. The skip list is cleared at the unit's next turn_end(), as for a normal turn.
+func begin_extra_action() -> void:
+	_in_own_turn = true
+
+
+func end_extra_action() -> void:
+	_in_own_turn = false
+
+
 ## Same announcement as GodotGAS, but triggered abilities go on the battle's queue (grant order) instead of running now.
 ## Outside a battle (no Battle ancestor) the addon's own behaviour applies.
 func send_gameplay_event(event_tag: StringName, payload: Variant = null) -> void:

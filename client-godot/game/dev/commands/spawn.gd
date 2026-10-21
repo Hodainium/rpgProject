@@ -4,8 +4,8 @@ extends DevCommand
 
 func _init() -> void:
 	name = "spawn"
-	usage = "spawn <encounter> | spawn item <item> [price] | spawn pool <tag> [price]"
-	help = "A fight with <encounter> here; or a pedestal (price 0) / shop slot with an item or one from a pool."
+	usage = "spawn <encounter> | spawn item <item or equipment> [price] | spawn pool <tag> [price]"
+	help = "A fight with <encounter> here; or a pedestal (price 0) / shop slot with an item, a piece of equipment, or one from a pool (items and equipment)."
 	cheat = true
 	arg_kinds.assign(["encounter", "item", "int"])
 
@@ -19,9 +19,11 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		var price: Variant = ctx.arg_int(args, 2, 0)
 		if args.size() < 2 or price == null:
 			return ctx.fail("usage: " + usage)
-		var item: ItemDefinition = null
+		var item: Resource = null
 		if args[0] == "item":
-			item = ctx.find("item", args[1])
+			item = ctx.content.equipment.get(StringName(args[1])) if ctx.content != null else null
+			if item == null:
+				item = ctx.find("item", args[1])
 			if item == null:
 				return ctx.fail(ctx.error)
 		var error := ctx.run.dev_spawn_item(item, StringName(args[1]), price)

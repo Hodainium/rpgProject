@@ -166,6 +166,12 @@ class ReplayController:
 		if StringName(str(entry["actor"])) != unit.unit_id:
 			battle.reject("ActorMismatch", "log entry says %s, but it is %s's turn" % [entry["actor"], unit.unit_id])
 			return {}
+		# Spec item-pass 3.2: a One More turn must be logged as one, and only then.
+		if bool(entry.get("extra", false)) != battle.extra_action:
+			battle.reject("TurnMismatch", "log entry on turn %d %s a One More action, the simulation %s" % [battle.turn,
+				"claims" if bool(entry.get("extra", false)) else "doesn't claim",
+				"has one" if battle.extra_action else "has none"])
+			return {}
 		var target: Variant = entry.get("target")
 		return {"ability": StringName(str(entry["ability"])), "target": &"" if target == null else StringName(str(target))}
 

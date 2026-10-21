@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_3c6fk"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/banner.tres" id="2_uenr4"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_7d8e7"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_tch13"]
+
+[sub_resource type="Resource" id="Resource_gwltm"]
+script = ExtResource("3_7d8e7")
+effects = Array[ExtResource("1_3c6fk")]([ExtResource("2_uenr4")])
+
+[resource]
+script = ExtResource("4_tch13")
+id = &"fixture.equipment.helm"
+display_name = "Helm"
+description = "Fixture armor: helm."
+slot = &"Fixture.Equipment.Slot.Head"
+grants = SubResource("Resource_gwltm")
+tags = Array[StringName]([&"Fixture.Pool.Armory"])
+price = 2

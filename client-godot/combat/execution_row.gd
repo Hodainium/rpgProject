@@ -21,6 +21,8 @@ enum Targets {
 ## SetByCaller tags the damage ExecCalc reads (values stored ×100).
 const DAMAGE_FLAT_TAG: StringName = &"Data.Damage.Flat"
 const DAMAGE_MULTIPLIER_TAG: StringName = &"Data.Damage.Multiplier"
+## Spec item-pass 3.1: the toughness a weakness hit removes, read by the damage ExecCalc.
+const TOUGHNESS_TAG: StringName = &"Data.Toughness"
 
 ## Name the animation's execute keys refer to. Unique within the ability.
 @export var id: StringName = &""
@@ -48,18 +50,32 @@ const DAMAGE_MULTIPLIER_TAG: StringName = &"Data.Damage.Multiplier"
 		_warn_decimals("multiplier", typed)
 		multiplier_x100 = Fixed.from_typed(typed)
 
+## Toughness damage as typed (e.g. 30), dealt only by a hit on the target's weakness (spec item-pass 3.3).
+@export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR) var toughness: float:
+	get:
+		return Fixed.to_display(toughness_x100)
+	set(typed):
+		_warn_decimals("toughness", typed)
+		toughness_x100 = Fixed.from_typed(typed)
+
 ## Saved forms (×100 whole numbers).
 @export_storage var flat_damage_x100: int = 0
 @export_storage var multiplier_x100: int = 10000
+@export_storage var toughness_x100: int = 0
 
 
-## Puts this row's damage override on a spec through GodotGAS's SetByCaller mechanism.
+## Puts this row's damage override and toughness damage on a spec through GodotGAS's SetByCaller mechanism, and its
+## tags (damage types) on the spec as dynamic tags, so an ExecCalc can read them with spec.has_tag().
 func apply_override(spec: GameplayEffectSpec) -> void:
 	match damage_mode:
 		DamageMode.FLAT:
 			spec.set_set_by_caller_magnitude(DAMAGE_FLAT_TAG, float(flat_damage_x100))
 		DamageMode.SCALED:
 			spec.set_set_by_caller_magnitude(DAMAGE_MULTIPLIER_TAG, float(multiplier_x100))
+	if toughness_x100 > 0:
+		spec.set_set_by_caller_magnitude(TOUGHNESS_TAG, float(toughness_x100))
+	for tag in tags:
+		spec.inject_tag(tag)
 
 
 func _warn_decimals(field: String, typed: float) -> void:

@@ -15,6 +15,8 @@ enum UseMode { CONSUMABLE, COOLDOWN }
 
 @export var id: StringName = &""
 @export var display_name: String = ""
+## One line for the pickup and party panels (spec item-pass 3.5).
+@export_multiline var description: String = ""
 @export var icon: Texture2D
 @export var mesh: Mesh
 ## Pools (Pool.Treasure, Pool.Shop...) and rarity (Item.Rarity.Rare...).
