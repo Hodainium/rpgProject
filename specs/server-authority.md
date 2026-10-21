@@ -16,7 +16,7 @@ start and resume, the stairs, a won run's ending, and account actions (gacha, cu
 | Bucket | Meaning | What's in it |
 |---|---|---|
 | **Server-authoritative** | The server decides. The client asks and uses the answer; it can't change it. | Player identity (B); the run id; **every floor seed** (HMAC, issued at the stairs: A); which floor the run may be on (A); the **order** of a run's actions and what has been accepted (sequence numbers, B); run status (active, verifying, won, lost, abandoned; B); the **ruleset version** a run started under (A); later: verdicts (3, 4a), rewards and currency (4, 5), gacha (5) |
-| **Server-verified** | The client runs it locally (offline-first, instant); the server stores it and later re-runs it in headless Godot. A mismatch is a `Rejected` verdict with `errorCode` 2002, never an HTTP error. | Every in-floor action: entering rooms, event choices, pickups, purchases, field use, battles (start conditions, turns, result), taking the stairs (floor generation); the claimed state **snapshots** at checkpoints; the run's end. Floor maps, item pools, shop stock, coin drops, HP/MP/ult charge and run inventory are all derived from the floor seeds and the logged actions |
+| **Server-verified** | The client runs it locally (offline-first, instant); the server stores it and later re-runs it in headless Godot. A mismatch is a `Rejected` verdict with `errorCode` 2002, never an HTTP error. | Every in-floor action: entering rooms, event choices, pickups, purchases, field use, equipping armor, battles (start conditions, turns, result), taking the stairs (floor generation); the claimed state **snapshots** at checkpoints; the run's end. Floor maps, item pools, shop stock, coin drops, HP/MP/ult charge and run inventory are all derived from the floor seeds and the logged actions |
 | **Client-only** | Never trusted. | Animations, sounds, cues, camera, screen layout, Auto/Skip, menus, the map view, the content-root switch, dev tools and the console (disabled when connected), the **local save** (a cache of the server's log plus the not-yet-sent tail), the presence heartbeat (a hint for live monitoring, never used for decisions) |
 
 **Why verified and not computed by the server:** the game rules (floor generation, pools, shops, events, combat)
@@ -182,8 +182,11 @@ public sealed record RunActionRequest(int Seq, RunAction Action, string StateHas
 
 public sealed record RunAction(string Type, int Floor, int? Cell = null, int? Page = null, int? Choice = null,
     int? Placement = null, int? Slot = null, string? Ability = null, int? Target = null,
-    string? ItemId = null,                        // take / buy / field: the item involved
-    string? CharacterId = null,                   // take / buy: who received it; field: who acted
+    string? ItemId = null,                        // take / buy / field: the item involved (take / buy: or the armor piece)
+    ItemKind? Kind = null,                        // take / buy: Equipment for armor (goes to the armor inventory)
+    string? CharacterId = null,                   // take / buy: who received it (never for armor); field: who acted
+    string? EquipmentId = null,                   // equip: the piece taken from the armor inventory
+    string? EquipmentSlot = null,                 // unequip: the slot tag emptied (Equipment.Slot.<X>)
     int? Price = null,                            // buy: coins paid
     int? CoinsAfter = null,                       // every action: the run's coins afterwards
     IReadOnlyList<ItemOffer>? Offers = null,      // enter_room: every pickup on offer in that room
@@ -192,8 +195,10 @@ public sealed record RunAction(string Type, int Floor, int? Cell = null, int? Pa
 public sealed record BattleSubmission(string BattleId, BattleSnapshot Conditions, ActionLog ActionLog);
 
 /// One pickup on offer when a room is entered (analytics: what players are shown and what they pick up).
-public sealed record ItemOffer(int Placement, string ItemId, int Price, OfferSource Source);
+public sealed record ItemOffer(int Placement, string ItemId, int Price, OfferSource Source,
+    ItemKind Kind = ItemKind.Item);
 public enum OfferSource { Treasure, Shop, BossReward, Other }
+public enum ItemKind { Item, Equipment }          // spec item-pass: pedestals and shelves also offer armor
 
 public sealed record RunActionAck(int LastSeq);
 
@@ -247,7 +252,9 @@ general behaviour from the stored log without re-running the game. They are clai
 stored as sent, checked by replay, flagged unverified until then. `run_actions.action` keeps them in `jsonb`.
 
 `Type` values: `start_run` (seq 1, client-sent, carries the first snapshot), `enter_room`, `choose`, `take`, `buy`,
-`field`, `battle`, `next_floor`, `end` (Lost only; Won uses the end endpoint). All new records get golden JSON tests.
+`field`, `equip`, `unequip` (armor, spec item-pass: map only, `Slot` = the party member; async and server-verified
+like `field`), `battle`, `next_floor`, `end` (Lost only; Won uses the end endpoint). All new records get golden JSON
+tests.
 
 ### 3.2 Endpoints
 | Endpoint | Part | Auth | Success | Errors |
@@ -315,7 +322,8 @@ the same row. The seed column is parsed from the conditions for indexing and the
   mode: `RunSeeds.rng(floor_seed[n], "x")`. `FloorGenerator` takes the seed source instead of `run_seed`.
   `RunState.canonical_lines()` adds `floor_seed=<current floor's seed>` in server mode only; local mode is unchanged.
 - **RunSnapshot v1 (Part B).** `RunState.to_snapshot()` / `RunState.from_snapshot()` plus the controller's pending
-  battle and event directive: everything needed to continue a run, as a JSON dictionary with `schemaVersion: 1`.
+  battle and event directive: everything needed to continue a run (including the armor inventory, `RunState.armor`),
+  as a JSON dictionary with `schemaVersion: 1`.
   Requirements: (1) round trip: `from_snapshot(to_snapshot(s)).run_hash() == s.run_hash()`; (2) **resume
   equivalence**: a scripted run stopped at any checkpoint, saved, loaded and finished reaches the same final run hash
   as the uninterrupted run. That second property is what makes local saves, resume without a save, and 4a's parallel

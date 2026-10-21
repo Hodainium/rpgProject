@@ -175,8 +175,10 @@ game/tools/dev_run.tscn -- --script run.txt [--out state.json] [--content-root r
      --manual: the runner stops waiting when a party member waits, for `act`
   start a run with `new <ids> [seed]` (there are no --seed / --party options)
   → state.json (DevReport.state_of): {seed, seedDecimal, status, floor, chapter, cell, coins, party (read through
-     GAS: hp/mp/energy and maxima, items, use slots, equipment, skills), event, battle, dev, sandbox, runHash,
-     warnings, runnerError, commands: [{line, command, ok, reply}], failed: ["line n: ..."]}
+     GAS: hp/mp/energy and maxima, items, use slots, equipment, skills, gear), armor, event, battle, lastBattle,
+     dev, sandbox, runHash, warnings, runnerError, commands: [{line, command, ok, reply}], failed: ["line n: ..."]}
+     (spec item-pass: armor = the armor inventory; gear = every run slot and what fills it; lastBattle =
+     RunController.battle_log: hits with hit_tags, triggered activations, breaks, recoveries, One More actions)
   exit 0, 2 if a command failed, 1 tool error
   --window: runs with rendering (no --headless) so `shot <name>` saves the viewport to <shots>/<name>.png
 ```
@@ -260,7 +262,10 @@ func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply (may 
 | `map` | | Prints the floor as text: index, cell, role, room id, content, pickups, visited/cleared, ENTER where you can go |
 | `enter <cell>` | | `enter_room` (play command) |
 | `choose <choice>` | | Event choice, 0-based like everything in the console (play command) |
-| `take <placement> <slot>` | | Take or buy a pickup (play command) |
+| `take <placement> <slot>` | | Take or buy a pickup (play command; armor ignores `<slot>` and goes to the armor inventory) |
+| `wear <equipment> <slot>` | | Spec item-pass: equips a piece from the armor inventory on member `<slot>`, map only; the replaced piece goes back (play command, the party panel's Equip) |
+| `unwear <slot> <equipment slot tag>` | | Takes off what member `<slot>` wears in that slot (e.g. `Equipment.Slot.Head`), back to the armor inventory, map only (play command) |
+| `items [tag]` | | Lists every item and piece of equipment (id, kind or slot, pools, description), or only those carrying `<tag>` |
 | `use <slot> <ability> [target slot]` | | Field action (play command) |
 | `act <ability> [target]` / `auto [on\|off]` | | In battle: one party action, or Auto for the rest of the battle (play commands) |
 | `next` | | Next floor after the boss (play command) |
@@ -282,8 +287,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply (may 
 | `room <room>` | ✅ | Sandbox floor with that room (2.2) |
 | `layout <layout>` | ✅ | Sandbox floor from that layout |
 | `spawn <encounter>` | ✅ | Starts a battle with that encounter in the current room (like an event's `StartEncounter`; enemies resolved with the floor's scaling, elite rolls from `dev/<k>`) |
-| `spawn item <item> [price]` | ✅ | Adds a pickup to the current room (price 0 = free pedestal, else a shop slot), numbered from 1000 and added to the run's seen items. Taken with the normal Take/Buy, so pickup rules, `on_pickup` and the "give to" picker are the real ones. Usable after the room is cleared, like any pickup |
-| `spawn pool <tag> [price]` | ✅ | Same, with the item picked by weight from unlocked items carrying `<tag>` (same pick as a pedestal's `item_query`, on `dev/<k>`) |
+| `spawn item <item or equipment> [price]` | ✅ | Adds a pickup to the current room (price 0 = free pedestal, else a shop slot), numbered from 1000 and added to the run's seen items. Taken with the normal Take/Buy, so pickup rules, `on_pickup` and the "give to" picker are the real ones. Usable after the room is cleared, like any pickup |
+| `spawn pool <tag> [price]` | ✅ | Same, with the item picked by weight from unlocked items and equipment carrying `<tag>` (same pick as a pedestal's `item_query`, `FloorGenerator.pick_pickup`, on `dev/<k>`) |
 | `reveal` | ✅ | Sets `state.revealed`; `RunController` emits `map_revealed`; the map view shows every room |
 | `seeds` | | Opens the seed runner (so the user's menu needs no Dev button) |
 | `create <type> <id> [folder]` | | The dock's Create: a new asset from its template (refuses existing ids and files) |
@@ -393,6 +398,11 @@ content)` run the subsets the room grid and Play need. `report()` and `error_cou
 | `placement_outside` | error | A placement cell outside the 13 × 7 grid |
 | `placement_overlap` | error | Two placements on one cell |
 | `spawn_mismatch` | warning | A room with a fixed encounter has fewer enemy spawns than encounter slots; a room with an encounter has no player spawn |
+| `placement_both` | error | Spec item-pass: a placement with both a fixed `item` and a fixed `equipment` |
+| `bad_equipment` | error | Equipment with no `slot` |
+| `bad_equipment_slot` | error | Equipment whose slot is in no run structure's `equipment_slots` (checked when any run lists its slots) |
+| `no_description` | warning | An item (not tagged `Dev`) or piece of equipment with no `description` |
+| `trigger_unregistered` | warning | A triggered ability whose `trigger_event_tag` is in a battle event family (`Event.Damage.*`, `Event.Unit.*`, …) but not an event the battle sends (a typo such as `Event.Damage.Delt`) |
 | `placement_kind` | warning | A field that doesn't belong to the placement's kind: a `price` on anything but a shop slot, an item or item query on anything but a pedestal or shop slot, a loadout on anything but an enemy spawn |
 | `bad_layout` | error | Everything `FloorGenerator.check_layout` refuses: not connected, not exactly one start and one boss, outside the grid, doors don't fit |
 | `bad_event` | error | `GoToPage` out of range; a page with no choices |
@@ -493,7 +503,8 @@ All in the Godot suite (`tests/game/` unless noted), on `tests/fixtures/` only, 
 
 ### Fixtures
 - **Broken content root** `tests/broken_fixtures/` (frozen, built by `tests/tools/build_broken_fixtures.tscn`): one file per
-  validator code, each named after it (`rooms/doors_unsatisfiable.tres`, …). Separate root, because `ContentIndex`
+  validator code, each named after it (`rooms/doors_unsatisfiable.tres`, …). Since spec item-pass both fixture builders
+  only add missing files (existing ones keep their bytes and uids) unless run with `-- --rebuild`. Separate root, because `ContentIndex`
   scans `tests/fixtures/` recursively and must keep seeing valid content.
 - Nothing is added to `tests/fixtures/` that a fixture chapter's queries could match, so no existing golden changes.
 

@@ -109,7 +109,7 @@ sub-resource created in place in the inspector (one-off). Godot supports both on
 | `EnemyDefinition extends UnitDefinition` | `variants: Array[EnemyVariant]` (which elite variants this enemy can roll) |
 | `Loadout` | **A starting kit, never the current inventory.** `id`, `skills: Array[PackedScene]`, `items: Array[ItemDefinition]`, `equipment: Array[EquipmentDefinition]`, `stats` (typed overrides, ×100; **enemies only**: a character's stats live on its definition so they can always be re-derived) |
 | `EnemyVariant` | `id`, `display_name`, `grants: AbilitySet`, `display_color`, `coin_bonus` |
-| `EquipmentDefinition` | `id`, `display_name`, `icon`, `slot: StringName` (a tag such as `Equipment.Slot.Weapon`; one item per slot), `grants: AbilitySet` |
+| `EquipmentDefinition` | `id`, `display_name`, `icon`, `slot: StringName` (a tag such as `Equipment.Slot.Weapon`; one item per slot), `grants: AbilitySet`; pickup fields (spec item-pass): `description`, `mesh`, `tags` (pools, rarity), `weight`, `price` |
 | `EncounterDefinition` (exists, changed) | add `display_name`, `tags`, `weight`; `enemies` becomes `slots: Array[EncounterSlot]` |
 | `EncounterSlot` | `enemy: UnitDefinition`, `loadout: Loadout` (optional override, asset or inline), `variant: EnemyVariant` (optional: forces this variant) |
 
@@ -131,18 +131,18 @@ permanent stat change must be an item or equipment, never a raw number.
 | Class | Fields |
 |---|---|
 | `RoomDefinition` | `id`, `display_name`, `tags` (room type + chapters), `doors` (flags N/E/S/W that *may* have a door), `min_doors` (1 = can be a dead end), `weight`, `content_mode` (`NONE`, `ENCOUNTER`, `ENCOUNTER_QUERY`, `EVENT`, `EVENT_QUERY`), `encounter`, `event`, `content_query` (empty = the chapter's query), `placements: Array[RoomPlacement]` |
-| `RoomPlacement` | `cell: Vector2i` (13 × 7 room grid), `kind` (`PLAYER_SPAWN`, `ENEMY_SPAWN`, `EVENT_PROP`, `ITEM_PEDESTAL`, `SHOP_SLOT`), `slot` (party slot or encounter slot, 1-based), `loadout` (enemy spawns: optional override), `item` (fixed item) or `item_query` (pool), `price` (shop slots: optional override; −1 = the item's price) |
+| `RoomPlacement` | `cell: Vector2i` (13 × 7 room grid), `kind` (`PLAYER_SPAWN`, `ENEMY_SPAWN`, `EVENT_PROP`, `ITEM_PEDESTAL`, `SHOP_SLOT`), `slot` (party slot or encounter slot, 1-based), `loadout` (enemy spawns: optional override), `item` (fixed item) or `equipment` (fixed armor piece, spec item-pass; never both) or `item_query` (pool of items and equipment), `price` (shop slots: optional override; −1 = the item's price) |
 | `ChapterDefinition` | `id`, `display_name`, `tags`, `room_query`, `encounter_query`, `boss_encounter_query`, `event_query`, `floor_gen_rules`, `scaling: ScalingRules` |
 | `ScalingRules` | `id`, `enemy_effects_by_depth: Array[GameplayEffect]` (index = depth; past the end the last one applies; empty = none), `elite_chance` (%), `coin_drop_chance` (%), `coin_drop_min`, `coin_drop_max` |
 | `FloorGenRules` | `grid_size` (default 9×8), `base_rooms`, `rooms_per_depth`, `random_extra_rooms`, `max_rooms`, `branch_chance` (%, default 50), `max_attempts` (default 100), `start_room_tag`, `normal_room_tag`, `boss_room_tag`, `special_room_tags` (one dead end each: e.g. treasure, shop) |
-| `RunStructure` | `id`, `display_name`, `floors: Array[FloorSlot]`, `fallback_item: ItemDefinition` (when a pool is empty) |
+| `RunStructure` | `id`, `display_name`, `floors: Array[FloorSlot]`, `fallback_item: ItemDefinition` (when a pool is empty), `equipment_slots: Array[StringName]` (the run's slot tags in display order, spec item-pass) |
 | `FloorSlot` | `chapters` (one picked per run), `rooms_from_any_chapter` (Delirium-style), `layout: FloorLayout` (optional hand-made floor) |
 | `FloorLayout` / `FloorLayoutCell` | `id`, `display_name`, `grid_size`, `cells`: `{cell, room, role (NORMAL, START, BOSS, SPECIAL), encounter / event overrides}`; the start is the cell with role `START` |
 
 **Items**
 | Class | Fields |
 |---|---|
-| `ItemDefinition` | `id`, `display_name`, `icon: Texture2D`, `mesh: Mesh`, `tags` (pools such as `Pool.Treasure`, rarity such as `Item.Rarity.Rare`), `weight`, `price`, `kind` (`PASSIVE`, `USABLE`), `grants: AbilitySet` + `applies_to` (`HOLDER` or `PARTY`), `use_ability: PackedScene` (`USABLE` only: a `BattleAbility`, so its targeting decides one, several or blast), `use_mode` (`CONSUMABLE`: gone after one use; `COOLDOWN`: ready again after `cooldown_battles` won battles), `extra_use_slots` (e.g. 1 for a Schoolbag-like item), `on_pickup`, `on_floor_start`, `on_room_cleared: Array[RunOutcome]` |
+| `ItemDefinition` | `id`, `display_name`, `description` (spec item-pass), `icon: Texture2D`, `mesh: Mesh`, `tags` (pools such as `Pool.Treasure`, rarity such as `Item.Rarity.Rare`), `weight`, `price`, `kind` (`PASSIVE`, `USABLE`), `grants: AbilitySet` + `applies_to` (`HOLDER` or `PARTY`), `use_ability: PackedScene` (`USABLE` only: a `BattleAbility`, so its targeting decides one, several or blast), `use_mode` (`CONSUMABLE`: gone after one use; `COOLDOWN`: ready again after `cooldown_battles` won battles), `extra_use_slots` (e.g. 1 for a Schoolbag-like item), `on_pickup`, `on_floor_start`, `on_room_cleared: Array[RunOutcome]` |
 
 **Holding items:** every item is held by one character. Passive items are unlimited; usable items need a free use
 slot (one per character, plus any `extra_use_slots` from items they hold). Taking an item asks which character gets
@@ -156,7 +156,7 @@ in battle and on the map. **Unlocks:** `Unlocks.is_unlocked(item)` is a stub tha
 |---|---|
 | `EventDefinition` / `EventPage` / `EventChoice` | `id`, `display_name`, `tags`, `weight`, `pages` (page 0 first); page `text`, `choices`; choice `label`, `conditions`, `outcomes` |
 | `RunCondition` (base, `holds(run)`) | `CoinsAtLeast(amount)`, `HasCharacter(character)`, `HasItem(item)`. Content can add subclasses, as with ExecCalcs. |
-| `RunOutcome` (base, `apply(run)`) | `GainCoins`, `LoseCoins` (never below 0), `ApplyPartyEffect(effect, include_dead)` (a GameplayEffect on party members through the field context: heals, damage, MP, ult charge, revives), `GiveItem(item or item_query, character)`, `RemoveItem(item)`, `GiveEquipment(equipment, character)`, `GoToPage(index)`, `StartEncounter(encounter)`, `EndEvent`. Content can add subclasses. |
+| `RunOutcome` (base, `apply(run)`) | `GainCoins`, `LoseCoins` (never below 0), `ApplyPartyEffect(effect, include_dead)` (a GameplayEffect on party members through the field context: heals, damage, MP, ult charge, revives), `GiveItem(item or item_query, character)` (items only), `RemoveItem(item)` (empty inside an item's own hook: that item), `GiveEquipment(equipment, character)` (a replaced piece goes to the armor inventory), `GoToPage(index)`, `StartEncounter(encounter)`, `EndEvent`. Content can add subclasses. |
 
 Content folders under the content root (subfolders allowed): `units/`, `characters/`, `enemies/`, `loadouts/`,
 `variants/`, `equipment/`, `items/`, `encounters/`, `events/`, `rooms/`, `chapters/`, `scaling/`, `floor_rules/`,
@@ -186,6 +186,9 @@ Cells are visited in **index order** (`y × width + x`) wherever order matters.
    picked from the enemy's `variants` (a slot's fixed `variant` always applies). Loadouts resolved by precedence (3.1).
 7. **Pickups** per cell with the room's loot stream: each `ITEM_PEDESTAL` / `SHOP_SLOT` resolves its item: fixed, or
    picked by weight from items matching `item_query` and unlocked, excluding items held or already placed this run.
+   Since spec item-pass the pool also holds equipment matching the query (`FloorGenerator.pick_pickup`: items, then
+   equipment, by id; held or worn armor excluded; equipment with no pool tags is never offered). An armor pickup
+   carries `kind: "equipment"`; item pickups are unchanged.
    Empty pool → `fallback_item`.
 
 A hand-made `FloorLayout` skips steps 1–5 (checked on load: connected, in the grid, one start, one boss).
@@ -291,13 +294,13 @@ system-design pass (slice 2b).
 ### 3.6 Run state, run log, run hash, system tags
 - `RunState`: `run_id`, `run_seed`, `run_structure_id`, `party` (slot → `{character id, level, hp, mp, energy, alive,
   skills, passive items, use slots with cooldowns, equipment by slot}`, seeded from the default loadout at run start),
-  `coins`, `seen_items`,
+  `coins`, `seen_items`, `armor` (the run's armor inventory, spec item-pass),
   `floor_index`, `chapter_id`, `map` (cells with resolved content, `visited`, `cleared`, pickups taken),
   `field_actions_on_floor`, `gifts_on_floor`, `event` (the open event's cell and page), `status`.
 - `RunLog` (`RunController.run_log`) entries in order: `start_run`, `enter_room`, `battle` (with the slice 1
-  `ActionLog`), `choose`, `take`, `buy`, `field`, `next_floor`, `end`.
+  `ActionLog`), `choose`, `take`, `buy`, `field`, `equip`, `unequip` (spec item-pass), `next_floor`, `end`.
 - Run hash: `RunState.run_hash()`, canonical `key=value` lines → SHA-256, like state hash v1. For determinism tests only;
-  not a wire format yet.
+  not a wire format yet. An `armor=` line appears only when the armor inventory isn't empty, so older run hashes hold.
 - **System tags the code uses** (you add them to your registry when you want them in the picker; the code doesn't need
   the registry): `State.Infield`, `State.Dead`, `Event.Battle.Start`, `Event.Turn.Start`, `Event.Turn.End`, `Event.Damage.Dealt`,
   `Event.Damage.Taken`, `Event.Unit.Died`, `Event.Ability.Used` (added 2026-10-19, see decision 15), and the prefix `Damage.Type.`.

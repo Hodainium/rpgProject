@@ -85,8 +85,13 @@ In slice 3 the verifier worker wraps this command; nothing here knows about Rabb
   11. `turn >= TURN_LIMIT` (1000) without an end → `TurnLimit`. A safety stop for the verifier, not a balance value.
 - **SPD changes mid-cycle** (a buff or debuff on `SPD`): the turn manager listens to `attribute_changed` and rescales the
   remaining distance: `av = av * old_spd / new_spd` (integer division). SPD below 1 is a content error.
-- Out of scope, but the log schema leaves room for them: action advance/delay, extra turns, ultimates that interrupt
-  the order, multiple enemy waves. Adding any of them bumps `schemaVersion`.
+- **Action delay and extra actions (spec item-pass):** a toughness break delays the broken unit by `BREAK_DELAY`
+  (25% of its full `av`, `TurnManager.delay`). The party unit whose action broke a unit is queued in
+  `Battle.one_more_queue`; the loop runs that queue before step 1, so a **One More** is an extra action with its own
+  `turn += 1` but no turn start (4), no turn end (6), no `av` change (9). Its log entry carries `"extra": true` and is
+  checked like any party action (10). An optional field absent from old logs, so `schemaVersion` stays 1.
+- Out of scope, but the log schema leaves room for them: action advance, ultimates that interrupt the order (slice
+  1c4), multiple enemy waves. Adding any of them bumps `schemaVersion` unless, like `extra`, it is an optional field.
 
 ### Effect timing: `CombatASC`
 GodotGAS's `advance_turn()` ticks DoTs and counts down every turn-based effect in one call. To get "DoTs at turn start,
@@ -275,7 +280,8 @@ public sealed record ActionEntry(
     string Actor,                            // "P1".."P4"
     string Ability,                          // the BattleAbility's ability_tag
     string? Target,                          // primary target unit id ("E1", "P2"), null for SELF/ALL_*
-    string Checkpoint);                      // state hash at the end of this turn
+    string Checkpoint,                       // state hash at the end of this turn
+    bool? Extra = null);                     // true for a One More (spec item-pass); omitted otherwise
 
 public sealed record ReplayRequest(BattleSnapshot Snapshot, ActionLog ActionLog);
 
@@ -297,7 +303,8 @@ public enum ReplayVerdict { Verified, Rejected }
 public enum BattleOutcome { Victory, Defeat, TurnLimit }
 public enum MismatchReason
 {
-    TurnMismatch,        // next entry's turn != the simulated turn of the next party action
+    TurnMismatch,        // next entry's turn != the simulated turn of the next party action, or its `extra` flag
+                         // differs from whether a One More is due there
     ActorMismatch,       // entry's actor isn't the unit whose turn it is
     IllegalAbility,      // not granted to that unit, or can_activate_ability is false (cost, cooldown, tags)
     InvalidTarget,       // missing, dead, wrong side, or not allowed for the ability's targeting
@@ -325,7 +332,10 @@ unit=<id>|alive=<0|1>|av=<int>             # units sorted by id
 attr=<id>|<name>|<base>|<current>          # per unit, attributes sorted by name
 tag=<id>|<tag>|<count>                     # per unit, active tags sorted
 effect=<id>|<resource_path>|<remaining_turns>|<stack_count>|<suppressed 0|1>   # per unit, sorted
+extra=<id>,<id>                            # owed One More actions in queue order; only while the queue isn't empty
 ```
+- The `extra=` line (spec item-pass) appears only while a One More is owed, so battles without breaks hash exactly as
+  before and the format stays `hash-v1`. Toughness is an attribute and `State.Broken` a tag, both already hashed.
 - **Whole numbers only.** Values are hashed as stored (hundredths). Each attribute value must be integral (after the
   `CombatASC` snap) and within ±2^53; otherwise it's a runner error (`NonIntegerAttribute`), because a fraction means
   some math escaped the fixed-point rules.
@@ -423,6 +433,7 @@ runs every `test_*` method, prints results and exits non-zero on any failure. No
 | `squad-seed-42.json` / `.result.json` | AoE, buffs, DoT ticks, SPD change, deaths mid-battle |
 | `squad-seed-42-tampered-target.json` / `.result.json` | Expected rejection, reason and turn |
 | `hash-v1-sample.txt` / `.sha256` | Canonical text and hash for the hasher-only test |
+| `break-seed-11.json` / `.result.json` | Spec item-pass: weakness hits, breaks, delay, recovery and a One More chain (entries with `extra`) |
 
 Each golden request is replayed in a **fresh** headless process by the test runner and must produce its `.result.json`
 byte for byte (except `engineVersion`, which is checked separately against the pinned build).

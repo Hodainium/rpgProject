@@ -10,7 +10,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1. `combat-replay-core` | ✅ Done | 2026-10-19 |
 | 1b. `game-skeleton` | ✅ Done | 2026-10-19 |
 | 1c. `dev-tools` | ✅ Done (spec synced; remaining work listed in `specs/dev-tools.md`) | 2026-10-20 |
-| 1c2. `item-pass` | 📝 Spec written (`specs/item-pass.md`) | 2026-10-20 |
+| 1c2. `item-pass` | ✅ Done (spec synced; known test gaps listed in `specs/item-pass.md` 6) | 2026-10-20 |
 | 1c3. `animation-sets` | ⬜ Not started | |
 | 1c4. `ult-interrupts` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
@@ -84,6 +84,7 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-10-20: 1c2 `item-pass` grew: hit tags (crit, weakness, break, follow-up), HSR toughness and break with a
   Persona-style One More, armor slots with an armor inventory. Added 1c4 `ult-interrupts` (ults at any time, HSR) as
   its own later slice. At the user's request.
+- 2026-10-20: 1c2 `item-pass` done: 35 new items and 10 armor pieces in the demo, both suites green, spec synced.
 
 
 ## Design tuning: any time, not just in breaks
