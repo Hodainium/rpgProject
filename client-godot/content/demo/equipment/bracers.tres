@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_tf06f"]
+[ext_resource type="Resource" path="res://content/demo/effects/bracers.tres" id="2_esxn2"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ws7rv"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_f0hm6"]
+
+[sub_resource type="Resource" id="Resource_dk4hs"]
+script = ExtResource("3_ws7rv")
+effects = Array[ExtResource("1_tf06f")]([ExtResource("2_esxn2")])
+
+[resource]
+script = ExtResource("4_f0hm6")
+id = &"demo.equipment.bracers"
+display_name = "Bracers"
+description = "+8% ATK."
+slot = &"Equipment.Slot.Arms"
+grants = SubResource("Resource_dk4hs")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 6

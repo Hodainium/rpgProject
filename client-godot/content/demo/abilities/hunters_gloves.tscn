@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_hv052"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ltesd"]
+[ext_resource type="Resource" path="res://content/demo/effects/gloves_charge.tres" id="3_mpg4a"]
+[ext_resource type="Animation" path="res://content/demo/animations/hunters_gloves.tres" id="4_8pevl"]
+
+[sub_resource type="Resource" id="Resource_1n4s6"]
+script = ExtResource("2_ltesd")
+id = &"charge"
+effect = ExtResource("3_mpg4a")
+
+[node name="HuntersGloves" type="Node" unique_id=691302225]
+script = ExtResource("1_hv052")
+targeting = 5
+executions = Array[ExtResource("2_ltesd")]([SubResource("Resource_1n4s6")])
+animation = ExtResource("4_8pevl")
+ability_tag = &"Ability.Passive.Huntersgloves"
+trigger_event_tag = &"Event.Damage.Dealt.Weakness"

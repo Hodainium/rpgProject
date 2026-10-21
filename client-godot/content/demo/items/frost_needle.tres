@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/frost_needle.tscn" id="1_4fysh"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_qgav0"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_3ab1j"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_qv2n8"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_xnk2d"]
+
+[sub_resource type="Resource" id="Resource_fl073"]
+script = ExtResource("3_3ab1j")
+abilities = Array[PackedScene]([ExtResource("1_4fysh")])
+
+[resource]
+script = ExtResource("5_xnk2d")
+id = &"demo.item.frost_needle"
+display_name = "Frost Needle"
+description = "Physical damage also deals 30 Ice damage."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+price = 6
+grants = SubResource("Resource_fl073")

@@ -8,6 +8,7 @@
 [sub_resource type="Resource" id="Resource_fwiiy"]
 script = ExtResource("3_jhck1")
 effects = Array[ExtResource("1_h7fb6")]([ExtResource("2_l6083")])
+tags = Array[StringName]([&"Weakness.Ice"])
 
 [resource]
 script = ExtResource("4_we8d5")

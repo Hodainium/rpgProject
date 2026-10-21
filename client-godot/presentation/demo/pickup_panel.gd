@@ -31,11 +31,15 @@ func _refresh() -> void:
 	for pickup in data["pickups"]:
 		if pickup["taken"]:
 			continue
+		if pickup.get("kind", "") == FloorGenerator.EQUIPMENT_KIND:
+			_armor_row(run, pickup)
+			continue
 		var item: ItemDefinition = run.content.items.get(pickup["item"])
 		if item == null:
 			continue
 		visible = true
 		var row := HBoxContainer.new()
+		row.tooltip_text = item.description
 		if item.icon != null:
 			var icon := TextureRect.new()
 			icon.texture = item.icon
@@ -45,6 +49,8 @@ func _refresh() -> void:
 		var label := Label.new()
 		label.text = "%s%s%s" % [item.display_name, " (use)" if item.is_usable() else "",
 			"  %d coins" % pickup["price"] if pickup["price"] > 0 else ""]
+		label.tooltip_text = item.description
+		label.mouse_filter = Control.MOUSE_FILTER_PASS
 		label.size_flags_horizontal = SIZE_EXPAND_FILL
 		row.add_child(label)
 		var picker := OptionButton.new()
@@ -61,8 +67,29 @@ func _refresh() -> void:
 		_rows.add_child(row)
 
 
+## Armor (spec item-pass 3.5): always taken into the armor inventory, so no "give to" picker; shows its slot.
+func _armor_row(run: RunController, pickup: Dictionary) -> void:
+	var piece: EquipmentDefinition = run.content.equipment.get(pickup["item"])
+	if piece == null:
+		return
+	visible = true
+	var row := HBoxContainer.new()
+	var label := Label.new()
+	label.text = "%s (%s)%s" % [piece.display_name, String(piece.slot).get_slice(".", 2),
+		"  %d coins" % pickup["price"] if pickup["price"] > 0 else ""]
+	label.tooltip_text = piece.description
+	label.mouse_filter = Control.MOUSE_FILTER_PASS
+	label.size_flags_horizontal = SIZE_EXPAND_FILL
+	row.add_child(label)
+	var take := Button.new()
+	take.text = "Buy" if pickup["price"] > 0 else "Take"
+	take.pressed.connect(_take.bind(pickup["placement"], null))
+	row.add_child(take)
+	_rows.add_child(row)
+
+
 func _take(placement: int, picker: OptionButton) -> void:
-	var problem := _main.run.take(placement, picker.get_item_id(picker.selected))
+	var problem := _main.run.take(placement, picker.get_item_id(picker.selected) if picker != null else 0)
 	if problem != "":
 		_main.show_message(problem)
 	get_tree().call_group("sound_board", "play", "Refused" if problem != "" else "Item")

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_jk64i"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_t1641"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_1scc4"]
+
+[resource]
+script = ExtResource("3_1scc4")
+policy = 3
+duration_turns = 2
+granted_tags = Array[StringName]([&"Weakness.Physical", &"Status.Debuff.Exposed"])

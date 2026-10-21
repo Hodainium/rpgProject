@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/executioners_seal.tscn" id="1_xnl7v"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_duxed"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_xjxrh"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_oeh6q"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_4erwv"]
+
+[sub_resource type="Resource" id="Resource_tbtd1"]
+script = ExtResource("3_xjxrh")
+abilities = Array[PackedScene]([ExtResource("1_xnl7v")])
+
+[resource]
+script = ExtResource("5_4erwv")
+id = &"demo.item.executioners_seal"
+display_name = "Executioner's Seal"
+description = "Critical hits trigger a follow-up: 50% ATK Physical."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Rare"])
+price = 10
+grants = SubResource("Resource_tbtd1")

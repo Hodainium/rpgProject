@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/vampire_fang.tscn" id="1_ptor1"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_7sfqb"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_vo0rk"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_6ovh5"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_oxswc"]
+
+[sub_resource type="Resource" id="Resource_4nxgq"]
+script = ExtResource("3_vo0rk")
+abilities = Array[PackedScene]([ExtResource("1_ptor1")])
+
+[resource]
+script = ExtResource("5_oxswc")
+id = &"demo.item.vampire_fang"
+display_name = "Vampire Fang"
+description = "Heal 15 HP whenever you deal damage."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 8
+grants = SubResource("Resource_4nxgq")

@@ -11,6 +11,7 @@ id = &"hit"
 effect = ExtResource("3_308ie")
 damage_mode = 2
 tags = Array[StringName]([&"Damage.Type.Physical"])
+toughness_x100 = 3000
 
 [node name="Strike" type="Node" unique_id=2029591556]
 script = ExtResource("1_efcy5")

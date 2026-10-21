@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_4g8d0"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_c1dt7"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/fire_bomb.tscn" id="3_pyw06"]
+
+[resource]
+script = ExtResource("2_c1dt7")
+id = &"demo.item.fire_bomb"
+display_name = "Fire Bomb"
+description = "Blast: 300 Fire damage (breaks Slimes)."
+tags = Array[StringName]([&"Pool.Shop", &"Item.Rarity.Common"])
+price = 4
+kind = 1
+use_ability = ExtResource("3_pyw06")

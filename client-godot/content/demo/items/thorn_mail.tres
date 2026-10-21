@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/thorn_mail.tscn" id="1_u8r3r"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_071mc"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ikpg6"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_r4do2"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_ck8w3"]
+
+[sub_resource type="Resource" id="Resource_xf30s"]
+script = ExtResource("3_ikpg6")
+abilities = Array[PackedScene]([ExtResource("1_u8r3r")])
+
+[resource]
+script = ExtResource("5_ck8w3")
+id = &"demo.item.thorn_mail"
+display_name = "Thorn Mail"
+description = "When hit, strike back for 60 Physical damage."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 8
+grants = SubResource("Resource_xf30s")

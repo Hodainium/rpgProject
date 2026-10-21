@@ -13,7 +13,7 @@ attribute_set = ExtResource("3_1to3b")
 abilities = Array[PackedScene]([ExtResource("1_nh0lt"), ExtResource("2_buk2u")])
 display_name = "Golem"
 display_color = Color(0.54509807, 0.27058825, 0.07450981, 1)
-tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Golem"])
+tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Golem", &"Weakness.Physical"])
 stats_x100 = Dictionary[String, int]({
 "atk": 32000,
 "crit_dmg": 5000,
@@ -21,6 +21,8 @@ stats_x100 = Dictionary[String, int]({
 "def": 30000,
 "hp": 200000,
 "max_hp": 200000,
+"max_toughness": 12000,
 "spd": 8000,
-"toughness": 30000
+"toughness": 12000,
+"weakness_dmg": 12500
 })

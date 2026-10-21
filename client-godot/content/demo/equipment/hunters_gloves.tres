@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hunters_gloves.tscn" id="1_dllt0"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_jlj1g"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_s4buf"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_oy0t0"]
+
+[sub_resource type="Resource" id="Resource_d6u5d"]
+script = ExtResource("3_s4buf")
+abilities = Array[PackedScene]([ExtResource("1_dllt0")])
+
+[resource]
+script = ExtResource("4_oy0t0")
+id = &"demo.equipment.hunters_gloves"
+display_name = "Hunter's Gloves"
+description = "Hitting a weakness gives +10 ult charge."
+slot = &"Equipment.Slot.Arms"
+grants = SubResource("Resource_d6u5d")
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 8

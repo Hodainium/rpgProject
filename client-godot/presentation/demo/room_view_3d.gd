@@ -90,8 +90,10 @@ func _build() -> void:
 				for pickup in data["pickups"]:
 					if pickup["placement"] == number + 1 and not pickup["taken"]:
 						var item: ItemDefinition = run.content.items.get(pickup["item"])
+						var piece: EquipmentDefinition = run.content.equipment.get(pickup["item"])  # armor (item-pass)
 						var price := " (%d)" % pickup["price"] if pickup["price"] > 0 else ""
-						_prop(placement.cell, Color.GOLD, (item.display_name if item != null else "?") + price, item)
+						var title := item.display_name if item != null else (piece.display_name if piece != null else "?")
+						_prop(placement.cell, Color.GOLD if piece == null else Color.SILVER, title + price, item)
 
 
 func _on_battle_started(battle: Battle) -> void:

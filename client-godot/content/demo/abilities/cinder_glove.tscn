@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_0w02i"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_jtuio"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="3_mm7d4"]
+[ext_resource type="Animation" path="res://content/demo/animations/cinder_glove.tres" id="4_oju2t"]
+
+[sub_resource type="Resource" id="Resource_pnkcg"]
+script = ExtResource("2_jtuio")
+id = &"ignite"
+effect = ExtResource("3_mm7d4")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 4000
+
+[node name="CinderGlove" type="Node" unique_id=2000430624]
+script = ExtResource("1_0w02i")
+executions = Array[ExtResource("2_jtuio")]([SubResource("Resource_pnkcg")])
+animation = ExtResource("4_oju2t")
+ability_tag = &"Ability.Passive.Cinderglove"
+trigger_event_tag = &"Event.Damage.Dealt.Fire"

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_0cxed"]
+[ext_resource type="Resource" path="res://content/demo/effects/swift_charm.tres" id="2_54aie"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_fefi3"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_gwpoa"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_7pje3"]
+
+[sub_resource type="Resource" id="Resource_4cefy"]
+script = ExtResource("3_fefi3")
+effects = Array[ExtResource("1_0cxed")]([ExtResource("2_54aie")])
+
+[resource]
+script = ExtResource("5_7pje3")
+id = &"demo.item.swift_charm"
+display_name = "Swift Charm"
+description = "+12 SPD."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 6
+grants = SubResource("Resource_4cefy")

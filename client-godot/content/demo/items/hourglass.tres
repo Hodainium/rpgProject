@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hourglass.tscn" id="1_7v0na"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_pyiov"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_1aesf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_18i4j"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_w2hen"]
+
+[sub_resource type="Resource" id="Resource_xi7cv"]
+script = ExtResource("3_1aesf")
+abilities = Array[PackedScene]([ExtResource("1_7v0na")])
+
+[resource]
+script = ExtResource("5_w2hen")
+id = &"demo.item.hourglass"
+display_name = "Hourglass"
+description = "Heal 5% of max HP at the start of each of your turns."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 8
+grants = SubResource("Resource_xi7cv")

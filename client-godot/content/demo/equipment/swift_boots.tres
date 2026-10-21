@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_m7v4l"]
+[ext_resource type="Resource" path="res://content/demo/effects/swift_boots.tres" id="2_dsdv3"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_jensp"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_qjsic"]
+
+[sub_resource type="Resource" id="Resource_mds0n"]
+script = ExtResource("3_jensp")
+effects = Array[ExtResource("1_m7v4l")]([ExtResource("2_dsdv3")])
+
+[resource]
+script = ExtResource("4_qjsic")
+id = &"demo.equipment.swift_boots"
+display_name = "Swift Boots"
+description = "+10 SPD."
+slot = &"Equipment.Slot.Legs"
+grants = SubResource("Resource_mds0n")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 6

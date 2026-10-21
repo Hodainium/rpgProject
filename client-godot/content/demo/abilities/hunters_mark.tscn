@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ah5sy"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_4jfba"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_vpqi7"]
+[ext_resource type="Animation" path="res://content/demo/animations/hunters_mark.tres" id="4_cqpqg"]
+
+[sub_resource type="Resource" id="Resource_07ldq"]
+script = ExtResource("2_4jfba")
+id = &"shot"
+effect = ExtResource("3_vpqi7")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 4000
+
+[node name="HuntersMark" type="Node" unique_id=63570924]
+script = ExtResource("1_ah5sy")
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+executions = Array[ExtResource("2_4jfba")]([SubResource("Resource_07ldq")])
+animation = ExtResource("4_cqpqg")
+ability_tag = &"Ability.Passive.Huntersmark"
+trigger_event_tag = &"Event.Damage.Dealt.Weakness"

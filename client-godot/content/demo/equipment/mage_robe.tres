@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_aa25q"]
+[ext_resource type="Resource" path="res://content/demo/effects/mage_robe.tres" id="2_0mesy"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_uiuwe"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_qdvs1"]
+
+[sub_resource type="Resource" id="Resource_ibx1d"]
+script = ExtResource("3_uiuwe")
+effects = Array[ExtResource("1_aa25q")]([ExtResource("2_0mesy")])
+
+[resource]
+script = ExtResource("4_qdvs1")
+id = &"demo.equipment.mage_robe"
+display_name = "Mage Robe"
+description = "+50 max MP, +5% ATK."
+slot = &"Equipment.Slot.Body"
+grants = SubResource("Resource_ibx1d")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 6

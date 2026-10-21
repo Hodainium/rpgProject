@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_3c1ia"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_0fbkv"]
+[ext_resource type="Resource" path="res://content/demo/effects/bounty_reward.tres" id="3_k7o6u"]
+[ext_resource type="Animation" path="res://content/demo/animations/bounty_mark.tres" id="4_4a6ch"]
+
+[sub_resource type="Resource" id="Resource_kdrw7"]
+script = ExtResource("2_0fbkv")
+id = &"bounty"
+effect = ExtResource("3_k7o6u")
+
+[node name="BountyMark" type="Node" unique_id=867523241]
+script = ExtResource("1_3c1ia")
+targeting = 5
+executions = Array[ExtResource("2_0fbkv")]([SubResource("Resource_kdrw7")])
+animation = ExtResource("4_4a6ch")
+ability_tag = &"Ability.Passive.Bountymark"
+trigger_event_tag = &"Event.Unit.Killed"

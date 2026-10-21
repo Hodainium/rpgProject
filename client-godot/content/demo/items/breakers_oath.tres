@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/breakers_oath.tscn" id="1_agk15"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_t8qju"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_etlf8"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_a05s1"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_wd611"]
+
+[sub_resource type="Resource" id="Resource_iqpi5"]
+script = ExtResource("3_etlf8")
+abilities = Array[PackedScene]([ExtResource("1_agk15")])
+
+[resource]
+script = ExtResource("5_wd611")
+id = &"demo.item.breakers_oath"
+display_name = "Breaker's Oath"
+description = "Breaking an enemy: +20 ult charge and +15% ATK for 2 turns."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Rare"])
+price = 9
+grants = SubResource("Resource_iqpi5")

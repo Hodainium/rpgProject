@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ember_pendant.tscn" id="1_er8qn"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_3xb4w"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_6lsv0"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_mblmw"]
+
+[sub_resource type="Resource" id="Resource_5iu0k"]
+script = ExtResource("3_6lsv0")
+abilities = Array[PackedScene]([ExtResource("1_er8qn")])
+
+[resource]
+script = ExtResource("4_mblmw")
+id = &"demo.equipment.ember_pendant"
+display_name = "Ember Pendant"
+description = "Fire damage makes the target weak to Fire for 1 turn."
+slot = &"Equipment.Slot.Accessory"
+grants = SubResource("Resource_5iu0k")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Rare"])
+price = 10

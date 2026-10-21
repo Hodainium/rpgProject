@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_6pulb"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_ewomb"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ether.tscn" id="3_no4je"]
+
+[resource]
+script = ExtResource("2_ewomb")
+id = &"demo.item.ether"
+display_name = "Ether"
+description = "One ally regains 60 MP. Ready again after 3 won battles."
+tags = Array[StringName]([&"Pool.Shop", &"Item.Rarity.Common"])
+price = 5
+kind = 1
+use_ability = ExtResource("3_no4je")
+use_mode = 1
+cooldown_battles = 3

@@ -12,6 +12,7 @@ effect = ExtResource("3_tct2h")
 damage_mode = 1
 tags = Array[StringName]([&"Damage.Type.Fire"])
 flat_damage_x100 = 6000
+toughness_x100 = 1500
 
 [node name="FrostEmber" type="Node" unique_id=165250761]
 script = ExtResource("1_75l4e")

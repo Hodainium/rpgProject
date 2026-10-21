@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_hsnix"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_dc333"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/analyzer_lens.tscn" id="3_841ge"]
+
+[resource]
+script = ExtResource("2_dc333")
+id = &"demo.item.analyzer_lens"
+display_name = "Analyzer Lens"
+description = "An enemy becomes weak to Physical for 2 turns. Ready again after 2 won battles."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+price = 8
+kind = 1
+use_ability = ExtResource("3_841ge")
+use_mode = 1
+cooldown_battles = 2

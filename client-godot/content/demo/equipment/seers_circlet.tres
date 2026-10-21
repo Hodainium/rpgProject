@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_sx3s3"]
+[ext_resource type="Resource" path="res://content/demo/effects/seers_circlet.tres" id="2_8j64w"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_s7cig"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_41sid"]
+
+[sub_resource type="Resource" id="Resource_6sdsc"]
+script = ExtResource("3_s7cig")
+effects = Array[ExtResource("1_sx3s3")]([ExtResource("2_8j64w")])
+
+[resource]
+script = ExtResource("4_41sid")
+id = &"demo.equipment.seers_circlet"
+display_name = "Seer's Circlet"
+description = "+5% crit rate, +20 max MP."
+slot = &"Equipment.Slot.Head"
+grants = SubResource("Resource_6sdsc")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+price = 8

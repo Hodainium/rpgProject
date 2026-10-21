@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_jbl07"]
+[ext_resource type="Resource" path="res://content/demo/effects/guardian_totem.tres" id="2_gng1y"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_3n3lc"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_h3gyn"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_knxm0"]
+
+[sub_resource type="Resource" id="Resource_8abxc"]
+script = ExtResource("3_3n3lc")
+effects = Array[ExtResource("1_jbl07")]([ExtResource("2_gng1y")])
+
+[resource]
+script = ExtResource("5_knxm0")
+id = &"demo.item.guardian_totem"
+display_name = "Guardian Totem"
+description = "The whole party: +25 DEF."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Rare"])
+price = 9
+grants = SubResource("Resource_8abxc")
+applies_to = 1

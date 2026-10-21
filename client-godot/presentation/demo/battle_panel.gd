@@ -61,8 +61,22 @@ func _on_battle_started(battle: Battle) -> void:
 	_battle = battle
 	battle.execution_resolved.connect(func(_u, _r, _t): _refresh_stats())
 	battle.turn_started.connect(func(_u, _t): _refresh_stats())
+	# Spec item-pass: hit marks (crit / weak / break), Broken and recovery, One More.
+	battle.damage_dealt.connect(_on_damage_dealt)
+	battle.unit_broken.connect(func(unit_id, _by): _main.show_message("%s is BROKEN!" % _name(_battle.unit_by_id(unit_id))))
+	battle.unit_recovered.connect(func(_u): _refresh_stats())
+	battle.one_more_started.connect(func(unit_id): _main.show_message("ONE MORE! %s acts again" % _name(_battle.unit_by_id(unit_id))))
 	_refresh_stats()
 	_update_visible()
+
+
+func _on_damage_dealt(_source: StringName, target_id: StringName, amount: int, hit_tags: Array[StringName]) -> void:
+	var marks := PackedStringArray()
+	for tag in [&"Hit.Critical", &"Hit.Weakness", &"Hit.FollowUp"]:
+		if hit_tags.has(tag):
+			marks.append(String(tag).get_slice(".", 1).to_upper())
+	if not marks.is_empty():
+		_turn.text = "%s  %d  %s" % [_name(_battle.unit_by_id(target_id)), amount / 100, " ".join(marks)]
 
 
 func _on_battle_finished(outcome: String) -> void:
@@ -150,10 +164,31 @@ func _refresh_stats() -> void:
 			line += "  MP %d" % (unit.stat(BattleUnit.MP) / 100)
 		if unit.asc.has_attribute(BattleUnit.ENERGY):
 			line += "  Ult %d" % (unit.stat(BattleUnit.ENERGY) / 100)
+		line += _toughness_text(unit)
 		if not unit.alive:
 			line += "  (dead)"
 		lines.append(line)
 	_stats.text = "\n".join(lines)
+
+
+## Toughness bar (hidden when max_toughness is 0), BROKEN, and the unit's current weaknesses (read from its tags, so a
+## timed weakness shows and vanishes): "  [####--] 40/60  weak Fire".
+func _toughness_text(unit: BattleUnit) -> String:
+	var text := ""
+	var maximum := unit.stat(Battle.MAX_TOUGHNESS)
+	if maximum > 0:
+		var filled := unit.stat(Battle.TOUGHNESS) * 6 / maximum
+		text += "  [%s%s] %d/%d" % ["#".repeat(filled), "-".repeat(6 - filled), unit.stat(Battle.TOUGHNESS) / 100, maximum / 100]
+	if unit.asc.has_tag_exact(Battle.BROKEN_TAG):
+		text += "  BROKEN"
+	var weak := PackedStringArray()
+	for tag in unit.asc._active_tags:
+		if String(tag).begins_with("Weakness."):
+			weak.append(String(tag).get_slice(".", 1))
+	weak.sort()
+	if not weak.is_empty():
+		text += "  weak " + ", ".join(weak)
+	return text
 
 
 func _clear_actions() -> void:

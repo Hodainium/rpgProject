@@ -34,7 +34,8 @@ stats_x100 = Dictionary[String, int]({
 "hp": 80000,
 "max_hp": 80000,
 "max_mp": 10000,
+"max_toughness": 0,
 "mp": 10000,
 "spd": 11000,
-"toughness": 30000
+"toughness": 0
 })

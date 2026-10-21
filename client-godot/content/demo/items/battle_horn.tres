@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/battle_horn.tscn" id="1_yo53r"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_v3pt5"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_a2s2e"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_3gp2b"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_wxd5w"]
+
+[sub_resource type="Resource" id="Resource_j7n05"]
+script = ExtResource("3_a2s2e")
+abilities = Array[PackedScene]([ExtResource("1_yo53r")])
+
+[resource]
+script = ExtResource("5_wxd5w")
+id = &"demo.item.battle_horn"
+display_name = "Battle Horn"
+description = "Start every battle with +30 ult charge."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 6
+grants = SubResource("Resource_j7n05")

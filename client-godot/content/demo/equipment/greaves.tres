@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_v8khc"]
+[ext_resource type="Resource" path="res://content/demo/effects/greaves.tres" id="2_b2wee"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_67st0"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_xbpat"]
+
+[sub_resource type="Resource" id="Resource_s3cvc"]
+script = ExtResource("3_67st0")
+effects = Array[ExtResource("1_v8khc")]([ExtResource("2_b2wee")])
+
+[resource]
+script = ExtResource("4_xbpat")
+id = &"demo.equipment.greaves"
+display_name = "Greaves"
+description = "+50 DEF, but −4 SPD."
+slot = &"Equipment.Slot.Legs"
+grants = SubResource("Resource_s3cvc")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 5

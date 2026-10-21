@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_qubkh"]
+[ext_resource type="Resource" path="res://content/demo/effects/war_drum.tres" id="2_lvsqj"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_sdyka"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_68hvp"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_7amtw"]
+
+[sub_resource type="Resource" id="Resource_ynyvq"]
+script = ExtResource("3_sdyka")
+effects = Array[ExtResource("1_qubkh")]([ExtResource("2_lvsqj")])
+
+[resource]
+script = ExtResource("5_7amtw")
+id = &"demo.item.war_drum"
+display_name = "War Drum"
+description = "The whole party: +6 SPD."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Rare"])
+price = 9
+grants = SubResource("Resource_ynyvq")
+applies_to = 1

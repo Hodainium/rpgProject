@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_oujww"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_io3rx"]
+[ext_resource type="Resource" path="res://content/demo/effects/exposed_physical.tres" id="3_s75qq"]
+[ext_resource type="Animation" path="res://content/demo/animations/analyzer_lens.tres" id="4_lxrbs"]
+
+[sub_resource type="Resource" id="Resource_hrrdd"]
+script = ExtResource("2_io3rx")
+id = &"expose"
+effect = ExtResource("3_s75qq")
+
+[node name="AnalyzerLens" type="Node" unique_id=1294661078]
+script = ExtResource("1_oujww")
+executions = Array[ExtResource("2_io3rx")]([SubResource("Resource_hrrdd")])
+animation = ExtResource("4_lxrbs")
+ability_tag = &"Ability.Item.Analyzer"

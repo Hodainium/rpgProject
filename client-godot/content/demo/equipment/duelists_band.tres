@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/duelists_band.tscn" id="1_j2lek"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_ufuo4"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_g6dsl"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_60kic"]
+
+[sub_resource type="Resource" id="Resource_1gov6"]
+script = ExtResource("3_g6dsl")
+abilities = Array[PackedScene]([ExtResource("1_j2lek")])
+
+[resource]
+script = ExtResource("4_60kic")
+id = &"demo.equipment.duelists_band"
+display_name = "Duelist's Band"
+description = "Critical hits trigger a follow-up: 30% ATK Physical."
+slot = &"Equipment.Slot.Accessory"
+grants = SubResource("Resource_1gov6")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Rare"])
+price = 10

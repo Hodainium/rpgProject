@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_fkfu2"]
+[ext_resource type="Resource" path="res://content/demo/effects/predators_fang.tres" id="2_8uu66"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_kvgqq"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_58c4i"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_wqf0y"]
+
+[sub_resource type="Resource" id="Resource_0mldd"]
+script = ExtResource("3_kvgqq")
+effects = Array[ExtResource("1_fkfu2")]([ExtResource("2_8uu66")])
+
+[resource]
+script = ExtResource("5_wqf0y")
+id = &"demo.item.predators_fang"
+display_name = "Predator's Fang"
+description = "+25% damage to Broken enemies."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 9
+grants = SubResource("Resource_0mldd")

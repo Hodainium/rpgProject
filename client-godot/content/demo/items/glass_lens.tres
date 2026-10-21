@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_l5lue"]
+[ext_resource type="Resource" path="res://content/demo/effects/glass_lens.tres" id="2_7esoc"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_hdw1x"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_am4g6"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_mi2bg"]
+
+[sub_resource type="Resource" id="Resource_wb4r8"]
+script = ExtResource("3_hdw1x")
+effects = Array[ExtResource("1_l5lue")]([ExtResource("2_7esoc")])
+
+[resource]
+script = ExtResource("5_mi2bg")
+id = &"demo.item.glass_lens"
+display_name = "Glass Lens"
+description = "+40% crit damage, but −150 max HP."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 7
+grants = SubResource("Resource_wb4r8")

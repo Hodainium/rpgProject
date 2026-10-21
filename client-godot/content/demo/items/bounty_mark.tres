@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bounty_mark.tscn" id="1_k4jhg"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_jfplv"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ndc3o"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_gqrvs"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_xmkpo"]
+
+[sub_resource type="Resource" id="Resource_7onhj"]
+script = ExtResource("3_ndc3o")
+abilities = Array[PackedScene]([ExtResource("1_k4jhg")])
+
+[resource]
+script = ExtResource("5_xmkpo")
+id = &"demo.item.bounty_mark"
+display_name = "Bounty Mark"
+description = "On a kill: +20 ult charge and heal 50 HP."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Rare"])
+price = 9
+grants = SubResource("Resource_7onhj")

@@ -16,3 +16,4 @@ id = &"demo.run.one_floor"
 display_name = "Demo run"
 floors = Array[ExtResource("2_aj63a")]([SubResource("Resource_651wr")])
 fallback_item = ExtResource("1_6uu8e")
+equipment_slots = Array[StringName]([&"Equipment.Slot.Weapon", &"Equipment.Slot.Head", &"Equipment.Slot.Body", &"Equipment.Slot.Arms", &"Equipment.Slot.Legs", &"Equipment.Slot.Accessory"])

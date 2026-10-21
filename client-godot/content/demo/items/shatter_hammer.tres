@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_e27f0"]
+[ext_resource type="Resource" path="res://content/demo/effects/shatter_hammer.tres" id="2_bnn7k"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_hfuuy"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_8ybxq"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_6mbo1"]
+
+[sub_resource type="Resource" id="Resource_7yn37"]
+script = ExtResource("3_hfuuy")
+effects = Array[ExtResource("1_e27f0")]([ExtResource("2_bnn7k")])
+
+[resource]
+script = ExtResource("5_6mbo1")
+id = &"demo.item.shatter_hammer"
+display_name = "Shatter Hammer"
+description = "+50% toughness damage."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 8
+grants = SubResource("Resource_7yn37")

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/momentum_charm.tscn" id="1_4yght"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_vxmlu"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_cqvg4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_nd6sa"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_f7qfp"]
+
+[sub_resource type="Resource" id="Resource_ctndt"]
+script = ExtResource("3_cqvg4")
+abilities = Array[PackedScene]([ExtResource("1_4yght")])
+
+[resource]
+script = ExtResource("5_f7qfp")
+id = &"demo.item.momentum_charm"
+display_name = "Momentum Charm"
+description = "Each follow-up attack gives +10 ult charge."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+price = 6
+grants = SubResource("Resource_ctndt")

@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_baipq"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_awpcg"]
+[ext_resource type="Resource" path="res://content/demo/effects/breakers_charge.tres" id="3_wb01e"]
+[ext_resource type="Resource" path="res://content/demo/effects/breakers_fury.tres" id="4_thei3"]
+[ext_resource type="Animation" path="res://content/demo/animations/breakers_oath.tres" id="5_wulr1"]
+
+[sub_resource type="Resource" id="Resource_y2ey2"]
+script = ExtResource("2_awpcg")
+id = &"charge"
+effect = ExtResource("3_wb01e")
+
+[sub_resource type="Resource" id="Resource_uw2xl"]
+script = ExtResource("2_awpcg")
+id = &"fury"
+effect = ExtResource("4_thei3")
+
+[node name="BreakersOath" type="Node" unique_id=1167110986]
+script = ExtResource("1_baipq")
+targeting = 5
+executions = Array[ExtResource("2_awpcg")]([SubResource("Resource_y2ey2"), SubResource("Resource_uw2xl")])
+animation = ExtResource("5_wulr1")
+ability_tag = &"Ability.Passive.Breakersoath"
+trigger_event_tag = &"Event.Damage.Dealt.Break"

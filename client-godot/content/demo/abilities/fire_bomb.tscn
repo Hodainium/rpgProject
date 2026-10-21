@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_lnmv2"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_hua3l"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_sg7pt"]
+[ext_resource type="Animation" path="res://content/demo/animations/fire_bomb.tres" id="4_htgqg"]
+
+[sub_resource type="Resource" id="Resource_7tmok"]
+script = ExtResource("2_hua3l")
+id = &"blast"
+effect = ExtResource("3_sg7pt")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 30000
+toughness_x100 = 6000
+
+[node name="FireBomb" type="Node" unique_id=573795906]
+script = ExtResource("1_lnmv2")
+targeting = 2
+executions = Array[ExtResource("2_hua3l")]([SubResource("Resource_7tmok")])
+animation = ExtResource("4_htgqg")
+ability_tag = &"Ability.Item.Firebomb"

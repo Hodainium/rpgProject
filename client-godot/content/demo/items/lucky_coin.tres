@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_wr43p"]
+[ext_resource type="Resource" path="res://content/demo/effects/lucky_coin.tres" id="2_yhvma"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_vkilm"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_h4hts"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_4l3xs"]
+
+[sub_resource type="Resource" id="Resource_sx71u"]
+script = ExtResource("3_vkilm")
+effects = Array[ExtResource("1_wr43p")]([ExtResource("2_yhvma")])
+
+[resource]
+script = ExtResource("5_4l3xs")
+id = &"demo.item.lucky_coin"
+display_name = "Lucky Coin"
+description = "+10% crit rate."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+price = 5
+grants = SubResource("Resource_sx71u")

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_4ndlj"]
+[ext_resource type="Resource" path="res://content/demo/effects/chain_vest.tres" id="2_ceyvd"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_sw3ga"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_acyim"]
+
+[sub_resource type="Resource" id="Resource_varcp"]
+script = ExtResource("3_sw3ga")
+effects = Array[ExtResource("1_4ndlj")]([ExtResource("2_ceyvd")])
+
+[resource]
+script = ExtResource("4_acyim")
+id = &"demo.equipment.chain_vest"
+display_name = "Chain Vest"
+description = "+60 DEF."
+slot = &"Equipment.Slot.Body"
+grants = SubResource("Resource_varcp")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 6

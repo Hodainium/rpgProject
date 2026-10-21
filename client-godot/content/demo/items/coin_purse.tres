@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_iw0lw"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="2_c8eo1"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="3_fw7r3"]
+
+[sub_resource type="Resource" id="Resource_87lxd"]
+script = ExtResource("2_c8eo1")
+
+[resource]
+script = ExtResource("3_fw7r3")
+id = &"demo.item.coin_purse"
+display_name = "Coin Purse"
+description = "+1 coin for every room you clear."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 5
+on_room_cleared = Array[ExtResource("1_iw0lw")]([SubResource("Resource_87lxd")])

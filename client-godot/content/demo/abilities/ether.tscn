@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_tnn31"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_n4xbg"]
+[ext_resource type="Resource" path="res://content/demo/effects/ether_mp.tres" id="3_np1ar"]
+[ext_resource type="Animation" path="res://content/demo/animations/ether.tres" id="4_mjsuk"]
+
+[sub_resource type="Resource" id="Resource_av4hw"]
+script = ExtResource("2_n4xbg")
+id = &"restore"
+effect = ExtResource("3_np1ar")
+
+[node name="Ether" type="Node" unique_id=78327595]
+script = ExtResource("1_tnn31")
+targeting = 3
+executions = Array[ExtResource("2_n4xbg")]([SubResource("Resource_av4hw")])
+animation = ExtResource("4_mjsuk")
+ability_tag = &"Ability.Item.Ether"

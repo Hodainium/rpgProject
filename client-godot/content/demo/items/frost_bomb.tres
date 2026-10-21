@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_d66ap"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_dqr3d"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/frost_bomb.tscn" id="3_6r06o"]
+
+[resource]
+script = ExtResource("2_dqr3d")
+id = &"demo.item.frost_bomb"
+display_name = "Frost Bomb"
+description = "Blast: 250 Ice damage (breaks Bats)."
+tags = Array[StringName]([&"Pool.Shop", &"Item.Rarity.Common"])
+price = 4
+kind = 1
+use_ability = ExtResource("3_6r06o")

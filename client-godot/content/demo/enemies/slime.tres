@@ -15,7 +15,7 @@ attribute_set = ExtResource("2_oqr2d")
 abilities = Array[PackedScene]([ExtResource("1_uh5gb")])
 display_name = "Slime"
 display_color = Color(0.19607843, 0.8039216, 0.19607843, 1)
-tags = Array[StringName]([&"Enemy.Type.Slime"])
+tags = Array[StringName]([&"Enemy.Type.Slime", &"Weakness.Fire"])
 default_loadout = ExtResource("3_5tc3g")
 stats_x100 = Dictionary[String, int]({
 "atk": 20000,
@@ -24,6 +24,8 @@ stats_x100 = Dictionary[String, int]({
 "def": 10000,
 "hp": 40000,
 "max_hp": 40000,
+"max_toughness": 6000,
 "spd": 9000,
-"toughness": 30000
+"toughness": 6000,
+"weakness_dmg": 15000
 })

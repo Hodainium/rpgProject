@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_5dtp8"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_sdh07"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_nkl8g"]
+[ext_resource type="Animation" path="res://content/demo/animations/thorn_mail.tres" id="4_ugc8d"]
+
+[sub_resource type="Resource" id="Resource_8opvq"]
+script = ExtResource("2_sdh07")
+id = &"thorns"
+effect = ExtResource("3_nkl8g")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Physical"])
+flat_damage_x100 = 6000
+
+[node name="ThornMail" type="Node" unique_id=239862101]
+script = ExtResource("1_5dtp8")
+executions = Array[ExtResource("2_sdh07")]([SubResource("Resource_8opvq")])
+animation = ExtResource("4_ugc8d")
+ability_tag = &"Ability.Passive.Thornmail"
+trigger_event_tag = &"Event.Damage.Taken"

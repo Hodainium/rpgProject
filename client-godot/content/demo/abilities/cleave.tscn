@@ -13,6 +13,7 @@ effect = ExtResource("3_qjktu")
 damage_mode = 2
 tags = Array[StringName]([&"Damage.Type.Physical"])
 multiplier_x100 = 20000
+toughness_x100 = 9000
 
 [node name="Cleave" type="Node" unique_id=389555525]
 script = ExtResource("1_q6ee8")

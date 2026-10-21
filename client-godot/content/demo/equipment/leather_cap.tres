@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_b6qcf"]
+[ext_resource type="Resource" path="res://content/demo/effects/leather_cap.tres" id="2_80tur"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_pwwa5"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_iodu5"]
+
+[sub_resource type="Resource" id="Resource_3yj0n"]
+script = ExtResource("3_pwwa5")
+effects = Array[ExtResource("1_b6qcf")]([ExtResource("2_80tur")])
+
+[resource]
+script = ExtResource("4_iodu5")
+id = &"demo.equipment.leather_cap"
+display_name = "Leather Cap"
+description = "+20 DEF, +100 max HP."
+slot = &"Equipment.Slot.Head"
+grants = SubResource("Resource_3yj0n")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 5

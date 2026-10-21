@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_wh6ox"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_qx3cn"]
+[ext_resource type="Resource" path="res://content/demo/effects/glass_heart_heal.tres" id="3_ipbwx"]
+[ext_resource type="Animation" path="res://content/demo/animations/glass_heart.tres" id="4_opijl"]
+
+[sub_resource type="Resource" id="Resource_udci5"]
+script = ExtResource("2_qx3cn")
+id = &"mend"
+effect = ExtResource("3_ipbwx")
+
+[node name="GlassHeart" type="Node" unique_id=1722946196]
+script = ExtResource("1_wh6ox")
+targeting = 5
+executions = Array[ExtResource("2_qx3cn")]([SubResource("Resource_udci5")])
+animation = ExtResource("4_opijl")
+ability_tag = &"Ability.Passive.Glassheart"
+trigger_event_tag = &"Event.Damage.Taken.Critical"

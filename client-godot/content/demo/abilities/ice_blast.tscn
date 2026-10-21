@@ -14,6 +14,7 @@ damage_mode = 2
 targets = 1
 tags = Array[StringName]([&"Damage.Type.Ice"])
 multiplier_x100 = 12000
+toughness_x100 = 6000
 
 [sub_resource type="Resource" id="Resource_0kopl"]
 script = ExtResource("2_bu8aa")
