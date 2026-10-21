@@ -28,10 +28,19 @@ Number notation: values are written as designers type them, with up to 2 decimal
 | weakness_dmg (%) | see draft | 0 | – |
 | toughness_dmg (%) | 0 | 0 | – |
 | broken_dmg (%) | 0 | 0 | – |
+| dmg_mult (%) | 100 | 0 | – |
+| dmg_taken (%) | 100 | 0 | – |
+| def_pen (%) | 0 | 0 | 100 |
+| heal_mult (%) | 100 | 0 | – |
+| heal_taken (%) | 100 | 0 | – |
+| energy_regen (%) | 100 | 0 | – |
 
 Names are snake_case, as the GodotGAS dashboard writes them; it generates the `x ≤ max_x` clamps itself (2026-10-19).
 The last three (spec item-pass) are the weakness damage a unit takes, and an attacker's bonus toughness damage and
 bonus damage against Broken targets; defaults live in `godot_gas/attributes_draft.cfg`, per-enemy values in its stats.
+The six multipliers after them (2026-10-20) let items, variants and buffs scale final damage dealt and taken, ignore
+DEF, and scale healing given and received and ult charge gained. They default to 100% (`def_pen` 0%), so content
+uses MULTIPLY for "×1.5" and ADD for "+20%". Mins and the `def_pen` cap are applied by the ExecCalcs.
 
 ## Gameplay tags
 - Abilities: `Ability.Basic.Slash`, `Ability.Skill.Starfall`, `Ability.Ultimate.NovaBurst`
@@ -48,7 +57,8 @@ Written in designer terms; the implementation does the same math on the ×100 wh
 `SkillMultiplier` (%) or a flat amount comes from the ability's execution-table row (`SCALED` / `FLAT`).
 ```text
 BaseDmg        = Attacker.atk × SkillMultiplier%          # or the row's flat damage
-DefMultiplier% = 100 − (Target.def × 100) / (Target.def + 1000)
+Def            = Target.def × (100 − min(Attacker.def_pen, 100))%
+DefMultiplier% = 100 − (Def × 100) / (Def + 1000)
 RawDmg         = BaseDmg × DefMultiplier%
 if row has Damage.Type.<X> and Target has Weakness.<X>:          # spec item-pass
     RawDmg = RawDmg × Target.weakness_dmg%;  hit tag Hit.Weakness
@@ -58,7 +68,13 @@ if Target is Broken:
     RawDmg = RawDmg × (100 + Attacker.broken_dmg)%
 if Roll() < Attacker.crit_rate%:                                  # one roll per hit, as before
     RawDmg = RawDmg × (100 + Attacker.crit_dmg)%;  hit tag Hit.Critical
+RawDmg = RawDmg × Attacker.dmg_mult% × Target.dmg_taken%
 ```
+
+## Heals and ult charge
+Flat heals and charge gains go through `ExecCalc_Restore` (`content/demo/exec_calcs/exec_calc_restore.gd`):
+`amount × Source.heal_mult% × Target.heal_taken%` for HP, `amount × Target.energy_regen%` for ult charge. Percent
+heals (`ExecCalc_PercentOfMax`) take the same heal multipliers. Ult costs and revives are not scaled.
 Example: ATK 500, SkillMultiplier 150, target DEF 300 → BaseDmg 750, DefMultiplier 76.93% (the DEF part,
 23.0769%, truncates to 23.07%), RawDmg 576.97; on a crit with CritDmg 50 → 865.45.
 
