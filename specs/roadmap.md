@@ -11,7 +11,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1b. `game-skeleton` | ✅ Done | 2026-10-19 |
 | 1c. `dev-tools` | ✅ Done (spec synced; remaining work listed in `specs/dev-tools.md`) | 2026-10-20 |
 | 1c2. `item-pass` | ✅ Done (spec synced; known test gaps listed in `specs/item-pass.md` 6) | 2026-10-20 |
-| 1c3. `animation-sets` | ⬜ Not started | |
+| 1c3. `animation-sets` | 📝 Spec written (awaiting review) | 2026-10-20 |
 | 1c4. `ult-interrupts` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
