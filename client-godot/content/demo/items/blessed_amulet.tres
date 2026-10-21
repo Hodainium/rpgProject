@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_eff"]
+[ext_resource type="Resource" path="res://content/demo/effects/blessed_amulet.tres" id="2_stat"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_set"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="4_item"]
+
+[sub_resource type="Resource" id="Resource_grants"]
+script = ExtResource("3_set")
+effects = Array[ExtResource("1_eff")]([ExtResource("2_stat")])
+
+[resource]
+script = ExtResource("4_item")
+id = &"demo.item.blessed_amulet"
+display_name = "Blessed Amulet"
+description = "+25% healing received."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 5
+grants = SubResource("Resource_grants")

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="EnemyVariant" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_eff"]
+[ext_resource type="Resource" path="res://content/demo/effects/variant_berserk.tres" id="2_berserk"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_set"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="4_var"]
+
+[sub_resource type="Resource" id="Resource_grants"]
+script = ExtResource("3_set")
+effects = Array[ExtResource("1_eff")]([ExtResource("2_berserk")])
+
+[resource]
+script = ExtResource("4_var")
+id = &"demo.variant.berserk"
+display_name = "Berserk"
+grants = SubResource("Resource_grants")
+display_color = Color(0.9, 0.15, 0.15, 1)
+coin_bonus = 2

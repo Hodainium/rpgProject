@@ -5,9 +5,13 @@
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_1to3b"]
 [ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="4_hwwiu"]
 [ext_resource type="Script" path="res://combat/enemy_variant.gd" id="5_fjat6"]
+[ext_resource type="Resource" path="res://content/demo/variants/giant.tres" id="6_giant"]
+[ext_resource type="Resource" path="res://content/demo/variants/berserk.tres" id="7_berserk"]
+[ext_resource type="Resource" path="res://content/demo/variants/swift.tres" id="8_swift"]
 
 [resource]
 script = ExtResource("4_hwwiu")
+variants = Array[ExtResource("5_fjat6")]([ExtResource("6_giant"), ExtResource("7_berserk"), ExtResource("8_swift")])
 id = &"demo.enemy.golem"
 attribute_set = ExtResource("3_1to3b")
 abilities = Array[PackedScene]([ExtResource("1_nh0lt"), ExtResource("2_buk2u")])

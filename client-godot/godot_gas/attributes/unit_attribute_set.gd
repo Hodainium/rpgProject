@@ -23,6 +23,12 @@ var max_toughness: AttributeData = AttributeData.new(30000.0)
 var weakness_dmg: AttributeData = AttributeData.new(15000.0)
 var toughness_dmg: AttributeData = AttributeData.new(0.0)
 var broken_dmg: AttributeData = AttributeData.new(0.0)
+var dmg_mult: AttributeData = AttributeData.new(10000.0)
+var dmg_taken: AttributeData = AttributeData.new(10000.0)
+var def_pen: AttributeData = AttributeData.new(0.0)
+var heal_mult: AttributeData = AttributeData.new(10000.0)
+var heal_taken: AttributeData = AttributeData.new(10000.0)
+var energy_regen: AttributeData = AttributeData.new(10000.0)
 
 
 ## The safety pipeline: Clamps stats before they are officially changed.

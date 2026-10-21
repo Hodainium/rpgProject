@@ -2,14 +2,15 @@
 
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_bev6t"]
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_gsrxv"]
-[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_br015"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_restore.gd" id="3_br015"]
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_kltns"]
 
 [sub_resource type="Resource" id="Resource_tx81b"]
 script = ExtResource("3_br015")
-value_x100 = 6000
-attribute_name = "hp"
+amount_x100 = 6000
+source_bonus = "heal_mult"
+target_bonus = "heal_taken"
 
 [resource]
 script = ExtResource("4_kltns")
-modifiers = Array[ExtResource("2_gsrxv")]([SubResource("Resource_tx81b")])
+executions = Array[ExtResource("1_bev6t")]([SubResource("Resource_tx81b")])

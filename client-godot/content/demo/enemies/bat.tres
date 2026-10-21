@@ -5,10 +5,13 @@
 [ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="3_i52vf"]
 [ext_resource type="Script" path="res://combat/enemy_variant.gd" id="4_3cngg"]
 [ext_resource type="Resource" path="res://content/demo/variants/elite.tres" id="5_kfc82"]
+[ext_resource type="Resource" path="res://content/demo/variants/giant.tres" id="6_giant"]
+[ext_resource type="Resource" path="res://content/demo/variants/berserk.tres" id="7_berserk"]
+[ext_resource type="Resource" path="res://content/demo/variants/swift.tres" id="8_swift"]
 
 [resource]
 script = ExtResource("3_i52vf")
-variants = Array[ExtResource("4_3cngg")]([ExtResource("5_kfc82")])
+variants = Array[ExtResource("4_3cngg")]([ExtResource("5_kfc82"), ExtResource("6_giant"), ExtResource("7_berserk"), ExtResource("8_swift")])
 id = &"demo.enemy.bat"
 attribute_set = ExtResource("2_brqa1")
 abilities = Array[PackedScene]([ExtResource("1_516rm")])

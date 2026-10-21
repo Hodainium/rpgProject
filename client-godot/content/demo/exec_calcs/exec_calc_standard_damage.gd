@@ -1,12 +1,14 @@
 ## ExecCalc_StandardDamage (specs/design/combat-design.md) on x100 whole numbers, truncating toward zero:
 ##
 ##   BaseDmg        = atk x SkillMultiplier%   (the execution row's SCALED multiplier; default 100%)  or the row's FLAT damage
+##   def            = target.def x (100% - source.def_pen)   (def_pen capped at 100%)
 ##   DefMultiplier% = 100% - def x 100% / (def + 1000)
 ##   RawDmg         = BaseDmg x DefMultiplier%
 ##   weakness: the row's Damage.Type.<X> and the target's Weakness.<X>  ->  RawDmg x target.weakness_dmg, a weakness hit,
 ##             and unless the target is Broken: toughness -= row toughness x (100% + source.toughness_dmg)
 ##   broken: target is State.Broken  ->  RawDmg x (100% + source.broken_dmg)
 ##   crit: rng.randi_range(0, 9999) < crit_rate  ->  RawDmg x (100% + crit_dmg), a critical hit
+##   final: RawDmg x source.dmg_mult x target.dmg_taken   (both 100% by default, never below 0%)
 ##
 ## One RNG roll per hit, from the battle's seeded RNG. Weakness, toughness and Broken use no RNG.
 ## Hit tags (spec item-pass): the ExecCalc marks the hit, the battle turns each mark into Event.Damage.Dealt/Taken.<X>.
@@ -26,6 +28,7 @@ func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Di
 	var source := BattleContext.source_asc(spec)
 	var atk := int(source.get_attribute("atk").current_value)
 	var def := int(target_asc.get_attribute("def").current_value)
+	def = Fixed.pct(def, Fixed.ONE_HUNDRED_PERCENT - mini(_stat(source, "def_pen", 0), Fixed.ONE_HUNDRED_PERCENT))
 	var crit_rate := int(source.get_attribute("crit_rate").current_value)
 	var crit_dmg := int(source.get_attribute("crit_dmg").current_value)
 
@@ -52,6 +55,8 @@ func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Di
 	if BattleContext.rng_for(target_asc).randi_range(0, 9999) < crit_rate:
 		damage = Fixed.pct(damage, Fixed.ONE_HUNDRED_PERCENT + crit_dmg)
 		spec.inject_tag(critical_hit_tag)
+	damage = Fixed.pct(damage, maxi(_stat(source, "dmg_mult", Fixed.ONE_HUNDRED_PERCENT), 0))
+	damage = Fixed.pct(damage, maxi(_stat(target_asc, "dmg_taken", Fixed.ONE_HUNDRED_PERCENT), 0))
 	result["hp"] = float(-damage)
 	return result
 

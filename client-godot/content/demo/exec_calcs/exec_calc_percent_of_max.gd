@@ -15,10 +15,14 @@ extends GameplayExecutionCalculation
 		percent_x100 = Fixed.from_typed(typed)
 
 @export_storage var percent_x100: int = 0
+## Optional multiplier attributes, as in ExecCalcRestore (heals: "heal_mult" / "heal_taken"; "" = none).
+@export var source_bonus: String = ""
+@export var target_bonus: String = ""
 
 
-func execute(_spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Dictionary:
+func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Dictionary:
 	var maximum := target_asc.get_attribute(max_attribute)
 	if maximum == null or not target_asc.has_attribute(attribute):
 		return {}
-	return {attribute: float(Fixed.pct(int(maximum.current_value), percent_x100))}
+	var restored := Fixed.pct(int(maximum.current_value), percent_x100)
+	return {attribute: float(ExecCalcRestore.scaled(restored, spec, target_asc, source_bonus, target_bonus))}

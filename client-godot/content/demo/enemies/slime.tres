@@ -6,10 +6,13 @@
 [ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="4_lrcye"]
 [ext_resource type="Script" path="res://combat/enemy_variant.gd" id="5_34ibf"]
 [ext_resource type="Resource" path="res://content/demo/variants/elite.tres" id="6_qmabn"]
+[ext_resource type="Resource" path="res://content/demo/variants/giant.tres" id="7_giant"]
+[ext_resource type="Resource" path="res://content/demo/variants/berserk.tres" id="8_berserk"]
+[ext_resource type="Resource" path="res://content/demo/variants/swift.tres" id="9_swift"]
 
 [resource]
 script = ExtResource("4_lrcye")
-variants = Array[ExtResource("5_34ibf")]([ExtResource("6_qmabn")])
+variants = Array[ExtResource("5_34ibf")]([ExtResource("6_qmabn"), ExtResource("7_giant"), ExtResource("8_berserk"), ExtResource("9_swift")])
 id = &"demo.enemy.slime"
 attribute_set = ExtResource("2_oqr2d")
 abilities = Array[PackedScene]([ExtResource("1_uh5gb")])

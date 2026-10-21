@@ -2,14 +2,15 @@
 
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_ectkt"]
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_7amwc"]
-[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_5o3yc"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_restore.gd" id="3_5o3yc"]
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_8qsh8"]
 
 [sub_resource type="Resource" id="Resource_60r5d"]
 script = ExtResource("3_5o3yc")
-value_x100 = 1000
-attribute_name = "energy"
+attribute = "energy"
+amount_x100 = 1000
+target_bonus = "energy_regen"
 
 [resource]
 script = ExtResource("4_8qsh8")
-modifiers = Array[ExtResource("2_7amwc")]([SubResource("Resource_60r5d")])
+executions = Array[ExtResource("1_ectkt")]([SubResource("Resource_60r5d")])

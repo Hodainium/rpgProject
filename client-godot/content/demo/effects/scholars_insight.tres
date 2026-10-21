@@ -4,11 +4,13 @@
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_wry5b"]
 [ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_pexht"]
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_xc4u0"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_restore.gd" id="5_rstr"]
 
 [sub_resource type="Resource" id="Resource_doyii"]
-script = ExtResource("3_pexht")
-value_x100 = 1500
-attribute_name = "energy"
+script = ExtResource("5_rstr")
+attribute = "energy"
+amount_x100 = 1500
+target_bonus = "energy_regen"
 
 [sub_resource type="Resource" id="Resource_i782f"]
 script = ExtResource("3_pexht")
@@ -17,4 +19,5 @@ attribute_name = "mp"
 
 [resource]
 script = ExtResource("4_xc4u0")
-modifiers = Array[ExtResource("2_wry5b")]([SubResource("Resource_doyii"), SubResource("Resource_i782f")])
+modifiers = Array[ExtResource("2_wry5b")]([SubResource("Resource_i782f")])
+executions = Array[ExtResource("1_5kvcq")]([SubResource("Resource_doyii")])
