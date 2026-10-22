@@ -245,7 +245,8 @@ content, so 1d is spent building a run rather than fixing tools or inventing mec
 - **Remaining work and test gaps:** `specs/dev-tools.md` "Remaining work" (`kill` queued during an enemy turn,
   plus the manual checks), `specs/item-pass.md` 6 known gaps (dead character equipped, demo Fire-beats-Physical on
   a Slime, demo break recovery; the equip/unequip run-log replay waits for 4a), `specs/animation-sets.md` 6 (the
-  `uid://` test for `view`), and anything 1c4 leaves open.
+  `uid://` test for `view`), and anything 1c4 leaves open (`specs/ult-interrupts.md` 8: items that react to ults,
+  smarter enemy ult timing, ults × statuses, party toughness, ult balance).
 - **Status effects, buffs and debuffs:** design them first (the "Not yet designed" items in
   `specs/design/combat-design.md`: magnitudes, durations, stacking, how they show), then build them as GAS content
   on the existing `Status.*` tags. Damage over time, stat ups and downs, control effects; break effects per damage
