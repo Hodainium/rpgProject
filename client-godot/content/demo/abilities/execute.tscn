@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_xigjt"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_d7vrq"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_xk0nq"]
+[ext_resource type="Animation" path="res://content/demo/animations/execute.tres" id="4_2rfya"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="5_w7ljm"]
+
+[sub_resource type="Resource" id="Resource_twiu6"]
+script = ExtResource("2_d7vrq")
+id = &"execute"
+effect = ExtResource("3_xk0nq")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 30000
+toughness_x100 = 12000
+
+[node name="Execute" type="Node" unique_id=156071765]
+script = ExtResource("1_xigjt")
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_d7vrq")]([SubResource("Resource_twiu6")])
+animation = ExtResource("4_2rfya")
+ability_tag = &"Ability.Ult.Execute"
+cost_effect = ExtResource("5_w7ljm")

@@ -8,13 +8,15 @@
 [ext_resource type="Resource" path="res://content/demo/variants/giant.tres" id="6_giant"]
 [ext_resource type="Resource" path="res://content/demo/variants/berserk.tres" id="7_berserk"]
 [ext_resource type="Resource" path="res://content/demo/variants/swift.tres" id="8_swift"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/quake.tscn" id="9_quake"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="10_charge_hit"]
 
 [resource]
 script = ExtResource("4_hwwiu")
 variants = Array[ExtResource("5_fjat6")]([ExtResource("6_giant"), ExtResource("7_berserk"), ExtResource("8_swift")])
 id = &"demo.enemy.golem"
 attribute_set = ExtResource("3_1to3b")
-abilities = Array[PackedScene]([ExtResource("1_nh0lt"), ExtResource("2_buk2u")])
+abilities = Array[PackedScene]([ExtResource("1_nh0lt"), ExtResource("2_buk2u"), ExtResource("9_quake"), ExtResource("10_charge_hit")])
 display_name = "Golem"
 display_color = Color(0.54509807, 0.27058825, 0.07450981, 1)
 tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Golem", &"Weakness.Physical"])

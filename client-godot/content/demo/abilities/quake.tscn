@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_usgxn"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_l1qbm"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_bs20u"]
+[ext_resource type="Animation" path="res://content/demo/animations/quake.tres" id="4_pyu8i"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="5_insjy"]
+
+[sub_resource type="Resource" id="Resource_a1i6c"]
+script = ExtResource("2_l1qbm")
+id = &"quake"
+effect = ExtResource("3_bs20u")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 15000
+
+[node name="Quake" type="Node" unique_id=1098755920]
+script = ExtResource("1_usgxn")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_l1qbm")]([SubResource("Resource_a1i6c")])
+animation = ExtResource("4_pyu8i")
+ability_tag = &"Ability.Ult.Quake"
+cost_effect = ExtResource("5_insjy")

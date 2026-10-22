@@ -18,6 +18,7 @@ toughness_x100 = 9000
 [node name="Cleave" type="Node" unique_id=389555525]
 script = ExtResource("1_q6ee8")
 targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
 executions = Array[ExtResource("2_cdaos")]([SubResource("Resource_oygwf")])
 animation = ExtResource("4_iak2l")
 ability_tag = &"Ability.Ult.Cleave"

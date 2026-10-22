@@ -1,5 +1,7 @@
 ## Demo battle panel (placeholder): HP/MP/ult charge of every unit, the acting unit's abilities and usable items
 ## (disabled when their cost or tags fail), target buttons (dead allies for revives), Skip and Auto toggles.
+## Spec ult-interrupts: a row of ult buttons for every party member, lit when its charge is full and pressable at any
+## time (even during enemy turns): the press fires at the next ult window. Auto presses ready ults too.
 extends Control
 
 var _main: GameMain
@@ -8,6 +10,9 @@ var _gate: ViewGate
 var _battle: Battle
 ## The party unit waiting for the player's pick, or null.
 var _waiting: BattleUnit
+## Ult buttons (built in code, under the action row) and the ult whose target is being picked.
+var _ults: HFlowContainer
+var _aiming: BattleAbility
 
 @onready var _stats: Label = %Stats
 @onready var _turn: Label = %Turn
@@ -23,6 +28,9 @@ func setup(main: GameMain) -> void:
 	main.run_changed.connect(_bind)
 	main.battle_prepared.connect(_on_battle_prepared)
 	main.mode_changed.connect(func(_mode): _update_visible())
+	_ults = HFlowContainer.new()
+	_ults.name = "Ults"
+	_actions.add_sibling(_ults)
 	visible = false
 
 
@@ -66,8 +74,14 @@ func _on_battle_started(battle: Battle) -> void:
 	battle.unit_broken.connect(func(unit_id, _by): _main.show_message("%s is BROKEN!" % _name(_battle.unit_by_id(unit_id))))
 	battle.unit_recovered.connect(func(_u): _refresh_stats())
 	battle.one_more_started.connect(func(unit_id): _main.show_message("ONE MORE! %s acts again" % _name(_battle.unit_by_id(unit_id))))
+	battle.interrupt_started.connect(_on_interrupt_started)
 	_refresh_stats()
 	_update_visible()
+
+
+func _on_interrupt_started(unit_id: StringName, ability_tag: StringName) -> void:
+	_main.show_message("%s unleashes %s!" % [_name(_battle.unit_by_id(unit_id)), _short(ability_tag)])
+	_refresh_stats()
 
 
 func _on_damage_dealt(_source: StringName, target_id: StringName, amount: int, hit_tags: Array[StringName]) -> void:
@@ -82,7 +96,9 @@ func _on_damage_dealt(_source: StringName, target_id: StringName, amount: int, h
 func _on_battle_finished(outcome: String) -> void:
 	_battle = null
 	_waiting = null
+	_aiming = null
 	_clear_actions()
+	_refresh_ults()
 	_main.show_message("Battle: " + outcome)
 	_update_visible()
 
@@ -138,8 +154,23 @@ func _submit(ability: BattleAbility, target_id: StringName) -> void:
 	_recorder.submit_action(ability.ability_tag, target_id)
 
 
-## Auto: the first usable ability on the first valid target (for watching several battles in a row).
+## Auto: every ready ult first (they fire at once and the unit is asked again), then the first usable ability on the
+## first valid target (for watching several battles in a row).
 func _auto_pick(unit: BattleUnit) -> void:
+	if _recorder.waiting_for != unit.unit_id:
+		return
+	var pressed := false
+	for member in _battle.units():
+		if not member.is_party() or not member.alive:
+			continue
+		for ult in member.ultimate_abilities():
+			var targets := _battle.target_candidates(member, ult)
+			if member.asc.can_activate_ability(ult) and (not ult.needs_target() or not targets.is_empty()):
+				_recorder.submit_ult(member.unit_id, ult.ability_tag, targets[0].unit_id if ult.needs_target() else &"")
+				pressed = true
+				break
+	if pressed:
+		return
 	for ability in unit.action_abilities():
 		if not unit.asc.can_activate_ability(ability):
 			continue
@@ -169,6 +200,56 @@ func _refresh_stats() -> void:
 			line += "  (dead)"
 		lines.append(line)
 	_stats.text = "\n".join(lines)
+	_refresh_ults()
+
+
+## One button per party member's ult, lit when it can fire now. Pressing one queues it for the next ult window
+## (single-target ults ask for a target first; the battle retargets if that target is gone by then).
+func _refresh_ults() -> void:
+	if _ults == null or _aiming != null:
+		return
+	for child in _ults.get_children():
+		child.queue_free()
+	if _battle == null or _recorder == null:
+		return
+	for unit in _battle.units():
+		if not unit.is_party():
+			continue
+		for ult in unit.ultimate_abilities():
+			var button := Button.new()
+			button.text = "ULT %s: %s" % [_name(unit), _short(ult.ability_tag)]
+			button.disabled = not unit.alive or not unit.asc.can_activate_ability(ult)
+			button.pressed.connect(_on_ult_pressed.bind(unit, ult))
+			_ults.add_child(button)
+
+
+func _on_ult_pressed(unit: BattleUnit, ult: BattleAbility) -> void:
+	if not ult.needs_target():
+		_press_ult(unit, ult, &"")
+		return
+	_aiming = ult
+	for child in _ults.get_children():
+		child.queue_free()
+	for target in _battle.target_candidates(unit, ult):
+		var button := Button.new()
+		button.text = "-> " + _name(target) + (" (dead)" if not target.alive else "")
+		button.pressed.connect(_press_ult.bind(unit, ult, target.unit_id))
+		_ults.add_child(button)
+	var back := Button.new()
+	back.text = "Back"
+	back.set_meta("sound", "back")
+	back.pressed.connect(func():
+		_aiming = null
+		_refresh_ults())
+	_ults.add_child(back)
+
+
+func _press_ult(unit: BattleUnit, ult: BattleAbility, target_id: StringName) -> void:
+	_aiming = null
+	_recorder.submit_ult(unit.unit_id, ult.ability_tag, target_id)
+	if _recorder.pending_interrupts() > 0:
+		_main.show_message("%s: %s at the next chance" % [_name(unit), _short(ult.ability_tag)])
+	_refresh_ults()
 
 
 ## Toughness bar (hidden when max_toughness is 0), BROKEN, and the unit's current weaknesses (read from its tags, so a
@@ -194,6 +275,11 @@ func _toughness_text(unit: BattleUnit) -> String:
 func _clear_actions() -> void:
 	for child in _actions.get_children():
 		child.queue_free()
+
+
+## The last segment of a tag: Ability.Ult.Execute → Execute.
+static func _short(tag: StringName) -> String:
+	return String(tag).get_slice(".", String(tag).get_slice_count(".") - 1)
 
 
 func _name(unit: BattleUnit) -> String:

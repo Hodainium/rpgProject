@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_pg5dv"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_fxvht"]
+[ext_resource type="Resource" path="res://content/demo/effects/resurrection_revive.tres" id="3_3dltd"]
+[ext_resource type="Animation" path="res://content/demo/animations/resurrection.tres" id="4_4wsk3"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="5_tjt13"]
+
+[sub_resource type="Resource" id="Resource_a6b14"]
+script = ExtResource("2_fxvht")
+id = &"raise"
+effect = ExtResource("3_3dltd")
+
+[node name="Resurrection" type="Node" unique_id=683304768]
+script = ExtResource("1_pg5dv")
+targeting = 6
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_fxvht")]([SubResource("Resource_a6b14")])
+animation = ExtResource("4_4wsk3")
+ability_tag = &"Ability.Ult.Resurrection"
+cost_effect = ExtResource("5_tjt13")
