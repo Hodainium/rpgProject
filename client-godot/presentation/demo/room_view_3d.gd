@@ -52,9 +52,13 @@ func _on_party_changed() -> void:
 		_build()
 
 
-func _on_battle_finished(_outcome: String) -> void:
+func _on_battle_finished(outcome: String) -> void:
 	_battle = null
 	_build()
+	if outcome == Battle.VICTORY:  # spec animation-sets: the living party celebrates
+		for id in _views:
+			if String(id).begins_with("P") and _views[id].has_method("celebrate"):
+				_views[id].celebrate()
 
 
 ## Rebuilds the current room from run state (out of battle).
@@ -112,13 +116,26 @@ func _on_battle_started(battle: Battle) -> void:
 	battle.execution_resolved.connect(_on_execution)
 	battle.unit_died.connect(_set_dead.bind(true))
 	battle.unit_revived.connect(_set_dead.bind(false))
+	battle.damage_dealt.connect(_on_damage_dealt)
 	battle.turn_started.connect(func(_id, _turn): _refresh_stats())
 	_refresh_stats()
 
 
+## Spec animation-sets: `death` (after any cast the unit is still playing) or `revive`.
 func _set_dead(unit_id: StringName, dead: bool) -> void:
 	if _views.has(unit_id):
-		_views[unit_id].set_dead(dead)
+		if _views[unit_id].has_method("die") and dead:
+			_views[unit_id].die()
+		elif _views[unit_id].has_method("revive") and not dead:
+			_views[unit_id].revive()
+		else:
+			_views[unit_id].set_dead(dead)
+
+
+## The additive flinch on whoever was hit (a blocked hit uses the set's `block`).
+func _on_damage_dealt(_source_id: StringName, target_id: StringName, _amount: int, hit_tags: Array[StringName]) -> void:
+	if _views.has(target_id) and _views[target_id].has_method("flinch"):
+		_views[target_id].flinch(hit_tags.has(&"Hit.Blocked"))
 
 
 func _on_ability_began(unit_id: StringName, ability: BattleAbility) -> void:
@@ -128,10 +145,7 @@ func _on_ability_began(unit_id: StringName, ability: BattleAbility) -> void:
 		_gate.release_finished()
 
 
-func _on_execution(_unit_id: StringName, _row_id: StringName, target_ids: Array[StringName]) -> void:
-	for id in target_ids:
-		if _views.has(id):
-			_views[id].flash()
+func _on_execution(_unit_id: StringName, _row_id: StringName, _target_ids: Array[StringName]) -> void:
 	_refresh_stats()
 
 
@@ -193,7 +207,7 @@ func _prop(cell: Vector2i, color: Color, text: String, item: ItemDefinition = nu
 
 
 func _unit(cell: Vector2i, definition: UnitDefinition) -> Node3D:
-	var view: Node3D = _main.unit_view.instantiate()
+	var view: Node3D = UnitAnimator.instantiate_for(definition, _main.unit_view)  # its own view, or the cube
 	_room_root.add_child(view)
 	view.position = _world(cell)
 	view.setup(_name(definition), definition.display_color if definition != null else Color.WHITE)

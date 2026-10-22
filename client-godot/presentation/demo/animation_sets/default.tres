@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="UnitAnimationSet" format=3]
+
+[ext_resource type="Animation" path="res://presentation/demo/animation_sets/default/block.tres" id="1_8aibd"]
+[ext_resource type="Animation" path="res://presentation/demo/animation_sets/default/cast.tres" id="2_p2fm1"]
+[ext_resource type="Animation" path="res://presentation/demo/animation_sets/default/dead.tres" id="3_y6xpv"]
+[ext_resource type="Animation" path="res://presentation/demo/animation_sets/default/death.tres" id="4_3qy8d"]
+[ext_resource type="Animation" path="res://presentation/demo/animation_sets/default/hit.tres" id="5_850o1"]
+[ext_resource type="Animation" path="res://presentation/demo/animation_sets/default/idle.tres" id="6_u8yfr"]
+[ext_resource type="Animation" path="res://presentation/demo/animation_sets/default/revive.tres" id="7_beqsm"]
+[ext_resource type="Script" path="res://game/view/unit_animation_set.gd" id="8_ibgpk"]
+[ext_resource type="Animation" path="res://presentation/demo/animation_sets/default/victory.tres" id="9_e2kt3"]
+[ext_resource type="Animation" path="res://presentation/demo/animation_sets/default/walk.tres" id="10_reejx"]
+
+[resource]
+script = ExtResource("8_ibgpk")
+idle = ExtResource("6_u8yfr")
+walk = ExtResource("10_reejx")
+hit = ExtResource("5_850o1")
+block = ExtResource("1_8aibd")
+death = ExtResource("4_3qy8d")
+dead = ExtResource("3_y6xpv")
+revive = ExtResource("7_beqsm")
+victory = ExtResource("9_e2kt3")
+cast = ExtResource("2_p2fm1")
