@@ -7,8 +7,11 @@
 ##
 ## Controller interface (duck-typed):
 ##   choose(battle, unit) -> {"ability": StringName, "target": StringName}   (may await; the client waits for input)
+##       or, at a DECISION ult window, {"interrupt": true, "unit", "ability", "target"} (spec ult-interrupts)
 ##   on_invalid(battle, unit, reason, detail) -> bool                         (true: ask again; false: stop)
 ##   after_party_turn(battle, unit, action, checkpoint) -> void
+##   interrupt(battle) -> {"interrupt": true, "unit", "ability", "target"} or {}   (BETWEEN window; never awaits)
+##   after_interrupt(battle, unit, action, checkpoint) -> void
 class_name Battle
 extends Node
 
@@ -24,6 +27,8 @@ signal trigger_activated(unit_id: StringName, ability_tag: StringName, event_tag
 signal unit_broken(unit_id: StringName, breaker_id: StringName)
 signal unit_recovered(unit_id: StringName)
 signal one_more_started(unit_id: StringName)
+## Spec ult-interrupts: a unit (party or enemy) casts its ult out of turn.
+signal interrupt_started(unit_id: StringName, ability_tag: StringName)
 
 const TURN_LIMIT: int = 1000
 const ONGOING: String = "Ongoing"
@@ -93,6 +98,8 @@ var allow_dev: bool = false
 var one_more_queue: Array[BattleUnit] = []
 ## True while the current decision is a One More action; the log entry carries "extra": true.
 var extra_action: bool = false
+## True while an ult cast out of turn resolves (spec ult-interrupts).
+var in_interrupt: bool = false
 
 var _units: Array[BattleUnit] = []  # sorted by unit id
 ## Instant effect that refills a recovering unit's toughness (amount by SetByCaller); built in code, never persisted.
@@ -345,10 +352,13 @@ func run(controller: Object) -> void:
 		_check_deaths()
 		_check_end()
 	while is_running():
+		await _ult_window(controller)
+		if not is_running():
+			break
+		while not one_more_queue.is_empty() and not one_more_queue[0].alive:
+			one_more_queue.pop_front()
 		if not one_more_queue.is_empty():
-			var owed: BattleUnit = one_more_queue.pop_front()
-			if owed.alive:
-				await _extra_action(owed, controller)
+			await _extra_action(one_more_queue.pop_front(), controller)
 			continue
 		var actor := turn_manager.next_actor()
 		turn_manager.elapse(actor)
@@ -476,9 +486,32 @@ func validate_action(actor: BattleUnit, choice: Dictionary) -> Array:
 		return ["IllegalAbility", "%s has no ability %s" % [actor.unit_id, tag]]
 	if ability.is_triggered():
 		return ["IllegalAbility", "%s is a triggered passive, not an action" % tag]
+	if ability.is_ultimate():
+		return ["IllegalAbility", "%s is an ult: it is cast out of turn, never as a turn action" % tag]
 	if not actor.asc.can_activate_ability(ability):
 		return ["IllegalAbility", "%s cannot activate %s now" % [actor.unit_id, tag]]
-	var target_id := StringName(str(choice.get("target", "")))
+	return _target_problem(actor, ability, StringName(str(choice.get("target", ""))))
+
+
+## Checks an ult cast out of turn (spec ult-interrupts). `party`: the caster must be a party unit (log entries and
+## presses), otherwise an enemy (brains). Returns [] when legal, else [reason, detail].
+func validate_interrupt(caster: BattleUnit, choice: Dictionary, party: bool) -> Array:
+	if caster == null or not caster.alive or caster.is_party() != party:
+		return ["ActorMismatch", "%s can't cast an ult now (not a living %s unit)" % [choice.get("unit", ""),
+			"party" if party else "enemy"]]
+	var tag := StringName(str(choice.get("ability", "")))
+	var ability := caster.ability_by_tag(tag)
+	if ability == null:
+		return ["IllegalAbility", "%s has no ability %s" % [caster.unit_id, tag]]
+	if not ability.is_ultimate():
+		return ["IllegalAbility", "%s is not an ult (Ability.Type.Ultimate), so it can't interrupt" % tag]
+	if not caster.asc.can_activate_ability(ability):
+		return ["IllegalAbility", "%s cannot activate %s now" % [caster.unit_id, tag]]
+	return _target_problem(caster, ability, StringName(str(choice.get("target", ""))))
+
+
+func _target_problem(actor: BattleUnit, ability: BattleAbility, target_id: StringName) -> Array:
+	var tag := ability.ability_tag
 	if ability.needs_target():
 		var target := unit_by_id(target_id)
 		if target == null or not target_candidates(actor, ability).has(target):
@@ -486,6 +519,111 @@ func validate_action(actor: BattleUnit, choice: Dictionary) -> Array:
 	elif target_id != &"":
 		return ["InvalidTarget", "%s takes no target, got %s" % [tag, target_id]]
 	return []
+
+
+## Spec ult-interrupts, retargeting: the unit a single-target ult queued for `wanted` hits now: `wanted` if still
+## valid, else the candidate nearest to its slot (ties: the lower slot), else null. Only for abilities that need a target.
+func retarget(caster: BattleUnit, ability: BattleAbility, wanted: BattleUnit) -> BattleUnit:
+	var candidates := target_candidates(caster, ability)
+	if candidates.has(wanted):
+		return wanted
+	if candidates.is_empty():
+		return null
+	if wanted == null:
+		return candidates[0]
+	var best: BattleUnit = null
+	for candidate in candidates:  # slot order, so the first of two equally near is the lower slot
+		if best == null or absi(candidate.slot - wanted.slot) < absi(best.slot - wanted.slot):
+			best = candidate
+	return best
+
+
+## Turns a player's ult press into an interrupt choice at the current window (client side, spec ult-interrupts):
+## retargets a lost target, then checks it. Returns {"choice": {...}} or {"problem": [reason, detail]}.
+func resolve_press(press: Dictionary) -> Dictionary:
+	var unit_id := StringName(str(press.get("unit", "")))
+	var caster := unit_by_id(unit_id)
+	var choice := {"interrupt": true, "unit": unit_id, "ability": StringName(str(press.get("ability", ""))),
+		"target": StringName(str(press.get("target", "")))}
+	var ability := caster.ability_by_tag(choice["ability"]) if caster != null else null
+	if ability != null and ability.needs_target():
+		var target := retarget(caster, ability, unit_by_id(choice["target"]))
+		if target == null:
+			return {"problem": ["InvalidTarget", "no valid target left for %s" % choice["ability"]]}
+		choice["target"] = target.unit_id
+	var problem := validate_interrupt(caster, choice, true)
+	return {"problem": problem} if not problem.is_empty() else {"choice": choice}
+
+
+## Spec ult-interrupts, BETWEEN window (after an action, before the next turn or One More): first each living enemy
+## in slot order may cast one ult (its brain decides from battle state, so replay re-simulates it; never logged), then
+## the controller's party interrupts, one after another, until it has none.
+func _ult_window(controller: Object) -> void:
+	var enemies: Array[BattleUnit] = []
+	for unit in _units:
+		if not unit.is_party() and not unit.ultimate_abilities().is_empty():
+			enemies.append(unit)
+	enemies.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)
+	for enemy in enemies:
+		if not is_running():
+			return
+		if not enemy.alive:
+			continue
+		var brain: EnemyBrain = enemy.definition.brain if enemy.definition.brain != null else EnemyBrain.new()
+		var choice := brain.choose_interrupt(enemy, self)
+		if StringName(str(choice.get("ability", ""))) == &"":
+			continue
+		var problem := validate_interrupt(enemy, choice, false)
+		if not problem.is_empty():
+			_fail("enemy brain chose an illegal interrupt: " + problem[1])
+			return
+		await _interrupt(enemy, choice, controller)
+	if not controller.has_method("interrupt"):
+		return
+	while is_running():
+		var choice: Dictionary = controller.interrupt(self)
+		if choice.is_empty():
+			return
+		if not await _party_interrupt(choice, controller):
+			return
+
+
+## A party interrupt from the controller (either window): checked, then cast. False when the battle stopped.
+func _party_interrupt(choice: Dictionary, controller: Object) -> bool:
+	var caster := unit_by_id(StringName(str(choice.get("unit", ""))))
+	var problem := validate_interrupt(caster, choice, true)
+	if not problem.is_empty():
+		if caster == null or not controller.on_invalid(self, caster, problem[0], problem[1]):
+			reject(problem[0], problem[1])
+			return false
+		return true
+	await _interrupt(caster, choice, controller)
+	return runner_error == "" and mismatch.is_empty()
+
+
+## Casts an ult out of turn: no turn number, no turn ticks, no action value change. A break it causes queues a One
+## More as any action does. A party cast is checkpointed and logged ("interrupt": true).
+func _interrupt(caster: BattleUnit, choice: Dictionary, controller: Object) -> void:
+	var ability := caster.ability_by_tag(StringName(str(choice["ability"])))
+	var target_id := StringName(str(choice.get("target", "")))
+	in_interrupt = true
+	interrupt_started.emit(caster.unit_id, ability.ability_tag)
+	var activated := await _activate(caster, ability, unit_by_id(target_id))
+	if not activated:
+		in_interrupt = false
+		if caster.is_party():
+			reject("IllegalAbility", "%s failed to activate" % ability.ability_tag)
+		else:
+			_fail("enemy ult %s failed to activate" % ability.ability_tag)
+		return
+	await _drain_triggers()
+	_check_deaths()
+	_check_end()
+	in_interrupt = false
+	if caster.is_party() and runner_error == "" and mismatch.is_empty():
+		var checkpoint := state_hash()
+		if runner_error == "":
+			controller.after_interrupt(self, caster, {"ability": ability.ability_tag, "target": target_id}, checkpoint)
 
 
 ## A dev decision (spec dev-tools 3.6): its GameplayEffect on the chosen living units through GAS, then the usual
@@ -604,6 +742,13 @@ func _take_action(actor: BattleUnit, controller: Object) -> Dictionary:
 			choice = await controller.choose(self, actor)
 			if not is_running():
 				return {}
+			# Spec ult-interrupts, DECISION window: any living party member's ult fires now; the turn isn't spent.
+			if bool(choice.get("interrupt", false)):
+				if not await _party_interrupt(choice, controller):
+					return {}
+				if not is_running() or not actor.alive:
+					return {}
+				continue
 			if choice.has("dev") and allow_dev:
 				await _apply_dev(actor, choice, controller)
 				if not is_running():

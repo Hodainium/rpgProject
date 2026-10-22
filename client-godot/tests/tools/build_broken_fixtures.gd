@@ -196,8 +196,34 @@ func _ready() -> void:
 	_unit(styled, "broken.character.bad_view_set", [load(reach_path)])
 	styled.view = view_path
 	_save("characters", "bad_view_set", styled)
+
+	# Spec ult-interrupts: an ult that is a triggered passive (error), and an enemy ult without a cost or a charge
+	# source (two warnings).
+	var triggered_ult := _ult_scene(strike, "triggered_ult", &"Event.Battle.Start")
+	var free_ult := _ult_scene(strike, "free_ult", &"")
+	var ult_character := CharacterDefinition.new()
+	_unit(ult_character, "broken.character.ult_triggered", [strike, triggered_ult])
+	_save("characters", "ult_triggered", ult_character)
+	var uncharged := EnemyDefinition.new()
+	_unit(uncharged, "broken.enemy.uncharged", [strike, free_ult])
+	_save("enemies", "uncharged", uncharged)
 	print("Broken fixtures built under ", ROOT)
 	get_tree().quit(0)
+
+
+## A copy of `base` tagged Ability.Type.Ultimate, with no cost, saved as abilities/<name>.tscn.
+func _ult_scene(base: PackedScene, name: String, trigger: StringName) -> PackedScene:
+	var path := ROOT + "abilities/%s.tscn" % name
+	if _rebuild or not ResourceLoader.exists(path):
+		var ability := base.instantiate() as BattleAbility
+		ability.ability_tag = StringName("Broken.Ability." + name.to_pascal_case())
+		ability.asset_tags.assign([BattleAbility.ULTIMATE_TAG])
+		ability.trigger_event_tag = trigger
+		var scene := PackedScene.new()
+		scene.pack(ability)
+		ResourceSaver.save(scene, path)
+		ability.free()
+	return load(path)
 
 
 func _item(id: String, tags: Array) -> ItemDefinition:

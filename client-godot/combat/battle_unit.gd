@@ -184,11 +184,20 @@ func abilities() -> Array[BattleAbility]:
 	return result
 
 
-## Abilities the unit can choose as its action: everything except triggered passives.
+## Abilities the unit can choose as its action: everything except triggered passives and ults.
 func action_abilities() -> Array[BattleAbility]:
 	var result: Array[BattleAbility] = []
 	for ability in abilities():
-		if not ability.is_triggered():
+		if not ability.is_triggered() and not ability.is_ultimate():
+			result.append(ability)
+	return result
+
+
+## Ults (spec ult-interrupts): cast only as interrupts, never as turn actions. Grant order.
+func ultimate_abilities() -> Array[BattleAbility]:
+	var result: Array[BattleAbility] = []
+	for ability in abilities():
+		if ability.is_ultimate():
 			result.append(ability)
 	return result
 

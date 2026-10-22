@@ -18,13 +18,16 @@ public sealed record ActionLog(
 /// <param name="Checkpoint">State hash at the end of this turn.</param>
 /// <param name="Extra">True for a One More action (spec item-pass 3.2: the actor broke a unit and acts again);
 /// omitted otherwise, so logs without one are unchanged.</param>
+/// <param name="Interrupt">True for a party ult cast out of turn (spec ult-interrupts): <c>Turn</c> is then the turn of
+/// its window, <c>Actor</c> the caster and <c>Target</c> the target actually used. Omitted otherwise.</param>
 public sealed record ActionEntry(
     int Turn,
     string Actor,
     string Ability,
     string? Target,
     string Checkpoint,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Extra = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Extra = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Interrupt = null);
 
 /// <summary>Input of the headless replay runner (slice 3 hands this to the verifier).</summary>
 public sealed record ReplayRequest(BattleSnapshot Snapshot, ActionLog ActionLog);

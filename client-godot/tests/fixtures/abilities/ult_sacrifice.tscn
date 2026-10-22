@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_th6kd"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_4pyf1"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/doom.tres" id="3_c24yh"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/ult_sacrifice.tres" id="4_ugwdy"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/ult_cost.tres" id="5_rxd52"]
+
+[sub_resource type="Resource" id="Resource_juwh8"]
+script = ExtResource("2_4pyf1")
+id = &"doom"
+effect = ExtResource("3_c24yh")
+
+[node name="UltSacrifice" type="Node" unique_id=745887157]
+script = ExtResource("1_th6kd")
+targeting = 5
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_4pyf1")]([SubResource("Resource_juwh8")])
+animation = ExtResource("4_ugwdy")
+ability_tag = &"Fixture.Ability.UltSacrifice"
+cost_effect = ExtResource("5_rxd52")

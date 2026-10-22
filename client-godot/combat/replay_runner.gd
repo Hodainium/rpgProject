@@ -160,6 +160,13 @@ class ReplayController:
 			battle.reject("LogExhausted", "%s must act on turn %d but the log has no entries left" % [unit.unit_id, battle.turn])
 			return {}
 		var entry: Dictionary = _entries[_next]
+		# Spec ult-interrupts, DECISION window: an interrupt logged for this turn fires before the action.
+		if bool(entry.get("interrupt", false)):
+			if int(entry["turn"]) != battle.turn:
+				battle.reject("TurnMismatch", "log entry is an ult interrupt on turn %d, but %s must act on turn %d" % [
+					int(entry["turn"]), unit.unit_id, battle.turn])
+				return {}
+			return _interrupt_choice(battle, entry)
 		if int(entry["turn"]) != battle.turn:
 			battle.reject("TurnMismatch", "log entry says turn %d, %s acts on turn %d" % [int(entry["turn"]), unit.unit_id, battle.turn])
 			return {}
@@ -174,6 +181,31 @@ class ReplayController:
 			return {}
 		var target: Variant = entry.get("target")
 		return {"ability": StringName(str(entry["ability"])), "target": &"" if target == null else StringName(str(target))}
+
+	## Spec ult-interrupts, BETWEEN window: the next entry fires here when it is an interrupt for this window's turn.
+	## One for an earlier turn was skipped by the simulation (TurnMismatch); one for a later turn waits.
+	func interrupt(battle: Battle) -> Dictionary:
+		if _next >= _entries.size():
+			return {}
+		var entry: Dictionary = _entries[_next]
+		if not bool(entry.get("interrupt", false)) or int(entry["turn"]) > battle.turn:
+			return {}
+		if int(entry["turn"]) < battle.turn:
+			battle.reject("TurnMismatch", "ult interrupt logged on turn %d never had a window (the simulation is past turn %d)" % [
+				int(entry["turn"]), battle.turn])
+			return {}
+		return _interrupt_choice(battle, entry)
+
+	func _interrupt_choice(battle: Battle, entry: Dictionary) -> Dictionary:
+		if bool(entry.get("extra", false)):
+			battle.reject("TurnMismatch", "log entry on turn %d claims both an ult interrupt and a One More" % battle.turn)
+			return {}
+		var target: Variant = entry.get("target")
+		return {"interrupt": true, "unit": StringName(str(entry["actor"])), "ability": StringName(str(entry["ability"])),
+			"target": &"" if target == null else StringName(str(target))}
+
+	func after_interrupt(battle: Battle, unit: BattleUnit, action: Dictionary, checkpoint: String) -> void:
+		after_party_turn(battle, unit, action, checkpoint)
 
 	func on_invalid(_battle: Battle, _unit: BattleUnit, _reason: String, _detail: String) -> bool:
 		return false

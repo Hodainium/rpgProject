@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_1q7da"]
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/triggered_ult.tscn" id="2_q2qex"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="3_72bco"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="4_oc3p1"]
+
+[resource]
+script = ExtResource("4_oc3p1")
+id = &"broken.character.ult_triggered"
+attribute_set = ExtResource("3_72bco")
+abilities = Array[PackedScene]([ExtResource("1_1q7da"), ExtResource("2_q2qex")])

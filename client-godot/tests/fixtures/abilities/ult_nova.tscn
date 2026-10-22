@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_4fhby"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_xmsdi"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_r2w21"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/ult_nova.tres" id="4_jf4b0"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/ult_cost.tres" id="5_0bye1"]
+
+[sub_resource type="Resource" id="Resource_2vdpv"]
+script = ExtResource("2_xmsdi")
+id = &"hit"
+effect = ExtResource("3_r2w21")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 6000
+toughness_x100 = 3000
+
+[node name="UltNova" type="Node" unique_id=1111285334]
+script = ExtResource("1_4fhby")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_xmsdi")]([SubResource("Resource_2vdpv")])
+animation = ExtResource("4_jf4b0")
+ability_tag = &"Fixture.Ability.UltNova"
+cost_effect = ExtResource("5_0bye1")

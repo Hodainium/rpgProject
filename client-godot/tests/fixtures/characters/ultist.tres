@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_xo7gn"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ult_nova.tscn" id="2_xxqe7"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ult_snipe.tscn" id="3_hi7yx"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ult_ward.tscn" id="4_viu40"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ult_raise.tscn" id="5_yp0rs"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/full_charge.tscn" id="6_82r56"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/recharge.tscn" id="7_bid1j"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_break_attribute_set.gd" id="8_1msfo"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="9_x2cwv"]
+
+[resource]
+script = ExtResource("9_x2cwv")
+id = &"fixture.character.ultist"
+attribute_set = ExtResource("8_1msfo")
+abilities = Array[PackedScene]([ExtResource("1_xo7gn"), ExtResource("2_xxqe7"), ExtResource("3_hi7yx"), ExtResource("4_viu40"), ExtResource("5_yp0rs"), ExtResource("6_82r56"), ExtResource("7_bid1j")])
+display_name = "Ultist"
+display_color = Color(1, 0.84313726, 0, 1)
+tags = Array[StringName]([&"Fixture.Character.Ultist"])
+stats_x100 = Dictionary[String, int]({
+"atk": 40000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 30000,
+"energy": 0,
+"hp": 120000,
+"max_hp": 120000,
+"max_mp": 10000,
+"max_toughness": 0,
+"mp": 10000,
+"spd": 10000,
+"toughness": 0,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

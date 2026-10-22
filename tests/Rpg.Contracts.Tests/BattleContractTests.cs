@@ -80,6 +80,21 @@ public class BattleContractTests
     }
 
     [Fact]
+    public void ActionEntry_WritesInterruptOnlyForOutOfTurnUlts()
+    {
+        var ult = new ActionEntry(3, "P1", "Fixture.Ability.UltNova", null, "ab12", Interrupt: true);
+        const string expected =
+            """{"turn":3,"actor":"P1","ability":"Fixture.Ability.UltNova","target":null,"checkpoint":"ab12","interrupt":true}""";
+
+        Assert.Equal(expected, JsonSerializer.Serialize(ult, RpgJson.Options));
+        var parsed = JsonSerializer.Deserialize<ActionEntry>(expected, RpgJson.Options)!;
+        Assert.True(parsed.Interrupt);
+        Assert.Null(parsed.Extra);
+        Assert.Equal(expected, JsonSerializer.Serialize(parsed, RpgJson.Options));
+        Assert.DoesNotContain("interrupt", JsonSerializer.Serialize(SampleRequest.ActionLog, RpgJson.Options));
+    }
+
+    [Fact]
     public void SnapshotV1Json_BindsWithV2FieldsNull()
     {
         var parsed = JsonSerializer.Deserialize<ReplayRequest>(SampleRequestJson, RpgJson.Options)!;

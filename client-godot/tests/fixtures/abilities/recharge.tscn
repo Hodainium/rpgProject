@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_vf403"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_031uu"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/ult_recharge.tres" id="3_erk78"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/recharge.tres" id="4_rqe8j"]
+
+[sub_resource type="Resource" id="Resource_466uu"]
+script = ExtResource("2_031uu")
+id = &"charge"
+effect = ExtResource("3_erk78")
+
+[node name="Recharge" type="Node" unique_id=577323301]
+script = ExtResource("1_vf403")
+targeting = 5
+executions = Array[ExtResource("2_031uu")]([SubResource("Resource_466uu")])
+animation = ExtResource("4_rqe8j")
+ability_tag = &"Fixture.Ability.Recharge"
+trigger_event_tag = &"Event.Ability.Used"

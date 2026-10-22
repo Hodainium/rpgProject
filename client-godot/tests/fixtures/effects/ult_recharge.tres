@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_hhaya"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_t78x1"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_ocgqo"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_sakiq"]
+
+[sub_resource type="Resource" id="Resource_k7xvd"]
+script = ExtResource("3_ocgqo")
+value_x100 = 5000
+attribute_name = "energy"
+
+[resource]
+script = ExtResource("4_sakiq")
+modifiers = Array[ExtResource("2_t78x1")]([SubResource("Resource_k7xvd")])

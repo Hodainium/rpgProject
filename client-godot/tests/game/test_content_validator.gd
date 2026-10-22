@@ -13,6 +13,7 @@ const EXPECTED_ERRORS: Array = [
 	["bad_layout", "layouts/bad_layout.tres"], ["empty_query", "chapters/empty_query.tres"],
 	["zero_weights", "chapters/zero_weights.tres"], ["generation_fails", "runs/run.tres"],
 	["bad_equipment", "equipment/bad_equipment.tres"], ["placement_both", "rooms/placement_both.tres"],
+	["ult_triggered", "characters/ult_triggered.tres"],
 ]
 const EXPECTED_WARNINGS: Array = [
 	["incomplete", "encounters/incomplete.tres"], ["empty_item_pool", "rooms/empty_item_pool.tres"],
@@ -20,6 +21,7 @@ const EXPECTED_WARNINGS: Array = [
 	["no_description", "items/fallback.tres"], ["trigger_unregistered", "items/trigger_unregistered.tres"],
 	["view_missing", "characters/view_missing.tres"], ["animation_set_loop", "views/bad_set_view.tscn"],
 	["animation_set_profile", "views/bad_set_view.tscn"], ["ability_montage_path", "characters/bad_view_set.tres"],
+	["ult_no_cost", "enemies/uncharged.tres"], ["ult_no_charge", "enemies/uncharged.tres"],
 ]
 
 

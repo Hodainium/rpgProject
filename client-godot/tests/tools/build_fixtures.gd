@@ -33,6 +33,7 @@ func _ready() -> void:
 	_build_encounters()
 	_build_run_world()
 	_build_item_pass()
+	_build_ult_interrupts()
 	_build_views()
 	print("Fixtures under %s: %d file(s) written" % [ROOT, _written])
 	get_tree().quit(0)
@@ -500,6 +501,66 @@ func _build_item_pass() -> void:
 	shelf.equipment = _world["equipment/mail"]
 	placements.append(shelf)
 	_room("armory", [&"Fixture.Room.Type.Treasure"], 15, 1, RoomDefinition.ContentMode.NONE, placements)
+
+
+## Spec ult-interrupts: ultists (two party members with four ults, full charge at battle start and +50 per action)
+## against the ult trial (a fast enemy, a brittle one, and a raging dummy whose ult charges when it is hit).
+func _build_ult_interrupts() -> void:
+	var D := ExecutionRow.DamageMode
+	var T := ExecutionRow.Targets
+	var B := BattleAbility.Targeting
+	_save_effect("ult_cost", _instant("energy", -100))
+	_save_effect("ult_full", _instant("energy", 100))
+	_save_effect("ult_recharge", _instant("energy", 50))
+	var ult := {"cost": _effects["ult_cost"], "asset_tags": [BattleAbility.ULTIMATE_TAG]}
+
+	var nova := _row("hit", "damage", D.SCALED, 60, T.ALL, [&"Damage.Type.Fire"])
+	nova.toughness_x100 = Fixed.from_typed(30)
+	_ability("ult_nova", "Fixture.Ability.UltNova", B.ALL_ENEMIES, [nova], [[0.3, "hit"]], [], null, ult)
+	_ability("ult_snipe", "Fixture.Ability.UltSnipe", B.SINGLE_ENEMY, [_row("hit", "damage", D.SCALED, 150, T.ALL)],
+		[[0.3, "hit"]], [], null, ult)
+	_ability("ult_ward", "Fixture.Ability.UltWard", B.SELF, [_row("buff", "guard", D.USE_EFFECT, 0, T.ALL)],
+		[[0.3, "buff"]], [], null, ult)
+	_ability("ult_raise", "Fixture.Ability.UltRaise", B.SINGLE_DEAD_ALLY, [_row("raise", "revive", D.USE_EFFECT, 0, T.ALL)],
+		[[0.3, "raise"]], [], null, ult)
+	_ability("ult_rage", "Fixture.Ability.UltRage", B.ALL_ENEMIES, [_row("hit", "damage", D.SCALED, 80, T.ALL)],
+		[[0.3, "hit"]], [], null, ult)
+	_ability("full_charge", "Fixture.Ability.FullCharge", B.SELF, [_row("charge", "ult_full", D.USE_EFFECT, 0, T.ALL)],
+		[[0.0, "charge"]], [], null, {"trigger": &"Event.Battle.Start"})
+	_ability("recharge", "Fixture.Ability.Recharge", B.SELF, [_row("charge", "ult_recharge", D.USE_EFFECT, 0, T.ALL)],
+		[[0.0, "charge"]], [], null, {"trigger": &"Event.Ability.Used"})
+	_ability("rage_charge", "Fixture.Ability.RageCharge", B.SELF, [_row("charge", "ult_recharge", D.USE_EFFECT, 0, T.ALL)],
+		[[0.0, "charge"]], [], null, {"trigger": &"Event.Damage.Taken"})
+	# The martyr's ult kills its caster (an actor dying inside its own DECISION window).
+	_save_effect("doom", _instant("hp", -100000))
+	_ability("ult_sacrifice", "Fixture.Ability.UltSacrifice", B.SELF, [_row("doom", "doom", D.USE_EFFECT, 0, T.ALL)],
+		[[0.3, "doom"]], [], null, ult)
+
+	var no_break := {"weakness_dmg": 150, "toughness_dmg": 0, "broken_dmg": 0}
+	var ultist := CharacterDefinition.new()
+	_fill_unit(ultist, "fixture.character.ultist", {"max_hp": 1200, "hp": 1200, "atk": 400, "def": 300, "spd": 100,
+		"crit_rate": 0, "crit_dmg": 50, "max_mp": 100, "mp": 100, "energy": 0, "max_toughness": 0, "toughness": 0},
+		no_break, ["strike", "ult_nova", "ult_snipe", "ult_ward", "ult_raise", "full_charge", "recharge"], Color.GOLD,
+		BREAK_ATTRIBUTE_SET)
+	ultist.tags.assign([&"Fixture.Character.Ultist"])
+	_save_world("characters", "ultist", ultist)
+	var martyr := CharacterDefinition.new()
+	_fill_unit(martyr, "fixture.character.martyr", {"max_hp": 1000, "hp": 1000, "atk": 300, "def": 300, "spd": 120,
+		"crit_rate": 0, "crit_dmg": 50, "max_mp": 100, "mp": 100, "energy": 0, "max_toughness": 0, "toughness": 0},
+		no_break, ["strike", "ult_sacrifice", "full_charge"], Color.DARK_VIOLET, BREAK_ATTRIBUTE_SET)
+	martyr.tags.assign([&"Fixture.Character.Martyr"])
+	_save_world("characters", "martyr", martyr)
+	var sprinter := EnemyDefinition.new()
+	_fill_unit(sprinter, "fixture.enemy.sprinter", {"max_hp": 1500, "hp": 1500, "atk": 150, "def": 0, "spd": 200,
+		"crit_rate": 0, "crit_dmg": 50, "max_mp": 0, "mp": 0, "energy": 0, "max_toughness": 0, "toughness": 0},
+		no_break, ["claw"], Color.SKY_BLUE, BREAK_ATTRIBUTE_SET)
+	_save_world("enemies", "sprinter", sprinter)
+	var raging := EnemyDefinition.new()
+	_fill_unit(raging, "fixture.enemy.raging", {"max_hp": 2000, "hp": 2000, "atk": 200, "def": 0, "spd": 70,
+		"crit_rate": 0, "crit_dmg": 50, "max_mp": 0, "mp": 0, "energy": 0, "max_toughness": 0, "toughness": 0},
+		no_break, ["claw", "ult_rage", "rage_charge"], Color.CRIMSON, BREAK_ATTRIBUTE_SET)
+	_save_world("enemies", "raging", raging)
+	_world_encounter("ult_trial", [], [["sprinter", null], ["brittle", null], ["raging", null]], 1)
 
 
 ## Spec animation-sets: a probe view (UnitAnimator root, a Body node) and a set of short animations with known

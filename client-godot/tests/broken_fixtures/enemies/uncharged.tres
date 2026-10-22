@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_svpjo"]
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/free_ult.tscn" id="2_sv3gg"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="3_f43by"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="4_stn8w"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="5_daqls"]
+
+[resource]
+script = ExtResource("4_stn8w")
+id = &"broken.enemy.uncharged"
+attribute_set = ExtResource("3_f43by")
+abilities = Array[PackedScene]([ExtResource("1_svpjo"), ExtResource("2_sv3gg")])

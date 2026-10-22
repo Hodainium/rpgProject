@@ -20,6 +20,7 @@ var issues: Array[ValidationIssue] = []
 var _visited: Dictionary = {}
 var _known_events: Dictionary = {}
 var _triggers: Dictionary = {}  # PackedScene -> trigger_event_tag
+var _ults: Dictionary = {}  # PackedScene -> true when the ability is tagged Ability.Type.Ultimate
 
 
 func _init(content_index: ContentIndex) -> void:
@@ -109,7 +110,24 @@ func _check_unit(unit: UnitDefinition) -> void:
 		_check_loadout(unit.default_loadout, unit)
 	elif unit.default_loadout != null and unit is CharacterDefinition:
 		_check_loadout_skills(unit.default_loadout, unit, path + "::default_loadout")
+	if unit is EnemyDefinition:
+		_check_enemy_charge(unit)
 	_check_view(unit)
+
+
+## Spec ult-interrupts: an enemy with an ult needs something that charges it (a triggered passive on the enemy or in
+## its default loadout), or its ult never fires. A warning: content may charge it some other way.
+func _check_enemy_charge(enemy: EnemyDefinition) -> void:
+	var scenes: Array = enemy.abilities.duplicate()
+	if enemy.default_loadout != null:
+		scenes.append_array(enemy.default_loadout.skills)
+		for item in enemy.default_loadout.items:
+			if item != null and item.grants != null:
+				scenes.append_array(item.grants.abilities)
+	scenes = scenes.filter(func(scene) -> bool: return scene != null and SkillTags.tag_of(scene) != &"")
+	if scenes.any(func(scene) -> bool: return _is_ult(scene)) \
+			and not scenes.any(func(scene) -> bool: return _trigger_of(scene) != &""):
+		_warning("ult_no_charge", enemy.resource_path, "%s has an ult but no triggered passive to charge it" % enemy.id)
 
 
 ## Spec animation-sets: the unit's view scene, its animation set and its abilities' tracks against the view. Warnings
@@ -171,15 +189,37 @@ func _check_skill_scene(scene: PackedScene, path: String, owner: StringName) -> 
 		if BATTLE_EVENT_PREFIXES.any(func(prefix: String) -> bool: return String(trigger).begins_with(prefix)) \
 				and not _battle_events().has(trigger):
 			_warning("trigger_unregistered", path, "%s triggers on %s, which the battle never sends" % [scene.resource_path, trigger])
+		_check_ult(scene, path)
+
+
+## Spec ult-interrupts: an ult (asset tag Ability.Type.Ultimate) is cast out of turn, so it can't be a triggered
+## passive, and without a cost (ult charge) it could fire at every window.
+func _check_ult(scene: PackedScene, path: String) -> void:
+	if _visited.has(scene) or not _is_ult(scene, true):
+		return
+	_visited[scene] = true
+	var ability := scene.instantiate() as BattleAbility
+	if ability.is_triggered():
+		_error("ult_triggered", path, "%s is tagged %s but is a triggered passive" % [scene.resource_path, BattleAbility.ULTIMATE_TAG])
+	elif ability.cost_effect == null:
+		_warning("ult_no_cost", path, "%s is an ult without a cost effect: it would fire at every ult window" % scene.resource_path)
+	ability.free()
 
 
 func _trigger_of(scene: PackedScene) -> StringName:
 	if not _triggers.has(scene):
 		var ability := scene.instantiate() as BattleAbility
 		_triggers[scene] = ability.trigger_event_tag if ability != null else &""
+		_ults[scene] = ability != null and ability.asset_tags.has(BattleAbility.ULTIMATE_TAG)
 		if ability != null:
 			ability.free()
 	return _triggers[scene]
+
+
+## True when the scene's ability carries Ability.Type.Ultimate (`tagged_only`: even when it is a triggered passive).
+func _is_ult(scene: PackedScene, tagged_only: bool = false) -> bool:
+	_trigger_of(scene)
+	return _ults[scene] and (tagged_only or _triggers[scene] == &"")
 
 
 ## Every event the battle can send: its fixed events, plus Event.Damage.Dealt/Taken.<X> for each Damage.Type.<X> and

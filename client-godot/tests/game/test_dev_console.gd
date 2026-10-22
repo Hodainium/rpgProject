@@ -385,6 +385,31 @@ func test_console_effect() -> void:
 
 ## In battle: give / stat apply from the next battle (and say so); kill <slot> kills one member and the same actor is
 ## asked again. Out of battle: give is refused when nobody can hold the item.
+## Spec ult-interrupts: `ult` queues a press for the next ult window; auto battles cast ready ults as interrupts.
+func test_console_ult() -> void:
+	var session := _session()
+	await _ok(session, "new fixture.character.ultist,fixture.character.ultist 7")
+	var run: RunController = session[0].run
+	check(not (await _run(session, "ult P1 Fixture.Ability.UltSnipe E1"))["ok"], "ult outside a battle is refused")
+	session[1].auto_battle = false
+	await _ok(session, "spawn fixture.encounter.ult_trial")
+	check(session[0].recorder.waiting_for != &"", "a party member waits")
+	var refused := await _run(session, "ult P1 Fixture.Ability.Strike")
+	check(not refused["ok"] and refused["text"].contains("Fixture.Ability.UltNova"), "not an ult: refused, ults listed: " + refused["text"])
+	check(not (await _run(session, "ult E1 Fixture.Ability.UltSnipe"))["ok"], "an enemy can't be pressed")
+	check(session[1].complete("ult P1 Fixture.Ability.UltS").has("ult P1 Fixture.Ability.UltSnipe"), "ult tags autocomplete")
+	await _ok(session, "ult P1 Fixture.Ability.UltSnipe E3")
+	var entries: Array = session[0].recorder.entries
+	eq(entries.map(func(entry): return [entry["actor"], entry["ability"], entry["target"], entry.get("interrupt", false)]),
+		[["P1", "Fixture.Ability.UltSnipe", "E3", true]], "the press fired in the waiting member's DECISION window")
+	session[1].auto_battle = true
+	await _ok(session, "act Fixture.Ability.Strike E1")
+	check(run.pending_battle.is_empty(), "auto finishes the battle")
+	var battle_entry: Dictionary = run.run_log[run.run_log.size() - 1]
+	var interrupts: Array = battle_entry["actionLog"]["actions"].filter(func(entry): return entry.get("interrupt", false))
+	check(interrupts.size() > 1, "auto battle casts ready ults out of turn: %d interrupts" % interrupts.size())
+
+
 func test_console_battle_edges() -> void:
 	var session := _session()
 	await _ok(session, "new %s 7" % PARTY)

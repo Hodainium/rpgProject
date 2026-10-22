@@ -54,9 +54,10 @@ public class BattleGoldenTests
     [Fact]
     public void GoldenSet_IsComplete()
     {
-        // duel, squad, squad tampered, run v2, break (item-pass: One More entries carry "extra": true).
-        Assert.Equal(5, Requests().Count);
-        Assert.Equal(5, Results().Count);
+        // duel, squad, squad tampered, run v2, break (item-pass: One More entries carry "extra": true),
+        // ult and ult tampered (ult-interrupts: out-of-turn ults carry "interrupt": true).
+        Assert.Equal(7, Requests().Count);
+        Assert.Equal(7, Results().Count);
     }
 
     private static TheoryData<string> Files(Func<string, bool> filter)

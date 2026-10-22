@@ -21,6 +21,8 @@ const SYSTEM_TAGS: Array[StringName] = [
 	&"State.Broken", &"Ability.Type.FollowUp", &"Data.Toughness", &"Hit.Break", &"Hit.FollowUp",
 	&"Event.Attack.FollowUp", &"Event.Unit.Killed", &"Event.Battle.OneMore",
 	&"Event.Damage.Dealt.Break", &"Event.Damage.Taken.Break", &"Event.Damage.Dealt.FollowUp", &"Event.Damage.Taken.FollowUp",
+	# Spec ult-interrupts: abilities cast out of turn.
+	&"Ability.Type.Ultimate",
 ]
 const FORMAT: String = "^([A-Z][a-zA-Z0-9]*)(\\.[A-Z][a-zA-Z0-9]*)*$"
 

@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_exblo"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_r0vi2"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_lq1e0"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/ult_snipe.tres" id="4_jg2wr"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/ult_cost.tres" id="5_pu7xr"]
+
+[sub_resource type="Resource" id="Resource_5y3x6"]
+script = ExtResource("2_r0vi2")
+id = &"hit"
+effect = ExtResource("3_lq1e0")
+damage_mode = 2
+multiplier_x100 = 15000
+
+[node name="UltSnipe" type="Node" unique_id=1741432415]
+script = ExtResource("1_exblo")
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_r0vi2")]([SubResource("Resource_5y3x6")])
+animation = ExtResource("4_jg2wr")
+ability_tag = &"Fixture.Ability.UltSnipe"
+cost_effect = ExtResource("5_pu7xr")

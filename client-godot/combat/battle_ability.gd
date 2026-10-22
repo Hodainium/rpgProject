@@ -20,6 +20,9 @@ enum Targeting {
 ## A triggered ability with this asset tag is a follow-up attack (spec item-pass 3.1): its hits carry Hit.FollowUp and
 ## the battle sends Event.Attack.FollowUp when it fires. It is still a passive: never an action, never logged.
 const FOLLOW_UP_TAG: StringName = &"Ability.Type.FollowUp"
+## An ability with this asset tag is an ult (spec ult-interrupts): never a turn action, cast only as an interrupt at an
+## ult window. Its cost effect (ult charge) decides when it can fire.
+const ULTIMATE_TAG: StringName = &"Ability.Type.Ultimate"
 
 @export var targeting: Targeting = Targeting.SINGLE_ENEMY
 ## Tags describing the ability itself (UE GAS's AbilityTags, which GodotGAS lacks), e.g. Ability.Type.FollowUp.
@@ -54,6 +57,11 @@ func is_triggered() -> bool:
 ## A triggered passive tagged Ability.Type.FollowUp.
 func is_follow_up() -> bool:
 	return is_triggered() and asset_tags.has(FOLLOW_UP_TAG)
+
+
+## An action ability tagged Ability.Type.Ultimate.
+func is_ultimate() -> bool:
+	return not is_triggered() and asset_tags.has(ULTIMATE_TAG)
 
 
 func row_by_id(row_id: StringName) -> ExecutionRow:

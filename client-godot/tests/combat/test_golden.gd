@@ -16,6 +16,8 @@ static func _scenarios() -> Dictionary:
 		# Spec item-pass: weakness hits, breaks, One More actions ("extra": true), a follow-up passive.
 		"break-seed-11": preload("res://tests/combat/test_item_pass_combat.gd").break_snapshot("brittle_pair",
 			["fixture.item.chaser_charm"], "11"),
+		# Spec ult-interrupts: ults in both windows ("interrupt": true), chains, an enemy ult, ult breaks with One More.
+		"ult-seed-7": preload("res://tests/combat/test_ult_interrupts.gd").ult_snapshot(),
 	}
 
 
@@ -27,7 +29,8 @@ func test_golden_replays() -> void:
 		if name.ends_with(".json") and not name.ends_with(".result.json"):
 			requests.append(name.trim_suffix(".json"))
 	requests.sort()
-	eq(Array(requests), ["break-seed-11", "duel-seed-1", "run-v2-seed-7", "squad-seed-42", "squad-seed-42-tampered-target"],
+	eq(Array(requests), ["break-seed-11", "duel-seed-1", "run-v2-seed-7", "squad-seed-42", "squad-seed-42-tampered-target",
+		"ult-seed-7", "ult-seed-7-tampered-turn"],
 		"golden set")
 	for name in requests:
 		var expected := FileAccess.get_file_as_string(GOLDEN + name + ".result.json")
@@ -65,6 +68,12 @@ func _write_goldens() -> void:
 			entry["target"] = "E3" if entry["target"] != "E3" else "E1"
 			break
 	requests["squad-seed-42-tampered-target"] = tampered
+	var moved := copy(requests["ult-seed-7"])
+	for entry in moved["actionLog"]["actions"]:
+		if entry.get("interrupt", false):
+			entry["turn"] = int(entry["turn"]) + 1
+			break
+	requests["ult-seed-7-tampered-turn"] = moved
 	for name in requests:
 		_write(GOLDEN + name + ".json", WireJson.stringify(requests[name]))
 		var replayed := _replay_fresh_process(GOLDEN + name + ".json")

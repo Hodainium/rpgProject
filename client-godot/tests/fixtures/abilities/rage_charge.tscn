@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ni28g"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_cwqse"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/ult_recharge.tres" id="3_0nygh"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/rage_charge.tres" id="4_xfo2i"]
+
+[sub_resource type="Resource" id="Resource_2y26o"]
+script = ExtResource("2_cwqse")
+id = &"charge"
+effect = ExtResource("3_0nygh")
+
+[node name="RageCharge" type="Node" unique_id=309784148]
+script = ExtResource("1_ni28g")
+targeting = 5
+executions = Array[ExtResource("2_cwqse")]([SubResource("Resource_2y26o")])
+animation = ExtResource("4_xfo2i")
+ability_tag = &"Fixture.Ability.RageCharge"
+trigger_event_tag = &"Event.Damage.Taken"

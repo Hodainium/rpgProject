@@ -164,6 +164,13 @@ func candidates(kind: String) -> Array[String]:
 			if ctx.battle != null and ctx.recorder != null and ctx.recorder.waiting_for != &"":
 				for ability in ctx.battle.unit_by_id(ctx.recorder.waiting_for).action_abilities():
 					values.append(String(ability.ability_tag))
+		"ult":
+			if ctx.battle != null:
+				for unit in ctx.battle.units():
+					if unit.is_party():
+						for ability in unit.ultimate_abilities():
+							if not values.has(String(ability.ability_tag)):
+								values.append(String(ability.ability_tag))
 		_:
 			for id in ctx.table_of(kind):
 				values.append(String(id))
@@ -209,13 +216,16 @@ func _on_action_requested(unit_id: StringName, _turn: int, game: GameMain, recor
 		_auto_pick.call_deferred(game, recorder, unit_id)
 
 
-## The first usable ability on the first valid target (the battle panel's Auto rule).
+## The first usable ability on the first valid target (the battle panel's Auto rule). Before that, every member's ult
+## that can fire is pressed (spec ult-interrupts: it fires at once, in this DECISION window, and the member is asked again).
 func _auto_pick(game: GameMain, recorder: ActionRecorder, unit_id: StringName) -> void:
 	if not auto_battle or recorder.waiting_for != unit_id or game.run == null:
 		return
 	var battle := game.run.get_node_or_null("RunBattle") as Battle
 	var unit := battle.unit_by_id(unit_id) if battle != null else null
 	if unit == null:
+		return
+	if DevConsole.press_ready_ults(battle, recorder):
 		return
 	for ability in unit.action_abilities():
 		if not unit.asc.can_activate_ability(ability):
@@ -228,6 +238,27 @@ func _auto_pick(game: GameMain, recorder: ActionRecorder, unit_id: StringName) -
 			target = targets[0].unit_id
 		recorder.submit_action(ability.ability_tag, target)
 		return
+
+
+## Presses the first ult that can fire for each living party member (Auto rule). True when one was pressed.
+static func press_ready_ults(battle: Battle, recorder: ActionRecorder) -> bool:
+	var pressed := false
+	for unit in battle.units():
+		if not unit.is_party() or not unit.alive:
+			continue
+		for ability in unit.ultimate_abilities():
+			if not unit.asc.can_activate_ability(ability):
+				continue
+			var target: StringName = &""
+			if ability.needs_target():
+				var targets := battle.target_candidates(unit, ability)
+				if targets.is_empty():
+					continue
+				target = targets[0].unit_id
+			recorder.submit_ult(unit.unit_id, ability.ability_tag, target)
+			pressed = true
+			break
+	return pressed
 
 
 func load_history() -> void:
