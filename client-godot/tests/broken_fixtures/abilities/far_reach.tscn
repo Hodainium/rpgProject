@@ -1,0 +1,47 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ofe80"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_uoufe"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_p4cec"]
+
+[sub_resource type="Resource" id="Resource_jv7aq"]
+script = ExtResource("2_uoufe")
+id = &"hit"
+effect = ExtResource("3_p4cec")
+damage_mode = 2
+
+[sub_resource type="Animation" id="Animation_wv5wf"]
+resource_name = "strike"
+length = 1.5
+tracks/0/type = "method"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.3),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [&"hit"],
+"method": &"execute"
+}]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Arm:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+
+[node name="Strike" type="Node" unique_id=1933697684]
+script = ExtResource("1_ofe80")
+executions = Array[ExtResource("2_uoufe")]([SubResource("Resource_jv7aq")])
+animation = SubResource("Animation_wv5wf")
+ability_tag = &"Broken.Ability.FarReach"

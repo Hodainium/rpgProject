@@ -33,6 +33,7 @@ func _ready() -> void:
 	_build_encounters()
 	_build_run_world()
 	_build_item_pass()
+	_build_views()
 	print("Fixtures under %s: %d file(s) written" % [ROOT, _written])
 	get_tree().quit(0)
 
@@ -499,6 +500,50 @@ func _build_item_pass() -> void:
 	shelf.equipment = _world["equipment/mail"]
 	placements.append(shelf)
 	_room("armory", [&"Fixture.Room.Type.Treasure"], 15, 1, RoomDefinition.ContentMode.NONE, placements)
+
+
+## Spec animation-sets: a probe view (UnitAnimator root, a Body node) and a set of short animations with known
+## lengths, for headless AnimationTree tests. Presentation-style files, never referenced by fixture content.
+func _build_views() -> void:
+	for directory in ["views", "animation_sets"]:
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ROOT + directory))
+	var set_path := ROOT + "animation_sets/probe_set.tres"
+	if _should_write(set_path):
+		var probe := UnitAnimationSet.new()
+		probe.idle = _view_animation(0.4, "Body:position", [Vector3.ZERO, Vector3(0, 0.1, 0), Vector3.ZERO], true)
+		probe.hit = _view_animation(0.2, "Body:position", [Vector3.ZERO, Vector3(0.3, 0, 0), Vector3.ZERO], false)
+		probe.death = _view_animation(0.2, "Body:rotation", [Vector3.ZERO, Vector3(0, 0, PI / 2)], false)
+		probe.dead = _view_animation(0.2, "Body:rotation", [Vector3(0, 0, PI / 2), Vector3(0, 0, PI / 2)], true)
+		probe.revive = _view_animation(0.2, "Body:rotation", [Vector3(0, 0, PI / 2), Vector3.ZERO], false)
+		probe.victory = _view_animation(0.2, "Body:rotation", [Vector3.ZERO, Vector3(0, PI, 0)], false)
+		probe.cast = _view_animation(0.2, "Body:position", [Vector3.ZERO, Vector3(0, 0.8, 0), Vector3.ZERO], false)
+		_save(probe, set_path)
+	var view_path := ROOT + "views/probe_view.tscn"
+	if _should_write(view_path):
+		var root := UnitAnimator.new()
+		root.name = "ProbeView"
+		root.animation_set = load(set_path)
+		var body := Node3D.new()
+		body.name = "Body"
+		root.add_child(body)
+		body.owner = root
+		var scene := PackedScene.new()
+		scene.pack(root)
+		_save(scene, view_path)
+		root.free()
+
+
+## Keys spread evenly over `length` on one value track.
+func _view_animation(length: float, path: String, values: Array, looping: bool) -> Animation:
+	var animation := Animation.new()
+	animation.length = length
+	if looping:
+		animation.loop_mode = Animation.LOOP_LINEAR
+	var track := animation.add_track(Animation.TYPE_VALUE)
+	animation.track_set_path(track, NodePath(path))
+	for index in values.size():
+		animation.track_insert_key(track, length * index / maxf(values.size() - 1, 1), values[index])
+	return animation
 
 
 func _armor(name: String, slot: String, tags: Array, effect_names: Array) -> void:

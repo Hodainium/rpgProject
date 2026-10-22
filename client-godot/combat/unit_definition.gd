@@ -15,6 +15,9 @@ extends Resource
 @export var display_name: String = ""
 ## Colour of the unit's cube in the placeholder screens. Not read by combat, not in the state hash.
 @export var display_color: Color = Color(0.6, 0.6, 0.6)
+## Spec animation-sets: the unit's view scene (its root extends UnitAnimator). A path, never a PackedScene, so loading
+## a definition (verifier, replays) never loads models or animations. Empty = the game's default view.
+@export_file("*.tscn") var view: String = ""
 ## Loose tags on the unit in v2 battles (e.g. Enemy.Boss), and pool tags for the game.
 @export_custom(PROPERTY_HINT_NONE, "gas::tag") var tags: Array[StringName] = []
 ## The loadout used unless an encounter slot or room placement overrides it.

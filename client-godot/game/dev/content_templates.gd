@@ -5,11 +5,17 @@ extends RefCounted
 
 ## Type → default folder name under the content folder.
 const TYPES: Dictionary = {"character": "characters", "enemy": "enemies", "encounter": "encounters",
-	"loadout": "loadouts", "room": "rooms", "item": "items", "event": "events"}
+	"loadout": "loadouts", "room": "rooms", "item": "items", "event": "events", "animation_set": "animation_sets"}
 const DEFAULT_BASE: String = "res://content/demo/"
+## Spec animation-sets: animation sets are presentation, so they default to the demo's presentation folder and fall
+## back to its default set.
+const PRESENTATION_BASE: String = "res://presentation/demo/"
+const DEFAULT_ANIMATION_SET: String = "res://presentation/demo/animation_sets/default.tres"
 
 
 static func default_folder(type: String, base: String = DEFAULT_BASE) -> String:
+	if type == "animation_set" and base == DEFAULT_BASE:
+		base = PRESENTATION_BASE
 	return base.path_join(TYPES.get(type, type)) + "/"
 
 
@@ -66,6 +72,11 @@ static func create(type: String, id: String, content: ContentIndex) -> Resource:
 			page.choices.append(leave)
 			event.pages.append(page)
 			return event
+		"animation_set":
+			var animation_set := UnitAnimationSet.new()
+			if ResourceLoader.exists(DEFAULT_ANIMATION_SET):
+				animation_set.fallback = load(DEFAULT_ANIMATION_SET)
+			return animation_set
 	return null
 
 

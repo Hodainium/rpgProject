@@ -316,7 +316,8 @@ func test_tool_parity() -> void:
 	console.keep_history = false
 	console.load_commands()
 	var pairs := {"dock Create": "create", "dock Validate": "validate", "room grid": "grid", "Play buttons": "play",
-		"seed runner": "seeds", "screenshot": "shot", "party panel Equip": "wear", "party panel Unequip": "unwear"}
+		"seed runner": "seeds", "screenshot": "shot", "party panel Equip": "wear", "party panel Unequip": "unwear",
+		"animation preview": "anim"}
 	for action in pairs:
 		check(console.commands.has(pairs[action]), "%s has the command %s" % [action, pairs[action]])
 	# The inspector grid commits *_result() through undo/redo; the console applies the same functions.
@@ -326,6 +327,26 @@ func test_tool_parity() -> void:
 	eq(room.placements.size(), undoable.size(), "grid paint: inspector and console agree")
 	eq(RoomGridOps.toggle_door_result(room, RoomDefinition.DOOR_E), room.doors ^ RoomDefinition.DOOR_E, "grid door")
 
+
+
+## Spec animation-sets: `anim` shows a unit's view and set, plays a slot, refuses unknown slots; `create animation_set`
+## writes a set that falls back to the default one.
+func test_console_anim_and_animation_set_template() -> void:
+	var session := _session()
+	var shown := await _ok(session, "anim fixture.unit.striker")
+	check(shown["text"].contains("(default)") and shown["text"].contains("idle"), "anim lists the default view's slots: " + shown["text"])
+	var played := await _ok(session, "anim fixture.unit.striker hit")
+	check(played["text"].contains("played hit"), "anim plays a slot: " + played["text"])
+	check(not (await _run(session, "anim fixture.unit.striker dance"))["ok"], "an unknown slot is refused")
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SCRATCH))
+	var path := SCRATCH + "console_set.tres"
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	await _ok(session, "create animation_set test.anim.console_set " + SCRATCH)
+	var created := load(path) as UnitAnimationSet
+	check(created != null, "create writes an animation set")
+	check(created != null and created.fallback != null, "that falls back to the default set")
+	eq(ContentTemplates.default_folder("animation_set"), "res://presentation/demo/animation_sets/", "sets default to presentation")
 
 
 func test_console_seed_codes() -> void:

@@ -32,7 +32,8 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
   commands** (sed, mv, rm, redirection, or scripts), which would bypass the permission prompt.
 - **One approved exception:** `game/tools/build_demo.tscn` (spec `game-skeleton` 3.8) writes the example set through
   `ResourceSaver` into `content/demo/` and `presentation/demo/` only, and never overwrites an existing file. Run it
-  only with the user's go-ahead.
+  only with the user's go-ahead. `game/tools/build_animation_sets.tscn` (spec `animation-sets` 3.3) works the same way
+  for `presentation/demo/animation_sets/` (the default unit animation set).
 - **Approved generators (2026-10-20):** `game/tools/generate_attributes.tscn` (the dashboard's attribute Generate,
   headless) and `game/tools/sync_tags.tscn` write GodotGAS's generated files in `godot_gas/` the way the dashboard
   does. Claude runs them after editing `attributes_draft.cfg` or the tag registry (each edit itself still prompts).

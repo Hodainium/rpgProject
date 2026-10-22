@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/view/unit_animator.gd" id="1_edcvk"]
+[ext_resource type="Resource" path="res://tests/fixtures/animation_sets/probe_set.tres" id="2_48as8"]
+
+[node name="ProbeView" type="Node3D" unique_id=1867626342]
+script = ExtResource("1_edcvk")
+animation_set = ExtResource("2_48as8")
+
+[node name="Body" type="Node3D" parent="." unique_id=1101122248]

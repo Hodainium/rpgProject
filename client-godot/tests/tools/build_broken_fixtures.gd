@@ -155,6 +155,47 @@ func _ready() -> void:
 	var typo_item := _item("broken.item.trigger_unregistered", [])
 	typo_item.grants = typo_set
 	_save("items", "trigger_unregistered", typo_item)
+
+	# Spec animation-sets: a view path that isn't there; a view whose set has a non-looping idle and tracks outside
+	# the skeleton its profile asks for; an ability animation moving a node that view doesn't have.
+	for directory in ["views", "animation_sets"]:
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ROOT + directory))
+	var lost := CharacterDefinition.new()
+	_unit(lost, "broken.character.view_missing", [strike])
+	lost.view = ROOT + "views/nowhere.tscn"
+	_save("characters", "view_missing", lost)
+	var stiff := UnitAnimationSet.new()
+	stiff.idle = Animation.new()  # LOOP_NONE
+	var stray := stiff.idle.add_track(Animation.TYPE_VALUE)
+	stiff.idle.track_set_path(stray, NodePath("Body:position"))
+	stiff.idle.track_insert_key(stray, 0.0, Vector3.ZERO)
+	stiff.skeleton_profile = SkeletonProfileHumanoid.new()
+	stiff = _save("animation_sets", "not_looping", stiff)
+	var view_path := ROOT + "views/bad_set_view.tscn"
+	if _rebuild or not ResourceLoader.exists(view_path):
+		var view_root := UnitAnimator.new()
+		view_root.animation_set = stiff
+		var view_scene := PackedScene.new()
+		view_scene.pack(view_root)
+		ResourceSaver.save(view_scene, view_path)
+		view_root.free()
+	var reach_path := ROOT + "abilities/far_reach.tscn"
+	if _rebuild or not ResourceLoader.exists(reach_path):
+		var reach := strike.instantiate() as BattleAbility
+		reach.ability_tag = &"Broken.Ability.FarReach"
+		var moving: Animation = reach.animation.duplicate()
+		var arm := moving.add_track(Animation.TYPE_VALUE)
+		moving.track_set_path(arm, NodePath("Arm:position"))
+		moving.track_insert_key(arm, 0.0, Vector3.ZERO)
+		reach.animation = moving
+		var reach_scene := PackedScene.new()
+		reach_scene.pack(reach)
+		ResourceSaver.save(reach_scene, reach_path)
+		reach.free()
+	var styled := CharacterDefinition.new()
+	_unit(styled, "broken.character.bad_view_set", [load(reach_path)])
+	styled.view = view_path
+	_save("characters", "bad_view_set", styled)
 	print("Broken fixtures built under ", ROOT)
 	get_tree().quit(0)
 

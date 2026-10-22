@@ -31,7 +31,10 @@ func test_content_templates() -> void:
 		if result["error"] != "":
 			continue
 		var loaded := ResourceLoader.load(result["path"], "", ResourceLoader.CACHE_MODE_IGNORE)
-		eq(String(loaded.get("id")), id, "%s keeps its id" % type)
+		if "id" in loaded:  # animation sets have no id: their file is their name
+			eq(String(loaded.get("id")), id, "%s keeps its id" % type)
+		else:
+			check(loaded is UnitAnimationSet, "%s is the only template without an id" % type)
 		eq(ContentTemplates.save_new(type, id, SCRATCH, content)["error"].contains("already exists"), true,
 			"%s: an existing file is refused" % type)
 	var character: CharacterDefinition = ResourceLoader.load(SCRATCH + "new_character.tres", "", ResourceLoader.CACHE_MODE_IGNORE)

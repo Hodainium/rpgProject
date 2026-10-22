@@ -109,6 +109,56 @@ func _check_unit(unit: UnitDefinition) -> void:
 		_check_loadout(unit.default_loadout, unit)
 	elif unit.default_loadout != null and unit is CharacterDefinition:
 		_check_loadout_skills(unit.default_loadout, unit, path + "::default_loadout")
+	_check_view(unit)
+
+
+## Spec animation-sets: the unit's view scene, its animation set and its abilities' tracks against the view. Warnings
+## only: a look can't break a run. Units without a view use the game's default (the demo cube) and are skipped.
+func _check_view(unit: UnitDefinition) -> void:
+	if unit.view == "":
+		return
+	var where := unit.resource_path + "::view"
+	var scene: PackedScene = load(unit.view) as PackedScene if ResourceLoader.exists(unit.view) else null
+	if scene == null:
+		_warning("view_missing", where, "%s's view %s is not a scene; the default view is used" % [unit.id, unit.view])
+		return
+	var root := scene.instantiate()
+	if not root is UnitAnimator:
+		_warning("view_missing", where, "%s's view %s has no UnitAnimator root; the default view is used" % [unit.id, unit.view])
+		root.free()
+		return
+	_check_animation_set((root as UnitAnimator).animation_set, unit.view + "::animation_set")
+	for index in unit.abilities.size():
+		var ability := unit.abilities[index].instantiate() as BattleAbility if unit.abilities[index] != null else null
+		if ability == null:
+			continue
+		if ability.animation != null:
+			for track in ability.animation.get_track_count():
+				var names := NodePath(ability.animation.track_get_path(track).get_concatenated_names())
+				if ability.animation.track_get_type(track) != Animation.TYPE_METHOD and not names.is_empty() \
+						and root.get_node_or_null(names) == null:
+					_warning("ability_montage_path", "%s::abilities[%d]" % [unit.resource_path, index],
+						"%s's animation moves %s, which %s doesn't have" % [ability.ability_tag, names, unit.view])
+					break
+		ability.free()
+	root.free()
+
+
+func _check_animation_set(animation_set: UnitAnimationSet, where: String) -> void:
+	if animation_set == null or _visited.has(animation_set):
+		return
+	_visited[animation_set] = true
+	for slot in UnitAnimationSet.LOOPING:
+		var animation := animation_set.animation_for(slot)
+		if animation != null and animation.loop_mode == Animation.LOOP_NONE:
+			_warning("animation_set_loop", where, "%s's %s doesn't loop (it plays until something else happens)" % [animation_set.resource_path, slot])
+	if animation_set.skeleton_profile != null:
+		for slot in animation_set.own_slots():
+			var animation: Animation = animation_set.get(slot)
+			for track in animation.get_track_count():
+				if not String(animation.track_get_path(track)).begins_with("%GeneralSkeleton"):
+					_warning("animation_set_profile", where, "%s's %s has a track outside %%GeneralSkeleton (%s) but the set uses a skeleton profile" % [animation_set.resource_path, slot, animation.track_get_path(track)])
+					break
 
 
 func _check_skill_scene(scene: PackedScene, path: String, owner: StringName) -> void:

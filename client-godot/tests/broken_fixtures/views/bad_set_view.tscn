@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/view/unit_animator.gd" id="1_idl7g"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/animation_sets/not_looping.tres" id="2_w08qg"]
+
+[node name="" type="Node3D" unique_id=808006568]
+script = ExtResource("1_idl7g")
+animation_set = ExtResource("2_w08qg")

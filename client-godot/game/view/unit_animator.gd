@@ -1,0 +1,350 @@
+## A unit's view (spec animation-sets): plays its UnitAnimationSet and the abilities it casts through one shared
+## AnimationTree, and releases the battle's presentation gate from the ability's `execute` keys.
+##
+## Tree (built once in code, shared by every unit; each unit has its own libraries and parameters):
+##   state (StateMachine over the slots) ─▶ montage (OneShot: the cast ability's animation) ─▶ flinch (Add2) ─▶ output
+##                                                          react (OneShot over a neutral pose: hit / block) ─┘
+## The montage plays `montage/current`, swapped per cast, so the shared tree is never edited. The flinch is additive:
+## a unit hit mid-cast keeps casting. Death waits for a running cast. Presentation only: nothing here touches combat
+## state, and the headless verifier never builds a view.
+## A view scene's root script extends this (the demo cube: presentation/demo/unit_view.gd) and may override _paint().
+class_name UnitAnimator
+extends Node3D
+
+const MONTAGE: StringName = &"montage/current"
+## Extra time after an ability animation's length before the gate is released anyway (a broken or interrupted
+## animation never stalls the battle).
+const SAFETY_SECONDS: float = 0.5
+const MONTAGE_FADE: float = 0.1
+## Value-track properties that move a model; an ability animation with none of them gets the set's `cast` merged in.
+const MODEL_PROPERTIES: Array[String] = ["position", "rotation", "rotation_degrees", "scale", "transform",
+	"quaternion", "basis", "visible"]
+const STATES: Array[StringName] = [&"idle", &"walk", &"cast", &"death", &"dead", &"revive", &"victory"]
+## Every live view joins this group (the console's `anim` finds them through it).
+const GROUP: StringName = &"unit_animators"
+
+@export var animation_set: UnitAnimationSet
+@export var label: Label3D
+
+var tree: AnimationTree
+var display_color: Color = Color.WHITE
+var is_dead: bool = false
+## The unit definition this view shows (set by instantiate_for).
+var definition_id: StringName = &""
+
+var _gate: ClientGate
+var _cast_id: int = 0
+var _pending_death: bool = false
+## The montage was seen playing since the last cast started (its end is when it stops).
+var _montage_live: bool = false
+
+static var _shared_tree: AnimationNodeBlendTree
+static var _merged: Dictionary = {}  # "ability id:cast id" -> merged Animation
+
+
+func _ready() -> void:
+	add_to_group(GROUP)
+	tree = AnimationTree.new()
+	tree.name = "AnimationTree"
+	add_child(tree)
+	tree.root_node = NodePath("..")
+	tree.callback_mode_method = AnimationMixer.ANIMATION_CALLBACK_MODE_METHOD_IMMEDIATE
+	_add_libraries()
+	tree.tree_root = shared_tree()
+	tree.animation_finished.connect(_on_animation_finished)
+	tree.mixer_applied.connect(_on_mixer_applied)
+	tree.active = true
+	tree.set("parameters/flinch/add_amount", 1.0)
+	_start(&"idle")
+
+
+## The scene to instantiate for a unit: its definition's `view` (a res:// or uid:// path), else `default_scene`.
+static func view_scene(definition: UnitDefinition, default_scene: PackedScene) -> PackedScene:
+	if definition != null and definition.view != "" and ResourceLoader.exists(definition.view):
+		var scene := load(definition.view) as PackedScene
+		if scene != null:
+			return scene
+	return default_scene
+
+
+## A new view for `definition` (view_scene), tagged with its id.
+static func instantiate_for(definition: UnitDefinition, default_scene: PackedScene) -> Node3D:
+	var view: Node3D = view_scene(definition, default_scene).instantiate()
+	if view is UnitAnimator and definition != null:
+		view.definition_id = definition.id
+	return view
+
+
+func setup(title: String, color: Color) -> void:
+	display_color = color
+	set_stats(title)
+	_paint()
+
+
+func set_stats(text: String) -> void:
+	if label != null:
+		label.text = text
+
+
+## Instant pose (building a room or a battle): lying down or standing, no animation.
+func set_dead(dead: bool) -> void:
+	is_dead = dead
+	_pending_death = false
+	_paint()
+	_start(&"dead" if dead else &"idle")
+
+
+## The unit died: `death`, then `dead`. Waits for a cast that is still playing.
+func die() -> void:
+	is_dead = true
+	_paint()
+	if _gate != null or bool(tree.get("parameters/montage/active")):
+		_pending_death = true
+	else:
+		_start(&"death")
+
+
+func revive() -> void:
+	is_dead = false
+	_pending_death = false
+	_paint()
+	_start(&"revive")
+
+
+func celebrate() -> void:
+	if not is_dead:
+		_start(&"victory")
+
+
+## Additive flinch on top of whatever plays (idle or a cast). `blocked` uses the `block` slot when the set has one.
+func flinch(blocked: bool = false) -> void:
+	var animation: Animation = animation_set.animation_for(&"block") if blocked and animation_set != null else null
+	if animation == null and animation_set != null:
+		animation = animation_set.animation_for(&"hit")
+	if animation == null:
+		return
+	_swap(&"react", animation)
+	tree.set("parameters/react/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+
+
+## Plays the ability's animation as the montage. Its `execute` keys call execute(); its end (or the safety timer)
+## releases the rest of the gate.
+func play(ability: BattleAbility, gate: ClientGate) -> void:
+	var animation := ability.animation
+	if animation == null:
+		gate.release_finished()
+		return
+	_gate = gate
+	_cast_id += 1
+	_montage_live = false
+	var montage := _montage_for(animation)
+	_swap(&"montage", montage)
+	tree.set("parameters/montage/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	var cast_id := _cast_id
+	var view: WeakRef = weakref(self)
+	get_tree().create_timer(montage.length + SAFETY_SECONDS).timeout.connect(func() -> void:
+		var animator: UnitAnimator = view.get_ref()
+		if animator != null and animator._cast_id == cast_id:
+			animator._finish_montage())
+
+
+## Plays one slot as the game would (`hit` / `block` as flinches, the rest as states). For previews and `anim`.
+func play_slot(slot: StringName) -> bool:
+	if slot == &"hit" or slot == &"block":
+		flinch(slot == &"block")
+		return true
+	if slot in STATES:
+		_start(slot)
+		return true
+	return false
+
+
+## Called by an ability animation's `execute` keys (method track on the view root).
+func execute(row_id: StringName) -> void:
+	if _gate != null:
+		_gate.release_execution(row_id)
+
+
+## Override to recolour the model (the demo cube greys out when dead).
+func _paint() -> void:
+	pass
+
+
+## True when the animation moves the model (transform or visibility tracks), not only keys and sounds.
+static func moves_model(animation: Animation) -> bool:
+	for track in animation.get_track_count():
+		match animation.track_get_type(track):
+			Animation.TYPE_POSITION_3D, Animation.TYPE_ROTATION_3D, Animation.TYPE_SCALE_3D, Animation.TYPE_BLEND_SHAPE:
+				return true
+			Animation.TYPE_VALUE, Animation.TYPE_BEZIER:
+				var property := String(animation.track_get_path(track).get_concatenated_subnames()).get_slice(":", 0)
+				if property in MODEL_PROPERTIES:
+					return true
+	return false
+
+
+static func shared_tree() -> AnimationNodeBlendTree:
+	if _shared_tree == null:
+		_shared_tree = build_tree()
+	return _shared_tree
+
+
+static func build_tree() -> AnimationNodeBlendTree:
+	var machine := AnimationNodeStateMachine.new()
+	for state in STATES:
+		var node := AnimationNodeAnimation.new()
+		node.animation = StringName("set/" + state)
+		machine.add_node(state, node)
+	machine.add_transition(&"Start", &"idle", _auto_transition(false))
+	for pair in [[&"death", &"dead"], [&"revive", &"idle"], [&"victory", &"idle"], [&"cast", &"idle"]]:
+		machine.add_transition(pair[0], pair[1], _auto_transition(true))
+	var blend := AnimationNodeBlendTree.new()
+	blend.add_node(&"state", machine)
+	var montage_anim := AnimationNodeAnimation.new()
+	montage_anim.animation = MONTAGE
+	blend.add_node(&"montage_anim", montage_anim)
+	var montage := AnimationNodeOneShot.new()
+	montage.fadein_time = MONTAGE_FADE
+	montage.fadeout_time = MONTAGE_FADE
+	blend.add_node(&"montage", montage)
+	var neutral := AnimationNodeAnimation.new()
+	neutral.animation = &"react/neutral"
+	blend.add_node(&"neutral", neutral)
+	var react_anim := AnimationNodeAnimation.new()
+	react_anim.animation = &"react/current"
+	blend.add_node(&"react_anim", react_anim)
+	blend.add_node(&"react", AnimationNodeOneShot.new())
+	blend.add_node(&"flinch", AnimationNodeAdd2.new())
+	blend.connect_node(&"montage", 0, &"state")
+	blend.connect_node(&"montage", 1, &"montage_anim")
+	blend.connect_node(&"react", 0, &"neutral")
+	blend.connect_node(&"react", 1, &"react_anim")
+	blend.connect_node(&"flinch", 0, &"montage")
+	blend.connect_node(&"flinch", 1, &"react")
+	blend.connect_node(&"output", 0, &"flinch")
+	return blend
+
+
+static func _auto_transition(at_end: bool) -> AnimationNodeStateMachineTransition:
+	var transition := AnimationNodeStateMachineTransition.new()
+	transition.advance_mode = AnimationNodeStateMachineTransition.ADVANCE_MODE_AUTO
+	if at_end:
+		transition.switch_mode = AnimationNodeStateMachineTransition.SWITCH_MODE_AT_END
+	return transition
+
+
+## Every slot (empty ones as short silent animations, so the tree always has something to play), plus the
+## per-unit montage and reaction slots.
+func _add_libraries() -> void:
+	var slots := AnimationLibrary.new()
+	for slot in UnitAnimationSet.SLOTS:
+		var animation: Animation = animation_set.animation_for(slot) if animation_set != null else null
+		slots.add_animation(slot, animation if animation != null else _silent(slot in UnitAnimationSet.LOOPING))
+	tree.add_animation_library(&"set", slots)
+	var montage := AnimationLibrary.new()
+	montage.add_animation(&"current", _silent(false))
+	tree.add_animation_library(&"montage", montage)
+	var react := AnimationLibrary.new()
+	react.add_animation(&"neutral", _silent(true))
+	react.add_animation(&"current", _silent(false))
+	tree.add_animation_library(&"react", react)
+	var rest := AnimationLibrary.new()
+	rest.add_animation(&"RESET", Animation.new())
+	tree.add_animation_library(&"", rest)
+	for slot in UnitAnimationSet.SLOTS:
+		_record_rest(slots.get_animation(slot))
+
+
+static func _silent(looping: bool) -> Animation:
+	var animation := Animation.new()
+	animation.length = 0.1
+	if looping:
+		animation.loop_mode = Animation.LOOP_LINEAR
+	return animation
+
+
+func _swap(library_name: StringName, animation: Animation) -> void:
+	_record_rest(animation)
+	var library := tree.get_animation_library(library_name)
+	library.remove_animation(&"current")
+	library.add_animation(&"current", animation)
+
+
+## Godot's deterministic blending adds every track onto its RESET value, or zero without one: a scale or `visible`
+## track would drop to 0 / false whenever nothing plays it (after a flinch, after a flash ability). So every value
+## track a slot or an ability animates gets a RESET key with the property's rest value. A property is recorded the
+## first time any animation uses it, before the tree has ever moved it, so its current value is the rest value.
+func _record_rest(animation: Animation) -> void:
+	var library := tree.get_animation_library(&"")
+	var reset := library.get_animation(&"RESET")
+	var added := false
+	for track in animation.get_track_count():
+		if animation.track_get_type(track) != Animation.TYPE_VALUE:
+			continue
+		var path := animation.track_get_path(track)
+		if reset.find_track(path, Animation.TYPE_VALUE) != -1:
+			continue
+		var node := get_node_or_null(NodePath(path.get_concatenated_names()))
+		if node == null:
+			continue
+		var copy := reset.add_track(Animation.TYPE_VALUE)
+		reset.track_set_path(copy, path)
+		reset.track_insert_key(copy, 0.0, node.get_indexed(NodePath(path.get_concatenated_subnames())))
+		added = true
+	if added:  # re-adding the animation makes the mixer rebuild its track cache
+		library.remove_animation(&"RESET")
+		library.add_animation(&"RESET", reset)
+
+
+## The ability's animation, or (when it doesn't move the model) a copy with the set's `cast` tracks merged in. A
+## keys-only animation would otherwise hide the pose underneath for its whole length.
+func _montage_for(animation: Animation) -> Animation:
+	var cast: Animation = animation_set.animation_for(&"cast") if animation_set != null else null
+	if cast == null or moves_model(animation):
+		return animation
+	var key := "%d:%d" % [animation.get_instance_id(), cast.get_instance_id()]
+	if not _merged.has(key):
+		var merged: Animation = animation.duplicate()
+		for track in cast.get_track_count():
+			var copy := merged.add_track(cast.track_get_type(track))
+			merged.track_set_path(copy, cast.track_get_path(track))
+			merged.track_set_interpolation_type(copy, cast.track_get_interpolation_type(track))
+			for index in cast.track_get_key_count(track):
+				merged.track_insert_key(copy, cast.track_get_key_time(track, index),
+					cast.track_get_key_value(track, index), cast.track_get_key_transition(track, index))
+		merged.length = maxf(animation.length, cast.length)
+		_merged[key] = merged
+	return _merged[key]
+
+
+func _on_animation_finished(animation_name: StringName) -> void:
+	if animation_name == MONTAGE:
+		_finish_montage()
+
+
+## The OneShot's `active` drops when the montage ends (with a fade-out the animation itself may never report
+## finished), so the end is read here after every tree update.
+func _on_mixer_applied() -> void:
+	if _gate == null:
+		return
+	if bool(tree.get("parameters/montage/active")):
+		_montage_live = true
+	elif _montage_live:
+		_finish_montage()
+
+
+func _finish_montage() -> void:
+	_montage_live = false
+	if _gate != null:
+		var gate := _gate
+		_gate = null
+		gate.release_finished()
+	if _pending_death:
+		_pending_death = false
+		_start(&"death")
+
+
+func _start(state: StringName) -> void:
+	var playback: AnimationNodeStateMachinePlayback = tree.get("parameters/state/playback")
+	if playback != null:
+		playback.start(state)
