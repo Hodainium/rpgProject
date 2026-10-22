@@ -13,6 +13,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c2. `item-pass` | ✅ Done (spec synced; known test gaps listed in `specs/item-pass.md` 6) | 2026-10-20 |
 | 1c3. `animation-sets` | ✅ Done (spec synced; `uid://` test for `view` still to add, `specs/animation-sets.md` 6) | 2026-10-21 |
 | 1c4. `ult-interrupts` | ⬜ Not started | |
+| 1c5. `content-pass` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
 | 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
@@ -85,6 +86,11 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   Persona-style One More, armor slots with an armor inventory. Added 1c4 `ult-interrupts` (ults at any time, HSR) as
   its own later slice. At the user's request.
 - 2026-10-20: 1c2 `item-pass` done: 35 new items and 10 armor pieces in the demo, both suites green, spec synced.
+- 2026-10-21: Added 1c5 `content-pass` after 1c4 and before 1d `playable-demo`: the polish and content slice. It
+  closes the remaining work and test gaps left by 1c, 1c2 and 1c3, and adds more enemies, bosses and items plus
+  status effects, buffs and debuffs, so the demo is built on finished tools and a wider content base. The content is
+  chosen to push the game design and cover many mechanic interactions, so the later system slices (verify, replay,
+  analytics, load) are tested against many real gameplay cases. At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -226,6 +232,29 @@ the existing item mechanics; new mechanics only if an item needs one. Content wo
 between any two actions (including during an enemy's turn order), not only on its own turn. Needs the action log to
 record an ult at the point it was cast and the replay to honour it (`specs/combat-replay-core.md` already leaves
 room for ultimates that interrupt). Builds on 1c2's break and One More rules.
+
+### 1c5. `content-pass`
+**Purpose:** the polish and content slice before the demo. It closes what earlier slices left open and widens the
+content, so 1d is spent building a run rather than fixing tools or inventing mechanics.
+- **Focus: content that pushes the game design and exercises the mechanics.** Every enemy, boss, item and status is
+  chosen to cover a mechanic or an interaction between mechanics (break with One More, follow-ups off statuses, ults
+  interrupting during DoT ticks, death and revive under debuffs, stacking and expiry, resist vs weakness…), not for
+  volume. The aim is a wide set of real gameplay cases, so that when the system slices land (2b run authority, 3
+  battle verify, 4a run verify, 4b analytics, 8 load) the verifier, replay and analytics are fed many different
+  mechanic paths instead of a few happy paths. The spec lists which mechanic each piece of content covers.
+- **Remaining work and test gaps:** `specs/dev-tools.md` "Remaining work" (`kill` queued during an enemy turn,
+  plus the manual checks), `specs/item-pass.md` 6 known gaps (dead character equipped, demo Fire-beats-Physical on
+  a Slime, demo break recovery; the equip/unequip run-log replay waits for 4a), `specs/animation-sets.md` 6 (the
+  `uid://` test for `view`), and anything 1c4 leaves open.
+- **Status effects, buffs and debuffs:** design them first (the "Not yet designed" items in
+  `specs/design/combat-design.md`: magnitudes, durations, stacking, how they show), then build them as GAS content
+  on the existing `Status.*` tags. Damage over time, stat ups and downs, control effects; break effects per damage
+  type (`specs/item-pass.md` 8) fit here.
+- **More test content:** enemies (incl. variants and resistances), bosses (multi-phase or scripted behaviour as
+  data), and items that use the new statuses. Fixtures for the system tests; demo content in `content/demo/` made
+  by builder scenes like 1c2's, on request and without changing the user's existing files unasked.
+- Any new mechanic stays data on GodotGAS building blocks; new battle code only where a status rule needs a hook,
+  with goldens re-recorded only for intentional changes.
 
 ### 1d. `playable-demo`
 **Purpose:** a short run playable start to finish, to show people, and the first real test of the dev tools.
