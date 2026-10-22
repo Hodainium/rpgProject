@@ -1,6 +1,6 @@
 # Spec: animation-sets (slice 1c3)
 
-Status: 📝 Spec written, reviewed (rev 2) · Roadmap: slice 1c3 · Date: 2026-10-20
+Status: ✅ Built, synced 2026-10-21 (rev 3) · Roadmap: slice 1c3 · Date: 2026-10-20
 Builds on: `specs/combat-replay-core.md` ("Execution table and animation events": an ability's animation `execute`
 keys time its hits), `specs/game-skeleton.md` 3.7 (placeholder screens, `ViewGate`), `specs/dev-tools.md` (templates,
 Play, validator, console parity).
@@ -14,11 +14,12 @@ hand-written tweens in `unit_view.gd`, and each ability's animation is played st
 - **Animation set** (`UnitAnimationSet`, a resource): named slots (`idle`, `walk`, `hit`, `block`, `death`,
   `dead`, `revive`, `victory`, `cast`) each holding an `Animation`. A new character or enemy is set up by dragging
   animations into slots; anything empty falls back to the default set (the demo's cube moves).
-- **One AnimationTree for every unit** (`res://game/view/unit_animation_tree.tres`, shared): a state machine over
-  the slots, plus a **montage** one-shot on top where the casting ability's own animation plays. Its `execute` keys
-  still time the hits, so combat and replay don't change.
-- **One unit view script** (`UnitAnimator`, system) that drives the tree from `combat/` signals and the gate. The
-  user's view scenes hold only the model, the skeleton and an `AnimationTree` node using the shared tree.
+- **One AnimationTree for every unit** (built once in code by `UnitAnimator.build_tree()` and shared as a static):
+  a state machine over the slots, plus a **montage** one-shot on top where the casting ability's own animation
+  plays. Its `execute` keys still time the hits, so combat and replay don't change.
+- **One unit view script** (`UnitAnimator`, system) that drives the tree from `combat/` signals and the gate. It is
+  the view scene's root (a view's own script extends it); it adds its `AnimationTree` child itself, so the user's
+  view scenes hold only the model, the skeleton and the `animation_set` export.
 - **Shared animations across models** through Godot's humanoid retargeting (`SkeletonProfileHumanoid` + a
   `BoneMap` at import, skeleton named `GeneralSkeleton`), so one set can serve every humanoid model. Documented and
   validated; the demo itself stays cubes (no rigged model in the repo yet).
@@ -29,7 +30,7 @@ never plays an animation. The ability's `Animation` resource stays where it is (
 
 | Area | What | Owner |
 |---|---|---|
-| `UnitAnimationSet` resource class, `UnitAnimator` node script, shared tree | system (`game/view/`, new) |
+| `UnitAnimationSet` resource class, `UnitAnimator` view root script (builds the shared tree) | system (`game/view/`, new) |
 | `UnitDefinition.view` (the unit's view scene, as a path) | system (`combat/unit_definition.gd`) |
 | Demo default set (cube idle bob, hit shake, death fall, revive, victory spin, cast hop) | yours (`presentation/demo/animation_sets/`, new files via the builder) |
 | `unit_view.tscn` / `unit_view.gd` move onto `UnitAnimator`; `room_view_3d.gd` instantiates each unit's own view | yours (`presentation/demo/`, edits need approval) |
@@ -51,24 +52,34 @@ No server. Three flows, all on the client.
 
 **Building a unit's view** (`room_view_3d._unit`, map and battle):
 ```
-definition.view (path) ──empty──▶ GameMain.unit_view (today's cube scene) as fallback
-load(view) → instantiate → UnitAnimator (root or child named "Animator")
-UnitAnimator.setup(definition):
-    set := definition's view scene's `animation_set` export, else the default set (presentation/demo/animation_sets/default.tres)
-    library "set"      ← every filled slot of `set`, missing slots from the default set
-    library "montage"  ← one placeholder animation named "current"
-    tree.tree_root     = the shared unit_animation_tree.tres; tree.active = true; travel("idle")
+UnitAnimator.instantiate_for(definition, GameMain.unit_view):
+    view_scene: definition.view (path) ──empty, missing or not a scene──▶ GameMain.unit_view (the cube) as fallback
+    instantiate → the root is the UnitAnimator; definition_id := definition.id
+UnitAnimator._ready (the view's own `animation_set` export picks the set):
+    adds its AnimationTree child (root = the view, callback_mode_method = immediate)
+    library "set"      ← every slot through set.animation_for (own, then the fallback chain); still empty, or no
+                         set at all → a short silent animation, so the tree always has something to play
+    library "montage"  ← placeholder "current";  library "react" ← "neutral" (silent loop) + placeholder "current"
+    library ""         ← "RESET" (rest values, see below)
+    tree.tree_root     = the shared tree (UnitAnimator.shared_tree()); tree.active = true; start("idle")
+setup(title, color) → label and colour (the cube's _paint)
 ```
+**Rest values.** Godot's deterministic blending adds every track onto its RESET value, or zero without one, so a
+`scale` flinch or a `visible` track would drop to 0 / false whenever nothing plays it. Every value track a slot or an
+ability animates therefore gets a RESET key holding the property's rest value, recorded the first time any
+animation uses it (`_record_rest`).
 
-**An ability** (`ViewGate.ability_began(unit_id, ability)` → `UnitAnimator.play_ability(ability, gate)`):
+**An ability** (`ViewGate.ability_began(unit_id, ability)` → `UnitAnimator.play(ability, gate)`):
 ```
 animation := ability.animation                         (content; null → gate.release_finished(), as today)
-library "montage": "current" := animation              (swap per cast; the tree resource is never edited)
-if animation has no track on the model (only execute keys, sounds): also fire the set's `cast` slot under it
-tree: request the OneShot "montage" (fade-in 0.1 s)    → the state machine keeps running underneath
+if it doesn't move the model (no transform, blend-shape or visibility track; only execute keys, sounds):
+    montage := a cached copy with the set's `cast` tracks merged in, length = the longer of the two
+library "montage": "current" := montage                (swap per cast; the shared tree is never edited)
+tree: request the OneShot "montage" (fade-in/out 0.1 s) → the state machine keeps running underneath
     each `execute(row_id)` method key  → UnitAnimator.execute(row_id) → gate.release_execution(row_id)
-    OneShot finishes (AnimationTree.animation_finished("montage/current")) → gate.release_finished()
-safety: a timer of animation.length + 0.5 s releases whatever is still held (an interrupted or broken animation
+    montage end → gate.release_finished(): `animation_finished("montage/current")`, or the OneShot's `active`
+        dropping (read on `mixer_applied`; with a fade-out the animation itself may never report finished)
+safety: a timer of montage.length + 0.5 s releases whatever is still held (an interrupted or broken animation
     never stalls the battle); ViewGate.skip_all bypasses all of this, as today
 ```
 The battle awaits only the gate, exactly as now (combat-replay-core: abilities await nothing but `battle.gate`).
@@ -77,11 +88,11 @@ The montage changes only which node plays the animation; key times and their ord
 **Reactions** (signals → state machine; never back into combat):
 | Signal | Slot |
 |---|---|
-| battle setup, run map | `idle` (loop) |
-| `damage_dealt(target = this)` | `hit` as an **additive flinch** on top of whatever plays (idle, or the unit's own cast); `block` replaces it when the hit carries a `Hit.Blocked` tag (none yet; hook only) |
-| `unit_died` | `death` → `dead` (loop, hold last pose) |
-| `unit_revived` | `revive` → `idle` |
-| `battle_ended(Victory)` | `victory` on living party units |
+| battle setup, run map | `idle` (loop), or `dead` for fallen units (`set_dead`, instant pose) |
+| `damage_dealt(target = this)` | `flinch()`: `hit` as an **additive flinch** on top of whatever plays (idle, or the unit's own cast); `block` replaces it when the hit carries a `Hit.Blocked` tag (none yet; hook only) |
+| `unit_died` | `die()`: `death` → `dead` (loop, hold last pose) |
+| `unit_revived` | `revive()`: `revive` → `idle` |
+| battle finished with Victory | `celebrate()`: `victory` → `idle` on living party units (`room_view_3d`, after rebuilding the room) |
 | (later) in-room movement | `walk` |
 
 A reaction never overrides a montage. The flinch is **additive** (decided 2026-10-20): it plays on its own layer and
@@ -96,17 +107,17 @@ relative to the rest pose).
 ### 3.1 Resource classes (system)
 | Class | Where | Fields |
 |---|---|---|
-| `UnitAnimationSet` (`Resource`) | `game/view/unit_animation_set.gd` | `idle`, `walk`, `hit`, `block`, `death`, `dead`, `revive`, `victory`, `cast`: `Animation` (all optional); `fallback: UnitAnimationSet` (default: the demo default set); `skeleton_profile: SkeletonProfile` (empty = cube-style, tracks on the view's own nodes; `SkeletonProfileHumanoid` = tracks on `%GeneralSkeleton:<bone>`) |
-| `UnitAnimator` (`Node`) | `game/view/unit_animator.gd` | exports `animation_set: UnitAnimationSet`, `tree: AnimationTree`, `label: Label3D` (optional); methods `setup(definition)`, `play_ability(ability, gate)`, `execute(row_id)` (the method keys' target), `react(slot)`, `set_stats(text)`, `set_dead(dead)` (same surface `room_view_3d` uses today) |
-| `unit_animation_tree.tres` | `game/view/` | `AnimationNodeBlendTree`: `StateMachine` (states `idle`, `walk`, `death`, `dead`, `revive`, `victory`, `cast`, each playing `set/<slot>`; any→death→dead, dead→revive→idle, idle→victory) → `OneShot "montage"` (shot: `montage/current`) → `Add2 "flinch"` (input B: a `OneShot` playing `set/hit` or `set/block`, add amount 1) → output |
+| `UnitAnimationSet` (`Resource`) | `game/view/unit_animation_set.gd` | `idle`, `walk`, `hit`, `block`, `death`, `dead`, `revive`, `victory`, `cast`: `Animation` (all optional); `fallback: UnitAnimationSet` (empty by default; the `animation_set` template sets it to the demo default set); `skeleton_profile: SkeletonProfile` (empty = cube-style, tracks on the view's own nodes; `SkeletonProfileHumanoid` = tracks on `%GeneralSkeleton:<bone>`). Methods `animation_for(slot)` (own slot, else up the fallback chain, at most 8 deep), `own_slots()`. Constants `SLOTS`, `LOOPING` (`idle`, `walk`, `dead`) |
+| `UnitAnimator` (`Node3D`, the view scene's root) | `game/view/unit_animator.gd` | exports `animation_set: UnitAnimationSet`, `label: Label3D` (optional); `tree` is the `AnimationTree` child it adds in `_ready`. Methods `setup(title, color)`, `set_stats(text)`, `set_dead(dead)` (instant pose), `play(ability, gate)`, `execute(row_id)` (the method keys' target), `flinch(blocked)`, `die()`, `revive()`, `celebrate()`, `play_slot(slot)` (previews, `anim`), `_paint()` (override to recolour). Statics `view_scene(definition, default_scene)`, `instantiate_for(definition, default_scene)`, `shared_tree()`, `build_tree()`, `moves_model(animation)`. Every live view joins group `unit_animators` |
+| Shared tree (`UnitAnimator.build_tree()`, built once) | in code, no `.tres` | `AnimationNodeBlendTree`: `StateMachine "state"` (states `idle`, `walk`, `cast`, `death`, `dead`, `revive`, `victory`, each playing `set/<slot>`; auto transitions Start→idle and, at end, death→dead, revive→idle, victory→idle, cast→idle; other states are entered with `playback.start`) → `OneShot "montage"` (shot: `montage/current`, fade 0.1 s) → `Add2 "flinch"` (add amount 1; input B: `OneShot "react"` over `react/neutral`, shot `react/current`, swapped to the set's `hit` or `block` per hit) → output |
 
 ### 3.2 Changes to existing system files
 | File | Change |
 |---|---|
 | `combat/unit_definition.gd` | `@export_file("*.tscn") var view: String = ""`: a **path**, not a `PackedScene`, so loading a definition (verifier, replays, tests) never loads models, textures or animation sets. Presentation calls `load()` on it. Empty = the default view. |
 | `game/game_main.gd` | `unit_view` stays as the default view scene. |
-| `game/dev/content_templates.gd` | character / enemy templates: `view = ""` (the default cube) plus a comment pointing at the set; new template `animation_set` (an empty `UnitAnimationSet` whose `fallback` is the default set). |
-| `game/dev/content_validator.gd` | Warnings: `view_missing` (a `view` path that doesn't exist or has no `UnitAnimator`), `animation_set_loop` (`idle` / `dead` / `walk` not looping), `animation_set_profile` (humanoid profile, but a track not under `%GeneralSkeleton`), `ability_montage_path` (an ability animation with a track path the default view doesn't have; Body-only cube animations are fine). Never errors: a look can't break a run. |
+| `game/dev/content_templates.gd` | character / enemy templates unchanged (`view` defaults to `""`, the default cube); new template `animation_set` (an empty `UnitAnimationSet` whose `fallback` is `presentation/demo/animation_sets/default.tres`), written by default to `presentation/demo/animation_sets/`. |
+| `game/dev/content_validator.gd` | Checked only for units with a `view`. Warnings: `view_missing` (a `view` path that doesn't exist, isn't a scene, or whose root isn't a `UnitAnimator`), `animation_set_loop` (`idle` / `dead` / `walk` not looping), `animation_set_profile` (a skeleton profile is set, but one of the set's own slots has a track not under `%GeneralSkeleton`), `ability_montage_path` (an ability animation with a non-method track on a node the unit's own view doesn't have). Never errors: a look can't break a run. |
 | Console | `anim <unit id> [slot]`: prints the unit's view, set, filled/fallback slots and validator findings; with a window it also plays the slot on the sandbox unit (Play parity). `play` (exists) shows the unit with its set. |
 | `addons/rpg_dev/` | Play on a character / enemy opens the sandbox with its view (already routes through `play`); no new buttons. |
 
@@ -115,11 +126,12 @@ relative to the rest pose).
   and its animations (`idle` gentle bob, `hit` shake, `death` fall onto its side, `dead` lying, `revive` stand up,
   `victory` spin, `cast` the hop the cube does today, `block` a squash; `walk` a waddle). Values are starting
   values for you to tune; once the files exist they are the source of truth.
-- **Edit** `unit_view.tscn`: root gets `UnitAnimator` (or an `Animator` child), `AnimationPlayer` becomes an
-  `AnimationTree` using the shared tree. `unit_view.gd` shrinks to the cube's colouring (`_paint`), since the tweens
-  (`flash`, hop, death rotation) become the default set.
-- **Edit** `room_view_3d.gd`: `_unit()` instantiates `definition.view` (or the default) instead of always
-  `unit_view`; calls `react(&"hit")` from `damage_dealt` instead of `flash()`; `victory` on battle end.
+- **Edit** `unit_view.tscn`: the root's `unit_view.gd` extends `UnitAnimator` with `animation_set` = the default set
+  and `label` = `Label`; the `AnimationPlayer` is gone (the animator adds its own tree). `unit_view.gd` shrinks to
+  the cube's colouring (`_paint`), since the tweens (`flash`, hop, death rotation) become the default set.
+- **Edit** `room_view_3d.gd`: `_unit()` uses `UnitAnimator.instantiate_for(definition, unit_view)` instead of always
+  `unit_view`; `flinch()` from `damage_dealt` instead of `flash()` on `execution_resolved`; `die()` / `revive()`
+  from `unit_died` / `unit_revived`; `celebrate()` on the living party after a victory.
 
 ### 3.4 Humanoid convention (documented, validated, not demoed)
 Import each humanoid model with the **Retarget → Bone Map** set to `SkeletonProfileHumanoid` and "Rename Skeleton"
@@ -134,7 +146,9 @@ can never change, slow or stall combat, and that replays stay byte-identical (sc
 
 | Failure | Behaviour | Test |
 |---|---|---|
-| The verifier or a replay loads a unit with a `view` | `view` is a path; nothing under `presentation/` is loaded; replay result byte-identical | `test_headless_never_loads_views` (loads every demo definition headless, asserts no `presentation/` resource is cached), every existing golden unchanged |
+| The verifier or a replay loads a unit with a `view` | `view` is a path; nothing under `presentation/` is loaded; replay result byte-identical | `test_headless_never_loads_views` (saves and reloads a probe definition with a view, asserts its view scene isn't cached; a missing view falls back to the default), every existing golden unchanged |
+| An ability animation that doesn't move the model (keys and sounds only) | The set's `cast` is merged into a copy, so the pose underneath isn't hidden | `test_montage_merges_cast_into_keys_only_animations` |
+| A slot or ability animates `scale` or `visible` | It comes back to the rest value afterwards, not 0 / false | `test_rest_values_survive` |
 | Montage drops or reorders `execute` keys | Same row ids, same order as `ExecutionReader.sequence_for` | `test_montage_releases_in_order` (fixture view, ClientGate, records `release_execution` calls) |
 | Ability animation is null, has no keys, or is interrupted (unit dies mid-cast, scene freed) | The gate is released (finished) within `length + 0.5 s`; battle continues | `test_montage_never_stalls` |
 | `hit` arrives during the unit's own cast | Flinch is added on its layer; the cast keeps playing, its `execute` keys still fire on time | `test_flinch_is_additive` |
@@ -148,23 +162,27 @@ can never change, slow or stall combat, and that replays stay byte-identical (sc
 N/A: client-only presentation, no service runs.
 
 ## 6. Test plan
-System tests use fixtures only: a fixture view `tests/fixtures/views/probe_view.tscn` (a `Body` node, an
-`AnimationTree` with the shared tree, `UnitAnimator`) and a fixture set whose slots are short animations with known
-lengths. They run headless (the AnimationTree is advanced manually with `advance(delta)`, no rendering).
-- `test_montage_releases_in_order`, `test_montage_never_stalls`, `test_montage_per_unit`,
-  `test_flinch_is_additive`, `test_death_waits_for_montage`, `test_animation_set_fallback`, `test_skip_and_animated_same_hash`,
-  `test_headless_never_loads_views`.
-- **First implementation step (pinned by a test):** check that method-call tracks fire through an `AnimationTree`
-  `OneShot` in Godot 4.7.2 (`callback_mode_method`), that `animation_finished` reports the one-shot's animation,
-  that an `Add2` flinch over a running montage adds to the pose without stopping it, and that `@export_file`
-  stores a `uid://` reference (so moving a view scene keeps the link). If either fails, `UnitAnimator` plays the montage on a dedicated `AnimationPlayer` child instead and
-  blends nothing (same gate behaviour); the spec is synced.
-- Validator: broken fixtures `views/view_missing` (a character whose `view` is a bad path),
-  `animation_sets/not_looping.tres`, `animation_sets/bad_profile.tres`; `test_content_validator` expected lists.
-- Templates: `create animation_set <id>` round trip; `test_tool_parity` adds `anim`.
+System tests use fixtures only: a fixture view `tests/fixtures/views/probe_view.tscn` (a `UnitAnimator` root with a
+`Body` node) and a fixture set `tests/fixtures/animation_sets/probe_set.tres` whose slots are short animations with
+known lengths (both made by `build_fixtures`). They run headless (the tree is switched to manual process and advanced
+with `advance(delta)`, no rendering). File: `tests/game/test_animation_sets.gd`.
+- `test_montage_releases_in_order`, `test_montage_never_stalls`, `test_montage_merges_cast_into_keys_only_animations`,
+  `test_montage_per_unit`, `test_flinch_is_additive`, `test_death_waits_for_montage`, `test_animation_set_fallback`,
+  `test_skip_and_animated_same_hash`, `test_headless_never_loads_views`, `test_rest_values_survive`.
+- **First implementation step (outcome):** method-call tracks fire through the `OneShot` with
+  `callback_mode_method` immediate (`test_montage_releases_in_order`) and an `Add2` flinch over a running montage
+  adds to the pose without stopping it (`test_flinch_is_additive`), so no `AnimationPlayer` fallback was needed.
+  `animation_finished` alone is not reliable with a fade-out; the end is also read from the OneShot's `active` (§2).
+  **Still to test:** that `@export_file` stores a `uid://` reference (so moving a view scene keeps the link).
+- Validator: broken fixtures `characters/view_missing.tres` (a `view` path that isn't there),
+  `animation_sets/not_looping.tres` (non-looping `idle` and a humanoid profile with a `Body` track) used by
+  `views/bad_set_view.tscn` via `characters/bad_view_set.tres`, whose ability `abilities/far_reach.tscn` moves an
+  `Arm` node the view doesn't have; `test_content_validator` expected lists.
+- Console and templates: `test_console_anim_and_animation_set_template` (`anim` shows and plays a slot, refuses an
+  unknown one; `create animation_set` round trip); `test_tool_parity` adds `anim`.
 - **Goldens:** no combat or game golden changes (nothing in the simulation path changes). No new goldens.
-- Demo smoke: `test_demo_smoke` (exists) still passes with the new view; one demo case checks every demo unit
-  resolves a view and a set with no validator warnings.
+- Demo smoke: `test_demo_smoke` (exists) still passes with the new view; `test_content_units_have_views` checks every
+  unit under `content/` resolves a view with a set and has no view or animation-set warnings.
 
 `dotnet build` / `dotnet test` green (no C# changes). Both suites pass before the slice counts as done. Headless
 Godot always with `--quit-after` and a timeout.

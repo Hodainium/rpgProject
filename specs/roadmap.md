@@ -11,7 +11,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1b. `game-skeleton` | ✅ Done | 2026-10-19 |
 | 1c. `dev-tools` | ✅ Done (spec synced; remaining work listed in `specs/dev-tools.md`) | 2026-10-20 |
 | 1c2. `item-pass` | ✅ Done (spec synced; known test gaps listed in `specs/item-pass.md` 6) | 2026-10-20 |
-| 1c3. `animation-sets` | 📝 Spec written (awaiting review) | 2026-10-20 |
+| 1c3. `animation-sets` | ✅ Done (spec synced; `uid://` test for `view` still to add, `specs/animation-sets.md` 6) | 2026-10-21 |
 | 1c4. `ult-interrupts` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
@@ -212,13 +212,14 @@ the existing item mechanics; new mechanics only if an item needs one. Content wo
 
 ### 1c3. `animation-sets`
 **Purpose:** a new character or enemy slots in by dragging animations into named slots, instead of hand-wiring each one.
-- **Animation set** (presentation resource, one per unit, referenced from `UnitDefinition` so characters and enemies
-  share it): slots such as idle, walk, hit react, block, death, victory and a generic cast.
+- **Animation set** (presentation resource): slots such as idle, walk, hit react, block, death, victory and a
+  generic cast; empty slots fall back to a default set. A unit's view scene picks its set, and `UnitDefinition`
+  holds only the view's path, so loading a definition (verifier, replays) never loads models or animations.
 - **One AnimationTree for every unit:** a state machine for the slots plus a montage slot on top, where the casting
   ability's own animation plays (its `execute` keys still time the hits, so combat and replay are unchanged).
 - Shared animations across models through Godot's humanoid skeleton profile and bone maps.
-- Presentation only: combat stays animation-free and the headless verifier never plays any. The 1c content templates
-  get an empty animation set; Play shows it.
+- Presentation only: combat stays animation-free and the headless verifier never plays any. A new 1c template
+  `animation_set` creates an empty set that falls back to the default one; Play shows a unit with its set.
 
 ### 1c4. `ult-interrupts`
 **Purpose:** ults can be used at any time, as in Honkai: Star Rail: a character with a full ult charge can cast it
