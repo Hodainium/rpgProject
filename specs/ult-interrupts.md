@@ -2,8 +2,8 @@
 
 Status: ✅ Implemented, synced with the code (2026-10-21) · Roadmap: slice 1c4 · Date: 2026-10-21
 Design intent: Honkai: Star Rail ultimates (`specs/design/combat-design.md`, "Ult charge"). Turn order, action log,
-checkpoints and state hash: `specs/combat-replay-core.md` (whose log schema leaves room for "ultimates that interrupt
-the order"). One More, break, follow-ups: `specs/item-pass.md` 3.1–3.2. Console and script runner:
+state hash: `specs/combat-replay-core.md` (whose log schema leaves room for "ultimates that interrupt the order");
+per-action checkpoints were removed later by `specs/atomic-battles.md`. One More, break, follow-ups: `specs/item-pass.md` 3.1–3.2. Console and script runner:
 `specs/dev-tools.md`.
 
 ## 1. Purpose & enterprise mapping
@@ -60,17 +60,17 @@ run():
     │      validate → _interrupt(i) → triggers, deaths, end check            (not logged)         │
     │ 2. Party, until the controller has none:                                                    │
     │      i = controller.interrupt(battle) → {} closes the window                                │
-    │      validate → _interrupt(i) → triggers, deaths, end check → checkpoint → log              │
+    │      validate → _interrupt(i) → triggers, deaths, end check → log                           │
     └─────────────────────────────────────────────────────────────────────────────────────────────┘
     if one_more_queue not empty: extra action (its decision is a DECISION window too); continue
     next actor by AV → elapse → turn += 1 → turn start ticks, triggers, deaths, end check
     party actor:  choice = controller.choose(battle, actor)              ◀── DECISION window
                   while choice is an interrupt and actor alive and ongoing:
-                      validate → _interrupt(choice) → triggers, deaths, end check → checkpoint → log
+                      validate → _interrupt(choice) → triggers, deaths, end check → log
                       choice = controller.choose(battle, actor)         (ask again; the turn isn't spent)
                   take the action as today
     enemy actor:  brain (unchanged; presses during an enemy turn wait for the next BETWEEN)
-    turn end, deaths, end check, AV reset, checkpoint (unchanged)
+    turn end, deaths, end check, AV reset (unchanged; no state hash since spec atomic-battles)
 ```
 - **BETWEEN** (HSR's "ult during the enemy's turn"): a press while an enemy acts is queued and fires once that action
   and its turn end are done, **before** the next unit's turn starts. So an ult can kill or break the next actor before it
@@ -97,7 +97,7 @@ run():
    runs before the next turn: right after a BETWEEN window, or after the current turn ends for a DECISION ult (as
    follow-up breaks do). The rule is generic, so an enemy ult that breaks a
    party unit with toughness would do the same (no demo content does).
-5. Party caster only: checkpoint (state hash) → `controller.after_interrupt(battle, caster, action, checkpoint)`.
+5. Party caster only: `controller.after_interrupt(battle, caster, action)` (no state hash: spec atomic-battles).
 
 **Self-buffs:** `CombatASC._in_own_turn` already decides it. An ult a unit casts in its own DECISION window (or its
 One More's) is "on its own turn", so that turn's end doesn't count it down and a 2-turn self-buff covers its next two
@@ -112,7 +112,7 @@ Battle at DECISION → recorder.choose() returns a queued interrupt first, else 
    (a press while choose() waits wakes it: choose() returns {"interrupt": true, "unit", "ability", "target"})
 target gone by then → Battle.retarget(caster, ability, target) (below); the log records the target actually used
 still invalid (caster dead, charge not full, no target left) → action_rejected, dropped, not logged
-after_interrupt → entries.append(entry(battle.turn, caster, action, checkpoint, interrupt = true))
+after_interrupt → entries.append(entry(battle.turn, caster, action, interrupt = true))
 battle ends with presses still queued → dropped
 ```
 **Auto** (the battle panel's Auto toggle and the console's auto battles): at a party decision it first presses every
@@ -136,7 +136,7 @@ console and tests share one rule. `Battle.resolve_press(press)` applies it and t
 ### B. Replay mode (verify)
 - Enemy phase: identical code, re-simulated (brain + battle RNG), as enemy turns are today.
 - Party phase: `ReplayController.interrupt(battle)` returns the next entry if it is `interrupt` **and** its
-  `turn == battle.turn`; else `{}`. `after_interrupt` compares the checkpoint and advances the cursor.
+  `turn == battle.turn`; else `{}`. `after_interrupt` advances the cursor (nothing is compared until the end).
 - DECISION: `ReplayController.choose(battle, unit)` returns the next entry as an interrupt if it is `interrupt` with
   `turn == battle.turn`; otherwise the existing checks (turn, actor, `extra`) for the turn action.
 
@@ -167,7 +167,7 @@ as for `choose()`.
 | `Battle.validate_action` | A turn action that `is_ultimate()` → `IllegalAbility`. New `validate_interrupt(caster, choice, party: bool)`: caster living and on the expected side (`ActorMismatch`), ability granted, `is_ultimate()` and `can_activate_ability` (`IllegalAbility`), target valid (`InvalidTarget`). |
 | `Battle` | `interrupt_started(unit_id, ability_tag)` signal; `in_interrupt: bool`; `_ult_window()`; `_party_interrupt()` (checks a party interrupt from either window; an invalid one goes to `controller.on_invalid`); `_interrupt()`; `retarget()`; `resolve_press()`. |
 | `EnemyBrain` | `choose_interrupt(unit, battle)` (above). |
-| Controllers | New `interrupt(battle) -> Dictionary` and `after_interrupt(battle, unit, action, checkpoint)` on `ActionRecorder`, `ReplayController`, `ScriptedController`. `choose()` may return `{"interrupt": true, "unit", "ability", "target"}` (DECISION). |
+| Controllers | New `interrupt(battle) -> Dictionary` and `after_interrupt(battle, unit, action)` on `ActionRecorder`, `ReplayController`, `ScriptedController`. `choose()` may return `{"interrupt": true, "unit", "ability", "target"}` (DECISION). |
 | `ActionRecorder` | `submit_ult(unit_id, ability_tag, target_id = &"")`; `pending_interrupts()`; `ActionRecorder.entry(..., extra, interrupt)` writes `"interrupt": true` only when set. |
 | Validator | Error `ult_triggered`: `Ability.Type.Ultimate` on a triggered ability. Warning `ult_no_cost`: an ult with no cost effect (castable at every window). Warning `ult_no_charge`: an enemy with an ult among its abilities, default-loadout skills or item grants, but no triggered passive at all there (anything that could charge it). |
 | Tools | `game/tools/sync_tags.gd` knows `Ability.Type.Ultimate` as a system tag. `game/dev/commands/ult.gd` (with `ult` tag completion in `dev_console.gd`). |
@@ -179,24 +179,25 @@ public sealed record ActionEntry(
     string Actor,                            // for an interrupt: the caster, any living party member
     string Ability,
     string? Target,                          // for an interrupt: the target actually used (after retargeting)
-    string Checkpoint,                       // state hash after this action (or interrupt) resolved
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Extra = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Interrupt = null);
     // true for a party ult cast out of turn (spec ult-interrupts); omitted otherwise
 ```
 Example (P1 Execute after enemy turn 3; then on P2's own turn 4, P2 Sanctuary before its Strike):
 ```json
-{"turn": 3, "actor": "P1", "ability": "Ability.Ult.Execute",   "target": "E2", "checkpoint": "…", "interrupt": true},
-{"turn": 4, "actor": "P2", "ability": "Ability.Ult.Sanctuary", "target": null, "checkpoint": "…", "interrupt": true},
-{"turn": 4, "actor": "P2", "ability": "Ability.Strike",        "target": "E1", "checkpoint": "…"}
+{"turn": 3, "actor": "P1", "ability": "Ability.Ult.Execute",   "target": "E2", "interrupt": true},
+{"turn": 4, "actor": "P2", "ability": "Ability.Ult.Sanctuary", "target": null, "interrupt": true},
+{"turn": 4, "actor": "P2", "ability": "Ability.Strike",        "target": "E1"}
 ```
-- Optional field, absent from every existing log, so **`ActionLog.schemaVersion` stays 1** and every golden is
-  unchanged (the rule `combat-replay-core` set for `extra`).
-- Enemy interrupts are not in the log (re-simulated); their effects are in the next party checkpoint.
+- Optional field, absent from every existing log, so `ActionLog.schemaVersion` stayed 1 and every golden was
+  unchanged (the rule `combat-replay-core` set for `extra`). Spec atomic-battles later made it 2 (no `Checkpoint`).
+- Enemy interrupts are not in the log (re-simulated); their effects are in the final hash (and in a determinism trace's
+  `interrupt` points).
 - `interrupt` and `extra` both true is malformed → `TurnMismatch`.
 - **No new `MismatchReason`:** an interrupt that can't fire where it is logged (its turn's window has passed, or
   it is met where a turn action is due) is `TurnMismatch`; one moved to another *valid* window fires there and is
-  caught by the next checkpoint (`CheckpointMismatch`: the log alone can't tell a later press from a moved one); a
+  caught later (a later entry no longer fits, or `OutcomeMismatch` / `FinalHashMismatch` at the end: the log alone
+  can't tell a later press from a moved one; spec atomic-battles); a
   non-ult or a partial charge is `IllegalAbility`; a dead or enemy caster is `ActorMismatch`; leftover interrupts
   after the end are `TrailingActions`. All are 2002.
 - **State hash:** unchanged, `hash-v1`. Queued presses are controller state, never battle state; the hash after an
@@ -231,15 +232,15 @@ N/A: no queues, topics or keys. The slice 3 battle job carries the log as an opa
 | Ult on own turn | Fires before the action; the actor still acts; its AV resets once | `test_ult_on_own_turn_keeps_turn` |
 | Ally ults during another member's decision | Fires; the deciding member still acts | `test_ult_break_one_more_and_ult_during_it` (P2 ults in P1's One More decision) |
 | Actor dies during its DECISION window (the martyr fixture's self-killing ult) | Window ends, no action; BETWEEN of the same turn follows; client and replay agree | `test_actor_dies_in_decision_window` |
-| Two party ults back to back | Both fire in one window, in press order, two entries, two checkpoints | `test_ult_chain` |
+| Two party ults back to back | Both fire in one window, in press order, two entries, two trace points | `test_ult_chain` |
 | Enemy with a full charge | Ults at the next window, before any party press; not logged; replay re-simulates it | `test_enemy_interrupt`, `test_record_replay_roundtrip_with_interrupts` |
 | Two enemies full in one window | Slot order, one each; no loop | `test_enemy_interrupts_slot_order` (`fixture.encounter.rage_pair`) |
 | Party ult fills an enemy's charge | The enemy answers at the next window, not the same one | `test_enemy_interrupt` |
 | Enemy without a castable ult | No RNG draw; existing goldens unchanged | `test_no_enemy_ult_no_rng` + existing goldens |
 | Ult as a turn action (party or enemy brain) | Client: `action_rejected`. Replay: 2002 `IllegalAbility`. Brain: runner error | `test_action_abilities_exclude_ults`, `test_tampered_interrupts` (see 6, known gaps) |
 | Interrupt with a partial charge | 2002 `IllegalAbility` (cost check) | `test_tampered_interrupts` |
-| Interrupt moved to another turn | 2002 `CheckpointMismatch` when it lands at a valid window (the usual case), `TurnMismatch` when it can't fire there | `test_tampered_interrupts`, golden `ult-seed-7-tampered-turn` |
-| Interrupt deleted from the log | 2002 `CheckpointMismatch` at the next entry | `test_tampered_interrupts` |
+| Interrupt moved to another turn | 2002 `TurnMismatch` when it can't fire there or a later entry no longer fits (measured in both tests, spec atomic-battles), else `OutcomeMismatch` / `FinalHashMismatch` at the end | `test_tampered_interrupts`, golden `ult-seed-7-tampered-turn` |
+| Interrupt deleted from the log | 2002 at the next structural check (`TurnMismatch` in the test) or at the end (`FinalHashMismatch`, `OutcomeMismatch`: spec atomic-battles) | `test_tampered_interrupts`, golden `ult-close-seed-2-tampered-outcome` |
 | Interrupt by a dead or enemy unit | 2002 `ActorMismatch` | `test_tampered_interrupts` (enemy), `test_tamper_ult_dead_actor` (dead) |
 | Both `extra` and `interrupt` | 2002 `TurnMismatch` | `test_tampered_interrupts` |
 | Queued ult whose target died first (incl. to an enemy ult in the same window) | Retargeted to the nearest slot; the log holds the new target; replay `Verified` | `test_ult_kills_next_actor_and_retargets`, `test_queued_ult_retargets_after_enemy_ult`, demo `test_execute_interrupt_and_retarget` |
@@ -282,7 +283,7 @@ Analytics (slice 4b): "most used moves" reads interrupt entries as moves; the fl
 
 ### Unit tests (`tests/combat/test_ult_interrupts.gd`)
 Every row of section 4, plus:
-- `test_record_replay_roundtrip_with_interrupts`: ScriptedController run → `Verified`, identical checkpoints.
+- `test_record_replay_roundtrip_with_interrupts`: ScriptedController run → `Verified`.
 - `test_interrupt_entry_shape`: `interrupt` written only when true; field order matches the C# record.
 - No change without ults: `test_no_enemy_ult_no_rng` (a break battle logs no `interrupt`) and the existing goldens,
   which rewrote byte-identical with this slice.
@@ -294,7 +295,7 @@ Every row of section 4, plus:
 | File | Proves |
 |---|---|
 | `ult-seed-7.json` / `.result.json` | Party interrupts in both windows (BETWEEN, and DECISION by an ally during another member's turn and One More), ult breaks followed by One More actions, an enemy interrupt (re-simulated, not in the file), Victory |
-| `ult-seed-7-tampered-turn.json` / `.result.json` | The first interrupt moved one turn → 2002 `CheckpointMismatch` at turn 1 (it lands at a valid window) |
+| `ult-seed-7-tampered-turn.json` / `.result.json` | The first interrupt moved one turn → 2002 `TurnMismatch` at turn 2 (since spec atomic-battles; until then `CheckpointMismatch` at turn 1) |
 
 Not in the golden, by design: a same-window chain (`test_ult_chain`) and retargeting. Retargeting happens before an
 entry is logged, so a retargeted entry looks like any other and a golden can't show it; its tests record a real
@@ -370,7 +371,8 @@ Decided 2026-10-21:
 6. Enemies can interrupt (decided by their brain, never logged); enemies act first in a window.
 
 Decided in implementation (synced 2026-10-21): a moved interrupt is `CheckpointMismatch`, not `TurnMismatch` (it
-lands at a valid window); the scripted policy splits windows by slot, not by turn; retargeting stays out of the golden
+lands at a valid window; superseded 2026-10-22 by spec atomic-battles: without checkpoints it is `TurnMismatch` or an
+end-of-battle reason); the scripted policy splits windows by slot, not by turn; retargeting stays out of the golden
 (it happens before logging); a martyr fixture instead of a thorn enemy, so the death-in-DECISION case replays; ults
 are battle-only (not on the map); auto battles press ready ults; the demo ults come from a new builder,
 `build_ult_pass`.

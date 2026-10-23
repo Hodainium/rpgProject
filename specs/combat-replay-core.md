@@ -44,9 +44,9 @@ presentation/ ──start(snapshot)──▶ Battle ──resolve content──�
                                      │    → GodotGAS: try_activate → for each baked execution: await gate ◀── execute key / skip
                                      │                                   → row's effect → ExecCalcs (battle RNG)
                                      │    → wait for animation end (or skip)
-                                     │    → turn_end: buffs/debuffs count down → death/end checks → AV reset → checkpoint
-                                     ├─ ActionRecorder appends {turn, actor, ability, target, checkpoint}
-                                     └─ battle_ended(outcome, finalHash) ──▶ presentation (and, in slice 3, /verify)
+                                     │    → turn_end: buffs/debuffs count down → death/end checks → AV reset
+                                     ├─ ActionRecorder appends {turn, actor, ability, target}   (no per-action hash: spec atomic-battles)
+                                     └─ battle_ended(outcome, finalHash: the battle's only state hash) ──▶ presentation (and, in slice 3, /verify)
 ```
 Presentation **listens** to signals (`turn_started`, `execution_resolved`, `unit_died`, `battle_ended`), calls
 `submit_action`, and opens the presentation gate from animation events (see "Execution table and animation events").
@@ -57,8 +57,7 @@ It never changes combat state directly.
 godot --headless --path client-godot res://combat/headless/replay_main.tscn -- --in request.json --out result.json
   └─ ReplayRunner: parse ReplayRequest → Battle in replay mode
        Party turn: take next log entry; validate turn, actor, ability, target; activate
-       after each party turn: compare checkpoint hash
-       end: compare outcome and final hash → ReplayResult
+       end: compare outcome and final hash → ReplayResult   (nothing is hashed before the end: spec atomic-battles)
   exit code 0 = Verified, 2 = Rejected (2002), 1 = runner error (malformed input, content error)
 ```
 In slice 3 the verifier worker wraps this command; nothing here knows about RabbitMQ.
@@ -81,7 +80,8 @@ In slice 3 the verifier worker wraps this command; nothing here knows about Rabb
   7. Death check: any unit with `HP` current value `<= 0` is dead, leaves the turn queue, and its ASC is `cleanup()`ed.
   8. End check: all enemies dead → `Victory`; all party dead → `Defeat`.
   9. `actor.av = full_av` using the actor's **current** SPD.
-  10. Party turn in replay mode: compute the state hash and compare it to the entry's `checkpoint`.
+  10. Party turn: the controller is told the action (`after_party_turn`): the recorder logs it, the replay moves to
+      the next entry. No state hash (spec atomic-battles; until 2026-10-22 a per-entry `checkpoint` was compared here).
   11. `turn >= TURN_LIMIT` (1000) without an end → `TurnLimit`. A safety stop for the verifier, not a balance value.
 - **SPD changes mid-cycle** (a buff or debuff on `SPD`): the turn manager listens to `attribute_changed` and rescales the
   remaining distance: `av = av * old_spd / new_spd` (integer division). SPD below 1 is a content error.
@@ -89,13 +89,13 @@ In slice 3 the verifier worker wraps this command; nothing here knows about Rabb
   (25% of its full `av`, `TurnManager.delay`). The party unit whose action broke a unit is queued in
   `Battle.one_more_queue`; the loop runs that queue before step 1, so a **One More** is an extra action with its own
   `turn += 1` but no turn start (4), no turn end (6), no `av` change (9). Its log entry carries `"extra": true` and is
-  checked like any party action (10). An optional field absent from old logs, so `schemaVersion` stays 1.
+  checked like any party action. An optional field, so it didn't change `schemaVersion` (atomic-battles made it 2).
 - **Ult windows (spec ult-interrupts):** an ability tagged `Ability.Type.Ultimate` is never a turn action; it is cast
   out of turn at two windows. BETWEEN, at the top of the loop (before a One More or step 1): enemies whose brain
   chooses an ult, in slot order, then the controller's party interrupts. DECISION: a party decision (step 5) may
   return an interrupt instead of an action; it fires and the member is asked again. An interrupt has no `turn += 1`,
-  no turn start or end and no `av` change. A party interrupt is checkpointed and logged with the window's turn and
-  `"interrupt": true` (an optional field, so `schemaVersion` stays 1); an enemy one is re-simulated, never logged.
+  no turn start or end and no `av` change. A party interrupt is logged with the window's turn and
+  `"interrupt": true` (an optional field); an enemy one is re-simulated, never logged.
 - Out of scope, but the log schema leaves room for them: action advance, multiple enemy waves. Adding either bumps
   `schemaVersion` unless, like `extra` and `interrupt`, it is an optional field.
 
@@ -276,17 +276,16 @@ public sealed record PartyMemberSnapshot(int Slot, string UnitDefId, int Level);
 
 /// Produced by the client's ActionRecorder. Only party decisions; enemy turns are re-derived.
 public sealed record ActionLog(
-    int SchemaVersion,                       // 1
+    int SchemaVersion,                       // 2 (spec atomic-battles: v1 had a per-entry Checkpoint; v2 only is read)
     IReadOnlyList<ActionEntry> Actions,
     BattleOutcome ClaimedOutcome,
-    string ClaimedFinalHash);                // lowercase hex SHA-256
+    string ClaimedFinalHash);                // lowercase hex SHA-256, the battle's only state hash
 
 public sealed record ActionEntry(
     int Turn,                                // global turn index (1-based) when this party unit acted
     string Actor,                            // "P1".."P4"
     string Ability,                          // the BattleAbility's ability_tag
     string? Target,                          // primary target unit id ("E1", "P2"), null for SELF/ALL_*
-    string Checkpoint,                       // state hash at the end of this turn
     bool? Extra = null,                      // true for a One More (spec item-pass); omitted otherwise
     bool? Interrupt = null);                 // true for a party ult cast out of turn (spec ult-interrupts); omitted otherwise
 
@@ -304,7 +303,7 @@ public sealed record ReplayResult(
     string FinalStateHash,
     string EngineVersion);                   // Engine.get_version_info()["string"], e.g. "4.7.2.stable.mono.official"
 
-public sealed record ReplayMismatch(MismatchReason Reason, int Turn, string Detail);
+public sealed record ReplayMismatch(MismatchReason Reason, int Turn, string Detail);   // Turn: where it was detected
 
 public enum ReplayVerdict { Verified, Rejected }
 public enum BattleOutcome { Victory, Defeat, TurnLimit }
@@ -316,7 +315,7 @@ public enum MismatchReason
     ActorMismatch,       // entry's actor isn't the unit whose turn it is (an interrupt: not a living party unit)
     IllegalAbility,      // not granted to that unit, or can_activate_ability is false (cost, cooldown, tags)
     InvalidTarget,       // missing, dead, wrong side, or not allowed for the ability's targeting
-    CheckpointMismatch,  // state hash after the turn differs from the entry's checkpoint
+                         // (CheckpointMismatch was removed by spec atomic-battles)
     LogExhausted,        // a party unit needs to act but the log has no entries left
     TrailingActions,     // battle ended with entries left in the log
     OutcomeMismatch,     // claimedOutcome differs from the simulated outcome
@@ -327,7 +326,10 @@ public enum MismatchReason
 - Unit ids are assigned by the battle, never by the client: party `P<slot>`, enemies `E<slot>` in encounter order.
 - **Error contract:** every `Rejected` result carries `errorCode` 2002 and `error` `"ReplayMismatch"`, with the reason
   in `mismatch.reason`. Use code 2002 everywhere (logs, metrics, events); `reason` is the detail, not a new code.
-- The replay stops at the **first** mismatch; `mismatch.turn` is where it happened.
+- The replay stops at the **first** mismatch; `mismatch.turn` is the turn where the replay **detected** it, not
+  necessarily where the log diverged: a legal tamper (another valid target) plays on and surfaces later, as a dead
+  target, a misplaced entry or at the end (`OutcomeMismatch` / `FinalHashMismatch`). The determinism trace finds the
+  divergent action (spec atomic-battles).
 
 ### 3.3 State hash (v1)
 SHA-256 (Godot `HashingContext`) over a canonical UTF-8 text, lowercase hex. One line per fact, joined with `\n`:
@@ -360,12 +362,11 @@ N/A: no queues, topics or keys in this slice.
 
 | Situation | Behaviour | Test |
 |---|---|---|
-| Same inputs twice, same process | Identical final hash and identical checkpoint sequence | `test_determinism_same_process` |
+| Same inputs twice, same process | Identical log and final hash | `test_determinism_same_process` |
 | Same inputs, fresh Godot process | Identical to the committed golden hash | `test_golden_replays` (each golden runs in its own `godot --headless` process) |
-| Tampered target | `Rejected` 2002, `InvalidTarget` or `CheckpointMismatch` at that turn | `test_tamper_target` |
+| Tampered target | `Rejected` 2002, `InvalidTarget`, or later `OutcomeMismatch` / `FinalHashMismatch` (spec atomic-battles) | `test_tamper_target` |
 | Tampered ability (not granted / on cooldown) | `Rejected` 2002, `IllegalAbility` | `test_tamper_ability` |
 | Wrong actor or turn | `ActorMismatch` / `TurnMismatch` | `test_tamper_actor`, `test_tamper_turn` |
-| Edited checkpoint | `CheckpointMismatch` at that turn | `test_tamper_checkpoint` |
 | Truncated log | `LogExhausted` | `test_log_exhausted` |
 | Extra entries | `TrailingActions` | `test_trailing_actions` |
 | Wrong claimed outcome or final hash | `OutcomeMismatch` / `FinalHashMismatch` | `test_claim_mismatch` |
@@ -373,7 +374,7 @@ N/A: no queues, topics or keys in this slice.
 | Ability awaits anything but the gate | Runner error `ContentAwaitedFrame`, exit code 1 | `test_zero_frame_rule` |
 | Ability without an animation, animation without `execute` keys, a key naming a missing row, or duplicate row ids | Content test fails (caught before shipping, never at verify time) | `test_execution_table_valid` |
 | Fractional attribute | Runner error `NonIntegerAttribute`, exit code 1 | `test_non_integer_attribute` |
-| Malformed JSON / unknown schemaVersion | Runner error, exit code 1 (slice 3 rejects these with HTTP 400 before they reach a worker) | `test_malformed_input` |
+| Malformed JSON / unknown schemaVersion (incl. an `ActionLog` v1) / an unknown entry key | Runner error, exit code 1 (slice 3 rejects these with HTTP 400 before they reach a worker) | `test_malformed_input` |
 
 **Acceptance scenario 5 (tampered action log → deterministic rejection with 2002):** covered at the runner level here,
 by the tamper tests, each run twice to prove the rejection itself is deterministic (same reason, same turn).

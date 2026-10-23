@@ -13,7 +13,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c2. `item-pass` | ✅ Done (spec synced; known test gaps listed in `specs/item-pass.md` 6) | 2026-10-20 |
 | 1c3. `animation-sets` | ✅ Done (spec synced; `uid://` test for `view` still to add, `specs/animation-sets.md` 6) | 2026-10-21 |
 | 1c4. `ult-interrupts` | ✅ Done (spec synced; one known test gap in `specs/ult-interrupts.md` 6) | 2026-10-21 |
-| 1c4b. `atomic-battles` | 🔨 Implementing | 2026-10-22 |
+| 1c4b. `atomic-battles` | ✅ Done | 2026-10-22 |
 | 1c5. `content-pass` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
@@ -103,6 +103,8 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-10-22: 1c4b spec written. Corrected its goldens example: the tampered goldens were replayed without the
   checkpoint compare and give `TurnMismatch` / `InvalidTarget`, not `FinalHashMismatch`; added two tampered goldens
   for the end-of-battle reasons. At the user's request.
+- 2026-10-22: 1c4b done and synced. Slice 8's verifier-cost note updated with the measured saving (the turn loop of
+  `ult-seed-7` halved) and the cost that remains per job (content index, setup, process startup).
 
 
 ## Design tuning: any time, not just in breaks
@@ -386,15 +388,17 @@ runs two API replicas behind a load balancer.
 Locust profiles (`/stress`); scripted chaos runs for scenarios 2, 3, 4; **scenario 7** (spike → backpressure →
 recovery in Grafana). This is the demo. Locust also trips the 2b rate limiter, and a slow verifier pool shows up as
 players waiting at the stairs gate.
-- **Consideration: verifier cost per battle** (per-action checkpoints removed by 1c4b; the rest still applies).
-  Measured 2026-10-21 on the ult fixture battles (headless 4.7.2 mono):
-  one state hash 0.3–0.4 ms, so the per-party-action checkpoints take ~5 ms of a ~12 ms simulation (30–50%). Almost
-  all of it is GDScript building the canonical text, not the SHA-256. Headless process startup (~1 s per job if
-  the worker launches one per battle) dwarfs both. If load shows verifier CPU matters, in this order: (1) keep warm
-  verifier processes that take many jobs (no contract change); (2) faster canonical text (cache unchanged units'
-  lines; `hash-v1` output unchanged); (3) checkpoint every N actions, or final hash only with a checkpointed re-run
-  when a battle is rejected (changes `combat-replay-core` and the log contract; needs a spec). The checkpoints are
-  what locate a false 2002 by turn, so drop them only with evidence.
+- **Consideration: verifier cost per battle.** Measured 2026-10-21 on the ult fixture battles (headless 4.7.2 mono):
+  one state hash 0.3–0.4 ms, so the per-party-action checkpoints took ~5 ms of a ~12 ms simulation (30–50%). Almost
+  all of it is GDScript building the canonical text, not the SHA-256. **1c4b removed them** (one final hash per
+  battle; the opt-in trace locates a false 2002 instead). Measured 2026-10-22 on `ult-seed-7` (16 log entries, 13
+  turns; median of 20 in-process runs, before = `f09ddff`, after = `5aadf0e`): turn loop **10.6 → 5.2 ms**; the
+  whole in-process job (content index ~6 ms + battle setup ~2 ms + turn loop) **~19 → ~13 ms**. What remains per job:
+  `ContentIndex` is built from scratch for every request (~6 ms, now the largest in-process cost) and headless process
+  startup (~1 s if the worker launches one per battle) dwarfs everything. If load shows verifier CPU matters, in this
+  order: (1) keep warm verifier processes that take many jobs and reuse one `ContentIndex` per ruleset (no contract
+  change); (2) faster canonical text for the one final hash (cache unchanged units' lines; `hash-v1` output
+  unchanged).
 
 ### 9. `ruleset-versioning` (later milestone)
 Multiple verifier versions; jobs routed by `ruleset_version`. **Scenario 6** (ruleset changes while a battle is open).

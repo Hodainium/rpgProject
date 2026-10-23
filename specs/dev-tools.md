@@ -269,6 +269,7 @@ func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply (may 
 | `use <slot> <ability> [target slot]` | | Field action (play command) |
 | `act <ability> [target]` / `auto [on\|off]` | | In battle: one party action, or Auto for the rest of the battle (play commands). Auto also presses every ult that can fire (spec ult-interrupts) |
 | `ult <unit> <ult tag> [target]` | | Spec ult-interrupts: party member `<unit>` (P1..P4) casts its ult out of turn at the next ult window, retargeted if the target is gone (play command, the battle panel's ult buttons) |
+| `trace [on\|off]` | | Spec atomic-battles: the next battles carry a determinism trace (hash and canonical lines after every action) and save `<battleId>.record.json` + `.request.json` to `user://traces/` (`DevConsole.traces_dir`), to diff against `combat/headless/trace_main.tscn` |
 | `next` | | Next floor after the boss (play command) |
 | `shot <name>` | | Saves the viewport as a PNG (`user://shots/` or the runner's `--shots` folder); needs a window |
 | `clear` | | Clears the scrollback |
@@ -364,7 +365,7 @@ otherwise normal), so a boss room resolves `boss_encounter_query` as in a real f
 - `Battle._take_action`: a `dev` choice with `allow_dev` applies the effect to the chosen units with
   `apply_to_units` (GAS, the same call event effects use), drains the trigger queue, runs `_check_deaths` /
   `_check_end` as after an action, and records an ordinary `ActionEntry`: `{"turn", "actor", "ability": <name>,
-  "target": <targets>, "checkpoint"}`. It has the existing entry shape, so the replay runner's request check and the
+  "target": <targets>}` (no `checkpoint` since spec atomic-battles). It has the existing entry shape, so the replay runner's request check and the
   C# `ActionEntry` record accept it unchanged. It doesn't use up the actor's turn: if the battle goes on, the same
   actor is asked again.
 - **On replay** (`allow_dev` false) no unit has the ability `Dev.Kill` or `Dev.Heal`, so `validate_action` returns

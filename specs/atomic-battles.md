@@ -1,6 +1,6 @@
 # Spec: atomic-battles (slice 1c4b)
 
-Status: 📝 Spec written, awaiting review · Roadmap: slice 1c4b · Date: 2026-10-22
+Status: ✅ Implemented, synced with the code (2026-10-22) · Roadmap: slice 1c4b · Date: 2026-10-22
 Builds on: `specs/combat-replay-core.md` (action log, state hash v1, replay runner, mismatch reasons),
 `specs/item-pass.md` 3.2 (One More), `specs/ult-interrupts.md` (party and enemy interrupts), `specs/dev-tools.md`
 3.6 (dev decisions in the log). Cost figures: `specs/roadmap.md` slice 8, "verifier cost per battle".
@@ -120,7 +120,9 @@ prints.
    `trace_main` runs the request in process A and process B with lines; the helper diffs them.
 2. **Record vs replay** (the client and the verifier disagree): `trace on` in the console attaches a trace to the
    client's battles in local mode and writes `user://traces/<battleId>.record.json` with the request
-   (`<battleId>.request.json`) when the battle ends; `trace_main --in <request> --lines` writes the replay side;
+   (`<battleId>.request.json`) when the battle ends (`DevConsole.trace_battles` / `traces_dir`; the trace is attached
+   on `RunController.battle_started`; a `/` in the battle id becomes `_`, e.g. `run-7_f0_c40_dev0`);
+   `trace_main --in <request> --lines` writes the replay side;
    `trace_main --diff` prints the first divergent action.
 3. **Golden drift** (a code change altered a golden): the committed golden trace is compared with a fresh one (3.3,
    "Golden traces"); the golden test prints the divergence on failure.
@@ -130,7 +132,7 @@ prints.
 
 ### Headless tool: `combat/headless/trace_main.tscn`
 ```
-godot --headless --path client-godot res://combat/headless/trace_main.tscn -- --in request.json --out trace.json [--lines] [--content res://tests/fixtures/]
+godot --headless --path client-godot res://combat/headless/trace_main.tscn -- --in request.json --out trace.json [--lines] [--content-root res://tests/fixtures/]
 godot --headless --path client-godot res://combat/headless/trace_main.tscn -- --diff a.trace.json b.trace.json
 ```
 - Trace mode replays the request exactly as `replay_main` does (same `ReplayRunner`, same content-root default), with
@@ -182,10 +184,10 @@ public enum MismatchReason
 
 ### 3.2 Godot side
 - `ActionRecorder.entry(turn, unit_id, action, extra := false, interrupt := false)`; `build_log` writes
-  `"schemaVersion": 2`. `ReplayRunner.SCHEMA_VERSION` = 2 (the action log's version; the result keeps writing 1, so
-  the runner gets two constants: `ACTION_LOG_SCHEMA_VERSION` = 2 and `RESULT_SCHEMA_VERSION` = 1).
+  `"schemaVersion"` = `ReplayRunner.ACTION_LOG_SCHEMA_VERSION` (2); the result keeps writing
+  `ReplayRunner.RESULT_SCHEMA_VERSION` (1).
 - Request check: every action needs `turn`, `actor`, `ability` (no `checkpoint`). A v2 entry with a key outside
-  `turn, actor, ability, target, extra, interrupt` is a runner error (`unknown field "checkpoint" in action 3`),
+  `ReplayRunner.ENTRY_KEYS` (`turn, actor, ability, target, extra, interrupt`) is a runner error (`unknown field "checkpoint" in action 3`),
   so a half-migrated client fails loudly in dev instead of having the key silently ignored.
 - Controller interface (`Battle` header comment): `after_party_turn(battle, unit, action)` and
   `after_interrupt(battle, unit, action)`. Implementers: `ActionRecorder`, `ReplayController`,
@@ -211,10 +213,12 @@ public enum MismatchReason
 ```
 - `lines` (only with `--lines` / `with_lines`) is **delta-encoded**: point 0 holds its full canonical lines (each
   prefixed `+`), every later point holds `+line` / `-line` against the previous point (multiset difference, sorted:
-  removals first, then additions, each in canonical order). The diff rebuilds full lines at any point. This keeps a
-  lined trace small (a typical action changes a handful of attributes, tags and the `rng=`/`turn=` lines).
+  removals first, then additions, each in canonical order). `BattleTrace.rebuild` and the diff rebuild the full lines
+  at any point as a **sorted** multiset (the deltas can't keep the canonical order, so a rebuilt state can be compared
+  but not re-hashed). This keeps a lined trace small: the golden traces are 4–21 KB.
 - `verdict` / `reason`: `"Recorded"` and null for a client-side trace; the replay verdict and `mismatch.reason` for a
-  replay trace.
+  replay trace; `"RunnerError"` and the message when the replay hit a runner error (the trace up to there is still
+  written).
 - Written with `WireJson.stringify` (stable key order), so the same battle always writes the same bytes.
 - **Golden traces:** each combat golden `tests/fixtures/golden/<name>.json` gets `<name>.trace.json` (with lines),
   written by `--update-goldens` together with the result. They are test data, re-recorded on purpose with the
@@ -227,13 +231,13 @@ N/A: no queues, topics or keys. When slice 3 adds `verify.battle`, the job paylo
 
 | Situation | Behaviour | Test |
 |---|---|---|
-| Honest battle, record then replay | `Verified`; the replay never hashes before the end | `test_replay_verified_v2` (existing round-trip tests, migrated) |
+| Honest battle, record then replay | `Verified`; the replay never hashes before the end | `test_record_then_replay_verifies` (migrated), `test_one_hash_per_battle` |
 | One hash per battle, both modes | `StateHasher.compute_count` rises by exactly 1 per battle with no trace attached, for record and replay, on a battle with One Mores and interrupts | `test_one_hash_per_battle` |
 | Trace attached | Final hash and log identical to the same battle without a trace (the trace only observes) | `test_trace_does_not_change_battle` |
 | Tampered target (still a valid target) | `Rejected` 2002, `InvalidTarget` at that turn, or `OutcomeMismatch` / `FinalHashMismatch` at the end; the same reason and turn on a second run | `test_tamper_target` (migrated) |
 | Tampered ability / actor / turn | `IllegalAbility` / `ActorMismatch` / `TurnMismatch` at that turn (unchanged) | `test_tamper_ability`, `test_tamper_actor`, `test_tamper_turn` |
-| Interrupt moved to another legal window | `TurnMismatch` if its window is gone, else `OutcomeMismatch` / `FinalHashMismatch` | `test_ult_interrupts` tamper cases (migrated) |
-| Interrupt deleted | `FinalHashMismatch`, `OutcomeMismatch`, `IllegalAbility` (energy no longer adds up) or `LogExhausted`; deterministic | `test_ult_interrupts` tamper cases (migrated) |
+| Interrupt moved to another legal window | `TurnMismatch` if its window is gone or a later entry no longer fits, else `OutcomeMismatch` / `FinalHashMismatch`. Measured on the ult trial recording: `TurnMismatch` | `test_tampered_interrupts` (migrated) |
+| Interrupt deleted | Caught at the next structural check or at the end. Measured: `TurnMismatch` on the ult trial recording (the next entry's turn no longer fits); `FinalHashMismatch` for 5 of `ult-seed-7`'s entries; `OutcomeMismatch` in `ult-close-seed-2-tampered-outcome`. Deterministic | `test_tampered_interrupts` (migrated), `test_golden_replays` |
 | Edited claimed hash / outcome | `FinalHashMismatch` / `OutcomeMismatch` (unchanged) | `test_claim_mismatch` |
 | Truncated log / extra entries | `LogExhausted` / `TrailingActions` (unchanged) | `test_log_exhausted`, `test_trailing_actions` |
 | v1 log (`schemaVersion` 1) | Runner error, exit 1, message names the version | `test_malformed_input` (new case) |
@@ -244,7 +248,7 @@ N/A: no queues, topics or keys. When slice 3 adds `verify.battle`, the job paylo
 | Legal tamper reaching the end | `FinalHashMismatch` / `OutcomeMismatch` from the simulation, in a fresh process | `test_golden_replays` (`-tampered-final`, `-tampered-outcome` goldens) |
 | Diverging traces | `diff` returns the first divergent point with its action and the differing lines; `describe` prints them | `test_trace_diff` (synthetic traces: hash-only, lined, one ends early, duplicate effect lines) |
 | Record vs replay with trace on | Identical points (a client-recorded trace equals the replay trace of its own request, except `verdict`) | `test_trace_record_vs_replay` |
-| Golden result changed | Golden test fails and prints the first divergent point against the committed `.trace.json` | `test_golden_replays` (self-check: a deliberately altered golden trace produces a printed divergence) |
+| Golden result changed | Golden test fails and prints the first divergent point against the committed `.trace.json` | `test_golden_replays` (also: every golden has its `.trace.json`); self-check `test_golden_trace_explains_a_change` (an altered golden trace gives a printed divergence) |
 
 **Acceptance scenario 5 (tampered action log → deterministic rejection with 2002):** still covered at the runner
 level by the tamper tests above, each run twice (same reason, same turn), and by the tampered goldens in fresh
@@ -262,6 +266,8 @@ reason}` loses the `CheckpointMismatch` reason value (bounded label set, now nin
 `rpg_replay_duration_seconds` should drop by the checkpoint share (30–50% of simulation time on the fixture
 battles). Slice 8's verifier-cost note gets the measured number after implementation (`test_one_hash_per_battle`
 proves the count; a one-off timing of the ult goldens before and after is recorded in the roadmap, not in a test).
+**Measured 2026-10-22** (`ult-seed-7`, median of 20 in-process runs): turn loop 10.6 → 5.2 ms, whole in-process job
+~19 → ~13 ms; details and what remains (the per-request `ContentIndex`, process startup) in `specs/roadmap.md` slice 8.
 
 ## 6. Test plan
 
@@ -270,8 +276,9 @@ proves the count; a one-off timing of the ult goldens before and after is record
   `test_trace_points` (on the ult trial: a `start` point, one `turn` point per turn for both sides including a unit
   that died at turn start, `extra` for each One More, `interrupt` for party and enemy ults, `end` with
   `hash == final_hash`; party `turn`/`extra`/`interrupt` points line up 1:1 with the log's entries),
-  `test_trace_lines_delta` (rebuilding full lines from the deltas at every point equals `StateHasher.canonical_lines`
-  there, and re-hashing them equals the point's `hash`), `test_trace_diff`, `test_trace_record_vs_replay`,
+  `test_trace_lines_delta` (a test subclass keeps each point's full `StateHasher.canonical_lines`: the sorted rebuild
+  from the deltas equals them sorted, hashing them in canonical order gives the point's `hash`, and later points hold
+  fewer lines than point 0), `test_trace_diff`, `test_trace_record_vs_replay`,
   `test_trace_two_processes` (two `trace_main` processes via `OS.execute`, with `--quit-after`),
   `test_trace_locates_tamper` (traces of `squad-seed-42` and `squad-seed-42-tampered-target`: first divergent point
   is the turn-4 `turn` point with target E2 vs E3, while the replay verdict is `InvalidTarget` at turn 11).
@@ -280,9 +287,10 @@ proves the count; a one-off timing of the ult goldens before and after is record
   determinism test compares logs and final hashes), `test_ult_interrupts.gd` (field-order test without `checkpoint`;
   "each interrupt has its own checkpoint" becomes "each interrupt has its own trace point"; moved/deleted interrupt
   tamper reasons as in section 4), `test_dev_battle.gd` (dev entry without `checkpoint`), `scripted_controller.gd`.
-- **Dev tools:** a `dev_run` script with `trace on`, one auto battle, `trace off` writes
-  `user://traces/<battleId>.record.json` and `.request.json`; running `trace_main --diff` on that record and its
-  replay trace prints "traces match". Headless parity per `specs/dev-tools.md`.
+- **Dev tools:** `test_console_trace` (`tests/game/test_dev_console.gd`): `trace on`, one auto battle on the ult
+  trial, the saved request verifies and its replay trace equals the saved record trace, `trace off`. The same path
+  through `dev_run.tscn` and `trace_main --diff` was checked by hand on 2026-10-22 ("traces match", exit 0; the honest
+  vs tampered squad goldens exit 3 with the turn-4 divergence). Headless parity per `specs/dev-tools.md`.
 
 ### Golden vectors (re-recorded on purpose)
 - Combat goldens: `duel-seed-1`, `squad-seed-42`, `break-seed-11`, `run-v2-seed-7`, `ult-seed-7` (requests lose
@@ -299,8 +307,8 @@ proves the count; a one-off timing of the ult goldens before and after is record
   The other five goldens stay `Verified` with the same outcome and turn count.
 - **New tampered goldens for the end-of-battle reasons.** After this slice `OutcomeMismatch` and
   `FinalHashMismatch` are the only defence against a legal tamper, and neither tampered golden above reaches them.
-  Two more, found at implement time by searching single-entry tampers of the existing honest goldens (target, ability
-  or interrupt window), chosen so the simulation itself diverges (editing the claim fields is `test_claim_mismatch`):
+  Two more, found at implement time by searching single-entry tampers (another target, an interrupt one turn later,
+  an entry deleted), chosen so the simulation itself diverges (editing the claim fields is `test_claim_mismatch`):
   - `<name>-tampered-final`: a legal tamper that plays to the same outcome with a different state →
     `FinalHashMismatch` at the battle's last turn.
   - `<name>-tampered-outcome`: a legal tamper that changes how the battle ends (e.g. Victory becomes Defeat) →
@@ -308,6 +316,18 @@ proves the count; a one-off timing of the ult goldens before and after is record
     doesn't count.
   If no single-entry tamper of the existing goldens gives one of them, the search widens to fixture battles recorded
   for it (new seed or encounter), and the spec sync records which golden it came from.
+
+  Built 2026-10-22 (written by `test_golden.gd` with `--update-goldens`):
+
+  | Golden | Tamper | Verdict |
+  |---|---|---|
+  | `squad-seed-42-tampered-final` | entry 3 (turn 5, P4 Poison) target E3 → E2 | `FinalHashMismatch` @ 27, still Victory |
+  | `ult-close-seed-2-tampered-outcome` | entry 11 deleted | `OutcomeMismatch` @ 15: claimed Victory, simulated Defeat |
+
+  No single-entry tamper flipped the outcome of the existing goldens, nor of 120 other fixture battles (5 scenarios ×
+  24 seeds): the scripted party wins too comfortably. So the outcome golden comes from a **close** battle,
+  `ult-close-seed-2` (`test_golden._close_ult_snapshot()`: the ult trial, seed 2, both ultists carried in at 60000 of
+  120000 HP). It is recorded during the update but is not a golden itself.
 - New `<name>.trace.json` beside each combat golden (3.3).
 - `golden/game/run_scripted.json`: battle entries in the run log lose `checkpoint`; the run's own hashes and
   checkpoints are untouched, so only the battle entries' text changes.
@@ -327,6 +347,11 @@ table, the "Same inputs twice" row), `item-pass` (One More "checked like any par
 shape) and the trace command, root `CLAUDE.md` (combat row: "state hash v1, recorder" text and the `ActionLog`
 description), `specs/roadmap.md` (1c4b status, slice 8 note). `server-authority` has no battle-checkpoint text
 (its checkpoints are run checkpoints), so it only needs its `ActionLog` references read for "v1".
+
+### Remaining work
+- **`test_trace_points`** asserts every turn number has a point, but the ult trial may not contain a unit that dies
+  at turn start; a fixture battle that does (1c5) makes that case explicit.
+- **`trace_main --diff` exit 3** is checked by hand only; `test_trace_two_processes` covers exit 0.
 
 ### Suggested implementation order (tests green at each)
 1. Trace first, checkpoints still in place: `BattleTrace`, trace points, `trace_main`, diff, golden traces. Proves

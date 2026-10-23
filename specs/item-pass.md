@@ -180,7 +180,7 @@ GodotGAS hands the ExecCalc the same spec object the battle holds, so `inject_ta
 | `combat/turn_manager.gd` | `delay(unit, percent)`: adds `percent` of the unit's full action value to its remaining action value (HSR action delay). No `insert_extra`: extra actions bypass the turn manager. |
 | `combat/combat_asc.gd` | `begin_extra_action()` / `end_extra_action()`. |
 | Action log | Entry gains `"extra": true` for a One More action (`ActionRecorder.entry(..., extra)`). The replay runner checks it: an extra action where none is due, or a missing one, is a 2002 rejection with `MismatchReason` `TurnMismatch` (existing; no new reason). |
-| State hash | Toughness is an attribute and `State.Broken` a tag, both already hashed. Owed One Mores at a checkpoint are hashed as `extra=<unit ids, comma-separated>` **only while the queue is non-empty**, so every existing golden is unchanged (hash stays v1). |
+| State hash | Toughness is an attribute and `State.Broken` a tag, both already hashed. Owed One Mores at a hashed point (the final hash, or a trace point: spec atomic-battles) are hashed as `extra=<unit ids, comma-separated>` **only while the queue is non-empty**, so every existing golden is unchanged (hash stays v1). |
 | AI (enemy brains) | Unchanged; a Broken enemy simply acts later. |
 
 ### 3.3 Crit, weakness damage and toughness damage (your ExecCalc and assets)
