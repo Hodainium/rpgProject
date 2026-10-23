@@ -13,7 +13,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c2. `item-pass` | ✅ Done (spec synced; known test gaps listed in `specs/item-pass.md` 6) | 2026-10-20 |
 | 1c3. `animation-sets` | ✅ Done (spec synced; `uid://` test for `view` still to add, `specs/animation-sets.md` 6) | 2026-10-21 |
 | 1c4. `ult-interrupts` | ✅ Done (spec synced; one known test gap in `specs/ult-interrupts.md` 6) | 2026-10-21 |
-| 1c4b. `atomic-battles` | ⬜ Not started | |
+| 1c4b. `atomic-battles` | 📝 Spec written | 2026-10-22 |
 | 1c5. `content-pass` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
@@ -100,6 +100,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   finds the first divergent action. Placed before 1c5 so 1c5's goldens are recorded once, and before slice 3 because
   nothing stores action logs yet, so the breaking log change costs nothing. Resolves slice 8's verifier-cost
   consideration. At the user's request.
+- 2026-10-22: 1c4b spec written. Corrected its goldens example: the tampered goldens were replayed without the
+  checkpoint compare and give `TurnMismatch` / `InvalidTarget`, not `FinalHashMismatch`; added two tampered goldens
+  for the end-of-battle reasons. At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -262,7 +265,8 @@ makes the log match it.
   failure. For a production false 2002 later (slice 3+), the rejected request is kept and rerun locally with the
   trace on.
 - **Goldens:** re-recorded on purpose (combat goldens, the scripted-run game golden); the tampered goldens' reasons
-  change (e.g. `ult-seed-7-tampered-turn` → `FinalHashMismatch`).
+  change (measured: `ult-seed-7-tampered-turn` → `TurnMismatch` at turn 2, `squad-seed-42-tampered-target` →
+  `InvalidTarget` at turn 11), and two new tampered goldens cover `FinalHashMismatch` and `OutcomeMismatch`.
 - **Scope:** battle checkpoints only. Run checkpoints (`RunSnapshot` at checkpoint actions, `specs/server-authority.md`)
   are a different mechanism and stay. Specs to update: `combat-replay-core`, `item-pass`, `ult-interrupts`,
   `dev-tools`, and any `server-authority` text on battle checkpoints.
