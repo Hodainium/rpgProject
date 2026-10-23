@@ -248,8 +248,9 @@ the claimed final hash, nothing per action. The client stops hashing after every
 hashes once, at the end. The verdict was already atomic (one job, one Verified or 2002, all rewards or none); this
 makes the log match it.
 - **Contract:** `ActionEntry` loses `Checkpoint`, so `ActionLog.schemaVersion` becomes 2 (breaking). Now is the
-  cheapest time: no server stores logs before slice 2b. The spec decides whether the verifier still reads v1 logs
-  (likely not: none exist outside goldens).
+  cheapest time: no server stores logs before slice 2b. **Decided 2026-10-22:** the verifier reads v2 only; a v1
+  log is an unsupported `schemaVersion` (runner error, as today for unknown versions), since no v1 logs exist outside
+  the goldens, which are re-recorded.
 - **Mismatch reasons:** `CheckpointMismatch` goes. Structural reasons keep their turn (`TurnMismatch`,
   `ActorMismatch`, `IllegalAbility`, `InvalidTarget`, `LogExhausted`, `TrailingActions`); any other tampering shows
   up at the end as `OutcomeMismatch` or `FinalHashMismatch`. Still 2002, still deterministic (scenario 5).
