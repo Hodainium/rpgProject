@@ -39,16 +39,16 @@ func on_invalid(_battle: Battle, unit: BattleUnit, reason: String, detail: Strin
 	return false
 
 
-func after_party_turn(battle: Battle, unit: BattleUnit, action: Dictionary, checkpoint: String) -> void:
-	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, checkpoint, battle.extra_action))
+func after_party_turn(battle: Battle, unit: BattleUnit, action: Dictionary) -> void:
+	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, battle.extra_action))
 
 
 func interrupt(battle: Battle) -> Dictionary:
 	return _ready_ult(battle, 1)
 
 
-func after_interrupt(battle: Battle, unit: BattleUnit, action: Dictionary, checkpoint: String) -> void:
-	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, checkpoint, false, true))
+func after_interrupt(battle: Battle, unit: BattleUnit, action: Dictionary) -> void:
+	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, false, true))
 
 
 ## The first living party unit (slot order, slot % 2 == parity) with an ult that can fire now, as an interrupt choice.

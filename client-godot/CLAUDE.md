@@ -132,6 +132,10 @@ from C#.**
 - **Fixtures:** `res://tests/tools/build_fixtures.tscn` rebuilds `tests/fixtures/`; rerun only when fixtures must change.
 - **Replay one battle:** `godot --headless --path client-godot res://combat/headless/replay_main.tscn -- --in req.json
   --out result.json [--content-root res://content/]`; exit code 0 Verified, 2 Rejected (2002), 1 runner error.
+- **Find where a battle diverges** (spec `atomic-battles`; the log has no per-action hashes): `trace_main.tscn -- --in
+  req.json --out trace.json --lines [--content-root ...]` writes the hash and canonical lines after every action;
+  `trace_main.tscn -- --diff a.json b.json` prints the first divergent action and the differing lines (exit 0 match,
+  3 diverged). The client side comes from the console's `trace on` (`user://traces/`).
 - After adding or renaming a `class_name` script, run `godot --headless --path client-godot --import` once so the
   global class cache is current.
 - **Godot 4.7.2 GDScript quirks hit here:** inside a class, its own enum `Side` and `BattleUnit.Side` count as different

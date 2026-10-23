@@ -27,7 +27,7 @@ func _expect_rejected(request: Dictionary, reasons: Array, turn: int, label: Str
 func test_determinism_same_process() -> void:
 	var a: Dictionary = await record(squad_snapshot())
 	var b: Dictionary = await record(squad_snapshot())
-	eq(WireJson.stringify(b), WireJson.stringify(a), "same inputs → same log, checkpoints and final hash")
+	eq(WireJson.stringify(b), WireJson.stringify(a), "same inputs → same log and final hash")
 	var c: Dictionary = await record(squad_snapshot("43"))
 	check(c["actionLog"]["claimedFinalHash"] != a["actionLog"]["claimedFinalHash"], "a different seed changes the battle")
 
@@ -53,7 +53,8 @@ func test_tamper_target() -> void:
 	var index := _first_entry(request, "Fixture.Ability.Strike")
 	var entry: Dictionary = request["actionLog"]["actions"][index]
 	entry["target"] = "E3" if entry["target"] != "E3" else "E1"
-	await _expect_rejected(request, ["InvalidTarget", "CheckpointMismatch"], int(entry["turn"]), "tampered target")
+	# Spec atomic-battles: a still-valid target plays on and is caught later (a dead target, the outcome or the hash).
+	await _expect_rejected(request, ["InvalidTarget", "OutcomeMismatch", "FinalHashMismatch"], -1, "tampered target")
 	entry["target"] = "P2"
 	await _expect_rejected(request, ["InvalidTarget"], int(entry["turn"]), "ally as an enemy target")
 
@@ -78,14 +79,6 @@ func test_tamper_turn() -> void:
 	var real_turn := int(entry["turn"])
 	entry["turn"] = real_turn + 1
 	await _expect_rejected(request, ["TurnMismatch"], real_turn, "wrong turn number")
-
-
-func test_tamper_checkpoint() -> void:
-	var request := copy(await record(squad_snapshot()))
-	var entry: Dictionary = request["actionLog"]["actions"][2]
-	var checkpoint: String = entry["checkpoint"]
-	entry["checkpoint"] = ("0" if checkpoint[0] != "0" else "1") + checkpoint.substr(1)
-	await _expect_rejected(request, ["CheckpointMismatch"], int(entry["turn"]), "edited checkpoint")
 
 
 func test_log_exhausted() -> void:
@@ -133,10 +126,15 @@ func test_malformed_input() -> void:
 	var bad_version := copy(good)
 	bad_version["snapshot"]["schemaVersion"] = 3  # 1 and 2 are valid (spec game-skeleton 3.5)
 	var missing_field := copy(good)
-	missing_field["actionLog"]["actions"][0].erase("checkpoint")
+	missing_field["actionLog"]["actions"][0].erase("ability")
 	var bad_seed := copy(good)
 	bad_seed["snapshot"]["seed"] = "-5"
-	for request in [{}, bad_version, missing_field, bad_seed]:
+	# Spec atomic-battles: the runner reads v2 logs only, and a v2 entry may not carry a checkpoint (or any unknown key).
+	var log_v1 := copy(good)
+	log_v1["actionLog"]["schemaVersion"] = 1
+	var leftover_checkpoint := copy(good)
+	leftover_checkpoint["actionLog"]["actions"][0]["checkpoint"] = "ab12"
+	for request in [{}, bad_version, missing_field, bad_seed, log_v1, leftover_checkpoint]:
 		var runner := ReplayRunner.new()
 		var result := await runner.run(request, FIXTURES, host)
 		check(result.has("runnerError"), "malformed input is a runner error: %s" % [result])

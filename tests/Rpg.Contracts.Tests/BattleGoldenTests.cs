@@ -13,7 +13,8 @@ public class BattleGoldenTests
 {
     private static readonly string GoldenDir = Path.Combine(RepoRoot(), "client-godot", "tests", "fixtures", "golden");
 
-    public static TheoryData<string> Requests() => Files(name => !name.EndsWith(".result.json"));
+    public static TheoryData<string> Requests() =>
+        Files(name => !name.EndsWith(".result.json") && !name.EndsWith(".trace.json"));
 
     public static TheoryData<string> Results() => Files(name => name.EndsWith(".result.json"));
 
@@ -26,6 +27,7 @@ public class BattleGoldenTests
         var request = JsonSerializer.Deserialize<ReplayRequest>(text, RpgJson.Options)!;
 
         Assert.Equal(text, JsonSerializer.Serialize(request, RpgJson.Options));
+        Assert.Equal(2, request.ActionLog.SchemaVersion);
         Assert.True(long.TryParse(request.Snapshot.Seed, out _), "seed is an int64 decimal string");
     }
 
@@ -55,9 +57,10 @@ public class BattleGoldenTests
     public void GoldenSet_IsComplete()
     {
         // duel, squad, squad tampered, run v2, break (item-pass: One More entries carry "extra": true),
-        // ult and ult tampered (ult-interrupts: out-of-turn ults carry "interrupt": true).
-        Assert.Equal(7, Requests().Count);
-        Assert.Equal(7, Results().Count);
+        // ult and ult tampered (ult-interrupts: out-of-turn ults carry "interrupt": true), and the atomic-battles
+        // tampered pair that reach the end of the battle (FinalHashMismatch, OutcomeMismatch).
+        Assert.Equal(9, Requests().Count);
+        Assert.Equal(9, Results().Count);
     }
 
     private static TheoryData<string> Files(Func<string, bool> filter)

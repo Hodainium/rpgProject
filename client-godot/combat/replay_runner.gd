@@ -5,7 +5,12 @@
 class_name ReplayRunner
 extends RefCounted
 
-const SCHEMA_VERSION: int = 1
+## The only ActionLog version the runner reads (spec atomic-battles: v2 entries carry no checkpoint).
+const ACTION_LOG_SCHEMA_VERSION: int = 2
+## ReplayResult's own version (unchanged by atomic-battles).
+const RESULT_SCHEMA_VERSION: int = 1
+## Every key an action entry may carry; any other (a leftover "checkpoint") is a runner error.
+const ENTRY_KEYS: Array[String] = ["turn", "actor", "ability", "target", "extra", "interrupt"]
 ## Snapshot schema versions the runner accepts (spec game-skeleton 3.5: v2 adds the run fields).
 const SNAPSHOT_SCHEMA_VERSIONS: Array[int] = [1, 2]
 const EXIT_VERIFIED: int = 0
@@ -15,6 +20,8 @@ const REPLAY_MISMATCH_CODE: int = 2002
 const REPLAY_MISMATCH_NAME: String = "ReplayMismatch"
 
 var exit_code: int = EXIT_RUNNER_ERROR
+## Spec atomic-battles: attached to the replayed battle when set (trace_main, tests); gets the verdict and reason.
+var trace: BattleTrace = null
 ## Set on a runner error; the result is then {"runnerError": ...} instead of a ReplayResult.
 var runner_error: String = ""
 
@@ -37,6 +44,7 @@ func run(request: Dictionary, content_root: String, host: Node) -> Dictionary:
 		return _error(setup_error)
 
 	var controller := ReplayController.new(action_log["actions"])
+	battle.trace = trace
 	var frames_before := Engine.get_process_frames()
 	await battle.run(controller)
 	if Engine.get_process_frames() != frames_before:
@@ -49,6 +57,9 @@ func run(request: Dictionary, content_root: String, host: Node) -> Dictionary:
 	if battle.mismatch.is_empty():
 		_check_claims(battle, controller, action_log)
 	var result := _result(battle)
+	if trace != null:
+		trace.verdict = result["verdict"]
+		trace.reason = result["mismatch"]["reason"] if result["mismatch"] != null else null
 	battle.queue_free()
 	return result
 
@@ -93,7 +104,7 @@ func _result(battle: Battle) -> Dictionary:
 			"detail": battle.mismatch["detail"],
 		}
 	return {
-		"schemaVersion": SCHEMA_VERSION,
+		"schemaVersion": RESULT_SCHEMA_VERSION,
 		"battleId": battle.battle_id,
 		"verdict": "Rejected" if rejected else "Verified",
 		"errorCode": REPLAY_MISMATCH_CODE if rejected else null,
@@ -123,22 +134,29 @@ func _validate_request(request: Dictionary) -> String:
 		return "request needs snapshot and actionLog objects"
 	var snapshot: Dictionary = request["snapshot"]
 	var action_log: Dictionary = request["actionLog"]
-	if int(action_log.get("schemaVersion", 0)) != SCHEMA_VERSION:
-		return "unsupported actionLog schemaVersion %s (expected %d)" % [action_log.get("schemaVersion"), SCHEMA_VERSION]
+	if int(action_log.get("schemaVersion", 0)) != ACTION_LOG_SCHEMA_VERSION:
+		return "unsupported actionLog schemaVersion %s (expected %d)" % [action_log.get("schemaVersion"), ACTION_LOG_SCHEMA_VERSION]
 	if not int(snapshot.get("schemaVersion", 0)) in SNAPSHOT_SCHEMA_VERSIONS:
 		return "unsupported snapshot schemaVersion %s (expected one of %s)" % [snapshot.get("schemaVersion"), SNAPSHOT_SCHEMA_VERSIONS]
 	if not action_log.get("actions") is Array or not snapshot.get("party") is Array:
 		return "actionLog.actions and snapshot.party must be arrays"
-	for entry in action_log["actions"]:
-		if not entry is Dictionary or not entry.has("turn") or not entry.has("actor") or not entry.has("ability") \
-				or not entry.has("checkpoint"):
-			return "every action needs turn, actor, ability and checkpoint"
+	var actions: Array = action_log["actions"]
+	for index in actions.size():
+		var entry: Variant = actions[index]
+		if not entry is Dictionary or not entry.has("turn") or not entry.has("actor") or not entry.has("ability"):
+			return "every action needs turn, actor and ability"
+		for key in entry:
+			if not str(key) in ENTRY_KEYS:
+				return "unknown field \"%s\" in action %d" % [key, index]
 	return ""
 
 
 func _error(message: String) -> Dictionary:
 	runner_error = message
 	exit_code = EXIT_RUNNER_ERROR
+	if trace != null:
+		trace.verdict = "RunnerError"
+		trace.reason = message
 	return {"runnerError": message}
 
 
@@ -204,14 +222,12 @@ class ReplayController:
 		return {"interrupt": true, "unit": StringName(str(entry["actor"])), "ability": StringName(str(entry["ability"])),
 			"target": &"" if target == null else StringName(str(target))}
 
-	func after_interrupt(battle: Battle, unit: BattleUnit, action: Dictionary, checkpoint: String) -> void:
-		after_party_turn(battle, unit, action, checkpoint)
+	func after_interrupt(battle: Battle, unit: BattleUnit, action: Dictionary) -> void:
+		after_party_turn(battle, unit, action)
 
 	func on_invalid(_battle: Battle, _unit: BattleUnit, _reason: String, _detail: String) -> bool:
 		return false
 
-	func after_party_turn(battle: Battle, _unit: BattleUnit, _action: Dictionary, checkpoint: String) -> void:
-		var entry: Dictionary = _entries[_next]
+	## Spec atomic-battles: the entry was checked when it was chosen; nothing is compared per action, only at the end.
+	func after_party_turn(_battle: Battle, _unit: BattleUnit, _action: Dictionary) -> void:
 		_next += 1
-		if str(entry["checkpoint"]) != checkpoint:
-			battle.reject("CheckpointMismatch", "state hash after turn %d is %s, log says %s" % [battle.turn, checkpoint, entry["checkpoint"]])

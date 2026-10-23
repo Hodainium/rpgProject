@@ -88,12 +88,12 @@ func on_invalid(_battle: Battle, unit: BattleUnit, reason: String, detail: Strin
 	return true
 
 
-func after_party_turn(battle: Battle, unit: BattleUnit, action: Dictionary, checkpoint: String) -> void:
-	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, checkpoint, battle.extra_action))
+func after_party_turn(battle: Battle, unit: BattleUnit, action: Dictionary) -> void:
+	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, battle.extra_action))
 
 
-func after_interrupt(battle: Battle, unit: BattleUnit, action: Dictionary, checkpoint: String) -> void:
-	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, checkpoint, false, true))
+func after_interrupt(battle: Battle, unit: BattleUnit, action: Dictionary) -> void:
+	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, false, true))
 
 
 ## The ActionLog JSON shape (Rpg.Contracts.Battle.ActionLog), field order matching the C# record.
@@ -102,16 +102,14 @@ func action_log(battle: Battle) -> Dictionary:
 
 
 ## `extra`: a One More action (spec item-pass 3.2); `interrupt`: an ult cast out of turn (spec ult-interrupts). Each
-## key is written only when true, so other logs are unchanged.
-static func entry(turn: int, unit_id: StringName, action: Dictionary, checkpoint: String, extra: bool = false,
-		interrupt: bool = false) -> Dictionary:
+## key is written only when true, so other logs are unchanged. No per-entry state hash (spec atomic-battles).
+static func entry(turn: int, unit_id: StringName, action: Dictionary, extra: bool = false, interrupt: bool = false) -> Dictionary:
 	var target := StringName(str(action.get("target", "")))
 	var result := {
 		"turn": turn,
 		"actor": String(unit_id),
 		"ability": String(action["ability"]),
 		"target": null if target == &"" else String(target),
-		"checkpoint": checkpoint,
 	}
 	if extra:
 		result["extra"] = true
@@ -122,7 +120,7 @@ static func entry(turn: int, unit_id: StringName, action: Dictionary, checkpoint
 
 static func build_log(log_entries: Array[Dictionary], outcome: String, final_hash: String) -> Dictionary:
 	return {
-		"schemaVersion": 1,
+		"schemaVersion": ReplayRunner.ACTION_LOG_SCHEMA_VERSION,
 		"actions": log_entries,
 		"claimedOutcome": outcome,
 		"claimedFinalHash": final_hash,

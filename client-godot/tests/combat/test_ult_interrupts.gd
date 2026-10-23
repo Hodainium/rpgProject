@@ -82,10 +82,10 @@ func test_action_abilities_exclude_ults() -> void:
 
 
 func test_interrupt_entry_shape() -> void:
-	var entry := ActionRecorder.entry(3, &"P1", {"ability": NOVA, "target": &""}, "ab12", false, true)
-	eq(entry.keys(), ["turn", "actor", "ability", "target", "checkpoint", "interrupt"], "field order matches the C# record")
+	var entry := ActionRecorder.entry(3, &"P1", {"ability": NOVA, "target": &""}, false, true)
+	eq(entry.keys(), ["turn", "actor", "ability", "target", "interrupt"], "field order matches the C# record")
 	eq(entry["interrupt"], true, "interrupt written when true")
-	check(not ActionRecorder.entry(3, &"P1", {"ability": STRIKE, "target": &"E1"}, "ab12").has("interrupt"),
+	check(not ActionRecorder.entry(3, &"P1", {"ability": STRIKE, "target": &"E1"}).has("interrupt"),
 		"and only then")
 
 
@@ -138,8 +138,12 @@ func test_ult_chain() -> void:
 		recorder.submit_ult(&"P1", NOVA))
 	eq(_shape(played["request"]["actionLog"]["actions"]).slice(0, 2), [[0, "P2", String(SNIPE), "E1", true, false],
 		[0, "P1", String(NOVA), null, true, false]], "two presses fire back to back in the first window, in press order")
-	var entries: Array = played["request"]["actionLog"]["actions"]
-	check(entries[0]["checkpoint"] != entries[1]["checkpoint"], "each interrupt has its own checkpoint")
+	# Spec atomic-battles: the log has no per-entry hash; the trace shows each interrupt as its own state.
+	var runner := ReplayRunner.new()
+	runner.trace = BattleTrace.new()
+	await runner.run(copy(played["request"]), FIXTURES, host)
+	var chain := runner.trace.points.filter(func(entry) -> bool: return entry["kind"] == "interrupt" and entry["turn"] == 0)
+	check(chain.size() >= 2 and chain[0]["hash"] != chain[1]["hash"], "each interrupt has its own trace point")
 	await _verified(played["request"], "a chain replays")
 
 
@@ -344,10 +348,11 @@ func test_tampered_interrupts() -> void:
 	await _rejected(twice, ["IllegalAbility"], "the same ult again with its charge spent")
 	var moved := copy(request)
 	moved["actionLog"]["actions"][first]["turn"] = int(moved["actionLog"]["actions"][first]["turn"]) + 1
-	await _rejected(moved, ["TurnMismatch", "CheckpointMismatch"], "an interrupt moved one turn")
+	# Spec atomic-battles: without checkpoints a removed or moved interrupt surfaces at the next structural check.
+	await _rejected(moved, ["TurnMismatch"], "an interrupt moved one turn")
 	var removed := copy(request)
 	removed["actionLog"]["actions"].remove_at(first)
-	await _rejected(removed, ["CheckpointMismatch"], "an interrupt deleted")
+	await _rejected(removed, ["TurnMismatch"], "an interrupt deleted")
 	var enemy := copy(request)
 	enemy["actionLog"]["actions"][first]["actor"] = "E1"
 	await _rejected(enemy, ["ActorMismatch"], "an interrupt by an enemy")

@@ -24,6 +24,10 @@ var grid_rooms: Dictionary = {}
 var keep_history: bool = true
 ## Where `shot` saves screenshots.
 var shots_dir: String = "user://shots/"
+## Spec atomic-battles: `trace on` attaches a determinism trace (with lines) to the next battles and writes
+## <battleId>.record.json and <battleId>.request.json here when each ends.
+var trace_battles: bool = false
+var traces_dir: String = "user://traces/"
 var tree: SceneTree
 var _attached: Array[GameMain] = []
 
@@ -209,6 +213,28 @@ func attach(game: GameMain) -> void:
 
 func _on_battle_prepared(recorder: ActionRecorder, _gate: ViewGate, game: GameMain) -> void:
 	recorder.action_requested.connect(_on_action_requested.bind(game, recorder))
+	if trace_battles and game.run != null:
+		game.run.battle_started.connect(_trace_battle.bind(game.run, recorder), CONNECT_ONE_SHOT)
+
+
+## Attaches a trace before the battle runs; when it ends, writes the client's trace and the request to replay it.
+func _trace_battle(battle: Battle, run: RunController, recorder: ActionRecorder) -> void:
+	var trace := BattleTrace.new(true)
+	battle.trace = trace
+	var snapshot := run.battle_snapshot()
+	battle.battle_ended.connect(func(outcome: String, final_hash: String) -> void:
+		var request := {"snapshot": snapshot, "actionLog": ActionRecorder.build_log(recorder.entries, outcome, final_hash)}
+		var base := traces_dir.path_join(battle.battle_id.replace("/", "_"))
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(traces_dir))
+		_store(base + ".record.json", WireJson.stringify(trace.to_json()))
+		_store(base + ".request.json", WireJson.stringify(request)), CONNECT_ONE_SHOT)
+
+
+static func _store(path: String, text: String) -> void:
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file != null:
+		file.store_string(text)
+		file.close()
 
 
 func _on_action_requested(unit_id: StringName, _turn: int, game: GameMain, recorder: ActionRecorder) -> void:

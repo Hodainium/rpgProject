@@ -13,14 +13,14 @@ public class BattleContractTests
     private static readonly ReplayRequest SampleRequest = new(
         new BattleSnapshot(1, "b-1", "9223372036854775807", "fixture.encounter.duel",
             [new PartyMemberSnapshot(1, "fixture.unit.striker", 1)]),
-        new ActionLog(1,
-            [new ActionEntry(1, "P1", "Fixture.Ability.Strike", "E1", "ab12"),
-             new ActionEntry(3, "P1", "Fixture.Ability.Guard", null, "cd34")],
+        new ActionLog(2,
+            [new ActionEntry(1, "P1", "Fixture.Ability.Strike", "E1"),
+             new ActionEntry(3, "P1", "Fixture.Ability.Guard", null)],
             BattleOutcome.Victory,
             "ef56"));
 
     private const string SampleRequestJson =
-        """{"snapshot":{"schemaVersion":1,"battleId":"b-1","seed":"9223372036854775807","encounterId":"fixture.encounter.duel","party":[{"slot":1,"unitDefId":"fixture.unit.striker","level":1}]},"actionLog":{"schemaVersion":1,"actions":[{"turn":1,"actor":"P1","ability":"Fixture.Ability.Strike","target":"E1","checkpoint":"ab12"},{"turn":3,"actor":"P1","ability":"Fixture.Ability.Guard","target":null,"checkpoint":"cd34"}],"claimedOutcome":"Victory","claimedFinalHash":"ef56"}}""";
+        """{"snapshot":{"schemaVersion":1,"battleId":"b-1","seed":"9223372036854775807","encounterId":"fixture.encounter.duel","party":[{"slot":1,"unitDefId":"fixture.unit.striker","level":1}]},"actionLog":{"schemaVersion":2,"actions":[{"turn":1,"actor":"P1","ability":"Fixture.Ability.Strike","target":"E1"},{"turn":3,"actor":"P1","ability":"Fixture.Ability.Guard","target":null}],"claimedOutcome":"Victory","claimedFinalHash":"ef56"}}""";
 
     [Fact]
     public void ReplayRequest_SerializesToTheSpecShape()
@@ -70,9 +70,9 @@ public class BattleContractTests
     [Fact]
     public void ActionEntry_WritesExtraOnlyForOneMore()
     {
-        var oneMore = new ActionEntry(4, "P1", "Fixture.Ability.Strike", "E2", "ab12", Extra: true);
+        var oneMore = new ActionEntry(4, "P1", "Fixture.Ability.Strike", "E2", Extra: true);
         const string expected =
-            """{"turn":4,"actor":"P1","ability":"Fixture.Ability.Strike","target":"E2","checkpoint":"ab12","extra":true}""";
+            """{"turn":4,"actor":"P1","ability":"Fixture.Ability.Strike","target":"E2","extra":true}""";
 
         Assert.Equal(expected, JsonSerializer.Serialize(oneMore, RpgJson.Options));
         Assert.True(JsonSerializer.Deserialize<ActionEntry>(expected, RpgJson.Options)!.Extra);
@@ -82,9 +82,9 @@ public class BattleContractTests
     [Fact]
     public void ActionEntry_WritesInterruptOnlyForOutOfTurnUlts()
     {
-        var ult = new ActionEntry(3, "P1", "Fixture.Ability.UltNova", null, "ab12", Interrupt: true);
+        var ult = new ActionEntry(3, "P1", "Fixture.Ability.UltNova", null, Interrupt: true);
         const string expected =
-            """{"turn":3,"actor":"P1","ability":"Fixture.Ability.UltNova","target":null,"checkpoint":"ab12","interrupt":true}""";
+            """{"turn":3,"actor":"P1","ability":"Fixture.Ability.UltNova","target":null,"interrupt":true}""";
 
         Assert.Equal(expected, JsonSerializer.Serialize(ult, RpgJson.Options));
         var parsed = JsonSerializer.Deserialize<ActionEntry>(expected, RpgJson.Options)!;
@@ -92,6 +92,25 @@ public class BattleContractTests
         Assert.Null(parsed.Extra);
         Assert.Equal(expected, JsonSerializer.Serialize(parsed, RpgJson.Options));
         Assert.DoesNotContain("interrupt", JsonSerializer.Serialize(SampleRequest.ActionLog, RpgJson.Options));
+    }
+
+    [Fact]
+    public void ActionLogV2_EntriesCarryNoCheckpoint()
+    {
+        var json = JsonSerializer.Serialize(SampleRequest.ActionLog, RpgJson.Options);
+
+        Assert.StartsWith("""{"schemaVersion":2,""", json);
+        Assert.DoesNotContain("checkpoint", json);
+    }
+
+    [Fact]
+    public void MismatchReasons_ArePinned()
+    {
+        // Spec atomic-battles: CheckpointMismatch is gone. The Godot replay runner emits exactly these names.
+        Assert.Equal(
+            ["TurnMismatch", "ActorMismatch", "IllegalAbility", "InvalidTarget", "LogExhausted", "TrailingActions",
+             "OutcomeMismatch", "FinalHashMismatch", "TurnLimitExceeded"],
+            Enum.GetNames<MismatchReason>());
     }
 
     [Fact]
@@ -110,11 +129,11 @@ public class BattleContractTests
     public void RejectedResult_CarriesErrorCode2002_AndReasonAsString()
     {
         var result = new ReplayResult(1, "b-1", ReplayVerdict.Rejected, ReplayErrors.ReplayMismatchCode,
-            ReplayErrors.ReplayMismatchName, new ReplayMismatch(MismatchReason.CheckpointMismatch, 7, "detail"),
+            ReplayErrors.ReplayMismatchName, new ReplayMismatch(MismatchReason.FinalHashMismatch, 7, "detail"),
             BattleOutcome.Victory, 12, "ab12", "4.7.2.stable.mono.official");
 
         Assert.Equal(
-            """{"schemaVersion":1,"battleId":"b-1","verdict":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"CheckpointMismatch","turn":7,"detail":"detail"},"outcome":"Victory","turns":12,"finalStateHash":"ab12","engineVersion":"4.7.2.stable.mono.official"}""",
+            """{"schemaVersion":1,"battleId":"b-1","verdict":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"FinalHashMismatch","turn":7,"detail":"detail"},"outcome":"Victory","turns":12,"finalStateHash":"ab12","engineVersion":"4.7.2.stable.mono.official"}""",
             JsonSerializer.Serialize(result, RpgJson.Options));
     }
 

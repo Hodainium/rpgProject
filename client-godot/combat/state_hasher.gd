@@ -6,11 +6,14 @@ class_name StateHasher
 extends RefCounted
 
 const VERSION_LINE: String = "hash-v1"
+## Calls to compute() (spec atomic-battles: one per battle without a trace). Lets a test prove it; never hashed or logged.
+static var compute_count: int = 0
 
 
 ## {"hash": String, "error": String}. The error is set (and the hash empty) when the state can't be hashed:
 ## a fractional attribute (NonIntegerAttribute) or an active effect without a saved resource (AnonymousActiveEffect).
 static func compute(battle: Battle) -> Dictionary:
+	compute_count += 1
 	var collected := canonical_lines(battle)
 	if collected["error"] != "":
 		return {"hash": "", "error": collected["error"]}

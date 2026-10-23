@@ -1,0 +1,1 @@
+{"schemaVersion":1,"battleId":"ult-close-seed-2","verdict":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"OutcomeMismatch","turn":15,"detail":"claimed Victory, simulated Defeat"},"outcome":"Defeat","turns":15,"finalStateHash":"3ff09874db29b3cda6cb8a50ad56a93c492b97f00cec016e666a16c5ea5229a7","engineVersion":"4.7.2.stable.mono.official.ed1daf0bf"}

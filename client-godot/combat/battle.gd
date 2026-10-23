@@ -9,9 +9,10 @@
 ##   choose(battle, unit) -> {"ability": StringName, "target": StringName}   (may await; the client waits for input)
 ##       or, at a DECISION ult window, {"interrupt": true, "unit", "ability", "target"} (spec ult-interrupts)
 ##   on_invalid(battle, unit, reason, detail) -> bool                         (true: ask again; false: stop)
-##   after_party_turn(battle, unit, action, checkpoint) -> void
+##   after_party_turn(battle, unit, action) -> void
 ##   interrupt(battle) -> {"interrupt": true, "unit", "ability", "target"} or {}   (BETWEEN window; never awaits)
-##   after_interrupt(battle, unit, action, checkpoint) -> void
+##   after_interrupt(battle, unit, action) -> void
+## A battle is hashed once, at its end (spec atomic-battles); attach a BattleTrace to hash after every action.
 class_name Battle
 extends Node
 
@@ -100,6 +101,8 @@ var one_more_queue: Array[BattleUnit] = []
 var extra_action: bool = false
 ## True while an ult cast out of turn resolves (spec ult-interrupts).
 var in_interrupt: bool = false
+## Spec atomic-battles: the determinism trace (tests and dev tools only). null = no trace and no hashing before the end.
+var trace: BattleTrace = null
 
 var _units: Array[BattleUnit] = []  # sorted by unit id
 ## Instant effect that refills a recovering unit's toughness (amount by SetByCaller); built in code, never persisted.
@@ -351,6 +354,7 @@ func run(controller: Object) -> void:
 		await _drain_triggers()
 		_check_deaths()
 		_check_end()
+		_trace_point("start")
 	while is_running():
 		await _ult_window(controller)
 		if not is_running():
@@ -395,13 +399,12 @@ func run(controller: Object) -> void:
 			outcome = TURN_LIMIT_OUTCOME
 
 		if actor.is_party() and not action.is_empty():
-			var checkpoint := state_hash()
-			if runner_error != "":
-				break
-			controller.after_party_turn(self, actor, action, checkpoint)
+			controller.after_party_turn(self, actor, action)
+		_trace_point("turn", actor.unit_id, action)
 
 	if runner_error == "":
 		final_hash = state_hash()
+		_trace_point("end")
 	battle_ended.emit(outcome, final_hash)
 
 
@@ -431,9 +434,8 @@ func _extra_action(unit: BattleUnit, controller: Object) -> void:
 	if outcome == ONGOING and turn >= TURN_LIMIT:
 		outcome = TURN_LIMIT_OUTCOME
 	if unit.is_party() and not action.is_empty():
-		var checkpoint := state_hash()
-		if runner_error == "":
-			controller.after_party_turn(self, unit, action, checkpoint)
+		controller.after_party_turn(self, unit, action)
+	_trace_point("extra", unit.unit_id, action)
 	extra_action = false
 
 
@@ -602,7 +604,7 @@ func _party_interrupt(choice: Dictionary, controller: Object) -> bool:
 
 
 ## Casts an ult out of turn: no turn number, no turn ticks, no action value change. A break it causes queues a One
-## More as any action does. A party cast is checkpointed and logged ("interrupt": true).
+## More as any action does. A party cast is logged ("interrupt": true).
 func _interrupt(caster: BattleUnit, choice: Dictionary, controller: Object) -> void:
 	var ability := caster.ability_by_tag(StringName(str(choice["ability"])))
 	var target_id := StringName(str(choice.get("target", "")))
@@ -621,9 +623,9 @@ func _interrupt(caster: BattleUnit, choice: Dictionary, controller: Object) -> v
 	_check_end()
 	in_interrupt = false
 	if caster.is_party() and runner_error == "" and mismatch.is_empty():
-		var checkpoint := state_hash()
-		if runner_error == "":
-			controller.after_interrupt(self, caster, {"ability": ability.ability_tag, "target": target_id}, checkpoint)
+		controller.after_interrupt(self, caster, {"ability": ability.ability_tag, "target": target_id})
+	if runner_error == "" and mismatch.is_empty():
+		_trace_point("interrupt", caster.unit_id, {"ability": ability.ability_tag, "target": target_id})
 
 
 ## A dev decision (spec dev-tools 3.6): its GameplayEffect on the chosen living units through GAS, then the usual
@@ -642,8 +644,8 @@ func _apply_dev(actor: BattleUnit, choice: Dictionary, controller: Object) -> vo
 	await _drain_triggers()
 	_check_deaths()
 	_check_end()
-	controller.after_party_turn(self, actor, {"ability": StringName(str(choice["dev"])), "target": StringName(targets)},
-		state_hash())
+	controller.after_party_turn(self, actor, {"ability": StringName(str(choice["dev"])), "target": StringName(targets)})
+	_trace_point("dev", actor.unit_id, {"ability": StringName(str(choice["dev"])), "target": StringName(targets)})
 
 
 ## Applies one execution-table row (called by BattleAbility for each entry of its execution sequence).
@@ -725,6 +727,17 @@ static func hit_tags_of(spec: GameplayEffectSpec) -> Array[StringName]:
 			result.append(tag)
 	result.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 	return result
+
+
+## Spec atomic-battles: one trace point (kind start, turn, extra, interrupt, dev or end), only when a trace is attached.
+## A hashing error there is a runner error, as it would be at the final hash.
+func _trace_point(kind: String, actor: StringName = &"", action: Dictionary = {}) -> void:
+	if trace == null:
+		return
+	var problem := trace.point(self, kind, actor, StringName(str(action.get("ability", ""))),
+		StringName(str(action.get("target", ""))))
+	if problem != "":
+		_fail(problem)
 
 
 ## State hash v1 of the current state. Sets runner_error when the state can't be hashed.

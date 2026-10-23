@@ -4,7 +4,7 @@ namespace Rpg.Contracts.Battle;
 /// <param name="SchemaVersion">Currently 1.</param>
 /// <param name="ErrorCode">2002 when Rejected (see <see cref="ReplayErrors"/>), otherwise null.</param>
 /// <param name="Error">"ReplayMismatch" when Rejected, otherwise null.</param>
-/// <param name="Mismatch">The first point of divergence when Rejected, otherwise null.</param>
+/// <param name="Mismatch">The first mismatch the replay detected when Rejected, otherwise null.</param>
 /// <param name="Outcome">What the verifier's own simulation reached.</param>
 /// <param name="EngineVersion">Godot version string of the runner, e.g. "4.7.2.stable.mono.official".</param>
 public sealed record ReplayResult(
@@ -19,6 +19,8 @@ public sealed record ReplayResult(
     string FinalStateHash,
     string EngineVersion);
 
+/// <param name="Turn">The simulated turn at which the replay detected the mismatch (not necessarily where the log
+/// diverged: a legal tamper can surface turns later; spec atomic-battles).</param>
 public sealed record ReplayMismatch(MismatchReason Reason, int Turn, string Detail);
 
 /// <summary>The error contract from the root CLAUDE.md: a replay mismatch is a verdict, always code 2002.</summary>
@@ -45,8 +47,6 @@ public enum MismatchReason
     IllegalAbility,
     /// <summary>Missing, dead, wrong side, or not allowed for the ability's targeting.</summary>
     InvalidTarget,
-    /// <summary>State hash after the turn differs from the entry's checkpoint.</summary>
-    CheckpointMismatch,
     /// <summary>A party unit needs to act but the log has no entries left.</summary>
     LogExhausted,
     /// <summary>The battle ended with entries left in the log.</summary>

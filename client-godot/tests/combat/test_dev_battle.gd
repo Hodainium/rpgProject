@@ -35,8 +35,7 @@ func test_replay_rejects_dev_battle() -> void:
 	var request: Dictionary = await record(squad_snapshot())
 	var actions: Array = request["actionLog"]["actions"]
 	var first: Dictionary = actions[0]
-	actions.insert(0, {"turn": first["turn"], "actor": first["actor"], "ability": "Dev.Kill", "target": "enemies",
-		"checkpoint": first["checkpoint"]})
+	actions.insert(0, {"turn": first["turn"], "actor": first["actor"], "ability": "Dev.Kill", "target": "enemies"})
 	var result := await replay(copy(request))
 	eq(result.get("verdict"), "Rejected", "a logged dev decision is rejected")
 	eq(result.get("errorCode"), 2002, "with 2002")

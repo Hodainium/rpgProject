@@ -443,3 +443,33 @@ func test_console_battle_edges() -> void:
 	eq([entry["ability"], entry["target"]], ["Dev.Kill", str(victim)], "logged as an ordinary entry with its target")
 	await _ok(session, "kill")
 	check(run.pending_battle.is_empty(), "kill enemies ends it")
+
+
+## Spec atomic-battles: `trace on` saves the client's trace and the request; the replay trace of that request matches.
+func test_console_trace() -> void:
+	var session := _session()
+	var console: DevConsole = session[1]
+	console.traces_dir = SCRATCH + "traces/"
+	await _ok(session, "new fixture.character.ultist,fixture.character.ultist 7")
+	check((await _ok(session, "trace on"))["text"].contains("trace on"), "trace on")
+	await _ok(session, "spawn fixture.encounter.ult_trial")
+	var run: RunController = session[0].run
+	check(run.pending_battle.is_empty(), "the auto battle finished")
+	var files := Array(DirAccess.get_files_at(console.traces_dir))
+	var records := files.filter(func(file: String) -> bool: return file.ends_with(".record.json"))
+	eq(records.size(), 1, "one battle traced: %s" % [files])
+	if records.size() != 1:
+		return
+	var base: String = console.traces_dir + records[0].trim_suffix(".record.json")
+	var recorded: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(base + ".record.json"))
+	var request: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(base + ".request.json"))
+	eq(recorded["verdict"], BattleTrace.RECORDED, "a client trace")
+	check(recorded["points"].size() > 2 and recorded["points"][0].has("lines"), "with points and lines")
+	var runner := ReplayRunner.new()
+	runner.trace = BattleTrace.new(true)
+	var result := await runner.run(request, FIXTURES, host)
+	eq(result.get("verdict"), "Verified", "the saved request verifies")
+	eq(BattleTrace.describe(BattleTrace.diff(recorded, runner.trace.to_json())), "traces match", "record vs replay")
+	check((await _ok(session, "trace off"))["text"] == "trace off", "trace off")
+	for file in DirAccess.get_files_at(console.traces_dir):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(console.traces_dir.path_join(file)))
