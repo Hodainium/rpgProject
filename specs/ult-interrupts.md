@@ -1,6 +1,6 @@
 # Spec: ult-interrupts (slice 1c4)
 
-Status: 📝 Draft for review · Roadmap: slice 1c4 · Date: 2026-10-21
+Status: ✅ Implemented, synced with the code (2026-10-21) · Roadmap: slice 1c4 · Date: 2026-10-21
 Design intent: Honkai: Star Rail ultimates (`specs/design/combat-design.md`, "Ult charge"). Turn order, action log,
 checkpoints and state hash: `specs/combat-replay-core.md` (whose log schema leaves room for "ultimates that interrupt
 the order"). One More, break, follow-ups: `specs/item-pass.md` 3.1–3.2. Console and script runner:
@@ -40,6 +40,9 @@ party uses; the AttributeSet is shared.
 the slice 3 verifier runs this replay unchanged. This is the "pricing library whose results must reproduce
 byte-for-byte" from `combat-replay-core` with out-of-band orders: an order can arrive at any moment, so it is
 sequenced at defined points and the sequence is the audit trail.
+
+Ults are battle-only: field mode (map actions) uses `action_abilities()`, so an ult such as Sanctuary is no longer
+usable on the map.
 
 Out of scope: enemy brains smarter than "ult when full" (content in 1c5), and the rest of section 8.
 
@@ -112,11 +115,13 @@ still invalid (caster dead, charge not full, no target left) → action_rejected
 after_interrupt → entries.append(entry(battle.turn, caster, action, checkpoint, interrupt = true))
 battle ends with presses still queued → dropped
 ```
+**Auto** (the battle panel's Auto toggle and the console's auto battles): at a party decision it first presses every
+member's ult that can fire (first valid target), so they go in at that DECISION window, then picks the action.
 
 **Retargeting** (HSR: a queued ult never fizzles while a valid target exists). A press names a target, but units act
 before the window, so it may be dead (or, for a revive, already revived) by then. `Battle.retarget(caster, ability,
 wanted) -> BattleUnit`:
-- `wanted` still valid → `wanted`.
+- `wanted` still valid → `wanted`. No `wanted` given → the first candidate by slot.
 - Otherwise the valid candidate (`target_candidates`) with the **nearest slot** to `wanted`'s; on a tie the lower
   slot. E2 dies with E1 and E3 alive → E1. For `SINGLE_DEAD_ALLY` the candidates are dead allies, same rule.
 - No candidate → `null`: the press is dropped with `action_rejected` (`InvalidTarget`).
@@ -125,7 +130,8 @@ wanted) -> BattleUnit`:
 Retargeting is **client-side input resolution**: it decides which target the client submits, and the log holds that
 final target. The replay doesn't retarget; it checks the logged target as for any action. So it adds no replay rule
 and no tamper surface (a client could always name any valid target). It lives in `Battle` only so the UI, the
-console and tests share one rule. Enemies don't need it: their brain picks at the window.
+console and tests share one rule. `Battle.resolve_press(press)` applies it and then checks the press
+(`{"choice"}` or `{"problem"}`). Enemies don't need it: their brain picks at the window.
 
 ### B. Replay mode (verify)
 - Enemy phase: identical code, re-simulated (brain + battle RNG), as enemy turns are today.
@@ -158,12 +164,13 @@ as for `choose()`.
 |---|---|
 | `BattleAbility` | `ULTIMATE_TAG := &"Ability.Type.Ultimate"`, `is_ultimate()` (asset tag present, not triggered). |
 | `BattleUnit` | `action_abilities()` excludes ultimates (never turn actions, either side). New `ultimate_abilities()`. |
-| `Battle.validate_action` | A turn action that `is_ultimate()` → `IllegalAbility`. New `validate_interrupt(unit, choice)`: caster living (`ActorMismatch`; for the party: a party unit), ability granted, `is_ultimate()` and `can_activate_ability` (`IllegalAbility`), target valid (`InvalidTarget`). |
-| `Battle` | `interrupt_started(unit_id, ability_tag)` signal; `in_interrupt: bool`; `_ult_window()`; `_interrupt()`; `retarget()`. |
+| `Battle.validate_action` | A turn action that `is_ultimate()` → `IllegalAbility`. New `validate_interrupt(caster, choice, party: bool)`: caster living and on the expected side (`ActorMismatch`), ability granted, `is_ultimate()` and `can_activate_ability` (`IllegalAbility`), target valid (`InvalidTarget`). |
+| `Battle` | `interrupt_started(unit_id, ability_tag)` signal; `in_interrupt: bool`; `_ult_window()`; `_party_interrupt()` (checks a party interrupt from either window; an invalid one goes to `controller.on_invalid`); `_interrupt()`; `retarget()`; `resolve_press()`. |
 | `EnemyBrain` | `choose_interrupt(unit, battle)` (above). |
 | Controllers | New `interrupt(battle) -> Dictionary` and `after_interrupt(battle, unit, action, checkpoint)` on `ActionRecorder`, `ReplayController`, `ScriptedController`. `choose()` may return `{"interrupt": true, "unit", "ability", "target"}` (DECISION). |
 | `ActionRecorder` | `submit_ult(unit_id, ability_tag, target_id = &"")`; `pending_interrupts()`; `ActionRecorder.entry(..., extra, interrupt)` writes `"interrupt": true` only when set. |
-| Validator | Warning: an `Ability.Type.Ultimate` ability with no cost effect (castable at every window). Error: `Ability.Type.Ultimate` on a triggered ability. Warning: an enemy loadout with an ult but no charge source. |
+| Validator | Error `ult_triggered`: `Ability.Type.Ultimate` on a triggered ability. Warning `ult_no_cost`: an ult with no cost effect (castable at every window). Warning `ult_no_charge`: an enemy with an ult among its abilities, default-loadout skills or item grants, but no triggered passive at all there (anything that could charge it). |
+| Tools | `game/tools/sync_tags.gd` knows `Ability.Type.Ultimate` as a system tag. `game/dev/commands/ult.gd` (with `ult` tag completion in `dev_console.gd`). |
 
 ### 3.2 Wire shape (`Rpg.Contracts.Battle.ActionEntry`)
 ```csharp
@@ -187,30 +194,32 @@ Example (P1 Execute after enemy turn 3; then on P2's own turn 4, P2 Sanctuary be
   unchanged (the rule `combat-replay-core` set for `extra`).
 - Enemy interrupts are not in the log (re-simulated); their effects are in the next party checkpoint.
 - `interrupt` and `extra` both true is malformed → `TurnMismatch`.
-- **No new `MismatchReason`:** an interrupt that doesn't fire at its window (wrong turn, or met where a turn action is
-  due) is `TurnMismatch`; a non-ult or a partial charge is `IllegalAbility`; a dead or enemy caster is
-  `ActorMismatch`; leftover interrupts after the end are `TrailingActions`. All are 2002.
+- **No new `MismatchReason`:** an interrupt that can't fire where it is logged (its turn's window has passed, or
+  it is met where a turn action is due) is `TurnMismatch`; one moved to another *valid* window fires there and is
+  caught by the next checkpoint (`CheckpointMismatch`: the log alone can't tell a later press from a moved one); a
+  non-ult or a partial charge is `IllegalAbility`; a dead or enemy caster is `ActorMismatch`; leftover interrupts
+  after the end are `TrailingActions`. All are 2002.
 - **State hash:** unchanged, `hash-v1`. Queued presses are controller state, never battle state; the hash after an
   interrupt already holds its effects (energy spent, HP, tags, AV). Enemy charge is an attribute, already hashed.
 
 ### 3.3 Demo ult examples (yours, approved 2026-10-21)
 Each class keeps its AoE ult and gains a single-target one, so the demo shows both shapes and exercises retargeting;
-one enemy gets an ult. Both party ults share the one charge bar (cost `ult_cost`, 100 energy); the loadouts grant
-both. Made by `game/tools/build_demo.gd` (new files only; existing files edited in place for the tag). Numbers are
-starting values for your tuning; the `.tres`/`.tscn` files become the source of truth.
+one enemy gets an ult. Both party ults share the one charge bar (cost `effects/ult_cost.tres`); each unit's
+`abilities` list grants its ults. New files made by `game/tools/build_ult_pass.tscn` (never overwrites); the tag on
+Cleave and Sanctuary and the grants were edited in place with your approval. The numbers live in the files named below.
 
 | Unit | Ult | Tag | Targeting | Does | Why it shows interrupts |
 |---|---|---|---|---|---|
-| Warrior | Cleave (exists) | `Ability.Ult.Cleave` | ALL_ENEMIES | 200% ATK physical | Clear weakened enemies before the next one moves |
-| Warrior | **Execute** (new) | `Ability.Ult.Execute` | SINGLE_ENEMY | 300% ATK physical, high toughness damage | Kill or break the next actor before its turn (break: 25% delay and a One More); retargets if its pick died |
-| Cleric | Sanctuary (exists) | `Ability.Ult.Sanctuary` | ALL_ALLIES | party heal | Heal after one enemy's hit, before the next enemy's |
-| Cleric | **Resurrection** (new) | `Ability.Ult.Resurrection` | SINGLE_DEAD_ALLY | revive at a % of max HP (`ExecCalc_PercentOfMax`, like Smelling Salts) | Revive an ally killed mid enemy round before the rest of the round; retargets to another dead ally if its pick is already back |
-| Golem | **Quake** (new) | `Ability.Ult.Quake` | ALL_ENEMIES (the party) | 150% ATK physical to every party member | Enemy interrupt: charges from being hit (`ult_charge_hit`), so hitting it hard makes it answer out of turn |
+| Warrior | Cleave (exists) | `Ability.Ult.Cleave` | ALL_ENEMIES | physical, % ATK (`abilities/cleave.tscn`) | Clear weakened enemies before the next one moves |
+| Warrior | **Execute** (new) | `Ability.Ult.Execute` | SINGLE_ENEMY | physical, % ATK, the demo's biggest toughness damage (`abilities/execute.tscn`) | Kill or break the next actor before its turn (break: 25% delay and a One More); retargets if its pick died |
+| Cleric | Sanctuary (exists) | `Ability.Ult.Sanctuary` | ALL_ALLIES | party heal (`effects/sanctuary_heal.tres`) | Heal after one enemy's hit, before the next enemy's |
+| Cleric | **Resurrection** (new) | `Ability.Ult.Resurrection` | SINGLE_DEAD_ALLY | revive at a % of max HP (`effects/resurrection_revive.tres`, `ExecCalc_PercentOfMax` like Smelling Salts) | Revive an ally killed mid enemy round before the rest of the round; retargets to another dead ally if its pick is already back |
+| Golem | **Quake** (new) | `Ability.Ult.Quake` | ALL_ENEMIES (the party) | physical, % ATK to every party member (`abilities/quake.tscn`) | Enemy interrupt: charges from being hit (`ult_charge_hit`), so hitting it hard makes it answer out of turn |
 
 All five get `Ability.Type.Ultimate` in `asset_tags`. New tags `Ability.Ult.Execute`, `Ability.Ult.Resurrection`,
-`Ability.Ult.Quake`, `Ability.Type.Ultimate` via `sync_tags --add-missing`. The Golem's loadout gains Quake,
-`ult_cost` and `ult_charge_hit`. Animations: Execute and Quake reuse the jump shape, Resurrection the spin, each with
-one `execute` key, as the builder does for the others.
+`Ability.Ult.Quake`, `Ability.Type.Ultimate` via `sync_tags --add-missing`. The Warrior gains Execute, the Cleric
+Resurrection, the Golem Quake and the `ult_charge_hit` passive (in `characters/*.tres`, `enemies/golem.tres`).
+Animations: Execute is a jump and spin, Quake a jump, Resurrection a spin, each with one `execute` key and a sound.
 
 ### 3.4 RabbitMQ / Redpanda / Redis
 N/A: no queues, topics or keys. The slice 3 battle job carries the log as an opaque payload.
@@ -220,28 +229,28 @@ N/A: no queues, topics or keys. The slice 3 battle job carries the log as an opa
 |---|---|---|
 | Ult pressed during an enemy's action | Queued; fires at the next window, before the next turn starts | `test_ult_between_turns` |
 | Ult on own turn | Fires before the action; the actor still acts; its AV resets once | `test_ult_on_own_turn_keeps_turn` |
-| Ally ults during another member's decision | Fires; the deciding member still acts | `test_ally_ult_during_decision` |
-| Actor dies during its DECISION window (e.g. a thorn passive) | Window ends, no action; BETWEEN of the same turn follows; client and replay agree | `test_actor_dies_in_decision_window` |
+| Ally ults during another member's decision | Fires; the deciding member still acts | `test_ult_break_one_more_and_ult_during_it` (P2 ults in P1's One More decision) |
+| Actor dies during its DECISION window (the martyr fixture's self-killing ult) | Window ends, no action; BETWEEN of the same turn follows; client and replay agree | `test_actor_dies_in_decision_window` |
 | Two party ults back to back | Both fire in one window, in press order, two entries, two checkpoints | `test_ult_chain` |
-| Enemy with a full charge | Ults at the next window, before any party press; not logged; replay re-simulates it | `test_enemy_interrupt` |
-| Two enemies full in one window | Slot order, one each; no loop | `test_enemy_interrupts_slot_order` |
-| Party ult fills an enemy's charge | The enemy answers at the next window, not the same one | `test_enemy_answers_next_window` |
+| Enemy with a full charge | Ults at the next window, before any party press; not logged; replay re-simulates it | `test_enemy_interrupt`, `test_record_replay_roundtrip_with_interrupts` |
+| Two enemies full in one window | Slot order, one each; no loop | `test_enemy_interrupts_slot_order` (`fixture.encounter.rage_pair`) |
+| Party ult fills an enemy's charge | The enemy answers at the next window, not the same one | `test_enemy_interrupt` |
 | Enemy without a castable ult | No RNG draw; existing goldens unchanged | `test_no_enemy_ult_no_rng` + existing goldens |
-| Ult as a turn action (party or enemy brain) | Client: `action_rejected`. Replay: 2002 `IllegalAbility`. Brain: runner error | `test_ult_not_a_turn_action` |
-| Interrupt with a partial charge | 2002 `IllegalAbility` (cost check) | `test_tamper_ult_charge` |
-| Interrupt moved to another turn | 2002 `TurnMismatch` (or `CheckpointMismatch` if it lands at a valid window with a different result) | `test_tamper_ult_turn` |
-| Interrupt deleted from the log | 2002 `CheckpointMismatch` at the next entry | `test_tamper_ult_removed` |
-| Interrupt by a dead or enemy unit | 2002 `ActorMismatch` | `test_tamper_ult_actor` |
-| Both `extra` and `interrupt` | 2002 `TurnMismatch` | `test_tamper_ult_extra` |
-| Queued ult whose target died first (incl. to an enemy ult in the same window) | Retargeted to the nearest slot; the log holds the new target; replay `Verified` | `test_queued_ult_retargets` |
-| Retarget tie (both neighbours alive) | Lower slot | `test_retarget_tie_lower_slot` |
-| Queued revive ult whose dead ally is already back | Next dead ally by slot; none → dropped | `test_retarget_dead_ally` |
+| Ult as a turn action (party or enemy brain) | Client: `action_rejected`. Replay: 2002 `IllegalAbility`. Brain: runner error | `test_action_abilities_exclude_ults`, `test_tampered_interrupts` (see 6, known gaps) |
+| Interrupt with a partial charge | 2002 `IllegalAbility` (cost check) | `test_tampered_interrupts` |
+| Interrupt moved to another turn | 2002 `CheckpointMismatch` when it lands at a valid window (the usual case), `TurnMismatch` when it can't fire there | `test_tampered_interrupts`, golden `ult-seed-7-tampered-turn` |
+| Interrupt deleted from the log | 2002 `CheckpointMismatch` at the next entry | `test_tampered_interrupts` |
+| Interrupt by a dead or enemy unit | 2002 `ActorMismatch` | `test_tampered_interrupts` (enemy), `test_tamper_ult_dead_actor` (dead) |
+| Both `extra` and `interrupt` | 2002 `TurnMismatch` | `test_tampered_interrupts` |
+| Queued ult whose target died first (incl. to an enemy ult in the same window) | Retargeted to the nearest slot; the log holds the new target; replay `Verified` | `test_ult_kills_next_actor_and_retargets`, `test_queued_ult_retargets_after_enemy_ult`, demo `test_execute_interrupt_and_retarget` |
+| Retarget tie (both neighbours alive) | Lower slot | `test_retarget_rules` |
+| Queued revive ult whose dead ally is already back | Next dead ally by slot; none → dropped | `test_retarget_rules` |
 | Queued ult whose caster died, or no target left | Dropped with `action_rejected`, not logged; replay never sees it | `test_queued_ult_dropped` |
-| Ult kills the next actor before its turn | Death check in the window; the dead unit leaves the turn queue | `test_ult_kills_next_actor` |
-| Ult breaks a unit | Break delay applies; One More for the caster right after the window | `test_ult_break_one_more` |
-| Windows around a One More | BETWEEN opens before it and its decision is a DECISION window; the One More action still follows | `test_ult_during_one_more` |
-| Ult kills the last enemy / last party member | Battle ends at once; no more interrupts; queued presses dropped | `test_ult_ends_battle` |
-| Self-buff from an own-turn ult | Covers the next two turns (own-turn rule); cast in BETWEEN, counts down normally | `test_ult_self_buff_countdown` |
+| Ult kills the next actor before its turn | Death check in the window; the dead unit leaves the turn queue | `test_ult_kills_next_actor_and_retargets` |
+| Ult breaks a unit | Break delay applies; One More for the caster right after the window | `test_ult_break_one_more_and_ult_during_it` |
+| Windows around a One More | BETWEEN opens before it and its decision is a DECISION window; the One More action still follows | `test_ult_break_one_more_and_ult_during_it` |
+| Ult kills the last enemy / last party member | Battle ends at once; no more interrupts; queued presses dropped | `test_ult_ends_battle` (Victory), `test_enemy_ult_ends_battle` (Defeat) |
+| Self-buff from an own-turn ult | Covers the next two turns (own-turn rule); cast in BETWEEN, counts down normally | `test_ult_on_own_turn_keeps_turn` |
 | Old log (no `interrupt`) | Verified exactly as before | existing goldens, unchanged |
 | An ability awaits a frame inside an interrupt | Runner error `ContentAwaitedFrame` (unchanged rule) | covered by the zero-frame check |
 
@@ -256,22 +265,27 @@ Analytics (slice 4b): "most used moves" reads interrupt entries as moves; the fl
 
 ## 6. Test plan
 ### Fixtures (`client-godot/tests/fixtures/`, frozen; builders add missing files only)
-- `fixture.ability.ult_nova`: `Ability.Type.Ultimate`, ALL_ENEMIES, cost 100 energy, physical damage that can break
-  a brittle enemy; `fixture.ability.ult_ward`: SELF, a 2-turn DEF buff; `fixture.ability.ult_snipe`: SINGLE_ENEMY
-  (retargeting).
-- `fixture.unit.ultist`: duelist-like, starts with full charge (a battle-start passive), the three ults; the
-  energy-charge passive so the bar refills.
-- `fixture.unit.raging_dummy`: enemy with an ALL_ENEMIES ult and `ult_charge_hit`.
-- `fixture.encounter.ult_trial`: a fast enemy (acts twice before the party), a brittle enemy, the raging dummy.
-- `ScriptedController` interrupt policy (deterministic, no RNG): a party unit whose ult can activate casts it,
-  at BETWEEN on odd turns and at DECISION on even turns, so a golden covers both windows; it cycles through its ults
-  and picks targets by turn among the candidates.
+- Ults (all `Ability.Type.Ultimate`, cost `effects/ult_cost.tres`): `Fixture.Ability.UltNova` (ALL_ENEMIES, Fire with
+  toughness damage, breaks the brittle enemy), `UltSnipe` (SINGLE_ENEMY, retargeting), `UltWard` (SELF, the 2-turn
+  guard buff), `UltRaise` (SINGLE_DEAD_ALLY), `UltRage` (the enemy ult), `UltSacrifice` (SELF, kills its caster),
+  `UltShield` (SINGLE_ALLY). Passives: `FullCharge` (full bar at battle start), `Recharge` (+charge per action),
+  `RageCharge` (+charge per hit taken).
+- `fixture.character.ultist`: Strike, Nova, Snipe, Ward, Raise, FullCharge, Recharge. `fixture.character.martyr`:
+  Strike, Sacrifice, FullCharge. `fixture.character.warden`: Strike, Shield, FullCharge (its own character, so the
+  ultist's kit and `ult-seed-7` stay as recorded).
+- `fixture.enemy.sprinter` (fast, acts first), `fixture.enemy.raging` (UltRage + RageCharge);
+  `fixture.encounter.ult_trial` (sprinter, brittle, raging), `fixture.encounter.rage_pair` (two raging).
+- `ScriptedController` interrupt policy (test-only, deterministic, no RNG): a party unit whose ult can activate casts
+  it, units in odd slots at the BETWEEN window and units in even slots at a DECISION window (any member's), so one
+  battle covers both windows; it cycles through its ults and picks targets by turn among the candidates. (Splitting
+  by turn number never reached DECISION: BETWEEN on the odd turns spent every charge first.)
 
 ### Unit tests (`tests/combat/test_ult_interrupts.gd`)
 Every row of section 4, plus:
 - `test_record_replay_roundtrip_with_interrupts`: ScriptedController run → `Verified`, identical checkpoints.
 - `test_interrupt_entry_shape`: `interrupt` written only when true; field order matches the C# record.
-- `test_no_interrupt_no_change`: a battle with no ults yields the same log and final hash as before this slice.
+- No change without ults: `test_no_enemy_ult_no_rng` (a break battle logs no `interrupt`) and the existing goldens,
+  which rewrote byte-identical with this slice.
 - `test_window_order`: BETWEEN (enemies, then party) and DECISION in the documented order (a probe controller logs
   each call).
 - `test_action_abilities_exclude_ults` and the validator rules.
@@ -279,8 +293,12 @@ Every row of section 4, plus:
 ### Golden vectors (`tests/fixtures/golden/`)
 | File | Proves |
 |---|---|
-| `ult-seed-7.json` / `.result.json` | Party interrupts in both windows and a chain, an enemy interrupt, an ult break with a One More, an ult kill, a retarget |
-| `ult-seed-7-tampered-turn.json` / `.result.json` | An interrupt moved one turn → 2002 `TurnMismatch` at that turn |
+| `ult-seed-7.json` / `.result.json` | Party interrupts in both windows (BETWEEN, and DECISION by an ally during another member's turn and One More), ult breaks followed by One More actions, an enemy interrupt (re-simulated, not in the file), Victory |
+| `ult-seed-7-tampered-turn.json` / `.result.json` | The first interrupt moved one turn → 2002 `CheckpointMismatch` at turn 1 (it lands at a valid window) |
+
+Not in the golden, by design: a same-window chain (`test_ult_chain`) and retargeting. Retargeting happens before an
+entry is logged, so a retargeted entry looks like any other and a golden can't show it; its tests record a real
+press, replay and verify (see 4).
 
 Existing goldens (`duel-seed-1`, `squad-seed-42`, `break-seed-11`, game goldens) must pass **unchanged**.
 
@@ -289,16 +307,25 @@ Existing goldens (`duel-seed-1`, `squad-seed-42`, `break-seed-11`, game goldens)
 - The new goldens deserialize into the records and re-serialize byte-identically (existing cross-check, extended).
 
 ### Dev tools
-- `ult <unit> <ability> [target]` queues a press; `dev_run` script test: a sandbox battle with an ult during an enemy
-  turn and a Golem Quake, logged and replayed `Verified`.
+- `test_console_ult` (`tests/game/test_dev_console.gd`): outside a battle, a non-ult and an enemy caster are refused,
+  ult tags autocomplete, a press fires in the waiting member's DECISION window and is logged as an interrupt, and an
+  auto battle casts ready ults out of turn. The script runner uses the same commands headless.
 
 ### Demo
 - The five ults of 3.3 tagged; `test_demo_items_replay` and the demo smoke test still pass (their scripted policy
   now casts ults as interrupts).
-- `test_demo_ults`: each ult cast as an interrupt in a sandbox battle, recorded and replayed `Verified`; Execute
-  retargets after its pick dies; Resurrection revives an ally killed earlier in the same enemy round; the Golem
-  quakes after being hit enough.
+- `tests/game/test_demo_ults.gd` (content test, direction only): the five are ults and never turn actions; Execute
+  kills a bat before it moves, replays `Verified`, and an Execute aimed at a dead bat retargets; Resurrection revives
+  a fallen ally (set up directly, not inside an enemy round) and then has no target; Sanctuary heals; the Golem
+  charges when hit and quakes at the window, unlogged; a scripted boss fight full of ults replays `Verified`.
 - `validate` over `content/`: 0 errors.
+
+### Known gaps
+- The client's `action_rejected` for an ult taken as a turn action, and the runner error for a brain that picks an
+  ult as a turn action, have no direct test (the reason, `IllegalAbility`, and the replay rejection do; a default
+  brain can't pick an ult). Neither can cause a wrong verdict: the first is a UI message on a shared path (the panel
+  never offers ults as actions), the second is a runner error, never a verdict. **Add a brain test in 1c5** with the
+  first custom `EnemyBrain` subclass, when the path first becomes reachable; the client signal needs none.
 
 ### Done when
 `dotnet build` / `dotnet test` and the Godot suite green; old goldens unchanged; new goldens in; `ult` command works
@@ -307,12 +334,16 @@ headless; `combat-replay-core` (windows, `interrupt` field), `combat-design` ("o
 
 ## 7. Files
 System (`feat:`): `combat/battle.gd`, `battle_ability.gd`, `battle_unit.gd`, `enemy_brain.gd`,
-`action_recorder.gd`, `replay_runner.gd`, `game/dev/commands/ult.gd`, the content validator rules,
-`tests/scripted_controller.gd`, `tests/combat/test_ult_interrupts.gd`, fixtures and goldens,
-`src/Rpg.Contracts/Battle/ActionLog.cs`, contract tests.
-Yours, approved 2026-10-21 (`design:`): `godot_gas/tag_registry.tres` (+ `gameplay_tags.gd`), the demo ults, the
-Warrior, Cleric and Golem loadouts, `game/tools/build_demo.gd` additions, `presentation/demo/battle_panel` (ult
-buttons, enemy charge, interrupt message).
+`action_recorder.gd`, `replay_runner.gd`; `game/dev/commands/ult.gd`, `game/dev/dev_console.gd` (completion,
+auto-ult), `game/dev/content_validator.gd`; `game/tools/sync_tags.gd`, `game/tools/build_ult_pass.gd`/`.tscn`;
+`tests/scripted_controller.gd`, `tests/combat/test_ult_interrupts.gd`, `tests/combat/test_golden.gd`,
+`tests/game/test_demo_ults.gd`, `tests/game/test_dev_console.gd`, `tests/game/test_content_validator.gd`,
+`tests/tools/build_fixtures.gd`, `tests/tools/build_broken_fixtures.gd`, fixtures, broken fixtures and goldens;
+`src/Rpg.Contracts/Battle/ActionLog.cs`, `BattleContractTests.cs`, `BattleGoldenTests.cs`.
+Yours, approved 2026-10-21 (`design:`): `godot_gas/tag_registry.tres` (+ regenerated `gameplay_tags.gd`), the new
+demo ult files, `cleave.tscn` and `sanctuary.tscn` (tag), `warrior.tres`, `cleric.tres`, `golem.tres` (grants),
+`presentation/demo/battle_panel.gd` (ult row built in code, auto-ult, "X unleashes Y!"; enemy charge shows in the
+existing "Ult" stat).
 
 ## 8. Later (slice 1c5 `content-pass`, unless noted)
 The mechanic and one example of each shape land here; content that leans on it waits for 1c5, where every piece is
@@ -337,5 +368,11 @@ Decided 2026-10-21:
 4. Retargeting is in this slice.
 5. All content and presentation edits approved: one new single-target ult per class, one enemy ult (Golem, Quake).
 6. Enemies can interrupt (decided by their brain, never logged); enemies act first in a window.
+
+Decided in implementation (synced 2026-10-21): a moved interrupt is `CheckpointMismatch`, not `TurnMismatch` (it
+lands at a valid window); the scripted policy splits windows by slot, not by turn; retargeting stays out of the golden
+(it happens before logging); a martyr fixture instead of a thorn enemy, so the death-in-DECISION case replays; ults
+are battle-only (not on the map); auto battles press ready ults; the demo ults come from a new builder,
+`build_ult_pass`.
 
 None open.

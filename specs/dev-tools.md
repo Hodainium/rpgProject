@@ -267,7 +267,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply (may 
 | `unwear <slot> <equipment slot tag>` | | Takes off what member `<slot>` wears in that slot (e.g. `Equipment.Slot.Head`), back to the armor inventory, map only (play command) |
 | `items [tag]` | | Lists every item and piece of equipment (id, kind or slot, pools, description), or only those carrying `<tag>` |
 | `use <slot> <ability> [target slot]` | | Field action (play command) |
-| `act <ability> [target]` / `auto [on\|off]` | | In battle: one party action, or Auto for the rest of the battle (play commands) |
+| `act <ability> [target]` / `auto [on\|off]` | | In battle: one party action, or Auto for the rest of the battle (play commands). Auto also presses every ult that can fire (spec ult-interrupts) |
+| `ult <unit> <ult tag> [target]` | | Spec ult-interrupts: party member `<unit>` (P1..P4) casts its ult out of turn at the next ult window, retargeted if the target is gone (play command, the battle panel's ult buttons) |
 | `next` | | Next floor after the boss (play command) |
 | `shot <name>` | | Saves the viewport as a PNG (`user://shots/` or the runner's `--shots` folder); needs a window |
 | `clear` | | Clears the scrollback |
@@ -402,6 +403,9 @@ content)` run the subsets the room grid and Play need. `report()` and `error_cou
 | `bad_equipment` | error | Equipment with no `slot` |
 | `bad_equipment_slot` | error | Equipment whose slot is in no run structure's `equipment_slots` (checked when any run lists its slots) |
 | `no_description` | warning | An item (not tagged `Dev`) or piece of equipment with no `description` |
+| `ult_triggered` | error | Spec ult-interrupts: an ability tagged `Ability.Type.Ultimate` that is a triggered passive |
+| `ult_no_cost` | warning | An ult without a cost effect (it could fire at every ult window) |
+| `ult_no_charge` | warning | An enemy with an ult but no triggered passive (abilities, default-loadout skills, item grants) that could charge it |
 | `trigger_unregistered` | warning | A triggered ability whose `trigger_event_tag` is in a battle event family (`Event.Damage.*`, `Event.Unit.*`, …) but not an event the battle sends (a typo such as `Event.Damage.Delt`) |
 | `placement_kind` | warning | A field that doesn't belong to the placement's kind: a `price` on anything but a shop slot, an item or item query on anything but a pedestal or shop slot, a loadout on anything but an enemy spawn |
 | `bad_layout` | error | Everything `FloorGenerator.check_layout` refuses: not connected, not exactly one start and one boss, outside the grid, doors don't fit |

@@ -90,8 +90,14 @@ In slice 3 the verifier worker wraps this command; nothing here knows about Rabb
   `Battle.one_more_queue`; the loop runs that queue before step 1, so a **One More** is an extra action with its own
   `turn += 1` but no turn start (4), no turn end (6), no `av` change (9). Its log entry carries `"extra": true` and is
   checked like any party action (10). An optional field absent from old logs, so `schemaVersion` stays 1.
-- Out of scope, but the log schema leaves room for them: action advance, ultimates that interrupt the order (slice
-  1c4), multiple enemy waves. Adding any of them bumps `schemaVersion` unless, like `extra`, it is an optional field.
+- **Ult windows (spec ult-interrupts):** an ability tagged `Ability.Type.Ultimate` is never a turn action; it is cast
+  out of turn at two windows. BETWEEN, at the top of the loop (before a One More or step 1): enemies whose brain
+  chooses an ult, in slot order, then the controller's party interrupts. DECISION: a party decision (step 5) may
+  return an interrupt instead of an action; it fires and the member is asked again. An interrupt has no `turn += 1`,
+  no turn start or end and no `av` change. A party interrupt is checkpointed and logged with the window's turn and
+  `"interrupt": true` (an optional field, so `schemaVersion` stays 1); an enemy one is re-simulated, never logged.
+- Out of scope, but the log schema leaves room for them: action advance, multiple enemy waves. Adding either bumps
+  `schemaVersion` unless, like `extra` and `interrupt`, it is an optional field.
 
 ### Effect timing: `CombatASC`
 GodotGAS's `advance_turn()` ticks DoTs and counts down every turn-based effect in one call. To get "DoTs at turn start,
@@ -281,7 +287,8 @@ public sealed record ActionEntry(
     string Ability,                          // the BattleAbility's ability_tag
     string? Target,                          // primary target unit id ("E1", "P2"), null for SELF/ALL_*
     string Checkpoint,                       // state hash at the end of this turn
-    bool? Extra = null);                     // true for a One More (spec item-pass); omitted otherwise
+    bool? Extra = null,                      // true for a One More (spec item-pass); omitted otherwise
+    bool? Interrupt = null);                 // true for a party ult cast out of turn (spec ult-interrupts); omitted otherwise
 
 public sealed record ReplayRequest(BattleSnapshot Snapshot, ActionLog ActionLog);
 
@@ -304,8 +311,9 @@ public enum BattleOutcome { Victory, Defeat, TurnLimit }
 public enum MismatchReason
 {
     TurnMismatch,        // next entry's turn != the simulated turn of the next party action, or its `extra` flag
-                         // differs from whether a One More is due there
-    ActorMismatch,       // entry's actor isn't the unit whose turn it is
+                         // differs from whether a One More is due there; an `interrupt` entry whose window has
+                         // passed or that is met where a turn action is due (spec ult-interrupts)
+    ActorMismatch,       // entry's actor isn't the unit whose turn it is (an interrupt: not a living party unit)
     IllegalAbility,      // not granted to that unit, or can_activate_ability is false (cost, cooldown, tags)
     InvalidTarget,       // missing, dead, wrong side, or not allowed for the ability's targeting
     CheckpointMismatch,  // state hash after the turn differs from the entry's checkpoint

@@ -12,7 +12,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c. `dev-tools` | ✅ Done (spec synced; remaining work listed in `specs/dev-tools.md`) | 2026-10-20 |
 | 1c2. `item-pass` | ✅ Done (spec synced; known test gaps listed in `specs/item-pass.md` 6) | 2026-10-20 |
 | 1c3. `animation-sets` | ✅ Done (spec synced; `uid://` test for `view` still to add, `specs/animation-sets.md` 6) | 2026-10-21 |
-| 1c4. `ult-interrupts` | ⬜ Not started | |
+| 1c4. `ult-interrupts` | ✅ Done (spec synced; one known test gap in `specs/ult-interrupts.md` 6) | 2026-10-21 |
 | 1c5. `content-pass` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
@@ -91,6 +91,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   status effects, buffs and debuffs, so the demo is built on finished tools and a wider content base. The content is
   chosen to push the game design and cover many mechanic interactions, so the later system slices (verify, replay,
   analytics, load) are tested against many real gameplay cases. At the user's request.
+- 2026-10-21: 1c4 `ult-interrupts` done: HSR ult windows (BETWEEN and DECISION), enemy interrupts, retargeting, the
+  `interrupt` log field; Execute, Resurrection and the Golem's Quake in the demo; both suites green, spec synced.
+  Added a verifier-cost consideration to slice 8 (state hash per checkpoint, measured). At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -246,7 +249,8 @@ content, so 1d is spent building a run rather than fixing tools or inventing mec
   plus the manual checks), `specs/item-pass.md` 6 known gaps (dead character equipped, demo Fire-beats-Physical on
   a Slime, demo break recovery; the equip/unequip run-log replay waits for 4a), `specs/animation-sets.md` 6 (the
   `uid://` test for `view`), and anything 1c4 leaves open (`specs/ult-interrupts.md` 8: items that react to ults,
-  smarter enemy ult timing, ults × statuses, party toughness, ult balance).
+  smarter enemy ult timing, ults × statuses, party toughness, ult balance; and 6 "Known gaps": a test that a custom
+  brain picking an ult as a turn action is a runner error, with the first `EnemyBrain` subclass).
 - **Status effects, buffs and debuffs:** design them first (the "Not yet designed" items in
   `specs/design/combat-design.md`: magnitudes, durations, stacking, how they show), then build them as GAS content
   on the existing `Status.*` tags. Damage over time, stat ups and downs, control effects; break effects per damage
@@ -347,6 +351,14 @@ runs two API replicas behind a load balancer.
 Locust profiles (`/stress`); scripted chaos runs for scenarios 2, 3, 4; **scenario 7** (spike → backpressure →
 recovery in Grafana). This is the demo. Locust also trips the 2b rate limiter, and a slow verifier pool shows up as
 players waiting at the stairs gate.
+- **Consideration: verifier cost per battle.** Measured 2026-10-21 on the ult fixture battles (headless 4.7.2 mono):
+  one state hash 0.3–0.4 ms, so the per-party-action checkpoints take ~5 ms of a ~12 ms simulation (30–50%). Almost
+  all of it is GDScript building the canonical text, not the SHA-256. Headless process startup (~1 s per job if
+  the worker launches one per battle) dwarfs both. If load shows verifier CPU matters, in this order: (1) keep warm
+  verifier processes that take many jobs (no contract change); (2) faster canonical text (cache unchanged units'
+  lines; `hash-v1` output unchanged); (3) checkpoint every N actions, or final hash only with a checkpointed re-run
+  when a battle is rejected (changes `combat-replay-core` and the log contract; needs a spec). The checkpoints are
+  what locate a false 2002 by turn, so drop them only with evidence.
 
 ### 9. `ruleset-versioning` (later milestone)
 Multiple verifier versions; jobs routed by `ruleset_version`. **Scenario 6** (ruleset changes while a battle is open).

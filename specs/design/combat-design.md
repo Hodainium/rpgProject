@@ -81,7 +81,10 @@ Example: ATK 500, SkillMultiplier 150, target DEF 300 → BaseDmg 750, DefMultip
 ## Ult charge (energy)
 Each ability a character uses in battle fires `Event.Ability.Used`; a triggered listener ability adds `energy` (demo:
 +25, so an ult every 4 actions). An ult's cost is 100 `energy`: GAS won't activate it on a partial bar and the cost
-empties it. Charge carries between battles. Not yet: per-ability charge amounts, charge from taking hits, out-of-turn ults.
+empties it. Charge carries between battles. Ults are cast out of turn, as in HSR (built, spec `ult-interrupts`):
+between any two actions and on your own turn before you act, never as a turn action; enemies can ult too.
+Charge from taking hits exists as a second listener on `Event.Damage.Taken` (demo `ult_charge_hit`, also on the
+Golem). Not yet: per-ability charge amounts.
 
 ## Toughness and break (HSR) with One More (Persona)
 Designed and built in `specs/item-pass.md`. A weakness hit depletes toughness by the row's toughness damage; at 0 the
