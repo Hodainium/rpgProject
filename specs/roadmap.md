@@ -13,6 +13,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c2. `item-pass` | ✅ Done (spec synced; known test gaps listed in `specs/item-pass.md` 6) | 2026-10-20 |
 | 1c3. `animation-sets` | ✅ Done (spec synced; `uid://` test for `view` still to add, `specs/animation-sets.md` 6) | 2026-10-21 |
 | 1c4. `ult-interrupts` | ✅ Done (spec synced; one known test gap in `specs/ult-interrupts.md` 6) | 2026-10-21 |
+| 1c4b. `atomic-battles` | ⬜ Not started | |
 | 1c5. `content-pass` | ⬜ Not started | |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
@@ -94,6 +95,11 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-10-21: 1c4 `ult-interrupts` done: HSR ult windows (BETWEEN and DECISION), enemy interrupts, retargeting, the
   `interrupt` log field; Execute, Resurrection and the Golem's Quake in the demo; both suites green, spec synced.
   Added a verifier-cost consideration to slice 8 (state hash per checkpoint, measured). At the user's request.
+- 2026-10-22: Added 1c4b `atomic-battles` after 1c4 and before 1c5: a battle is verified as one atomic unit (no
+  per-action checkpoints in the log, only the final hash), with an opt-in determinism trace for tests and dev that
+  finds the first divergent action. Placed before 1c5 so 1c5's goldens are recorded once, and before slice 3 because
+  nothing stores action logs yet, so the breaking log change costs nothing. Resolves slice 8's verifier-cost
+  consideration. At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -236,6 +242,30 @@ between any two actions (including during an enemy's turn order), not only on it
 record an ult at the point it was cast and the replay to honour it (`specs/combat-replay-core.md` already leaves
 room for ultimates that interrupt). Builds on 1c2's break and One More rules.
 
+### 1c4b. `atomic-battles`
+**Purpose:** a battle is one atomic unit, end to end. The log carries the party's decisions, the claimed outcome and
+the claimed final hash, nothing per action. The client stops hashing after every party action and the verifier
+hashes once, at the end. The verdict was already atomic (one job, one Verified or 2002, all rewards or none); this
+makes the log match it.
+- **Contract:** `ActionEntry` loses `Checkpoint`, so `ActionLog.schemaVersion` becomes 2 (breaking). Now is the
+  cheapest time: no server stores logs before slice 2b. The spec decides whether the verifier still reads v1 logs
+  (likely not: none exist outside goldens).
+- **Mismatch reasons:** `CheckpointMismatch` goes. Structural reasons keep their turn (`TurnMismatch`,
+  `ActorMismatch`, `IllegalAbility`, `InvalidTarget`, `LogExhausted`, `TrailingActions`); any other tampering shows
+  up at the end as `OutcomeMismatch` or `FinalHashMismatch`. Still 2002, still deterministic (scenario 5).
+- **Determinism trace (tests and dev only, zero cost when off):** an opt-in trace that records the state hash (and,
+  on demand, the canonical lines) after **every** action: party, enemy, ult interrupt and One More, finer than
+  today's party-only checkpoints. It never enters the wire contract. A test helper and a headless tool replay a
+  request twice in fresh processes, and record vs replay, with the trace on, and diff the traces: the first
+  divergent action plus the lines that differ (which attribute, tag or effect). The golden test prints that on a
+  failure. For a production false 2002 later (slice 3+), the rejected request is kept and rerun locally with the
+  trace on.
+- **Goldens:** re-recorded on purpose (combat goldens, the scripted-run game golden); the tampered goldens' reasons
+  change (e.g. `ult-seed-7-tampered-turn` → `FinalHashMismatch`).
+- **Scope:** battle checkpoints only. Run checkpoints (`RunSnapshot` at checkpoint actions, `specs/server-authority.md`)
+  are a different mechanism and stay. Specs to update: `combat-replay-core`, `item-pass`, `ult-interrupts`,
+  `dev-tools`, and any `server-authority` text on battle checkpoints.
+
 ### 1c5. `content-pass`
 **Purpose:** the polish and content slice before the demo. It closes what earlier slices left open and widens the
 content, so 1d is spent building a run rather than fixing tools or inventing mechanics.
@@ -351,7 +381,8 @@ runs two API replicas behind a load balancer.
 Locust profiles (`/stress`); scripted chaos runs for scenarios 2, 3, 4; **scenario 7** (spike → backpressure →
 recovery in Grafana). This is the demo. Locust also trips the 2b rate limiter, and a slow verifier pool shows up as
 players waiting at the stairs gate.
-- **Consideration: verifier cost per battle.** Measured 2026-10-21 on the ult fixture battles (headless 4.7.2 mono):
+- **Consideration: verifier cost per battle** (per-action checkpoints removed by 1c4b; the rest still applies).
+  Measured 2026-10-21 on the ult fixture battles (headless 4.7.2 mono):
   one state hash 0.3–0.4 ms, so the per-party-action checkpoints take ~5 ms of a ~12 ms simulation (30–50%). Almost
   all of it is GDScript building the canonical text, not the SHA-256. Headless process startup (~1 s per job if
   the worker launches one per battle) dwarfs both. If load shows verifier CPU matters, in this order: (1) keep warm
