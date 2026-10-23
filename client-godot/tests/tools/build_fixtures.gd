@@ -561,6 +561,17 @@ func _build_ult_interrupts() -> void:
 		no_break, ["claw", "ult_rage", "rage_charge"], Color.CRIMSON, BREAK_ATTRIBUTE_SET)
 	_save_world("enemies", "raging", raging)
 	_world_encounter("ult_trial", [], [["sprinter", null], ["brittle", null], ["raging", null]], 1)
+	# Two ult enemies (slot order inside one window) and an ally-targeting ult on its own character, so the ultist's
+	# kit and the ult-seed-7 golden stay unchanged.
+	_world_encounter("rage_pair", [], [["raging", null], ["raging", null]], 1)
+	_ability("ult_shield", "Fixture.Ability.UltShield", B.SINGLE_ALLY, [_row("buff", "guard", D.USE_EFFECT, 0, T.ALL)],
+		[[0.3, "buff"]], [], null, ult)
+	var warden := CharacterDefinition.new()
+	_fill_unit(warden, "fixture.character.warden", {"max_hp": 1200, "hp": 1200, "atk": 300, "def": 300, "spd": 100,
+		"crit_rate": 0, "crit_dmg": 50, "max_mp": 100, "mp": 100, "energy": 0, "max_toughness": 0, "toughness": 0},
+		no_break, ["strike", "ult_shield", "full_charge"], Color.SLATE_GRAY, BREAK_ATTRIBUTE_SET)
+	warden.tags.assign([&"Fixture.Character.Warden"])
+	_save_world("characters", "warden", warden)
 
 
 ## Spec animation-sets: a probe view (UnitAnimator root, a Body node) and a set of short animations with known

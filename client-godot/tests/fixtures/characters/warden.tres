@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_jfmrc"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ult_shield.tscn" id="2_bj1dn"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/full_charge.tscn" id="3_t5kmj"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_break_attribute_set.gd" id="4_xp5h0"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="5_qlhu0"]
+
+[resource]
+script = ExtResource("5_qlhu0")
+id = &"fixture.character.warden"
+attribute_set = ExtResource("4_xp5h0")
+abilities = Array[PackedScene]([ExtResource("1_jfmrc"), ExtResource("2_bj1dn"), ExtResource("3_t5kmj")])
+display_name = "Warden"
+display_color = Color(0.4392157, 0.5019608, 0.5647059, 1)
+tags = Array[StringName]([&"Fixture.Character.Warden"])
+stats_x100 = Dictionary[String, int]({
+"atk": 30000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 30000,
+"energy": 0,
+"hp": 120000,
+"max_hp": 120000,
+"max_mp": 10000,
+"max_toughness": 0,
+"mp": 10000,
+"spd": 10000,
+"toughness": 0,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

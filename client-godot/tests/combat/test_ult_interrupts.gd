@@ -359,6 +359,75 @@ func test_tampered_interrupts() -> void:
 	await _rejected(as_action, ["IllegalAbility"], "an ult logged as a turn action")
 
 
+## Two full enemies in one window: slot order, one ult each, no loop.
+func test_enemy_interrupts_slot_order() -> void:
+	var battle := new_battle(ult_snapshot(["ultist", "ultist"], "rage_pair"))
+	var cast := []
+	battle.interrupt_started.connect(func(unit_id, ability): cast.append([unit_id, ability]))
+	for id in [&"E2", &"E1"]:
+		_set_stat(battle.unit_by_id(id), BattleUnit.ENERGY, 10000.0)
+	await battle._ult_window(ActionRecorder.new())
+	eq(cast, [[&"E1", RAGE], [&"E2", RAGE]], "slot order, one ult each")
+	await battle._ult_window(ActionRecorder.new())
+	eq(cast.size(), 2, "spent charges: the next window casts nothing")
+
+
+## An enemy ult in the window kills the ally a queued party ult was aimed at; the press retargets (nearest slot, the
+## lower one on a tie) and the log holds the ally actually shielded.
+func test_queued_ult_retargets_after_enemy_ult() -> void:
+	var battle := new_battle(ult_snapshot(["warden", "ultist", "ultist"]))
+	await battle._drain_triggers()
+	_set_stat(battle.unit_by_id(&"P1"), BattleUnit.ENERGY, 10000.0)
+	_set_stat(battle.unit_by_id(&"P2"), BattleUnit.HP, 100.0)
+	_set_stat(battle.unit_by_id(&"E3"), BattleUnit.ENERGY, 10000.0)
+	var recorder := ActionRecorder.new()
+	var cast := []
+	battle.interrupt_started.connect(func(unit_id, _ability): cast.append(unit_id))
+	recorder.submit_ult(&"P1", &"Fixture.Ability.UltShield", &"P2")
+	await battle._ult_window(recorder)
+	eq(cast, [&"E3", &"P1"], "the enemy ult first, then the press")
+	check(not battle.unit_by_id(&"P2").alive, "the enemy ult killed P2")
+	eq(recorder.entries.map(func(entry): return [entry["actor"], entry["target"], entry.get("interrupt")]),
+		[["P1", "P1", true]], "the shield went to the nearest living ally (P1 and P3 tie: the lower slot)")
+
+
+## An enemy ult that kills the last party member ends the battle at once: Defeat before the first turn, and the
+## party's queued press never fires.
+func test_enemy_ult_ends_battle() -> void:
+	var played := await _play(ult_snapshot(["ultist"]), func(battle: Battle, recorder: ActionRecorder):
+		_set_stat(battle.unit_by_id(&"P1"), BattleUnit.HP, 100.0)
+		_set_stat(battle.unit_by_id(&"E3"), BattleUnit.ENERGY, 10000.0)
+		recorder.submit_ult(&"P1", SNIPE, &"E1"))
+	var battle: Battle = played["battle"]
+	eq([battle.outcome, battle.turn], ["Defeat", 0], "Defeat in the first window")
+	eq(played["request"]["actionLog"]["actions"], [], "nothing logged")
+	eq(played["recorder"].pending_interrupts(), 1, "the party's press is left unfired")
+
+
+## A logged interrupt by a party member who is already dead: 2002 ActorMismatch.
+func test_tamper_ult_dead_actor() -> void:
+	var played := await _play(ult_snapshot(["martyr", "ultist"]), func(_battle: Battle, recorder: ActionRecorder):
+		var pressed := [false]
+		recorder.action_requested.connect(func(unit_id, _turn):
+			if unit_id == &"P1" and not pressed[0]:
+				pressed[0] = true
+				recorder.submit_ult(&"P1", SACRIFICE)
+				recorder.submit_ult(&"P2", NOVA)))
+	var request: Dictionary = played["request"]
+	await _verified(request, "the untouched martyr battle replays")
+	var tampered := copy(request)
+	var nova: Dictionary = tampered["actionLog"]["actions"][1]
+	check(nova["ability"] == String(NOVA), "the second entry is P2's nova")
+	nova["actor"] = "P1"
+	nova["ability"] = String(SACRIFICE)
+	await _rejected(tampered, ["ActorMismatch"], "the dead martyr casting again")
+
+
+static func _set_stat(unit: BattleUnit, attribute_name: String, value: float) -> void:
+	var values: Dictionary[String, float] = {attribute_name: value}
+	unit.asc.initialize_attribute_overrides(values)
+
+
 static func _kill(battle: Battle, units: Array) -> void:
 	var dead: Dictionary[String, float] = {BattleUnit.HP: 0.0}
 	for unit in units:
