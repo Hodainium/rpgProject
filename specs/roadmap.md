@@ -14,7 +14,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c3. `animation-sets` | ✅ Done (spec synced; `uid://` test for `view` still to add, `specs/animation-sets.md` 6) | 2026-10-21 |
 | 1c4. `ult-interrupts` | ✅ Done (spec synced; one known test gap in `specs/ult-interrupts.md` 6) | 2026-10-21 |
 | 1c4b. `atomic-battles` | ✅ Done | 2026-10-22 |
-| 1c5. `content-pass` | ⬜ Not started | |
+| 1c5. `content-pass` | 📝 Spec written | 2026-10-22 |
 | 1d. `playable-demo` | ⬜ Not started | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
 | 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
@@ -105,6 +105,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   for the end-of-battle reasons. At the user's request.
 - 2026-10-22: 1c4b done and synced. Slice 8's verifier-cost note updated with the measured saving (the turn loop of
   `ult-seed-7` halved) and the cost that remains per job (content index, setup, process startup).
+- 2026-10-22: 1c5 spec written and reviewed: statuses with six battle hooks (control skip, status chance, per-stack
+  DoTs, combined break/ult events, boss phases, action delay and advance), two enemy brains, content chosen for
+  mechanic coverage, and the earlier slices' gaps. All decisions approved as recommended. At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
