@@ -124,6 +124,15 @@ from C#.**
   (9 minutes in 2026-10-19, six report shards in 2026-10-26). Game goldens live in `tests/fixtures/golden/game/`.
 - **Parallel by default:** the suite runs as `../tools/godot_tests.sh` (shards by test, default 8); reports shard
   with `game/tools/play_sharded.sh`; independent jobs start together and are waited on.
+- **Exported builds** (spec `playable-demo` 3.12): `../tools/export.sh player|dev|full` → `../build/demo|dev|full/`.
+  Templates take no scene or `--path` on the command line and ignore `--script`; the dev and full builds open a scene
+  through the user arg `--scene`: `../build/dev/rpgDemo.console.exe --headless --quit-after 100000 -- --scene
+  res://game/tools/dev_run.tscn --script <file> --out <json>`. The suite inside the full build:
+  `../tools/godot_tests.sh --build ../build/full/rpgDemo.console.exe`; a test that reads project source starts with
+  `if skip_in_export(): return`, a test that starts a child Godot builds its arguments with `scene_args(scene, args)`.
+  The player build is checked from outside with `../tools/release_check.sh <shots> [player|dev]`. A new `class_name`
+  or `preload` from shipped code into `game/dev/` or `game/tools/` fails `test_export_keeps_what_runs`: ship the file
+  or drop the reference.
 - **System tests:** `godot --headless --path client-godot res://tests/run_tests.tscn` (add `-- --filter <text>` to
   narrow). They run as a **scene**, not with `--script`: GodotGAS needs its `GameplayCueManager` autoload, which
   `--script` mode doesn't load. A test file that fails to compile counts as a failure, and so does any script or

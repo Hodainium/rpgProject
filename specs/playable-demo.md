@@ -1,6 +1,6 @@
 # Spec: playable-demo (slice 1d)
 
-Status: 📝 Spec written, approved (D1–D6 as recommended, 2026-10-26) · Roadmap: slice 1d · Date: 2026-10-26
+Status: 🔨 Implementing: A–E done (E: the export, 3.12), design break next; approved (D1–D6 as recommended, 2026-10-26) · Roadmap: slice 1d · Date: 2026-10-26
 Design intent: `specs/design/game-design.md` sections 1, 3 and 6. Builds on `specs/game-skeleton.md` (run layer,
 `RunController`, `GameMain`), `specs/dev-tools.md` (console, script runner, seed report, validator),
 `specs/animation-sets.md` (cube unit views), `specs/content-pass.md` (the content base: statuses, affinities, nine
@@ -141,7 +141,7 @@ client-only slice. The contracts here are Godot content types and the run-layer 
 | `--play` mode, `--policy auto\|chaos`, `--illegal <percent>` | `game/tools/seed_report.gd` | 2.3, 2.3b |
 | `ChaosController`, `InvariantChecker` | `game/dev/` | 2.3b; the checker reads state only, never changes it |
 | `RunController.run_summary() -> Dictionary` | `game/run_controller.gd` | Read-only, derived from `run_log` and state: battles won, enemies defeated, items and armor picked up, coins earned and spent, floors cleared, ended in (room, encounter). Used by `run_end_view` and the report |
-| Export preset `Windows Desktop` | `client-godot/export_presets.cfg` | Release build to `build/demo/` (gitignored); excludes `tests/`, `game/dev/scripts/`; D5 |
+| Export presets `Windows Desktop` / `Dev` / `Full`, `tools/export.sh`, `tools/release_check.sh`, `game/dev/build_entry.tscn`, `addons/rpg_dev/export_plugin.gd` | `client-godot/export_presets.cfg`, `tools/` | 3.12 (D5, D33–D35); builds in `build/` (gitignored) |
 
 ### 3.2 Tags (your `godot_gas/` registry)
 `Chapter.Cellar`, `Chapter.Crypt` (added through `sync_tags.tscn --add-missing`). `Chapter.Demo` stays the shared demo
@@ -180,7 +180,7 @@ Consequence, accepted unless you say otherwise: the one-floor run no longer roll
 | F2 | No whole-run balance view; `RunPlayer` lives in `tests/` | 2.3: `seed_report --play`, `autorun`, `RunPlayer` in `game/dev/` | `test_seed_report_play` (fixtures, 5 seeds, deterministic JSON, golden `seed_report_play.json`), `test_autorun_command` |
 | F3 | Validator doesn't check a run end to end (a floor slot whose chapter has no boss room or no boss encounter only fails at generation) | Rule `run_floor_unplayable` (error): for each floor slot and chapter, the boss room query, boss encounter query and the special-room tags each match ≥ 1 | broken fixture `runs/no_boss_floor.tres` |
 | F5 | Auto-play never makes bad or illegal moves, so nothing stresses wrong decisions; nothing checks battle invariants or record → replay on whole runs | 2.3b: chaos policy, illegal moves, invariant checker, replay of every battle | `test_chaos_policy` (fixtures, 5 seeds, all checks on, deterministic report), one `test_illegal_<case>` per illegal move (refused, no state change, no log entry, no RNG draw) |
-| F4 | Release-build behaviour of `Dev` never checked (dev-tools manual checklist) | Checked on the D5 export; recorded as done in `specs/dev-tools.md` | manual, once per export |
+| F4 | Release-build behaviour of `Dev` never checked (dev-tools manual checklist) | 3.12: `Dev.is_inert_for`, `load_commands(debug_build)`, the player filter, the release check; recorded in `specs/dev-tools.md` | `test_dev_inert_rule`, `test_console_registry` (release ignores `user://dev_commands/`), `test_export_presets`, `test_export_keeps_what_runs` (per preset), `test_export_patches`, `test_content_roots`; `tools/release_check.sh` once per export; a floor played by hand in the player build |
 | F… | Found while building | Added here and in `/sync-spec` | |
 
 ### 3.6 Shell (your `presentation/demo/`; D3)
@@ -454,6 +454,75 @@ Chances 2–6%, on some enemies only (beasts and brutes drop meat, casters cake)
 supports +7% max HP, +6% ATK, +5% DEF; tanks (Bulwark) +9% max HP, +4% ATK, +7% DEF (all FREE stacking, on each
 class).
 
+### 3.12 Amendment E (2026-10-26, D5 as built, D33–D35): the Windows export, export levels, the release check
+Status: built 2026-10-26.
+
+**Presets** (`client-godot/export_presets.cfg`), one per level, made by `tools/export.sh <level>` (through
+`tools/watch.sh`; output in the repo root's `build/<folder>/`, gitignored, outside the Godot project so the editor
+never scans it):
+
+| Level | Preset | Template | Ships | Folder | Use |
+|---|---|---|---|---|---|
+| `player` | `Windows Desktop` | release | the game only | `build/demo/` | the demo for people |
+| `dev` | `Windows Desktop Dev` | debug | + `game/dev/` whole (console commands, dev content, players and reports), `game/tools/dev_run.*` | `build/dev/` | drive the exported build with console scripts, as in the editor |
+| `full` | `Windows Desktop Full` | debug | everything, plus the non-resource files tests read (`*.json, *.txt, *.cfg, *.sha256`) | `build/full/` | the test suite, play reports and headless runners against the exported pack |
+
+The debug presets also write `rpgDemo.console.exe` (stdout for headless runs). The level is the preset alone: no
+runtime switch. `Dev` is active in a debug build and inert in a release one (`Dev.is_inert_for(display, debug_build)`),
+so the player build has no console, no cheat commands (the command files are not in its pack) and never reads
+`user://dev_commands/` (`DevConsole.load_commands(debug_build)`). Dev builds are local only. All levels share
+`user://` (`app_userdata/rpgDemo`) with editor runs.
+
+**Starting a scene in a dev or full build:** the official 4.7 templates are compiled without path overrides (a scene
+or `--path` on the command line aborts; `--script` is ignored), which keeps the player build closed. The dev and full
+presets add the custom feature `dev_build`; the project setting `application/run/main_scene.dev_build` makes
+`game/dev/build_entry.tscn` their main scene, which opens the scene in the user arg `--scene <res://...>` (or the
+game). Examples: `build/dev/rpgDemo.console.exe --headless --quit-after 100000 -- --scene
+res://game/tools/dev_run.tscn --script <file> --out <json>`; the suite: `tools/godot_tests.sh --build
+build/full/rpgDemo.console.exe`. Tests that start a child Godot build its arguments with `TestCase.scene_args`;
+tests that read project source or editor files call `skip_in_export()` and count as skipped there.
+
+**Player exclusions** (closed over their dependencies; the shipped dev files are `dev`, `watchdog`,
+`script_error_log`, `dev_console`, `dev_command`, `dev_context`, `content_templates`, `room_grid_ops`,
+`play_request`, `sandbox_request`): `tests/`, `game/tools/`, `game/dev/scripts/`, `game/dev/commands/`,
+`game/dev/content/`, `game/dev/build_entry.*`, `combat/headless/`, `addons/rpg_dev/`, and the reports and
+controllers in `game/dev/` (`chaos_controller`, `content_validator`, `dev_report`, `invariant_checker`, `play_main`,
+`play_report`, `run_player`, `scripted_controller`, `seed_report`, `seed_runner`, `smart_controller`,
+`ui_policy_check`, `validation_issue`). **Dev exclusions:** `tests/`, `game/tools/` except `dev_run.*`,
+`combat/headless/`, `addons/rpg_dev/`. **Full:** none.
+
+**Content roots in an export:** `GameMain.content_roots()` lists only the roots the build has (the player and dev
+builds have no `tests/fixtures/`); a saved root the build lacks falls back to `res://content/`; the title menu hides
+the picker when there is one root.
+
+**GodotGAS export patch (D34):** GodotGAS 1.1.2 names `EditorInterface` in runtime code
+(`managers/gameplay_cue_manager.gd` once, `utilities/project_settings.gd` twice; guarded by
+`Engine.is_editor_hint()`, but GDScript resolves the name at parse time and export templates have no editor
+classes), so in any export the `GameplayCueManager` autoload fails to load. The addon stays untouched:
+`addons/rpg_dev/export_plugin.gd` (registered by our editor plugin) skips those files and adds patched copies at the
+same paths (`EditorInterface.` → `Engine.get_singleton(&"EditorInterface").`, the same object in the editor, never
+reached in a game); the patch table is `addons/rpg_dev/export_patches.gd`. Each patch must match exactly as listed,
+or the file ships unpatched with "RPG export:" in the log and `tools/export.sh` fails. **Scripts export as text**
+(`script_export_mode=0`, every preset): with binary tokens GDScript's own exporter takes every script before a
+project plugin sees it, and resource customization stores a `.res` that GDScript can't resolve as a dependency.
+
+**Release check (D35):** `tools/release_check.sh <shots folder> [player|dev]` (through `tools/watch.sh`; the work is
+`tools/release_check.py`): starts the build in a 1600×900 window with its own log file, waits for the title screen,
+takes a shot, sends a backtick keypress by scan code (the console listens on the physical key), takes a second shot,
+closes the window, and fails on any `SCRIPT ERROR` or `ERROR:` log line or when the console's area (the top third)
+changed against the expectation. `dev` is the control: its console must open, which proves the keypress reached the
+game. Takes focus for a few seconds. Playing a floor in the player build stays a manual check; the same floor is
+played on the exported dev build with `dev_run` in a window.
+
+**No .NET assembly yet:** the project has no C# scripts, so an export has no `data_rpgDemo_*` folder. Slice 2 (the
+first C# script, server sync) must check that the export carries `Rpg.Client`.
+
+**As built, 2026-10-26:** the player pack is 5.3 MB (dev 5.5, full 6.9). The release check passes on the player build
+(title screen, console area unchanged, no errors in the log) and on the dev control (console opened, 76% of its area
+changed). The full build runs the suite: 338 passed, 4 skipped (the export tests). The dev build played seed 7's
+first floor in a window (treasure, shop, the merchant event, the Golem won, both members to level 2). Not fixed here:
+`dev_run` leaks a few objects at exit ("ObjectDB instances leaked", "resources still in use"), the same in the editor.
+
 ## 4. Failure modes
 Server failure scenarios (root `CLAUDE.md` 1–7): **none apply** (no server, no wire change). What this slice
 protects is that **adding a second run and a second floor doesn't change any existing replay**, which scenario 5
@@ -478,7 +547,9 @@ protects is that **adding a second run and a second floor doesn't change any exi
 | Encounter grants or a slot brain change replays | Read from content by encounter id and slot; the verifier builds the same units | `test_encounter_grants_replay` (record → replay Verified), existing goldens unchanged |
 | Rewards on a lost battle | Never applied | `test_encounter_rewards` |
 | Rarity weights change existing pools | Only when set; empty weights use the old draw | `test_rarity_weights` (fixtures: same picks without weights; with weights the draw counts follow them over many seeds) |
-| Export ships the console | `Dev` inert in release (dev-tools spec) | F4 manual check |
+| Export ships the console | `Dev` inert in release (dev-tools spec); command files not in the player pack | F4: tests and `tools/release_check.sh` |
+| A shipped file needs an excluded one (parse error in the build only) | Export fails to start or a screen breaks | `test_export_keeps_what_runs` per preset |
+| GodotGAS upgrade changes a patched line | Export stops with the file named (3.12 D34) | `test_export_patches` |
 
 ## 5. Observability
 N/A: client-only slice, no service runs. Local signals: the auto-play report (2.3), the validator report, the script
@@ -511,7 +582,13 @@ report's shape and determinism. A recorded demo run is **not** a golden (your tu
 2 spec decides whether the server tests want one.
 
 **Manual (once, before calling the slice done):** play `The Descent` start to finish in the window, win and lose
-once each; the exported build starts, plays a floor, and has no console (F4).
+once each; play one floor in the exported player build (`build/demo/rpgDemo.exe`). That it starts on the title
+screen with no console and no errors is automated (`tools/release_check.sh`, F4, 3.12).
+
+**Export tests (3.12):** `test_export_presets`, `test_export_keeps_what_runs` (each preset's exclusions are closed
+over their dependencies), `test_export_patches` (the GodotGAS patches match and parse), `test_content_roots`,
+`test_dev_inert_rule`, `test_console_registry` (a release build ignores `user://dev_commands/`); the whole suite
+also runs inside the `full` build (`tools/godot_tests.sh --build build/full/rpgDemo.console.exe`).
 
 `dotnet build` / `dotnet test` green. Both suites pass before the slice counts as done. Headless Godot always with
 `--quit-after` and a timeout.
@@ -537,7 +614,8 @@ C3. 3.8: H9 mirror, H10 per-item scaling, boss rotation, validator rules, the `m
 C2. 3.7: system first (encounter grants, slot brain, rewards, armor to inventory, rarity weights, validator, tests),
    then your files after the rarity table is approved.
 D. Shell (3.6), each file shown as a diff.
-E. Export preset, `build/` in `.gitignore`, F4 check; then the design break: your tuning on the report.
+E. ✅ Export presets (player, dev, full), `build/` in `.gitignore`, F4 check (3.12); then the design break: your
+   tuning on the report.
 F. `/sync-spec playable-demo`, roadmap ✅, root `CLAUDE.md` table (`content/demo/` now a two-floor run), the
    dev-tools checklist line.
 
@@ -608,3 +686,10 @@ Decided 2026-10-26 by the user (amendment C6, 3.11):
 - **D31 some enemies have a low chance to drop food** (2–8%), a usable item, Castlevania style; the rest stop and a healer
   are the main recovery.
 - **D32 (to review):** the numbers in 3.11.
+
+Decided 2026-10-26 by the user (amendment E, 3.12):
+- **D5 as built:** a release preset `Windows Desktop` to `build/demo/` (repo root), the player exclusions in 3.12.
+- **D33 export levels** `player`, `dev` (minimal dev tools) and `full` (everything), one preset each, so Claude can
+  drive and test exported builds.
+- **D34 patch GodotGAS at export time,** never on disk.
+- **D35 a release check script** for what can be checked from outside the player build; a floor played by hand.

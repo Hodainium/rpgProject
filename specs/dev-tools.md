@@ -246,7 +246,9 @@ func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply (may 
 - **`Dev` autoload** (`game/dev/dev.gd`): hosts the console (UI built in code; it registers the `dev_console`
   action, backtick by physical key, if the project has none); `cheats_allowed()` is `OS.is_debug_build()` (slice 2
   adds `and not ServerLink.connected`). It is **inert** when `DisplayServer.get_name() == "headless"` or in a release
-  build: no input handling, no UI, so the headless verifier never runs dev code. Battles' auto play lives in
+  build: no input handling, no UI, so the headless verifier never runs dev code (`Dev.is_inert_for(display,
+  debug_build)` is the rule, testable without an export). Exported builds (spec `playable-demo` 3.12): the player
+  build is a release export without the commands; the `dev` and `full` exports are debug builds with them. Battles' auto play lives in
   `DevConsole` (`auto_battle`, attached to GameMain's `battle_prepared`).
 - `GameMain` adds itself to the group `game_main` (one line); that is how commands find the run. Nothing in
   `combat/` references `game/dev/` (purity test).
@@ -662,8 +664,12 @@ Builders, imports and golden updates stay sequential (they write shared files). 
 - `kill` queued during an enemy turn: tested since `content-pass` (`test_kill_queued_during_enemy_turn`, driven by
   the battle's signals).
 - **Manual checklist** (no headless test possible):
-  - [ ] In an exported release build, the `Dev` autoload is inert (backtick opens nothing) and a script in
-    `user://dev_commands/` is never loaded.
+  - [x] In an exported release build, the `Dev` autoload is inert (backtick opens nothing) and a script in
+    `user://dev_commands/` is never loaded. Done 2026-10-26 on the player export (spec `playable-demo` 3.12, F4):
+    `test_dev_inert_rule` (`Dev.is_inert_for`), `test_console_registry` (`load_commands(false)` ignores
+    `user://dev_commands/`), the command files are not in the player pack, and `tools/release_check.sh` checks the
+    real build (backtick by scan code, the console area unchanged; the dev build as the control). Rerun it after
+    each player export.
   - [ ] In the console overlay, repeated Tab cycles through the completions (command names, then argument ids) and
     shows the list when there are several.
 - `status <unit>` (spec `content-pass`): a unit's statuses with turns and stacks; `test_status_command`.

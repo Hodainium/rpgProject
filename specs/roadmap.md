@@ -15,7 +15,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c4. `ult-interrupts` | ✅ Done (spec synced; one known test gap in `specs/ult-interrupts.md` 6) | 2026-10-21 |
 | 1c4b. `atomic-battles` | ✅ Done | 2026-10-22 |
 | 1c5. `content-pass` | ✅ Done (2026-10-25) | 2026-10-22 |
-| 1d. `playable-demo` | 🔨 Implementing (A–C6 done: tools, the ten-floor Descent, 11 classes, XP and rest; smart 4-member 35.7%; D screens done; D2 `ui-framework` (Lyra-style UI) done; D3 `gameplay-messages` (Lyra-style message bus) done; next E export) | 2026-10-26 |
+| 1d. `playable-demo` | 🔨 Implementing (A–C6 done: tools, the ten-floor Descent, 11 classes, XP and rest; smart 4-member 35.7%; D screens done; D2 `ui-framework` (Lyra-style UI) done; D3 `gameplay-messages` (Lyra-style message bus) done; E Windows export done (player, dev and full builds, release check); next the design break: your tuning on the smart 4-member report, then F `/sync-spec`) | 2026-10-26 |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
 | 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
 | 3. `battle-verify` | ⬜ Not started | |
@@ -123,6 +123,10 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   exactly-once trades, a house account that buys at the dust rate and relists its stock). Decided by the user: held
   copies count as eidolons, order-book prices, gems buy packs and dust comes only from cards. Root `CLAUDE.md`,
   `game-design.md` and `server-authority.md` follow. At the user's request.
+- 2026-10-26: 1d step E: three export levels instead of one (player release build; dev and full debug builds with
+  the dev tools, or everything incl. tests, so Claude can drive and test exported builds), a GodotGAS export-time
+  patch (its cue manager names an editor class in runtime code) and a release check script. Spec `playable-demo`
+  3.12. At the user's request.
 - 2026-10-26: 1d `playable-demo` grew (amendments C2 and C3, in the slice spec): encounter grants, brains and
   rewards, armor always to the inventory, rarity tiers with pool weights; then the full ten-floor Descent (six
   chapters: Cellar, Crypt, Ember Forge, Hollow with no item rooms, Silent Cathedral, the Vault with a final boss that
