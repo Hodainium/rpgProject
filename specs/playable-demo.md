@@ -351,6 +351,97 @@ GodotGAS refuses the effect and no status roll is drawn (existing rule, H2). A u
 the tag. Validator warning `status_without_immunity`: a `Status.Debuff.*` effect whose query doesn't ignore its
 immunity tags. Vein Cloak goes back to the spec'd **+150 max HP, immune to Bleed**.
 
+### 3.10 Amendment C5 (2026-10-26, D23–D27): nine new classes, four-member parties, balance for four
+The run is meant for a party of four, but the demo has two characters, which is the main reason every report so far
+gives 0% wins. C5 adds nine classes (eleven in all) and tests parties of one to four, with four-member runs evaluated
+the closest. **Class values are a proposal for review (D26).** All kits are content on existing hooks: no battle code.
+
+**Roles (a loose guideline, HSR-style paths):**
+| Class | Role | Element | Fantasy |
+|---|---|---|---|
+| Warrior (existing) | damage dealer / off-tank | Physical | Cleave, Execute, Provoke |
+| Cleric (existing) | support: healer | — | heals, Sanctuary, Resurrection, Purify |
+| **Arcanist** | damage dealer: magic | Fire and Ice | MP-hungry spells, area damage |
+| **Bard** | support: buffs, debuffs, statuses | Physical | a Robin-style ult: the party acts at once and hits harder |
+| **Ranger** | specialist: follow-ups | Physical | weakness hits trigger follow-ups, follow-ups charge the ult |
+| **Cryomancer** | damage dealer: control | Ice | freezes, breaks, Blizzard |
+| **Pyromancer** | damage dealer: damage over time | Fire | Burn on everything, a fast ult |
+| **Bulwark** | tank: power from being hit | Physical | taunts, each hit taken stacks Fury (ATK) and charges the ult |
+| **Ember Knight** | damage dealer: break | Fire | implants a Fire weakness, breaks it, and deals the most damage to Broken enemies (like HSR's Firefly) |
+| **Shatterweaver** | support: break | Physical | raises the party's toughness damage and damage to Broken enemies (like HSR's Dahlia) |
+| **Plaguewright** | support: statuses | Physical | spreads Poison and Bleed and makes everyone's debuffs last longer |
+
+Playstyles the classes are meant to mix in (loosely; every class fits other teams too): break (Ember Knight,
+Shatterweaver, Cryomancer, Ranger), damage over time (Pyromancer, Plaguewright, Bard), follow-ups (Ranger, Bulwark),
+sustain (Cleric, Bulwark, Bard).
+
+**Kits** (every class also has the shared ult-charge passives and the three break passives, like today's two; each ult
+can't be cast while controlled, D3; "MP" is the skill's cost):
+| Class | HP / MP / ATK / DEF / SPD | Basic | Skills | Passive | Ult |
+|---|---|---|---|---|---|
+| Arcanist | 700 / 140 / 520 / 180 / 105 | Arcane Bolt: Ice 90% | Fireburst (15 MP): Fire blast 140% + 60% adjacent; Frost Nova (20 MP): all enemies Ice 70% | Spellweave: +6 MP on each kill | Meteor: all enemies Fire 200%, heavy toughness |
+| Bard | 850 / 110 / 380 / 240 / 120 | Dissonance: Physical 70%, Weaken 60% | Anthem (15 MP): the party Attack Up and Haste; Discord (15 MP): all enemies Vulnerable 80%, Slow 50% | Encore: +10 ult charge when an ally gets a One More | Finale: the party acts at once (advance 100%), +30% ATK for 2 turns |
+| Ranger | 850 / 80 / 480 / 220 / 115, crit 20% | Quick Shot: Physical 100% | Mark Prey (10 MP): Physical 80%, the target becomes weak to Physical (2 turns) | Hunter's Instinct: a weakness hit triggers a 50% ATK follow-up; each follow-up +10 ult charge | Rain of Arrows: all enemies Physical 130% |
+| Cryomancer | 800 / 120 / 470 / 220 / 105 | Frost Jab: Ice 100%, toughness 30 | Glacial Spike (15 MP): Ice 160%, Freeze 35%; Blizzard (20 MP): all enemies Ice 70%, Slow | Cold Snap: +20 ult charge on a break | Absolute Zero: all enemies Ice 160%, Freeze 50% |
+| Pyromancer | 780 / 120 / 500 / 200 / 110, ult charge gain +25% | Ember: Fire 100% | Ignite (10 MP): Fire 80% + Burn 60; Inferno (20 MP): all enemies Fire 60% + Burn 40 | Kindling: +8 ult charge on each Fire hit | Supernova: all enemies Fire 220% + Burn 100 |
+| Bulwark | 1400 / 60 / 320 / 420 / 90 | Shield Slam: Physical 80%, toughness 40 | Fortify (10 MP): Defense Up and Taunt | Retaliation: when hit, a 40% ATK counter, +1 Fury (+10% ATK, up to 5, 2 turns) and +10 ult charge | Bastion: the party gains Ward and Defense Up |
+| Ember Knight | 950 / 80 / 500 / 260 / 112 | Searing Slash: Fire 100%, toughness 30 | Kindle Brand (15 MP): Fire 150%, toughness 50, the target becomes weak to Fire (Seared, 2 turns) | Ashen Resolve: +40% damage to Broken enemies | Complete Combustion: 3 turns of +30 SPD, +50% toughness damage, +40% damage to Broken enemies, and Fyrefly Strike unlocked (Fire 200% + 80% adjacent, toughness 60, Seared on every hit; free) |
+| Shatterweaver | 820 / 110 / 380 / 230 / 118 | Fault Line: Physical 80%, toughness 40 | Fracture Field (15 MP): the party +30% toughness damage and +25% damage to Broken enemies (3 turns); Splinter (10 MP): Physical 60%, toughness 50, Vulnerable | Resonance: +20 ult charge on a break | Shatter Chorus: all enemies Physical 60% with toughness 80, then Fracture Field on the party |
+| Plaguewright | 820 / 120 / 400 / 220 / 112 | Infect: Physical 70%, Poison 60% | Contagion (15 MP): all enemies 2 stacks of Poison (80%); Lingering Malady (15 MP): the party's debuffs last 1 more turn (3 turns) | Virulence: its own debuffs last 1 more turn; +10 ult charge when one is resisted | Pandemic: all enemies Poison, Bleed, Burn 60 and Vulnerable |
+
+New effects: Fury (`Status.Buff.Fury`, stacks to 5), Finale (+30% ATK, 2 turns), Combustion (`Status.Buff.Combustion`
+plus `State.Combustion`, which Fyrefly Strike's activation query requires), Fracture (`Status.Buff.Fracture`), Malady
+(`Status.Buff.Malady`, +1 `debuff_turns`), Seared (`Weakness.Fire` and `Status.Debuff.Exposed`, 2 turns, refused by
+`Immune.Exposed` and `Immune.Debuff`). Mark Prey's weakness reuses Exposed (Physical). The break effects themselves
+are the existing break passives, whose bursts hit a Broken target, so damage to Broken enemies strengthens them.
+
+**Testing parties of one to four (D24):**
+| Option | Rule |
+|---|---|
+| `--party a,b,c,d` | a fixed party, as today |
+| `--party-size N` (1–4; default 4) | per seed, N different selectable characters drawn from the stream `dev/party/<seed>` (sorted ids), so every class appears across seeds |
+| `--party-size mixed` | per seed, a size of 1 to 4 from the same stream, then the members |
+| Report | adds `bySize` (runs and wins per party size), `byCharacter` (runs and wins per class) and `byParty` (the most played compositions), so four-member win rates can be read on their own |
+
+**Balance target (D25):** with four members on the smart policy, 35–55% of runs won on The Descent; auto lower; chaos
+lower still, but most chaos runs reach floor 5 or later. Smaller parties are expected to win less. The report informs
+your tuning; no test asserts a rate.
+
+### 3.11 Amendment C6 (2026-10-26, D28–D32): experience and levels, a rest stop between floors, healing, food drops
+The first four-member reports (smart 0/300) show why balance can't come from numbers alone: the party never grows
+(every member stays level 1 for ten floors) and its HP drains floor after floor (median boss-entry HP 96% on floor 1,
+about 25% from floor 7). C6 adds growth and recovery, all as run-layer data: battles still rebuild everything from the
+snapshot, which already carries each member's level. **Values are a proposal for review (D32).**
+
+**Experience and levels (D28):**
+| Piece | Where | Rule |
+|---|---|---|
+| `RunStructure.xp_per_enemy`, `xp_per_boss`, `xp_to_level: Array[int]` | `game/defs/run_structure.gd` | After a **won** battle every living member gains `xp_per_enemy` per enemy beaten (`xp_per_boss` for an `Enemy.Boss`); `xp_to_level[k]` is the total XP for level k + 2. Empty `xp_to_level` = no XP at all (fixtures and older runs unchanged) |
+| Level-ups | `RunController` | Checked after every battle and every event outcome; a member may gain several at once; logged in the run log only through the battle or choice that caused it (re-derived on replay). Run hash: `xp` joins the member line only when the run has a curve |
+| `CharacterDefinition.level_effect: GameplayEffect` | `game/defs/character_definition.gd`, `combat/battle.gd` (v2 party setup) | Applied once per level above 1 at battle start and in field mode (FREE stacking); the verifier rebuilds it from the snapshot's `level` (no wire change) |
+| `GainXp(amount)`, `GainLevel(count)` outcomes | `game/defs/outcomes/` | For events (and rewards): to every living member, or to `character` when set |
+| Validator | | `level_not_stacking` (error); `xp_curve_order` (error: thresholds must rise) |
+
+**Rest stop between floors (D29):** `RunStructure.rest_event: EventDefinition`. Taking the stairs logs `next_floor` as
+today and then opens the rest event before the next floor is built (its cell is −1, nothing on the map); when the
+event ends, the next floor starts. A rest event can't start an encounter (validator `rest_event_encounter`, error).
+The demo's **Waystation**: "A quiet waystation between floors. The lamps are warm." Choices: **Rest** (the party heals
+50% of max HP and MP, the fallen get up with 25% HP), **Train** (every living member gains 1 level), **Move on**.
+
+**Healing events (D30, `Event.Demo`):** Healing Spring (drink: heal 35%; bathe: heal 70%, pay 10 coins), Wandering
+Medic (15 coins: full heal and revive the fallen), Old Tutor (a free level for the party, or 40 XP each and 10 coins).
+
+**Food drops (D31):** `ScalingRules.food_drop_chance` (typed %) and `food_query`. After a won battle, one roll on the
+stream `floor/<n>/food/<cell>`; a hit gives one item from the query, as an event gift. Food heals the moment it drops
+(its `on_pickup` heals, then it removes itself), so it never needs a slot. Demo food (`Pool.Food`, Common unless
+noted): Rations (party 10% HP), Roast Haunch (party 20% HP), Honey Cake (party 30% MP), Hearty Feast (Rare: party 35% HP
+and 20% MP). The Descent's scaling: 35% chance per won battle.
+
+**Demo numbers (D32):** `xp_per_enemy` 20, `xp_per_boss` 120; `xp_to_level`: 60, 150, 270, 420, 600, 810, 1050, 1320,
+1620, 1950, 2310, 2700, 3120, 3570 (levels 2–15). Growth per level: damage dealers +6% max HP, +8% ATK, +4% DEF;
+supports +7% max HP, +6% ATK, +5% DEF; tanks (Bulwark) +9% max HP, +4% ATK, +7% DEF (all FREE stacking, on each
+class).
+
 ## 4. Failure modes
 Server failure scenarios (root `CLAUDE.md` 1–7): **none apply** (no server, no wire change). What this slice
 protects is that **adding a second run and a second floor doesn't change any existing replay**, which scenario 5
@@ -421,6 +512,11 @@ B2. F5: illegal-move tests first (they pin how the battle refuses today; a crash
    with its test), then `ChaosController`, `InvariantChecker`, `--policy chaos`; a first chaos report on the demo.
 C. Your files, after approval: tags, the 3.4 edits (`old → new`), then `build_demo_run.tscn` for the new content;
    `test_demo_run.gd`. First `--play` report shared with you.
+C6. 3.11: XP, levels and level effects, the rest stop, food drops, GainXp/GainLevel (system, tests on fixtures);
+   then the content (Waystation, three events, four foods, growth effects; edits to the eleven classes and The
+   Descent shown); reports at party sizes 1-4 and the tuning toward D25.
+C5. 3.10: the party options and report breakdown (system, tests on fixtures); the six classes through a builder
+   (`build_classes.tscn`; new files only); reports at party sizes 1-4; a tuning pass toward D25 as edits, each shown.
 C4. 3.9: the tuning pass, the immunity tags and queries (your files, shown as edits), the smart controller and chaos
    injection (system, tests on fixtures), then both reports plus a smart one on the ten-floor run.
 C3. 3.8: H9 mirror, H10 per-item scaling, boss rotation, validator rules, the `mirror-seed-9` golden and system tests
@@ -483,3 +579,19 @@ Decided 2026-10-26 by the user (amendment C4, 3.9):
 - **D21 chaos is injected on top of the smart policy,** at a rate and from a floor, so chaos reaches the late floors.
 - **D22 status immunity per status** (`Immune.<Status>`, `Immune.Debuff`), as GAS application queries; Vein Cloak is
   immune to Bleed.
+
+Decided 2026-10-26 by the user (amendment C5, 3.10):
+- **D23 nine new classes** (Arcanist, Bard, Ranger, Cryomancer, Pyromancer, Bulwark; then D27: Ember Knight,
+  Shatterweaver, Plaguewright), loosely by role.
+- **D24 tests use parties of one to four,** drawn per seed, with the report broken down by size, class and party.
+- **D25 balance for four:** the smart policy with four members wins 35–55%; four-member results are read first.
+- **D26 (to review):** the class values in 3.10.
+- **D27 three more classes for playstyles:** a Firefly-like breaker, a Dahlia-like break support and a status
+  support; classes stay loose enough to fit different teams.
+
+Decided 2026-10-26 by the user (amendment C6, 3.11):
+- **D28 characters gain XP from every battle and level up** after any battle or event; events can grant XP or a level.
+- **D29 a rest stop between floors** (Persona's subway was only the concept; not a subway).
+- **D30 events that heal** the party.
+- **D31 enemies drop food** that heals the party.
+- **D32 (to review):** the numbers in 3.11.
