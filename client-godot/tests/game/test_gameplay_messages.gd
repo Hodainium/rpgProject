@@ -246,6 +246,28 @@ func test_messages_refuse() -> void:
 		{"reason": "price", "text": "not enough coins"}], "the refusal says who, why and the text")
 
 
+## Presentation check (reads res://presentation/): the demo call-out panel shows a BROKEN! line and clears its lines
+## when the battle ends and when a new one starts, so no call-out outlives its battle.
+func test_demo_callouts_clear_between_battles() -> void:
+	const CALLOUTS := "res://presentation/demo/ui/battle_callouts.tscn"
+	if not ResourceLoader.exists(CALLOUTS):
+		print("    skipped: no %s" % CALLOUTS)
+		return
+	var panel: UIScreen = load(CALLOUTS).instantiate()
+	host.add_child(panel)
+	_nodes.append(panel)
+	panel._ui_bind(null)
+	var lines := panel.get_node("%Lines")
+	var broken := VerbMessage.make(&"Verb.Break", &"P1", &"E1", 0, [], {"targetName": "Slime"})
+	GameplayMessages.broadcast(GameplayMessageRouter.BATTLE_BROKEN, broken)
+	eq(lines.get_child_count(), 1, "a BROKEN! line shows")
+	GameplayMessages.broadcast(GameplayMessageRouter.BATTLE_ENDED, VerbMessage.make(&"Verb.Win", &"", &"enc"))
+	eq(lines.get_child_count(), 0, "the battle's end clears it")
+	GameplayMessages.broadcast(GameplayMessageRouter.BATTLE_BROKEN, broken)
+	GameplayMessages.broadcast(GameplayMessageRouter.BATTLE_STARTED, VerbMessage.make(&"Verb.Start", &"", &"enc"))
+	eq(lines.get_child_count(), 0, "a new battle's start clears what is left")
+
+
 ## Spec gameplay-messages 6, UI: a panel listening to Message.Notification shows GameMain.show_message's text, and
 ## its listener goes away with the game.
 func test_messages_ui_panel_listens() -> void:
