@@ -11,11 +11,11 @@ Design intent: `specs/roadmap.md` "Run authority model" (the client action polic
 floor's seed at the stairs; everything on that floor (layout, rooms, loot, shops, events, battle seeds) comes from it.
 Every action on the floor is applied locally at once, logged in order and uploaded when there's a connection. The
 server orders and stores the log and (from slice 3 / 4a) has headless Godot verify it. Only a few things block: run
-start and resume, the stairs, a won run's ending, and account actions (gacha, currency).
+start and resume, the stairs, a won run's ending, and account actions (cards, currency).
 
 | Bucket | Meaning | What's in it |
 |---|---|---|
-| **Server-authoritative** | The server decides. The client asks and uses the answer; it can't change it. | Player identity (B); the run id; **every floor seed** (HMAC, issued at the stairs: A); which floor the run may be on (A); the **order** of a run's actions and what has been accepted (sequence numbers, B); run status (active, verifying, won, lost, abandoned; B); the **ruleset version** a run started under (A); later: verdicts (3, 4a), rewards and currency (4, 5), gacha (5) |
+| **Server-authoritative** | The server decides. The client asks and uses the answer; it can't change it. | Player identity (B); the run id; **every floor seed** (HMAC, issued at the stairs: A); which floor the run may be on (A); the **order** of a run's actions and what has been accepted (sequence numbers, B); run status (active, verifying, won, lost, abandoned; B); the **ruleset version** a run started under (A); later: verdicts (3, 4a), rewards and currency (4, 5), cards, packs and market trades (5, 5b) |
 | **Server-verified** | The client runs it locally (offline-first, instant); the server stores it and later re-runs it in headless Godot. A mismatch is a `Rejected` verdict with `errorCode` 2002, never an HTTP error. | Every in-floor action: entering rooms, event choices, pickups, purchases, field use, equipping armor, battles (start conditions, turns, result), taking the stairs (floor generation); the claimed state **snapshots** at checkpoints; the run's end. Floor maps, item pools, shop stock, coin drops, HP/MP/ult charge and run inventory are all derived from the floor seeds and the logged actions |
 | **Client-only** | Never trusted. | Animations, sounds, cues, camera, screen layout, Auto/Skip, menus, the map view, the content-root switch, dev tools and the console (disabled when connected), the **local save** (a cache of the server's log plus the not-yet-sent tail), the presence heartbeat (a hint for live monitoring, never used for decisions) |
 
@@ -274,7 +274,7 @@ Part A identifies the player with an `X-Dev-Player` header (auto-creates a `play
 replaces it with the token's `sub` everywhere and removes the header. Idempotency: run start is not idempotent (a
 second start abandons the first, by design); floor seeds are idempotent by `(runId, floor)`; actions by
 `(runId, seq)` with body comparison. No `Idempotency-Key` header is needed on these; slice 3's `/battle/verify`-style
-job submission and slice 5's gacha keep it.
+job submission and slices 5 and 5b (cards, market) keep it.
 
 ### 3.3 Floor seeds
 `floorSeed = int63(HMAC-SHA256(key = Seeds:Secret, message = "floor-seed-v1|{runId}|{floor}"))`: the first 8 bytes

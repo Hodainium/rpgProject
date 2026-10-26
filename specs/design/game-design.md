@@ -17,7 +17,8 @@ A roguelike run in the shape of *The Binding of Isaac*, with *Honkai: Star Rail*
   `combat-design.md`). **HP and MP carry over** between battles; buffs, debuffs and DoTs do not.
 - **Coins** are the run currency: scarce, with low prices (an item costs about 20).
 - **Items** work like Isaac items: passive or active, with a rarity, drawn from pools; a rare one or two act differently per holder (like Birthright), through abilities gated on character tags.
-  Items are **unlocked through gacha**, like characters: a run's item pools only contain items you have unlocked.
+  Items are **unlocked by cards**, like characters: a run's item pools only contain items you hold at least one card
+  of (roadmap slice 5 `card-collection`, 2026-10-26: Hearthstone-style packs, dust and crafting, a card market).
 - **Active items and characters' spells/moves can be used in the dungeon, outside battle** (e.g. heal between rooms).
 - **Equipment** is per character, like HSR Light Cones/relics, kept simple at first.
 - **Completion marks** (beating a boss, or winning a run, with a given character) grant **gems**, the meta currency
@@ -61,7 +62,7 @@ A roguelike run in the shape of *The Binding of Isaac*, with *Honkai: Star Rail*
 Not GAS: coins, gems, map state, unlocks. They are run/meta state, not unit stats.
 
 ## 3. Content assets
-`★` = in scope for 1b `game-skeleton`; `later` = after the skeleton (hub, gacha, meta). The rest is defined now so the shapes don't
+`★` = in scope for 1b `game-skeleton`; `later` = after the skeleton (hub, cards, meta). The rest is defined now so the shapes don't
 change later, but built in later slices.
 
 ### Rooms and floors
@@ -148,7 +149,7 @@ loadout overrides. Two consequences:
 ## 7. Slice split (revised 2026-10-19)
 | Slice | Scope |
 |---|---|
-| **1b `game-skeleton`** | Every mechanic in sections 3–5 except the hub, gacha and completion marks: world and run, units, loadouts, variants, scaling, items, equipment, shops, events, carry-over, out-of-battle actions, snapshot v2. Proven on test fixtures with placeholder screens. |
+| **1b `game-skeleton`** | Every mechanic in sections 3–5 except the hub, cards and completion marks: world and run, units, loadouts, variants, scaling, items, equipment, shops, events, carry-over, out-of-battle actions, snapshot v2. Proven on test fixtures with placeholder screens. |
 | 🧭 system-design pass | Wire contracts for everything that changes player state (slice 2b `run-authority`). |
 | **1c `dev-tools`** | Console, room editor, floor layout editor, seed runner, content validator. Only for mechanics that exist. |
 | **1d `playable-demo`** | Demo content (coloured cubes) built with the tools, plus fixing whatever the tools turn out to get wrong. |
@@ -158,7 +159,8 @@ loadout overrides. Two consequences:
 - 3D: basic Isaac-shaped 3D rooms; enemies are in the room on arrival and the battle starts at once.
 - Navigation is click-on-the-map for now; walking inside rooms is a late goal.
 - Active items and character spells work outside battle too.
-- Items and characters are unlocked through gacha in a hub (hub and gacha come later).
+- Items and characters are unlocked through gacha in a hub (hub and gacha come later). **Replaced 2026-10-26:** they are
+  cards (packs bought with gems, dust from dusting or selling, base-set crafting, a card market; roadmap 5 and 5b).
 - Everything is seeded (section 5). Slice split as in section 7.
 - Loadout = starting kit only; a character's inventory (learned skills, passive items, 1–2 use slots, equipment,
   HP/MP/ult charge) is its run state, captured when each battle starts; other stats are re-derived. Inventory lives in
@@ -175,7 +177,7 @@ loadout overrides. Two consequences:
 ## 10. Player analytics and live monitoring (dashboard)
 Goal: understand how the game is played and how the service is doing. General behaviour, not tuning prices per player:
 which characters and parties people play, what they pick up, what they decide in events, which moves they use, what
-each gacha banner earns, and how many players are online or in a battle right now.
+packs, dust and the card market do, and how many players are online or in a battle right now.
 
 **Every player action is logged.** The server already stores them in order (runs and their quick messages, battle
 sessions, and from slice 3 each battle's action log). Analytics only reads and aggregates that log; nothing extra is
@@ -190,7 +192,7 @@ computed on the client. Aggregates can be filtered to **verified** runs and batt
 | **Events** | the decisions made on each event page |
 | **Runs** | runs started and finished, how far they get, where they end (floor, room, encounter), run length |
 | **Encounters** | wins and losses per encounter, how often elites appear |
-| **Gacha (slice 5)** | pulls and currency spent per banner, i.e. what each banner earns; what comes out of it |
+| **Cards (slices 5, 5b)** | packs opened per pack type and what comes out; dust created and spent; crafts; market volume and prices per card |
 | **Health** | the operational side (latency, errors, queue age, verification rejections) stays in Prometheus/Grafana |
 
 Live counts are plain aggregate numbers, so they can be Prometheus gauges; anything broken down by character, item,

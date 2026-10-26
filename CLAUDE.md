@@ -17,9 +17,9 @@ analytics, and end-to-end observability.
 | `client-godot/game/dev/` + `addons/rpg_dev/` | Dev tools (spec `dev-tools`), local mode only: console (backtick; command registry in `game/dev/commands/`, one file per command, throwaway ones in `user://dev_commands/`; play commands and logged cheats through GAS), sandbox (one room or layout), content validator, seed codes, seed runner (`game/dev/seed_runner.tscn`, headless `game/tools/seed_report.tscn`), `status` (a unit's statuses in battle), dev content (`game/dev/content/`: kill/heal/revive effects, dev stat items), `trace on|off` (saves the client's battle trace and request to `user://traces/`). Editor plugin: "RPG Content" dock (create from template, validate, Play settings), room grid and Play buttons in the inspector. **Claude drives everything headless** with the script runner `game/tools/dev_run.tscn` (`--script`, JSON out) and `game/tools/validate_content.tscn`. |
 | `client-godot/tests/` | In-house GDScript test runner (`run_tests.tscn`, 266 tests incl. the demo smoke test, the demo item, ult and content-pass tests, the status, boss and brain tests, the animation-set tests on a probe view and the content validator over `content/`), frozen fixtures (combat + run world + item-pass: duelist, brittle enemies, armory room + ult-interrupts: ultist, martyr, warden, the ult trial and rage pair + content-pass: hexer, guard, breaker, the status trial and the lich court on `FixtureStatusAttributeSet`; the builders only add missing files unless `--rebuild`) and goldens in `tests/fixtures/` (combat goldens as `ActionLog` v2, each with a committed `.trace.json`, incl. `break-seed-11`, `ult-seed-7`, `status-seed-3`, `boss-seed-5` and five tampered copies: target, turn, final hash, outcome, skipped turn) (`golden/game/` for floors, seeds, seed codes, sandbox, seed report, the scripted run), broken content for the validator in `tests/broken_fixtures/`. |
 | `Rpg.slnx` + `global.json` | Root solution (all projects below plus `rpgDemo.csproj`). .NET SDK 10.0.402; tests run on Microsoft.Testing.Platform. Package versions pinned in `Directory.Packages.props`. |
-| `src/Rpg.Contracts/` | `ServerInfoResponse`, `RpgJson`, and battle wire shapes in `Battle/` (`BattleSnapshot` v1/v2 with `PartyMemberSnapshot`, `UseSlotSnapshot`, `EnemySnapshot`; `ActionLog` v2 (no per-entry checkpoint; entries carry an optional `Extra` for One More actions and `Interrupt` for ults cast out of turn), `ReplayRequest`, `ReplayResult`, `MismatchReason`). No run, inventory or gacha DTOs yet. |
+| `src/Rpg.Contracts/` | `ServerInfoResponse`, `RpgJson`, and battle wire shapes in `Battle/` (`BattleSnapshot` v1/v2 with `PartyMemberSnapshot`, `UseSlotSnapshot`, `EnemySnapshot`; `ActionLog` v2 (no per-entry checkpoint; entries carry an optional `Extra` for One More actions and `Interrupt` for ults cast out of turn), `ReplayRequest`, `ReplayResult`, `MismatchReason`). No run, inventory or card DTOs yet. |
 | `src/Rpg.Client/` | `GameServerClient.GetInfoAsync` only. |
-| `src/Rpg.GameServerApi/` | Skeleton only: `/api/v1/info`, `/health/live`, `/health/ready`, `/metrics` on port 5000. Connects to Postgres/Redis/RabbitMQ for readiness; **no tables, queues, topics or battle/gacha endpoints yet.** |
+| `src/Rpg.GameServerApi/` | Skeleton only: `/api/v1/info`, `/health/live`, `/health/ready`, `/metrics` on port 5000. Connects to Postgres/Redis/RabbitMQ for readiness; **no tables, queues, topics or battle/card endpoints yet.** |
 | `tests/` | `Rpg.Contracts.Tests` (golden JSON, purity guards, battle contracts cross-checked against the Godot golden files), `Rpg.GameServerApi.Tests` (Testcontainers; **Docker required**). |
 | `load-test/`, `web-dashboard/` | **Empty.** |
 | `specs/design/` | Design intent (not slice specs). `combat-design.md`: attributes, tags, damage formula. Damage formula, weakness, toughness and break are built (spec `item-pass`); buff magnitudes and break effects are not yet designed. `run-authority-decisions.md`: why runs work the way `server-authority.md` specifies (options rejected, accepted cheats). |
@@ -34,7 +34,7 @@ Do not describe or code against components listed as empty as though they exist.
   `POST /api/v1/runs/{id}/floors/{n}` (floor seed at the stairs), `POST /api/v1/runs/{id}/actions` (batched async
   quick messages; battles travel here), `POST /api/v1/runs/{id}/end`, `GET /api/v1/runs/current`,
   `GET /api/v1/runs/{id}/resume`, `GET /api/v1/runs/{id}/battles/{seq}` (session and, from slice 3, its verdict).
-  Auth: `POST /api/v1/auth/dev-token` (development). Gacha: `POST /api/v1/gacha/pull`. Analytics read API for the
+  Auth: `POST /api/v1/auth/dev-token` (development). Cards (slices 5, 5b): collection, packs, dust, craft and market order endpoints. Analytics read API for the
   dashboard (player behaviour aggregates). Spec for battles and runs: `specs/server-authority.md`.
 - **`src/Rpg.Contracts`**: .NET 10 class library holding only the wire contracts: HTTP request/response `record` DTOs and
   queue/event message schemas. Referenced by the server and `Rpg.Client`.
@@ -44,23 +44,23 @@ Do not describe or code against components listed as empty as though they exist.
 - **Verifier workers**: headless Godot 4.7.2 .NET containers running the `client-godot` project. They consume
   verification jobs from RabbitMQ.
 - **PostgreSQL**: the source of truth for players, runs and their ordered action logs, run inventory, account
-  inventory, currency, pity counters, battle sessions (seed + conditions + ruleset version), settlements, the outbox,
+  card collection, currency ledgers (gems, dust), market orders and trades, battle sessions (seed + conditions + ruleset version), settlements, the outbox,
   and the analytics projections.
 - **Redis**: a cache in front of Postgres battle sessions (30-min TTL) plus `lock:battle:{id}` / `lock:player:{id}`
   to suppress duplicate work; also live presence, per-player rate limiting, the floor read model, verdict cache, live
-  analytics counters, leaderboards, the gacha banner cache and the SignalR backplane (slice placement: "Redis plan" in
+  analytics counters, leaderboards, the pack catalog cache, the market top of book and the SignalR backplane (slice placement: "Redis plan" in
   `specs/roadmap.md`). **Never the source of correctness:** every entry can be rebuilt from Postgres or the event log.
 - **Run authority (2026-10-20):** the client gets one floor at a time (HMAC floor seed at the stairs) and plays it
   offline; every in-floor action is async and verified in parallel by headless Godot; the client stays within one
   floor of the last verified floor. Action policy table: "Run authority model" in `specs/roadmap.md`.
-- **RabbitMQ**: work queues with acks, retries and DLQ, for verification jobs and reward/gacha settlement.
+- **RabbitMQ**: work queues with acks, retries and DLQ, for verification jobs and reward settlement.
 - **Redpanda**: append-only event log (runs, run actions such as item offers, pickups and purchases, verified
-  battles, gacha outcomes, anti-cheat alerts), fed only by the outbox relay. Analytics consumers project it into
+  battles, packs opened, cards dusted and crafted, market trades, anti-cheat alerts), fed only by the outbox relay. Analytics consumers project it into
   Postgres tables for the dashboard.
 - **Prometheus/Grafana + OpenTelemetry .NET**: operational metrics and traces (latency, queue age, rejections).
   **`web-dashboard`**: React/TS, with SignalR as the browser push gateway: live monitoring (players online, players
   in a battle, service health) **and** player analytics (most played characters and parties, most used moves, items
-  picked up, event decisions, what each gacha banner earns). **`load-test`**: Locust.
+  picked up, event decisions, packs opened, dust flows and card market prices). **`load-test`**: Locust.
 
 ## Battle workflow decisions (2026-10-14)
 - **Single combat implementation:** GodotGAS (GDScript) in `client-godot/` is the only combat logic. Never
@@ -97,7 +97,7 @@ Do not describe or code against components listed as empty as though they exist.
   nothing rewarded). Dev tools and system tests use it.
 - **Player analytics:** every player action is logged (runs and their quick messages, battle sessions and action
   logs). General behaviour metrics (most played characters and parties, most used moves, items picked up, event
-  decisions, gacha banner earnings) are aggregated from that log: published through the outbox to Redpanda and
+  decisions, packs, dust and market trades) are aggregated from that log: published through the outbox to Redpanda and
   projected into Postgres tables the dashboard reads, filterable to verified runs. Live counts (players online, in a
   battle) are Prometheus gauges. **Never use item, character, move or encounter ids as Prometheus labels** (unbounded
   cardinality). Design: `specs/design/game-design.md` section 10.

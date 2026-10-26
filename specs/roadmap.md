@@ -22,7 +22,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 4. `settlement-outbox` | ⬜ Not started | |
 | 4a. `run-verify` | ⬜ Not started | |
 | 4b. `game-analytics` | ⬜ Not started | |
-| 5. `gacha` | ⬜ Not started | |
+| 5. `card-collection` | ⬜ Not started | |
+| 5b. `card-market` | ⬜ Not started | |
 | 6. `observability` | ⬜ Not started | |
 | 7. `live-dashboard` | ⬜ Not started | |
 | 8. `load-and-chaos` | ⬜ Not started | |
@@ -116,6 +117,12 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   execution row (no `Data.Delay`), phase tags are `State.Phase.Two` / `Three`, the break effects are three passives
   per character, no `Event.Ability.Used.FollowUp`, no sandbox layout. Still open: the equip/unequip run-log replay
   (4a), the dev-tools manual checklist, demo content that uses a row delay.
+- 2026-10-26: Slice 5 `gacha` replaced by a Hearthstone-style card system, split into 5 `card-collection` (characters
+  and items are cards; owning one unlocks it; character copies are eidolons, level = copies held − 1; gems buy packs;
+  dust any card for a flat rate; craft the base set for dust) and 5b `card-market` (order book per card, escrow,
+  exactly-once trades, a house account that buys at the dust rate and relists its stock). Decided by the user: held
+  copies count as eidolons, order-book prices, gems buy packs and dust comes only from cards. Root `CLAUDE.md`,
+  `game-design.md` and `server-authority.md` follow. At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -175,7 +182,7 @@ later by a worker; the server's verdict is final. **Free** = client-only, never 
 | **End the run (win)** | **Blocking** | run fan-in | The victory screen appears only after the server has verified every floor; rewards settle in the same step. A short "Verifying run…" screen covers it (usually only the last floor is still pending). Offline: the run waits at that screen until a connection. Rejected: rollback to the last valid checkpoint, no victory |
 | End the run (death) | Async | run fan-in | The defeat screen shows at once; nothing is paid out, so there's nothing to protect |
 | Save locally | Free | | `user://` save of the run state, the floor seed and the unsent action queue. A convenience copy: the server's acknowledged log always wins |
-| Gacha pull, spending currency, account inventory | Blocking | | Server RNG and server state; settled through RabbitMQ and the outbox |
+| Opening packs, dusting, crafting, market orders, spending currency, the account collection | Blocking | | Server RNG (packs) and server state; settled with the outbox (5, 5b). Cards held by a run in progress are locked |
 | Animations, sounds, camera, Auto/Skip, menus, settings, inspecting items, the map view | Free | | |
 
 ### Redis plan
@@ -192,7 +199,8 @@ Redis is never the source of correctness: every entry can be lost and rebuilt fr
 | **Floor read model** (floor hash, room → encounter and offers, written when a floor's entry step is verified) | hash per run and floor | 4a |
 | **Live analytics counters** (items picked today, most played party this hour) | `HINCRBY` / sorted sets, fed from Redpanda; Postgres keeps the history | 4b |
 | **Leaderboards** (fastest clear, deepest floor per character; **verified runs only**) | sorted sets, fed from Redpanda, rebuildable from Postgres | 4b (shown in 7) |
-| **Gacha banner cache** (active banners, rates, pool) | string/hash, invalidated when a banner changes | 5 |
+| **Pack catalog cache** (pack types, odds, card lists) | string/hash, invalidated when a pack changes | 5 |
+| **Market top of book** (best bid and ask per card) | hash per card, updated after each settled trade, rebuilt from Postgres | 5b |
 | **SignalR backplane** (a verdict reaches whichever API instance holds the player's socket) | pub/sub; the demo runs two API replicas | 7 |
 
 ## Slices
@@ -368,19 +376,61 @@ behaviour, not per-player pricing. Run and battle events (run started and ended,
 decision, field use, battle started and its moves and result) published through the slice 4 outbox to Redpanda; a
 consumer projects them into Postgres analytics tables (idempotent by event id, rebuildable from the topic); a read API
 for aggregates: most played characters and parties, most used moves, most picked-up items and who holds them, event
-decisions, how far runs get, encounter wins and losses, each filterable to verified runs. Gacha banner earnings join
-in slice 5. No item, character or move ids as Prometheus labels.
+decisions, how far runs get, encounter wins and losses, each filterable to verified runs. Pack, dust and market
+figures join in slices 5 and 5b. No item, character or move ids as Prometheus labels.
 Redis: **live analytics counters** (`HINCRBY` / sorted sets fed from Redpanda, for the live tiles; Postgres keeps the
 history) and **leaderboards** (sorted sets, fastest clear and deepest floor per character, **verified runs only**,
 rebuildable from Postgres). A Redpanda consumer for **anomaly flags** (too-perfect play, abandon rate, inhuman action
 speed) feeds a delayed review queue, not instant bans.
 
-### 5. `gacha`
-`POST /gacha/pull`; pity counters and currency in Postgres; settlement via RabbitMQ; events through the outbox.
-Spec must decide where gacha RNG lives (server-authoritative, separate from combat RNG) and say so explicitly.
-Redis: **gacha banner cache** (active banners, rates and pools; Postgres is the source; invalidated when a banner changes).
+### 5. `card-collection` (replaces `gacha`, 2026-10-26)
+**Purpose:** Hearthstone-style collecting instead of gacha pulls. Every playable character and every item is a
+**card** in the player's account collection.
+- **What owning a card does:** at least 1 copy unlocks it (a character becomes playable; an item enters the run's item
+  pools). Extra item copies change nothing in game; they only have value to trade or dust.
+- **Rarities:** characters are always Legendary; items are Common, Rare, Epic or Legendary.
+- **Eidolons (HSR):** a character's level is copies held − 1, up to E6. Selling or dusting a copy lowers it. Eidolon
+  effects are content (one AbilitySet per level, GAS-first). The level is captured in the run's starting state, so a
+  battle replays with the level the run started with.
+- **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting or selling cards.
+- **Packs:** several pack types, each with its own card list and rarity odds. Opening is server-side, on a pack RNG
+  separate from combat RNG, recorded for audit.
+- **Dust:** any card can be dusted at any time for a flat rate per rarity. Dusting sells the card to the house (5b),
+  which keeps the card in its stock.
+- **Crafting:** the **base set** can always be crafted for a fixed dust cost per rarity. Cards from other sets come only
+  from packs or the market (5b).
+- **Run lock:** a card held by a run in progress can't be dusted, sold or listed until that run ends, so a run never
+  loses a character or item it is verified with.
 
-> 🎨 Suggested design break 3, gacha feel: banners, rates, pity curve, pull animation, new pullable characters.
+Server: account collection (card counts), currency ledgers and pack catalog in Postgres; collection, pack, dust and
+craft endpoints (blocking account actions, idempotent by request key); currency changes and card moves in one
+transaction with an outbox row (pack opened, card dusted, card crafted). Contracts: the collection, plus eidolon levels
+and unlocked items in the run's starting state.
+Redis: **pack catalog cache** (pack types, odds and card lists; Postgres is the source; invalidated when a pack
+changes).
+
+> 🎨 Suggested design break 3, card feel: sets and rarities, dust rates and craft costs, pack odds, eidolon effects
+> per character, pack-opening animation.
+
+### 5b. `card-market`
+**Purpose:** a community marketplace where players trade cards for dust, and the backend's trading-system showcase.
+- **Order book per card:** players post sell listings and buy orders at their own dust prices; the server matches
+  them (price, then time). A listing escrows the card and a buy order escrows the dust; a cancel returns the escrow.
+- **Settlement:** both sides of a match (card and dust) move in one Postgres transaction with an outbox row (exactly
+  once). Order submission is idempotent; one card or one dust balance can never be spent twice; two buyers racing for
+  one listing produce one trade.
+- **The house account** (the game owner) keeps supply healthy when players dust instead of selling. Its standing buy
+  at the flat dust rate *is* dusting (the price floor). It lists its stock (dusted cards) at a set price per rarity,
+  which caps market prices.
+- The spec decides the matching path (matching inside the request's transaction, or a single matching worker per card
+  partition fed by RabbitMQ) and how matching avoids lock contention under load.
+
+Redis: **top of book** per card (best bid and ask, for the market UI; rebuilt from Postgres), and the 2b rate limiter
+on order traffic.
+Analytics (4b pipeline): packs opened per pack type, dust created and spent, crafts, trade volume and prices per card.
+Card ids never become Prometheus labels.
+Failure scenarios: a duplicate order submission makes one order; a crash between match and acknowledgement loses no
+escrow and settles once; Redis flushed rebuilds the book from Postgres.
 
 ### 6. `observability`
 End-to-end traces HTTP → RabbitMQ → worker → outbox → Redpanda. Metrics: verify latency, queue age,
@@ -388,10 +438,10 @@ End-to-end traces HTTP → RabbitMQ → worker → outbox → Redpanda. Metrics:
 as code, including **battles per minute against server load** (CPU, memory, latency, queue age) on one panel.
 
 ### 7. `live-dashboard`
-SignalR hub pushing verdicts to client and browser. React/TS `web-dashboard` live feed: battles, gacha, anti-cheat alerts.
+SignalR hub pushing verdicts to client and browser. React/TS `web-dashboard` live feed: battles, packs opened, market trades, anti-cheat alerts.
 **Live monitoring** (players online, players in a battle, runs in progress, service health) and **player analytics
 pages** over the `game-analytics` read API: characters and parties, moves, items picked up, event decisions, runs,
-encounters, gacha banner earnings, leaderboards.
+encounters, packs and the card market (volume, prices, dust flows), leaderboards.
 Redis **SignalR backplane** (pub/sub) so a verdict reaches whichever API instance holds the socket; the compose demo
 runs two API replicas behind a load balancer.
 
