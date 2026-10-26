@@ -584,9 +584,13 @@ existing fixtures and goldens stay byte-identical.
   Also `test_demo_endings`, `test_demo_status_immunity`, `test_demo_ults_*`, `test_demo_items_replay`.
 - `test_content_valid`: 0 errors.
 
-**Open after the 2026-10-26 sync (untested on demo content):** the C6 events (Healing Spring, Wandering Medic,
-Old Tutor) and the Waystation have no `test_demo_events` case (the rest stop is tested on fixtures,
-`test_rest_stop_between_floors`); no demo test asserts that floor 1 differs from floor 0 for the same seed.
+- `test_demo_c6_events` (3.11): Healing Spring (drinking heals; bathing needs and takes 10 coins and heals more),
+  Wandering Medic (needs 15 coins; full heal, the fallen get up), Old Tutor (a level each, or XP and 10 coins), the
+  Waystation as The Descent's rest stop (rest heals HP and MP and raises the fallen; train gives a level; move on
+  changes nothing).
+
+**Open after the 2026-10-26 sync (untested on demo content):** no demo test asserts that floor 1 differs from floor 0
+for the same seed.
 
 **Golden vectors:** no new combat golden (no battle rule changes). `seed_report_play.json` (fixtures) pins the
 report's shape and determinism. A recorded demo run is **not** a golden (your tuning would break it daily); the slice
