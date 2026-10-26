@@ -66,23 +66,30 @@ BattleMessages (game/, M3)   → a client-only bridge GameMain creates on each `
                                 `battle_finished`: Battle signals → Message.Battle.* verbs, with the units' display
                                 names in `data`. Never created by the replay runner, trace runner or verifier, and
                                 combat/ is unchanged, so the battle kernel never broadcasts
-presentation                 → may broadcast its own channels (Message.Ui.*): the battle panel and the pickup panel
-                                send Message.Ui.Refused when an action is refused
+GameMain.refuse(text, who, data) → a refused player action (2026-10-26 follow-up): the line on Message.Notification
+                                and Message.Ui.Refused (Verb.Refuse, data + "text"). The battle, pickup and field
+                                panels refuse only through it; no screen plays the Refused sound itself
 ```
 
 ### 2.3 Who listens
 ```
-message_line (UI footer)     → Message.Notification (exact, NotificationMessage): shows the text
+message_line (UI footer)     → Message.Notification (exact, NotificationMessage): shows the text; and
+                                Message.Battle.Ended (exact): "Battle: Victory" (`battle_end_format`)
+floor_card (HUD overlay)     → Message.Run.FloorEntered: the floor's title card
 battle_callouts (new panel,  → Message.Battle (partial, VerbMessage): BROKEN!, ONE MORE!, phases, resisted, knocked
   UI.Slot.Hud.Overlay,          down, turn lost, ult unleashed, as exported formats; each line shows for `seconds`
   order 10, while Battle)       (2, real time), at most `max_lines` (3) at once
-sound_board                  → Message.Battle.UnitDied → Death, Message.Run.ItemTaken → Item, Message.Ui.Refused →
-                                Refused (its unit_died and action_rejected hooks are gone; the pickup panel no
-                                longer plays Item itself)
+sound_board                  → Message.Battle.Started → BattleStart, Message.Battle.UnitDied → Death,
+                                Message.Run.ItemTaken → Item, Message.Ui.Refused → Refused (its battle_started,
+                                unit_died and action_rejected hooks are gone; Move stays on room_entered, deferred,
+                                because a room that starts a battle plays BattleStart instead)
 dev console `messages`       → any channel (partial), printed and collected for script runs (2.4)
 ```
-The battle panel keeps its stats line, the `%Turn` hit marks, its buttons and its own lines through
-`show_message` ("Battle: Victory", refusals, "ult at the next chance").
+The battle panel keeps its stats line, the `%Turn` hit marks, its buttons and its "ult at the next chance" line.
+**Rule of thumb (2026-10-26 review):** messages are for things that *happen* (call-outs, lines, sounds, title cards);
+panels that redraw *state* (party, map, pickups, events, the room view, the stats line) stay on the run's and battle's
+signals and read the state, as Lyra's widgets do. Messages carry no run id: fine with one run per client; a second
+live `RunController` beside the shown game would need one in `data`.
 
 ### 2.4 Dev tools (console parity)
 `messages on [channel]` logs every message under a channel (default `Message`; it must start with `Message`) to the
@@ -145,7 +152,9 @@ OneMore, Interrupt, Phase, Resist, Drain, Skip, Die, Refuse. Notification tags: 
 | `game/tools/sync_tags.gd` (system) | also checks the message channels, verbs and notification tags |
 | `presentation/demo/ui/message_line.gd` (yours) | listens to `Message.Notification` instead of `main.message_shown` |
 | `presentation/demo/ui/battle_panel.gd` (yours) | the call-outs left (to `battle_callouts`); a refused pick broadcasts `Message.Ui.Refused` |
-| `presentation/demo/ui/pickup_panel.gd` (yours) | a refusal broadcasts `Message.Ui.Refused`; no own Item/Refused sound |
+| `presentation/demo/ui/pickup_panel.gd`, `field_panel.gd` (yours) | refusals through `GameMain.refuse` (the field panel's failed field spell now plays Refused too); no own Refused sound; the field panel keeps Item for wearing and taking off armor |
+| `presentation/demo/ui/floor_card.gd` (yours) | shows on `Message.Run.FloorEntered` instead of the run's `floor_entered` |
+| `game/game_main.gd` (system, follow-up) | `refuse(text, instigator, data)` |
 | `presentation/demo/sound_board.gd` (yours) | Death, Item, Refused from messages instead of signal hooks |
 | `presentation/demo/ui/battle_callouts.tscn/.gd` (yours, new) + one `ui_policy.tres` entry | the call-out panel |
 | `godot_gas/tag_registry.tres`, `gameplay_tags.gd` (yours, through `sync_tags --add-missing`) | the 46 tags of 3.2 |
@@ -179,7 +188,8 @@ System tests in `tests/game/test_gameplay_messages.gd` (fixtures and code-built 
   run has an XP curve.
 - `test_messages_battle_bridge`: the item-pass break fixture: the opening breaks `P1→E2`, `P1→E1` with names, one
   Broken / OneMore message per signal, hit tags on damage, Started first and a won Ended last, same final hash.
-- `test_messages_run_hash_unchanged`, `test_replay_sends_no_messages`.
+- `test_messages_run_hash_unchanged`, `test_replay_sends_no_messages`, `test_messages_refuse` (the line, then
+  `Message.Ui.Refused` with who, why and the text).
 - `test_messages_ui_panel_listens`: a probe panel (`tests/game/ui_probe_message.gd`) in a code-built policy shows
   `show_message` text; its listener leaves with the game.
 - `tests/game/test_dev_console.gd`: `test_tool_parity` (the `messages` command) and `test_console_messages` (on,

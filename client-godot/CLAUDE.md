@@ -198,6 +198,8 @@ from C#.**
 - **Events reach screens as gameplay messages** (spec `gameplay-messages`, Lyra's message router): a screen listens
   with `GameplayMessages.listen(channel, callback, GameplayMessageRouter.Match.EXACT or PARTIAL, payload type, self)`
   (the listener leaves with the screen) and reads `VerbMessage` / `NotificationMessage` fields; a line for the player
-  is `ctx.main.show_message(text)` (`Message.Notification`). A kill feed or toast stack is a listener + a policy entry.
+  is `ctx.main.show_message(text)` (`Message.Notification`), a refused action `ctx.main.refuse(text, who, data)`
+  (the line plus `Message.Ui.Refused`; never play the Refused sound yourself). Messages are for things that happen;
+  panels that redraw state stay on the run's signals. A kill feed or toast stack is a listener + a policy entry.
   Listeners never change run or battle state; the battle kernel never broadcasts (`BattleMessages` bridges the
   battles `GameMain` shows). New channels are `Message.*` tags (`sync_tags`); `messages on` logs them.
