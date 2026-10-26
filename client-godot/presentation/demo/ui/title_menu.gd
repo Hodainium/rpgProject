@@ -10,9 +10,11 @@ extends UIScreen
 
 
 func bind(context: UIContext) -> void:
-	for path in GameMain.CONTENT_ROOTS:
+	var roots := GameMain.content_roots()
+	for path in roots:
 		%ContentRoot.add_item("Content: " + path)
-	%ContentRoot.item_selected.connect(func(index): ctx.main.set_content_root(GameMain.CONTENT_ROOTS[index]))
+	%ContentRoot.visible = roots.size() > 1
+	%ContentRoot.item_selected.connect(func(index): ctx.main.set_content_root(roots[index]))
 	%Random.pressed.connect(func(): %Seed.text = RunSeeds.random_code())
 	%Start.pressed.connect(_start)
 	%Classes.entry_filled.connect(func(entry, _item):
@@ -23,7 +25,7 @@ func bind(context: UIContext) -> void:
 
 
 func _fill(content: ContentIndex) -> void:
-	%ContentRoot.select(maxi(GameMain.CONTENT_ROOTS.find(ctx.main.content_root), 0))
+	%ContentRoot.select(maxi(GameMain.content_roots().find(ctx.main.content_root), 0))
 	%RunPicker.clear()
 	if content == null:
 		%Classes.set_items([])
