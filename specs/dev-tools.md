@@ -638,8 +638,14 @@ specs/roadmap.md, CLAUDE.md, client-godot/CLAUDE.md   status, current-state tabl
     `DemoUnitAttributes` can't be instantiated there).
 
 ## Remaining work
-- **Untested:** `kill` queued during an enemy turn (hard to time headless); throwaway commands ignored in a release
-  build (needs a release build: manual); Tab cycling in the console overlay (UI: manual).
+- `kill` queued during an enemy turn: tested since `content-pass` (`test_kill_queued_during_enemy_turn`, driven by
+  the battle's signals).
+- **Manual checklist** (no headless test possible):
+  - [ ] In an exported release build, the `Dev` autoload is inert (backtick opens nothing) and a script in
+    `user://dev_commands/` is never loaded.
+  - [ ] In the console overlay, repeated Tab cycles through the completions (command names, then argument ids) and
+    shows the list when there are several.
+- `status <unit>` (spec `content-pass`): a unit's statuses with turns and stacks; `test_status_command`.
 - Fixed after the sync (2026-10-20): `effect` with a non-GameplayEffect file now refuses instead of raising a script
   error; `Battle` setup reports an unknown held item as a runner error ("unknown item 'x'") instead of crashing, like
   unknown equipment and use-slot items already did.

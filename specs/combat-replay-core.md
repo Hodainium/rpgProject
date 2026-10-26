@@ -168,6 +168,11 @@ AttributeSet must have both. All other attributes are content. Every attribute v
   `Battle` ancestor. No autoload or static state, so several battles can run one after another in one process.
 - Percentage rolls: `rng.randi_range(0, 9999) < chance` (see Number format). The RNG's final `state` is part of the state hash, so any extra or
   missing draw shows up as a mismatch.
+- Status rolls (spec content-pass H2): one roll per target in hit order, only on rows with a `chance` whose final
+  chance is below 100%; never on immunity, in field mode or on a drained hit (no crit roll either).
+- Skipped turns (spec content-pass H1): a unit holding `State.Controlled` skips its turn with nothing logged, so a
+  log entry on such a party turn is 2002 `TurnMismatch`. Boss phases (H5) and enemy One Mores from a party weakness
+  hit (H7) are re-simulated, never logged.
 
 ### Execution table and animation events (Dark Souls-style)
 An ability's **execution table** says *what* each hit does; its **animation** says *when* each hit lands and *which*
@@ -339,6 +344,8 @@ turn=<int>
 rng=<int>                                  # RandomNumberGenerator.state
 outcome=<Ongoing|Victory|Defeat|TurnLimit>
 unit=<id>|alive=<0|1>|av=<int>             # units sorted by id
+pattern=<id>|<n>                           # PatternBrain step; only when non-zero (spec content-pass)
+phase=<id>|<n>                             # boss phases entered; only when non-zero (spec content-pass)
 attr=<id>|<name>|<base>|<current>          # per unit, attributes sorted by name
 tag=<id>|<tag>|<count>                     # per unit, active tags sorted
 effect=<id>|<resource_path>|<remaining_turns>|<stack_count>|<suppressed 0|1>   # per unit, sorted
@@ -346,6 +353,8 @@ extra=<id>,<id>                            # owed One More actions in queue orde
 ```
 - The `extra=` line (spec item-pass) appears only while a One More is owed, so battles without breaks hash exactly as
   before and the format stays `hash-v1`. Toughness is an attribute and `State.Broken` a tag, both already hashed.
+  The `pattern=` and `phase=` lines (spec content-pass) follow the same rule; statuses, `State.Controlled` and
+  `State.Downed` are tags and effects, already hashed.
 - **Whole numbers only.** Values are hashed as stored (hundredths). Each attribute value must be integral (after the
   `CombatASC` snap) and within ±2^53; otherwise it's a runner error (`NonIntegerAttribute`), because a fraction means
   some math escaped the fixed-point rules.

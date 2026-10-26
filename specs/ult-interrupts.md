@@ -325,8 +325,8 @@ Existing goldens (`duel-seed-1`, `squad-seed-42`, `break-seed-11`, game goldens)
 - The client's `action_rejected` for an ult taken as a turn action, and the runner error for a brain that picks an
   ult as a turn action, have no direct test (the reason, `IllegalAbility`, and the replay rejection do; a default
   brain can't pick an ult). Neither can cause a wrong verdict: the first is a UI message on a shared path (the panel
-  never offers ults as actions), the second is a runner error, never a verdict. **Add a brain test in 1c5** with the
-  first custom `EnemyBrain` subclass, when the path first becomes reachable; the client signal needs none.
+  never offers ults as actions), the second is a runner error, never a verdict. **Closed in `content-pass`:**
+  `test_brain_ult_as_action_is_runner_error` with `PatternBrain`; the client signal needs none.
 
 ### Done when
 `dotnet build` / `dotnet test` and the Godot suite green; old goldens unchanged; new goldens in; `ult` command works
@@ -359,6 +359,12 @@ chosen for the mechanic it exercises:
 - **Party toughness:** enemy ults breaking the party and enemy One Mores (the rule already supports it; needs
   content).
 - **Balance:** charge gain per action, ult costs, Execute's toughness damage against the One More combo.
+
+Done in `content-pass` (2026-10-25): items reacting to ults (`Event.Ability.Used.Ultimate`, `Event.Battle.Interrupt`:
+Overcharge Coil, Interrupter's Badge), `TacticalBrain` ult timing (`ult_when_ally_hp_below`, `ult_when_party_down`),
+ults × statuses (Sanctuary cleanse before a tick, controlled units can't ult), and party toughness replaced by D10
+(party units are never Broken; a party weakness hit downs the unit and gives the enemy a One More). Balance stays for
+design break 1d.
 
 ## 9. Decisions
 Decided 2026-10-21:

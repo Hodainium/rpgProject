@@ -432,8 +432,9 @@ it happens and which way, never the tuned number. `test_content_valid` (existing
 `game/dev/scripts/item_pass.txt` is a manual smoke script for the script runner, not an automated test.
 
 **Known gaps:** a replay of a run log with equip/unequip (no run-log replayer until slice 4a; the log entries and the
-`armor=` hash line are tested); a dead character being equipped (allowed, untested); demo "Fire beats Physical on a
-Slime" and demo recovery (recovery is tested on fixtures only).
+`armor=` hash line are tested; still open for slice 4a). Closed by `content-pass` (2026-10-25): a dead character
+being equipped (`test_equip_dead_character`: the gear applies on revive); demo "Fire beats Physical on a Slime" and
+demo recovery (`test_demo_slime_fire_vs_physical_and_recovery`).
 
 `dotnet build` / `dotnet test` green. Both suites pass before the slice counts as done. Headless Godot always with
 `--quit-after` and a timeout.
@@ -452,9 +453,12 @@ F. `server-authority` text (`ItemKind`, `equip`/`unequip`), `combat-replay-core`
    root `CLAUDE.md` table.
 
 ## 8. Later
-- Resist / null / repel / drain via `Resist.<Type>` and `Hit.Resisted` (no battle code needed).
-- HSR break effects per damage type (burn, freeze…) and break damage; buildable as content on `Event.Damage.Dealt.Break`.
-- Party toughness (enemies breaking the party, and enemy One More): already supported by the generic rule; needs content.
+- Resist and drain: **done in `content-pass`** (`Resist.<Type>`, `Drain.<Type>`, priority Drain > Weak > Resist).
+  Null and repel stay later (`content-pass` 8).
+- HSR break effects per damage type and break damage: **done in `content-pass`** (break passives on
+  `Event.Damage.Dealt.Break.<Type>`).
+- Party toughness: **replaced in `content-pass`** (D10): party units are never Broken; an enemy hit on a party
+  weakness knocks the unit down (`State.Downed`) and gives the enemy a One More.
 - Follow-ups that copy the triggering hit's damage type; party-wide follow-up events.
 - Reveal-map and shop-discount items; armor set bonuses; selling armor.
 

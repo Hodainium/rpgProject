@@ -173,7 +173,8 @@ with `advance(delta)`, no rendering). File: `tests/game/test_animation_sets.gd`.
   `callback_mode_method` immediate (`test_montage_releases_in_order`) and an `Add2` flinch over a running montage
   adds to the pose without stopping it (`test_flinch_is_additive`), so no `AnimationPlayer` fallback was needed.
   `animation_finished` alone is not reliable with a fade-out; the end is also read from the OneShot's `active` (§2).
-  **Still to test:** that `@export_file` stores a `uid://` reference (so moving a view scene keeps the link).
+  That `@export_file` stores a `uid://` reference (so moving a view scene keeps the link): `test_view_path_is_uid`
+  (added in `content-pass`).
 - Validator: broken fixtures `characters/view_missing.tres` (a `view` path that isn't there),
   `animation_sets/not_looping.tres` (non-looping `idle` and a humanoid profile with a `Body` track) used by
   `views/bad_set_view.tscn` via `characters/bad_view_set.tres`, whose ability `abilities/far_reach.tscn` moves an

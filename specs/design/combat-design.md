@@ -94,6 +94,11 @@ gets a One More: an immediate extra action of any kind. A follow-up attack (an `
 fires from another follow-up's hit. Per-enemy weakness, toughness and `weakness_dmg` are in each enemy's `.tres`.
 
 ## Not yet designed
-Per-ability execution tables (multipliers and hit timing), buff and debuff magnitudes and durations, break damage and
-per-type break effects, resistances. (Turn order, action value and effect timing are specified in
-`specs/combat-replay-core.md`.)
+Per-ability execution tables (multipliers and hit timing), as a general rule (each ability sets its own today).
+(Turn order, action value and effect timing are specified in `specs/combat-replay-core.md`.)
+
+Designed in `specs/content-pass.md` (2026-10-25): statuses (DoTs, stat ups and downs, control, taunt, cleanse,
+dispel, immunity) and their chance (the row's own chance, no hit or resist stat; immunity tags are the counter), debuff duration (`debuff_turns`), per-type break effects and break damage, Persona
+affinities (weak, resist, drain; Drain > Weak > Resist), and party weakness hits (no party toughness: the unit is
+knocked down and the enemy gets a One More). Magnitudes and durations live in `content/demo/effects/` and the
+ExecCalc, not here. Still to design: shields, Null and Repel affinities.
