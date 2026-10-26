@@ -1,6 +1,6 @@
 # Spec: gameplay-messages (slice 1d, step D3)
 
-Status: 🔨 Implemented, awaiting your review (M1–M5 approved as recommended, 2026-10-26) · Roadmap: inside 1d
+Status: ✅ Done (M1–M5 approved as recommended, 2026-10-26) · Roadmap: inside 1d
 `playable-demo`, after D2 `ui-framework`, before E (M5) ·
 Date: 2026-10-26
 Model: Lyra's **Gameplay Message Subsystem** (the `GameplayMessageRouter` plugin): typed payloads broadcast on

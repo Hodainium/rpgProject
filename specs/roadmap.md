@@ -15,7 +15,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c4. `ult-interrupts` | ✅ Done (spec synced; one known test gap in `specs/ult-interrupts.md` 6) | 2026-10-21 |
 | 1c4b. `atomic-battles` | ✅ Done | 2026-10-22 |
 | 1c5. `content-pass` | ✅ Done (2026-10-25) | 2026-10-22 |
-| 1d. `playable-demo` | 🔨 Implementing (A–C6 done: tools, the ten-floor Descent, 11 classes, XP and rest; smart 4-member 35.7%; D screens done; D2 `ui-framework` (Lyra-style UI) done; D3 `gameplay-messages` (Lyra-style message bus) built, in review; next E export) | 2026-10-26 |
+| 1d. `playable-demo` | 🔨 Implementing (A–C6 done: tools, the ten-floor Descent, 11 classes, XP and rest; smart 4-member 35.7%; D screens done; D2 `ui-framework` (Lyra-style UI) done; D3 `gameplay-messages` (Lyra-style message bus) done; next E export) | 2026-10-26 |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
 | 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
 | 3. `battle-verify` | ⬜ Not started | |
