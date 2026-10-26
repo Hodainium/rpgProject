@@ -35,6 +35,8 @@ display_name = "Warrior"
 display_color = Color(0.27450982, 0.50980395, 0.7058824, 1)
 tags = Array[StringName]([&"Character.Warrior"])
 level_effect = ExtResource("90_growth")
+role = "Damage dealer / off-tank"
+description = "Physical fighter. Cleave hits a crowd, Execute finishes a wounded foe, Provoke pulls enemies onto him."
 default_loadout = SubResource("Resource_xidmk")
 stats_x100 = Dictionary[String, int]({
 "atk": 50000,

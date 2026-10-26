@@ -23,6 +23,8 @@ display_name = "Bulwark"
 display_color = Color(0.7411765, 0.7176471, 0.41960785, 1)
 tags = Array[StringName]([&"Character.Bulwark"])
 level_effect = ExtResource("90_growth")
+role = "Tank"
+description = "Taunts, then grows stronger from every hit taken: counters, Fury stacks and ult charge. Bastion shields the party."
 stats_x100 = Dictionary[String, int]({
 "atk": 32000,
 "crit_dmg": 5000,

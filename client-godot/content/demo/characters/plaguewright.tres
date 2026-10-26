@@ -23,6 +23,8 @@ display_name = "Plaguewright"
 display_color = Color(0.6039216, 0.8039216, 0.19607843, 1)
 tags = Array[StringName]([&"Character.Plaguewright"])
 level_effect = ExtResource("90_growth")
+role = "Support: statuses"
+description = "Spreads Poison and Bleed and makes every debuff last longer. Pandemic hits all enemies with Poison, Bleed, Burn and Vulnerable."
 stats_x100 = Dictionary[String, int]({
 "atk": 40000,
 "crit_dmg": 5000,

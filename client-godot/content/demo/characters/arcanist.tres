@@ -23,6 +23,8 @@ display_name = "Arcanist"
 display_color = Color(0.5764706, 0.4392157, 0.85882354, 1)
 tags = Array[StringName]([&"Character.Arcanist"])
 level_effect = ExtResource("90_growth")
+role = "Damage dealer: magic"
+description = "Fire and Ice spells that hit many enemies, at a steep MP cost. Kills refill MP; Meteor burns the whole field."
 stats_x100 = Dictionary[String, int]({
 "atk": 52000,
 "crit_dmg": 5000,

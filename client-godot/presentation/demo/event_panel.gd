@@ -16,7 +16,8 @@ func setup(main: GameMain) -> void:
 
 
 func _bind(run: RunController) -> void:
-	for changed in [run.event_page_shown, run.room_entered, run.room_cleared, run.battle_requested, run.party_changed]:
+	for changed in [run.event_page_shown, run.room_entered, run.room_cleared, run.battle_requested, run.party_changed,
+			run.floor_entered]:
 		changed.connect(func(_a = null, _b = null): _refresh.call_deferred())
 
 
@@ -30,6 +31,8 @@ func _refresh() -> void:
 	for child in _choices.get_children():
 		child.queue_free()
 	_title.text = event.display_name
+	if run.state.event.has("rest_to"):  # the rest stop between floors (spec playable-demo 3.11)
+		_title.text += "  ·  before floor %d" % (int(run.state.event["rest_to"]) + 1)
 	_text.text = page.text
 	for index in page.choices.size():
 		var button := Button.new()

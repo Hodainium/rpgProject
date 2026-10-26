@@ -5,6 +5,9 @@ extends Control
 var _main: GameMain
 var _busy: bool = false
 var _battle: Battle
+## Spec playable-demo 3.11: each member's level when the party last entered a room (slot -> level); a higher level
+## now shows LEVEL UP! until the next room.
+var _seen_levels: Dictionary = {}
 
 @onready var _members: VBoxContainer = %Members
 @onready var _field: HFlowContainer = %Field
@@ -23,6 +26,29 @@ func _bind(run: RunController) -> void:
 		changed.connect(func(_a = null, _b = null): _refresh.call_deferred())
 	run.battle_started.connect(_on_battle_started)
 	run.battle_finished.connect(func(_outcome): _battle = null)
+	_seen_levels.clear()
+	for changed in [run.room_entered, run.floor_entered]:
+		changed.connect(func(_a = null): _see_levels())
+
+
+func _see_levels() -> void:
+	for member in _main.run.state.party:
+		_seen_levels[member["slot"]] = int(member["level"])
+
+
+## "  Lv 3 · XP 180/270" (just "Lv 3" without an XP curve, "XP 2700 (max)" at the top level); "LEVEL UP!" after a rise.
+func _level_text(run: RunController, member: Dictionary) -> String:
+	var level := int(member["level"])
+	if not _seen_levels.has(member["slot"]):
+		_seen_levels[member["slot"]] = level
+	var text := "  Lv %d" % level
+	var curve: Array[int] = run.structure.xp_to_level if run.structure != null else []
+	if not curve.is_empty():
+		text += " · XP %d/%d" % [member.get("xp", 0), curve[level - 1]] if level - 1 < curve.size() \
+			else " · XP %d (max)" % member.get("xp", 0)
+	if level > _seen_levels[member["slot"]]:
+		text += "  LEVEL UP!"
+	return text
 
 
 ## During a battle the panel shows the fighting units' live values, updated after every action.
@@ -49,10 +75,13 @@ func _refresh() -> void:
 		var alive: bool = unit.alive if unit != null else member["alive"]
 		var label := Label.new()
 		var lines := PackedStringArray()
-		lines.append("%d. %s%s   %s%s%s" % [member["slot"], character.display_name if character != null else member["character"],
-			"  [DEAD]" if not alive else "", _pair("HP", values, BattleUnit.HP, BattleUnit.MAX_HP),
+		lines.append("%d. %s%s%s" % [member["slot"], character.display_name if character != null else member["character"],
+			_level_text(run, member), "  [DEAD]" if not alive else ""])
+		var bars := "%s%s%s" % [_pair("HP", values, BattleUnit.HP, BattleUnit.MAX_HP),
 			_pair("  MP", values, BattleUnit.MP, BattleUnit.MAX_MP),
-			_pair("  Ult", values, BattleUnit.ENERGY, BattleUnit.MAX_ENERGY)])
+			_pair("  Ult", values, BattleUnit.ENERGY, BattleUnit.MAX_ENERGY)]
+		if bars != "":
+			lines.append("    " + bars)
 		var held := PackedStringArray()
 		var tips := PackedStringArray()
 		for item_id in member["items"]:
@@ -77,8 +106,8 @@ func _refresh() -> void:
 		label.tooltip_text = "\n".join(tips)
 		label.mouse_filter = Control.MOUSE_FILTER_PASS
 		_members.add_child(label)
-	if _busy or not run.pending_battle.is_empty() or not run.state.event.is_empty():
-		return
+	if _busy or not run.pending_battle.is_empty() or not run.state.event.is_empty() or _main.mode != "run":
+		return  # armor and field actions only on the map, never on the end screen
 	_armor_controls(run)
 	for option in run.field_options():
 		var tag := String(option["ability"])
@@ -144,6 +173,10 @@ func _armor_controls(run: RunController) -> void:
 		_members.add_child(worn)
 	else:
 		worn.free()
+	if not run.state.armor.is_empty():
+		var heading := Label.new()
+		heading.text = "Armor bag (not worn):"
+		_members.add_child(heading)
 	for piece_id in run.state.armor:
 		var piece: EquipmentDefinition = run.content.equipment.get(piece_id)
 		var row := HBoxContainer.new()

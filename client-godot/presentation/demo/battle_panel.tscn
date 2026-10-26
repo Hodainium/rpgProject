@@ -68,6 +68,13 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Auto"
 
+[node name="Speed" type="Button" parent="Margin/Panel/Inner/Columns/Right/Toggles"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+tooltip_text = "Battle speed (animations only)"
+text = "1×"
+
 [node name="Actions" type="HFlowContainer" parent="Margin/Panel/Inner/Columns/Right"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 80)

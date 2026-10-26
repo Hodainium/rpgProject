@@ -23,6 +23,8 @@ display_name = "Pyromancer"
 display_color = Color(1, 0.27058825, 0, 1)
 tags = Array[StringName]([&"Character.Pyromancer"])
 level_effect = ExtResource("90_growth")
+role = "Damage dealer: damage over time"
+description = "Sets everything on fire. Ignite and Inferno stack Burn, Fire hits charge the ult fast, Supernova ends fights."
 stats_x100 = Dictionary[String, int]({
 "atk": 50000,
 "crit_dmg": 5000,

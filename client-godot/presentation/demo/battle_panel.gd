@@ -19,12 +19,18 @@ var _aiming: BattleAbility
 @onready var _actions: HFlowContainer = %Actions
 @onready var _skip: CheckBox = %Skip
 @onready var _auto: CheckBox = %Auto
+@onready var _speed: Button = %Speed
+
+## Spec playable-demo 3.6: the battle speed (1 or 2), kept between battles. It sets Engine.time_scale only while a
+## battle is open: presentation only, the gate still waits on the animations' execute keys, so replay is unaffected.
+var _speed_scale: float = 1.0
 
 
 func setup(main: GameMain) -> void:
 	_main = main
 	_skip.toggled.connect(_on_skip_toggled)
 	_auto.toggled.connect(_on_auto_toggled)
+	_speed.pressed.connect(_on_speed_pressed)
 	main.run_changed.connect(_bind)
 	main.battle_prepared.connect(_on_battle_prepared)
 	main.mode_changed.connect(func(_mode): _update_visible())
@@ -47,6 +53,13 @@ func _on_auto_toggled(on: bool) -> void:
 		_auto_pick(_waiting)
 
 
+func _on_speed_pressed() -> void:
+	_speed_scale = 1.0 if _speed_scale > 1.0 else 2.0
+	_speed.text = "%d×" % int(_speed_scale)
+	if _battle != null:
+		Engine.time_scale = _speed_scale
+
+
 func _on_skip_toggled(on: bool) -> void:
 	if _gate != null:
 		_gate.skip_all = on
@@ -67,6 +80,7 @@ func _on_battle_prepared(recorder: ActionRecorder, gate: ViewGate) -> void:
 
 func _on_battle_started(battle: Battle) -> void:
 	_battle = battle
+	Engine.time_scale = _speed_scale
 	battle.execution_resolved.connect(func(_u, _r, _t): _refresh_stats())
 	battle.turn_started.connect(func(_u, _t): _refresh_stats())
 	# Spec item-pass: hit marks (crit / weak / break), Broken and recovery, One More.
@@ -107,6 +121,7 @@ func _on_damage_dealt(_source: StringName, target_id: StringName, amount: int, h
 
 func _on_battle_finished(outcome: String) -> void:
 	_battle = null
+	Engine.time_scale = 1.0
 	_waiting = null
 	_aiming = null
 	_clear_actions()

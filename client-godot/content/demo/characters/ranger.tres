@@ -23,6 +23,8 @@ display_name = "Ranger"
 display_color = Color(0.13333334, 0.54509807, 0.13333334, 1)
 tags = Array[StringName]([&"Character.Ranger"])
 level_effect = ExtResource("90_growth")
+role = "Specialist: follow-ups"
+description = "Marks a target to make it weak to Physical; every weakness hit triggers a follow-up shot, and follow-ups charge Rain of Arrows."
 stats_x100 = Dictionary[String, int]({
 "atk": 48000,
 "crit_dmg": 5000,

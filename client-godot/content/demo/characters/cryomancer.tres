@@ -23,6 +23,8 @@ display_name = "Cryomancer"
 display_color = Color(0, 0.7490196, 1, 1)
 tags = Array[StringName]([&"Character.Cryomancer"])
 level_effect = ExtResource("90_growth")
+role = "Damage dealer: control"
+description = "Ice that freezes and breaks. Glacial Spike and Blizzard lock enemies down; Absolute Zero freezes the whole field."
 stats_x100 = Dictionary[String, int]({
 "atk": 47000,
 "crit_dmg": 5000,

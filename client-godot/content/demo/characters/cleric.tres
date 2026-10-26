@@ -31,6 +31,8 @@ display_name = "Cleric"
 display_color = Color(0.18039216, 0.54509807, 0.34117648, 1)
 tags = Array[StringName]([&"Character.Cleric"])
 level_effect = ExtResource("90_growth")
+role = "Support: healer"
+description = "Keeps the party standing. Heals and Purify in battle; Sanctuary shields everyone, Resurrection brings the fallen back."
 default_loadout = SubResource("Resource_ud7a5")
 stats_x100 = Dictionary[String, int]({
 "atk": 35000,

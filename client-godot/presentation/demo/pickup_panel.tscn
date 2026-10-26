@@ -39,6 +39,6 @@ theme_override_constants/margin_bottom = 12
 
 [node name="Rows" type="VBoxContainer" parent="Margin/Panel/Inner"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(460, 0)
+custom_minimum_size = Vector2(520, 0)
 layout_mode = 2
 theme_override_constants/separation = 8

@@ -22,6 +22,8 @@ display_name = "Ember Knight"
 display_color = Color(1, 0.3882353, 0.2784314, 1)
 tags = Array[StringName]([&"Character.EmberKnight"])
 level_effect = ExtResource("90_growth")
+role = "Damage dealer: break"
+description = "Brands enemies weak to Fire and breaks them. Complete Combustion unlocks Fyrefly Strike and hits Broken foes hardest."
 stats_x100 = Dictionary[String, int]({
 "atk": 50000,
 "broken_dmg": 4000,

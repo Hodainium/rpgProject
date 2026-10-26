@@ -47,8 +47,8 @@ func _refresh() -> void:
 			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			row.add_child(icon)
 		var label := Label.new()
-		label.text = "%s%s%s" % [item.display_name, " (use)" if item.is_usable() else "",
-			"  %d coins" % pickup["price"] if pickup["price"] > 0 else ""]
+		label.text = "%s%s%s" % [item.display_name, " (use)" if item.is_usable() else "", _price(run, pickup)]
+		_mark_rarity(label, item.tags)
 		label.tooltip_text = item.description
 		label.mouse_filter = Control.MOUSE_FILTER_PASS
 		label.size_flags_horizontal = SIZE_EXPAND_FILL
@@ -61,10 +61,11 @@ func _refresh() -> void:
 				picker.set_item_disabled(picker.item_count - 1, true)
 		row.add_child(picker)
 		var take := Button.new()
-		take.text = "Buy" if pickup["price"] > 0 else "Take"
+		take.text = "Buy" if pickup["price"] > 0 or pickup.has("priceItem") else "Take"
 		take.pressed.connect(_take.bind(pickup["placement"], picker))
 		row.add_child(take)
 		_rows.add_child(row)
+		_add_description(item.description)
 
 
 ## Armor (spec item-pass 3.5): always taken into the armor inventory, so no "give to" picker; shows its slot.
@@ -75,17 +76,56 @@ func _armor_row(run: RunController, pickup: Dictionary) -> void:
 	visible = true
 	var row := HBoxContainer.new()
 	var label := Label.new()
-	label.text = "%s (%s)%s" % [piece.display_name, String(piece.slot).get_slice(".", 2),
-		"  %d coins" % pickup["price"] if pickup["price"] > 0 else ""]
+	label.text = "%s (%s)%s" % [piece.display_name, String(piece.slot).get_slice(".", 2), _price(run, pickup)]
+	_mark_rarity(label, piece.tags)
 	label.tooltip_text = piece.description
 	label.mouse_filter = Control.MOUSE_FILTER_PASS
 	label.size_flags_horizontal = SIZE_EXPAND_FILL
 	row.add_child(label)
 	var take := Button.new()
-	take.text = "Buy" if pickup["price"] > 0 else "Take"
+	take.text = "Buy" if pickup["price"] > 0 or pickup.has("priceItem") else "Take"
 	take.pressed.connect(_take.bind(pickup["placement"], null))
 	row.add_child(take)
 	_rows.add_child(row)
+	_add_description(piece.description)
+
+
+## Spec playable-demo 3.6/3.8: "  12 coins", or what an altar costs instead ("  costs a Void Scar: -10% max HP").
+static func _price(run: RunController, pickup: Dictionary) -> String:
+	if pickup.has("priceItem"):
+		var curse: ItemDefinition = run.content.items.get(StringName(str(pickup["priceItem"])))
+		if curse == null:
+			return "  costs %s" % pickup["priceItem"]
+		return "  costs a %s%s" % [curse.display_name, ": " + curse.description if curse.description != "" else ""]
+	return "  %d coins" % pickup["price"] if pickup["price"] > 0 else ""
+
+
+const RARITY_COLORS: Dictionary = {
+	"Common": Color(0.9, 0.9, 0.9), "Rare": Color(0.45, 0.7, 1.0), "Epic": Color(0.8, 0.5, 1.0),
+	"Legendary": Color(1.0, 0.75, 0.3),
+}
+
+
+## "[Epic] " before the name, in the tier's color, from the Item.Rarity.* tag.
+static func _mark_rarity(label: Label, tags: Array[StringName]) -> void:
+	for tag in tags:
+		if String(tag).begins_with("Item.Rarity."):
+			var tier := String(tag).get_slice(".", 2)
+			label.text = "[%s] %s" % [tier, label.text]
+			label.add_theme_color_override("font_color", RARITY_COLORS.get(tier, Color.WHITE))
+			return
+
+
+## The description in small grey type under its row.
+func _add_description(text: String) -> void:
+	if text == "":
+		return
+	var label := Label.new()
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.modulate = Color(0.75, 0.75, 0.75)
+	label.add_theme_font_size_override("font_size", 13)
+	_rows.add_child(label)
 
 
 func _take(placement: int, picker: OptionButton) -> void:

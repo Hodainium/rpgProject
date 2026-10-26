@@ -24,6 +24,8 @@ display_name = "Shatterweaver"
 display_color = Color(0.9411765, 0.5019608, 0.5019608, 1)
 tags = Array[StringName]([&"Character.Shatterweaver"])
 level_effect = ExtResource("90_growth")
+role = "Support: break"
+description = "Fracture Field makes the whole party break faster and hit Broken enemies harder. Shatter Chorus breaks everything at once."
 stats_x100 = Dictionary[String, int]({
 "atk": 38000,
 "crit_dmg": 5000,

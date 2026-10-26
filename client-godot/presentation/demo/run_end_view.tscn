@@ -42,8 +42,25 @@ custom_minimum_size = Vector2(480, 0)
 layout_mode = 2
 autowrap_mode = 3
 
-[node name="Back" type="Button" parent="Center/Panel/Inner/Box"]
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Inner/Box"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PlayAgain" type="Button" parent="Center/Panel/Inner/Box/Buttons"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Back to menu"
+size_flags_horizontal = 3
+text = "Play again"
+
+[node name="NewRun" type="Button" parent="Center/Panel/Inner/Box/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "New run"
+
+[node name="Back" type="Button" parent="Center/Panel/Inner/Box/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Menu"
 metadata/sound = "back"

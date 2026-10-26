@@ -23,6 +23,8 @@ display_name = "Bard"
 display_color = Color(1, 0.4117647, 0.7058824, 1)
 tags = Array[StringName]([&"Character.Bard"])
 level_effect = ExtResource("90_growth")
+role = "Support: buffs and debuffs"
+description = "Anthem speeds up and strengthens the party, Discord weakens enemies. Finale lets the whole party act at once."
 stats_x100 = Dictionary[String, int]({
 "atk": 38000,
 "crit_dmg": 5000,
