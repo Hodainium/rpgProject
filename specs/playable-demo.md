@@ -546,7 +546,7 @@ protects is that **adding a second run and a second floor doesn't change any exi
 | Illegal move found in a log on replay | 2002 `IllegalAbility` / `InvalidTarget` (existing reasons) | existing tampered goldens |
 | Strange but legal battle (wasted ults, heals on full HP, drain hits) | Replays Verified with the same hash | `test_chaos_policy` replays every battle |
 | Chaos policy changes the battle's RNG | Can't: own `dev/chaos/<seq>` stream; checked by replaying without the policy | `test_chaos_policy` |
-| Speed toggle changes combat | Can't: `time_scale` affects presentation; combat awaits only the gate | a headless run (no view) vs a scripted window run with 2× give the same run hash (manual, once; not done yet) |
+| Speed toggle changes combat | Can't: `time_scale` affects presentation; combat awaits only the gate | `test_demo_battle_speed_keeps_combat`: one demo battle through `GameMain` with the views and the battle panel's own Skip and Speed buttons, animations skipped, 1× and 2× (the gate waiting on the animations; about 30 ms, 3.4 s and 1.7 s): the same final hash and run hash |
 | Cursed chest's 20% damage on a dead or low member | Existing outcome rules (`apply_party_effect` skips the dead unless `include_dead`; whether it can kill is pinned as built, not changed here) | `test_demo_events` pins the built rule, direction only |
 | Encounter grants or a slot brain change replays | Read from content by encounter id and slot; the verifier builds the same units | `test_encounter_grants_replay` (record → replay Verified), existing goldens unchanged |
 | Rewards on a lost battle | Never applied | `test_encounter_rewards` |
@@ -588,6 +588,7 @@ existing fixtures and goldens stay byte-identical.
   Wandering Medic (needs 15 coins; full heal, the fallen get up), Old Tutor (a level each, or XP and 10 coins), the
   Waystation as The Descent's rest stop (rest heals HP and MP and raises the fallen; train gives a level; move on
   changes nothing).
+- `test_demo_battle_speed_keeps_combat` (4, 3.6): skipped animations, 1× and 2× give the same battle and run hash.
 - `test_demo_floors_differ_per_seed` (4): for the same seed, a chapter's two floors are generated differently (each
   floor draws from its own `floor/<n>/…` stream).
 
