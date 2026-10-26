@@ -17,7 +17,7 @@ func after_each() -> void:
 
 func _start(seed_text: String = "7", party: Array = ["fixture.character.knight", "fixture.character.medic",
 		"fixture.character.rogue"]) -> RunController:
-	var run := RunPlayer.start(host, seed_text, party)
+	var run := start_run(host, seed_text, party)
 	_runs.append(run)
 	return run
 

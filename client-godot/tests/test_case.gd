@@ -41,6 +41,17 @@ static func fixtures() -> ContentIndex:
 	return _content
 
 
+## A RunController under `host`, started on the fixtures with the given party and seed (for RunPlayer runs).
+static func start_run(host_node: Node, seed_text: String, party: Array = ["fixture.character.knight",
+		"fixture.character.medic", "fixture.character.rogue"]) -> RunController:
+	var run := RunController.new()
+	host_node.add_child(run)
+	var error := run.start_run(fixtures(), party, seed_text)
+	if error != "":
+		push_error("TestCase.start_run: " + error)
+	return run
+
+
 ## A BattleSnapshot dictionary in the C# field order. party: [[slot, "unit name"], ...].
 static func snapshot(encounter: String, party: Array, seed_text: String = "1", battle_id: String = "") -> Dictionary:
 	var members: Array = []

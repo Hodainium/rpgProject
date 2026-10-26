@@ -98,8 +98,8 @@ func test_generation_pools() -> void:
 
 
 func test_streams_independent_of_exploration_order() -> void:
-	var a := RunPlayer.start(host, "99")
-	var b := RunPlayer.start(host, "99")
+	var a := start_run(host, "99")
+	var b := start_run(host, "99")
 	var map: FloorMap = a.state.map
 	var reachable := []
 	for index in map.neighbours(map.start):

@@ -104,9 +104,10 @@ func load_content() -> void:
 
 
 ## Starts a run with the chosen characters (ids) and a seed typed as a decimal string. "" or the error.
-func start_run(character_ids: Array, seed_text: String) -> String:
+## `run_id` picks the RunStructure (spec playable-demo 2.2); empty = the only or the default one.
+func start_run(character_ids: Array, seed_text: String, run_id: StringName = &"") -> String:
 	_new_run()
-	var error := run.start_run(content, character_ids, seed_text)
+	var error := run.start_run(content, character_ids, seed_text, run_id)
 	if error != "":
 		set_mode("end")
 	return error
@@ -119,6 +120,24 @@ func start_sandbox(request: SandboxRequest) -> String:
 	if error != "":
 		set_mode("end")
 	return error
+
+
+## The content root's runs for a picker, sorted by id: [{"id", "name", "default"}] (default = what an empty id starts).
+func runs() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if content == null:
+		return result
+	var default_id: StringName = &""
+	var picked := RunController.pick_run(content)
+	if picked["error"] == "":
+		default_id = picked["run"].id
+	var ids := content.runs.keys()
+	ids.sort_custom(func(a, b) -> bool: return String(a) < String(b))
+	for id in ids:
+		var structure: RunStructure = content.runs[id]
+		result.append({"id": id, "name": structure.display_name if structure.display_name != "" else String(id),
+			"default": id == default_id})
+	return result
 
 
 func _new_run() -> void:

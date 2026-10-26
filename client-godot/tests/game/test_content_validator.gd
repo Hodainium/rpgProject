@@ -15,6 +15,7 @@ const EXPECTED_ERRORS: Array = [
 	["bad_equipment", "equipment/bad_equipment.tres"], ["placement_both", "rooms/placement_both.tres"],
 	["ult_triggered", "characters/ult_triggered.tres"],
 	["phase_order", "enemies/phase_order.tres"], ["pattern_unknown_ability", "enemies/pattern_unknown.tres"],
+	["run_default_twice", "runs/default_b.tres"],
 ]
 const EXPECTED_WARNINGS: Array = [
 	["incomplete", "encounters/incomplete.tres"], ["empty_item_pool", "rooms/empty_item_pool.tres"],

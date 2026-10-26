@@ -53,6 +53,7 @@ static func validate(content_index: ContentIndex, options: Dictionary = {}) -> A
 		validator._check_layout(content_index.layouts[id])
 	for id in _sorted(content_index.runs):
 		validator._check_run(content_index.runs[id], int(options.get("generate_seeds", 0)))
+	validator._check_default_run()
 	if options.get("tags", true):
 		validator._check_tags()
 	return validator._sorted_issues()
@@ -644,6 +645,20 @@ func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 				if result["error"] != "":
 					_error("generation_fails", where, "floor %d, chapter %s, seed %d: %s" % [floor_index, chapter.id, seed_value, result["error"]])
 					break
+
+
+## Spec playable-demo 2.2: with several runs, exactly one should be default_run (an empty run id starts it).
+func _check_default_run() -> void:
+	var defaults: Array = []
+	for id in _sorted(content.runs):
+		if content.runs[id].default_run:
+			defaults.append(content.runs[id])
+	for structure in defaults.slice(1):
+		_error("run_default_twice", structure.resource_path + "::default_run", "%s and %s are both default_run"
+			% [defaults[0].id, structure.id])
+	if content.runs.size() > 1 and defaults.is_empty():
+		_warning("run_no_default", "", "%d runs and none is default_run: the menu and `new` must name one"
+			% content.runs.size())
 
 
 ## Every gas::tag value in the content against the registry; Dev.* is reserved for dev decisions.

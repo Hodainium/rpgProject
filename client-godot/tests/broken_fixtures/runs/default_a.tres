@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="RunStructure" format=3]
+
+[ext_resource type="Resource" path="res://tests/broken_fixtures/items/fallback.tres" id="1_ctqec"]
+[ext_resource type="Script" path="res://game/defs/floor_slot.gd" id="2_kyh7w"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="3_fox5x"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/chapters/gen.tres" id="4_bx8yj"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/layouts/bad_layout.tres" id="5_rp4n6"]
+[ext_resource type="Script" path="res://game/defs/run_structure.gd" id="6_73pmc"]
+
+[sub_resource type="Resource" id="Resource_noe4p"]
+script = ExtResource("2_kyh7w")
+chapters = Array[ExtResource("3_fox5x")]([ExtResource("4_bx8yj")])
+layout = ExtResource("5_rp4n6")
+
+[resource]
+script = ExtResource("6_73pmc")
+id = &"broken.run.default_a"
+floors = Array[ExtResource("2_kyh7w")]([SubResource("Resource_noe4p")])
+fallback_item = ExtResource("1_ctqec")
+default_run = true

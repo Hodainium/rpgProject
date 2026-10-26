@@ -38,6 +38,8 @@ var pending_battle: Dictionary = {}
 var battle_log: Array[Dictionary] = []
 ## The item whose run hook is running (null otherwise); an empty RemoveItem in a hook removes it.
 var hook_item: ItemDefinition
+## Spec playable-demo 3.1: what run_summary() can't read from the log (coins in and out, enemies beaten). Never hashed.
+var _tally: Dictionary = {}
 
 var _directive: String = ""
 var _directive_page: int = 0
@@ -47,8 +49,9 @@ var _directive_encounter: EncounterDefinition
 # --- Run and floors -------------------------------------------------------------------------------------------------
 
 ## Starts a run with 1-4 characters (ids of CharacterDefinitions) and a seed typed as a decimal string or seed code.
-func start_run(content_index: ContentIndex, character_ids: Array, seed_text: String) -> String:
-	var error := _begin_run(content_index, character_ids, seed_text)
+## `run_id` names the RunStructure; empty picks it as pick_run() does (spec playable-demo 2.2).
+func start_run(content_index: ContentIndex, character_ids: Array, seed_text: String, run_id: StringName = &"") -> String:
+	var error := _begin_run(content_index, character_ids, seed_text, run_id)
 	if error != "":
 		return error
 	run_started.emit()
@@ -66,7 +69,7 @@ func start_sandbox(content_index: ContentIndex, request: SandboxRequest) -> Stri
 		return _stop("a sandbox needs a room or a layout")
 	if request.room != null and request.room.id == &"":
 		return _stop("the room needs an id before it can be played")
-	var error := _begin_run(content_index.overlay(extra), request.party, str(request.seed))
+	var error := _begin_run(content_index.overlay(extra), request.party, str(request.seed), &"", true)
 	if error != "":
 		return error
 	state.sandbox = true
@@ -112,14 +115,38 @@ func _sandbox_chapter(request: SandboxRequest) -> ChapterDefinition:
 	return content.chapters[ids[0]] if not ids.is_empty() else null
 
 
+## The RunStructure to start (spec playable-demo 2.2): `run_id` when given; else the only run; else the one flagged
+## default_run. `lenient` (sandboxes, which only need a run's slots and fallback item) falls back to the first id.
+## {"run": RunStructure or null, "error": String}.
+static func pick_run(content_index: ContentIndex, run_id: StringName = &"", lenient: bool = false) -> Dictionary:
+	var ids := content_index.runs.keys()
+	ids.sort_custom(func(a, b) -> bool: return String(a) < String(b))
+	if run_id != &"":
+		if not content_index.runs.has(run_id):
+			return {"run": null, "error": "unknown run '%s'" % run_id}
+		return {"run": content_index.runs[run_id], "error": ""}
+	if ids.is_empty():
+		return {"run": null, "error": "the content root has no RunStructure"}
+	if ids.size() == 1:
+		return {"run": content_index.runs[ids[0]], "error": ""}
+	for id in ids:
+		if content_index.runs[id].default_run:
+			return {"run": content_index.runs[id], "error": ""}
+	if lenient:
+		return {"run": content_index.runs[ids[0]], "error": ""}
+	return {"run": null, "error": "several runs and none is default: %s" % ", ".join(ids)}
+
+
 ## Everything start_run does before the first floor: checks, run state, party from default loadouts, the start_run entry.
-func _begin_run(content_index: ContentIndex, character_ids: Array, seed_text: String) -> String:
+func _begin_run(content_index: ContentIndex, character_ids: Array, seed_text: String, run_id: StringName = &"",
+		lenient: bool = false) -> String:
 	content = content_index
 	if not content.problems.is_empty():
 		return _stop("content problems: " + "; ".join(content.problems))
-	if content.runs.size() != 1:
-		return _stop("the content root needs exactly one RunStructure, found %d" % content.runs.size())
-	structure = content.runs.values()[0]
+	var picked := pick_run(content, run_id, lenient)
+	if picked["error"] != "":
+		return _stop(picked["error"])
+	structure = picked["run"]
 	if structure.floors.is_empty():
 		return _stop("run structure %s has no floors" % structure.id)
 	var seed_value := RunSeeds.parse(seed_text)
@@ -132,6 +159,7 @@ func _begin_run(content_index: ContentIndex, character_ids: Array, seed_text: St
 	state.run_id = "run-%d" % seed_value
 	state.run_structure_id = structure.id
 	run_log.clear()
+	_tally = {"coinsEarned": 0, "coinsSpent": 0, "enemiesDefeated": 0}
 	for index in character_ids.size():
 		var character: CharacterDefinition = content.characters.get(StringName(str(character_ids[index])))
 		if character == null:
@@ -140,7 +168,10 @@ func _begin_run(content_index: ContentIndex, character_ids: Array, seed_text: St
 	_refresh_party(true)
 	if runner_error != "":
 		return runner_error
-	run_log.append({"type": "start_run", "seed": str(seed_value), "party": character_ids.duplicate()})
+	var start_entry := {"type": "start_run", "seed": str(seed_value), "party": character_ids.duplicate()}
+	if content.runs.size() > 1:
+		start_entry["run"] = String(structure.id)  # only when there is a choice, so one-run logs stay unchanged
+	run_log.append(start_entry)
 	return ""
 
 
@@ -237,6 +268,34 @@ func is_last_floor() -> bool:
 	return state.floor_index + 1 >= structure.floors.size()
 
 
+## Spec playable-demo 3.1: the run so far for the end screen and the play report. Read-only; counted from run_log,
+## plus coins and enemies beaten (tallied as they happen). {} before a run starts.
+func run_summary() -> Dictionary:
+	if state == null:
+		return {}
+	var counts := {"battle_won": 0, "battle_lost": 0, "take": 0, "armor": 0, "choose": 0, "field": 0, "next_floor": 0}
+	for entry in run_log:
+		match str(entry["type"]):
+			"battle":
+				counts["battle_won" if entry["outcome"] == Battle.VICTORY else "battle_lost"] += 1
+			"take", "buy":
+				counts["armor" if entry.get("kind", "") == FloorGenerator.EQUIPMENT_KIND else "take"] += 1
+			"choose", "field", "next_floor":
+				counts[entry["type"]] += 1
+	var room := current_room() if state.map != null and state.current_cell >= 0 else null
+	return {
+		"status": state.status, "run": String(state.run_structure_id), "seed": RunSeeds.display(state.run_seed),
+		"floorReached": state.floor_index + 1, "floors": structure.floors.size() if structure != null else 0,
+		"floorsCleared": counts["next_floor"] + (1 if state.boss_cleared else 0),
+		"battlesWon": counts["battle_won"], "battlesLost": counts["battle_lost"],
+		"enemiesDefeated": _tally.get("enemiesDefeated", 0), "itemsTaken": counts["take"], "armorTaken": counts["armor"],
+		"eventChoices": counts["choose"], "fieldActions": counts["field"], "coins": state.coins,
+		"coinsEarned": _tally.get("coinsEarned", 0), "coinsSpent": _tally.get("coinsSpent", 0),
+		"endedIn": {"floor": state.floor_index + 1, "room": String(room.id) if room != null else "",
+			"encounter": _tally.get("lastEncounter", "") if state.status == RunState.LOST else ""},
+	}
+
+
 # --- Map ------------------------------------------------------------------------------------------------------------
 
 ## Isaac rules: any room next to a visited one; revisiting is allowed; nothing while a battle or event is open.
@@ -328,6 +387,7 @@ func fight(controller: Object, gate: PresentationGate = null) -> String:
 		battle.queue_free()
 		return _stop("battle %s: %s" % [snapshot["battleId"], message_text])
 	var won := battle.outcome == Battle.VICTORY
+	_tally["lastEncounter"] = String(pending_battle["encounter"])
 	run_log.append({
 		"type": "battle", "floor": state.floor_index, "cell": pending_battle["cell"], "battleId": snapshot["battleId"],
 		"outcome": battle.outcome, "finalHash": battle.final_hash,
@@ -341,6 +401,7 @@ func fight(controller: Object, gate: PresentationGate = null) -> String:
 	pending_battle = {}
 	battle_finished.emit(battle.outcome)
 	if won:
+		_tally["enemiesDefeated"] += snapshot["enemies"].size()
 		_clear_room(cell, true)
 	else:
 		_end(RunState.LOST)
@@ -542,6 +603,7 @@ func take(placement: int, slot: int) -> String:
 		if pickup.get("kind", "") == FloorGenerator.EQUIPMENT_KIND:
 			# Spec item-pass 3.5: armor always goes into the armor inventory; nobody has to hold it.
 			state.coins -= pickup["price"]
+			_tally["coinsSpent"] += pickup["price"]
 			pickup["taken"] = true
 			run_log.append({"type": "buy" if pickup["price"] > 0 else "take", "floor": state.floor_index,
 				"cell": state.current_cell, "placement": placement, "kind": FloorGenerator.EQUIPMENT_KIND})
@@ -552,6 +614,7 @@ func take(placement: int, slot: int) -> String:
 		if problem != "":
 			return problem
 		state.coins -= pickup["price"]
+		_tally["coinsSpent"] += pickup["price"]
 		pickup["taken"] = true
 		run_log.append({"type": "buy" if pickup["price"] > 0 else "take", "floor": state.floor_index,
 			"cell": state.current_cell, "placement": placement, "slot": slot})
@@ -785,7 +848,10 @@ func _refresh_party(full: bool) -> void:
 # --- Outcome API (called by RunOutcome subclasses) -------------------------------------------------------------------
 
 func add_coins(amount: int) -> void:
+	var before := state.coins
 	state.coins = maxi(state.coins + amount, 0)
+	if not _tally.is_empty():
+		_tally["coinsEarned" if amount > 0 else "coinsSpent"] += absi(state.coins - before)
 	party_changed.emit()
 
 

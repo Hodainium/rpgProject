@@ -1,4 +1,4 @@
-## Test-only party controller: a fixed policy standing in for the player, recording the action log like
+## Dev and test party controller (RunPlayer, the play report, tests): a fixed policy standing in for the player, recording the action log like
 ## ActionRecorder does. It never touches the battle RNG (the player's choices are inputs, not simulation).
 ##
 ## Policy: each unit rotates through its own abilities in grant order (so every ability gets used), skipping ones

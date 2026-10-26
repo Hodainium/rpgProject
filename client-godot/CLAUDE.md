@@ -158,6 +158,10 @@ from C#.**
   method to system code, never to content.
 - **Never point `create`, `grid ... save` or the dock at `res://content/` on Claude's own initiative.** Test on
   `user://` copies or fixtures; the user's files change only through `Edit`/`Write` and their permission prompt.
+- **Play whole runs headless** (spec `playable-demo`): `res://game/tools/seed_report.tscn -- --play [--policy chaos]
+  [--check] --count 200 --out <report.json>` (large `--quit-after`). Auto plays `RunPlayer`'s policy; chaos plays
+  bad and illegal moves on its own seeded stream, checks invariants and replays every battle; failing battles are saved
+  next to the report for `replay_main` / `trace_main --diff`. Exit 3 on a stopped run or a violation.
 - **Check content:** `res://game/tools/validate_content.tscn` (exit 3 on content errors) and the `test_content_valid`
   content test. Seed statistics: `res://game/tools/seed_report.tscn -- --count 1000 --floor 0`.
 - Rebuild generated dev and test data only on purpose: `game/tools/build_dev_content.tscn` (dev effects and stat items),

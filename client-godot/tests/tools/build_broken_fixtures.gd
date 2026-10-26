@@ -104,7 +104,7 @@ func _ready() -> void:
 		cell.room = rooms["gen_normal"]
 		cell.role = entry[1]
 		layout.cells.append(cell)
-	_save("layouts", "bad_layout", layout)
+	layout = _save("layouts", "bad_layout", layout)
 
 	# Chapters: one whose room query matches nothing, one whose rooms all weigh 0, one whose rules can't be met.
 	var scaling := ScalingRules.new()
@@ -132,6 +132,19 @@ func _ready() -> void:
 	run.floors.append(slot)
 	run.fallback_item = fallback
 	_save("runs", "run", run)
+
+	# Spec playable-demo 2.2: two runs flagged default_run (run_default_twice on the second id). Their floor is the
+	# layout, so the validator doesn't generate it.
+	for name in ["default_a", "default_b"]:
+		var flagged := RunStructure.new()
+		flagged.id = StringName("broken.run." + name)
+		flagged.default_run = true
+		var fixed := FloorSlot.new()
+		fixed.chapters.append(gen)
+		fixed.layout = layout
+		flagged.floors.append(fixed)
+		flagged.fallback_item = fallback
+		_save("runs", name, flagged)
 
 	# Spec item-pass: equipment without a slot, a placement offering an item and equipment, a trigger typo.
 	var no_slot := EquipmentDefinition.new()

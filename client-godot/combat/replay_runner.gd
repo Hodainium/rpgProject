@@ -29,6 +29,12 @@ var runner_error: String = ""
 ## Runs the replay under `host` (a node inside the scene tree). Returns the ReplayResult JSON shape (field order
 ## matching the C# record) or {"runnerError": ...}.
 func run(request: Dictionary, content_root: String, host: Node) -> Dictionary:
+	return await run_on(request, ContentIndex.new(content_root), host)
+
+
+## run() on a content index already loaded (spec playable-demo 2.3b: the play report replays every battle of a run on
+## the index the run used, so dev overlays and in-memory content replay as recorded).
+func run_on(request: Dictionary, content: ContentIndex, host: Node) -> Dictionary:
 	var problem := _validate_request(request)
 	if problem != "":
 		return _error(problem)
@@ -38,7 +44,7 @@ func run(request: Dictionary, content_root: String, host: Node) -> Dictionary:
 	var battle := Battle.new()
 	battle.name = "ReplayBattle"
 	host.add_child(battle)
-	var setup_error := battle.setup(snapshot, ContentIndex.new(content_root), HeadlessGate.new())
+	var setup_error := battle.setup(snapshot, content, HeadlessGate.new())
 	if setup_error != "":
 		battle.queue_free()
 		return _error(setup_error)

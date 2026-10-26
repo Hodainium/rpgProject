@@ -21,5 +21,5 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 	var seed_text := " ".join(args)  # a code may be typed with its space
 	if RunSeeds.parse(seed_text) < 0:
 		return ctx.fail("not a seed: %s" % seed_text)
-	var error := ctx.game.start_run(ctx.run.state.party_characters(), seed_text)
+	var error := ctx.game.start_run(ctx.run.state.party_characters(), seed_text, ctx.run.state.run_structure_id)
 	return ctx.fail(error) if error != "" else "new run, seed %s" % RunSeeds.display(RunSeeds.parse(seed_text))

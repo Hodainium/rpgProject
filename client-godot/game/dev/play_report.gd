@@ -1,0 +1,281 @@
+## The auto-play report (spec playable-demo 2.3, 2.3b): whole runs played headless on a fixed policy, for tuning and
+## stress tests. Dev only. RunPlayer drives the run; battles use ScriptedController ("auto") or ChaosController
+## ("chaos": bad and illegal moves, each battle checked by InvariantChecker and replayed through ReplayRunner).
+## Deterministic: seeds run in order in one process, no wall clock in the result, integers only, keys sorted.
+class_name PlayReport
+extends RefCounted
+
+const POLICIES: Array[String] = ["auto", "chaos"]
+const DEFAULTS: Dictionary = {"run": "", "party": [], "policy": "auto", "illegal": 20, "check": false,
+	"max_steps": 400, "trace": false}
+
+
+## Plays seeds from..from+count-1. options: DEFAULTS keys ("party" [] = the first two selectable characters by id;
+## "illegal" a percent; "check" = invariants and replay, always on for chaos). The result also holds "failures" (each
+## failing battle's request and traces, too big for the report file): take it out before saving; see save_failures().
+static func many(content: ContentIndex, host: Node, from: int, count: int, options: Dictionary = {}) -> Dictionary:
+	var opts := _options(content, options)
+	var runs: Array[Dictionary] = []
+	var failures: Array = []
+	for seed_value in range(from, from + count):
+		var record := await play_one(content, host, seed_value, opts)
+		failures.append_array(record["failures"])
+		runs.append(record)
+	var report := summarize(runs, opts, from, count)
+	report["failures"] = failures
+	return report
+
+
+## One seed: {"seed", "status", "stop", "runnerError", "summary", "bossEntry", "battles", "violations", "runHash",
+## "failures"} (failures: replay requests and traces for violations, kept out of the summary).
+static func play_one(content: ContentIndex, host: Node, seed_value: int, options: Dictionary) -> Dictionary:
+	var opts := _options(content, options)
+	var run := RunController.new()
+	run.name = "PlayReportRun"
+	host.add_child(run)
+	var record := {"seed": seed_value, "status": "", "stop": "", "runnerError": "", "summary": {}, "bossEntry": [],
+		"battles": [], "violations": [], "runHash": "", "failures": []}
+	var error := run.start_run(content, opts["party"], str(seed_value), StringName(opts["run"]))
+	if error != "":
+		record["runnerError"] = error
+		run.free()
+		return record
+	var fight := func(active: RunController) -> void:
+		await fight_pending(active, content, host, opts, record)
+	record["stop"] = await RunPlayer.play(run, int(opts["max_steps"]), fight)
+	record["status"] = run.state.status
+	record["runnerError"] = run.runner_error
+	record["summary"] = run.run_summary()
+	record["runHash"] = run.state.run_hash()
+	run.free()
+	return record
+
+
+## Fights the pending battle with the policy's controller, then records it and (check) verifies it.
+static func fight_pending(run: RunController, content: ContentIndex, host: Node, opts: Dictionary, record: Dictionary) -> void:
+	var snapshot := run.battle_snapshot()
+	var encounter := String(run.pending_battle["encounter"])
+	var boss: bool = run.state.map.cells[run.pending_battle["cell"]]["role"] == FloorMap.ROLE_BOSS
+	var chaos: bool = opts["policy"] == "chaos"
+	var check: bool = chaos or opts["check"]
+	var controller: Object
+	if chaos:
+		controller = ChaosController.new(RunSeeds.rng(run.state.run_seed, "dev/chaos/%s" % snapshot["battleId"]),
+			int(opts["illegal"]) * 100)
+	else:
+		controller = ScriptedController.new()
+	var seen := {"battle": null, "checker": null, "turns": 0, "mismatch": {}}
+	var on_start := func(battle: Battle) -> void:
+		seen["battle"] = battle
+		if check:
+			seen["checker"] = InvariantChecker.new(bool(opts["trace"]))
+			battle.trace = seen["checker"]
+		if boss:
+			record["bossEntry"].append(_party_health(battle, run.state.floor_index + 1, encounter))
+		battle.battle_ended.connect(func(_outcome, _hash):
+			seen["turns"] = battle.turn
+			seen["mismatch"] = battle.mismatch.duplicate())
+	run.battle_started.connect(on_start, CONNECT_ONE_SHOT)
+	await run.fight(controller)
+	if run.battle_started.is_connected(on_start):
+		run.battle_started.disconnect(on_start)
+	var entry := _last_battle(run)
+	var battle_record := {"encounter": encounter, "floor": run.state.floor_index + 1, "boss": boss,
+		"outcome": entry.get("outcome", "") if not entry.is_empty() else "", "turns": seen["turns"]}
+	if chaos:
+		battle_record["refused"] = controller.refused.duplicate()
+	record["battles"].append(battle_record)
+	if not check or entry.is_empty():
+		return
+	var where := {"seed": record["seed"], "floor": battle_record["floor"], "battle": record["battles"].size(),
+		"battleId": snapshot["battleId"], "encounter": encounter}
+	var found: Array[Dictionary] = []
+	if not seen["mismatch"].is_empty():
+		found.append({"invariant": "record_rejected", "detail": "%s: %s" % [seen["mismatch"]["reason"], seen["mismatch"]["detail"]]})
+	if seen["checker"] != null:
+		found.append_array(seen["checker"].violations)
+	if chaos:
+		for violation in controller.violations:
+			found.append({"invariant": violation["kind"], "turn": violation["turn"], "unit": violation["unit"],
+				"case": violation["case"], "detail": violation["detail"]})
+	# Record → replay: the log the client would upload, through JSON as the verifier gets it.
+	var request: Dictionary = JSON.parse_string(WireJson.stringify({"snapshot": snapshot, "actionLog": entry["actionLog"]}))
+	var runner := ReplayRunner.new()
+	var result: Dictionary = await runner.run_on(request, content, host)
+	if result.has("runnerError"):
+		found.append({"invariant": "replay_runner_error", "detail": str(result["runnerError"])})
+	elif result["verdict"] != "Verified" or result["finalStateHash"] != entry["finalHash"] or result["outcome"] != entry["outcome"]:
+		var reason: Variant = result["mismatch"]["reason"] if result["mismatch"] != null else null
+		found.append({"invariant": "replay_mismatch", "detail": "verdict %s (%s), hash %s vs %s, outcome %s vs %s" % [
+			result["verdict"], reason, result["finalStateHash"], entry["finalHash"], result["outcome"], entry["outcome"]]})
+	if found.is_empty():
+		return
+	for violation in found:
+		var full := where.duplicate()
+		full.merge(violation)
+		record["violations"].append(full)
+	var replay_trace := ReplayRunner.new()
+	replay_trace.trace = BattleTrace.new(true)
+	await replay_trace.run_on(request, content, host)
+	record["failures"].append({"where": where, "request": request, "replayTrace": replay_trace.trace.to_json(),
+		"recordTrace": seen["checker"].to_json() if seen["checker"] != null and opts["trace"] else null})
+
+
+## Party HP and MP at a battle's start as whole percents of their maximum (×100 values summed over living members).
+@warning_ignore("integer_division")
+static func _party_health(battle: Battle, floor_number: int, encounter: String) -> Dictionary:
+	var totals := {BattleUnit.HP: 0, BattleUnit.MAX_HP: 0, BattleUnit.MP: 0, BattleUnit.MAX_MP: 0}
+	var alive := 0
+	for unit in battle.units():
+		if not unit.is_party():
+			continue
+		if unit.alive:
+			alive += 1
+		for attribute_name in totals:
+			if unit.asc.has_attribute(attribute_name):
+				totals[attribute_name] += unit.stat(attribute_name)
+	return {"floor": floor_number, "encounter": encounter, "alive": alive,
+		"hpPercent": totals[BattleUnit.HP] * 100 / totals[BattleUnit.MAX_HP] if totals[BattleUnit.MAX_HP] > 0 else 0,
+		"mpPercent": totals[BattleUnit.MP] * 100 / totals[BattleUnit.MAX_MP] if totals[BattleUnit.MAX_MP] > 0 else 0}
+
+
+static func _last_battle(run: RunController) -> Dictionary:
+	for index in range(run.run_log.size() - 1, -1, -1):
+		if run.run_log[index]["type"] == "battle":
+			return run.run_log[index]
+	return {}
+
+
+static func _options(content: ContentIndex, options: Dictionary) -> Dictionary:
+	var opts := DEFAULTS.duplicate(true)
+	opts.merge(options, true)
+	if opts["party"].is_empty():
+		var ids: Array = []
+		for id in content.characters:
+			if content.characters[id].selectable:
+				ids.append(String(id))
+		ids.sort()
+		opts["party"] = ids.slice(0, 2)
+	return opts
+
+
+## The aggregate over played runs (per-run lines kept compact, failures left out).
+@warning_ignore("integer_division")
+static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, count: int) -> Dictionary:
+	var report := {"run": opts["run"], "policy": opts["policy"], "party": opts["party"], "from": from, "count": count,
+		"illegalPercent": opts["illegal"] if opts["policy"] == "chaos" else 0, "won": 0, "lost": 0, "stopped": 0,
+		"winPercentX100": 0, "deaths": {}, "floorReached": {}, "bossEntryHpPercent": {}, "turnsPerBattle": {},
+		"coinsSpent": {}, "refused": {}, "violations": [], "runs": []}
+	var boss_hp := {}
+	var turns := {}
+	var coins: Array[int] = []
+	for record in runs:
+		var summary: Dictionary = record["summary"]
+		if record["runnerError"] != "" or record["stop"] != "":
+			report["stopped"] += 1
+		elif record["status"] == RunState.WON:
+			report["won"] += 1
+		elif record["status"] == RunState.LOST:
+			report["lost"] += 1
+			SeedReport._count(report["deaths"], summary["endedIn"]["encounter"])
+		if not summary.is_empty():
+			SeedReport._count(report["floorReached"], str(summary["floorReached"]))
+			coins.append(int(summary["coinsSpent"]))
+		for entry in record["bossEntry"]:
+			var key := "floor %d" % entry["floor"]
+			if not boss_hp.has(key):
+				var values: Array[int] = []
+				boss_hp[key] = values
+			boss_hp[key].append(int(entry["hpPercent"]))
+		for battle in record["battles"]:
+			if not turns.has(battle["encounter"]):
+				var values: Array[int] = []
+				turns[battle["encounter"]] = values
+			turns[battle["encounter"]].append(int(battle["turns"]))
+			for case in battle.get("refused", {}):
+				report["refused"][case] = report["refused"].get(case, 0) + battle["refused"][case]
+		report["violations"].append_array(record["violations"])
+		report["runs"].append({"seed": record["seed"], "status": record["status"], "stop": record["stop"],
+			"runnerError": record["runnerError"], "floorReached": summary.get("floorReached", 0),
+			"battles": record["battles"].size(), "violations": record["violations"].size(), "runHash": record["runHash"]})
+	report["winPercentX100"] = report["won"] * 10000 / count if count > 0 else 0
+	for key in boss_hp:
+		report["bossEntryHpPercent"][key] = spread(boss_hp[key])
+	for key in turns:
+		report["turnsPerBattle"][key] = spread(turns[key])
+	report["coinsSpent"] = spread(coins)
+	for key in ["deaths", "floorReached", "bossEntryHpPercent", "turnsPerBattle", "refused"]:
+		report[key] = SeedReport._sorted(report[key])
+	return report
+
+
+## min, median (lower middle), average ×100 and max of whole numbers; {} when empty.
+@warning_ignore("integer_division")
+static func spread(values: Array[int]) -> Dictionary:
+	if values.is_empty():
+		return {}
+	var sorted := values.duplicate()
+	sorted.sort()
+	var result := SeedReport._spread(values)
+	result["median"] = sorted[(sorted.size() - 1) / 2]
+	return result
+
+
+## The report as text: outcome counts, deaths, boss-entry HP, turns per encounter, violations.
+static func text(report: Dictionary) -> String:
+	var lines := PackedStringArray(["%s policy%s, run %s, party %s, seeds %d..%d" % [report["policy"],
+		" (%d%% illegal)" % report["illegalPercent"] if report["policy"] == "chaos" else "",
+		report["run"] if report["run"] != "" else "(default)", ",".join(report["party"]), report["from"],
+		report["from"] + report["count"] - 1]])
+	lines.append("  won %d  lost %d  stopped %d  (win rate %.2f%%)" % [report["won"], report["lost"], report["stopped"],
+		report["winPercentX100"] / 100.0])
+	lines.append("  floor reached: %s" % _pairs(report["floorReached"]))
+	lines.append("  deaths: %s" % _pairs(report["deaths"], true))
+	for key in report["bossEntryHpPercent"]:
+		var spread_entry: Dictionary = report["bossEntryHpPercent"][key]
+		lines.append("  boss entry HP %%, %s: min %d  median %d  max %d" % [key, spread_entry["min"], spread_entry["median"],
+			spread_entry["max"]])
+	for key in report["turnsPerBattle"]:
+		var spread_entry: Dictionary = report["turnsPerBattle"][key]
+		lines.append("  turns, %s: median %d  max %d" % [key, spread_entry["median"], spread_entry["max"]])
+	if not report["coinsSpent"].is_empty():
+		lines.append("  coins spent per run: median %d  max %d" % [report["coinsSpent"]["median"], report["coinsSpent"]["max"]])
+	if report["policy"] == "chaos":
+		lines.append("  illegal moves refused: %s" % _pairs(report["refused"]))
+	lines.append("  violations: %d" % report["violations"].size())
+	for violation in report["violations"].slice(0, 20):
+		lines.append("    seed %d, floor %d, battle %d (%s): %s %s" % [violation["seed"], violation["floor"],
+			violation["battle"], violation["encounter"], violation["invariant"], violation.get("detail", "")])
+	for record in report["runs"]:
+		if record["stop"] != "" or record["runnerError"] != "":
+			lines.append("  STOPPED seed %d: %s" % [record["seed"], record["runnerError"] if record["runnerError"] != "" else record["stop"]])
+	return "\n".join(lines)
+
+
+static func _pairs(counts: Dictionary, most_first: bool = false) -> String:
+	var keys := counts.keys()
+	if most_first:
+		keys.sort_custom(func(a, b) -> bool: return counts[a] > counts[b] or (counts[a] == counts[b] and a < b))
+	return ", ".join(keys.map(func(key) -> String: return "%s ×%d" % [key, counts[key]])) if not keys.is_empty() else "-"
+
+
+## Writes each failing battle's request and traces next to `out_path` (<out>.failures/seed-<n>-battle-<k>.*.json),
+## ready for replay_main and trace_main --diff. Returns the files written.
+static func save_failures(runs_failures: Array, out_path: String) -> PackedStringArray:
+	var written := PackedStringArray()
+	if runs_failures.is_empty():
+		return written
+	var directory := out_path.get_basename() + ".failures/"
+	DirAccess.make_dir_recursive_absolute(directory if directory.is_absolute_path() else ProjectSettings.globalize_path(directory))
+	for failure in runs_failures:
+		var stem := directory + "seed-%d-battle-%d" % [failure["where"]["seed"], failure["where"]["battle"]]
+		for part in [["request", failure["request"]], ["replay.trace", failure["replayTrace"]], ["record.trace", failure["recordTrace"]]]:
+			if part[1] == null:
+				continue
+			var file := FileAccess.open("%s.%s.json" % [stem, part[0]], FileAccess.WRITE)
+			if file == null:
+				continue
+			file.store_string(WireJson.stringify(part[1]))
+			file.close()
+			written.append("%s.%s.json" % [stem, part[0]])
+	return written

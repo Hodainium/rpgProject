@@ -66,9 +66,11 @@ func _ready() -> void:
 func _load_rules() -> void:
 	_rules = null
 	_rules_original = null
-	if content.runs.size() != 1:
+	var picked := RunController.pick_run(content)
+	if picked["error"] != "":
 		return
-	var slot: FloorSlot = content.runs.values()[0].floors[clampi(int(_floor.value), 0, content.runs.values()[0].floors.size() - 1)]
+	var floors: Array[FloorSlot] = picked["run"].floors
+	var slot: FloorSlot = floors[clampi(int(_floor.value), 0, floors.size() - 1)]
 	if slot.chapters.is_empty() or slot.chapters[0].floor_gen_rules == null:
 		return
 	_rules_original = slot.chapters[0].floor_gen_rules

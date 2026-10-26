@@ -7,10 +7,13 @@ extends RefCounted
 ## Floors 0..floor_index of `seed_value`, generated in order with one pools object (so items seen on earlier floors are
 ## left out later, as in a run; items given by events or bought are not simulated). `rules` (optional) replaces the
 ## chapter's FloorGenRules, for tuning a copy. {"map": FloorMap or null, "chapter": StringName, "error": String}.
-static func floor_of(content: ContentIndex, seed_value: int, floor_index: int, rules: FloorGenRules = null) -> Dictionary:
-	if content.runs.size() != 1:
-		return {"map": null, "chapter": &"", "error": "the content root needs exactly one RunStructure"}
-	var structure: RunStructure = content.runs.values()[0]
+## `run_id` as in RunController.pick_run (empty = the only or default run).
+static func floor_of(content: ContentIndex, seed_value: int, floor_index: int, rules: FloorGenRules = null,
+		run_id: StringName = &"") -> Dictionary:
+	var picked := RunController.pick_run(content, run_id)
+	if picked["error"] != "":
+		return {"map": null, "chapter": &"", "error": picked["error"]}
+	var structure: RunStructure = picked["run"]
 	if floor_index < 0 or floor_index >= structure.floors.size():
 		return {"map": null, "chapter": &"", "error": "floors are 0 to %d" % (structure.floors.size() - 1)}
 	var pools := {"party": [], "held": [], "seen": []}
@@ -34,14 +37,15 @@ static func floor_of(content: ContentIndex, seed_value: int, floor_index: int, r
 
 
 ## Statistics for seeds from..from+count-1 on one floor.
-static func many(content: ContentIndex, from: int, count: int, floor_index: int, rules: FloorGenRules = null) -> Dictionary:
+static func many(content: ContentIndex, from: int, count: int, floor_index: int, rules: FloorGenRules = null,
+		run_id: StringName = &"") -> Dictionary:
 	var report := {"floor": floor_index, "from": from, "count": count, "failures": [], "attempts": {}, "rooms": {},
 		"dead_ends": {}, "rooms_used": {}, "encounters": {}, "events": {}, "elites": {}, "items": {}}
 	var attempts: Array[int] = []
 	var rooms: Array[int] = []
 	var dead_ends: Array[int] = []
 	for seed_value in range(from, from + count):
-		var result := floor_of(content, seed_value, floor_index, rules)
+		var result := floor_of(content, seed_value, floor_index, rules, run_id)
 		if result["error"] != "":
 			report["failures"].append({"seed": seed_value, "error": result["error"]})
 			continue
