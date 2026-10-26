@@ -73,6 +73,8 @@ func _show_speed() -> void:
 ## The battle refused the pick and waits for another one: show the choices again.
 func _on_action_rejected(unit_id: StringName, reason: String, detail: String) -> void:
 	ctx.main.show_message("%s: %s" % [reason, detail])
+	GameplayMessages.broadcast(GameplayMessageRouter.UI_REFUSED,
+		VerbMessage.make(&"Verb.Refuse", unit_id, &"", 0, [], {"reason": reason, "detail": detail}))
 	_waiting = _battle.unit_by_id(unit_id)
 	_show_abilities(_waiting)
 
@@ -90,27 +92,15 @@ func _on_battle_started(battle: Battle) -> void:
 	battle.turn_started.connect(func(_u, _t): _refresh_stats())
 	# Spec item-pass: hit marks (crit / weak / break), Broken and recovery, One More.
 	battle.damage_dealt.connect(_on_damage_dealt)
-	battle.unit_broken.connect(func(unit_id, _by): ctx.main.show_message("%s is BROKEN!" % _name(_battle.unit_by_id(unit_id))))
+	battle.unit_broken.connect(func(_u, _by): _refresh_stats())
 	battle.unit_recovered.connect(func(_u): _refresh_stats())
-	battle.one_more_started.connect(func(unit_id): ctx.main.show_message("ONE MORE! %s acts again" % _name(_battle.unit_by_id(unit_id))))
-	battle.interrupt_started.connect(_on_interrupt_started)
-	# Spec content-pass: skipped turns, resisted statuses, drains, boss phases, delays.
-	battle.turn_skipped.connect(func(unit_id): ctx.main.show_message("%s can't act and loses the turn" % _name(_battle.unit_by_id(unit_id))))
-	battle.status_resisted.connect(func(_source, target_id, effect_path):
-		ctx.main.show_message("%s resisted %s" % [_name(_battle.unit_by_id(target_id)), String(effect_path).get_file().get_basename().capitalize()]))
+	battle.interrupt_started.connect(func(_u, _ability): _refresh_stats())
+	# Spec content-pass: drains, delays, knock-downs. Call-outs (BROKEN!, ONE MORE!, phases…) are battle_callouts'.
 	battle.damage_drained.connect(func(_source, target_id, amount):
 		%Turn.text = "%s  drains %d" % [_name(_battle.unit_by_id(target_id)), amount / 100]
 		_refresh_stats())
-	battle.phase_changed.connect(func(unit_id, phase): ctx.main.show_message("%s enters phase %d!" % [_name(_battle.unit_by_id(unit_id)), phase + 1]))
 	battle.action_delayed.connect(func(_u, _p): _refresh_stats())
-	battle.unit_downed.connect(func(unit_id, _by):
-		ctx.main.show_message("%s is KNOCKED DOWN!" % _name(_battle.unit_by_id(unit_id)))
-		_refresh_stats())
-	_refresh_stats()
-
-
-func _on_interrupt_started(unit_id: StringName, ability_tag: StringName) -> void:
-	ctx.main.show_message("%s unleashes %s!" % [_name(_battle.unit_by_id(unit_id)), _short(ability_tag)])
+	battle.unit_downed.connect(func(_u, _by): _refresh_stats())
 	_refresh_stats()
 
 

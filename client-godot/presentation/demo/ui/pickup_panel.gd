@@ -30,5 +30,6 @@ func refresh() -> void:
 func _after_take(problem: String) -> void:
 	if problem != "":
 		ctx.main.show_message(problem)
-	get_tree().call_group("sound_board", "play", "Refused" if problem != "" else "Item")
+		GameplayMessages.broadcast(GameplayMessageRouter.UI_REFUSED,
+			VerbMessage.make(&"Verb.Refuse", &"", &"", 0, [], {"reason": problem}))
 	refresh()

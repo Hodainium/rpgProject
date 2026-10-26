@@ -1,7 +1,8 @@
-## Footer panel (UI.Slot.Footer, always): the last message for the player (run events, battle calls, refusals).
+## Footer panel (UI.Slot.Footer, always): the last line for the player (run events, level-ups, drops, refusals), from
+## the Message.Notification channel (spec gameplay-messages). Battle call-outs are the battle_callouts panel's.
 extends UIScreen
 
 
-func bind(context: UIContext) -> void:
-	context.main.message_shown.connect(func(text): %Text.text = text)
-	%Text.text = context.main.last_message
+func bind(_context: UIContext) -> void:
+	GameplayMessages.listen(GameplayMessageRouter.NOTIFICATION, func(_channel, message: NotificationMessage):
+		%Text.text = message.text, GameplayMessageRouter.Match.EXACT, NotificationMessage, self)

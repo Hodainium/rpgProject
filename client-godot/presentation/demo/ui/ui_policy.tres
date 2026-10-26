@@ -20,6 +20,7 @@
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/battle_panel.tscn" id="26_battle"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/floor_card.tscn" id="27_card"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/message_line.tscn" id="28_message"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/battle_callouts.tscn" id="29_callouts"]
 
 [sub_resource type="Resource" id="when_menu"]
 script = ExtResource("4_query")
@@ -135,11 +136,18 @@ script = ExtResource("3_ext")
 slot = &"UI.Slot.Footer"
 scene = ExtResource("28_message")
 
+[sub_resource type="Resource" id="panel_callouts"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Hud.Overlay"
+scene = ExtResource("29_callouts")
+order = 10
+active_when = SubResource("when_battle")
+
 [resource]
 script = ExtResource("1_policy")
 layout = ExtResource("5_layout")
 theme = ExtResource("6_theme")
 screens = Array[ExtResource("2_rule")]([SubResource("screen_title"), SubResource("screen_hud"), SubResource("screen_end")])
-extensions = Array[ExtResource("3_ext")]([SubResource("panel_map"), SubResource("panel_stairs"), SubResource("panel_pickup"), SubResource("panel_party"), SubResource("panel_field"), SubResource("panel_event"), SubResource("panel_battle"), SubResource("panel_card"), SubResource("panel_message")])
+extensions = Array[ExtResource("3_ext")]([SubResource("panel_map"), SubResource("panel_stairs"), SubResource("panel_pickup"), SubResource("panel_party"), SubResource("panel_field"), SubResource("panel_event"), SubResource("panel_battle"), SubResource("panel_card"), SubResource("panel_message"), SubResource("panel_callouts")])
 back_screens = Array[ExtResource("2_rule")]([SubResource("back_run_menu")])
 confirm_scene = ExtResource("14_confirm")

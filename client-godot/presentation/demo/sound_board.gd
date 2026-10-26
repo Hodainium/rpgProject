@@ -2,8 +2,9 @@
 ## (swap the stream in sound_board.tscn to change it). Other sounds live elsewhere, the GAS way:
 ##   ability sounds  → an audio track on the ability's animation (content/demo/animations/), on the cube's Audio node;
 ##   hit sounds      → GameplayCue Cue.Sfx.Hit (godot_gas/cue_registry.tres), listed on the damage effect.
-## Screens play one with get_tree().call_group("sound_board", "play", "Item"). A button with metadata sound = "back"
-## plays Back instead of Confirm.
+## Screens play one with get_tree().call_group("sound_board", "play", "Item"), or broadcast a message it listens to
+## (Message.Battle.UnitDied → Death, Message.Run.ItemTaken → Item, Message.Ui.Refused → Refused). A button with
+## metadata sound = "back" plays Back instead of Confirm.
 extends Node
 
 var _main: GameMain
@@ -15,7 +16,10 @@ func setup(main: GameMain) -> void:
 	_hook_all(get_tree().root)
 	get_tree().node_added.connect(_on_node_added)
 	main.run_changed.connect(_bind)
-	main.battle_prepared.connect(_on_battle_prepared)
+	# Spec gameplay-messages: stingers from the message bus (this node owns the listeners).
+	GameplayMessages.listen(GameplayMessageRouter.BATTLE_UNIT_DIED, func(_c, _m): play("Death"))
+	GameplayMessages.listen(GameplayMessageRouter.RUN_ITEM_TAKEN, func(_c, _m): play("Item"))
+	GameplayMessages.listen(GameplayMessageRouter.UI_REFUSED, func(_c, _m): play("Refused"))
 
 
 func play(sound_name: String) -> void:
@@ -35,13 +39,8 @@ func _play_move(run: RunController) -> void:
 		play("Move")
 
 
-func _on_battle_prepared(recorder: ActionRecorder, _gate: ViewGate) -> void:
-	recorder.action_rejected.connect(func(_unit, _reason, _detail): play("Refused"))
-
-
-func _on_battle_started(battle: Battle) -> void:
+func _on_battle_started(_battle: Battle) -> void:
 	play("BattleStart")
-	battle.unit_died.connect(func(_unit): play("Death"))
 
 
 func _hook_all(node: Node) -> void:
