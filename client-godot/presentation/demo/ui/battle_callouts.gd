@@ -36,8 +36,7 @@ func _on_message(channel: StringName, message: VerbMessage) -> void:
 		GameplayMessageRouter.BATTLE_DOWNED:
 			_show(downed_format % target)
 		GameplayMessageRouter.BATTLE_INTERRUPT:
-			var ability := String(message.tags[0]) if not message.tags.is_empty() else ""
-			_show(interrupt_format % [instigator, ability.get_slice(".", ability.get_slice_count(".") - 1)])
+			_show(interrupt_format % [instigator, message.data.get("abilityName", "")])
 
 
 func _show(text: String) -> void:

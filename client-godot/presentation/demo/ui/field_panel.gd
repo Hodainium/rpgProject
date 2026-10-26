@@ -32,9 +32,7 @@ func refresh() -> void:
 	%Bag.set_items(run.state.armor.map(func(piece_id) -> Dictionary: return {"run": run, "piece": piece_id}))
 	var actions: Array = []
 	for option in run.field_options():
-		var tag := String(option["ability"])
-		var title := "%d: %s%s" % [option["slot"], tag.get_slice(".", tag.get_slice_count(".") - 1),
-			item_suffix if option["item"] != &"" else ""]
+		var title := "%d: %s%s" % [option["slot"], option["name"], item_suffix if option["item"] != &"" else ""]
 		if option["targets"].is_empty():
 			actions.append({"text": title, "action": _use.bind(option["slot"], option["ability"], 0)})
 		for target in option["targets"]:

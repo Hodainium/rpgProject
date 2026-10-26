@@ -133,7 +133,7 @@ func _on_action_requested(unit_id: StringName, turn: int) -> void:
 func _show_abilities(unit: BattleUnit) -> void:
 	var items: Array = []
 	for ability in unit.action_abilities():
-		items.append({"text": _short(ability.ability_tag) + (item_suffix if unit.item_abilities.has(ability.ability_tag) else ""),
+		items.append({"text": AbilityName.of(ability) + (item_suffix if unit.item_abilities.has(ability.ability_tag) else ""),
 			"disabled": not unit.asc.can_activate_ability(ability), "action": _on_ability_pressed.bind(unit, ability)})
 	%Actions.set_items(items)
 
@@ -211,7 +211,7 @@ func _refresh_ults() -> void:
 			if not unit.is_party():
 				continue
 			for ult in unit.ultimate_abilities():
-				items.append({"text": ult_format % [_name(unit), _short(ult.ability_tag)],
+				items.append({"text": ult_format % [_name(unit), AbilityName.of(ult)],
 					"disabled": not unit.alive or not unit.asc.can_activate_ability(ult),
 					"action": _on_ult_pressed.bind(unit, ult)})
 	%Ults.set_items(items)
@@ -235,7 +235,7 @@ func _press_ult(unit: BattleUnit, ult: BattleAbility, target_id: StringName) -> 
 	_aiming = null
 	_recorder.submit_ult(unit.unit_id, ult.ability_tag, target_id)
 	if _recorder.pending_interrupts() > 0:
-		ctx.main.show_message("%s: %s at the next chance" % [_name(unit), _short(ult.ability_tag)])
+		ctx.main.show_message("%s: %s at the next chance" % [_name(unit), AbilityName.of(ult)])
 	_refresh_ults()
 
 
