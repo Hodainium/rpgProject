@@ -292,6 +292,9 @@ func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply (may 
 | `spawn item <item or equipment> [price]` | ✅ | Adds a pickup to the current room (price 0 = free pedestal, else a shop slot), numbered from 1000 and added to the run's seen items. Taken with the normal Take/Buy, so pickup rules, `on_pickup` and the "give to" picker are the real ones. Usable after the room is cleared, like any pickup |
 | `spawn pool <tag> [price]` | ✅ | Same, with the item picked by weight from unlocked items and equipment carrying `<tag>` (same pick as a pedestal's `item_query`, `FloorGenerator.pick_pickup`, on `dev/<k>`) |
 | `reveal` | ✅ | Sets `state.revealed`; `RunController` emits `map_revealed`; the map view shows every room |
+| `goto <cell \| boss \| special tag>` | ✅ (2026-10-26, from a screenshot helper) | `RunController.dev_goto`: moves into any room of the floor, no adjacency needed; it plays as if entered (battle, event, pickups) |
+| `bossdone` | ✅ (2026-10-26) | `RunController.dev_boss_done`: the boss room is cleared without a battle, rewards or XP; the stairs open (last floor: Won) |
+| `xp <amount> [slot]`, `xp level <count> [slot]` | ✅ (2026-10-26) | `RunController.dev_xp`: the GainXp / GainLevel outcome paths, so level-ups, class growth and `Message.Run.LevelUp` happen as in play; refused on a run without `xp_to_level` |
 | `seeds` | | Opens the seed runner (so the user's menu needs no Dev button) |
 | `create <type> <id> [folder]` | | The dock's Create: a new asset from its template (refuses existing ids and files) |
 | `grid <room> <op> …` | | The room grid without a window: `paint`, `erase`, `door`, `show`, `save` on a room loaded by id or path (edits an in-memory copy until `save`) |
@@ -306,7 +309,7 @@ through the same code. Nothing writes a unit's numbers directly.
 | A unit's attributes, now | An instant `GameplayEffect` applied by GAS (field context out of battle, a dev decision in battle) | `heal`, `revive`, `kill`, `effect` |
 | A unit's attributes, for the rest of the run | An **item** (or equipment) held in run state, whose `AbilitySet` GAS grants at every battle start and field context, the only way anything permanent exists (game-skeleton 3.1: stats are always re-derived) | `stat`, `give`, `equip` |
 | Run-level values (coins, inventory, pickups) | The existing `RunOutcome`s and pickup code | `coins`, `give`, `remove`, `spawn item`, `spawn pool` |
-| Where the run is | `RunController` (floors, rooms, sandbox, run end) | `stage`, `room`, `layout`, `spawn`, `win`, `reveal` |
+| Where the run is | `RunController` (floors, rooms, sandbox, run end) | `stage`, `room`, `layout`, `spawn`, `win`, `reveal`, `goto`, `bossdone`, `xp` |
 
 To make that possible, `RunController.apply_party_effect` gains an optional slot list (`apply_member_effect(effect,
 slots, include_dead)`), the same field-context path with fewer targets. The dev methods on `RunController`:
