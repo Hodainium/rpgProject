@@ -3,7 +3,8 @@
 #   game/tools/play_sharded.sh <shards> <out.json> <from> <count> [seed_report --play options...]
 # e.g. the gold standard (smart, four members, 300 seeds in 6 shards):
 #   game/tools/play_sharded.sh 6 /tmp/smart4.json 1 300 --policy smart --party-size 4 --check
-# GODOT overrides the Godot console binary. Every shard has a timeout and a large --quit-after.
+# GODOT overrides the Godot console binary. Every shard runs under tools/watch.sh (killed after 240 s of silence) and
+# the Watchdog autoload (quits on a script that failed to load or 180 s without progress).
 set -euo pipefail
 shards=$1; out=$2; from=$3; count=$4; shift 4
 godot=${GODOT:-/h/Godot/Godot_v4.7.2-stable_mono_win64_console.exe}
@@ -23,8 +24,9 @@ for (( i = 0; i < shards; i++ )); do
 	n=$(( left < size ? left : size ))
 	part="$base.shard$i.json"
 	parts+=("$part")
-	timeout 3600 "$godot" --headless --path "$here" --quit-after 2000000000 res://game/tools/seed_report.tscn -- \
-		--play --records --from "$start" --count "$n" --out "$part" "$@" > "$base.shard$i.log" 2>&1 &
+	"$here/../tools/watch.sh" --idle 240 --timeout 3600 --log "$base.shard$i.log" --name "shard$i" -- \
+		"$godot" --headless --path "$here" --quit-after 2000000000 res://game/tools/seed_report.tscn -- \
+		--play --records --from "$start" --count "$n" --out "$part" "$@" &
 done
 status=0
 wait || status=$?

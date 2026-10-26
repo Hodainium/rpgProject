@@ -21,6 +21,7 @@ static func many(content: ContentIndex, host: Node, from: int, count: int, optio
 	var runs: Array[Dictionary] = []
 	var failures: Array = []
 	for seed_value in range(from, from + count):
+		_beat("seed %d" % seed_value)
 		var record := await play_one(content, host, seed_value, opts)
 		failures.append_array(record["failures"])
 		runs.append(record)
@@ -78,6 +79,7 @@ static func play_one(content: ContentIndex, host: Node, seed_value: int, options
 ## Fights the pending battle with the policy's controller, then records it and (check) verifies it.
 static func fight_pending(run: RunController, content: ContentIndex, host: Node, opts: Dictionary, record: Dictionary) -> void:
 	var snapshot := run.battle_snapshot()
+	_beat("seed %d battle %s" % [record["seed"], snapshot["battleId"]])
 	var encounter := String(run.pending_battle["encounter"])
 	var boss: bool = run.state.map.cells[run.pending_battle["cell"]]["role"] == FloorMap.ROLE_BOSS
 	var chaos: bool = opts["policy"] == "chaos"
@@ -161,6 +163,14 @@ static func _replay_disagrees(result: Dictionary, entry: Dictionary) -> bool:
 	if entry["outcome"] == Battle.TURN_LIMIT_OUTCOME:
 		return result["mismatch"] == null or result["mismatch"]["reason"] != "TurnLimitExceeded"
 	return result["verdict"] != "Verified" or result["outcome"] != entry["outcome"]
+
+
+## Progress for the headless watchdog (spec dev-tools, "Headless safeguards"); nothing outside headless runs.
+static func _beat(label: String) -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	var watchdog: Node = tree.root.get_node_or_null("Watchdog") if tree != null else null
+	if watchdog != null:
+		watchdog.beat(label)
 
 
 ## Party HP and MP at a battle's start as whole percents of their maximum (×100 values summed over living members).

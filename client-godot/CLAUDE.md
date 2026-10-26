@@ -115,8 +115,13 @@ from C#.**
   numbers as integers so the C# records can read them.
 
 ## 4. Running tests and replays
-- **Headless Godot must always exit:** pass `--quit-after <frames>` and wrap the call in `timeout` (a script error
-  once left a headless tool scene running for 9 minutes). Game goldens live in `tests/fixtures/golden/game/`.
+- **Headless Godot must always exit:** run it through `../tools/watch.sh` (liveness every 30 s; killed with exit 124
+  after 180 s of silence) and pass `--quit-after <frames>`. The `Watchdog` autoload quits a headless run whose main
+  scene script failed to load (exit 70) or that gets no `Watchdog.beat()` for `--idle-limit` seconds (default 180, exit
+  124); call `Watchdog.beat(label)` in any new long-running tool loop. Script errors once left headless scenes idling
+  (9 minutes in 2026-10-19, six report shards in 2026-10-26). Game goldens live in `tests/fixtures/golden/game/`.
+- **Parallel by default:** the suite runs as `../tools/godot_tests.sh` (shards by test, default 8); reports shard
+  with `game/tools/play_sharded.sh`; independent jobs start together and are waited on.
 - **System tests:** `godot --headless --path client-godot res://tests/run_tests.tscn` (add `-- --filter <text>` to
   narrow). They run as a **scene**, not with `--script`: GodotGAS needs its `GameplayCueManager` autoload, which
   `--script` mode doesn't load. A test file that fails to compile counts as a failure.

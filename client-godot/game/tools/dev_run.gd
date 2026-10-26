@@ -49,6 +49,7 @@ func _ready() -> void:
 		if text == "" or text.begins_with("#"):
 			continue
 		print("> ", text)
+		Watchdog.beat("line %d: %s" % [number, text])
 		var result: Dictionary = await console.execute(text)
 		await _settle()
 		print(result["text"])

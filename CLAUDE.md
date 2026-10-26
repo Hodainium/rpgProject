@@ -25,6 +25,7 @@ analytics, and end-to-end observability.
 | `specs/design/` | Design intent (not slice specs). `combat-design.md`: attributes, tags, damage formula. Damage formula, weakness, toughness and break are built (spec `item-pass`); buff magnitudes and break effects are not yet designed. `run-authority-decisions.md`: why runs work the way `server-authority.md` specifies (options rejected, accepted cheats). |
 | `specs/roadmap.md` | **Build order: slices 0–9 and design breaks. Read it to know what's next; mark slices done there.** |
 | `.gitattributes` | Root: LF everywhere (CRLF only for `.sln`/`.ps1`/`.cmd`/`.bat`), binaries marked. |
+| `tools/` | Run safeguards (spec `dev-tools`, "Headless safeguards and parallel runs"): `watch.sh` (any command with a liveness line every 30 s, killed with its process tree after an idle or total limit, exit 124), `godot_tests.sh` (the Godot suite in parallel shards, default 8), `dotnet_test.sh`. In Godot, the `Watchdog` autoload quits a headless run whose main script failed to load (exit 70) or that makes no progress (exit 124). |
 | `infra/docker-compose.yml` | Postgres, Redis, RabbitMQ, Redpanda; Prometheus + Grafana under the `observability` profile. |
 
 Do not describe or code against components listed as empty as though they exist. Update this table when that changes.
@@ -133,7 +134,12 @@ Each must have a spec and an automated test before the workflow counts as done:
 - Slice cycle: `/spec` → `/implement` → commit `feat:` → user tuning → commit `design:` → `/sync-spec` → commit `spec:`.
 
 ## Build & test
-- `dotnet build` and `dotnet test` from the repo root must pass before touching Godot scenes.
-- Godot system tests: `H:\Godot\Godot_v4.7.2-stable_mono_win64_console.exe --headless --path client-godot res://tests/run_tests.tscn`
-  (details in `client-godot/CLAUDE.md` section 4). Both suites must pass for a slice to count as done.
+- `dotnet build` and `dotnet test` from the repo root must pass before touching Godot scenes (`tools/dotnet_test.sh`
+  runs the tests watched).
+- Godot system tests: `tools/godot_tests.sh` (parallel shards, each watched; about 26 s instead of 50 s; `-- --filter
+  <text>`; `-- --update-goldens` runs as one shard). Details in `client-godot/CLAUDE.md` section 4. Both suites must
+  pass for a slice to count as done.
+- **Use the machine, never hang:** independent headless jobs run in parallel processes; every headless Godot or long
+  `dotnet` run goes through `tools/watch.sh` (or a script that uses it), so a stall is killed and reported, never left
+  idle. Builders, imports and golden updates stay sequential.
 - Infra: `cd infra && docker compose up -d` (add `--profile observability` for Prometheus/Grafana). Secrets in `infra/.env` (see `.env.example`).
