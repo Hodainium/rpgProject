@@ -59,6 +59,8 @@ func _ready() -> void:
 	var report := DevReport.state_of(game.run)
 	report["commands"] = results
 	report["failed"] = Array(failed_lines)
+	if not console.message_log.is_empty():
+		report["messages"] = Array(console.message_log)  # spec gameplay-messages 2.4: `messages on` in the script
 	var out := _arg(args, "--out", "")
 	if out != "":
 		var file := FileAccess.open(out, FileAccess.WRITE)

@@ -18,8 +18,8 @@ signal pickups_shown(cell: int)
 signal party_changed
 signal room_cleared(cell: int)
 signal run_ended(status: String)
-## Errors and content warnings for the screens and the Godot log.
-signal message(text: String)
+## The run stopped on a runner error (broken content; not a loss). Its text also goes out as a Notification.
+signal stopped(error: String)
 ## The console's `reveal` (spec dev-tools 3.2): the map view should show every room.
 signal map_revealed
 
@@ -55,6 +55,7 @@ func start_run(content_index: ContentIndex, character_ids: Array, seed_text: Str
 	if error != "":
 		return error
 	run_started.emit()
+	_send(GameplayMessageRouter.RUN_STARTED, &"Verb.Start", &"", structure.id)
 	return enter_floor(0)
 
 
@@ -78,6 +79,7 @@ func start_sandbox(content_index: ContentIndex, request: SandboxRequest) -> Stri
 		"layout": String(request.layout.id) if request.layout != null else "", "depth": request.depth,
 		"chapter": String(request.chapter_id), "seed": str(request.seed)})
 	run_started.emit()
+	_send(GameplayMessageRouter.RUN_STARTED, &"Verb.Start", &"", structure.id, 0, [], {"sandbox": true})
 	return enter_sandbox_floor(request)
 
 
@@ -251,6 +253,7 @@ func _install_floor(map: FloorMap, pools: Dictionary, clear_start: bool) -> void
 		% [state.run_seed, state.floor_index, state.chapter_id, state.map.cells.size(), state.map.attempts])
 	_run_hooks("on_floor_start")
 	floor_entered.emit(state.floor_index)
+	_send(GameplayMessageRouter.RUN_FLOOR_ENTERED, &"Verb.Enter", &"", state.chapter_id, state.floor_index + 1)
 
 
 ## After the boss: the next floor, or the run is won after the last one (that happens in _clear_room).
@@ -485,9 +488,11 @@ func _check_levels() -> void:
 				level += 1
 		if level > int(member["level"]):
 			var character: UnitDefinition = content.units.get(member["character"])
-			message.emit("%s reaches level %d" % [character.display_name if character != null else String(member["character"]),
-				level])
+			var shown := character.display_name if character != null else String(member["character"])
 			member["level"] = level
+			_notify("%s reaches level %d" % [shown, level])
+			_send(GameplayMessageRouter.RUN_LEVEL_UP, &"Verb.LevelUp", &"", StringName("slot:%d" % member["slot"]), level,
+				[], {"targetName": shown})
 	party_changed.emit()
 
 
@@ -500,7 +505,10 @@ func _roll_drops(enemies: Array, cell: int) -> void:
 		if definition == null or definition.drop_item == null or definition.drop_chance_x100 <= 0:
 			continue
 		if RunSeeds.roll(stream, definition.drop_chance_x100):
-			message.emit("%s dropped %s" % [definition.display_name, definition.drop_item.display_name])
+			_notify("%s dropped %s" % [definition.display_name, definition.drop_item.display_name])
+			_send(GameplayMessageRouter.RUN_ITEM_DROPPED, &"Verb.Drop", definition.id, definition.drop_item.id, 0,
+				definition.drop_item.tags, {"instigatorName": definition.display_name,
+				"targetName": definition.drop_item.display_name})
 			give_item(definition.drop_item, null, null)
 
 
@@ -667,6 +675,8 @@ func choose(choice_index: int) -> String:
 	var cell: int = state.event["cell"]
 	run_log.append({"type": "choose", "floor": state.floor_index, "cell": cell, "page": state.event["page"],
 		"choice": choice_index})
+	_send(GameplayMessageRouter.RUN_CHOICE, &"Verb.Choose", &"", StringName(str(state.event["event"])), choice_index,
+		[], {"page": state.event["page"]})
 	_directive = ""
 	for outcome in current_page().choices[choice_index].outcomes:
 		if outcome != null:
@@ -727,7 +737,9 @@ func take(placement: int, slot: int) -> String:
 			if pickup.has("priceItem"):
 				entry["slot"] = payer  # who pays the curse; only on priced armor, so older logs are unchanged
 			run_log.append(entry)
-			_receive_equipment(content.equipment[pickup["item"]])
+			var piece: EquipmentDefinition = content.equipment[pickup["item"]]
+			_receive_equipment(piece)
+			_send_taken(entry["type"], payer, piece, pickup)
 			if pickup.has("priceItem"):
 				_pay_with_item(payer, pickup["priceItem"])
 			return ""
@@ -742,6 +754,7 @@ func take(placement: int, slot: int) -> String:
 		run_log.append({"type": "buy" if pickup["price"] > 0 or paid_with_item else "take", "floor": state.floor_index,
 			"cell": state.current_cell, "placement": placement, "slot": slot})
 		_receive_item(slot, item)
+		_send_taken(run_log[-1]["type"], slot, item, pickup)
 		if paid_with_item:
 			_pay_with_item(slot, pickup["priceItem"])
 		return ""
@@ -1306,20 +1319,45 @@ func _end(status: String) -> void:
 	state.status = status
 	run_log.append({"type": "end", "status": status})
 	run_ended.emit(status)
+	_send(GameplayMessageRouter.RUN_ENDED, &"Verb.Win" if status == RunState.WON else &"Verb.Lose", &"", structure.id,
+		0, [], {"status": status})
 
 
 func _stop(error: String) -> String:
 	if runner_error == "":
 		runner_error = error
 		push_error("RunController: " + error)
-		message.emit(error)
+		_notify(error, [&"Notification.Error"])
+		_send(GameplayMessageRouter.RUN_ENDED, &"Verb.Stop", &"", structure.id if structure != null else &"", 0, [],
+			{"status": "Stopped", "error": error})
+		stopped.emit(error)
 	return runner_error
 
 
 func _warn(text: String) -> void:
 	warnings.append(text)
 	print("RunController warning: ", text)
-	message.emit(text)
+	_notify(text, [&"Notification.Warning"])
+
+
+## Spec gameplay-messages: tells listeners (screens, sounds, the dev log) what happened. Built from state; nothing
+## here is read back by the run, so run logs and hashes never depend on who listens.
+func _send(channel: StringName, verb: StringName, instigator: StringName, target: StringName, amount: int = 0,
+		tags: Array = [], data: Dictionary = {}) -> void:
+	GameplayMessages.broadcast(channel, VerbMessage.make(verb, instigator, target, amount, tags, data))
+
+
+func _notify(text: String, tags: Array = []) -> void:
+	GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION, NotificationMessage.make(text, tags))
+
+
+## Message.Run.ItemTaken for a pickup or purchase (`kind` "take" or "buy") by the member in `slot`.
+func _send_taken(kind: String, slot: int, item: Resource, pickup: Dictionary) -> void:
+	var data := {"targetName": item.display_name}
+	if pickup.has("priceItem"):
+		data["priceItem"] = String(pickup["priceItem"])
+	_send(GameplayMessageRouter.RUN_ITEM_TAKEN, &"Verb.Buy" if kind == "buy" else &"Verb.Take",
+		StringName("slot:%d" % slot), item.id, int(pickup["price"]), item.tags, data)
 
 
 func _warn_all(texts: PackedStringArray) -> void:

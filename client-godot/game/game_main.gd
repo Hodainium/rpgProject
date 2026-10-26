@@ -5,7 +5,9 @@
 ## with `setup(main: GameMain)` (defaults in res://presentation/demo/).
 ##
 ## Holds no game rules: every change goes through RunController. Battles are fought here with an ActionRecorder (the
-## battle panel submits the player's picks) and a ViewGate (the room view plays the animations).
+## battle panel submits the player's picks) and a ViewGate (the room view plays the animations). Spec
+## gameplay-messages: lines for the player go out on the GameplayMessages bus (Message.Notification), and each battle
+## fought here gets a BattleMessages bridge (Message.Battle.*); the replay and trace runners never make one.
 class_name GameMain
 extends Node
 
@@ -18,8 +20,6 @@ signal battle_prepared(recorder: ActionRecorder, gate: ViewGate)
 signal content_changed(content: ContentIndex)
 ## A sandbox run (spec dev-tools 2.2) was left through the run-end screen.
 signal sandbox_closed
-## A line for the player (run messages, battle calls, refusals); the policy's message panel shows it.
-signal message_shown(text: String)
 
 const VIEW_DIR: String = "res://presentation/demo/"
 const UI_POLICY: String = "res://presentation/demo/ui/ui_policy.tres"
@@ -46,8 +46,8 @@ var gate: ViewGate
 var skip_animations: bool = false
 ## Spec ui-framework: shows the policy's screens; null when the policy failed to load (see the error label).
 var ui: UIManager
-## The last message shown (a message panel created later reads it).
-var last_message: String = ""
+## Spec gameplay-messages: the current battle's bridge to Message.Battle.* (null between battles).
+var battle_messages: BattleMessages
 
 var _error_label: Label
 
@@ -169,8 +169,10 @@ func _new_run() -> void:
 	run = RunController.new()
 	run.name = "Run"
 	add_child(run)
-	run.message.connect(show_message)
+	run.stopped.connect(_on_run_stopped)
 	run.battle_requested.connect(_on_battle_requested)
+	run.battle_started.connect(_on_battle_started)
+	run.battle_finished.connect(func(_outcome): battle_messages = null)
 	run.run_ended.connect(func(_status): set_mode("end"))
 	show_message("")
 	run_changed.emit(run)
@@ -202,11 +204,21 @@ func set_mode(new_mode: String) -> void:
 	mode_changed.emit(mode)
 
 
+## A line for the player (refusals, content problems): broadcast on Message.Notification; the policy's message line
+## (and any other listener) shows it. "" clears the line.
 func show_message(text: String) -> void:
-	last_message = text
-	message_shown.emit(text)
-	if run != null and run.runner_error != "" and mode == "run":
+	GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION, NotificationMessage.make(text))
+
+
+## A runner error stopped the run (its text went out as a Notification): show the end screen.
+func _on_run_stopped(_error: String) -> void:
+	if mode == "run":
 		set_mode("end")
+
+
+func _on_battle_started(battle: Battle) -> void:
+	battle_messages = BattleMessages.new()
+	battle_messages.attach(battle, StringName(str(run.pending_battle.get("encounter", ""))), GameplayMessages)
 
 
 func _on_battle_requested(_snapshot: Dictionary) -> void:

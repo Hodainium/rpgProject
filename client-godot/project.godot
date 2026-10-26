@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 GameplayCueManager="*res://addons/GodotGAS/managers/gameplay_cue_manager.gd"
 Dev="*res://game/dev/dev.gd"
 Watchdog="*res://game/dev/watchdog.gd"
+GameplayMessages="*res://game/messages/gameplay_messages.gd"
 
 [display]
 

@@ -28,6 +28,7 @@ func _ready() -> void:
 	console.load_history()
 	_ensure_action()
 	_build()
+	console.message_logged.connect(func(line: String): _print("[color=gray]%s[/color]" % line.replace("[", "[lb]")))
 	for warning in console.warnings:
 		_print("[color=orange]warning: %s[/color]" % warning)
 

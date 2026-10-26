@@ -318,7 +318,8 @@ func test_tool_parity() -> void:
 	var pairs := {"dock Create": "create", "dock Validate": "validate", "room grid": "grid", "Play buttons": "play",
 		"seed runner": "seeds", "screenshot": "shot", "party panel Equip": "wear", "party panel Unequip": "unwear",
 		"animation preview": "anim", "battle panel status line": "status", "menu run picker": "new",
-		"seed report --play": "autorun", "UI buttons, Back and screens (spec ui-framework)": "ui"}
+		"seed report --play": "autorun", "UI buttons, Back and screens (spec ui-framework)": "ui",
+		"gameplay message log (spec gameplay-messages)": "messages"}
 	for action in pairs:
 		check(console.commands.has(pairs[action]), "%s has the command %s" % [action, pairs[action]])
 	# The inspector grid commits *_result() through undo/redo; the console applies the same functions.
@@ -328,6 +329,28 @@ func test_tool_parity() -> void:
 	eq(room.placements.size(), undoable.size(), "grid paint: inspector and console agree")
 	eq(RoomGridOps.toggle_door_result(room, RoomDefinition.DOOR_E), room.doors ^ RoomDefinition.DOOR_E, "grid door")
 
+
+
+## Spec gameplay-messages 2.4: `messages on` logs the run's and the battle's messages; `last`, `off`.
+func test_console_messages() -> void:
+	var session := _session()
+	await _ok(session, "messages on")
+	await _ok(session, "new %s 7" % PARTY)
+	await _ok(session, "spawn fixture.encounter.pack")
+	var console: DevConsole = session[1]
+	var text := "
+".join(PackedStringArray(console.message_log))
+	for line in ["[msg] Message.Run.Started Verb.Start", "[msg] Message.Run.FloorEntered Verb.Enter",
+			"[msg] Message.Battle.Started Verb.Start →fixture.encounter.pack", "[msg] Message.Battle.Damage Verb.Damage P",
+			"[msg] Message.Battle.Ended"]:
+		check(text.contains(line), "the log has '%s'" % line)
+	var last := await _ok(session, "messages last 1")
+	eq(last["text"], console.message_log.back(), "last 1 is the newest line")
+	await _ok(session, "messages off")
+	var count := console.message_log.size()
+	await _ok(session, "new %s 8" % PARTY)
+	eq(console.message_log.size(), count, "nothing is logged while off")
+	check(not (await _run(session, "messages on Battle"))["ok"], "a channel must be a Message tag")
 
 
 ## Spec animation-sets: `anim` shows a unit's view and set, plays a slot, refuses unknown slots; `create animation_set`

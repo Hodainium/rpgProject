@@ -3,8 +3,9 @@
 ##
 ## Checked: every field marked "gas::tag" (GodotGAS's and ours) in every resource and scene under res://content/ and
 ## res://presentation/ (the UI policy, layers and slots, spec ui-framework), plus the tags the code itself uses
-## (SYSTEM_TAGS and the UI state tags). Reported: tags in use but not registered (with where), tags with a bad
-## format, and registered tags nothing uses (info only; nothing is ever removed).
+## (SYSTEM_TAGS, the UI state tags, and the gameplay message channels, verbs and notification tags). Reported: tags in
+## use but not registered (with where), tags with a bad format, and registered tags nothing uses (info only; nothing
+## is ever removed).
 ## Writes only gameplay_tags.gd. With --add-missing it also adds the missing tags through the registry's own
 ## add_tag() (which validates the format, sorts, saves and regenerates). Exit code 1 while anything is missing.
 ##   godot --headless --path client-godot --quit-after 600 res://game/tools/sync_tags.tscn [-- --add-missing]
@@ -45,7 +46,7 @@ func _ready() -> void:
 		push_error("sync_tags: no tag registry at " + registry_path)
 		get_tree().quit(1)
 		return
-	for tag in SYSTEM_TAGS + UIState.ALL:
+	for tag in SYSTEM_TAGS + UIState.ALL + GameplayMessageRouter.CHANNELS + GameplayMessageRouter.VERBS 			+ GameplayMessageRouter.NOTIFICATION_TAGS:
 		_note(tag, "code (system tag)")
 	_scan(CONTENT_ROOT)
 	_scan(PRESENTATION_ROOT)

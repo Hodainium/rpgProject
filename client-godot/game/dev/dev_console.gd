@@ -4,11 +4,16 @@
 class_name DevConsole
 extends RefCounted
 
+## Spec gameplay-messages 2.4: one line of the message log (`messages on`), for the overlay.
+signal message_logged(line: String)
+
 const COMMANDS_DIR: String = "res://game/dev/commands/"
 ## Throwaway commands (debug builds only); they can't replace a built-in name.
 const USER_COMMANDS_DIR: String = "user://dev_commands/"
 const HISTORY_PATH: String = "user://dev_console_history.txt"
 const HISTORY_SIZE: int = 50
+## Lines `messages` keeps (the oldest go first).
+const MESSAGE_LOG_SIZE: int = 1000
 
 ## name -> DevCommand
 var commands: Dictionary = {}
@@ -28,6 +33,11 @@ var shots_dir: String = "user://shots/"
 ## <battleId>.record.json and <battleId>.request.json here when each ends.
 var trace_battles: bool = false
 var traces_dir: String = "user://traces/"
+## Spec gameplay-messages 2.4: the channel `messages on` logs (with its children); &"" while off.
+var message_channel: StringName = &""
+## "[msg] <channel> <describe()>" lines, oldest first (the script runner writes them to its JSON as "messages").
+var message_log: Array[String] = []
+var _message_handle: GameplayMessageHandle
 var tree: SceneTree
 var _attached: Array[GameMain] = []
 
@@ -164,6 +174,15 @@ func candidates(kind: String) -> Array[String]:
 			values.assign(["enemies", "party", "1", "2", "3", "4"])
 		"on_off":
 			values.assign(["on", "off"])
+		"messages_op":
+			values.assign(["on", "off", "last"])
+		"channel":
+			for channel in GameplayMessageRouter.CHANNELS:
+				var parts := String(channel).split(".")
+				for depth in range(1, parts.size() + 1):
+					var name := ".".join(parts.slice(0, depth))
+					if not values.has(name):
+						values.append(name)
 		"ability":
 			if ctx.battle != null and ctx.recorder != null and ctx.recorder.waiting_for != &"":
 				for ability in ctx.battle.unit_by_id(ctx.recorder.waiting_for).action_abilities():
@@ -197,6 +216,25 @@ static func closest(ids: Array, typed: String) -> String:
 		if entry[0] > 0.3:
 			best.append(entry[1])
 	return " (did you mean: %s?)" % ", ".join(best) if not best.is_empty() else ""
+
+
+## Logs every message on `channel` and its children (spec gameplay-messages 2.4); &"" stops. Prints each line.
+func log_messages(channel: StringName) -> void:
+	if _message_handle != null:
+		_message_handle.unregister()
+		_message_handle = null
+	message_channel = channel
+	if channel != &"":
+		_message_handle = GameplayMessages.listen(channel, _on_message, GameplayMessageRouter.Match.PARTIAL)
+
+
+func _on_message(channel: StringName, message: GameplayMessage) -> void:
+	var line := "[msg] %s %s" % [channel, message.describe()]
+	message_log.append(line)
+	if message_log.size() > MESSAGE_LOG_SIZE:
+		message_log = message_log.slice(message_log.size() - MESSAGE_LOG_SIZE)
+	print(line)
+	message_logged.emit(line)
 
 
 func find_game() -> GameMain:
