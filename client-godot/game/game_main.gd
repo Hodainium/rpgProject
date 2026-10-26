@@ -210,6 +210,17 @@ func show_message(text: String) -> void:
 	GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION, NotificationMessage.make(text))
 
 
+## A player's action was refused: `text` on Message.Notification (the message line) and Message.Ui.Refused (sounds, a
+## shake) with Verb.Refuse, `instigator` (who tried) and `data` plus "text". Screens refuse through this, never by
+## playing a sound themselves.
+func refuse(text: String, instigator: StringName = &"", data: Dictionary = {}) -> void:
+	show_message(text)
+	var extras := data.duplicate()
+	extras["text"] = text
+	GameplayMessages.broadcast(GameplayMessageRouter.UI_REFUSED,
+		VerbMessage.make(&"Verb.Refuse", instigator, &"", 0, [], extras))
+
+
 ## A runner error stopped the run (its text went out as a Notification): show the end screen.
 func _on_run_stopped(_error: String) -> void:
 	if mode == "run":
