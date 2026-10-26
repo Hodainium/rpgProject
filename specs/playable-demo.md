@@ -1,6 +1,6 @@
 # Spec: playable-demo (slice 1d)
 
-Status: 🔨 Implementing: A–E done (E: the export, 3.12), design break next; approved (D1–D6 as recommended, 2026-10-26) · Roadmap: slice 1d · Date: 2026-10-26
+Status: 🔨 Implementing: A–E done (E: the export, 3.12), design break next; spec synced 2026-10-26; approved (D1–D6 as recommended, 2026-10-26) · Roadmap: slice 1d · Date: 2026-10-26
 Design intent: `specs/design/game-design.md` sections 1, 3 and 6. Builds on `specs/game-skeleton.md` (run layer,
 `RunController`, `GameMain`), `specs/dev-tools.md` (console, script runner, seed report, validator),
 `specs/animation-sets.md` (cube unit views), `specs/content-pass.md` (the content base: statuses, affinities, nine
@@ -17,8 +17,8 @@ tools on a whole run instead of single rooms. Today `content/demo/` already has 
 enemies, two bosses, 65 items, 14 armor pieces, 8 rooms, 2 events, a one-floor run), but no run that strings them
 into an arc with a beginning, a rising difficulty and an ending. Four parts:
 
-1. **The demo run** `demo.run.descent`: two floors, **The Cellar** (boss: the Golem) then **The Crypt** (boss: the
-   Lich), with battles, events, a treasure room and a shop on each floor (D1). About 15–25 minutes.
+1. **The demo run** `demo.run.descent`: first two floors, **The Cellar** then **The Crypt** (D1); grown by C3 into the
+   ten-floor Descent with two ending routes (3.8 is the run shape as built).
 2. **The demo shell** (your `presentation/demo/`): a title screen with the run picker, party select with each
    character's kit, a floor title card at the stairs, item and armor descriptions where you pick them, a run summary
    at the end, play again. Placeholder-grade text UI, no new art.
@@ -32,8 +32,8 @@ Plus a **Windows export** (D5) so the demo runs without the editor, which also c
 
 **Enterprise mapping: none at runtime** (client-only, local mode; no service, queue, broker or cache). Indirect:
 - The demo is the **traffic generator** of every later slice: slice 2 issues its floor seeds, 2b uploads its run
-  log, 3 and 4a verify its battles and floors, 4b aggregates its picks, 8 drives it with Locust. A two-floor run is the
-  smallest one that exercises the stairs (`POST /runs/{id}/floors/{n}`), so slice 2 is tested on real content.
+  log, 3 and 4a verify its battles and floors, 4b aggregates its picks, 8 drives it with Locust. The Descent takes the
+  stairs nine times (`POST /runs/{id}/floors/{n}`), so slice 2 is tested on real content.
 - The content hash changes, so `ruleset_version` changes (expected; no server yet).
 - **No wire change:** no `Rpg.Contracts` record, no snapshot field, no log entry type. Only content and the run-layer
   entry point (which run to start) change.
@@ -47,16 +47,16 @@ No server. Everything below runs in the Godot client in local mode.
 
 ### 2.1 Playing the demo (player's view)
 ```
-title screen (menu.tscn)
+title screen (presentation/demo/ui/title_menu, a UI policy screen; spec ui-framework)
   run picker: "The Descent" (default) · "Demo run" (one floor) · fixture runs only when the content root is fixtures
-  party select: Warrior, Cleric (both on by default), kit lines from each character's abilities and description
+  party select: class cards (up to 4) with each class's kit; Details opens class_details
   seed: blank = random code; "Random" button; the seed code shows on every later screen
   Start → GameMain.start_run(character_ids, seed_text, run_id)
-floor 0 "The Cellar": title card → map → rooms (battle / event / treasure / shop) → boss room (Golem)
-  boss cleared → "Take the stairs" (map_view NextFloor, existing) → RunController.next_floor()
-floor 1 "The Crypt": title card → map → … → boss room (Lich, three phases)
-  Lich dead → run Won (is_last_floor) → run_end_view: summary + Play again (same seed) / New run / Menu
-party wiped anywhere → run Lost → run_end_view with the floor, room and encounter where it ended
+each floor: floor_card (Message.Run.FloorEntered) → map_panel → rooms (battle / event / treasure / shop / altar)
+  → boss room; boss cleared → stairs_panel "Next floor" (the route choice at the floor-8 stairs, 3.8)
+  → the Waystation rest event (3.11) → the next floor
+floor 10 boss dead → run Won (is_last_floor) → run_end: summary + Play again (same seed) / New run / Menu
+party wiped anywhere → run Lost → run_end with the floor, room and encounter where it ended
 ```
 
 ### 2.2 Starting a run with several run structures (system fix, 3.5 F1)
@@ -140,7 +140,7 @@ client-only slice. The contracts here are Godot content types and the run-layer 
 | `run=<id>` on `new`; new command `autorun [max_steps]` | `game/dev/commands/` | parity test entries |
 | `--play` mode, `--policy auto\|chaos`, `--illegal <percent>` | `game/tools/seed_report.gd` | 2.3, 2.3b |
 | `ChaosController`, `InvariantChecker` | `game/dev/` | 2.3b; the checker reads state only, never changes it |
-| `RunController.run_summary() -> Dictionary` | `game/run_controller.gd` | Read-only, derived from `run_log` and state: battles won, enemies defeated, items and armor picked up, coins earned and spent, floors cleared, ended in (room, encounter). Used by `run_end_view` and the report |
+| `RunController.run_summary() -> Dictionary` | `game/run_controller.gd` | Read-only, derived from `run_log` and state: battles won, enemies defeated, items and armor picked up, coins earned and spent, floors cleared, ended in (room, encounter). Used by the `run_end` screen and the report |
 | Export presets `Windows Desktop` / `Dev` / `Full`, `tools/export.sh`, `tools/release_check.sh`, `game/dev/build_entry.tscn`; the GodotGAS patches (F6, 3.12 D34) | `client-godot/export_presets.cfg`, `tools/` | 3.12 (D5, D33–D35); builds in `build/` (gitignored) |
 
 ### 3.2 Tags (your `godot_gas/` registry)
@@ -148,6 +148,7 @@ client-only slice. The contracts here are Godot content types and the run-layer 
 pool (rooms and early encounters).
 
 ### 3.3 The run (proposal; ids `demo.<kind>.<id>`, new files made by the builder)
+The first, two-floor version of the run (step C). C3 (3.8) replaced its shape; the Crypt content below stays in it.
 | Asset | Proposal |
 |---|---|
 | `demo.run.descent` "The Descent" | Two floor slots: [Cellar], [Crypt]; `default_run = true`; same fallback item and equipment slots as `one_floor` |
@@ -169,7 +170,7 @@ already covers the mechanics; the demo strings them together.
 | `content/demo/rooms/boss.tres` | tags `Room.Type.Boss, Chapter.Demo` → `Room.Type.Boss, Chapter.Cellar` | keeps the Golem's den out of the Crypt |
 | `content/demo/chapters/cellar.tres` | boss query `Encounter.Boss, Chapter.Demo` → `Encounter.Boss, Chapter.Cellar`; room query adds `Chapter.Cellar` (any of) | both runs |
 | `content/demo/runs/one_floor.tres` | none (it keeps working; its boss is now always the Golem) | |
-| `presentation/demo/menu.*`, `run_end_view.*`, `map_view.*`, `pickup_panel.*` | 3.6 | the shell |
+| the shell screens (`presentation/demo/ui/`: `title_menu`, `floor_card`, `pickup_panel`, `run_end`, …) | 3.6 | the shell |
 
 Consequence, accepted unless you say otherwise: the one-floor run no longer rolls the Lich as its boss.
 
@@ -178,19 +179,20 @@ Consequence, accepted unless you say otherwise: the one-floor run no longer roll
 |---|---|---|---|
 | F1 | One `RunStructure` per content root (`RunController._begin_run` stops otherwise) | 2.2: run id, `default_run`, picker, `new run=` | `test_run_picker` (fixture root with a second run in `user://`), `run_scripted.json` unchanged |
 | F2 | No whole-run balance view; `RunPlayer` lives in `tests/` | 2.3: `seed_report --play`, `autorun`, `RunPlayer` in `game/dev/` | `test_seed_report_play` (fixtures, 5 seeds, deterministic JSON, golden `seed_report_play.json`), `test_autorun_command` |
-| F3 | Validator doesn't check a run end to end (a floor slot whose chapter has no boss room or no boss encounter only fails at generation) | Rule `run_floor_unplayable` (error): for each floor slot and chapter, the boss room query, boss encounter query and the special-room tags each match ≥ 1 | broken fixture `runs/no_boss_floor.tres` |
-| F5 | Auto-play never makes bad or illegal moves, so nothing stresses wrong decisions; nothing checks battle invariants or record → replay on whole runs | 2.3b: chaos policy, illegal moves, invariant checker, replay of every battle | `test_chaos_policy` (fixtures, 5 seeds, all checks on, deterministic report), one `test_illegal_<case>` per illegal move (refused, no state change, no log entry, no RNG draw) |
+| F3 | Validator doesn't check a run end to end (a floor slot whose chapter has no boss room or no boss encounter only fails at generation) | As built: the per-chapter checks of every room role (the boss room included) and of the boss and normal encounter queries, errors `empty_query` and `zero_weights`, on every chapter | broken fixture `chapters/empty_query.tres` |
+| F5 | Auto-play never makes bad or illegal moves, so nothing stresses wrong decisions; nothing checks battle invariants or record → replay on whole runs | 2.3b: chaos policy, illegal moves, invariant checker, replay of every battle | `test_chaos_policy` (fixtures, 5 seeds, all checks on, deterministic report), `test_illegal_moves_refused` (every illegal case: refused, no state change, no log entry, no RNG draw) |
 | F6 | Every Godot run leaked at exit (4 objects, 3 resources: GodotGAS `GameplayEffect` and the two scripts it holds): Godot 4.7.2 keeps a script alive when it `@export`s a typed array of its own class (`overflow_effects: Array[GameplayEffect]`); order-dependent, every editor-binary run, about 3 in 5 dev-build runs | The one approved on-disk GodotGAS patch (2026-10-26): `Array[Resource]` (holds GameplayEffects only; nothing in `content/` uses it); recorded in `client-godot/CLAUDE.md` section 0. Second leak, debug template only: a UI sound playing when `dev_run` quit left its playback in the audio server (`Cursor1.wav`, the Hover sound: tearing screens down fires `mouse_entered`, so stopping sounds first is not enough); `Watchdog.quit(code)` frees the current scene, then lets the mixer settle (3 frames, 0.1 s) before quitting, used by `dev_run` | `test_no_leak_at_exit` (the game in a child process prints no exit leak), `test_no_self_typed_exports` (no such export in the addon or our code); both fail with the original line. Audio: 8 of 8 dev-build `dev_run` runs clean (was 5 of 5 leaking) |
 | F4 | Release-build behaviour of `Dev` never checked (dev-tools manual checklist) | 3.12: `Dev.is_inert_for`, `load_commands(debug_build)`, the player filter, the release check; recorded in `specs/dev-tools.md` | `test_dev_inert_rule`, `test_console_registry` (release ignores `user://dev_commands/`), `test_export_presets`, `test_export_keeps_what_runs` (per preset), `test_godotgas_patches`, `test_content_roots`; `tools/release_check.sh` once per export; a floor played by hand in the player build |
 | F… | Found while building | Added here and in `/sync-spec` | |
 
 ### 3.6 Shell (your `presentation/demo/`; D3)
-- `menu`: run picker (`GameMain.runs()`), party toggles with each character's ability names and `description`,
-  the seed field (existing).
-- Floor title card: a label over the map for two seconds on `floor_entered` ("Floor 2 · The Crypt").
-- `pickup_panel`: the item's or armor's `description` under its name (field exists since item-pass), price in shops.
-- `run_end_view`: `run_summary()` lines, the seed code, **Play again** (same seed, same party), **New run**, **Menu**.
-- Battle speed toggle 1× / 2× (`Engine.time_scale` on the battle view only; presentation, never combat state; the
+As built, the screens are UI policy screens in `presentation/demo/ui/` (spec `ui-framework`):
+- `title_menu`: run picker (`GameMain.runs()`), class cards with each class's kit (`class_card`, `class_details`),
+  the seed field.
+- `floor_card`: the floor's title over the map for two seconds of real time on `Message.Run.FloorEntered`.
+- `pickup_panel` / `pickup_row`: the item's or armor's `description`, price in shops, an altar's curse price.
+- `run_end`: `run_summary()` lines, the seed code, **Play again** (same seed, same party), **New run**, **Menu**.
+- Battle speed toggle 1× / 2× (`battle_panel`: `Engine.time_scale` while a battle shows; presentation, never combat state; the
   gate still waits on `execute` keys, so replay is unaffected).
 - Ability animations: every demo ability already moves or spins the cube (`Body` position and rotation tracks);
   where you want a **flash**, it is an extra track on your animation files, done in the design break, not here.
@@ -211,7 +213,8 @@ worn at once. Rarity tags existed but did nothing.
 
 Content (your files, D10, each shown as `old → new`): tags `Item.Rarity.Uncommon` and `Item.Rarity.Legendary`; a
 tier per item and armor piece (proposal table in chat, approved before editing); The Descent's weights Common 60,
-Uncommon 25, Rare 12, Legendary 3; Wisp choir grants `Drain.Ice` to every wisp; Bound dead's first Toad gets an
+Uncommon 25, Rare 12, Legendary 3 (tiers renamed by D16; weights as built in `runs/descent.tres`
+`rarity_weights_x100`); Wisp choir grants `Drain.Ice` to every wisp; Bound dead's first Toad gets an
 Entangle skill with a row `delay` and a `PatternBrain` (closes content-pass 8); the knight duel rewards the Warden
 Helm; the wounded knight's paid helm goes to the armor inventory.
 
@@ -245,39 +248,39 @@ events still appear. The Vault's treasure rooms draw from `Pool.Treasure` and a 
 | **H10 Per-item scaling** (D11): `EnemyDefinition.per_item_effect: GameplayEffect` | same | Applied once per item and armor piece held (the same count as H9), after floor scaling. The effect must stack (validator error `per_item_not_stacking`) |
 | **Boss rotation** (D12): `ChapterDefinition.boss_rotation: bool` (default false) | `game/floor_generator.gd` | The chapter's boss candidates (sorted ids) are shuffled once per run by the stream `chapter/<chapter id>/bosses`; the chapter's floor *k* (counted over the run's floor slots) takes entry *k* mod *n*. Stateless: nothing new in the run state or the run hash. Off = today's pick, so fixtures don't change |
 | **Route choice** (D15): `FloorSlot.pick: RANDOM \| CHOICE \| ROUTE` (default RANDOM), `ChapterDefinition.route_tag` (`Route.Light`, `Route.Dark`) | `game/defs/floor_slot.gd`, `game/run_controller.gd`, `game/dev/seed_report.gd` | RANDOM: today's seeded pick (`floor/<n>/chapter`). CHOICE: `next_floor(chapter_id)` names one of the slot's chapters; the run log's `next_floor` entry gets `"chapter"` (only on CHOICE slots, so old logs are unchanged); no draw. ROUTE: the slot's chapter whose `route_tag` matches the previous floor's chapter; no draw. The auto and chaos policies pick a CHOICE from their own stream `dev/route/<floor>`, so reports cover both routes. The seed report takes `--route <chapter id>` (default the first) |
-| **Price in max HP** (D17): `RoomPlacement.price_item: ItemDefinition`, `ItemDefinition.stackable: bool` | `game/defs/`, `game/floor_generator.gd`, `RunController.take` | A pedestal with a price item costs no coins: taking it gives the buyer the price item too (a curse such as Void Scar, −10% max HP), even past their item capacity. A stackable item may be held several times; each copy's effects apply in battle (its passives once). Logged as a `buy`; the items travel in the snapshot's existing `items` list (no wire change) |
-| Validator | `game/dev/content_validator.gd` | `boss_rotation_short` (warning): a rotating chapter with fewer bosses than its floors in a run; `per_item_not_stacking` (error); `choice_slot_single` (warning): a CHOICE slot with one chapter; `route_unmatched` (error): a ROUTE slot with no chapter for a route its previous slot can give; `price_item_not_stackable` (warning) |
+| **Price in max HP** (D17): `RoomPlacement.price_item: ItemDefinition` | `game/defs/`, `game/floor_generator.gd`, `RunController.take` | A pedestal with a price item costs no coins: taking it gives the buyer the price item too (a curse such as Void Scar), even past their item capacity. As built there is no `stackable` flag: a price item may be held several times and adds up through its FREE-stacking effects. Logged as a `buy`; the items travel in the snapshot's existing `items` list (no wire change) |
+| Validator | `game/dev/content_validator.gd` | `boss_rotation_short` (warning): a rotating chapter with fewer bosses than its floors in a run; `per_item_not_stacking` (error); `choice_slot_single` (warning): a CHOICE slot with one chapter; `route_unmatched` (error): a ROUTE slot with no chapter for a route its previous slot can give; `price_item_not_stacking` (warning: the price item's effects refresh instead of stacking) |
 
 Both hooks read only the snapshot and content, so the verifier rebuilds the same boss; fixtures and goldens without
 them are byte-identical. A new combat golden `mirror-seed-9` (a fixture mirror boss against a fixture party holding
 items and armor) pins H9 and H10.
 
 **Depth scaling** `demo.scaling.descent` (typed %, enemies only; replaces `basic` on the Cellar and the Crypt, so
-`one_floor` also uses floor 1's step): floors 1–10 HP +0/10/20/35/50/65/80/100/120/140, ATK
-+10/20/30/40/50/60/70/85/100/115, DEF +0/10/15/20/30/40/50/60/70/80.
+`one_floor` also uses floor 1's step): HP, ATK and DEF rise per floor; values as built in
+`content/demo/scaling/descent.tres` and its `effects/scale_depth_*.tres` (tuned in C4 and C6).
 
-**New enemies** (stats as typed; for scale, the Warrior has 1000 HP / 500 ATK and the Cleric 800 HP / 350 ATK; the
-Golem has 2000 HP and the Lich 4800):
-| Enemy | Chapter | HP / ATK / DEF / SPD / toughness | Affinities | Moves and brain |
-|---|---|---|---|---|
-| Rat King (boss) | Cellar | 2400 / 300 / 180 / 115 / 120 | weak Fire | Gnaw (Physical, Bleed 60%), Swarm (all, Physical); at 50% a Frenzy phase (Haste, Swarm unlocked); PatternBrain |
-| Bone Warden (boss) | Crypt | 3600 / 280 / 320 / 85 / 200 | resist Physical, weak Fire, Immune.Control | Shield Bash (Stun 40%), Bone Wall (Defense Up and Taunt); at 40% a Ward phase; ult Ossuary (all, Physical) |
-| Cinder Hound | Forge | 380 / 300 / 90 / 130 / 40 | resist Fire, weak Ice | Searing Bite (Fire, Burn) |
-| Anvil Guard | Forge | 700 / 260 / 300 / 80 / 120 | drain Fire, weak Ice | Hammer Down (Physical, heavy toughness damage), Brace (Defense Up) |
-| Smelter | Forge | 420 / 200 / 120 / 105 / 40 | weak Physical | Stoke (allies' ATK up), Slag (Fire, Slow); PatternBrain |
-| Forgemaster (boss) | Forge | 5200 / 340 / 240 / 100 / 180 | resist Fire, weak Ice | Hammer, Fire Bolt; at 60% Molten Armor (drain Fire, Defense Up); at 30% Meltdown (all, Fire, Burn); TacticalBrain ult |
-| Brass Colossus (boss) | Forge | 6400 / 360 / 360 / 75 / 300 | weak Ice and Physical | Piston (Physical), ult Overheat (all, Fire); breaking it is the way in (toughness 300) |
-| Leech | Hollow | 360 / 260 / 80 / 120 / 30 | drain Physical, weak Fire | Latch (Physical, Bleed) |
-| Gutter Maw | Hollow | 900 / 300 / 140 / 80 / 60 | weak Ice | Bile (2 stacks of Poison), Devour (Physical, heavy) |
-| Vein Weaver | Hollow | 440 / 240 / 100 / 115 / 40 | resist Ice, weak Fire | Entangle Lash (row delay), Hemorrhage (all, Bleed 50%); PatternBrain |
-| Mother Heart (boss) | Hollow | 7000 / 320 / 220 / 90 / 200 | weak Fire | Pulse (all, Physical), Regen on itself; at 50% Bleeding Out (all, Bleed and Vulnerable); ult Systole |
-| Twin Hearts (boss pair) | Hollow | 2 × 3600 / 340 / 200 / 100 / 120 | one weak Fire, one weak Ice | Pulse, Mend on the other; ult when the other is below 50% (TacticalBrain) |
-| Choir Seraph | Cathedral | 520 / 260 / 160 / 120 / 60 | resist Ice | Hymn (heal allies, Regen), Ward on an ally |
-| Penitent Knight | Cathedral | 900 / 360 / 340 / 85 / 120 | resist Physical, Immune.Control | Shield Bash (Stun), Provoke (Taunt) |
-| Hallowed Judge (boss) | Cathedral | 9000 / 400 / 300 / 105 / 240 | resist Fire, weak Physical | Smite, Dispel (party buffs), Purify on itself; phases at 60% and 25%; ult Judgement (single, Doom-like) |
-| Gilded Mimic | Vault | 600 / 420 / 150 / 125 / 60 | weak Physical | Snap (Physical, high crit) |
-| Vault Sentry | Vault | 1100 / 360 / 380 / 80 / 160 | drain Ice, weak Fire | Lockdown (Freeze 50%), Spiked Plating (strikes back when hit) |
-| The Collector (final boss) | Vault | 9000 / 380 / 300 / 110 / 260; **mirror**; **+5% HP, ATK and DEF per item held** | weak Physical | Appraise (Vulnerable), Repossess (Dispel), Gilded Ray (all, Ice); at 50% a Hoard phase (Ward and Haste); ult Liquidate (single, huge) |
+**New enemies** (base stats, toughness and speed as built in `content/demo/enemies/<id>.tres`; tuned after the
+proposal, most final-floor bosses to less HP):
+| Enemy | Chapter | Affinities | Moves and brain |
+|---|---|---|---|
+| Rat King (boss) | Cellar | weak Fire | Gnaw (Physical, Bleed 60%), Swarm (all, Physical); at 50% a Frenzy phase (Haste, Swarm unlocked); PatternBrain |
+| Bone Warden (boss) | Crypt | resist Physical, weak Fire, Immune.Control | Shield Bash (Stun 40%), Bone Wall (Defense Up and Taunt); at 40% a Ward phase; ult Ossuary (all, Physical) |
+| Cinder Hound | Forge | resist Fire, weak Ice | Searing Bite (Fire, Burn) |
+| Anvil Guard | Forge | drain Fire, weak Ice | Hammer Down (Physical, heavy toughness damage), Brace (Defense Up) |
+| Smelter | Forge | weak Physical | Stoke (allies' ATK up), Slag (Fire, Slow); PatternBrain |
+| Forgemaster (boss) | Forge | resist Fire, weak Ice | Hammer, Fire Bolt; at 60% Molten Armor (drain Fire, Defense Up); at 30% Meltdown (all, Fire, Burn); TacticalBrain ult |
+| Brass Colossus (boss) | Forge | weak Ice and Physical | Piston (Physical), ult Overheat (all, Fire); breaking it is the way in (toughness 300) |
+| Leech | Hollow | drain Physical, weak Fire | Latch (Physical, Bleed) |
+| Gutter Maw | Hollow | weak Ice | Bile (2 stacks of Poison), Devour (Physical, heavy) |
+| Vein Weaver | Hollow | resist Ice, weak Fire | Entangle Lash (row delay), Hemorrhage (all, Bleed 50%); PatternBrain |
+| Mother Heart (boss) | Hollow | weak Fire | Pulse (all, Physical), Regen on itself; at 50% Bleeding Out (all, Bleed and Vulnerable); ult Systole |
+| Twin Hearts (boss pair) | Hollow | one weak Fire, one weak Ice | Pulse, Mend on the other; ult when the other is below 50% (TacticalBrain) |
+| Choir Seraph | Cathedral | resist Ice | Hymn (heal allies, Regen), Ward on an ally |
+| Penitent Knight | Cathedral | resist Physical, Immune.Control | Shield Bash (Stun), Provoke (Taunt) |
+| Hallowed Judge (boss) | Cathedral | resist Fire, weak Physical | Smite, Dispel (party buffs), Purify on itself; phases at 60% and 25%; ult Judgement (single, Doom-like) |
+| Gilded Mimic | Vault | weak Physical | Snap (Physical, high crit) |
+| Vault Sentry | Vault | drain Ice, weak Fire | Lockdown (Freeze 50%), Spiked Plating (strikes back when hit) |
+| The Collector (final boss) | Vault | weak Physical | Appraise (Vulnerable), Repossess (Dispel), Gilded Ray (all, Ice); at 50% a Hoard phase (Ward and Haste); ult Liquidate (single, huge); **mirror** (H9) and per-item scaling (H10, `effects/collector_per_item.tres`) |
 
 Encounters (normal ones tagged `Chapter.<X>`): Forge 4 (hound pack, anvil and smelter, mixed, elite anvil), Hollow 4
 (leeches, maw and weaver, mixed, elite maw), Cathedral 3 (seraph and knight, two knights and a seraph, elite knight),
@@ -294,21 +297,21 @@ Rat King and the Bone Warden use their chapter's existing boss room.
 
 **Rarity (D16):** four tiers Common, Rare, Epic, Legendary. Today's tiers shift up: Uncommon → Rare, Rare → Epic
 (49 files, one tag each); `Item.Rarity.Uncommon` leaves the registry and `Item.Rarity.Epic` joins it. The Descent's
-weights: Common 60, Rare 25, Epic 12, Legendary 3.
+weights as built: `runs/descent.tres` `rarity_weights_x100`.
 
 **The dark route's enemies:**
-| Enemy | Chapter | HP / ATK / DEF / SPD / toughness | Affinities | Moves and brain |
-|---|---|---|---|---|
-| Cultist | Coven | 480 / 300 / 120 / 115 / 40 | weak Physical | Hex (Vulnerable), Curse (Weaken); PatternBrain |
-| Bound Demon | Coven | 1200 / 420 / 240 / 90 / 140 | drain Fire, weak Ice | Hellfire (Fire, Burn), Rend (Physical, Bleed) |
-| High Witch (boss) | Coven | 9000 / 400 / 260 / 110 / 220 | resist Ice, weak Fire | Hex All, Dispel, Doom; phases at 60% (Ward each turn) and 25% (Haste, Hellfire unlocked); TacticalBrain ult Black Mass (all, Ice) |
-| Void Wraith | Void | 800 / 440 / 160 / 130 / 60 | drain Ice, resist Physical | Chill Touch (Ice, Freeze 40%), Fade (Defense Up) |
-| Abyssal Hulk | Void | 1800 / 480 / 360 / 80 / 200 | weak Fire | Crush (Physical, heavy toughness), Quake (all) |
-| The Nameless (final boss) | Void | 16000 / 460 / 340 / 115 / 300 (no mirror) | resist Physical and Ice, weak Fire | Unmake (single, huge), Entropy (all, Bleed and Slow), Silence (Stun 50%); phases at 66% and 33%, each clearing its debuffs; ult Oblivion (all, huge) |
+| Enemy | Chapter | Affinities | Moves and brain |
+|---|---|---|---|
+| Cultist | Coven | weak Physical | Hex (Vulnerable), Curse (Weaken); PatternBrain |
+| Bound Demon | Coven | drain Fire, weak Ice | Hellfire (Fire, Burn), Rend (Physical, Bleed) |
+| High Witch (boss) | Coven | resist Ice, weak Fire | Hex All, Dispel, Doom; phases at 60% (Ward each turn) and 25% (Haste, Hellfire unlocked); TacticalBrain ult Black Mass (all, Ice) |
+| Void Wraith | Void | drain Ice, resist Physical | Chill Touch (Ice, Freeze 40%), Fade (Defense Up) |
+| Abyssal Hulk | Void | weak Fire | Crush (Physical, heavy toughness), Quake (all) |
+| The Nameless (final boss) | Void | resist Physical and Ice, weak Fire | Unmake (single, huge), Entropy (all, Bleed and Slow), Silence (Stun 50%); phases at 66% and 33%, each clearing its debuffs; ult Oblivion (all, huge) (no mirror) |
 
 Encounters: Coven 3 (cultists, demon and cultist, elite demon), Void 3 (wraiths, hulk and wraith, elite hulk). Boss
 rooms: one per chapter. **The Void's altars:** `Room.Type.Altar` (a new special room type), two pedestals each,
-`Pool.Void`, price item **Void Scar** (Common, `Item.Curse`, stackable: −10% max HP).
+`Pool.Void`, price item **Void Scar** (Common, `Item.Curse`; a max HP loss that stacks per copy, value in `content/demo/items/`).
 
 **Corrupted items (D18; 15, `Pool.Void`, `Item.Corrupted`, the same tier as the original):** stronger flipsides of
 all five legendaries and ten epics, each with a drawback.
@@ -387,18 +390,19 @@ Shatterweaver, Cryomancer, Ranger), damage over time (Pyromancer, Plaguewright, 
 sustain (Cleric, Bulwark, Bard).
 
 **Kits** (every class also has the shared ult-charge passives and the three break passives, like today's two; each ult
-can't be cast while controlled, D3; "MP" is the skill's cost):
-| Class | HP / MP / ATK / DEF / SPD | Basic | Skills | Passive | Ult |
-|---|---|---|---|---|---|
-| Arcanist | 700 / 140 / 520 / 180 / 105 | Arcane Bolt: Ice 90% | Fireburst (15 MP): Fire blast 140% + 60% adjacent; Frost Nova (20 MP): all enemies Ice 70% | Spellweave: +6 MP on each kill | Meteor: all enemies Fire 200%, heavy toughness |
-| Bard | 850 / 110 / 380 / 240 / 120 | Dissonance: Physical 70%, Weaken 60% | Anthem (15 MP): the party Attack Up and Haste; Discord (15 MP): all enemies Vulnerable 80%, Slow 50% | Encore: +10 ult charge when an ally gets a One More | Finale: the party acts at once (advance 100%), +30% ATK for 2 turns |
-| Ranger | 850 / 80 / 480 / 220 / 115, crit 20% | Quick Shot: Physical 100% | Mark Prey (10 MP): Physical 80%, the target becomes weak to Physical (2 turns) | Hunter's Instinct: a weakness hit triggers a 50% ATK follow-up; each follow-up +10 ult charge | Rain of Arrows: all enemies Physical 130% |
-| Cryomancer | 800 / 120 / 470 / 220 / 105 | Frost Jab: Ice 100%, toughness 30 | Glacial Spike (15 MP): Ice 160%, Freeze 35%; Blizzard (20 MP): all enemies Ice 70%, Slow | Cold Snap: +20 ult charge on a break | Absolute Zero: all enemies Ice 160%, Freeze 50% |
-| Pyromancer | 780 / 120 / 500 / 200 / 110, ult charge gain +25% | Ember: Fire 100% | Ignite (10 MP): Fire 80% + Burn 60; Inferno (20 MP): all enemies Fire 60% + Burn 40 | Kindling: +8 ult charge on each Fire hit | Supernova: all enemies Fire 220% + Burn 100 |
-| Bulwark | 1400 / 60 / 320 / 420 / 90 | Shield Slam: Physical 80%, toughness 40 | Fortify (10 MP): Defense Up and Taunt | Retaliation: when hit, a 40% ATK counter, +1 Fury (+10% ATK, up to 5, 2 turns) and +10 ult charge | Bastion: the party gains Ward and Defense Up |
-| Ember Knight | 950 / 80 / 500 / 260 / 112 | Searing Slash: Fire 100%, toughness 30 | Kindle Brand (15 MP): Fire 150%, toughness 50, the target becomes weak to Fire (Seared, 2 turns) | Ashen Resolve: +40% damage to Broken enemies | Complete Combustion: 3 turns of +30 SPD, +50% toughness damage, +40% damage to Broken enemies, and Fyrefly Strike unlocked (Fire 200% + 80% adjacent, toughness 60, Seared on every hit; free) |
-| Shatterweaver | 820 / 110 / 380 / 230 / 118 | Fault Line: Physical 80%, toughness 40 | Fracture Field (15 MP): the party +30% toughness damage and +25% damage to Broken enemies (3 turns); Splinter (10 MP): Physical 60%, toughness 50, Vulnerable | Resonance: +20 ult charge on a break | Shatter Chorus: all enemies Physical 60% with toughness 80, then Fracture Field on the party |
-| Plaguewright | 820 / 120 / 400 / 220 / 112 | Infect: Physical 70%, Poison 60% | Contagion (15 MP): all enemies 2 stacks of Poison (80%); Lingering Malady (15 MP): the party's debuffs last 1 more turn (3 turns) | Virulence: its own debuffs last 1 more turn; +10 ult charge when one is resisted | Pandemic: all enemies Poison, Bleed, Burn 60 and Vulnerable |
+can't be cast while controlled, D3; "MP" is the skill's cost). Base stats (HP, MP, ATK, DEF, SPD, and extras such as
+the Ranger's crit rate and the Pyromancer's ult charge gain) as built in `content/demo/characters/<id>.tres`:
+| Class | Basic | Skills | Passive | Ult |
+|---|---|---|---|---|
+| Arcanist | Arcane Bolt: Ice 90% | Fireburst (15 MP): Fire blast 140% + 60% adjacent; Frost Nova (20 MP): all enemies Ice 70% | Spellweave: +6 MP on each kill | Meteor: all enemies Fire 200%, heavy toughness |
+| Bard | Dissonance: Physical 70%, Weaken 60% | Anthem (15 MP): the party Attack Up and Haste; Discord (15 MP): all enemies Vulnerable 80%, Slow 50% | Encore: +10 ult charge when an ally gets a One More | Finale: the party acts at once (advance 100%), +30% ATK for 2 turns |
+| Ranger | Quick Shot: Physical 100% | Mark Prey (10 MP): Physical 80%, the target becomes weak to Physical (2 turns) | Hunter's Instinct: a weakness hit triggers a 50% ATK follow-up; each follow-up +10 ult charge | Rain of Arrows: all enemies Physical 130% |
+| Cryomancer | Frost Jab: Ice 100%, toughness 30 | Glacial Spike (15 MP): Ice 160%, Freeze 35%; Blizzard (20 MP): all enemies Ice 70%, Slow | Cold Snap: +20 ult charge on a break | Absolute Zero: all enemies Ice 160%, Freeze 50% |
+| Pyromancer | Ember: Fire 100% | Ignite (10 MP): Fire 80% + Burn 60; Inferno (20 MP): all enemies Fire 60% + Burn 40 | Kindling: +8 ult charge on each Fire hit | Supernova: all enemies Fire 220% + Burn 100 |
+| Bulwark | Shield Slam: Physical 80%, toughness 40 | Fortify (10 MP): Defense Up and Taunt | Retaliation: when hit, a 40% ATK counter, +1 Fury (+10% ATK, up to 5, 2 turns) and +10 ult charge | Bastion: the party gains Ward and Defense Up |
+| Ember Knight | Searing Slash: Fire 100%, toughness 30 | Kindle Brand (15 MP): Fire 150%, toughness 50, the target becomes weak to Fire (Seared, 2 turns) | Ashen Resolve: +40% damage to Broken enemies | Complete Combustion: 3 turns of +30 SPD, +50% toughness damage, +40% damage to Broken enemies, and Fyrefly Strike unlocked (Fire 200% + 80% adjacent, toughness 60, Seared on every hit; free) |
+| Shatterweaver | Fault Line: Physical 80%, toughness 40 | Fracture Field (15 MP): the party +30% toughness damage and +25% damage to Broken enemies (3 turns); Splinter (10 MP): Physical 60%, toughness 50, Vulnerable | Resonance: +20 ult charge on a break | Shatter Chorus: all enemies Physical 60% with toughness 80, then Fracture Field on the party |
+| Plaguewright | Infect: Physical 70%, Poison 60% | Contagion (15 MP): all enemies 2 stacks of Poison (80%); Lingering Malady (15 MP): the party's debuffs last 1 more turn (3 turns) | Virulence: its own debuffs last 1 more turn; +10 ult charge when one is resisted | Pandemic: all enemies Poison, Bleed, Burn 60 and Vulnerable |
 
 New effects: Fury (`Status.Buff.Fury`, stacks to 5), Finale (+30% ATK, 2 turns), Combustion (`Status.Buff.Combustion`
 plus `State.Combustion`, which Fyrefly Strike's activation query requires), Fracture (`Status.Buff.Fracture`), Malady
@@ -450,10 +454,9 @@ stay the main recovery. Demo food (`Pool.Food`, never in item pools): Rations (o
 Haunch (one ally heals 30% HP), Honey Cake (one ally regains 40% MP), Hearty Feast (the party heals 25% HP; Rare).
 Chances 2–6%, on some enemies only (beasts and brutes drop meat, casters cake), up to 8% on bosses.
 
-**Demo numbers (D32):** `xp_per_enemy` 20, `xp_per_boss` 120; `xp_to_level`: 60, 150, 270, 420, 600, 810, 1050, 1320,
-1620, 1950, 2310, 2700, 3120, 3570 (levels 2–15). Growth per level: damage dealers +6% max HP, +8% ATK, +4% DEF;
-supports +7% max HP, +6% ATK, +5% DEF; tanks (Bulwark) +9% max HP, +4% ATK, +7% DEF (all FREE stacking, on each
-class).
+**Demo numbers (D32):** as built in `runs/descent.tres` (`xp_per_enemy`, `xp_per_boss`, `xp_to_level`, levels 2–15)
+and the growth effects `effects/growth_damage.tres`, `growth_support.tres` and `growth_tank.tres` (max HP, ATK and DEF
+per level, FREE stacking; each class's `level_effect` names one).
 
 ### 3.12 Amendment E (2026-10-26, D5 as built, D33–D35): the Windows export, export levels, the release check
 Status: built 2026-10-26.
@@ -534,16 +537,16 @@ protects is that **adding a second run and a second floor doesn't change any exi
 |---|---|---|
 | Fixture root (one run) replayed after F1 | Same log, same run hash: the `"run"` field is written only when several runs exist | `run_scripted.json` golden unchanged |
 | Several runs, none named, none default | `stop("several runs and none is default: …")`, run never starts, end view shows it | `test_run_picker` |
-| Two runs flagged default | Validator error `run_default_twice` | broken fixture |
+| Two runs flagged default | Validator error `run_default_twice` (none flagged: warning `run_no_default`) | broken fixtures `runs/default_a.tres`, `runs/default_b.tres` |
 | Unknown `run=` id | Command fails, names the id; menu can't offer it | `test_run_picker` |
-| A floor that can't generate (no boss room for its chapter) | Validator error before play (F3); at generation the existing runner error | broken fixture |
-| Second floor's battles draw from the wrong stream | Can't: floor seeds are `floor/<n>/…` (`RunSeeds`), unchanged | existing `test_generation`, plus `test_demo_run_two_floors` checks floor 1 differs from floor 0 for the same seed |
+| A floor that can't generate (no boss room for its chapter) | Validator error before play (F3: `empty_query` / `zero_weights`); at generation the existing runner error | broken fixture `chapters/empty_query.tres` |
+| Second floor's battles draw from the wrong stream | Can't: floor seeds are `floor/<n>/…` (`RunSeeds`), unchanged | existing `test_generation` (fixtures); on demo content not asserted (`test_demo_run_full_descent` checks each floor's chapter and boss, not that floor 1 differs from floor 0; open, 6) |
 | Report differs between two runs of the same seeds | Not allowed: one process, sequential seeds, no wall-clock in the JSON | `test_seed_report_play` runs it twice and compares |
-| Illegal move submitted (chaos or a player's UI bug) | Refused: no state change, no log entry, no RNG draw; the decision is asked again | `test_illegal_<case>` |
+| Illegal move submitted (chaos or a player's UI bug) | Refused: no state change, no log entry, no RNG draw; the decision is asked again | `test_illegal_moves_refused` |
 | Illegal move found in a log on replay | 2002 `IllegalAbility` / `InvalidTarget` (existing reasons) | existing tampered goldens |
 | Strange but legal battle (wasted ults, heals on full HP, drain hits) | Replays Verified with the same hash | `test_chaos_policy` replays every battle |
 | Chaos policy changes the battle's RNG | Can't: own `dev/chaos/<seq>` stream; checked by replaying without the policy | `test_chaos_policy` |
-| Speed toggle changes combat | Can't: `time_scale` affects presentation; combat awaits only the gate | `test_demo_run_two_floors` headless (no view) vs a scripted window run with 2× give the same run hash (manual, once) |
+| Speed toggle changes combat | Can't: `time_scale` affects presentation; combat awaits only the gate | a headless run (no view) vs a scripted window run with 2× give the same run hash (manual, once; not done yet) |
 | Cursed chest's 20% damage on a dead or low member | Existing outcome rules (`apply_party_effect` skips the dead unless `include_dead`; whether it can kill is pinned as built, not changed here) | `test_demo_events` pins the built rule, direction only |
 | Encounter grants or a slot brain change replays | Read from content by encounter id and slot; the verifier builds the same units | `test_encounter_grants_replay` (record → replay Verified), existing goldens unchanged |
 | Rewards on a lost battle | Never applied | `test_encounter_rewards` |
@@ -563,20 +566,27 @@ existing fixtures and goldens stay byte-identical.
 
 **System tests:** `test_run_picker` (one run, several with a default, several without, unknown id, two defaults),
 `test_seed_report_play` (+ golden `tests/fixtures/golden/game/seed_report_play.json`), `test_autorun_command`,
-`test_run_summary` (fixture scripted run: counts match its log), `test_chaos_policy` and the `test_illegal_<case>`
-tests (F5), `test_invariant_checker` (a dev effect pushes HP past max in a fixture battle → the checker reports it), parity entries for `new run=` and `autorun` in
-`test_tool_parity`, the validator broken fixtures `runs/no_boss_floor.tres` and `runs/two_defaults/`.
+`test_run_summary` (fixture scripted run: counts match its log), `test_chaos_policy` and `test_illegal_moves_refused`
+(F5), `test_invariant_checker` (a dev effect pushes HP past max in a fixture battle → the checker reports it), parity entries for `new run=` and `autorun` in
+`test_tool_parity`, the validator broken fixtures `chapters/empty_query.tres` and `runs/default_a.tres` / `default_b.tres`.
 
 **Demo content tests** (`tests/game/test_demo_run.gd`, reads `content/demo/`, direction only, never tuned numbers):
-- `test_demo_run_two_floors`: `demo.run.descent` is the default; floor 0 is the Cellar with the Golem as boss, floor
-  1 the Crypt with the Lich; each floor has a treasure room and a shop; seeds 1–20 all generate.
+- `test_demo_run_full_descent` (was `test_demo_run_two_floors`): `demo.run.descent` is the default; every floor ends
+  in its chapter's boss, a chapter's two floors meet different bosses, both routes reach floor 10; item rooms only
+  where the chapter has them (none in the Hollow, the Cathedral and the Coven; four treasure rooms in the Vault; three
+  altars in the Void).
 - `test_demo_run_completes`: `RunPlayer` on seeds 1–10 always ends (Won or Lost, never a runner error or the step
   cap), and the stairs are taken on every run that clears the Golem.
 - `test_demo_events`: each new event's choices are enabled under their conditions and do what the text says
   (direction: coins go down, an item arrives, an encounter starts).
-- `test_demo_crypt_encounters`: each Crypt encounter is reachable and uses its mechanic (Stun, Freeze, Ice drain, the
-  Entangle delay pushes the target's next turn back).
+- `test_demo_encounter_features` (was `test_demo_crypt_encounters`): the Wisp choir drains Ice, Bound dead's first
+  Toad lashes with Entangle (its row delay fires), beating the wounded knight drops his helm into the armor inventory.
+  Also `test_demo_endings`, `test_demo_status_immunity`, `test_demo_ults_*`, `test_demo_items_replay`.
 - `test_content_valid`: 0 errors.
+
+**Open after the 2026-10-26 sync (untested on demo content):** the C6 events (Healing Spring, Wandering Medic,
+Old Tutor) and the Waystation have no `test_demo_events` case (the rest stop is tested on fixtures,
+`test_rest_stop_between_floors`); no demo test asserts that floor 1 differs from floor 0 for the same seed.
 
 **Golden vectors:** no new combat golden (no battle rule changes). `seed_report_play.json` (fixtures) pins the
 report's shape and determinism. A recorded demo run is **not** a golden (your tuning would break it daily); the slice
@@ -618,21 +628,19 @@ C2. 3.7: system first (encounter grants, slot brain, rewards, armor to inventory
 D. Shell (3.6), each file shown as a diff.
 E. ✅ Export presets (player, dev, full), `build/` in `.gitignore`, F4 check (3.12); then the design break: your
    tuning on the report.
-F. `/sync-spec playable-demo`, roadmap ✅, root `CLAUDE.md` table (`content/demo/` now a two-floor run), the
-   dev-tools checklist line.
+F. `/sync-spec playable-demo`, roadmap ✅, root `CLAUDE.md` table (`content/demo/` the ten-floor Descent), the
+   dev-tools checklist line (done in E). Spec synced 2026-10-26; what is left: your tuning, the manual checks in 6.
 
 ## 8. Later
 - Local saves and resume (2b), a hub and unlocks (5), completion marks and gems.
 - More floors and chapters; Delirium-style mixed floors (`rooms_from_any_chapter` exists, unused).
-- A smarter auto-play policy (target weaknesses, use ults at breaks) if the report's dumb policy turns out too far
-  from human play to be useful.
 - A floor-layout grid in the inspector (`specs/dev-tools.md` Later).
 - Status icons, flash VFX, music per chapter (`ChapterDefinition` has no music field yet).
 
 ## 9. Decisions
 All approved as recommended (user, 2026-10-26). F5 (chaos policy, 2.3b) added the same day at the user's request. The edits to existing files (D3) are still each shown as `old → new`
 when made.
-- **D1 run length: two floors** (Cellar → Crypt), recommended: the smallest run with stairs, a difficulty step and
+- **D1 run length: two floors** (Cellar → Crypt; superseded by D13 and D15, the ten-floor Descent), recommended: the smallest run with stairs, a difficulty step and
   both bosses, short enough to show. Alternatives: one floor (exists; no stairs, no arc), three floors (needs a third
   boss, which is new content beyond this slice).
 - **D2 keep `demo.run.one_floor`** next to the new run, picked in the menu (F1), recommended: it stays the quick
