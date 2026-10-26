@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_lfc5o"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_rwcf3"]
+[ext_resource type="Resource" path="res://content/demo/enemies/imp.tres" id="3_68h4a"]
+[ext_resource type="Resource" path="res://content/demo/enemies/knight.tres" id="4_snf00"]
+[ext_resource type="Resource" path="res://content/demo/variants/elite.tres" id="5_gj208"]
+
+[sub_resource type="Resource" id="Resource_mwd5l"]
+script = ExtResource("2_rwcf3")
+enemy = ExtResource("3_68h4a")
+
+[sub_resource type="Resource" id="Resource_ato8b"]
+script = ExtResource("2_rwcf3")
+enemy = ExtResource("4_snf00")
+variant = ExtResource("5_gj208")
+
+[resource]
+script = ExtResource("1_lfc5o")
+id = &"demo.encounter.ember_watch"
+display_name = "Ember watch"
+tags = Array[StringName]([&"Chapter.Crypt"])
+slots = Array[ExtResource("2_rwcf3")]([SubResource("Resource_mwd5l"), SubResource("Resource_ato8b")])

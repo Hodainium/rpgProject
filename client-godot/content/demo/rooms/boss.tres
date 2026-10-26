@@ -43,6 +43,6 @@ slot = 3
 script = ExtResource("2_a1lot")
 id = &"demo.room.boss"
 display_name = "Golem's den"
-tags = Array[StringName]([&"Room.Type.Boss", &"Chapter.Demo"])
+tags = Array[StringName]([&"Room.Type.Boss", &"Chapter.Cellar"])
 content_mode = 2
 placements = Array[ExtResource("1_wnc7d")]([SubResource("Resource_hrs0h"), SubResource("Resource_sp3ln"), SubResource("Resource_agehj"), SubResource("Resource_qltj2"), SubResource("Resource_afc4l"), SubResource("Resource_2pbk3"), SubResource("Resource_mnpm3")])

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_nui1w"]
+[ext_resource type="Resource" path="res://content/demo/equipment/warden_helm.tres" id="2_spck0"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_equipment.gd" id="3_vnl6u"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="4_raxc5"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="5_s57xv"]
+[ext_resource type="Resource" path="res://content/demo/enemies/knight.tres" id="6_5cwk5"]
+[ext_resource type="Resource" path="res://content/demo/variants/elite.tres" id="7_d27a4"]
+
+[sub_resource type="Resource" id="Resource_o5chm"]
+script = ExtResource("3_vnl6u")
+equipment = ExtResource("2_spck0")
+
+[sub_resource type="Resource" id="Resource_2c5ge"]
+script = ExtResource("5_s57xv")
+enemy = ExtResource("6_5cwk5")
+variant = ExtResource("7_d27a4")
+
+[resource]
+script = ExtResource("4_raxc5")
+id = &"demo.encounter.knight_duel"
+display_name = "Wounded knight"
+slots = Array[ExtResource("5_s57xv")]([SubResource("Resource_2c5ge")])
+rewards = Array[ExtResource("1_nui1w")]([SubResource("Resource_o5chm")])

@@ -15,6 +15,6 @@ script = ExtResource("5_kkd2d")
 id = &"demo.item.scholars_tome"
 display_name = "Scholar's Tome"
 description = "Hitting a weakness gives +15 ult charge and 5 MP."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Uncommon"])
 price = 6
 grants = SubResource("Resource_4n6kl")

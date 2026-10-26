@@ -15,6 +15,6 @@ script = ExtResource("5_rn0qo")
 id = &"demo.item.sharp_eye"
 display_name = "Sharp Eye"
 description = "Critical hits give +10 ult charge."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Uncommon"])
 price = 6
 grants = SubResource("Resource_hacgo")

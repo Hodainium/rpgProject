@@ -15,6 +15,6 @@ script = ExtResource("5_lfmco")
 id = &"demo.item.siphon_sigil"
 display_name = "Siphon Sigil"
 description = "Each hit you drain gives +10 ult charge."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Uncommon"])
 price = 5
 grants = SubResource("Resource_ep6o8")

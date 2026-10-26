@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="ChapterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_ohs8t"]
+[ext_resource type="Resource" path="res://content/demo/floor_rules/crypt.tres" id="2_tmoox"]
+[ext_resource type="Resource" path="res://content/demo/scaling/basic.tres" id="3_3yriu"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="4_wpxxl"]
+
+[sub_resource type="Resource" id="Resource_3rdpc"]
+script = ExtResource("1_ohs8t")
+require_all_tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Crypt"])
+
+[sub_resource type="Resource" id="Resource_n6s0v"]
+script = ExtResource("1_ohs8t")
+require_all_tags = Array[StringName]([&"Chapter.Crypt"])
+ignore_tags = Array[StringName]([&"Encounter.Boss"])
+
+[sub_resource type="Resource" id="Resource_y35ka"]
+script = ExtResource("1_ohs8t")
+require_all_tags = Array[StringName]([&"Event.Demo"])
+
+[sub_resource type="Resource" id="Resource_qf5dr"]
+script = ExtResource("1_ohs8t")
+require_any_tags = Array[StringName]([&"Chapter.Demo", &"Chapter.Crypt"])
+
+[resource]
+script = ExtResource("4_wpxxl")
+id = &"demo.chapter.crypt"
+display_name = "The Crypt"
+tags = Array[StringName]([&"Chapter.Crypt"])
+room_query = SubResource("Resource_qf5dr")
+encounter_query = SubResource("Resource_n6s0v")
+boss_encounter_query = SubResource("Resource_3rdpc")
+event_query = SubResource("Resource_y35ka")
+floor_gen_rules = ExtResource("2_tmoox")
+scaling = ExtResource("3_3yriu")

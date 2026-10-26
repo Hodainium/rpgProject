@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_w3txt"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_4lsqc"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_pb3r3"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_j071w"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_gh1n5"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="6_65fyf"]
+[ext_resource type="Resource" path="res://content/demo/effects/curse_wound.tres" id="7_dswys"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="8_j5tyf"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="9_m6tgc"]
+
+[sub_resource type="Resource" id="Resource_bg305"]
+script = ExtResource("5_gh1n5")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_0sown"]
+script = ExtResource("6_65fyf")
+item_query = SubResource("Resource_bg305")
+
+[sub_resource type="Resource" id="Resource_2srn8"]
+script = ExtResource("8_j5tyf")
+effect = ExtResource("7_dswys")
+
+[sub_resource type="Resource" id="Resource_oeelf"]
+script = ExtResource("2_4lsqc")
+label = "Open it (an item; everyone loses 20% max HP)"
+outcomes = Array[ExtResource("4_j071w")]([SubResource("Resource_0sown"), SubResource("Resource_2srn8")])
+
+[sub_resource type="Resource" id="Resource_kriy8"]
+script = ExtResource("2_4lsqc")
+label = "Leave it"
+
+[sub_resource type="Resource" id="Resource_sooab"]
+script = ExtResource("1_w3txt")
+text = "A chest bound in black chains. Something inside is worth having; the chains want blood."
+choices = Array[ExtResource("2_4lsqc")]([SubResource("Resource_oeelf"), SubResource("Resource_kriy8")])
+
+[resource]
+script = ExtResource("9_m6tgc")
+id = &"demo.event.cursed_chest"
+display_name = "Cursed chest"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_w3txt")]([SubResource("Resource_sooab")])

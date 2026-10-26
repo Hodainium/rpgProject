@@ -12,5 +12,5 @@ enemy = ExtResource("3_vyx2v")
 script = ExtResource("1_nnfem")
 id = &"demo.encounter.golem"
 display_name = "The Golem"
-tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Demo"])
+tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Cellar"])
 slots = Array[ExtResource("2_guaok")]([SubResource("Resource_r67ve")])

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_ft3fu"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_q0uao"]
+[ext_resource type="Resource" path="res://content/demo/enemies/knight.tres" id="3_1hl5r"]
+[ext_resource type="Resource" path="res://content/demo/enemies/shaman.tres" id="4_ijriq"]
+
+[sub_resource type="Resource" id="Resource_lsugy"]
+script = ExtResource("2_q0uao")
+enemy = ExtResource("3_1hl5r")
+
+[sub_resource type="Resource" id="Resource_n550j"]
+script = ExtResource("2_q0uao")
+enemy = ExtResource("4_ijriq")
+
+[resource]
+script = ExtResource("1_ft3fu")
+id = &"demo.encounter.crypt_guard"
+display_name = "Crypt guard"
+tags = Array[StringName]([&"Chapter.Crypt"])
+slots = Array[ExtResource("2_q0uao")]([SubResource("Resource_lsugy"), SubResource("Resource_n550j")])

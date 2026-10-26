@@ -15,6 +15,6 @@ script = ExtResource("5_b0snd")
 id = &"demo.item.leech_hide"
 display_name = "Leech Hide"
 description = "You drain Physical: Physical hits heal you."
-tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary"])
 price = 12
 grants = SubResource("Resource_bhexx")

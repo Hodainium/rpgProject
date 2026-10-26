@@ -13,5 +13,6 @@ effects = Array[ExtResource("1_jnukx")]([ExtResource("2_vpfha")])
 script = ExtResource("4_a3qd0")
 id = &"demo.equipment.iron_sword"
 display_name = "Iron Sword"
+tags = Array[StringName]([&"Item.Rarity.Common"])
 slot = &"Equipment.Slot.Weapon"
 grants = SubResource("Resource_wt8mu")

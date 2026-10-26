@@ -15,6 +15,6 @@ script = ExtResource("5_nw03h")
 id = &"demo.item.witchs_eye"
 display_name = "Witch's Eye"
 description = "Debuffs you apply last 1 more turn."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Uncommon"])
 price = 6
 grants = SubResource("Resource_vt7v5")

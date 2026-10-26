@@ -15,6 +15,6 @@ script = ExtResource("5_metqj")
 id = &"demo.item.encore_ribbon"
 display_name = "Encore Ribbon"
 description = "Heal 60 HP whenever you get a One More."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Uncommon"])
 price = 6
 grants = SubResource("Resource_gb2rw")

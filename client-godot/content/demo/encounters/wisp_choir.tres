@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_b0rhs"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="2_0w8db"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="3_kh0wa"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="4_0ma1v"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="5_cln3m"]
+[ext_resource type="Resource" path="res://content/demo/enemies/wisp.tres" id="6_2gmq7"]
+
+[sub_resource type="Resource" id="Resource_nm516"]
+script = ExtResource("2_0w8db")
+tags = Array[StringName]([&"Drain.Ice"])
+
+[sub_resource type="Resource" id="Resource_7s0u4"]
+script = ExtResource("5_cln3m")
+enemy = ExtResource("6_2gmq7")
+
+[sub_resource type="Resource" id="Resource_ayn75"]
+script = ExtResource("5_cln3m")
+enemy = ExtResource("6_2gmq7")
+
+[sub_resource type="Resource" id="Resource_p78vo"]
+script = ExtResource("5_cln3m")
+enemy = ExtResource("6_2gmq7")
+
+[resource]
+script = ExtResource("4_0ma1v")
+id = &"demo.encounter.wisp_choir"
+display_name = "Wisp choir"
+tags = Array[StringName]([&"Chapter.Crypt"])
+slots = Array[ExtResource("5_cln3m")]([SubResource("Resource_7s0u4"), SubResource("Resource_ayn75"), SubResource("Resource_p78vo")])
+grants = SubResource("Resource_nm516")

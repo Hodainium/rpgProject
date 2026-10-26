@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_c2037"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_kf066"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_0vjwg"]
+[ext_resource type="Resource" path="res://content/demo/effects/entangle.tres" id="4_w0ddg"]
+[ext_resource type="Animation" path="res://content/demo/animations/entangle_lash.tres" id="5_vcwm7"]
+
+[sub_resource type="Resource" id="Resource_dlc6k"]
+script = ExtResource("2_kf066")
+id = &"lash"
+effect = ExtResource("3_0vjwg")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_5o6wy"]
+script = ExtResource("2_kf066")
+id = &"snare"
+effect = ExtResource("4_w0ddg")
+chance_x100 = 10000
+delay_x100 = 3000
+
+[node name="EntangleLash" type="Node" unique_id=951577961]
+script = ExtResource("1_c2037")
+executions = Array[ExtResource("2_kf066")]([SubResource("Resource_dlc6k"), SubResource("Resource_5o6wy")])
+animation = ExtResource("5_vcwm7")
+ability_tag = &"Ability.Entanglelash"

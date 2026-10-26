@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_6nroo"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_brv61"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_t12dq"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="4_hyg3f"]
+[ext_resource type="Resource" path="res://content/demo/enemies/toad.tres" id="5_17rad"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/entangle_lash.tscn" id="6_v8ge3"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="7_h00dc"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="8_f0spt"]
+[ext_resource type="Resource" path="res://content/demo/enemies/shaman.tres" id="9_5sjj1"]
+
+[sub_resource type="Resource" id="Resource_87348"]
+script = ExtResource("4_hyg3f")
+pattern = Array[StringName]([&"Ability.Entanglelash", &"Ability.Spit"])
+
+[sub_resource type="Resource" id="Resource_aqnp7"]
+script = ExtResource("8_f0spt")
+abilities = Array[PackedScene]([ExtResource("6_v8ge3")])
+
+[sub_resource type="Resource" id="Resource_idpg7"]
+script = ExtResource("3_t12dq")
+enemy = ExtResource("5_17rad")
+grants = SubResource("Resource_aqnp7")
+brain = SubResource("Resource_87348")
+
+[sub_resource type="Resource" id="Resource_ro0wd"]
+script = ExtResource("3_t12dq")
+enemy = ExtResource("9_5sjj1")
+
+[sub_resource type="Resource" id="Resource_m0qcu"]
+script = ExtResource("3_t12dq")
+enemy = ExtResource("5_17rad")
+
+[resource]
+script = ExtResource("2_brv61")
+id = &"demo.encounter.bound_dead"
+display_name = "Bound dead"
+tags = Array[StringName]([&"Chapter.Crypt"])
+slots = Array[ExtResource("3_t12dq")]([SubResource("Resource_idpg7"), SubResource("Resource_ro0wd"), SubResource("Resource_m0qcu")])

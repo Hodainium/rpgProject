@@ -1,0 +1,70 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_rjly7"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_ki0n4"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_rtl03"]
+[ext_resource type="Script" path="res://game/defs/conditions/coins_at_least.gd" id="4_fp2qg"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_bl6yw"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_coins.gd" id="6_wk0o6"]
+[ext_resource type="Resource" path="res://content/demo/equipment/warden_helm.tres" id="7_54kmg"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_equipment.gd" id="8_kjthq"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="9_yksel"]
+[ext_resource type="Resource" path="res://content/demo/encounters/knight_duel.tres" id="10_7s5rf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="11_35vjp"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="12_hn55m"]
+
+[sub_resource type="Resource" id="Resource_eggoh"]
+script = ExtResource("4_fp2qg")
+amount = 15
+
+[sub_resource type="Resource" id="Resource_gpal7"]
+script = ExtResource("6_wk0o6")
+amount = 15
+
+[sub_resource type="Resource" id="Resource_seg6r"]
+script = ExtResource("8_kjthq")
+equipment = ExtResource("7_54kmg")
+
+[sub_resource type="Resource" id="Resource_3elqh"]
+script = ExtResource("9_yksel")
+page = 1
+
+[sub_resource type="Resource" id="Resource_bibcy"]
+script = ExtResource("2_ki0n4")
+label = "Pay 15 coins"
+conditions = Array[ExtResource("3_rtl03")]([SubResource("Resource_eggoh")])
+outcomes = Array[ExtResource("5_bl6yw")]([SubResource("Resource_gpal7"), SubResource("Resource_seg6r"), SubResource("Resource_3elqh")])
+
+[sub_resource type="Resource" id="Resource_6cmmk"]
+script = ExtResource("11_35vjp")
+encounter = ExtResource("10_7s5rf")
+
+[sub_resource type="Resource" id="Resource_k22nl"]
+script = ExtResource("2_ki0n4")
+label = "Challenge him"
+outcomes = Array[ExtResource("5_bl6yw")]([SubResource("Resource_6cmmk")])
+
+[sub_resource type="Resource" id="Resource_r5mjd"]
+script = ExtResource("2_ki0n4")
+label = "Walk past"
+
+[sub_resource type="Resource" id="Resource_n3ee2"]
+script = ExtResource("1_rjly7")
+text = "A wounded knight blocks the way. \"Fifteen coins for a healer, and my helm is yours.\""
+choices = Array[ExtResource("2_ki0n4")]([SubResource("Resource_bibcy"), SubResource("Resource_k22nl"), SubResource("Resource_r5mjd")])
+
+[sub_resource type="Resource" id="Resource_gte41"]
+script = ExtResource("2_ki0n4")
+label = "Continue"
+
+[sub_resource type="Resource" id="Resource_15t7v"]
+script = ExtResource("1_rjly7")
+text = "He presses the helm into your hands and limps away."
+choices = Array[ExtResource("2_ki0n4")]([SubResource("Resource_gte41")])
+
+[resource]
+script = ExtResource("12_hn55m")
+id = &"demo.event.wounded_knight"
+display_name = "Wounded knight"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_rjly7")]([SubResource("Resource_n3ee2"), SubResource("Resource_15t7v")])

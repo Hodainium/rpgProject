@@ -8,7 +8,7 @@
 script = ExtResource("2_b2vrq")
 id = &"demo.item.phoenix_feather"
 display_name = "Phoenix Feather"
-tags = Array[StringName]([&"Pool.Shop", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Shop", &"Item.Rarity.Uncommon"])
 price = 5
 kind = 1
 use_ability = ExtResource("3_3p0mk")

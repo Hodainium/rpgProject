@@ -15,6 +15,6 @@ script = ExtResource("5_ke7u5")
 id = &"demo.item.last_rites"
 display_name = "Last Rites"
 description = "On a kill: Regen (6% of max HP per turn, 2 turns)."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Uncommon"])
 price = 6
 grants = SubResource("Resource_bbnfq")

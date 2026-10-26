@@ -1,0 +1,59 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_cdm06"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_ip8tk"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_bf8ja"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_55p7y"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="5_xud85"]
+[ext_resource type="Resource" path="res://content/demo/items/scholars_tome.tres" id="6_d2lib"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="7_obar1"]
+[ext_resource type="Resource" path="res://content/demo/items/hourglass.tres" id="8_3olb8"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="9_leevh"]
+
+[sub_resource type="Resource" id="Resource_3kxog"]
+script = ExtResource("5_xud85")
+page = 1
+
+[sub_resource type="Resource" id="Resource_qgkun"]
+script = ExtResource("2_ip8tk")
+label = "Look at the books"
+outcomes = Array[ExtResource("4_55p7y")]([SubResource("Resource_3kxog")])
+
+[sub_resource type="Resource" id="Resource_x0m3c"]
+script = ExtResource("2_ip8tk")
+label = "Leave"
+
+[sub_resource type="Resource" id="Resource_0fiyd"]
+script = ExtResource("1_cdm06")
+text = "An old librarian looks up from a pile of books. \"Take one. Only one.\""
+choices = Array[ExtResource("2_ip8tk")]([SubResource("Resource_qgkun"), SubResource("Resource_x0m3c")])
+
+[sub_resource type="Resource" id="Resource_cdthb"]
+script = ExtResource("7_obar1")
+item = ExtResource("6_d2lib")
+
+[sub_resource type="Resource" id="Resource_nii5r"]
+script = ExtResource("2_ip8tk")
+label = "Take the Scholar's Tome"
+outcomes = Array[ExtResource("4_55p7y")]([SubResource("Resource_cdthb")])
+
+[sub_resource type="Resource" id="Resource_m5tjx"]
+script = ExtResource("7_obar1")
+item = ExtResource("8_3olb8")
+
+[sub_resource type="Resource" id="Resource_f1tks"]
+script = ExtResource("2_ip8tk")
+label = "Take the Hourglass"
+outcomes = Array[ExtResource("4_55p7y")]([SubResource("Resource_m5tjx")])
+
+[sub_resource type="Resource" id="Resource_slhul"]
+script = ExtResource("1_cdm06")
+text = "Two books are left on the desk."
+choices = Array[ExtResource("2_ip8tk")]([SubResource("Resource_nii5r"), SubResource("Resource_f1tks")])
+
+[resource]
+script = ExtResource("9_leevh")
+id = &"demo.event.librarian"
+display_name = "Librarian"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_cdm06")]([SubResource("Resource_0fiyd"), SubResource("Resource_slhul")])

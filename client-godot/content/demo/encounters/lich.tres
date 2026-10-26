@@ -12,5 +12,5 @@ enemy = ExtResource("3_y8lo2")
 script = ExtResource("1_we4w8")
 id = &"demo.encounter.lich"
 display_name = "The Lich"
-tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Demo"])
+tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Crypt"])
 slots = Array[ExtResource("2_7k4hg")]([SubResource("Resource_bq4af")])

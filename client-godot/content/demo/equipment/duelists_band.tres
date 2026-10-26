@@ -16,5 +16,5 @@ display_name = "Duelist's Band"
 description = "Critical hits trigger a follow-up: 30% ATK Physical."
 slot = &"Equipment.Slot.Accessory"
 grants = SubResource("Resource_1gov6")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Legendary"])
 price = 10

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="RunStructure" format=3]
+
+[ext_resource type="Resource" path="res://content/demo/items/stale_bread.tres" id="1_qxoat"]
+[ext_resource type="Script" path="res://game/defs/floor_slot.gd" id="2_o757x"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="3_cnybo"]
+[ext_resource type="Resource" path="res://content/demo/chapters/cellar.tres" id="4_f0o4k"]
+[ext_resource type="Resource" path="res://content/demo/chapters/crypt.tres" id="5_u8qch"]
+[ext_resource type="Script" path="res://game/defs/run_structure.gd" id="6_dkv7c"]
+
+[sub_resource type="Resource" id="Resource_5oori"]
+script = ExtResource("2_o757x")
+chapters = Array[ExtResource("3_cnybo")]([ExtResource("4_f0o4k")])
+
+[sub_resource type="Resource" id="Resource_oj7po"]
+script = ExtResource("2_o757x")
+chapters = Array[ExtResource("3_cnybo")]([ExtResource("5_u8qch")])
+
+[resource]
+script = ExtResource("6_dkv7c")
+id = &"demo.run.descent"
+display_name = "The Descent"
+floors = Array[ExtResource("2_o757x")]([SubResource("Resource_5oori"), SubResource("Resource_oj7po")])
+fallback_item = ExtResource("1_qxoat")
+equipment_slots = Array[StringName]([&"Equipment.Slot.Weapon", &"Equipment.Slot.Head", &"Equipment.Slot.Body", &"Equipment.Slot.Arms", &"Equipment.Slot.Legs", &"Equipment.Slot.Accessory"])
+default_run = true
+rarity_weights_x100 = Dictionary[StringName, int]({
+&"Item.Rarity.Common": 6000,
+&"Item.Rarity.Uncommon": 2500,
+&"Item.Rarity.Rare": 1200,
+&"Item.Rarity.Legendary": 300
+})

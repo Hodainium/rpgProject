@@ -15,6 +15,6 @@ script = ExtResource("5_f7qfp")
 id = &"demo.item.momentum_charm"
 display_name = "Momentum Charm"
 description = "Each follow-up attack gives +10 ult charge."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Uncommon"])
 price = 6
 grants = SubResource("Resource_ctndt")
