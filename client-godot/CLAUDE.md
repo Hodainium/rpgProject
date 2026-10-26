@@ -175,3 +175,17 @@ from C#.**
 - Rebuild generated dev and test data only on purpose: `game/tools/build_dev_content.tscn` (dev effects and stat items),
   `tests/tools/build_broken_fixtures.tscn` (validator fixtures).
 
+
+## 6. UI (spec `ui-framework`): how screens are added
+- **The UI is data:** `presentation/demo/ui/ui_policy.tres` (a `UIPolicy`) names the layout, the screens (pushed onto
+  layer stacks `UI.Layer.Game/GameMenu/Menu/Modal` by `UI.State.*` tag queries), the HUD panels (plugged into
+  `UIExtensionPoint` slots `UI.Slot.*`), the Esc screens and the confirm dialog. Framework code is `game/ui/` (system).
+- **A new screen or panel = a scene whose root extends `UIScreen` + one entry in the policy.** Never wire screens in
+  `GameMain` or from another screen's code. A menu inside a menu is a `UIPushButton` (scene and layer set in the
+  inspector) or `ctx.ui.push(layer, scene, payload)`; Back is Esc, `UIBackButton` or `ctx.ui.back()`.
+- Screens read the game through `ctx` (`ctx.main`, `ctx.run`, `ctx.state`), connect to the run with
+  `ctx.on_run(self, "signal", callable)` (rebinds on each new run), and change it only through `RunController`.
+- Repeated rows are `UIList` + an entry scene with `set_item(item, ctx)`; looks (colors, sizes, rarity) are theme type
+  variations in `ui/ui_theme.tres`, and screen texts are `@export`s, not literals in code.
+- Check it: `test_ui` (framework, built in code), `test_demo_ui_policy` and `validate_content.tscn` (`UIPolicyCheck`),
+  window runs driven with the console's `ui press <name or text> [n]` / `ui back` / `ui`.

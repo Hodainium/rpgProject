@@ -1,6 +1,7 @@
 # Spec: ui-framework (slice 1d, step D2)
 
-Status: 📝 Spec written, awaiting review · Roadmap: inside 1d `playable-demo`, after step D and before E (U5) ·
+Status: 🔨 Implemented, awaiting your review (U1–U5 approved as recommended, 2026-10-26) · Roadmap: inside 1d
+`playable-demo`, step D2, after step D and before E ·
 Date: 2026-10-26
 Builds on `specs/game-skeleton.md` 3.7 (`GameMain` hosts the screens), `specs/playable-demo.md` 3.6 (the demo
 screens), `specs/dev-tools.md` (console parity, script runner shots). Model: Unreal's **Lyra** UI (CommonUI's
@@ -86,21 +87,22 @@ The demo policy (proposal; your file):
 | `map_panel` | `UI.Slot.Hud.Right` | `UI.State.Run.Map` |
 | `stairs_panel` (Next floor / route buttons) | `UI.Slot.Hud.Right` | `UI.State.Run.Stairs` |
 | `party_panel` | `UI.Slot.Hud.Left` | `UI.State.Run` |
-| `field_actions` (spells, items, armor on the map) | `UI.Slot.Hud.Left` | `UI.State.Run.Map` |
+| `field_panel` (take off / equip armor from the bag, field spells and items) | `UI.Slot.Hud.Left` (order 10) | `UI.State.Run.Map` |
 | `pickup_panel` | `UI.Slot.Hud.Center` | `UI.State.Run.Pickup` |
 | `event_panel` | `UI.Slot.Hud.Center` | `UI.State.Run.Event` |
 | `battle_panel` | `UI.Slot.Hud.Bottom` | `UI.State.Run.Battle` |
-| `floor_card` | `UI.Slot.Hud.Overlay` | `UI.State.Run.Map` (shows itself on `floor_entered`) |
-| `message_line` | `UI.Slot.Hud.Footer` | `UI.State.Run` |
+| `floor_card` | `UI.Slot.Hud.Overlay` | `UI.State.Run` (shows itself on each new floor, hides when the state leaves Map) |
+| `message_line` | `UI.Slot.Footer` (in the layout, so menus show messages too) | always (no query) |
 | `run_end` (screen) | Menu | `UI.State.End` |
-| `run_menu` (screen, U3 example) | GameMenu | pushed by Esc on the map |
-| `room_view_3d` | not UI: stays a `GameMain` world export (`world_view`) | |
+| `run_menu` (screen, U3 example) | GameMenu | the policy's `back_screens`: Esc on the map (`UI.State.Run.Map`) |
+| `confirm_dialog` (root `UIConfirm`) | Modal | the policy's `confirm_scene`, for `ctx.ui.confirm()` |
+| `room_view_3d` | not UI: stays the `GameMain` export `room_view` | |
 
 ### 2.4 Menus inside menus (CommonUI activatable stack)
 ```
 title_menu: a class card's "Details" (UIPushButton, screen = class_details.tscn, layer = UI.Layer.Menu)
   UIManager.push(UI.Layer.Menu, class_details.tscn, payload = {character})
-    stack top title_menu → on_deactivated() (hidden, keeps its state); class_details: bind(ctx), on_activated(payload)
+    stack top title_menu → on_deactivated() (hidden, keeps its state); class_details: bind(ctx), on_pushed(payload), on_activated()
   Back (Esc = ui_cancel, or a UIBackButton) → UIManager.back()
     the topmost non-empty layer pops its top screen (Modal first, then Menu, GameMenu; Game never pops)
     unless that screen's handles_back() returns true (it consumed Back, e.g. closing its own picker)
@@ -116,7 +118,8 @@ UIList (a container node; export entry_scene: PackedScene)
 pickup_panel: %Rows.set_items(run pickups)    entry pickup_row.tscn (rarity, name, price, description, give-to, Take)
 party_panel:  %Members.set_items(party)        entry member_card.tscn ; %ArmorBag.set_items(state.armor) → armor_row.tscn
 title_menu:   %Classes.set_items(characters)   entry class_card.tscn ; %Runs.set_items(runs) (or an OptionButton)
-stairs_panel: %Routes.set_items(choices)       entry route_button.tscn
+stairs_panel: %Routes.set_items(choices)       entry action_button.tscn (one generic button entry: {text, action,
+              disabled, tooltip, variation, hidden, sound}; also map cells, event choices, field actions, abilities, ults)
 ```
 
 ### 2.6 Headless and the dev tools
@@ -138,12 +141,13 @@ client-only). The contracts are Godot types (system, `game/ui/`) and your resour
 | `UIState` | `RefCounted` | `compute(main) -> Array[StringName]` (2.2), pure; `UIManager` calls it |
 | `UILayout` | `Control` (your layout's root script) | finds `UILayerStack` children; nothing else |
 | `UILayerStack` | `Control` | `@export layer: StringName` (`gas::tag`), `@export blocks_below: bool` (Modal, Menu: dim and block input to lower layers) |
-| `UIScreen` | `Control` (base for every screen and panel root) | virtuals `bind(ctx)` (once), `on_activated(payload)`, `on_deactivated()`, `handles_back() -> bool`, `refresh()`; `@export focus_on_activate: NodePath` |
+| `UIScreen` | `Control` (base for every screen and panel root) | virtuals `bind(ctx)` (once), `on_pushed(payload)` (once), `on_activated()` (each time it is shown on top; default calls `refresh()`), `on_deactivated()`, `handles_back() -> bool`, `refresh()`; `@export focus_on_activate: NodePath`; `static context_of(node)` |
+| `UIConfirm` | `UIScreen` | the confirm dialog: fills `%Text`, `%Yes`, `%No` from the payload, signal `decided(yes)`; Back answers no |
 | `UIExtensionPoint` | `Container` | `@export slot: StringName` (`gas::tag`); hosts extension scenes, sorted by `order` |
-| `UIPolicy` | `Resource` | `layout: PackedScene`, `screens: Array[UIScreenRule]`, `extensions: Array[UIExtension]`, `theme: Theme` |
+| `UIPolicy` | `Resource` | `layout: PackedScene`, `theme: Theme`, `screens: Array[UIScreenRule]`, `extensions: Array[UIExtension]`, `back_screens: Array[UIScreenRule]` (Esc with nothing to close), `confirm_scene: PackedScene` |
 | `UIScreenRule` | `Resource` | `scene: PackedScene`, `layer: StringName`, `active_when: GameplayTagQuery`, `clears_layer: StringName` |
 | `UIExtension` | `Resource` | `slot: StringName`, `scene: PackedScene`, `order: int`, `active_when: GameplayTagQuery` |
-| `UIList` | `Container` | `@export entry_scene: PackedScene`, `set_items(items: Array)`; entries implement `set_item(item, ctx)` |
+| `UIList` | `Container` | `@export entry_scene: PackedScene`, `set_items(items: Array) -> Array[Node]` (reuses entries); entries implement `set_item(item, ctx)`; signal `entry_filled(entry, item)` for wiring entry signals |
 | `UIPushButton` | `Button` | `@export screen: PackedScene`, `@export layer: StringName = &"UI.Layer.Menu"`, `@export payload: Dictionary` |
 | `UIBackButton` | `Button` | calls `ctx.ui.back()` |
 
@@ -153,7 +157,7 @@ it only through `RunController`'s public methods, as today. Presentation never c
 ### 3.2 `GameMain` (system; edit shown `old → new`)
 | Old | New |
 |---|---|
-| Ten exports `menu_view … sound_board` + `_view()` fallback to `presentation/demo/<name>.tscn` | `@export var ui_policy: UIPolicy` (fallback `res://presentation/demo/ui/ui_policy.tres`), `@export var world_view: PackedScene` (room view), `@export var unit_view`, `@export var sound_board` (kept: not UI) |
+| Ten exports `menu_view … sound_board` + `_view()` fallback to `presentation/demo/<name>.tscn` | `@export var ui_policy: UIPolicy` (fallback `res://presentation/demo/ui/ui_policy.tres`), `room_view`, `unit_view`, `sound_board` kept (not UI); `var ui: UIManager`; `var gate: ViewGate` (a battle panel made after `battle_prepared` reads it); `static load_setting / save_setting(section, key, …)` for `user://game_main.cfg` |
 | `show_message(text)` writes its own bottom `Label` | emits `message_shown(text)`; the policy's `message_line` panel shows it (headless: still printed by the console) |
 | `mode` strings `menu` / `run` / `end` | kept (the console and tests use them); `UIState` derives tags from them |
 
@@ -169,18 +173,20 @@ it only through `RunController`'s public methods, as today. Presentation never c
 | `layout.tscn` | `UILayout` with the four `UILayerStack`s |
 | `title_menu.tscn`, `class_card.tscn`, `class_details.tscn` | the menu (today's `menu`), split into a card entry and a details sub-screen (U3) |
 | `hud.tscn` | the Game-layer screen with the six `UIExtensionPoint` slots |
-| `map_panel`, `stairs_panel`, `route_button`, `floor_card`, `party_panel`, `member_card`, `armor_row`, `field_actions`, `pickup_panel`, `pickup_row`, `event_panel`, `battle_panel`, `message_line`, `run_end`, `run_menu` (`.tscn` + `.gd`) | today's screens ported onto `UIScreen` / entries; behaviour unchanged except visibility now comes from the policy |
+| `action_button`, `map_panel`, `stairs_panel`, `floor_card`, `party_panel`, `member_card`, `field_panel`, `armor_row`, `pickup_panel`, `pickup_row`, `event_panel`, `battle_panel`, `message_line`, `run_end`, `run_menu`, `settings` (`.tscn` + `.gd`), `confirm_dialog.tscn` | today's screens ported onto `UIScreen` / entries; behaviour unchanged except visibility now comes from the policy |
 
 Every behaviour from step D carries over (run picker, remembered party, kit lines, title card, route buttons, rest
 title, level and XP, armor bag, rarity and Void Scar prices, end summary and buttons, speed toggle). The old
 `presentation/demo/*.tscn` screens are deleted only after you confirm (U4); `room_view_3d`, `unit_view`, `cues/`,
 `animation_sets/` and `sound_board` stay as they are.
 
-### 3.5 Validator (`game/dev/content_validator.gd`, run on the policy too)
-`ui_layer_unknown` (error: a rule's layer has no `UILayerStack` in the layout), `ui_slot_unknown` (error: an
-extension's slot has no `UIExtensionPoint` in the layout or in a screen of the policy), `ui_screen_not_uiscreen`
-(error: a scene's root doesn't extend `UIScreen`), `ui_rule_never` (warning: an empty `active_when` on an extension,
-which means always).
+### 3.5 Validator (`game/dev/ui_policy_check.gd`, run by `validate_content.tscn` on the game's policy)
+All errors: `ui_layout_root` (no layout, or its root isn't a `UILayout`), `ui_scene_missing` (a rule or extension
+without a scene), `ui_layer_unknown` (a rule's layer has no `UILayerStack` in the layout), `ui_slot_unknown` (an
+extension's slot has no `UIExtensionPoint` in the layout or in any scene of the policy), `ui_screen_not_uiscreen` (a
+screen's root doesn't extend `UIScreen`; the confirm scene's must extend `UIConfirm`). Dropped while building: a
+warning for an extension without `active_when` (that means "always", which the message line wants).
+The tag checkpoint (`sync_tags.tscn`) now also scans `res://presentation/` and knows the `UI.State.*` tags.
 
 ## 4. Failure modes
 Server failure scenarios (root `CLAUDE.md` 1–7): **none apply** (no server, no wire change). What this slice
@@ -189,32 +195,33 @@ without the UI (scenario 5 relies on it).
 | Failure | Behaviour | Test |
 |---|---|---|
 | Policy missing or a scene fails to load | `GameMain` shows a plain error label naming the file; the game stays playable from the console | `test_ui_policy_missing` |
-| A rule's layer or slot doesn't exist | Validator error before play; at runtime a warning and the entry is skipped | `test_ui_validator` (broken policy fixtures) |
+| A rule's layer or slot doesn't exist | Validator error before play; at runtime a warning and the entry is skipped | `test_ui_policy_check` (broken policies built in code) |
 | Back on an empty stack / on the Game layer | `back()` returns false, nothing changes | `test_ui_stack` |
 | Pushing the same screen twice | the existing instance moves to the top (no duplicates) unless the rule says `allow_multiple` | `test_ui_stack` |
 | A state flips quickly (battle starts the frame a pickup shows) | rules apply to the latest tag set only, once per frame (deferred) | `test_ui_rules_coalesce` |
 | A screen awaits something while it's removed | removal frees it after `on_deactivated`; signals connected through `ctx.on_run` disconnect with it | `test_ui_context_rebinds` |
 | UI changes a run | Can't through the framework (it has no run API); screens use `RunController` methods as today; a headless run and a window run of the same script give the same run hash | `test_ui_run_hash_unchanged` (fixtures, scripted run with and without a UI policy) |
-| Speed toggle leaks `Engine.time_scale` after a battle | the battle panel resets it on deactivation too | `test_ui_screens_fixture` |
+| Speed toggle leaks `Engine.time_scale` after a battle | the battle panel resets it on battle end and on deactivation | manual (window run; presentation code) |
 | A presentation script stops compiling | caught by `test_presentation_scripts_compile` (step D) | existing |
 
 ## 5. Observability
 N/A: client-only, no service. Local signals: the `ui` console command's dump, validator output, window shots.
 
 ## 6. Test plan
-System tests in `tests/game/test_ui.gd` on **fixture** UI scenes and a fixture policy in `tests/fixtures/ui/`
-(system-owned, never `presentation/`), so your restyling can't fail them:
+System tests in `tests/game/test_ui.gd` on layouts, screens and policies **built in code** from two probes
+(`tests/game/ui_probe_screen.gd`, `ui_probe_entry.gd`; never `presentation/`), so your restyling can't fail them:
 - `test_ui_stack`: push/back/remove/clear per layer; activation order (`on_deactivated` before the next
   `on_activated`); the screen below keeps its state; no duplicates; Back order Modal → Menu → GameMenu; Game never pops;
   `handles_back` consumes Back.
-- `test_ui_rules`: a fixture policy and a scripted fixture run (`TestCase.start_run`): the right screens and
+- `test_ui_rules` (also covers `clears_layer` and `back_screens`): a policy and a scripted fixture run (`TestCase.start_run`): the right screens and
   extensions exist for Menu, Map, Battle, Event, Pickup, Stairs (and Choice), End Won/Lost; ordering by `order`.
 - `test_ui_rules_coalesce`, `test_ui_context_rebinds` (a new run reconnects `on_run` signals; the old run's are gone).
 - `test_ui_state_tags`: `UIState.compute` for each row of 2.2 (fixtures; pure function).
 - `test_ui_list`: `UIList.set_items` reuses entries, keeps order, frees extras, passes `ctx`.
-- `test_ui_push_button`: a `UIPushButton` in a fixture screen pushes its scene with its payload; `UIBackButton` pops.
+- `test_ui_push_and_back_buttons`: a `UIPushButton` in a screen pushes its scene with its payload; `UIBackButton` pops.
 - `test_ui_confirm`: Modal confirm resolves true/false and pops.
-- `test_ui_validator` + broken fixtures `tests/broken_fixtures/ui/` (unknown layer, unknown slot, non-UIScreen root).
+- `test_ui_policy_check`: broken policies built in code (no layout, unknown layer, unknown slot, non-UIScreen and
+  non-UIConfirm roots); `test_ui_policy_missing`: a broken policy leaves no UI, an error label, and runs still start.
 - `test_ui_run_hash_unchanged`: the fixture scripted run's hash and log are identical with and without a policy.
 - `test_tool_parity`: the `ui` command (`ui`, `ui push`, `ui back`, `ui press`).
 - Content/presentation (reads your files, direction only): `test_demo_ui_policy` (the demo policy validates with 0
@@ -230,15 +237,15 @@ Implementation order: (1) framework types and fixture tests; (2) `GameMain` swit
 kept until 4 so the game always runs); (3) your new `presentation/demo/ui/` files, ported screen by screen, the theme;
 (4) after your confirmation, delete the old screens and the old exports; (5) the `ui` command, validator rules, shots.
 
-## 7. Decisions (to review)
+## 7. Decisions (approved as recommended by the user, 2026-10-26)
 - **U1 tags for layers, slots and states: GodotGAS tags** (recommended: the project's one naming system, inspector
   pickers via `gas::tag`, queries via `GameplayTagQuery` like abilities). Alternative: plain `StringName`s (no
   registry entries, but typos fail silently).
 - **U2 visibility from the policy's state rules** (recommended: one place says what is shown when; screens stop
   checking `mode`). Alternative: keep each screen deciding for itself and only add the stacks and slots.
 - **U3 two example nested menus** to prove "menus in menus": the class **Details** sub-screen from the party select,
-  and an **Esc run menu** (Resume, Settings → battle speed and skip-animation defaults, Abandon run → confirm modal,
-  Main menu). Recommended both; or only Details.
+  and an **Esc run menu** (Resume, Settings → battle speed and skip-animation defaults, Abandon run → confirm modal;
+  built without a separate Main menu button, which Abandon covers). Recommended both; or only Details.
 - **U4 migration:** new files in `presentation/demo/ui/`, the game switched over, then the old ten screen files
   deleted after you confirm (recommended: one reviewable change, no half-edited old files). Alternative: rework the
   old files in place, each shown `old → new` (many large edits).
