@@ -8,7 +8,7 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
 | Folder | Owner | What lives there |
 |---|---|---|
 | `combat/` | System (Claude) | Battle kernel (spec `combat-replay-core`): `Battle`, `TurnManager`, `CombatASC`, `BattleAbility`, `ExecutionRow`, gates, recorder, state hasher, replay runner, headless entry `combat/headless/replay_main.tscn`. No balance numbers. |
-| `game/` | System (Claude) | Run layer (spec `game-skeleton`): content types in `defs/`, floor generator, `RunState`, `RunController`, `GameMain` shell (main scene), `ViewGate`, one-time example-set builder `tools/build_demo.tscn`. No balance numbers. |
+| `game/` | System (Claude) | Run layer (spec `game-skeleton`): content types in `defs/`, floor generator, `RunState`, `RunController`, `GameMain` shell (main scene), `ViewGate`, one-time example-set builder `tools/build_demo.tscn`; the UI framework `ui/` (spec `ui-framework`) and the message bus `messages/` (spec `gameplay-messages`). No balance numbers. |
 | `game/dev/`, `addons/rpg_dev/` | System (Claude) | Dev tools (spec `dev-tools`): console and its commands, sandbox, validator, templates, room grid ops, seed runner, Play entry scene, dev content (`game/dev/content/`); our editor plugin (dock, room grid, Play buttons). |
 | `tests/` (except `fixtures/`) | System (Claude) | In-house test runner `run_tests.tscn`, `TestCase`, system tests in `tests/combat/` and `tests/game/`, fixture builder `tests/tools/`. |
 | `content/` | **User** | Abilities, `GameplayEffect` `.tres`, ExecCalcs, characters, cue definitions, balance values. |
@@ -124,7 +124,9 @@ from C#.**
   with `game/tools/play_sharded.sh`; independent jobs start together and are waited on.
 - **System tests:** `godot --headless --path client-godot res://tests/run_tests.tscn` (add `-- --filter <text>` to
   narrow). They run as a **scene**, not with `--script`: GodotGAS needs its `GameplayCueManager` autoload, which
-  `--script` mode doesn't load. A test file that fails to compile counts as a failure.
+  `--script` mode doesn't load. A test file that fails to compile counts as a failure, and so does any script or
+  engine error during a test (`TestErrorLog`; a test that causes one on purpose calls `expect_error("text")`).
+  `push_error()` is deliberate logging and never fails a test.
 - **Goldens:** regenerate only on purpose with `-- --update-goldens --filter test_golden`, then rerun the C# tests
   (`BattleGoldenTests` cross-checks the same files).
 - **Tag checkpoint:** `res://game/tools/sync_tags.tscn` checks every `gas::tag` field under `res://content/` plus the
@@ -189,3 +191,9 @@ from C#.**
   variations in `ui/ui_theme.tres`, and screen texts are `@export`s, not literals in code.
 - Check it: `test_ui` (framework, built in code), `test_demo_ui_policy` and `validate_content.tscn` (`UIPolicyCheck`),
   window runs driven with the console's `ui press <name or text> [n]` / `ui back` / `ui`.
+- **Events reach screens as gameplay messages** (spec `gameplay-messages`, Lyra's message router): a screen listens
+  with `GameplayMessages.listen(channel, callback, GameplayMessageRouter.Match.EXACT or PARTIAL, payload type, self)`
+  (the listener leaves with the screen) and reads `VerbMessage` / `NotificationMessage` fields; a line for the player
+  is `ctx.main.show_message(text)` (`Message.Notification`). A kill feed or toast stack is a listener + a policy entry.
+  Listeners never change run or battle state; the battle kernel never broadcasts (`BattleMessages` bridges the
+  battles `GameMain` shows). New channels are `Message.*` tags (`sync_tags`); `messages on` logs them.

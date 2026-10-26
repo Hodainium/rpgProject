@@ -158,7 +158,7 @@ it only through `RunController`'s public methods, as today. Presentation never c
 | Old | New |
 |---|---|
 | Ten exports `menu_view … sound_board` + `_view()` fallback to `presentation/demo/<name>.tscn` | `@export var ui_policy: UIPolicy` (fallback `res://presentation/demo/ui/ui_policy.tres`), `room_view`, `unit_view`, `sound_board` kept (not UI); `var ui: UIManager`; `var gate: ViewGate` (a battle panel made after `battle_prepared` reads it); `static load_setting / save_setting(section, key, …)` for `user://game_main.cfg` |
-| `show_message(text)` writes its own bottom `Label` | emits `message_shown(text)`; the policy's `message_line` panel shows it (headless: still printed by the console) |
+| `show_message(text)` writes its own bottom `Label` | emits `message_shown(text)`; the policy's `message_line` panel shows it (headless: still printed by the console). Superseded by `specs/gameplay-messages.md` (D3): it broadcasts `Message.Notification` and `message_shown` is gone |
 | `mode` strings `menu` / `run` / `end` | kept (the console and tests use them); `UIState` derives tags from them |
 
 ### 3.3 Tags (your registry, added through `sync_tags --add-missing` after you approve)
