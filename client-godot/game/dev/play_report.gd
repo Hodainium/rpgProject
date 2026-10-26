@@ -8,10 +8,10 @@ extends RefCounted
 const POLICIES: Array[String] = ["auto", "smart", "chaos"]
 ## chaos: the share of chaotic decisions (percent; the rest are smart) and the first floor (1-based) it plays on.
 const DEFAULTS: Dictionary = {"run": "", "party": [], "policy": "auto", "illegal": 20, "check": false,
-	"max_steps": 2000, "trace": false, "chaos": 100, "chaos_from": 1}
+	"max_steps": 2000, "trace": false, "chaos": 100, "chaos_from": 1, "party_size": 4}
 
 
-## Plays seeds from..from+count-1. options: DEFAULTS keys ("party" [] = the first two selectable characters by id;
+## Plays seeds from..from+count-1. options: DEFAULTS keys ("party" [] = drawn per seed, see party_for();
 ## "illegal" a percent; "check" = invariants and replay, always on for chaos). The result also holds "failures" (each
 ## failing battle's request and traces, too big for the report file): take it out before saving; see save_failures().
 static func many(content: ContentIndex, host: Node, from: int, count: int, options: Dictionary = {}) -> Dictionary:
@@ -34,9 +34,11 @@ static func play_one(content: ContentIndex, host: Node, seed_value: int, options
 	var run := RunController.new()
 	run.name = "PlayReportRun"
 	host.add_child(run)
-	var record := {"seed": seed_value, "status": "", "stop": "", "runnerError": "", "summary": {}, "bossEntry": [],
+	var record := {"seed": seed_value, "party": [], "status": "", "stop": "", "runnerError": "", "summary": {}, "bossEntry": [],
 		"battles": [], "violations": [], "runHash": "", "failures": []}
-	var error := run.start_run(content, opts["party"], str(seed_value), StringName(opts["run"]))
+	var party := party_for(content, seed_value, opts)
+	record["party"] = party
+	var error := run.start_run(content, party, str(seed_value), StringName(opts["run"]))
 	if error != "":
 		record["runnerError"] = error
 		run.free()
@@ -165,33 +167,62 @@ static func _last_battle(run: RunController) -> Dictionary:
 	return {}
 
 
-static func _options(content: ContentIndex, options: Dictionary) -> Dictionary:
+static func _options(_content: ContentIndex, options: Dictionary) -> Dictionary:
 	var opts := DEFAULTS.duplicate(true)
 	opts.merge(options, true)
-	if opts["party"].is_empty():
-		var ids: Array = []
-		for id in content.characters:
-			if content.characters[id].selectable:
-				ids.append(String(id))
-		ids.sort()
-		opts["party"] = ids.slice(0, 2)
 	return opts
+
+
+## Spec playable-demo 3.10 (D24): the seed's party. A fixed "party" is used as given; otherwise "party_size" (1-4, or
+## "mixed": a size of 1 to 4 per seed) different selectable characters, drawn from the stream dev/party (sorted ids).
+static func party_for(content: ContentIndex, seed_value: int, opts: Dictionary) -> Array:
+	if not opts["party"].is_empty():
+		return opts["party"]
+	var ids: Array = []
+	for id in content.characters:
+		if content.characters[id].selectable:
+			ids.append(String(id))
+	ids.sort()
+	var draw := RunSeeds.rng(seed_value, "dev/party")
+	var size: int = draw.randi_range(1, 4) if str(opts["party_size"]) == "mixed" else int(opts["party_size"])
+	size = clampi(size, 1, mini(4, ids.size()))
+	for index in range(ids.size() - 1, 0, -1):
+		var other := draw.randi_range(0, index)
+		var held: Variant = ids[index]
+		ids[index] = ids[other]
+		ids[other] = held
+	var party := ids.slice(0, size)
+	party.sort()
+	return party
 
 
 ## The aggregate over played runs (per-run lines kept compact, failures left out).
 @warning_ignore("integer_division")
 static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, count: int) -> Dictionary:
-	var report := {"run": opts["run"], "policy": opts["policy"], "party": opts["party"], "from": from, "count": count,
+	var party_label: Variant = opts["party"] if not opts["party"].is_empty() else "size %s" % opts["party_size"]
+	var report := {"run": opts["run"], "policy": opts["policy"], "party": party_label, "from": from, "count": count,
 		"illegalPercent": opts["illegal"] if opts["policy"] == "chaos" else 0,
 		"chaosPercent": opts["chaos"] if opts["policy"] == "chaos" else 0,
 		"chaosFrom": opts["chaos_from"] if opts["policy"] == "chaos" else 0, "won": 0, "lost": 0, "stopped": 0,
 		"winPercentX100": 0, "deaths": {}, "floorReached": {}, "bossEntryHpPercent": {}, "turnsPerBattle": {},
-		"coinsSpent": {}, "refused": {}, "violations": [], "runs": []}
+		"coinsSpent": {}, "refused": {}, "bySize": {}, "byCharacter": {}, "byParty": {}, "violations": [], "runs": []}
 	var boss_hp := {}
 	var turns := {}
 	var coins: Array[int] = []
 	for record in runs:
 		var summary: Dictionary = record["summary"]
+		# Spec playable-demo 3.10: runs and wins by party size, by character and by party.
+		var won_run := 1 if record["status"] == RunState.WON else 0
+		for pair in [["bySize", str(record["party"].size())], ["byParty", ",".join(record["party"])]]:
+			var tally: Dictionary = report[pair[0]].get(pair[1], {"runs": 0, "won": 0})
+			tally["runs"] += 1
+			tally["won"] += won_run
+			report[pair[0]][pair[1]] = tally
+		for id in record["party"]:
+			var tally: Dictionary = report["byCharacter"].get(id, {"runs": 0, "won": 0})
+			tally["runs"] += 1
+			tally["won"] += won_run
+			report["byCharacter"][id] = tally
 		if record["runnerError"] != "" or record["stop"] != "":
 			report["stopped"] += 1
 		elif record["status"] == RunState.WON:
@@ -217,7 +248,7 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 				report["refused"][case] = report["refused"].get(case, 0) + battle["refused"][case]
 		report["violations"].append_array(record["violations"])
 		report["runs"].append({"seed": record["seed"], "status": record["status"], "stop": record["stop"],
-			"runnerError": record["runnerError"], "floorReached": summary.get("floorReached", 0),
+			"runnerError": record["runnerError"], "party": record["party"], "floorReached": summary.get("floorReached", 0),
 			"battles": record["battles"].size(), "violations": record["violations"].size(), "runHash": record["runHash"]})
 	report["winPercentX100"] = report["won"] * 10000 / count if count > 0 else 0
 	for key in boss_hp:
@@ -225,7 +256,8 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 	for key in turns:
 		report["turnsPerBattle"][key] = spread(turns[key])
 	report["coinsSpent"] = spread(coins)
-	for key in ["deaths", "floorReached", "bossEntryHpPercent", "turnsPerBattle", "refused"]:
+	for key in ["deaths", "floorReached", "bossEntryHpPercent", "turnsPerBattle", "refused", "bySize", "byCharacter",
+			"byParty"]:
 		report[key] = SeedReport._sorted(report[key])
 	return report
 
@@ -247,11 +279,23 @@ static func text(report: Dictionary) -> String:
 	var lines := PackedStringArray(["%s policy%s, run %s, party %s, seeds %d..%d" % [report["policy"],
 		" (%d%% of decisions from floor %d, %d%% illegal)" % [report["chaosPercent"], report["chaosFrom"],
 			report["illegalPercent"]] if report["policy"] == "chaos" else "",
-		report["run"] if report["run"] != "" else "(default)", ",".join(report["party"]), report["from"],
+		report["run"] if report["run"] != "" else "(default)", ",".join(report["party"]) if report["party"] is Array else report["party"], report["from"],
 		report["from"] + report["count"] - 1]])
 	lines.append("  won %d  lost %d  stopped %d  (win rate %.2f%%)" % [report["won"], report["lost"], report["stopped"],
 		report["winPercentX100"] / 100.0])
 	lines.append("  floor reached: %s" % _pairs(report["floorReached"]))
+	for key in ["bySize", "byCharacter"]:
+		var parts := PackedStringArray()
+		for id in report[key]:
+			var tally: Dictionary = report[key][id]
+			parts.append("%s %d/%d" % [String(id).trim_prefix("demo.character."), tally["won"], tally["runs"]])
+		if not parts.is_empty():
+			lines.append("  won/runs by %s: %s" % ["party size" if key == "bySize" else "class", ", ".join(parts)])
+	var parties: Array = report["byParty"].keys()
+	parties.sort_custom(func(a, b) -> bool: return report["byParty"][a]["won"] * 1000 / maxi(report["byParty"][a]["runs"], 1) 		> report["byParty"][b]["won"] * 1000 / maxi(report["byParty"][b]["runs"], 1) or (report["byParty"][a]["won"] * 1000 		/ maxi(report["byParty"][a]["runs"], 1) == report["byParty"][b]["won"] * 1000 / maxi(report["byParty"][b]["runs"], 1) and a < b))
+	for id in parties.slice(0, 5):
+		lines.append("  party %s: %d/%d" % [String(id).replace("demo.character.", ""), report["byParty"][id]["won"],
+			report["byParty"][id]["runs"]])
 	lines.append("  deaths: %s" % _pairs(report["deaths"], true))
 	for key in report["bossEntryHpPercent"]:
 		var spread_entry: Dictionary = report["bossEntryHpPercent"][key]

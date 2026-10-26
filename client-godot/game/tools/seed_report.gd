@@ -6,7 +6,7 @@
 ## With --play (spec playable-demo 2.3, 2.3b) it plays each seed instead (PlayReport): exit 0, 3 when a run was
 ## stopped or (chaos, --check) an invariant broke; failing battles are saved next to --out.
 ##     -- --play [--policy auto|smart|chaos] [--illegal 20] [--chaos 100] [--chaos-from 1] [--check] [--trace]
-##        [--party a,b] [--max-steps 2000]   (chaos below 100% or from a later floor plays on top of smart)
+##        [--party a,b | --party-size 1-4|mixed (default 4)] [--max-steps 2000]   (chaos below 100% or from a later floor plays on top of smart)
 ##   (give --quit-after a large frame count: every battle step takes frames)
 extends Node
 
@@ -47,7 +47,8 @@ func _play(content: ContentIndex, args: PackedStringArray) -> void:
 	var options := {"run": _arg(args, "--run", ""), "party": party, "policy": policy,
 		"illegal": int(_arg(args, "--illegal", "20")), "check": args.has("--check"), "trace": args.has("--trace"),
 		"max_steps": int(_arg(args, "--max-steps", "2000")), "chaos": int(_arg(args, "--chaos", "100")),
-		"chaos_from": int(_arg(args, "--chaos-from", "1"))}
+		"chaos_from": int(_arg(args, "--chaos-from", "1")),
+		"party_size": _arg(args, "--party-size", "4") if _arg(args, "--party-size", "4") == "mixed" else int(_arg(args, "--party-size", "4"))}
 	var report := await PlayReport.many(content, self, int(_arg(args, "--from", "1")), int(_arg(args, "--count", "100")),
 		options)
 	var failures: Array = report["failures"]

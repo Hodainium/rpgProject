@@ -171,3 +171,36 @@ func test_autorun_command() -> void:
 	var chaos: Dictionary = await console.execute("autorun policy=chaos illegal=50")
 	check(chaos["ok"] and chaos["text"].contains("violations: 0"), "autorun policy=chaos checks every battle: " + chaos["text"])
 	check(not (await console.execute("autorun policy=wild"))["ok"], "an unknown policy is refused")
+
+
+## Spec playable-demo 3.10 (D24): without a fixed party each seed draws its own, of the asked size (or 1 to 4), from
+## different selectable characters; the report counts runs and wins by size, class and party.
+func test_party_draws() -> void:
+	var selectable := fixtures().characters.values().filter(func(character) -> bool: return character.selectable).size()
+	var sized := await PlayReport.many(fixtures(), host, 1, 6, {"party_size": 2})
+	for record in sized["runs"]:
+		eq(record["party"].size(), mini(2, selectable), "seed %d: a party of two" % record["seed"])
+		eq(record["party"], _unique(record["party"]), "seed %d: different characters" % record["seed"])
+	eq(sized["bySize"].keys(), ["2"], "every run counted under size 2")
+	var mixed := await PlayReport.many(fixtures(), host, 1, 12, {"party_size": "mixed"})
+	var sizes := {}
+	for record in mixed["runs"]:
+		check(record["party"].size() >= 1 and record["party"].size() <= mini(4, selectable), "a size of 1 to 4")
+		sizes[record["party"].size()] = true
+	check(sizes.size() >= 2, "mixed draws more than one size over 12 seeds")
+	var total := 0
+	for key in mixed["bySize"]:
+		total += mixed["bySize"][key]["runs"]
+	eq(total, 12, "bySize counts every run once")
+	var again := await PlayReport.many(fixtures(), host, 1, 12, {"party_size": "mixed"})
+	eq(again["runs"].map(func(run): return run["party"]), mixed["runs"].map(func(run): return run["party"]),
+		"the same seeds draw the same parties")
+	check(not mixed["byCharacter"].is_empty() and not mixed["byParty"].is_empty(), "by class and by party")
+
+
+static func _unique(values: Array) -> Array:
+	var result: Array = []
+	for value in values:
+		if not result.has(value):
+			result.append(value)
+	return result
