@@ -3,8 +3,8 @@
 ##   ability sounds  → an audio track on the ability's animation (content/demo/animations/), on the cube's Audio node;
 ##   hit sounds      → GameplayCue Cue.Sfx.Hit (godot_gas/cue_registry.tres), listed on the damage effect.
 ## Screens play one with get_tree().call_group("sound_board", "play", "Item"), or broadcast a message it listens to
-## (Message.Battle.UnitDied → Death, Message.Run.ItemTaken → Item, Message.Ui.Refused → Refused). A button with
-## metadata sound = "back" plays Back instead of Confirm.
+## (Message.Battle.Started → BattleStart, Message.Battle.UnitDied → Death, Message.Run.ItemTaken → Item,
+## Message.Ui.Refused → Refused). A button with metadata sound = "back" plays Back instead of Confirm.
 extends Node
 
 var _main: GameMain
@@ -17,6 +17,7 @@ func setup(main: GameMain) -> void:
 	get_tree().node_added.connect(_on_node_added)
 	main.run_changed.connect(_bind)
 	# Spec gameplay-messages: stingers from the message bus (this node owns the listeners).
+	GameplayMessages.listen(GameplayMessageRouter.BATTLE_STARTED, func(_c, _m): play("BattleStart"))
 	GameplayMessages.listen(GameplayMessageRouter.BATTLE_UNIT_DIED, func(_c, _m): play("Death"))
 	GameplayMessages.listen(GameplayMessageRouter.RUN_ITEM_TAKEN, func(_c, _m): play("Item"))
 	GameplayMessages.listen(GameplayMessageRouter.UI_REFUSED, func(_c, _m): play("Refused"))
@@ -30,17 +31,12 @@ func play(sound_name: String) -> void:
 
 func _bind(run: RunController) -> void:
 	run.room_entered.connect(func(_cell): _play_move.call_deferred(run))
-	run.battle_started.connect(_on_battle_started)
 
 
 ## The room sound waits until enter_room is done: a room that starts a battle plays BattleStart instead.
 func _play_move(run: RunController) -> void:
 	if is_instance_valid(run) and run.pending_battle.is_empty():
 		play("Move")
-
-
-func _on_battle_started(_battle: Battle) -> void:
-	play("BattleStart")
 
 
 func _hook_all(node: Node) -> void:

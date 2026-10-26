@@ -72,9 +72,7 @@ func _show_speed() -> void:
 
 ## The battle refused the pick and waits for another one: show the choices again.
 func _on_action_rejected(unit_id: StringName, reason: String, detail: String) -> void:
-	ctx.main.show_message("%s: %s" % [reason, detail])
-	GameplayMessages.broadcast(GameplayMessageRouter.UI_REFUSED,
-		VerbMessage.make(&"Verb.Refuse", unit_id, &"", 0, [], {"reason": reason, "detail": detail}))
+	ctx.main.refuse("%s: %s" % [reason, detail], unit_id, {"reason": reason, "detail": detail})
 	_waiting = _battle.unit_by_id(unit_id)
 	_show_abilities(_waiting)
 
@@ -113,12 +111,11 @@ func _on_damage_dealt(_source: StringName, target_id: StringName, amount: int, h
 		%Turn.text = "%s  %d  %s" % [_name(_battle.unit_by_id(target_id)), amount / 100, " ".join(marks)]
 
 
-func _on_battle_finished(outcome: String) -> void:
+func _on_battle_finished(_outcome: String) -> void:
 	_battle = null
 	_waiting = null
 	_aiming = null
 	Engine.time_scale = 1.0
-	ctx.main.show_message("Battle: " + outcome)
 
 
 func _on_action_requested(unit_id: StringName, turn: int) -> void:

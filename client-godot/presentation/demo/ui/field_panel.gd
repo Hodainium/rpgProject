@@ -48,13 +48,14 @@ func _use(slot: int, ability: StringName, target: int) -> void:
 	var problem: Array = await ctx.run.use_field(slot, ability, target)
 	_busy = false
 	if not problem.is_empty():
-		ctx.main.show_message("%s: %s" % problem)
+		ctx.main.refuse("%s: %s" % problem)
 	refresh()
 
 
 ## Wear / take off result: the message and the sound, then a fresh panel.
 func _after(problem: String) -> void:
 	if problem != "":
-		ctx.main.show_message(problem)
-	get_tree().call_group("sound_board", "play", "Refused" if problem != "" else "Item")
+		ctx.main.refuse(problem)
+	else:
+		get_tree().call_group("sound_board", "play", "Item")
 	refresh()
