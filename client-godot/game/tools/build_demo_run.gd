@@ -183,7 +183,7 @@ func _descent() -> void:
 	run.id = &"demo.run.descent"
 	run.display_name = "The Descent"
 	run.default_run = true
-	run.rarity_weights_x100 = {&"Item.Rarity.Common": 6000, &"Item.Rarity.Uncommon": 2500, &"Item.Rarity.Rare": 1200,
+	run.rarity_weights_x100 = {&"Item.Rarity.Common": 6000, &"Item.Rarity.Rare": 2500, &"Item.Rarity.Epic": 1200,
 		&"Item.Rarity.Legendary": 300}
 	run.fallback_item = _r["items/stale_bread"]
 	run.equipment_slots.assign(one_floor.equipment_slots)

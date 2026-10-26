@@ -324,6 +324,33 @@ Edits to your existing files for C3 (each shown `old → new` when made): `runs/
 `descent`), the Golem and Lich encounters (a `Pool.Boss` reward each), the 49 rarity retags, and the tag registry
 (`Item.Rarity.Uncommon` removed; new tags added through `sync_tags --add-missing`).
 
+### 3.9 Amendment C4 (2026-10-26, D19–D22): tuning pass, smart policy, chaos injection, status immunity
+The first ten-floor reports gave 0% wins (auto and chaos), most deaths on floors 3–5 to the Bone Warden, and one
+battle stuck at the turn cap (a Leech nest draining Physical).
+
+**Tuning pass (D19, your files made in C3):** Bone Warden 3600 → 2600 HP, 320 → 240 DEF, `Resist.Physical` removed;
+`demo.scaling.descent` floors 3–6 HP +20/35/50/65 → +10/20/30/45%; Leech `Drain.Physical` → `Resist.Physical`.
+
+**Smart policy (D20):** `SmartController` (`game/dev/`), deterministic and RNG-free, plays well: a dead ally is
+revived; an ally under 45% HP is healed; otherwise the (ability, target) with the best score: estimated damage ×
+weakness 2, resist ½, drain never; ×1.5 against a target the hit can break; ×1.3 against a target it can kill; ×
+the number of targets for area moves; costed moves only while MP is above 30%. A ready ult is cast when it hits two or
+more enemies or a boss. `seed_report --play --policy smart`, `autorun policy=smart`. Expected to win more than `auto`.
+
+**Chaos injection (D21):** chaos plays on top of the smart policy. `--chaos <percent>` (default 100, today's
+behaviour) is the share of decisions that are chaotic (random legal moves, illegal attempts at `--illegal`); the rest
+are smart. `--chaos-from <floor>` (default 1) plays smart until that floor, so chaos also reaches the late floors.
+The chaos draw (does this decision go chaotic) comes from the policy's own stream, like every chaos draw.
+`autorun policy=chaos chaos=30 from=5`.
+
+**Status immunity (D22):** `Immune.<Status>` (`Immune.Bleed`, `Immune.Burn`, `Immune.Poison`, `Immune.Freeze`,
+`Immune.Stun`, `Immune.Slow`, `Immune.Entangle`, `Immune.Vulnerable`, `Immune.Weaken`, `Immune.AttackDown`,
+`Immune.DefenseDown`, `Immune.Exposed`) and `Immune.Debuff` (all of them), as GAS data: each debuff effect's
+`application_query` ignores its own `Immune.<Status>` and `Immune.Debuff` (Freeze and Stun keep `Immune.Control`), so
+GodotGAS refuses the effect and no status roll is drawn (existing rule, H2). A unit or item becomes immune by holding
+the tag. Validator warning `status_without_immunity`: a `Status.Debuff.*` effect whose query doesn't ignore its
+immunity tags. Vein Cloak goes back to the spec'd **+150 max HP, immune to Bleed**.
+
 ## 4. Failure modes
 Server failure scenarios (root `CLAUDE.md` 1–7): **none apply** (no server, no wire change). What this slice
 protects is that **adding a second run and a second floor doesn't change any existing replay**, which scenario 5
@@ -394,6 +421,8 @@ B2. F5: illegal-move tests first (they pin how the battle refuses today; a crash
    with its test), then `ChaosController`, `InvariantChecker`, `--policy chaos`; a first chaos report on the demo.
 C. Your files, after approval: tags, the 3.4 edits (`old → new`), then `build_demo_run.tscn` for the new content;
    `test_demo_run.gd`. First `--play` report shared with you.
+C4. 3.9: the tuning pass, the immunity tags and queries (your files, shown as edits), the smart controller and chaos
+   injection (system, tests on fixtures), then both reports plus a smart one on the ten-floor run.
 C3. 3.8: H9 mirror, H10 per-item scaling, boss rotation, validator rules, the `mirror-seed-9` golden and system tests
    (fixtures); then the content builder (`build_full_descent.tscn`), the edits to your files, demo tests, and a play
    and chaos report on the ten-floor run. Step D (screens) comes after C3.
@@ -447,3 +476,10 @@ Decided 2026-10-26 by the user (amendment C3, 3.8):
 - **D16 rarity is Common, Rare, Epic, Legendary;** today's Uncommon → Rare and Rare → Epic. Replaces D7's tier names.
 - **D17 the Void sells corrupted items for max HP** (a stackable curse item as the price).
 - **D18 fifteen corrupted items:** the five legendaries and ten epics; the Void's final boss doesn't mirror.
+
+Decided 2026-10-26 by the user (amendment C4, 3.9):
+- **D19 the tuning pass** as listed in 3.9.
+- **D20 a smart policy** for tests, beside auto and chaos.
+- **D21 chaos is injected on top of the smart policy,** at a rate and from a floor, so chaos reaches the late floors.
+- **D22 status immunity per status** (`Immune.<Status>`, `Immune.Debuff`), as GAS application queries; Vein Cloak is
+  immune to Bleed.

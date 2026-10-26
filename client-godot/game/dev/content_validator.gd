@@ -109,6 +109,9 @@ func _check_unit(unit: UnitDefinition) -> void:
 		for index in unit.variants.size():
 			if unit.variants[index] == null:
 				_error("dangling_ref", "%s::variants[%d]" % [path, index], "%s has an empty variant entry" % unit.id)
+		# Spec playable-demo 3.8 H10: the per-item effect is applied once per piece held, so it must stack.
+		if unit.per_item_effect != null and not _stacks(unit.per_item_effect):
+			_error("per_item_not_stacking", path + "::per_item_effect", "%s's per-item effect refreshes instead of stacking; it would count once" % unit.id)
 	if unit.default_loadout != null and _is_inline(unit.default_loadout):
 		_check_loadout(unit.default_loadout, unit)
 	elif unit.default_loadout != null and unit is CharacterDefinition:
@@ -296,7 +299,26 @@ func _check_rows(scene: PackedScene, path: String) -> void:
 				and not effect.granted_tags.any(func(tag) -> bool: return String(tag).begins_with(Battle.DEBUFF_TAG + ".")):
 			_warning("controlled_without_status", path, "%s grants %s without a %s.* tag" % [effect.resource_path,
 				Battle.CONTROLLED_TAG, Battle.DEBUFF_TAG])
+		_check_immunity(effect, path)
 	ability.free()
+
+
+## Spec playable-demo 3.9 (D22): a debuff effect refuses units immune to it, as GAS data: its application_query ignores
+## Immune.<Status> (the last segment of its Status.Debuff.* tag) and Immune.Debuff.
+func _check_immunity(effect: GameplayEffect, path: String) -> void:
+	var key := "immunity|" + effect.resource_path
+	if _visited.has(key):
+		return
+	_visited[key] = true
+	for tag in effect.granted_tags:
+		if not String(tag).begins_with(Battle.DEBUFF_TAG + "."):
+			continue
+		var own := StringName("Immune." + String(tag).get_slice(".", String(tag).get_slice_count(".") - 1))
+		var ignored: Array = effect.application_query.ignore_tags if effect.application_query != null else []
+		var missing := [own, &"Immune.Debuff"].filter(func(needed) -> bool: return not ignored.has(needed))
+		if not missing.is_empty():
+			_warning("status_without_immunity", path, "%s grants %s but its application_query doesn't ignore %s" % [
+				effect.resource_path, tag, ", ".join(missing)])
 
 
 func _trigger_of(scene: PackedScene) -> StringName:
@@ -410,8 +432,23 @@ func _check_loadout_ref(loadout: Loadout, owner_id: StringName, number: String, 
 		_error("bad_loadout_ref", where, "loadout ref '%s' does not resolve (is the loadout file under %s?)" % [ref, content.root])
 
 
+## A GameplayEffect that adds an instance per application (FREE stacking, no cap of 1).
+static func _stacks(effect: GameplayEffect) -> bool:
+	return effect.stacking_policy == GameplayEffect.StackingPolicy.FREE and effect.max_stacks != 1
+
+
 func _check_room(room: RoomDefinition) -> void:
 	var path := room.resource_path if room.resource_path != "" else "room " + String(room.id)
+	# Spec playable-demo 3.8: a curse paid as a price is meant to add up, so its effects must stack.
+	for index in room.placements.size():
+		var placement: RoomPlacement = room.placements[index]
+		if placement == null or placement.price_item == null:
+			continue
+		var curse := placement.price_item
+		var effects: Array = curse.grants.effects if curse.grants != null else []
+		if effects.any(func(effect: GameplayEffect) -> bool: return effect != null and not _stacks(effect)):
+			_warning("price_item_not_stacking", "%s::placements[%d].price_item" % [path, index],
+				"%s refreshes instead of stacking, so a second purchase costs nothing" % curse.id)
 	if room.id == &"":
 		_error("missing_id", path, "the room has no id")
 	if room.min_doors > RoomDefinition.door_count(room.doors):
@@ -651,6 +688,7 @@ func _check_layout(layout: FloorLayout) -> void:
 func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 	var path := structure.resource_path
 	_check_rarity_weights(structure)
+	_check_routes(structure)
 	if structure.floors.is_empty():
 		_error("dangling_ref", path + "::floors", "%s has no floors" % structure.id)
 	for floor_index in structure.floors.size():
@@ -670,6 +708,38 @@ func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 				if result["error"] != "":
 					_error("generation_fails", where, "floor %d, chapter %s, seed %d: %s" % [floor_index, chapter.id, seed_value, result["error"]])
 					break
+
+
+## Spec playable-demo 3.8: choice slots offer a choice, route slots can follow every route their previous slot gives,
+## and a rotating chapter has a boss for each of its floors in the run.
+func _check_routes(structure: RunStructure) -> void:
+	var path := structure.resource_path
+	var floors_of := {}
+	for index in structure.floors.size():
+		var slot: FloorSlot = structure.floors[index]
+		if slot == null or slot.chapters.has(null):
+			continue
+		var where := "%s::floors[%d]" % [path, index]
+		for chapter in slot.chapters:
+			floors_of[chapter] = int(floors_of.get(chapter, 0)) + 1
+		if slot.pick == FloorSlot.Pick.CHOICE and slot.chapters.size() < 2:
+			_warning("choice_slot_single", where, "floor %d is a choice with one chapter" % (index + 1))
+		if slot.pick == FloorSlot.Pick.ROUTE:
+			var previous: FloorSlot = structure.floors[index - 1] if index > 0 else null
+			var routes: Array = previous.chapters.map(func(chapter) -> StringName: return chapter.route_tag) if previous != null else [&""]
+			for route in routes:
+				if not slot.chapters.any(func(chapter) -> bool: return chapter.route_tag == route):
+					_error("route_unmatched", where, "floor %d has no chapter for route '%s' from floor %d" % [index + 1, route, index])
+	for chapter in floors_of:
+		if not chapter.boss_rotation:
+			continue
+		var bosses := 0
+		for id in _sorted(content.encounters):
+			if TagMatch.matches(chapter.boss_encounter_query, content.encounters[id].tags) and content.encounters[id].weight_x100 > 0:
+				bosses += 1
+		if bosses < floors_of[chapter]:
+			_warning("boss_rotation_short", chapter.resource_path + "::boss_rotation",
+				"%s has %d floor(s) in %s but %d boss(es); a boss repeats" % [chapter.id, floors_of[chapter], structure.id, bosses])
 
 
 ## Spec playable-demo 3.7: rarity weights name Item.Rarity.* tags some item or piece has; with weights, every pooled

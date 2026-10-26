@@ -14,3 +14,8 @@ extends Resource
 @export var event_query: GameplayTagQuery
 @export var floor_gen_rules: FloorGenRules
 @export var scaling: ScalingRules
+## Spec playable-demo 3.8: the chapter's floors take its bosses in a seeded rotation (never the same twice while it has
+## two). Off: each floor picks by weight, as before.
+@export var boss_rotation: bool = false
+## Spec playable-demo 3.8: the route this chapter belongs to (Route.Light, Route.Dark), for a ROUTE floor slot after it.
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var route_tag: StringName = &""

@@ -214,7 +214,10 @@ func _resolve(map: FloorMap, chapter: ChapterDefinition, pools: Dictionary, over
 			var price := 0
 			if placement.kind == RoomPlacement.Kind.SHOP_SLOT:
 				price = placement.price if placement.price >= 0 else picked.price
-			data["pickups"].append(pickup_entry(number + 1, picked, price))
+			var entry := pickup_entry(number + 1, picked, price)
+			if placement.price_item != null:
+				entry["priceItem"] = placement.price_item.id
+			data["pickups"].append(entry)
 	return {"map": map, "error": ""}
 
 
@@ -234,7 +237,10 @@ func _resolve_content(room: RoomDefinition, chapter: ChapterDefinition, is_boss:
 				var query := room.content_query
 				if query == null:
 					query = chapter.boss_encounter_query if is_boss else chapter.encounter_query
-				encounter = RunSeeds.pick_weighted(stream, _matching(content.encounters, query))
+				if is_boss and room.content_query == null and chapter.boss_rotation:
+					encounter = rotated_boss(chapter)
+				else:
+					encounter = RunSeeds.pick_weighted(stream, _matching(content.encounters, query))
 				if encounter == null:
 					return {"error": "no encounter matches the %s query" % ("boss" if is_boss else "encounter")}
 			RoomDefinition.ContentMode.EVENT:
@@ -250,6 +256,29 @@ func _resolve_content(room: RoomDefinition, chapter: ChapterDefinition, is_boss:
 	if event != null:
 		return {"kind": "event", "encounter": &"", "event": event.id, "enemies": []}
 	return {"kind": "none", "encounter": &"", "event": &"", "enemies": []}
+
+
+## Spec playable-demo 3.8 (boss rotation): the chapter's boss candidates (sorted ids, weight above 0), shuffled once per
+## run by the stream chapter/<id>/bosses; the chapter's k-th floor in the run takes entry k mod n. Stateless, so the
+## run state and hash hold nothing new, and two floors of one chapter never meet the same boss while it has two.
+func rotated_boss(chapter: ChapterDefinition) -> EncounterDefinition:
+	var candidates: Array = _matching(content.encounters, chapter.boss_encounter_query).filter(
+		func(encounter: EncounterDefinition) -> bool: return encounter.weight_x100 > 0)
+	if candidates.is_empty():
+		return null
+	var shuffle := RunSeeds.rng(run_seed, "chapter/%s/bosses" % chapter.id)
+	for index in range(candidates.size() - 1, 0, -1):
+		var other := shuffle.randi_range(0, index)
+		var held: Variant = candidates[index]
+		candidates[index] = candidates[other]
+		candidates[other] = held
+	var nth := 0
+	if run_structure != null:
+		for floor_index in mini(depth, run_structure.floors.size()):
+			var slot: FloorSlot = run_structure.floors[floor_index]
+			if slot != null and slot.chapters.has(chapter):
+				nth += 1
+	return candidates[nth % candidates.size()]
 
 
 ## EnemySnapshot dictionaries for an encounter placed in a room: loadout precedence (enemy default → encounter slot →

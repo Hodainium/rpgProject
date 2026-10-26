@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_mi00o"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="2_cwh40"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_tfulj"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_h1575"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_0awpw"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_niubf"]
+
+[sub_resource type="Resource" id="Resource_r0bm8"]
+script = ExtResource("1_mi00o")
+stacking_policy = 1
+policy = 2
+
+[sub_resource type="Resource" id="Resource_5p0ho"]
+script = ExtResource("4_h1575")
+effects = Array[ExtResource("1_mi00o")]([SubResource("Resource_r0bm8")])
+
+[resource]
+script = ExtResource("6_niubf")
+id = &"broken.item.refreshing_curse"
+grants = SubResource("Resource_5p0ho")

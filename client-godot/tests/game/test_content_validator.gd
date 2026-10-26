@@ -15,7 +15,8 @@ const EXPECTED_ERRORS: Array = [
 	["bad_equipment", "equipment/bad_equipment.tres"], ["placement_both", "rooms/placement_both.tres"],
 	["ult_triggered", "characters/ult_triggered.tres"],
 	["phase_order", "enemies/phase_order.tres"], ["pattern_unknown_ability", "enemies/pattern_unknown.tres"],
-	["run_default_twice", "runs/default_b.tres"],
+	["run_default_twice", "runs/default_b.tres"], ["per_item_not_stacking", "enemies/per_item_refresh.tres"],
+	["route_unmatched", "runs/route_unmatched.tres"],
 ]
 const EXPECTED_WARNINGS: Array = [
 	["incomplete", "encounters/incomplete.tres"], ["empty_item_pool", "rooms/empty_item_pool.tres"],
@@ -27,7 +28,8 @@ const EXPECTED_WARNINGS: Array = [
 	["ult_ignores_control", "enemies/uncharged.tres"], ["affinity_conflict", "enemies/affinity_conflict.tres"],
 	["chance_on_damage", "characters/chance_on_damage.tres"],
 	["controlled_without_status", "characters/controlled_without_status.tres"],
-	["party_toughness", "characters/party_toughness.tres"],
+	["party_toughness", "characters/party_toughness.tres"], ["choice_slot_single", "runs/choice_single.tres"],
+	["boss_rotation_short", "chapters/rotation_short.tres"], ["price_item_not_stacking", "rooms/price_refresh.tres"],
 ]
 
 

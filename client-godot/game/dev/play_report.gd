@@ -5,9 +5,10 @@
 class_name PlayReport
 extends RefCounted
 
-const POLICIES: Array[String] = ["auto", "chaos"]
+const POLICIES: Array[String] = ["auto", "smart", "chaos"]
+## chaos: the share of chaotic decisions (percent; the rest are smart) and the first floor (1-based) it plays on.
 const DEFAULTS: Dictionary = {"run": "", "party": [], "policy": "auto", "illegal": 20, "check": false,
-	"max_steps": 400, "trace": false}
+	"max_steps": 2000, "trace": false, "chaos": 100, "chaos_from": 1}
 
 
 ## Plays seeds from..from+count-1. options: DEFAULTS keys ("party" [] = the first two selectable characters by id;
@@ -62,6 +63,13 @@ static func fight_pending(run: RunController, content: ContentIndex, host: Node,
 	if chaos:
 		controller = ChaosController.new(RunSeeds.rng(run.state.run_seed, "dev/chaos/%s" % snapshot["battleId"]),
 			int(opts["illegal"]) * 100)
+		# Spec playable-demo 3.9: chaos on top of the smart policy, at a rate and from a floor.
+		if int(opts["chaos"]) < 100 or int(opts["chaos_from"]) > 1:
+			controller.base = SmartController.new()
+			controller.chaos_x100 = int(opts["chaos"]) * 100
+			controller.active = run.state.floor_index + 1 >= int(opts["chaos_from"])
+	elif opts["policy"] == "smart":
+		controller = SmartController.new()
 	else:
 		controller = ScriptedController.new()
 	var seen := {"battle": null, "checker": null, "turns": 0, "mismatch": {}}
@@ -104,7 +112,7 @@ static func fight_pending(run: RunController, content: ContentIndex, host: Node,
 	var result: Dictionary = await runner.run_on(request, content, host)
 	if result.has("runnerError"):
 		found.append({"invariant": "replay_runner_error", "detail": str(result["runnerError"])})
-	elif result["verdict"] != "Verified" or result["finalStateHash"] != entry["finalHash"] or result["outcome"] != entry["outcome"]:
+	elif _replay_disagrees(result, entry):
 		var reason: Variant = result["mismatch"]["reason"] if result["mismatch"] != null else null
 		found.append({"invariant": "replay_mismatch", "detail": "verdict %s (%s), hash %s vs %s, outcome %s vs %s" % [
 			result["verdict"], reason, result["finalStateHash"], entry["finalHash"], result["outcome"], entry["outcome"]]})
@@ -119,6 +127,17 @@ static func fight_pending(run: RunController, content: ContentIndex, host: Node,
 	await replay_trace.run_on(request, content, host)
 	record["failures"].append({"where": where, "request": request, "replayTrace": replay_trace.trace.to_json(),
 		"recordTrace": seen["checker"].to_json() if seen["checker"] != null and opts["trace"] else null})
+
+
+## True when the verifier's result is not the recording's: another verdict, hash or outcome. A battle that hit the
+## turn cap is recorded as TurnLimit and verified as Rejected (TurnLimitExceeded, spec combat-replay-core) with the same
+## hash; that is consistent, and the invariant checker already reports it as turn_limit.
+static func _replay_disagrees(result: Dictionary, entry: Dictionary) -> bool:
+	if result["finalStateHash"] != entry["finalHash"]:
+		return true
+	if entry["outcome"] == Battle.TURN_LIMIT_OUTCOME:
+		return result["mismatch"] == null or result["mismatch"]["reason"] != "TurnLimitExceeded"
+	return result["verdict"] != "Verified" or result["outcome"] != entry["outcome"]
 
 
 ## Party HP and MP at a battle's start as whole percents of their maximum (×100 values summed over living members).
@@ -163,7 +182,9 @@ static func _options(content: ContentIndex, options: Dictionary) -> Dictionary:
 @warning_ignore("integer_division")
 static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, count: int) -> Dictionary:
 	var report := {"run": opts["run"], "policy": opts["policy"], "party": opts["party"], "from": from, "count": count,
-		"illegalPercent": opts["illegal"] if opts["policy"] == "chaos" else 0, "won": 0, "lost": 0, "stopped": 0,
+		"illegalPercent": opts["illegal"] if opts["policy"] == "chaos" else 0,
+		"chaosPercent": opts["chaos"] if opts["policy"] == "chaos" else 0,
+		"chaosFrom": opts["chaos_from"] if opts["policy"] == "chaos" else 0, "won": 0, "lost": 0, "stopped": 0,
 		"winPercentX100": 0, "deaths": {}, "floorReached": {}, "bossEntryHpPercent": {}, "turnsPerBattle": {},
 		"coinsSpent": {}, "refused": {}, "violations": [], "runs": []}
 	var boss_hp := {}
@@ -224,7 +245,8 @@ static func spread(values: Array[int]) -> Dictionary:
 ## The report as text: outcome counts, deaths, boss-entry HP, turns per encounter, violations.
 static func text(report: Dictionary) -> String:
 	var lines := PackedStringArray(["%s policy%s, run %s, party %s, seeds %d..%d" % [report["policy"],
-		" (%d%% illegal)" % report["illegalPercent"] if report["policy"] == "chaos" else "",
+		" (%d%% of decisions from floor %d, %d%% illegal)" % [report["chaosPercent"], report["chaosFrom"],
+			report["illegalPercent"]] if report["policy"] == "chaos" else "",
 		report["run"] if report["run"] != "" else "(default)", ",".join(report["party"]), report["from"],
 		report["from"] + report["count"] - 1]])
 	lines.append("  won %d  lost %d  stopped %d  (win rate %.2f%%)" % [report["won"], report["lost"], report["stopped"],

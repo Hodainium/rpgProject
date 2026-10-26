@@ -6,8 +6,8 @@ extends DevCommand
 
 func _init() -> void:
 	name = "autorun"
-	usage = "autorun [max_steps] [policy=auto|chaos] [illegal=<percent>]"
-	help = "Plays the rest of the run on the auto policy (or chaos: bad and illegal moves, every battle checked)."
+	usage = "autorun [max_steps] [policy=auto|smart|chaos] [illegal=<percent>] [chaos=<percent>] [from=<floor>]"
+	help = "Plays the rest of the run on a policy: auto, smart, or chaos (bad and illegal moves on top of smart; every battle checked)."
 	cheat = false
 	arg_kinds.assign(["int", "text", "text"])
 
@@ -18,7 +18,7 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 	var run := ctx.run
 	if not run.pending_battle.is_empty():
 		return ctx.fail("finish the current battle first")
-	var options := {"policy": "auto", "illegal": 20, "max_steps": 400}
+	var options := {"policy": "auto", "illegal": 20, "max_steps": 2000}
 	for arg in args:
 		if arg.is_valid_int():
 			options["max_steps"] = int(arg)
@@ -26,6 +26,10 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 			options["policy"] = arg.trim_prefix("policy=")
 		elif arg.begins_with("illegal=") and arg.trim_prefix("illegal=").is_valid_int():
 			options["illegal"] = int(arg.trim_prefix("illegal="))
+		elif arg.begins_with("chaos=") and arg.trim_prefix("chaos=").is_valid_int():
+			options["chaos"] = int(arg.trim_prefix("chaos="))
+		elif arg.begins_with("from=") and arg.trim_prefix("from=").is_valid_int():
+			options["chaos_from"] = int(arg.trim_prefix("from="))
 		else:
 			return ctx.fail("usage: " + usage)
 	if not PlayReport.POLICIES.has(options["policy"]):

@@ -24,3 +24,6 @@ enum Kind {
 @export var item_query: GameplayTagQuery
 ## SHOP_SLOT: price override; -1 uses the item's price.
 @export var price: int = -1
+## Spec playable-demo 3.8 (the Void's altars): taking this pickup also gives the taker this item (a curse such as Void
+## Scar, −10% max HP), whatever their capacity. Usually on a pedestal (no coins).
+@export var price_item: ItemDefinition

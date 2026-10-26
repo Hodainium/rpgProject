@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/slam.tscn" id="1_osyu0"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/claw.tscn" id="2_n4275"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="3_i0g18"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/per_item_boost.tres" id="4_hundb"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="5_m176o"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="6_2ybfp"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="7_ihsqi"]
+
+[resource]
+script = ExtResource("6_2ybfp")
+mirror_party_items = true
+per_item_effect = ExtResource("4_hundb")
+id = &"fixture.enemy.mirror"
+attribute_set = ExtResource("3_i0g18")
+abilities = Array[PackedScene]([ExtResource("1_osyu0"), ExtResource("2_n4275")])
+display_name = "Mirror"
+display_color = Color(1, 0.84313726, 0, 1)
+tags = Array[StringName]([&"Enemy.Boss"])
+stats_x100 = Dictionary[String, int]({
+"atk": 26000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 20000,
+"hp": 240000,
+"max_hp": 240000,
+"spd": 10000
+})

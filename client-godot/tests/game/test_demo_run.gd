@@ -30,43 +30,54 @@ func _start(content: ContentIndex, seed_text: String = "1") -> RunController:
 	return run
 
 
-func test_demo_run_two_floors() -> void:
+## Spec playable-demo 3.8: ten floors, two per chapter up to the Hollow, then a choice of routes at floor 9 and the
+## route's end at floor 10. Every floor ends in its chapter's boss; a chapter's two floors meet different bosses; item
+## rooms only where the chapter has them (none in the Hollow, the Cathedral and the Coven; four treasure rooms in the
+## Vault; three altars in the Void).
+func test_demo_run_full_descent() -> void:
 	var content := _demo()
 	if content == null:
 		print("    skipped: %s not built" % DESCENT)
 		return
 	eq(RunController.pick_run(content)["run"].id, DESCENT, "The Descent is the default run")
 	var structure: RunStructure = content.runs[DESCENT]
-	eq(structure.floors.size(), 2, "two floors")
-	eq(structure.floors[0].chapters.map(func(chapter): return chapter.id), [&"demo.chapter.cellar"], "floor 1 is the Cellar")
-	eq(structure.floors[1].chapters.map(func(chapter): return chapter.id), [&"demo.chapter.crypt"], "floor 2 is the Crypt")
-	var bosses := [{"room": &"demo.room.boss", "encounter": "demo.encounter.golem"},
-		{"room": &"demo.room.sanctum", "encounter": "demo.encounter.lich"}]
-	for seed_value in range(1, 21):
-		for floor_index in 2:
-			var result := SeedReport.floor_of(content, seed_value, floor_index)
-			eq(result["error"], "", "seed %d floor %d generates" % [seed_value, floor_index + 1])
-			if result["error"] != "":
-				continue
-			var map: FloorMap = result["map"]
-			var kinds := {}
-			for index in map.sorted_indices():
-				var cell: Dictionary = map.cells[index]
-				var room: RoomDefinition = content.rooms[cell["room"]]
-				for tag in [&"Room.Type.Treasure", &"Room.Type.Shop"]:
-					if room.tags.has(tag):
-						kinds[tag] = true
-				if cell["role"] == FloorMap.ROLE_BOSS:
-					eq(cell["room"], bosses[floor_index]["room"], "seed %d floor %d boss room" % [seed_value, floor_index + 1])
-					eq(String(cell["content"]["encounter"]), bosses[floor_index]["encounter"],
-						"seed %d floor %d boss" % [seed_value, floor_index + 1])
-			eq(kinds.size(), 2, "seed %d floor %d has a treasure room and a shop" % [seed_value, floor_index + 1])
-	var cellar: Dictionary = SeedReport.many(content, 1, 30, 0)["encounters"]
-	var crypt: Dictionary = SeedReport.many(content, 1, 30, 1)["encounters"]
-	for id in crypt:
-		check(content.encounters[StringName(id)].tags.has(&"Chapter.Crypt"), "the Crypt draws only Crypt encounters: " + id)
-	for id in cellar:
-		check(not content.encounters[StringName(id)].tags.has(&"Chapter.Crypt"), "the Cellar draws no Crypt encounter: " + id)
+	eq(structure.floors.size(), 10, "ten floors")
+	var order := ["cellar", "cellar", "crypt", "crypt", "forge", "forge", "hollow", "hollow"]
+	for index in order.size():
+		eq(structure.floors[index].chapters.map(func(chapter): return chapter.id), [StringName("demo.chapter." + order[index])],
+			"floor %d is the %s" % [index + 1, order[index]])
+	eq(structure.floors[8].pick, FloorSlot.Pick.CHOICE, "floor 9 is a choice")
+	eq(structure.floors[8].chapters.map(func(chapter): return chapter.id), [&"demo.chapter.cathedral", &"demo.chapter.coven"], "light or dark")
+	eq(structure.floors[9].pick, FloorSlot.Pick.ROUTE, "floor 10 follows the route")
+	var specials := {"cellar": {"Room.Type.Treasure": 1, "Room.Type.Shop": 1}, "crypt": {"Room.Type.Treasure": 1, "Room.Type.Shop": 1},
+		"forge": {"Room.Type.Treasure": 1, "Room.Type.Shop": 1}, "hollow": {}, "cathedral": {}, "coven": {},
+		"vault": {"Room.Type.Treasure": 4, "Room.Type.Shop": 1}, "void": {"Room.Type.Altar": 3}}
+	for route in [&"demo.chapter.cathedral", &"demo.chapter.coven"]:
+		for seed_value in range(1, 13):
+			var bosses := {}
+			for floor_index in 10:
+				var result := SeedReport.floor_of(content, seed_value, floor_index, null, DESCENT, route)
+				var where := "%s seed %d floor %d" % [route, seed_value, floor_index + 1]
+				eq(result["error"], "", where + " generates")
+				if result["error"] != "":
+					continue
+				var name := String(result["chapter"]).trim_prefix("demo.chapter.")
+				var chapter: ChapterDefinition = content.chapters[result["chapter"]]
+				var map: FloorMap = result["map"]
+				var counts := {}
+				for index in map.sorted_indices():
+					var cell: Dictionary = map.cells[index]
+					if cell["role"] == FloorMap.ROLE_SPECIAL:
+						counts[String(cell["special_tag"])] = int(counts.get(String(cell["special_tag"]), 0)) + 1
+					if cell["role"] == FloorMap.ROLE_BOSS:
+						var encounter: EncounterDefinition = content.encounters[cell["content"]["encounter"]]
+						check(TagMatch.matches(chapter.boss_encounter_query, encounter.tags),
+							where + ": the boss is the chapter's (%s)" % encounter.id)
+						if chapter.boss_rotation:
+							check(not bosses.has(encounter.id) or bosses[encounter.id] != name, where + ": a new boss in the chapter")
+							bosses[encounter.id] = name
+				eq(counts, specials[name], where + " (%s): special rooms" % name)
+	var crypt: Dictionary = SeedReport.many(content, 1, 30, 2)["encounters"]
 	for id in ["demo.encounter.crypt_guard", "demo.encounter.wisp_choir", "demo.encounter.ember_watch",
 			"demo.encounter.bound_dead"]:
 		check(crypt.has(id), "%s appears on the Crypt in 30 seeds" % id)
@@ -203,3 +214,67 @@ class _KillFirst extends ScriptedController:
 			_done = true
 			return {"dev": &"Dev.Kill", "effect": RunController.dev_effect("dev_kill"), "targets": "enemies"}
 		return super(battle, unit)
+
+
+## Spec playable-demo 3.8: the Void's altars offer only corrupted items, each costing a Void Scar; the Collector
+## mirrors the build and the Nameless does not.
+func test_demo_endings() -> void:
+	var content := _demo()
+	if content == null:
+		print("    skipped: %s not built" % DESCENT)
+		return
+	var priced := 0
+	for seed_value in range(1, 11):
+		var result := SeedReport.floor_of(content, seed_value, 9, null, DESCENT, &"demo.chapter.coven")
+		eq(result["chapter"], &"demo.chapter.void", "seed %d: the dark route ends in the Void" % seed_value)
+		var map: FloorMap = result["map"]
+		for index in map.sorted_indices():
+			for pickup in map.cells[index]["pickups"]:
+				if not pickup.has("priceItem"):
+					continue
+				priced += 1
+				eq(pickup["priceItem"], &"demo.item.void_scar", "an altar costs a Void Scar")
+				var entry: Resource = content.items.get(pickup["item"], content.equipment.get(pickup["item"]))
+				check(entry != null and (entry.tags.has(&"Item.Corrupted") or entry.id == &"demo.item.stale_bread"),
+					"an altar offers a corrupted item (%s)" % pickup["item"])
+	eq(priced, 60, "3 altars × 2 pedestals × 10 seeds")
+	check(content.units[&"demo.enemy.collector"].mirror_party_items, "the Collector mirrors the build")
+	check(content.units[&"demo.enemy.collector"].per_item_effect != null, "and grows per piece held")
+	check(not content.units[&"demo.enemy.nameless"].mirror_party_items, "the Nameless does not")
+	var corrupted := content.items.values().filter(func(item) -> bool: return item.tags.has(&"Item.Corrupted")).size() \
+		+ content.equipment.values().filter(func(piece) -> bool: return piece.tags.has(&"Item.Corrupted")).size()
+	eq(corrupted, 15, "fifteen corrupted items")
+
+
+## Spec playable-demo 3.9 (D22): Immune.<Status> refuses that status, Immune.Debuff refuses every debuff, through each
+## debuff effect's application_query; Vein Cloak makes its wearer immune to Bleed.
+func test_demo_status_immunity() -> void:
+	var content := _demo()
+	if content == null:
+		print("    skipped: %s not built" % DESCENT)
+		return
+	var run := _start(content)
+	_inject(run, &"demo.encounter.slime_pair")
+	var battle := Battle.new()
+	host.add_child(battle)
+	eq(battle.setup(run.battle_snapshot(), content), "", "a battle builds")
+	var bleed: GameplayEffect = load("res://content/demo/effects/bleed.tres")
+	var poison: GameplayEffect = load("res://content/demo/effects/poison.tres")
+	var first := battle.unit_by_id(&"E1")
+	var second := battle.unit_by_id(&"E2")
+	first.asc.add_tag(&"Immune.Bleed")
+	for unit in [first, second]:
+		unit.asc.apply_gameplay_effect(bleed, unit.asc, 1)
+		unit.asc.apply_gameplay_effect(poison, unit.asc, 1)
+	var tags := func(unit: BattleUnit) -> Array: return unit.statuses().map(func(status): return status["tag"])
+	check(not tags.call(first).has("Status.Debuff.Bleed"), "Immune.Bleed refuses Bleed")
+	check(tags.call(first).has("Status.Debuff.Poison"), "but not Poison")
+	check(tags.call(second).has("Status.Debuff.Bleed"), "a unit without the tag bleeds")
+	second.asc.add_tag(&"Immune.Debuff")
+	second.asc.apply_gameplay_effect(load("res://content/demo/effects/weaken.tres"), second.asc, 1)
+	check(not tags.call(second).has("Status.Debuff.Weaken"), "Immune.Debuff refuses every debuff")
+	battle.free()
+	run.free()
+	var cloak: EquipmentDefinition = content.equipment[&"demo.equipment.vein_cloak"]
+	check(cloak.grants.effects.any(func(effect) -> bool: return effect.granted_tags.has(&"Immune.Bleed")),
+		"Vein Cloak grants Immune.Bleed")

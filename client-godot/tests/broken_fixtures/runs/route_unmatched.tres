@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="RunStructure" format=3]
+
+[ext_resource type="Resource" path="res://tests/broken_fixtures/items/fallback.tres" id="1_l4xc2"]
+[ext_resource type="Script" path="res://game/defs/floor_slot.gd" id="2_a8m5y"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="3_0i1hl"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/chapters/gen.tres" id="4_v22dv"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/layouts/bad_layout.tres" id="5_6u2h2"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/floor_rules/impossible.tres" id="6_i37e5"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="7_un7a0"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/scaling/basic.tres" id="8_6si7t"]
+[ext_resource type="Script" path="res://game/defs/run_structure.gd" id="9_mmri8"]
+
+[sub_resource type="Resource" id="Resource_58d3p"]
+script = ExtResource("2_a8m5y")
+chapters = Array[ExtResource("3_0i1hl")]([ExtResource("4_v22dv")])
+layout = ExtResource("5_6u2h2")
+
+[sub_resource type="Resource" id="Resource_k7tj6"]
+script = ExtResource("7_un7a0")
+require_all_tags = Array[StringName]([&"Broken.Gen"])
+
+[sub_resource type="Resource" id="Resource_iosa0"]
+script = ExtResource("3_0i1hl")
+id = &"broken.chapter.lit"
+room_query = SubResource("Resource_k7tj6")
+floor_gen_rules = ExtResource("6_i37e5")
+scaling = ExtResource("8_6si7t")
+route_tag = &"Route.Light"
+
+[sub_resource type="Resource" id="Resource_j1pjn"]
+script = ExtResource("2_a8m5y")
+chapters = Array[ExtResource("3_0i1hl")]([SubResource("Resource_iosa0")])
+pick = 2
+layout = ExtResource("5_6u2h2")
+
+[resource]
+script = ExtResource("9_mmri8")
+id = &"broken.run.route_unmatched"
+floors = Array[ExtResource("2_a8m5y")]([SubResource("Resource_58d3p"), SubResource("Resource_j1pjn")])
+fallback_item = ExtResource("1_l4xc2")

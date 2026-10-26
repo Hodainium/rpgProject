@@ -25,6 +25,8 @@ static func _scenarios() -> Dictionary:
 		# party weakness hits with enemy One Mores (H7) and ults timed on a Downed party member.
 		"status-seed-3": status_golden_snapshot(),
 		"boss-seed-5": preload("res://tests/combat/test_bosses.gd").boss_snapshot("5"),
+		# Spec playable-demo 3.8: a mirror boss copying the party's held items and armor, one stack per piece (H9, H10).
+		"mirror-seed-9": preload("res://tests/combat/test_mirror.gd").mirror_snapshot("9"),
 	}
 
 
@@ -58,7 +60,7 @@ func test_golden_replays() -> void:
 		if name.ends_with(".json") and not name.ends_with(".result.json") and not name.ends_with(".trace.json"):
 			requests.append(name.trim_suffix(".json"))
 	requests.sort()
-	eq(Array(requests), ["boss-seed-5", "break-seed-11", "duel-seed-1", "run-v2-seed-7", "squad-seed-42",
+	eq(Array(requests), ["boss-seed-5", "break-seed-11", "duel-seed-1", "mirror-seed-9", "run-v2-seed-7", "squad-seed-42",
 		"squad-seed-42-tampered-final", "squad-seed-42-tampered-target", "status-seed-3", "status-seed-3-tampered-skip",
 		"ult-close-seed-2-tampered-outcome", "ult-seed-7", "ult-seed-7-tampered-turn"], "golden set")
 	for name in requests:

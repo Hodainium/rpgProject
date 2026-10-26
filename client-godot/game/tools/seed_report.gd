@@ -1,10 +1,12 @@
 ## Headless seed statistics (spec dev-tools 2.5): the SeedReport for many seeds as JSON, for tuning FloorGenRules.
 ## Exit 0 (no failures), 3 (some seeds failed to generate), 1 (tool error).
 ##   godot --headless --path client-godot --quit-after 100000 res://game/tools/seed_report.tscn
-##     -- [--content-root res://content/] [--run <id>] [--from 1] [--count 1000] [--floor 0] [--out report.json]
+##     -- [--content-root res://content/] [--run <id>] [--from 1] [--count 1000] [--floor 0] [--route <chapter id>]
+##        [--out report.json]
 ## With --play (spec playable-demo 2.3, 2.3b) it plays each seed instead (PlayReport): exit 0, 3 when a run was
 ## stopped or (chaos, --check) an invariant broke; failing battles are saved next to --out.
-##     -- --play [--policy auto|chaos] [--illegal 20] [--check] [--trace] [--party a,b] [--max-steps 400]
+##     -- --play [--policy auto|smart|chaos] [--illegal 20] [--chaos 100] [--chaos-from 1] [--check] [--trace]
+##        [--party a,b] [--max-steps 2000]   (chaos below 100% or from a later floor plays on top of smart)
 ##   (give --quit-after a large frame count: every battle step takes frames)
 extends Node
 
@@ -23,7 +25,7 @@ func _ready() -> void:
 		await _play(content, args)
 		return
 	var report := SeedReport.many(content, int(_arg(args, "--from", "1")), int(_arg(args, "--count", "1000")),
-		int(_arg(args, "--floor", "0")), null, run_id)
+		int(_arg(args, "--floor", "0")), null, run_id, StringName(_arg(args, "--route", "")))
 	print(SeedReport.text(report))
 	var out := _arg(args, "--out", "")
 	if out != "":
@@ -44,7 +46,8 @@ func _play(content: ContentIndex, args: PackedStringArray) -> void:
 		party.append(id.strip_edges())
 	var options := {"run": _arg(args, "--run", ""), "party": party, "policy": policy,
 		"illegal": int(_arg(args, "--illegal", "20")), "check": args.has("--check"), "trace": args.has("--trace"),
-		"max_steps": int(_arg(args, "--max-steps", "400"))}
+		"max_steps": int(_arg(args, "--max-steps", "2000")), "chaos": int(_arg(args, "--chaos", "100")),
+		"chaos_from": int(_arg(args, "--chaos-from", "1"))}
 	var report := await PlayReport.many(content, self, int(_arg(args, "--from", "1")), int(_arg(args, "--count", "100")),
 		options)
 	var failures: Array = report["failures"]

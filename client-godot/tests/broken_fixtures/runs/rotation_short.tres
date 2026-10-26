@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="RunStructure" format=3]
+
+[ext_resource type="Resource" path="res://tests/broken_fixtures/items/fallback.tres" id="1_5hgqd"]
+[ext_resource type="Script" path="res://game/defs/floor_slot.gd" id="2_xbapf"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="3_qnxpm"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/chapters/rotation_short.tres" id="4_di304"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/layouts/bad_layout.tres" id="5_7qm88"]
+[ext_resource type="Script" path="res://game/defs/run_structure.gd" id="6_tka0j"]
+
+[sub_resource type="Resource" id="Resource_mimgr"]
+script = ExtResource("2_xbapf")
+chapters = Array[ExtResource("3_qnxpm")]([ExtResource("4_di304")])
+layout = ExtResource("5_7qm88")
+
+[sub_resource type="Resource" id="Resource_s165k"]
+script = ExtResource("2_xbapf")
+chapters = Array[ExtResource("3_qnxpm")]([ExtResource("4_di304")])
+layout = ExtResource("5_7qm88")
+
+[resource]
+script = ExtResource("6_tka0j")
+id = &"broken.run.rotation_short"
+floors = Array[ExtResource("2_xbapf")]([SubResource("Resource_mimgr"), SubResource("Resource_s165k")])
+fallback_item = ExtResource("1_5hgqd")

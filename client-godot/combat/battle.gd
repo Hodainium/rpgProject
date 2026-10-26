@@ -307,8 +307,23 @@ func _add_enemies_v2(snapshot: Dictionary, encounter: EncounterDefinition, conte
 			var slot: EncounterSlot = encounter.slots[index]
 			var loadout: Loadout = slot.loadout if slot.loadout != null else slot.enemy.default_loadout
 			entries.append({"slot": index + 1, "definition": slot.enemy, "loadout": loadout, "variant": slot.variant})
+	var mirror := _mirror_of_party(snapshot, content)
+	if runner_error != "":
+		return runner_error
+	var mirrored := entries.any(func(entry: Dictionary) -> bool:
+		return entry["definition"] is EnemyDefinition and entry["definition"].mirror_party_items)
 	for entry in entries:
 		var kit := _enemy_kit(entry["loadout"], entry["variant"], scaling_effect)
+		# Spec playable-demo 3.8: H9 a mirror boss takes every held item's and armor piece's passives (party-wide ones
+		# go to every enemy of its encounter); H10 its per-item effect once per piece held.
+		var enemy := entry["definition"] as EnemyDefinition
+		if mirrored:
+			kit["grants"].append_array(mirror["party"])
+		if enemy != null and enemy.mirror_party_items:
+			kit["grants"].append_array(mirror["holder"])
+		if enemy != null and enemy.per_item_effect != null:
+			for count in mirror["count"]:
+				kit["extra_effects"].append(enemy.per_item_effect)
 		# Spec playable-demo 3.7: the encounter's grants, then its slot's (from content, by encounter id and slot number).
 		var encounter_slot: EncounterSlot = null
 		var number: int = entry["slot"]
@@ -322,6 +337,45 @@ func _add_enemies_v2(snapshot: Dictionary, encounter: EncounterDefinition, conte
 		if encounter_slot != null and encounter_slot.brain != null:
 			unit_by_id(id).brain_override = encounter_slot.brain
 	return ""
+
+
+## Spec playable-demo 3.8 (H9, H10): the party's held items and armor from the snapshot, in party slot order, then
+## each member's items, armor (by slot tag) and use slots. {"holder": grants of holder items, armor and use slots,
+## "party": grants of party-wide items, "count": pieces held}. Use abilities are never copied.
+func _mirror_of_party(snapshot: Dictionary, content: ContentIndex) -> Dictionary:
+	var result := {"holder": [], "party": [], "count": 0}
+	var by_slot: Array = snapshot.get("party", []).duplicate()
+	by_slot.sort_custom(func(a, b) -> bool: return int(a.get("slot", 0)) < int(b.get("slot", 0)))
+	for member in by_slot:
+		for item_id in _list(member, "items"):
+			var item: ItemDefinition = content.items.get(StringName(str(item_id)))
+			if item == null:
+				_fail("unknown item '%s'" % item_id)
+				return result
+			result["count"] += 1
+			if item.grants != null:
+				result["party" if item.applies_to == ItemDefinition.AppliesTo.PARTY else "holder"].append({"set": item.grants})
+		var gear: Array[EquipmentDefinition] = []
+		for equipment_id in _list(member, "equipmentIds"):
+			var piece: EquipmentDefinition = content.equipment.get(StringName(str(equipment_id)))
+			if piece == null:
+				_fail("unknown equipment '%s'" % equipment_id)
+				return result
+			gear.append(piece)
+		gear.sort_custom(func(a, b) -> bool: return String(a.slot) < String(b.slot))
+		for piece in gear:
+			result["count"] += 1
+			if piece.grants != null:
+				result["holder"].append({"set": piece.grants})
+		for use_slot in _list(member, "useSlots"):
+			var usable: ItemDefinition = content.items.get(StringName(str(use_slot.get("itemId", ""))))
+			if usable == null:
+				_fail("unknown item '%s'" % use_slot.get("itemId"))
+				return result
+			result["count"] += 1
+			if usable.grants != null:
+				result["holder"].append({"set": usable.grants})
+	return result
 
 
 ## v2 enemy: its loadout (stats, skills, items, equipment), variant and floor scaling.

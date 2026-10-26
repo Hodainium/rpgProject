@@ -36,6 +36,7 @@ func _ready() -> void:
 	_build_item_pass()
 	_build_ult_interrupts()
 	_build_content_pass()
+	_build_full_descent()
 	_build_views()
 	print("Fixtures under %s: %d file(s) written" % [ROOT, _written])
 	get_tree().quit(0)
@@ -761,6 +762,20 @@ func _build_content_pass() -> void:
 
 
 ## A turn-based status that refreshes instead of stacking (REFRESH_DURATION, max 1); callers raise max_stacks.
+## Spec playable-demo 3.8 (H9, H10): a mirror boss that copies the party's held items and armor and grows per piece
+## held, alone in an encounter in no pool (the mirror-seed-9 golden).
+func _build_full_descent() -> void:
+	_save_effect("per_item_boost", _infinite("atk", GameplayEffectModifier.Operation.PERCENT_ADD, 5))
+	var mirror := EnemyDefinition.new()
+	_fill_unit(mirror, "fixture.enemy.mirror", {"max_hp": 2400, "hp": 2400, "atk": 260, "def": 200, "spd": 100,
+		"crit_rate": 5, "crit_dmg": 50}, {}, ["slam", "claw"], Color.GOLD)
+	mirror.tags.assign([&"Enemy.Boss"])
+	mirror.mirror_party_items = true
+	mirror.per_item_effect = _effects["per_item_boost"]
+	_save_world("enemies", "mirror", mirror)
+	_world_encounter("mirror_hall", [], [["mirror", null]], 1)
+
+
 func _status(turns: int, granted: Array) -> GameplayEffect:
 	var effect := GameplayEffect.new()
 	effect.policy = GameplayEffect.DurationPolicy.TURN_BASED

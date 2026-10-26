@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ChapterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_7vwjg"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/floor_rules/impossible.tres" id="2_d0drm"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/scaling/basic.tres" id="3_ugvj7"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="4_ufx68"]
+
+[sub_resource type="Resource" id="Resource_5jk8q"]
+script = ExtResource("1_7vwjg")
+require_all_tags = Array[StringName]([&"Broken.NoBoss"])
+
+[sub_resource type="Resource" id="Resource_k7tj6"]
+script = ExtResource("1_7vwjg")
+require_all_tags = Array[StringName]([&"Broken.Gen"])
+
+[resource]
+script = ExtResource("4_ufx68")
+id = &"broken.chapter.rotation_short"
+room_query = SubResource("Resource_k7tj6")
+boss_encounter_query = SubResource("Resource_5jk8q")
+floor_gen_rules = ExtResource("2_d0drm")
+scaling = ExtResource("3_ugvj7")
+boss_rotation = true

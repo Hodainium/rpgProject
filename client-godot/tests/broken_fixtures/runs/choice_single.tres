@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="RunStructure" format=3]
+
+[ext_resource type="Resource" path="res://tests/broken_fixtures/items/fallback.tres" id="1_xmujk"]
+[ext_resource type="Script" path="res://game/defs/floor_slot.gd" id="2_x7v6l"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="3_l71bj"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/chapters/gen.tres" id="4_aqtjn"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/layouts/bad_layout.tres" id="5_4gbdl"]
+[ext_resource type="Script" path="res://game/defs/run_structure.gd" id="6_tfth8"]
+
+[sub_resource type="Resource" id="Resource_htta5"]
+script = ExtResource("2_x7v6l")
+chapters = Array[ExtResource("3_l71bj")]([ExtResource("4_aqtjn")])
+pick = 1
+layout = ExtResource("5_4gbdl")
+
+[resource]
+script = ExtResource("6_tfth8")
+id = &"broken.run.choice_single"
+floors = Array[ExtResource("2_x7v6l")]([SubResource("Resource_htta5")])
+fallback_item = ExtResource("1_xmujk")

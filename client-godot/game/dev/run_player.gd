@@ -4,7 +4,8 @@
 ## Policy, all deterministic: battles use ScriptedController (or `battle`, which must fight the pending battle); events
 ## take the first enabled choice; in a cleared room take every free pickup and buy what is affordable (for the first
 ## member who can hold it); once per floor use the first field option; then enter the unvisited room with the lowest
-## index next to a visited one; after the boss go to the next floor. Stops when the run ends or after `max_steps`.
+## index next to a visited one; after the boss go to the next floor (a route choice drawn from the policy's own stream
+## dev/route/<floor>). Stops when the run ends or after `max_steps`.
 ## Returns "" (the run ended or stopped on a runner error), "stuck" (nothing left to do) or "step cap".
 class_name RunPlayer
 extends RefCounted
@@ -42,7 +43,13 @@ static func play(run: RunController, max_steps: int = 400, battle: Callable = Ca
 				await run.use_field(option["slot"], option["ability"], targets[0] if not targets.is_empty() else 0)
 				continue
 		if run.state.boss_cleared and not run.is_last_floor():
-			run.next_floor()
+			# Spec playable-demo 3.8: a route choice comes from the policy's own stream, never the run's.
+			var choices := run.next_floor_choices()
+			var pick: StringName = &""
+			if choices.size() > 1:
+				var route_rng := RunSeeds.rng(run.state.run_seed, "dev/route/%d" % (run.state.floor_index + 1))
+				pick = choices[route_rng.randi_range(0, choices.size() - 1)].id
+			run.next_floor(pick)
 			continue
 		var next := next_room(run)
 		if next == -1:

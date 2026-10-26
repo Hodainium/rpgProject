@@ -7,9 +7,10 @@ extends RefCounted
 ## Floors 0..floor_index of `seed_value`, generated in order with one pools object (so items seen on earlier floors are
 ## left out later, as in a run; items given by events or bought are not simulated). `rules` (optional) replaces the
 ## chapter's FloorGenRules, for tuning a copy. {"map": FloorMap or null, "chapter": StringName, "error": String}.
-## `run_id` as in RunController.pick_run (empty = the only or default run).
+## `run_id` as in RunController.pick_run (empty = the only or default run). `route` (spec playable-demo 3.8): the chapter
+## picked on CHOICE floors when it is one of theirs, else their first chapter; ROUTE floors follow it.
 static func floor_of(content: ContentIndex, seed_value: int, floor_index: int, rules: FloorGenRules = null,
-		run_id: StringName = &"") -> Dictionary:
+		run_id: StringName = &"", route: StringName = &"") -> Dictionary:
 	var picked := RunController.pick_run(content, run_id)
 	if picked["error"] != "":
 		return {"map": null, "chapter": &"", "error": picked["error"]}
@@ -18,10 +19,17 @@ static func floor_of(content: ContentIndex, seed_value: int, floor_index: int, r
 		return {"map": null, "chapter": &"", "error": "floors are 0 to %d" % (structure.floors.size() - 1)}
 	var pools := {"party": [], "held": [], "seen": []}
 	var result := {}
+	var previous: ChapterDefinition = null
 	for index in floor_index + 1:
 		var slot: FloorSlot = structure.floors[index]
-		var chapter_rng := RunSeeds.rng(seed_value, "floor/%d/chapter" % index)
-		var chapter: ChapterDefinition = slot.chapters[chapter_rng.randi_range(0, slot.chapters.size() - 1)]
+		var choice := route
+		if slot.pick == FloorSlot.Pick.CHOICE and not slot.chapters.any(func(entry) -> bool: return entry.id == route):
+			choice = slot.chapters[0].id if not slot.chapters.is_empty() else &""
+		var chosen := slot.pick_chapter(seed_value, index, previous, choice)
+		if chosen["error"] != "":
+			return {"map": null, "chapter": &"", "error": chosen["error"]}
+		var chapter: ChapterDefinition = chosen["chapter"]
+		previous = chapter
 		if rules != null and index == floor_index:
 			chapter = chapter.duplicate()
 			chapter.floor_gen_rules = rules
@@ -38,14 +46,14 @@ static func floor_of(content: ContentIndex, seed_value: int, floor_index: int, r
 
 ## Statistics for seeds from..from+count-1 on one floor.
 static func many(content: ContentIndex, from: int, count: int, floor_index: int, rules: FloorGenRules = null,
-		run_id: StringName = &"") -> Dictionary:
+		run_id: StringName = &"", route: StringName = &"") -> Dictionary:
 	var report := {"floor": floor_index, "from": from, "count": count, "failures": [], "attempts": {}, "rooms": {},
 		"dead_ends": {}, "rooms_used": {}, "encounters": {}, "events": {}, "elites": {}, "items": {}}
 	var attempts: Array[int] = []
 	var rooms: Array[int] = []
 	var dead_ends: Array[int] = []
 	for seed_value in range(from, from + count):
-		var result := floor_of(content, seed_value, floor_index, rules, run_id)
+		var result := floor_of(content, seed_value, floor_index, rules, run_id, route)
 		if result["error"] != "":
 			report["failures"].append({"seed": seed_value, "error": result["error"]})
 			continue

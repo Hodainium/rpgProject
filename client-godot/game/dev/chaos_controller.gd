@@ -6,6 +6,9 @@
 ## be built now) and expects the battle to refuse it with no state change, no log entry and no RNG draw; then (or
 ## otherwise) it picks uniformly among every legal (ability, target) pair, good or bad. At each ult window it presses a
 ## random ready ult half the time. Anything unexpected goes to `violations`.
+## Spec playable-demo 3.9 (D21): with a `base` controller (the smart policy), only `chaos_x100` of the decisions go
+## chaotic (one draw per decision from the same stream; none at 100%); the others, and every decision while not
+## `active` (before the report's --chaos-from floor), are the base's.
 class_name ChaosController
 extends RefCounted
 
@@ -22,6 +25,11 @@ var violations: Array[Dictionary] = []
 ## Illegal moves submitted and refused, by case.
 var refused: Dictionary = {}
 var illegal_x100: int = 0
+## Share of decisions that go chaotic (×100 percent); 10000 = all of them (no draw).
+var chaos_x100: int = 10000
+## False: every decision is the base's (the floors before --chaos-from).
+var active: bool = true
+var base: Object = null
 
 var _rng: RandomNumberGenerator
 ## The illegal move waiting for on_invalid: {"case", "hash", "rng", "entries"}.
@@ -36,6 +44,8 @@ func _init(policy_rng: RandomNumberGenerator, illegal_percent_x100: int = 0) -> 
 
 
 func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
+	if _calm():
+		return base.choose(battle, unit)
 	if _try_illegal(battle):
 		# A quarter of the time an illegal ult press at the DECISION window, otherwise an illegal turn action.
 		var illegal := _illegal_interrupt(battle) if _rng.randi_range(0, 3) == 0 else {}
@@ -57,6 +67,8 @@ func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 
 
 func interrupt(battle: Battle) -> Dictionary:
+	if _calm():
+		return base.interrupt(battle)
 	if _try_illegal(battle):
 		var illegal := _illegal_interrupt(battle)
 		if not illegal.is_empty():
@@ -95,6 +107,17 @@ func _accepted(battle: Battle, unit: BattleUnit) -> void:
 	if not _probe.is_empty():
 		_violate(battle, "illegal_accepted", unit.unit_id, _probe["case"], "the battle took an illegal move")
 		_probe = {}
+
+
+## This decision is the base's: no chaos yet, or the per-decision draw says calm. Never calm without a base.
+func _calm() -> bool:
+	if base == null:
+		return false
+	if not active:
+		return true
+	if _force_legal or chaos_x100 >= 10000:
+		return false
+	return _rng.randi_range(0, 9999) >= chaos_x100
 
 
 # --- Legal moves ----------------------------------------------------------------------------------------------------

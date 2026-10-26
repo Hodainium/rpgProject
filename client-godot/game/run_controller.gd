@@ -208,12 +208,13 @@ func _new_member(slot: int, character: CharacterDefinition) -> Dictionary:
 	return member
 
 
-func enter_floor(floor_index: int) -> String:
+## `choice`: the chapter picked at the stairs for a CHOICE slot (spec playable-demo 3.8).
+func enter_floor(floor_index: int, choice: StringName = &"") -> String:
 	var slot: FloorSlot = structure.floors[floor_index]
-	if slot.chapters.is_empty():
-		return _stop("floor %d of %s has no chapters" % [floor_index, structure.id])
-	var chapter_rng := RunSeeds.rng(state.run_seed, "floor/%d/chapter" % floor_index)
-	var chapter: ChapterDefinition = slot.chapters[chapter_rng.randi_range(0, slot.chapters.size() - 1)]
+	var picked := slot.pick_chapter(state.run_seed, floor_index, chapter() if state.chapter_id != &"" else null, choice)
+	if picked["error"] != "":
+		return _stop("%s: %s" % [structure.id, picked["error"]])
+	var chapter: ChapterDefinition = picked["chapter"]
 	_reset_floor(floor_index, chapter)
 	var pools := _pools()
 	var generator := FloorGenerator.new(content, structure, state.run_seed, floor_index)
@@ -253,11 +254,30 @@ func _install_floor(map: FloorMap, pools: Dictionary, clear_start: bool) -> void
 
 
 ## After the boss: the next floor, or the run is won after the last one (that happens in _clear_room).
-func next_floor() -> String:
+## `chapter_id`: the route picked at the stairs when the next floor is a CHOICE (next_floor_choices()).
+func next_floor(chapter_id: StringName = &"") -> String:
 	if not _active() or not state.boss_cleared or state.floor_index + 1 >= structure.floors.size() or state.sandbox:
 		return "the next floor is not open"
-	run_log.append({"type": "next_floor", "floor": state.floor_index})
-	return enter_floor(state.floor_index + 1)
+	var choices := next_floor_choices()
+	var entry := {"type": "next_floor", "floor": state.floor_index}
+	if choices.size() > 1:
+		if not choices.any(func(chapter: ChapterDefinition) -> bool: return chapter.id == chapter_id):
+			return "pick the next floor: %s" % ", ".join(choices.map(func(chapter: ChapterDefinition) -> String:
+				return String(chapter.id)))
+		entry["chapter"] = String(chapter_id)  # only on a choice, so older logs are unchanged
+	run_log.append(entry)
+	return enter_floor(state.floor_index + 1, chapter_id)
+
+
+## Spec playable-demo 3.8: the chapters the player picks between at the stairs ([] unless the next floor is a CHOICE).
+func next_floor_choices() -> Array[ChapterDefinition]:
+	var result: Array[ChapterDefinition] = []
+	if state == null or state.floor_index + 1 >= structure.floors.size():
+		return result
+	var slot: FloorSlot = structure.floors[state.floor_index + 1]
+	if slot.pick == FloorSlot.Pick.CHOICE:
+		result.assign(slot.chapters)
+	return result
 
 
 func chapter() -> ChapterDefinition:
@@ -621,9 +641,16 @@ func take(placement: int, slot: int) -> String:
 			state.coins -= pickup["price"]
 			_tally["coinsSpent"] += pickup["price"]
 			pickup["taken"] = true
-			run_log.append({"type": "buy" if pickup["price"] > 0 else "take", "floor": state.floor_index,
-				"cell": state.current_cell, "placement": placement, "kind": FloorGenerator.EQUIPMENT_KIND})
+			var entry := {"type": "buy" if pickup["price"] > 0 or pickup.has("priceItem") else "take",
+				"floor": state.floor_index, "cell": state.current_cell, "placement": placement,
+				"kind": FloorGenerator.EQUIPMENT_KIND}
+			var payer := slot if slot > 0 else int(state.party[0]["slot"])
+			if pickup.has("priceItem"):
+				entry["slot"] = payer  # who pays the curse; only on priced armor, so older logs are unchanged
+			run_log.append(entry)
 			_receive_equipment(content.equipment[pickup["item"]])
+			if pickup.has("priceItem"):
+				_pay_with_item(payer, pickup["priceItem"])
 			return ""
 		var item: ItemDefinition = content.items[pickup["item"]]
 		var problem := can_hold(slot, item)
@@ -632,9 +659,12 @@ func take(placement: int, slot: int) -> String:
 		state.coins -= pickup["price"]
 		_tally["coinsSpent"] += pickup["price"]
 		pickup["taken"] = true
-		run_log.append({"type": "buy" if pickup["price"] > 0 else "take", "floor": state.floor_index,
+		var paid_with_item: bool = pickup.has("priceItem")
+		run_log.append({"type": "buy" if pickup["price"] > 0 or paid_with_item else "take", "floor": state.floor_index,
 			"cell": state.current_cell, "placement": placement, "slot": slot})
 		_receive_item(slot, item)
+		if paid_with_item:
+			_pay_with_item(slot, pickup["priceItem"])
 		return ""
 	return "no such pickup"
 
@@ -702,6 +732,16 @@ func _receive_item(slot: int, item: ItemDefinition) -> void:
 			outcome.apply(self)
 	hook_item = outer
 	party_changed.emit()
+
+
+## Spec playable-demo 3.8: a pickup's price item (a curse) goes to the taker, past any capacity; each copy counts.
+func _pay_with_item(slot: int, item_id: StringName) -> void:
+	var curse: ItemDefinition = content.items.get(item_id)
+	if curse == null:
+		_stop("unknown price item '%s'" % item_id)
+		return
+	_receive_item(slot, curse)
+	_tally["itemPrices"] = int(_tally.get("itemPrices", 0)) + 1
 
 
 func _place_item(member: Dictionary, item: ItemDefinition) -> void:
@@ -1054,14 +1094,19 @@ func dev_win() -> String:
 
 
 ## Enters floor `floor_index` (0-based) of the run structure; party and inventory are kept.
-func dev_stage(floor_index: int) -> String:
+## `chapter_id` picks a CHOICE floor's chapter, or a ROUTE floor's when the current chapter is on no route of it
+## (spec playable-demo 3.8); empty = the slot's first chapter.
+func dev_stage(floor_index: int, chapter_id: StringName = &"") -> String:
 	if not _active():
 		return "no run"
 	if floor_index < 0 or floor_index >= structure.floors.size():
 		return "floors are 0 to %d" % (structure.floors.size() - 1)
-	dev_log("stage", [floor_index])
+	var slot: FloorSlot = structure.floors[floor_index]
+	if chapter_id == &"" and slot.pick != FloorSlot.Pick.RANDOM and not slot.chapters.is_empty():
+		chapter_id = slot.chapters[0].id
+	dev_log("stage", [floor_index] + ([String(chapter_id)] if chapter_id != &"" else []))
 	state.sandbox = false
-	return enter_floor(floor_index)
+	return enter_floor(floor_index, chapter_id)
 
 
 ## Replaces the current floor with a sandbox floor (one room or one layout); party and inventory are kept.

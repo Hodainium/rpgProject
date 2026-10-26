@@ -259,6 +259,38 @@ func _ready() -> void:
 	_unit(armored, "broken.character.party_toughness", [strike])
 	armored.stats_x100.assign({"max_toughness": 6000, "toughness": 6000})
 	_save("characters", "party_toughness", armored)
+
+	# Spec playable-demo 3.8: a per-item effect that refreshes (error), a route slot no chapter of the previous floor
+	# can follow (error), a choice of one (warning), a rotating chapter with fewer bosses than floors (warning), and a
+	# price item whose effect refreshes (warning). The runs' floors are the layout, so nothing generates.
+	var refreshing := GameplayEffect.new()
+	refreshing.policy = GameplayEffect.DurationPolicy.INFINITE
+	refreshing.stacking_policy = GameplayEffect.StackingPolicy.REFRESH_DURATION
+	var greedy := EnemyDefinition.new()
+	_unit(greedy, "broken.enemy.per_item_refresh", [strike])
+	greedy.per_item_effect = refreshing
+	_save("enemies", "per_item_refresh", greedy)
+	var lit: ChapterDefinition = gen.duplicate()
+	lit.id = &"broken.chapter.lit"
+	lit.route_tag = &"Route.Light"
+	_save("runs", "route_unmatched", _routed_run("route_unmatched", [[[gen], FloorSlot.Pick.RANDOM],
+		[[lit], FloorSlot.Pick.ROUTE]], layout, fallback))
+	_save("runs", "choice_single", _routed_run("choice_single", [[[gen], FloorSlot.Pick.CHOICE]], layout, fallback))
+	var rotating: ChapterDefinition = gen.duplicate()
+	rotating.id = &"broken.chapter.rotation_short"
+	rotating.boss_rotation = true
+	rotating.boss_encounter_query = _query([&"Broken.NoBoss"])  # no boss for its two floors
+	rotating = _save("chapters", "rotation_short", rotating)
+	_save("runs", "rotation_short", _routed_run("rotation_short", [[[rotating], FloorSlot.Pick.RANDOM],
+		[[rotating], FloorSlot.Pick.RANDOM]], layout, fallback))
+	var curse := _item("broken.item.refreshing_curse", [])
+	curse.grants = AbilitySet.new()
+	curse.grants.effects.append(refreshing)
+	curse = _save("items", "refreshing_curse", curse)
+	var altar := _placement(Vector2i(6, 3), RoomPlacement.Kind.ITEM_PEDESTAL)
+	altar.item = fallback
+	altar.price_item = curse
+	_save("rooms", "price_refresh", _room("price_refresh", [&"Broken.Room"], [altar]))
 	print("Broken fixtures built under ", ROOT)
 	get_tree().quit(0)
 
@@ -304,6 +336,19 @@ func _item(id: String, tags: Array) -> ItemDefinition:
 	item.id = StringName(id)
 	item.tags.assign(tags)
 	return item
+
+
+func _routed_run(name: String, slot_specs: Array, layout: FloorLayout, fallback: ItemDefinition) -> RunStructure:
+	var run := RunStructure.new()
+	run.id = StringName("broken.run." + name)
+	run.fallback_item = fallback
+	for spec in slot_specs:
+		var slot := FloorSlot.new()
+		slot.chapters.assign(spec[0])
+		slot.pick = spec[1]
+		slot.layout = layout
+		run.floors.append(slot)
+	return run
 
 
 func _unit(unit: UnitDefinition, id: String, abilities: Array) -> void:
