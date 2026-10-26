@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_3pngf"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_pgl3p"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_omx4u"]
+[ext_resource type="Resource" path="res://content/demo/enemies/gilded_mimic.tres" id="4_urslj"]
+
+[sub_resource type="Resource" id="Resource_3o5ju"]
+script = ExtResource("3_omx4u")
+enemy = ExtResource("4_urslj")
+
+[sub_resource type="Resource" id="Resource_2amj7"]
+script = ExtResource("3_omx4u")
+enemy = ExtResource("4_urslj")
+
+[resource]
+script = ExtResource("2_pgl3p")
+id = &"demo.encounter.mimic_den"
+display_name = "Mimic den"
+tags = Array[StringName]([&"Chapter.Vault"])
+slots = Array[ExtResource("3_omx4u")]([SubResource("Resource_3o5ju"), SubResource("Resource_2amj7")])

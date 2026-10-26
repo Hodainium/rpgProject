@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/pulse.tscn" id="1_t6dqs"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/mend.tscn" id="2_m1u6c"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/twin_beat.tscn" id="3_cgf4g"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="4_uwa0h"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="5_4luj3"]
+[ext_resource type="Script" path="res://combat/tactical_brain.gd" id="6_10ndy"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="7_lmhje"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="8_b2tn4"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="9_ayf2h"]
+
+[sub_resource type="Resource" id="Resource_d8kcx"]
+script = ExtResource("6_10ndy")
+ult_when_party_down = true
+ult_when_ally_hp_below_x100 = 5000
+
+[resource]
+script = ExtResource("8_b2tn4")
+id = &"demo.enemy.heart_right"
+attribute_set = ExtResource("5_4luj3")
+abilities = Array[PackedScene]([ExtResource("1_t6dqs"), ExtResource("2_m1u6c"), ExtResource("3_cgf4g"), ExtResource("4_uwa0h")])
+brain = SubResource("Resource_d8kcx")
+display_name = "Right Heart"
+display_color = Color(0.25490198, 0.4117647, 0.88235295, 1)
+tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Heart", &"Weakness.Ice"])
+stats_x100 = Dictionary[String, int]({
+"atk": 34000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 20000,
+"energy": 0,
+"hp": 360000,
+"max_hp": 360000,
+"max_toughness": 12000,
+"spd": 10000,
+"toughness": 12000,
+"weakness_dmg": 15000
+})

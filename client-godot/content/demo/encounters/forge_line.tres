@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_7g87k"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_cffns"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_xmopo"]
+[ext_resource type="Resource" path="res://content/demo/enemies/anvil_guard.tres" id="4_q8vq3"]
+[ext_resource type="Resource" path="res://content/demo/enemies/smelter.tres" id="5_gdb5b"]
+
+[sub_resource type="Resource" id="Resource_dxfg0"]
+script = ExtResource("3_xmopo")
+enemy = ExtResource("4_q8vq3")
+
+[sub_resource type="Resource" id="Resource_a58x2"]
+script = ExtResource("3_xmopo")
+enemy = ExtResource("5_gdb5b")
+
+[resource]
+script = ExtResource("2_cffns")
+id = &"demo.encounter.forge_line"
+display_name = "Forge line"
+tags = Array[StringName]([&"Chapter.Forge"])
+slots = Array[ExtResource("3_xmopo")]([SubResource("Resource_dxfg0"), SubResource("Resource_a58x2")])

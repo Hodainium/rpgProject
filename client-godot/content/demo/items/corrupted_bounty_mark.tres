@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/corrupted_bounty.tscn" id="1_xum0s"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_ptrd8"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_bounty_cost.tres" id="3_47lt1"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_p8bee"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_66pu4"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_6h8cc"]
+
+[sub_resource type="Resource" id="Resource_5ct07"]
+script = ExtResource("4_p8bee")
+abilities = Array[PackedScene]([ExtResource("1_xum0s")])
+effects = Array[ExtResource("2_ptrd8")]([ExtResource("3_47lt1")])
+
+[resource]
+script = ExtResource("6_6h8cc")
+id = &"demo.item.corrupted_bounty_mark"
+display_name = "Corrupted Bounty"
+description = "On a kill: +40 ult charge and heal 120 HP. −15% healing received."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+price = 0
+grants = SubResource("Resource_5ct07")

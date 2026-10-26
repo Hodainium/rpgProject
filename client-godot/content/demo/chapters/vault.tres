@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="ChapterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_b80f0"]
+[ext_resource type="Resource" path="res://content/demo/floor_rules/vault.tres" id="2_b4808"]
+[ext_resource type="Resource" path="res://content/demo/scaling/descent.tres" id="3_ucbn6"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="4_u7cu6"]
+
+[sub_resource type="Resource" id="Resource_xfoyh"]
+script = ExtResource("1_b80f0")
+require_all_tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Vault"])
+
+[sub_resource type="Resource" id="Resource_towrf"]
+script = ExtResource("1_b80f0")
+require_all_tags = Array[StringName]([&"Chapter.Vault"])
+ignore_tags = Array[StringName]([&"Encounter.Boss"])
+
+[sub_resource type="Resource" id="Resource_2j4tr"]
+script = ExtResource("1_b80f0")
+require_all_tags = Array[StringName]([&"Event.Demo"])
+
+[sub_resource type="Resource" id="Resource_lka10"]
+script = ExtResource("1_b80f0")
+require_any_tags = Array[StringName]([&"Chapter.Demo", &"Chapter.Vault"])
+
+[resource]
+script = ExtResource("4_u7cu6")
+id = &"demo.chapter.vault"
+display_name = "The Vault"
+tags = Array[StringName]([&"Chapter.Vault"])
+room_query = SubResource("Resource_lka10")
+encounter_query = SubResource("Resource_towrf")
+boss_encounter_query = SubResource("Resource_xfoyh")
+event_query = SubResource("Resource_2j4tr")
+floor_gen_rules = ExtResource("2_b4808")
+scaling = ExtResource("3_ucbn6")
+route_tag = &"Route.Light"

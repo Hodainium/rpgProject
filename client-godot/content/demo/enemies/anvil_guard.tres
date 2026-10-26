@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hammer_down.tscn" id="1_0ch0b"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/brace.tscn" id="2_0qe7k"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_km61g"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="4_vtegq"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="5_x5jnc"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="6_uf7l0"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="7_gjagi"]
+
+[sub_resource type="Resource" id="Resource_vhn2k"]
+script = ExtResource("4_vtegq")
+pattern = Array[StringName]([&"Ability.Hammerdown", &"Ability.Brace", &"Ability.Hammerdown"])
+
+[resource]
+script = ExtResource("6_uf7l0")
+id = &"demo.enemy.anvil_guard"
+attribute_set = ExtResource("3_km61g")
+abilities = Array[PackedScene]([ExtResource("1_0ch0b"), ExtResource("2_0qe7k")])
+brain = SubResource("Resource_vhn2k")
+display_name = "Anvil Guard"
+display_color = Color(0.4117647, 0.4117647, 0.4117647, 1)
+tags = Array[StringName]([&"Enemy.Type.Anvil", &"Drain.Fire", &"Weakness.Ice"])
+stats_x100 = Dictionary[String, int]({
+"atk": 26000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 30000,
+"energy": 0,
+"hp": 70000,
+"max_hp": 70000,
+"max_toughness": 12000,
+"spd": 8000,
+"toughness": 12000,
+"weakness_dmg": 15000
+})

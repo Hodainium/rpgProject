@@ -15,6 +15,6 @@ script = ExtResource("5_p80au")
 id = &"demo.item.mirror_ward"
 display_name = "Mirror Ward"
 description = "Heal 60 HP whenever a status roll involving you misses."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Uncommon"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
 price = 6
 grants = SubResource("Resource_kxww2")

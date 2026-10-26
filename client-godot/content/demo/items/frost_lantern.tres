@@ -15,6 +15,6 @@ script = ExtResource("5_xfvex")
 id = &"demo.item.frost_lantern"
 display_name = "Frost Lantern"
 description = "Ice damage has a 25% chance to Freeze the target."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
 price = 8
 grants = SubResource("Resource_2ipfk")

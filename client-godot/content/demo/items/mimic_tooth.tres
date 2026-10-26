@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/mimic_tooth.tscn" id="1_o51w2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/mimic_mend.tscn" id="2_v0lwb"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_lh7el"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_v765u"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_0cfgb"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_vbcti"]
+
+[sub_resource type="Resource" id="Resource_8vak7"]
+script = ExtResource("4_v765u")
+abilities = Array[PackedScene]([ExtResource("1_o51w2"), ExtResource("2_v0lwb")])
+
+[resource]
+script = ExtResource("6_vbcti")
+id = &"demo.item.mimic_tooth"
+display_name = "Mimic Tooth"
+description = "Critical hits make the target Bleed and heal you 30 HP."
+tags = Array[StringName]([&"Pool.Vault", &"Pool.Treasure", &"Item.Rarity.Epic"])
+price = 9
+grants = SubResource("Resource_8vak7")

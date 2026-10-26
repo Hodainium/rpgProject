@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/corrupted_vampire.tscn" id="1_sarl6"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_1grf5"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_vampire_cost.tres" id="3_0hk36"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_quh78"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_s538a"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_ufads"]
+
+[sub_resource type="Resource" id="Resource_hoodf"]
+script = ExtResource("4_quh78")
+abilities = Array[PackedScene]([ExtResource("1_sarl6")])
+effects = Array[ExtResource("2_1grf5")]([ExtResource("3_0hk36")])
+
+[resource]
+script = ExtResource("6_ufads")
+id = &"demo.item.corrupted_vampire_fang"
+display_name = "Corrupted Vampire Fang"
+description = "Heal 35 HP whenever you deal damage. −20% max HP."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+price = 0
+grants = SubResource("Resource_hoodf")

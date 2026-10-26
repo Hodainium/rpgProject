@@ -6,6 +6,12 @@
 [ext_resource type="Resource" path="res://content/demo/chapters/cellar.tres" id="4_f0o4k"]
 [ext_resource type="Resource" path="res://content/demo/chapters/crypt.tres" id="5_u8qch"]
 [ext_resource type="Script" path="res://game/defs/run_structure.gd" id="6_dkv7c"]
+[ext_resource type="Resource" path="res://content/demo/chapters/forge.tres" id="7_forge"]
+[ext_resource type="Resource" path="res://content/demo/chapters/hollow.tres" id="8_hollow"]
+[ext_resource type="Resource" path="res://content/demo/chapters/cathedral.tres" id="9_cathedral"]
+[ext_resource type="Resource" path="res://content/demo/chapters/coven.tres" id="10_coven"]
+[ext_resource type="Resource" path="res://content/demo/chapters/vault.tres" id="11_vault"]
+[ext_resource type="Resource" path="res://content/demo/chapters/void.tres" id="12_void"]
 
 [sub_resource type="Resource" id="Resource_5oori"]
 script = ExtResource("2_o757x")
@@ -15,17 +21,35 @@ chapters = Array[ExtResource("3_cnybo")]([ExtResource("4_f0o4k")])
 script = ExtResource("2_o757x")
 chapters = Array[ExtResource("3_cnybo")]([ExtResource("5_u8qch")])
 
+[sub_resource type="Resource" id="Resource_forge"]
+script = ExtResource("2_o757x")
+chapters = Array[ExtResource("3_cnybo")]([ExtResource("7_forge")])
+
+[sub_resource type="Resource" id="Resource_hollow"]
+script = ExtResource("2_o757x")
+chapters = Array[ExtResource("3_cnybo")]([ExtResource("8_hollow")])
+
+[sub_resource type="Resource" id="Resource_choice"]
+script = ExtResource("2_o757x")
+chapters = Array[ExtResource("3_cnybo")]([ExtResource("9_cathedral"), ExtResource("10_coven")])
+pick = 1
+
+[sub_resource type="Resource" id="Resource_route"]
+script = ExtResource("2_o757x")
+chapters = Array[ExtResource("3_cnybo")]([ExtResource("11_vault"), ExtResource("12_void")])
+pick = 2
+
 [resource]
 script = ExtResource("6_dkv7c")
 id = &"demo.run.descent"
 display_name = "The Descent"
-floors = Array[ExtResource("2_o757x")]([SubResource("Resource_5oori"), SubResource("Resource_oj7po")])
+floors = Array[ExtResource("2_o757x")]([SubResource("Resource_5oori"), SubResource("Resource_5oori"), SubResource("Resource_oj7po"), SubResource("Resource_oj7po"), SubResource("Resource_forge"), SubResource("Resource_forge"), SubResource("Resource_hollow"), SubResource("Resource_hollow"), SubResource("Resource_choice"), SubResource("Resource_route")])
 fallback_item = ExtResource("1_qxoat")
 equipment_slots = Array[StringName]([&"Equipment.Slot.Weapon", &"Equipment.Slot.Head", &"Equipment.Slot.Body", &"Equipment.Slot.Arms", &"Equipment.Slot.Legs", &"Equipment.Slot.Accessory"])
 default_run = true
 rarity_weights_x100 = Dictionary[StringName, int]({
 &"Item.Rarity.Common": 6000,
-&"Item.Rarity.Uncommon": 2500,
-&"Item.Rarity.Rare": 1200,
+&"Item.Rarity.Rare": 2500,
+&"Item.Rarity.Epic": 1200,
 &"Item.Rarity.Legendary": 300
 })

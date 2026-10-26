@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_4x1n0"]
+[ext_resource type="Resource" path="res://content/demo/effects/appraisers_loupe.tres" id="2_ifuf1"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_l8orn"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_ubesf"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_ts4ay"]
+
+[sub_resource type="Resource" id="Resource_pihmp"]
+script = ExtResource("3_l8orn")
+effects = Array[ExtResource("1_4x1n0")]([ExtResource("2_ifuf1")])
+
+[resource]
+script = ExtResource("5_ts4ay")
+id = &"demo.item.appraisers_loupe"
+display_name = "Appraiser's Loupe"
+description = "+20% weakness damage."
+tags = Array[StringName]([&"Pool.Vault", &"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 7
+grants = SubResource("Resource_pihmp")

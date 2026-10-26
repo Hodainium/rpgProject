@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_cyra6"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ifboy"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_iji85"]
+[ext_resource type="Resource" path="res://content/demo/effects/freeze.tres" id="4_gk8yi"]
+[ext_resource type="Animation" path="res://content/demo/animations/chill_touch.tres" id="5_bxwo5"]
+
+[sub_resource type="Resource" id="Resource_s213x"]
+script = ExtResource("2_ifboy")
+id = &"touch"
+effect = ExtResource("3_iji85")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 9000
+
+[sub_resource type="Resource" id="Resource_1vq50"]
+script = ExtResource("2_ifboy")
+id = &"freeze"
+effect = ExtResource("4_gk8yi")
+chance_x100 = 4000
+
+[node name="ChillTouch" type="Node" unique_id=1141326542]
+script = ExtResource("1_cyra6")
+executions = Array[ExtResource("2_ifboy")]([SubResource("Resource_s213x"), SubResource("Resource_1vq50")])
+animation = ExtResource("5_bxwo5")
+ability_tag = &"Ability.Chilltouch"

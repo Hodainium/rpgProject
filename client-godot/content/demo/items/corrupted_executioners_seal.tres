@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/corrupted_seal.tscn" id="1_68owc"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_fg8rd"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_seal_cost.tres" id="3_lfal3"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_r8ebw"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_mxdwj"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_j3vjc"]
+
+[sub_resource type="Resource" id="Resource_1eq04"]
+script = ExtResource("4_r8ebw")
+abilities = Array[PackedScene]([ExtResource("1_68owc")])
+effects = Array[ExtResource("2_fg8rd")]([ExtResource("3_lfal3")])
+
+[resource]
+script = ExtResource("6_j3vjc")
+id = &"demo.item.corrupted_executioners_seal"
+display_name = "Corrupted Seal"
+description = "Critical hits trigger a follow-up: 90% ATK Physical. You take 10% more damage."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary"])
+price = 0
+grants = SubResource("Resource_1eq04")

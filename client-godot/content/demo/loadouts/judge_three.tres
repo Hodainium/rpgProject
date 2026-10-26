@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AbilitySet" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_2uaev"]
+[ext_resource type="Resource" path="res://content/demo/effects/haste.tres" id="2_dpmib"]
+[ext_resource type="Resource" path="res://content/demo/effects/defense_up.tres" id="3_ideje"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_p3e7g"]
+
+[resource]
+script = ExtResource("4_p3e7g")
+effects = Array[ExtResource("1_2uaev")]([ExtResource("2_dpmib"), ExtResource("3_ideje")])
+tags = Array[StringName]([&"State.Phase.Three"])

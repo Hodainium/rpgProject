@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_a5dn8"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_ttvd6"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_w12p6"]
+[ext_resource type="Resource" path="res://content/demo/enemies/vault_sentry.tres" id="4_2obnf"]
+[ext_resource type="Resource" path="res://content/demo/variants/elite.tres" id="5_c0br7"]
+[ext_resource type="Resource" path="res://content/demo/enemies/gilded_mimic.tres" id="6_wq6a7"]
+
+[sub_resource type="Resource" id="Resource_yweop"]
+script = ExtResource("3_w12p6")
+enemy = ExtResource("4_2obnf")
+variant = ExtResource("5_c0br7")
+
+[sub_resource type="Resource" id="Resource_kb5ua"]
+script = ExtResource("3_w12p6")
+enemy = ExtResource("6_wq6a7")
+
+[resource]
+script = ExtResource("2_ttvd6")
+id = &"demo.encounter.iron_sentry"
+display_name = "Iron sentry"
+tags = Array[StringName]([&"Chapter.Vault"])
+slots = Array[ExtResource("3_w12p6")]([SubResource("Resource_yweop"), SubResource("Resource_kb5ua")])

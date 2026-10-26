@@ -1,0 +1,53 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/forge_hammer.tscn" id="1_0t26f"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/fire_bolt.tscn" id="2_p6vqg"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/crucible.tscn" id="3_hflxu"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="4_6h8kf"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="5_j8fp2"]
+[ext_resource type="Script" path="res://combat/tactical_brain.gd" id="6_7le77"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="7_hxmik"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/forgemaster_molten.tres" id="8_6f26n"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/forgemaster_meltdown.tres" id="9_b5psw"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="10_ri65f"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="11_40iuf"]
+
+[sub_resource type="Resource" id="Resource_7vupl"]
+script = ExtResource("6_7le77")
+ult_when_party_down = true
+ult_when_ally_hp_below_x100 = 5000
+
+[sub_resource type="Resource" id="Resource_b8334"]
+script = ExtResource("7_hxmik")
+ability_set = ExtResource("8_6f26n")
+hp_below_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_x1v63"]
+script = ExtResource("7_hxmik")
+ability_set = ExtResource("9_b5psw")
+clear_debuffs = true
+hp_below_x100 = 3000
+
+[resource]
+script = ExtResource("10_ri65f")
+phases = Array[ExtResource("7_hxmik")]([SubResource("Resource_b8334"), SubResource("Resource_x1v63")])
+id = &"demo.enemy.forgemaster"
+attribute_set = ExtResource("5_j8fp2")
+abilities = Array[PackedScene]([ExtResource("1_0t26f"), ExtResource("2_p6vqg"), ExtResource("3_hflxu"), ExtResource("4_6h8kf")])
+brain = SubResource("Resource_7vupl")
+display_name = "Forgemaster"
+display_color = Color(0.69803923, 0.13333334, 0.13333334, 1)
+tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Forgemaster", &"Resist.Fire", &"Weakness.Ice"])
+stats_x100 = Dictionary[String, int]({
+"atk": 34000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 24000,
+"energy": 0,
+"hp": 520000,
+"max_hp": 520000,
+"max_toughness": 18000,
+"spd": 10000,
+"toughness": 18000,
+"weakness_dmg": 15000
+})

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_0kokp"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_hide.tres" id="2_kf6c3"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_24l1d"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_1yrpj"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_3wqt1"]
+
+[sub_resource type="Resource" id="Resource_s6ixi"]
+script = ExtResource("3_24l1d")
+effects = Array[ExtResource("1_0kokp")]([ExtResource("2_kf6c3")])
+
+[resource]
+script = ExtResource("5_3wqt1")
+id = &"demo.item.corrupted_leech_hide"
+display_name = "Corrupted Hide"
+description = "You drain Physical and Ice, but you become weak to Fire."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary"])
+price = 0
+grants = SubResource("Resource_s6ixi")

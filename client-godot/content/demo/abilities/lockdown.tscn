@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_vkvl3"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_woxkp"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_wcme1"]
+[ext_resource type="Resource" path="res://content/demo/effects/freeze.tres" id="4_17drh"]
+[ext_resource type="Animation" path="res://content/demo/animations/lockdown.tres" id="5_f1dg1"]
+
+[sub_resource type="Resource" id="Resource_4xwna"]
+script = ExtResource("2_woxkp")
+id = &"lock"
+effect = ExtResource("3_wcme1")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 8000
+
+[sub_resource type="Resource" id="Resource_f4dgs"]
+script = ExtResource("2_woxkp")
+id = &"freeze"
+effect = ExtResource("4_17drh")
+chance_x100 = 5000
+
+[node name="Lockdown" type="Node" unique_id=1238776647]
+script = ExtResource("1_vkvl3")
+executions = Array[ExtResource("2_woxkp")]([SubResource("Resource_4xwna"), SubResource("Resource_f4dgs")])
+animation = ExtResource("5_f1dg1")
+ability_tag = &"Ability.Lockdown"

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hex.tscn" id="1_wayxl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/curse.tscn" id="2_d7lhj"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_rrih1"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="4_rfcbd"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="5_hgugm"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="6_jnrvu"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="7_83gte"]
+
+[sub_resource type="Resource" id="Resource_jhl7u"]
+script = ExtResource("4_rfcbd")
+pattern = Array[StringName]([&"Ability.Hex", &"Ability.Curse"])
+
+[resource]
+script = ExtResource("6_jnrvu")
+id = &"demo.enemy.cultist"
+attribute_set = ExtResource("3_rrih1")
+abilities = Array[PackedScene]([ExtResource("1_wayxl"), ExtResource("2_d7lhj")])
+brain = SubResource("Resource_jhl7u")
+display_name = "Cultist"
+display_color = Color(0.54509807, 0, 0.54509807, 1)
+tags = Array[StringName]([&"Enemy.Type.Cultist", &"Weakness.Physical"])
+stats_x100 = Dictionary[String, int]({
+"atk": 30000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 12000,
+"energy": 0,
+"hp": 48000,
+"max_hp": 48000,
+"max_toughness": 4000,
+"spd": 11500,
+"toughness": 4000,
+"weakness_dmg": 15000
+})

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_jtkm1"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_i4unt"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_rb7qx"]
+[ext_resource type="Resource" path="res://content/demo/enemies/cinder_hound.tres" id="4_23jng"]
+[ext_resource type="Resource" path="res://content/demo/enemies/smelter.tres" id="5_3jc0w"]
+
+[sub_resource type="Resource" id="Resource_3fwff"]
+script = ExtResource("3_rb7qx")
+enemy = ExtResource("4_23jng")
+
+[sub_resource type="Resource" id="Resource_c211q"]
+script = ExtResource("3_rb7qx")
+enemy = ExtResource("5_3jc0w")
+
+[sub_resource type="Resource" id="Resource_03ctn"]
+script = ExtResource("3_rb7qx")
+enemy = ExtResource("4_23jng")
+
+[resource]
+script = ExtResource("2_i4unt")
+id = &"demo.encounter.foundry"
+display_name = "Foundry"
+tags = Array[StringName]([&"Chapter.Forge"])
+slots = Array[ExtResource("3_rb7qx")]([SubResource("Resource_3fwff"), SubResource("Resource_c211q"), SubResource("Resource_03ctn")])

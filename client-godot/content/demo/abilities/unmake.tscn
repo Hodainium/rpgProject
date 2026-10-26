@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_o1h0m"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_d2hgb"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_oxfuo"]
+[ext_resource type="Animation" path="res://content/demo/animations/unmake.tres" id="4_gmxd6"]
+
+[sub_resource type="Resource" id="Resource_cnp26"]
+script = ExtResource("2_d2hgb")
+id = &"unmake"
+effect = ExtResource("3_oxfuo")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 25000
+
+[node name="Unmake" type="Node" unique_id=253857074]
+script = ExtResource("1_o1h0m")
+executions = Array[ExtResource("2_d2hgb")]([SubResource("Resource_cnp26")])
+animation = ExtResource("4_gmxd6")
+ability_tag = &"Ability.Unmake"

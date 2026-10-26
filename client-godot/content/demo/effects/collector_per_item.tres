@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_adme8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_l6rb2"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_i03qk"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_c5kpu"]
+
+[sub_resource type="Resource" id="Resource_0x1ll"]
+script = ExtResource("3_i03qk")
+value_x100 = 500
+attribute_name = "max_hp"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_5carj"]
+script = ExtResource("3_i03qk")
+value_x100 = 500
+attribute_name = "atk"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_wpnte"]
+script = ExtResource("3_i03qk")
+value_x100 = 500
+attribute_name = "def"
+operation = 1
+
+[resource]
+script = ExtResource("4_c5kpu")
+policy = 2
+modifiers = Array[ExtResource("2_l6rb2")]([SubResource("Resource_0x1ll"), SubResource("Resource_5carj"), SubResource("Resource_wpnte")])

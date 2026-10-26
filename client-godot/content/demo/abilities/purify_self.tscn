@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_3vwms"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_e503p"]
+[ext_resource type="Resource" path="res://content/demo/effects/cleanse.tres" id="3_kgnfx"]
+[ext_resource type="Animation" path="res://content/demo/animations/purify_self.tres" id="4_xafd1"]
+
+[sub_resource type="Resource" id="Resource_8epui"]
+script = ExtResource("2_e503p")
+id = &"cleanse"
+effect = ExtResource("3_kgnfx")
+
+[node name="PurifySelf" type="Node" unique_id=1939532960]
+script = ExtResource("1_3vwms")
+targeting = 5
+executions = Array[ExtResource("2_e503p")]([SubResource("Resource_8epui")])
+animation = ExtResource("4_xafd1")
+ability_tag = &"Ability.Purifyself"

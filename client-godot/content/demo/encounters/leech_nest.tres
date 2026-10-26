@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_okkhr"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_sbdes"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_ih74l"]
+[ext_resource type="Resource" path="res://content/demo/enemies/leech.tres" id="4_2r87c"]
+
+[sub_resource type="Resource" id="Resource_3gfq6"]
+script = ExtResource("3_ih74l")
+enemy = ExtResource("4_2r87c")
+
+[sub_resource type="Resource" id="Resource_x215d"]
+script = ExtResource("3_ih74l")
+enemy = ExtResource("4_2r87c")
+
+[sub_resource type="Resource" id="Resource_d63hl"]
+script = ExtResource("3_ih74l")
+enemy = ExtResource("4_2r87c")
+
+[resource]
+script = ExtResource("2_sbdes")
+id = &"demo.encounter.leech_nest"
+display_name = "Leech nest"
+tags = Array[StringName]([&"Chapter.Hollow"])
+slots = Array[ExtResource("3_ih74l")]([SubResource("Resource_3gfq6"), SubResource("Resource_x215d"), SubResource("Resource_d63hl")])

@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_r3osc"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_olk7b"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_uaa64"]
+[ext_resource type="Animation" path="res://content/demo/animations/corrupted_band.tres" id="4_qqx2g"]
+
+[sub_resource type="Resource" id="Resource_3f86u"]
+script = ExtResource("2_olk7b")
+id = &"riposte"
+effect = ExtResource("3_uaa64")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 6000
+
+[node name="CorruptedBand" type="Node" unique_id=911842992]
+script = ExtResource("1_r3osc")
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+executions = Array[ExtResource("2_olk7b")]([SubResource("Resource_3f86u")])
+animation = ExtResource("4_qqx2g")
+ability_tag = &"Ability.Passive.Corruptedband"
+trigger_event_tag = &"Event.Damage.Dealt.Critical"

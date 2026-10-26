@@ -15,6 +15,6 @@ script = ExtResource("5_wy1a1")
 id = &"demo.item.shatterpoint"
 display_name = "Shatterpoint"
 description = "Breaking an enemy with Ice makes it Vulnerable."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
 price = 8
 grants = SubResource("Resource_nswok")

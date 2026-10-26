@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="ChapterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_hwauq"]
+[ext_resource type="Resource" path="res://content/demo/floor_rules/void.tres" id="2_ngm11"]
+[ext_resource type="Resource" path="res://content/demo/scaling/descent.tres" id="3_c0rb5"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="4_2o5wr"]
+
+[sub_resource type="Resource" id="Resource_friso"]
+script = ExtResource("1_hwauq")
+require_all_tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Void"])
+
+[sub_resource type="Resource" id="Resource_grd2h"]
+script = ExtResource("1_hwauq")
+require_all_tags = Array[StringName]([&"Chapter.Void"])
+ignore_tags = Array[StringName]([&"Encounter.Boss"])
+
+[sub_resource type="Resource" id="Resource_ly71l"]
+script = ExtResource("1_hwauq")
+require_all_tags = Array[StringName]([&"Event.Demo"])
+
+[sub_resource type="Resource" id="Resource_rhxyh"]
+script = ExtResource("1_hwauq")
+require_any_tags = Array[StringName]([&"Chapter.Demo", &"Chapter.Void"])
+
+[resource]
+script = ExtResource("4_2o5wr")
+id = &"demo.chapter.void"
+display_name = "The Void"
+tags = Array[StringName]([&"Chapter.Void"])
+room_query = SubResource("Resource_rhxyh")
+encounter_query = SubResource("Resource_grd2h")
+boss_encounter_query = SubResource("Resource_friso")
+event_query = SubResource("Resource_ly71l")
+floor_gen_rules = ExtResource("2_ngm11")
+scaling = ExtResource("3_c0rb5")
+route_tag = &"Route.Dark"

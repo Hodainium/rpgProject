@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_qe1j2"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_mqt1g"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_o0r6a"]
+[ext_resource type="Resource" path="res://content/demo/effects/bleed.tres" id="4_yyc2y"]
+[ext_resource type="Animation" path="res://content/demo/animations/rend.tres" id="5_ehka5"]
+
+[sub_resource type="Resource" id="Resource_5nq6a"]
+script = ExtResource("2_mqt1g")
+id = &"rend"
+effect = ExtResource("3_o0r6a")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 11000
+
+[sub_resource type="Resource" id="Resource_xm1f7"]
+script = ExtResource("2_mqt1g")
+id = &"bleed"
+effect = ExtResource("4_yyc2y")
+chance_x100 = 10000
+
+[node name="Rend" type="Node" unique_id=26121945]
+script = ExtResource("1_qe1j2")
+executions = Array[ExtResource("2_mqt1g")]([SubResource("Resource_5nq6a"), SubResource("Resource_xm1f7")])
+animation = ExtResource("5_ehka5")
+ability_tag = &"Ability.Rend"

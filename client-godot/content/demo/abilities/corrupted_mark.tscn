@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_hdadr"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_3fo6u"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_qwy56"]
+[ext_resource type="Animation" path="res://content/demo/animations/corrupted_mark.tres" id="4_4j1au"]
+
+[sub_resource type="Resource" id="Resource_bqqde"]
+script = ExtResource("2_3fo6u")
+id = &"shot"
+effect = ExtResource("3_qwy56")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 8000
+
+[node name="CorruptedMark" type="Node" unique_id=1332934379]
+script = ExtResource("1_hdadr")
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+executions = Array[ExtResource("2_3fo6u")]([SubResource("Resource_bqqde")])
+animation = ExtResource("4_4j1au")
+ability_tag = &"Ability.Passive.Corruptedmark"
+trigger_event_tag = &"Event.Damage.Dealt.Weakness"

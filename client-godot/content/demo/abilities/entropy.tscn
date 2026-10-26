@@ -1,0 +1,35 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_x5fk5"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_65bu1"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_feffs"]
+[ext_resource type="Resource" path="res://content/demo/effects/bleed.tres" id="4_nymlv"]
+[ext_resource type="Resource" path="res://content/demo/effects/slow.tres" id="5_h1ygx"]
+[ext_resource type="Animation" path="res://content/demo/animations/entropy.tres" id="6_ovrm7"]
+
+[sub_resource type="Resource" id="Resource_l7ot1"]
+script = ExtResource("2_65bu1")
+id = &"decay"
+effect = ExtResource("3_feffs")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+
+[sub_resource type="Resource" id="Resource_qb3mg"]
+script = ExtResource("2_65bu1")
+id = &"bleed"
+effect = ExtResource("4_nymlv")
+chance_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_ttb4n"]
+script = ExtResource("2_65bu1")
+id = &"slow"
+effect = ExtResource("5_h1ygx")
+chance_x100 = 10000
+
+[node name="Entropy" type="Node" unique_id=577319404]
+script = ExtResource("1_x5fk5")
+targeting = 1
+executions = Array[ExtResource("2_65bu1")]([SubResource("Resource_l7ot1"), SubResource("Resource_qb3mg"), SubResource("Resource_ttb4n")])
+animation = ExtResource("6_ovrm7")
+ability_tag = &"Ability.Entropy"

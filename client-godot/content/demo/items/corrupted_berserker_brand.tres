@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_uobqt"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_brand.tres" id="2_qei6w"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ap6oa"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_nmi6k"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_knmgd"]
+
+[sub_resource type="Resource" id="Resource_nktc1"]
+script = ExtResource("3_ap6oa")
+effects = Array[ExtResource("1_uobqt")]([ExtResource("2_qei6w")])
+
+[resource]
+script = ExtResource("5_knmgd")
+id = &"demo.item.corrupted_berserker_brand"
+display_name = "Corrupted Brand"
+description = "+40% damage dealt; +20% damage taken."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+price = 0
+grants = SubResource("Resource_nktc1")

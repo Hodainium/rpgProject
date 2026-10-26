@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_kfg7p"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_n31vx"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_elik3"]
+[ext_resource type="Resource" path="res://content/demo/enemies/choir_seraph.tres" id="4_m8dhf"]
+[ext_resource type="Resource" path="res://content/demo/enemies/penitent_knight.tres" id="5_x1o6c"]
+
+[sub_resource type="Resource" id="Resource_f0ssh"]
+script = ExtResource("3_elik3")
+enemy = ExtResource("4_m8dhf")
+
+[sub_resource type="Resource" id="Resource_fs3kc"]
+script = ExtResource("3_elik3")
+enemy = ExtResource("5_x1o6c")
+
+[resource]
+script = ExtResource("2_n31vx")
+id = &"demo.encounter.choir"
+display_name = "Choir"
+tags = Array[StringName]([&"Chapter.Cathedral"])
+slots = Array[ExtResource("3_elik3")]([SubResource("Resource_f0ssh"), SubResource("Resource_fs3kc")])

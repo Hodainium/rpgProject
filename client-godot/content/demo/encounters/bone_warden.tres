@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_i3w6o"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_qg7wg"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="3_6uk0b"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="4_3tp6s"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="5_myime"]
+[ext_resource type="Resource" path="res://content/demo/enemies/bone_warden.tres" id="6_devve"]
+
+[sub_resource type="Resource" id="Resource_v657k"]
+script = ExtResource("2_qg7wg")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_ladj0"]
+script = ExtResource("3_6uk0b")
+item_query = SubResource("Resource_v657k")
+
+[sub_resource type="Resource" id="Resource_rx2wj"]
+script = ExtResource("5_myime")
+enemy = ExtResource("6_devve")
+
+[resource]
+script = ExtResource("4_3tp6s")
+id = &"demo.encounter.bone_warden"
+display_name = "The Bone Warden"
+tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Crypt"])
+slots = Array[ExtResource("5_myime")]([SubResource("Resource_rx2wj")])
+rewards = Array[ExtResource("1_i3w6o")]([SubResource("Resource_ladj0")])

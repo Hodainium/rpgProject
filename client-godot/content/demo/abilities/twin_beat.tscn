@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_6qn83"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_kl21p"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_bd6hd"]
+[ext_resource type="Animation" path="res://content/demo/animations/twin_beat.tres" id="4_xekhe"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_yh47i"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_58nbl"]
+
+[sub_resource type="Resource" id="Resource_y0bxj"]
+script = ExtResource("2_kl21p")
+id = &"beat"
+effect = ExtResource("3_bd6hd")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 20000
+
+[node name="TwinBeat" type="Node" unique_id=2088240354]
+script = ExtResource("1_6qn83")
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_kl21p")]([SubResource("Resource_y0bxj")])
+animation = ExtResource("4_xekhe")
+ability_tag = &"Ability.Ult.Twinbeat"
+activation_query = ExtResource("5_yh47i")
+cost_effect = ExtResource("6_58nbl")

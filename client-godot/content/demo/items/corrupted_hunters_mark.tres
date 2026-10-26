@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/corrupted_mark.tscn" id="1_tudox"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_vr4eu"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_mark_cost.tres" id="3_6psee"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_n5wbe"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_mla88"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_rpviu"]
+
+[sub_resource type="Resource" id="Resource_kt5xw"]
+script = ExtResource("4_n5wbe")
+abilities = Array[PackedScene]([ExtResource("1_tudox")])
+effects = Array[ExtResource("2_vr4eu")]([ExtResource("3_6psee")])
+
+[resource]
+script = ExtResource("6_rpviu")
+id = &"demo.item.corrupted_hunters_mark"
+display_name = "Corrupted Mark"
+description = "Hitting a weakness triggers a follow-up: 80% ATK Physical. −10% crit rate."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+price = 0
+grants = SubResource("Resource_kt5xw")

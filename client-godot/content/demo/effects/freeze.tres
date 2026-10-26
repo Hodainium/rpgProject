@@ -7,7 +7,7 @@
 
 [sub_resource type="Resource" id="Resource_n54r7"]
 script = ExtResource("1_3hle1")
-ignore_tags = Array[StringName]([&"Immune.Control"])
+ignore_tags = Array[StringName]([&"Immune.Control", &"Immune.Freeze", &"Immune.Debuff"])
 
 [resource]
 script = ExtResource("4_oc5wq")

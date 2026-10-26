@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/piston.tscn" id="1_pnlty"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/overheat.tscn" id="2_e38ll"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="3_w4feu"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="4_4xsnd"]
+[ext_resource type="Script" path="res://combat/tactical_brain.gd" id="5_kt4pa"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="6_1fspe"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="7_nlaho"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="8_w44r4"]
+
+[sub_resource type="Resource" id="Resource_wdss8"]
+script = ExtResource("5_kt4pa")
+ult_when_party_down = true
+ult_when_ally_hp_below_x100 = 5000
+
+[resource]
+script = ExtResource("7_nlaho")
+id = &"demo.enemy.brass_colossus"
+attribute_set = ExtResource("4_4xsnd")
+abilities = Array[PackedScene]([ExtResource("1_pnlty"), ExtResource("2_e38ll"), ExtResource("3_w4feu")])
+brain = SubResource("Resource_wdss8")
+display_name = "Brass Colossus"
+display_color = Color(0.85490197, 0.64705884, 0.1254902, 1)
+tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Colossus", &"Weakness.Ice", &"Weakness.Physical"])
+stats_x100 = Dictionary[String, int]({
+"atk": 36000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 36000,
+"energy": 0,
+"hp": 640000,
+"max_hp": 640000,
+"max_toughness": 30000,
+"spd": 7500,
+"toughness": 30000,
+"weakness_dmg": 15000
+})

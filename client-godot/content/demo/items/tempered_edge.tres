@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_lbkvl"]
+[ext_resource type="Resource" path="res://content/demo/effects/tempered_edge.tres" id="2_dc1tg"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ft2hy"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_8g8bk"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_5f3rh"]
+
+[sub_resource type="Resource" id="Resource_0ms2b"]
+script = ExtResource("3_ft2hy")
+effects = Array[ExtResource("1_lbkvl")]([ExtResource("2_dc1tg")])
+
+[resource]
+script = ExtResource("5_5f3rh")
+id = &"demo.item.tempered_edge"
+display_name = "Tempered Edge"
+description = "+15% ATK, +20% toughness damage."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+price = 7
+grants = SubResource("Resource_0ms2b")

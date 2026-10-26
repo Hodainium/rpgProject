@@ -3,6 +3,17 @@
 [ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_nnfem"]
 [ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_guaok"]
 [ext_resource type="Resource" path="res://content/demo/enemies/golem.tres" id="3_vyx2v"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_outcome"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_query"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="6_give"]
+
+[sub_resource type="Resource" id="Resource_bossq"]
+script = ExtResource("5_query")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_reward"]
+script = ExtResource("6_give")
+item_query = SubResource("Resource_bossq")
 
 [sub_resource type="Resource" id="Resource_r67ve"]
 script = ExtResource("2_guaok")
@@ -14,3 +25,4 @@ id = &"demo.encounter.golem"
 display_name = "The Golem"
 tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Cellar"])
 slots = Array[ExtResource("2_guaok")]([SubResource("Resource_r67ve")])
+rewards = Array[ExtResource("4_outcome")]([SubResource("Resource_reward")])

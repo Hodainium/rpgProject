@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/corrupted_coil.tscn" id="1_ngkae"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_7ylwd"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_coil_cost.tres" id="3_xblnk"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_38txb"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_e4cpj"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_ehq54"]
+
+[sub_resource type="Resource" id="Resource_uxs8n"]
+script = ExtResource("4_38txb")
+abilities = Array[PackedScene]([ExtResource("1_ngkae")])
+effects = Array[ExtResource("2_7ylwd")]([ExtResource("3_xblnk")])
+
+[resource]
+script = ExtResource("6_ehq54")
+id = &"demo.item.corrupted_overcharge_coil"
+display_name = "Corrupted Coil"
+description = "After each of your ults, +40 ult charge. −30 max MP."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+price = 0
+grants = SubResource("Resource_uxs8n")

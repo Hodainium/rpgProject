@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_yrdss"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_a3g77"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_vhj52"]
+[ext_resource type="Animation" path="res://content/demo/animations/witch_bolt.tres" id="4_2cde2"]
+
+[sub_resource type="Resource" id="Resource_5ic4m"]
+script = ExtResource("2_a3g77")
+id = &"bolt"
+effect = ExtResource("3_vhj52")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 11000
+
+[node name="WitchBolt" type="Node" unique_id=69651475]
+script = ExtResource("1_yrdss")
+executions = Array[ExtResource("2_a3g77")]([SubResource("Resource_5ic4m")])
+animation = ExtResource("4_2cde2")
+ability_tag = &"Ability.Witchbolt"

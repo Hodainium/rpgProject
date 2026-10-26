@@ -15,6 +15,6 @@ script = ExtResource("5_pyqjw")
 id = &"demo.item.serrated_edge"
 display_name = "Serrated Edge"
 description = "Critical hits make the target Bleed (6% of max HP per turn, 2 turns)."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Uncommon"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
 price = 6
 grants = SubResource("Resource_1yfs8")

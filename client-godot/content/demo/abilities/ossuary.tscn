@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_bc5a8"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_cbth2"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_8fn5f"]
+[ext_resource type="Animation" path="res://content/demo/animations/ossuary.tres" id="4_2cjd3"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_1x2hn"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_mtlv3"]
+
+[sub_resource type="Resource" id="Resource_o8fs4"]
+script = ExtResource("2_cbth2")
+id = &"bones"
+effect = ExtResource("3_8fn5f")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 12000
+
+[node name="Ossuary" type="Node" unique_id=984246842]
+script = ExtResource("1_bc5a8")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_cbth2")]([SubResource("Resource_o8fs4")])
+animation = ExtResource("4_2cjd3")
+ability_tag = &"Ability.Ult.Ossuary"
+activation_query = ExtResource("5_1x2hn")
+cost_effect = ExtResource("6_mtlv3")

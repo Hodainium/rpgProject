@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_dcasb"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ebibm"]
+[ext_resource type="Resource" path="res://content/demo/effects/second_heart_revive.tres" id="3_amma3"]
+[ext_resource type="Animation" path="res://content/demo/animations/second_heart.tres" id="4_t7dhm"]
+
+[sub_resource type="Resource" id="Resource_vjre4"]
+script = ExtResource("2_ebibm")
+id = &"revive"
+effect = ExtResource("3_amma3")
+
+[node name="SecondHeart" type="Node" unique_id=497740091]
+script = ExtResource("1_dcasb")
+targeting = 6
+executions = Array[ExtResource("2_ebibm")]([SubResource("Resource_vjre4")])
+animation = ExtResource("4_t7dhm")
+ability_tag = &"Ability.Item.Secondheart"

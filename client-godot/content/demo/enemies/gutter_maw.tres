@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bile.tscn" id="1_5dlkv"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/devour.tscn" id="2_cgnl8"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_uw3s7"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="4_cqa78"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="5_da5nr"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="6_korcm"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="7_1k2xf"]
+
+[sub_resource type="Resource" id="Resource_8j7r5"]
+script = ExtResource("4_cqa78")
+pattern = Array[StringName]([&"Ability.Bile", &"Ability.Devour"])
+
+[resource]
+script = ExtResource("6_korcm")
+id = &"demo.enemy.gutter_maw"
+attribute_set = ExtResource("3_uw3s7")
+abilities = Array[PackedScene]([ExtResource("1_5dlkv"), ExtResource("2_cgnl8")])
+brain = SubResource("Resource_8j7r5")
+display_name = "Gutter Maw"
+display_color = Color(0.41960785, 0.5568628, 0.13725491, 1)
+tags = Array[StringName]([&"Enemy.Type.Maw", &"Weakness.Ice"])
+stats_x100 = Dictionary[String, int]({
+"atk": 30000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 14000,
+"energy": 0,
+"hp": 90000,
+"max_hp": 90000,
+"max_toughness": 6000,
+"spd": 8000,
+"toughness": 6000,
+"weakness_dmg": 15000
+})

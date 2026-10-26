@@ -16,5 +16,5 @@ display_name = "Seer's Circlet"
 description = "+5% crit rate, +20 max MP."
 slot = &"Equipment.Slot.Head"
 grants = SubResource("Resource_6sdsc")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Uncommon"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
 price = 8

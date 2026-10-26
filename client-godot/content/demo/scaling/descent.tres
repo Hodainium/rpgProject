@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ScalingRules" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_gkklw"]
+[ext_resource type="Resource" path="res://content/demo/effects/descent_depth_0.tres" id="2_unqs7"]
+[ext_resource type="Resource" path="res://content/demo/effects/descent_depth_1.tres" id="3_mr3pj"]
+[ext_resource type="Resource" path="res://content/demo/effects/descent_depth_2.tres" id="4_1x80p"]
+[ext_resource type="Resource" path="res://content/demo/effects/descent_depth_3.tres" id="5_kn223"]
+[ext_resource type="Resource" path="res://content/demo/effects/descent_depth_4.tres" id="6_43pe6"]
+[ext_resource type="Resource" path="res://content/demo/effects/descent_depth_5.tres" id="7_bclj2"]
+[ext_resource type="Resource" path="res://content/demo/effects/descent_depth_6.tres" id="8_yvvvo"]
+[ext_resource type="Resource" path="res://content/demo/effects/descent_depth_7.tres" id="9_4jok4"]
+[ext_resource type="Resource" path="res://content/demo/effects/descent_depth_8.tres" id="10_gq5gu"]
+[ext_resource type="Resource" path="res://content/demo/effects/descent_depth_9.tres" id="11_2w00e"]
+[ext_resource type="Script" path="res://game/defs/scaling_rules.gd" id="12_p5dpd"]
+
+[resource]
+script = ExtResource("12_p5dpd")
+id = &"demo.scaling.descent"
+enemy_effects_by_depth = Array[ExtResource("1_gkklw")]([ExtResource("2_unqs7"), ExtResource("3_mr3pj"), ExtResource("4_1x80p"), ExtResource("5_kn223"), ExtResource("6_43pe6"), ExtResource("7_bclj2"), ExtResource("8_yvvvo"), ExtResource("9_4jok4"), ExtResource("10_gq5gu"), ExtResource("11_2w00e")])
+elite_chance_x100 = 2000
+coin_drop_chance_x100 = 8000

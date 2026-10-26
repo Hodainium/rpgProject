@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/corrupted_lantern.tscn" id="1_mcbbe"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_hitjg"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_lantern_cost.tres" id="3_p2fhs"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_3qrn2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_77s46"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_lkiut"]
+
+[sub_resource type="Resource" id="Resource_1jwie"]
+script = ExtResource("4_3qrn2")
+abilities = Array[PackedScene]([ExtResource("1_mcbbe")])
+effects = Array[ExtResource("2_hitjg")]([ExtResource("3_p2fhs")])
+
+[resource]
+script = ExtResource("6_lkiut")
+id = &"demo.item.corrupted_frost_lantern"
+display_name = "Corrupted Lantern"
+description = "Ice damage Freezes the target half the time, but you become weak to Fire."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+price = 0
+grants = SubResource("Resource_1jwie")

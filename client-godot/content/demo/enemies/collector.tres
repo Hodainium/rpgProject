@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/appraise.tscn" id="1_vwsga"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/dispel.tscn" id="2_juu8y"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/gilded_ray.tscn" id="3_4tu63"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/liquidate.tscn" id="4_k2xtr"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="5_akmb0"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="6_ch86r"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="7_1fjxb"]
+[ext_resource type="Resource" path="res://content/demo/effects/collector_per_item.tres" id="8_mg8ya"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="9_mn22x"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/collector_hoard.tres" id="10_xlocy"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="11_i3xlh"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="12_757kv"]
+
+[sub_resource type="Resource" id="Resource_j0bi5"]
+script = ExtResource("7_1fjxb")
+pattern = Array[StringName]([&"Ability.Appraise", &"Ability.Gildedray", &"Ability.Dispel"])
+
+[sub_resource type="Resource" id="Resource_icvbp"]
+script = ExtResource("9_mn22x")
+ability_set = ExtResource("10_xlocy")
+hp_below_x100 = 5000
+
+[resource]
+script = ExtResource("11_i3xlh")
+phases = Array[ExtResource("9_mn22x")]([SubResource("Resource_icvbp")])
+mirror_party_items = true
+per_item_effect = ExtResource("8_mg8ya")
+id = &"demo.enemy.collector"
+attribute_set = ExtResource("6_ch86r")
+abilities = Array[PackedScene]([ExtResource("1_vwsga"), ExtResource("2_juu8y"), ExtResource("3_4tu63"), ExtResource("4_k2xtr"), ExtResource("5_akmb0")])
+brain = SubResource("Resource_j0bi5")
+display_name = "The Collector"
+display_color = Color(0.72156864, 0.5254902, 0.043137256, 1)
+tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Collector", &"Weakness.Physical"])
+stats_x100 = Dictionary[String, int]({
+"atk": 38000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 30000,
+"energy": 0,
+"hp": 900000,
+"max_hp": 900000,
+"max_toughness": 26000,
+"spd": 11000,
+"toughness": 26000,
+"weakness_dmg": 15000
+})

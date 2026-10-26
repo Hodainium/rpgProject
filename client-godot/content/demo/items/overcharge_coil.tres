@@ -15,6 +15,6 @@ script = ExtResource("5_gj0yx")
 id = &"demo.item.overcharge_coil"
 display_name = "Overcharge Coil"
 description = "After each of your ults, +20 ult charge."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
 price = 9
 grants = SubResource("Resource_g623v")

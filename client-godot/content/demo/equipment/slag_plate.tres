@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_quj81"]
+[ext_resource type="Resource" path="res://content/demo/effects/slag_plate.tres" id="2_3arcn"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_gjl4f"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_btlf5"]
+
+[sub_resource type="Resource" id="Resource_wjvga"]
+script = ExtResource("3_gjl4f")
+effects = Array[ExtResource("1_quj81")]([ExtResource("2_3arcn")])
+
+[resource]
+script = ExtResource("4_btlf5")
+id = &"demo.equipment.slag_plate"
+display_name = "Slag Plate"
+description = "+80 DEF, resist Fire, −6 SPD."
+slot = &"Equipment.Slot.Body"
+grants = SubResource("Resource_wjvga")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+price = 7

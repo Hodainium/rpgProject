@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_myate"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_c2tw2"]
+[ext_resource type="Resource" path="res://content/demo/effects/mimic_mend.tres" id="3_tqkq1"]
+[ext_resource type="Animation" path="res://content/demo/animations/mimic_mend.tres" id="4_o81ou"]
+
+[sub_resource type="Resource" id="Resource_woqjy"]
+script = ExtResource("2_c2tw2")
+id = &"mend"
+effect = ExtResource("3_tqkq1")
+
+[node name="MimicMend" type="Node" unique_id=766408534]
+script = ExtResource("1_myate")
+targeting = 5
+executions = Array[ExtResource("2_c2tw2")]([SubResource("Resource_woqjy")])
+animation = ExtResource("4_o81ou")
+ability_tag = &"Ability.Passive.Mimicmend"
+trigger_event_tag = &"Event.Damage.Dealt.Critical"

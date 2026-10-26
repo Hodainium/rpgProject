@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_b05p6"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_pf80y"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="3_dsa4w"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="4_72wkj"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="5_da8s5"]
+[ext_resource type="Resource" path="res://content/demo/enemies/heart_left.tres" id="6_rae73"]
+[ext_resource type="Resource" path="res://content/demo/enemies/heart_right.tres" id="7_qlrfd"]
+
+[sub_resource type="Resource" id="Resource_pxuw2"]
+script = ExtResource("2_pf80y")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_tnqrc"]
+script = ExtResource("3_dsa4w")
+item_query = SubResource("Resource_pxuw2")
+
+[sub_resource type="Resource" id="Resource_evmgb"]
+script = ExtResource("5_da8s5")
+enemy = ExtResource("6_rae73")
+
+[sub_resource type="Resource" id="Resource_velg3"]
+script = ExtResource("5_da8s5")
+enemy = ExtResource("7_qlrfd")
+
+[resource]
+script = ExtResource("4_72wkj")
+id = &"demo.encounter.twin_hearts"
+display_name = "The Twin Hearts"
+tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Hollow"])
+slots = Array[ExtResource("5_da8s5")]([SubResource("Resource_evmgb"), SubResource("Resource_velg3")])
+rewards = Array[ExtResource("1_b05p6")]([SubResource("Resource_tnqrc")])

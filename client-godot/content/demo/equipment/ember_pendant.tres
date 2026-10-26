@@ -16,5 +16,5 @@ display_name = "Ember Pendant"
 description = "Fire damage makes the target weak to Fire for 1 turn."
 slot = &"Equipment.Slot.Accessory"
 grants = SubResource("Resource_5iu0k")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Epic"])
 price = 10

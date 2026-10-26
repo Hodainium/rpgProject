@@ -15,6 +15,6 @@ script = ExtResource("5_hteij")
 id = &"demo.item.hunters_mark"
 display_name = "Hunter's Mark"
 description = "Hitting a weakness triggers a follow-up: 40% ATK Physical."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
 price = 9
 grants = SubResource("Resource_pse67")

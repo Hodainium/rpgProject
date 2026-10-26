@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/corrupted_thorns.tscn" id="1_mx53i"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_d7xjq"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_thorns_cost.tres" id="3_lcf0l"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_7hpwv"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_g1c5k"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_2m0yd"]
+
+[sub_resource type="Resource" id="Resource_fxkwk"]
+script = ExtResource("4_7hpwv")
+abilities = Array[PackedScene]([ExtResource("1_mx53i")])
+effects = Array[ExtResource("2_d7xjq")]([ExtResource("3_lcf0l")])
+
+[resource]
+script = ExtResource("6_2m0yd")
+id = &"demo.item.corrupted_thorn_mail"
+display_name = "Corrupted Thorns"
+description = "When hit, strike back for 150 Physical damage. −40 DEF."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+price = 0
+grants = SubResource("Resource_fxkwk")

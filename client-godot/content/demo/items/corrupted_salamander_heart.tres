@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_1xv7e"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_heart.tres" id="2_ep4ma"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_nsc1d"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_w51xf"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_w38hy"]
+
+[sub_resource type="Resource" id="Resource_i76y8"]
+script = ExtResource("3_nsc1d")
+effects = Array[ExtResource("1_1xv7e")]([ExtResource("2_ep4ma")])
+
+[resource]
+script = ExtResource("5_w38hy")
+id = &"demo.item.corrupted_salamander_heart"
+display_name = "Corrupted Heart"
+description = "You drain Fire and deal +20% damage, but you become weak to Ice and Physical."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary"])
+price = 0
+grants = SubResource("Resource_i76y8")

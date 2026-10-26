@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_8g6s3"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_oax1w"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_p27b5"]
+[ext_resource type="Resource" path="res://content/demo/enemies/vault_sentry.tres" id="4_axdhu"]
+[ext_resource type="Resource" path="res://content/demo/enemies/gilded_mimic.tres" id="5_i6j6c"]
+
+[sub_resource type="Resource" id="Resource_l48mt"]
+script = ExtResource("3_p27b5")
+enemy = ExtResource("4_axdhu")
+
+[sub_resource type="Resource" id="Resource_40rxi"]
+script = ExtResource("3_p27b5")
+enemy = ExtResource("5_i6j6c")
+
+[resource]
+script = ExtResource("2_oax1w")
+id = &"demo.encounter.strongroom"
+display_name = "Strongroom"
+tags = Array[StringName]([&"Chapter.Vault"])
+slots = Array[ExtResource("3_p27b5")]([SubResource("Resource_l48mt"), SubResource("Resource_40rxi")])

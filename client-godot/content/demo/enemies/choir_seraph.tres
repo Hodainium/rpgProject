@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hymn.tscn" id="1_hgufc"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bless.tscn" id="2_6cq8y"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_j6oba"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="4_sowk2"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="5_aoypv"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="6_4hi4o"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="7_krc4e"]
+
+[sub_resource type="Resource" id="Resource_twx2y"]
+script = ExtResource("4_sowk2")
+pattern = Array[StringName]([&"Ability.Hymn", &"Ability.Bless"])
+
+[resource]
+script = ExtResource("6_4hi4o")
+id = &"demo.enemy.choir_seraph"
+attribute_set = ExtResource("3_j6oba")
+abilities = Array[PackedScene]([ExtResource("1_hgufc"), ExtResource("2_6cq8y")])
+brain = SubResource("Resource_twx2y")
+display_name = "Choir Seraph"
+display_color = Color(1, 1, 0.8784314, 1)
+tags = Array[StringName]([&"Enemy.Type.Seraph", &"Resist.Ice"])
+stats_x100 = Dictionary[String, int]({
+"atk": 26000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 16000,
+"energy": 0,
+"hp": 52000,
+"max_hp": 52000,
+"max_toughness": 6000,
+"spd": 12000,
+"toughness": 6000,
+"weakness_dmg": 15000
+})

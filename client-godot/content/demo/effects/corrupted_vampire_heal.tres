@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_gke8m"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_4jdjl"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_4qnbi"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_yd4qp"]
+
+[sub_resource type="Resource" id="Resource_q3suj"]
+script = ExtResource("3_4qnbi")
+value_x100 = 3500
+attribute_name = "hp"
+
+[resource]
+script = ExtResource("4_yd4qp")
+modifiers = Array[ExtResource("2_4jdjl")]([SubResource("Resource_q3suj")])

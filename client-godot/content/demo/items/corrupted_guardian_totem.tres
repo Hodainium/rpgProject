@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_irccb"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_totem.tres" id="2_ig177"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_o21i2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_a1ca1"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_uax2y"]
+
+[sub_resource type="Resource" id="Resource_0nnia"]
+script = ExtResource("3_o21i2")
+effects = Array[ExtResource("1_irccb")]([ExtResource("2_ig177")])
+
+[resource]
+script = ExtResource("5_uax2y")
+id = &"demo.item.corrupted_guardian_totem"
+display_name = "Corrupted Totem"
+description = "The whole party: +50 DEF, −8 SPD."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary"])
+price = 0
+grants = SubResource("Resource_0nnia")
+applies_to = 1

@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/pulse.tscn" id="1_3cimd"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/heart_regen.tscn" id="2_87cgr"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/systole.tscn" id="3_y2p7m"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="4_x2bal"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="5_gpyxp"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="6_4qbx5"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="7_v2ajs"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/mother_heart_bleeding.tres" id="8_6vtb5"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="9_5iy4y"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="10_tk6m6"]
+
+[sub_resource type="Resource" id="Resource_2sdb5"]
+script = ExtResource("6_4qbx5")
+pattern = Array[StringName]([&"Ability.Pulse", &"Ability.Bleedingout", &"Ability.Pulse", &"Ability.Heartregen"])
+
+[sub_resource type="Resource" id="Resource_cvwxd"]
+script = ExtResource("7_v2ajs")
+ability_set = ExtResource("8_6vtb5")
+hp_below_x100 = 5000
+
+[resource]
+script = ExtResource("9_5iy4y")
+phases = Array[ExtResource("7_v2ajs")]([SubResource("Resource_cvwxd")])
+id = &"demo.enemy.mother_heart"
+attribute_set = ExtResource("5_gpyxp")
+abilities = Array[PackedScene]([ExtResource("1_3cimd"), ExtResource("2_87cgr"), ExtResource("3_y2p7m"), ExtResource("4_x2bal")])
+brain = SubResource("Resource_2sdb5")
+display_name = "Mother Heart"
+display_color = Color(0.78039217, 0.08235294, 0.52156866, 1)
+tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Heart", &"Weakness.Fire"])
+stats_x100 = Dictionary[String, int]({
+"atk": 32000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 22000,
+"energy": 0,
+"hp": 700000,
+"max_hp": 700000,
+"max_toughness": 20000,
+"spd": 9000,
+"toughness": 20000,
+"weakness_dmg": 15000
+})

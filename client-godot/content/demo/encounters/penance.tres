@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_hswfs"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_8hkj1"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_jtbxw"]
+[ext_resource type="Resource" path="res://content/demo/enemies/penitent_knight.tres" id="4_2xi1c"]
+[ext_resource type="Resource" path="res://content/demo/enemies/choir_seraph.tres" id="5_y5ky3"]
+
+[sub_resource type="Resource" id="Resource_4bjjj"]
+script = ExtResource("3_jtbxw")
+enemy = ExtResource("4_2xi1c")
+
+[sub_resource type="Resource" id="Resource_ykjiv"]
+script = ExtResource("3_jtbxw")
+enemy = ExtResource("5_y5ky3")
+
+[sub_resource type="Resource" id="Resource_mmhwp"]
+script = ExtResource("3_jtbxw")
+enemy = ExtResource("4_2xi1c")
+
+[resource]
+script = ExtResource("2_8hkj1")
+id = &"demo.encounter.penance"
+display_name = "Penance"
+tags = Array[StringName]([&"Chapter.Cathedral"])
+slots = Array[ExtResource("3_jtbxw")]([SubResource("Resource_4bjjj"), SubResource("Resource_ykjiv"), SubResource("Resource_mmhwp")])

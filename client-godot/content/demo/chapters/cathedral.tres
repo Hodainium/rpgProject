@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="ChapterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_4b2hm"]
+[ext_resource type="Resource" path="res://content/demo/floor_rules/cathedral.tres" id="2_peyps"]
+[ext_resource type="Resource" path="res://content/demo/scaling/descent.tres" id="3_v2ytf"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="4_vyect"]
+
+[sub_resource type="Resource" id="Resource_6xydo"]
+script = ExtResource("1_4b2hm")
+require_all_tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Cathedral"])
+
+[sub_resource type="Resource" id="Resource_o8leh"]
+script = ExtResource("1_4b2hm")
+require_all_tags = Array[StringName]([&"Chapter.Cathedral"])
+ignore_tags = Array[StringName]([&"Encounter.Boss"])
+
+[sub_resource type="Resource" id="Resource_r42ms"]
+script = ExtResource("1_4b2hm")
+require_all_tags = Array[StringName]([&"Event.Demo"])
+
+[sub_resource type="Resource" id="Resource_oy8oh"]
+script = ExtResource("1_4b2hm")
+require_any_tags = Array[StringName]([&"Chapter.Demo", &"Chapter.Cathedral"])
+
+[resource]
+script = ExtResource("4_vyect")
+id = &"demo.chapter.cathedral"
+display_name = "The Silent Cathedral"
+tags = Array[StringName]([&"Chapter.Cathedral"])
+room_query = SubResource("Resource_oy8oh")
+encounter_query = SubResource("Resource_o8leh")
+boss_encounter_query = SubResource("Resource_6xydo")
+event_query = SubResource("Resource_r42ms")
+floor_gen_rules = ExtResource("2_peyps")
+scaling = ExtResource("3_v2ytf")
+route_tag = &"Route.Light"

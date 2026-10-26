@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_xc82d"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_2rowy"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_1wp2i"]
+[ext_resource type="Resource" path="res://content/demo/enemies/cinder_hound.tres" id="4_wyll0"]
+
+[sub_resource type="Resource" id="Resource_35huh"]
+script = ExtResource("3_1wp2i")
+enemy = ExtResource("4_wyll0")
+
+[sub_resource type="Resource" id="Resource_4474o"]
+script = ExtResource("3_1wp2i")
+enemy = ExtResource("4_wyll0")
+
+[sub_resource type="Resource" id="Resource_fvdlt"]
+script = ExtResource("3_1wp2i")
+enemy = ExtResource("4_wyll0")
+
+[resource]
+script = ExtResource("2_2rowy")
+id = &"demo.encounter.hound_pack"
+display_name = "Hound pack"
+tags = Array[StringName]([&"Chapter.Forge"])
+slots = Array[ExtResource("3_1wp2i")]([SubResource("Resource_35huh"), SubResource("Resource_4474o"), SubResource("Resource_fvdlt")])

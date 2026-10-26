@@ -4,12 +4,18 @@
 [ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_standard_damage.gd" id="2_a0wnl"]
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_yta4x"]
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_ntq8o"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_immune"]
 
 [sub_resource type="Resource" id="Resource_g2lhe"]
 script = ExtResource("2_a0wnl")
 
+[sub_resource type="Resource" id="Resource_immune"]
+script = ExtResource("5_immune")
+ignore_tags = Array[StringName]([&"Immune.Burn", &"Immune.Debuff"])
+
 [resource]
 script = ExtResource("4_ntq8o")
+application_query = SubResource("Resource_immune")
 policy = 3
 period = 1.0
 duration_turns = 2

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bellows.tscn" id="1_303e3"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_g84ox"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_abub2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_b3erc"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_xhu5m"]
+
+[sub_resource type="Resource" id="Resource_owr0u"]
+script = ExtResource("3_abub2")
+abilities = Array[PackedScene]([ExtResource("1_303e3")])
+
+[resource]
+script = ExtResource("5_xhu5m")
+id = &"demo.item.bellows"
+display_name = "Bellows"
+description = "Breaking an enemy gives +15 ult charge."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+price = 7
+grants = SubResource("Resource_owr0u")

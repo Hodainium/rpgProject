@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_u7vdm"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ubxep"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_coil_refund.tres" id="3_v5617"]
+[ext_resource type="Animation" path="res://content/demo/animations/corrupted_coil.tres" id="4_urh1l"]
+
+[sub_resource type="Resource" id="Resource_tfcni"]
+script = ExtResource("2_ubxep")
+id = &"refund"
+effect = ExtResource("3_v5617")
+
+[node name="CorruptedCoil" type="Node" unique_id=1361660586]
+script = ExtResource("1_u7vdm")
+targeting = 5
+executions = Array[ExtResource("2_ubxep")]([SubResource("Resource_tfcni")])
+animation = ExtResource("4_urh1l")
+ability_tag = &"Ability.Passive.Corruptedcoil"
+trigger_event_tag = &"Event.Ability.Used.Ultimate"

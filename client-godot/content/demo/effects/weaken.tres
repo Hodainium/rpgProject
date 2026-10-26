@@ -4,6 +4,7 @@
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_75oe5"]
 [ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_mjax5"]
 [ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_nv3re"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_immune"]
 
 [sub_resource type="Resource" id="Resource_5p3eg"]
 script = ExtResource("3_mjax5")
@@ -11,8 +12,13 @@ value_x100 = -1500
 attribute_name = "dmg_mult"
 operation = 1
 
+[sub_resource type="Resource" id="Resource_immune"]
+script = ExtResource("5_immune")
+ignore_tags = Array[StringName]([&"Immune.Weaken", &"Immune.Debuff"])
+
 [resource]
 script = ExtResource("4_nv3re")
+application_query = SubResource("Resource_immune")
 stacking_policy = 1
 policy = 3
 max_stacks = 1

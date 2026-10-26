@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/snap.tscn" id="1_41532"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_qvrel"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="3_ahqru"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="4_cja2u"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="5_4u3px"]
+
+[resource]
+script = ExtResource("4_cja2u")
+id = &"demo.enemy.gilded_mimic"
+attribute_set = ExtResource("2_qvrel")
+abilities = Array[PackedScene]([ExtResource("1_41532")])
+display_name = "Gilded Mimic"
+display_color = Color(1, 0.84313726, 0, 1)
+tags = Array[StringName]([&"Enemy.Type.Mimic", &"Weakness.Physical"])
+stats_x100 = Dictionary[String, int]({
+"atk": 42000,
+"crit_dmg": 5000,
+"crit_rate": 3000,
+"def": 15000,
+"energy": 0,
+"hp": 60000,
+"max_hp": 60000,
+"max_toughness": 6000,
+"spd": 12500,
+"toughness": 6000,
+"weakness_dmg": 15000
+})

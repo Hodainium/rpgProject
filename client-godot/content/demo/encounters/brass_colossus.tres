@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_7k48v"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_lnvy4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="3_vfljl"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="4_4a48j"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="5_gbc5t"]
+[ext_resource type="Resource" path="res://content/demo/enemies/brass_colossus.tres" id="6_1rtxp"]
+
+[sub_resource type="Resource" id="Resource_7mspg"]
+script = ExtResource("2_lnvy4")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_l6caa"]
+script = ExtResource("3_vfljl")
+item_query = SubResource("Resource_7mspg")
+
+[sub_resource type="Resource" id="Resource_f0uvp"]
+script = ExtResource("5_gbc5t")
+enemy = ExtResource("6_1rtxp")
+
+[resource]
+script = ExtResource("4_4a48j")
+id = &"demo.encounter.brass_colossus"
+display_name = "The Brass Colossus"
+tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Forge"])
+slots = Array[ExtResource("5_gbc5t")]([SubResource("Resource_f0uvp")])
+rewards = Array[ExtResource("1_7k48v")]([SubResource("Resource_l6caa")])

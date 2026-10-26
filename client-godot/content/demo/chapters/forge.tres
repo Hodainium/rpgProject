@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="ChapterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_5xuqq"]
+[ext_resource type="Resource" path="res://content/demo/floor_rules/forge.tres" id="2_qpemp"]
+[ext_resource type="Resource" path="res://content/demo/scaling/descent.tres" id="3_3352m"]
+[ext_resource type="Script" path="res://game/defs/chapter_definition.gd" id="4_g56vv"]
+
+[sub_resource type="Resource" id="Resource_2qwyj"]
+script = ExtResource("1_5xuqq")
+require_all_tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Forge"])
+
+[sub_resource type="Resource" id="Resource_6hvds"]
+script = ExtResource("1_5xuqq")
+require_all_tags = Array[StringName]([&"Chapter.Forge"])
+ignore_tags = Array[StringName]([&"Encounter.Boss"])
+
+[sub_resource type="Resource" id="Resource_xt1ch"]
+script = ExtResource("1_5xuqq")
+require_all_tags = Array[StringName]([&"Event.Demo"])
+
+[sub_resource type="Resource" id="Resource_ux4ov"]
+script = ExtResource("1_5xuqq")
+require_any_tags = Array[StringName]([&"Chapter.Demo", &"Chapter.Forge"])
+
+[resource]
+script = ExtResource("4_g56vv")
+id = &"demo.chapter.forge"
+display_name = "The Ember Forge"
+tags = Array[StringName]([&"Chapter.Forge"])
+room_query = SubResource("Resource_ux4ov")
+encounter_query = SubResource("Resource_6hvds")
+boss_encounter_query = SubResource("Resource_2qwyj")
+event_query = SubResource("Resource_xt1ch")
+floor_gen_rules = ExtResource("2_qpemp")
+scaling = ExtResource("3_3352m")
+boss_rotation = true

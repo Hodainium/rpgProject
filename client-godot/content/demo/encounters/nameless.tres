@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_xalxc"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_v0whh"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="3_id7u1"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="4_p7mdq"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="5_is7w0"]
+[ext_resource type="Resource" path="res://content/demo/enemies/nameless.tres" id="6_v0wne"]
+
+[sub_resource type="Resource" id="Resource_oydgf"]
+script = ExtResource("2_v0whh")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_85em1"]
+script = ExtResource("3_id7u1")
+item_query = SubResource("Resource_oydgf")
+
+[sub_resource type="Resource" id="Resource_kciij"]
+script = ExtResource("5_is7w0")
+enemy = ExtResource("6_v0wne")
+
+[resource]
+script = ExtResource("4_p7mdq")
+id = &"demo.encounter.nameless"
+display_name = "The Nameless"
+tags = Array[StringName]([&"Encounter.Boss", &"Chapter.Void"])
+slots = Array[ExtResource("5_is7w0")]([SubResource("Resource_kciij")])
+rewards = Array[ExtResource("1_xalxc")]([SubResource("Resource_85em1")])

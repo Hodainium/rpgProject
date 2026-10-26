@@ -1,0 +1,55 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/witch_bolt.tscn" id="1_m75kj"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hex_all.tscn" id="2_bj3cx"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/dispel.tscn" id="3_bugau"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/doom.tscn" id="4_gkxaa"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/black_mass.tscn" id="5_t1lub"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="6_rq1uo"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="7_ior01"]
+[ext_resource type="Script" path="res://combat/tactical_brain.gd" id="8_yvayj"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="9_8oecl"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/witch_two.tres" id="10_c5nap"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/witch_three.tres" id="11_lyvqa"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="12_4vaw4"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="13_lru2s"]
+
+[sub_resource type="Resource" id="Resource_u4f28"]
+script = ExtResource("8_yvayj")
+ult_when_party_down = true
+ult_when_ally_hp_below_x100 = 5000
+
+[sub_resource type="Resource" id="Resource_2lk30"]
+script = ExtResource("9_8oecl")
+ability_set = ExtResource("10_c5nap")
+hp_below_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_o2ufl"]
+script = ExtResource("9_8oecl")
+ability_set = ExtResource("11_lyvqa")
+clear_debuffs = true
+hp_below_x100 = 2500
+
+[resource]
+script = ExtResource("12_4vaw4")
+phases = Array[ExtResource("9_8oecl")]([SubResource("Resource_2lk30"), SubResource("Resource_o2ufl")])
+id = &"demo.enemy.high_witch"
+attribute_set = ExtResource("7_ior01")
+abilities = Array[PackedScene]([ExtResource("1_m75kj"), ExtResource("2_bj3cx"), ExtResource("3_bugau"), ExtResource("4_gkxaa"), ExtResource("5_t1lub"), ExtResource("6_rq1uo")])
+brain = SubResource("Resource_u4f28")
+display_name = "High Witch"
+display_color = Color(0.29411766, 0, 0.50980395, 1)
+tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Witch", &"Resist.Ice", &"Weakness.Fire"])
+stats_x100 = Dictionary[String, int]({
+"atk": 40000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 26000,
+"energy": 0,
+"hp": 900000,
+"max_hp": 900000,
+"max_toughness": 22000,
+"spd": 11000,
+"toughness": 22000,
+"weakness_dmg": 15000
+})

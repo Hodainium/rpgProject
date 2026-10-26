@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_ahhn3"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_ilkh3"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="3_6ka60"]
+
+[sub_resource type="Resource" id="Resource_lrefp"]
+script = ExtResource("1_ahhn3")
+cell = Vector2i(2, 2)
+
+[sub_resource type="Resource" id="Resource_t2vdt"]
+script = ExtResource("1_ahhn3")
+cell = Vector2i(2, 4)
+slot = 2
+
+[sub_resource type="Resource" id="Resource_5kyd2"]
+script = ExtResource("1_ahhn3")
+cell = Vector2i(1, 1)
+slot = 3
+
+[sub_resource type="Resource" id="Resource_gtw2w"]
+script = ExtResource("1_ahhn3")
+cell = Vector2i(1, 5)
+slot = 4
+
+[sub_resource type="Resource" id="Resource_8d302"]
+script = ExtResource("2_ilkh3")
+require_any_tags = Array[StringName]([&"Pool.Vault", &"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_47y2x"]
+script = ExtResource("1_ahhn3")
+cell = Vector2i(6, 3)
+kind = 3
+item_query = SubResource("Resource_8d302")
+
+[resource]
+script = ExtResource("3_6ka60")
+id = &"demo.room.hoard"
+display_name = "Hoard"
+tags = Array[StringName]([&"Room.Type.Treasure", &"Chapter.Vault"])
+placements = Array[ExtResource("1_ahhn3")]([SubResource("Resource_lrefp"), SubResource("Resource_t2vdt"), SubResource("Resource_5kyd2"), SubResource("Resource_gtw2w"), SubResource("Resource_47y2x")])

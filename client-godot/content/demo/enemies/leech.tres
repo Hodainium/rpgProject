@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/latch.tscn" id="1_i854s"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_bnyuc"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="3_0cxwr"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="4_tf1tm"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="5_rhxsa"]
+
+[resource]
+script = ExtResource("4_tf1tm")
+id = &"demo.enemy.leech"
+attribute_set = ExtResource("2_bnyuc")
+abilities = Array[PackedScene]([ExtResource("1_i854s")])
+display_name = "Leech"
+display_color = Color(0.54509807, 0, 0, 1)
+tags = Array[StringName]([&"Enemy.Type.Leech", &"Resist.Physical", &"Weakness.Fire"])
+stats_x100 = Dictionary[String, int]({
+"atk": 26000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 8000,
+"energy": 0,
+"hp": 36000,
+"max_hp": 36000,
+"max_toughness": 3000,
+"spd": 12000,
+"toughness": 3000,
+"weakness_dmg": 15000
+})

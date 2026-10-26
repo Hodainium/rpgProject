@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_uaq0k"]
+[ext_resource type="Resource" path="res://content/demo/effects/relic_shard.tres" id="2_dnkdq"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ilcut"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_d530x"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_xdkcr"]
+
+[sub_resource type="Resource" id="Resource_eht4i"]
+script = ExtResource("3_ilcut")
+effects = Array[ExtResource("1_uaq0k")]([ExtResource("2_dnkdq")])
+
+[resource]
+script = ExtResource("5_xdkcr")
+id = &"demo.item.relic_shard"
+display_name = "Relic Shard"
+description = "+12% crit rate."
+tags = Array[StringName]([&"Pool.Boss", &"Pool.Vault", &"Item.Rarity.Rare"])
+price = 7
+grants = SubResource("Resource_eht4i")

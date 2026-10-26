@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_j6bmq"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_cw244"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_jji35"]
+[ext_resource type="Resource" path="res://content/demo/effects/bleed.tres" id="4_btn8t"]
+[ext_resource type="Animation" path="res://content/demo/animations/gnaw.tres" id="5_twpid"]
+
+[sub_resource type="Resource" id="Resource_wnv0w"]
+script = ExtResource("2_cw244")
+id = &"bite"
+effect = ExtResource("3_jji35")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 11000
+
+[sub_resource type="Resource" id="Resource_hl1jx"]
+script = ExtResource("2_cw244")
+id = &"bleed"
+effect = ExtResource("4_btn8t")
+chance_x100 = 6000
+
+[node name="Gnaw" type="Node" unique_id=652906575]
+script = ExtResource("1_j6bmq")
+executions = Array[ExtResource("2_cw244")]([SubResource("Resource_wnv0w"), SubResource("Resource_hl1jx")])
+animation = ExtResource("5_twpid")
+ability_tag = &"Ability.Gnaw"

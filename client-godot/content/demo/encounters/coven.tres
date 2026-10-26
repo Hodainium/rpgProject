@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_ri1c1"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_dd5yh"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_b4bcu"]
+[ext_resource type="Resource" path="res://content/demo/enemies/cultist.tres" id="4_lr4ge"]
+
+[sub_resource type="Resource" id="Resource_ukk8t"]
+script = ExtResource("3_b4bcu")
+enemy = ExtResource("4_lr4ge")
+
+[sub_resource type="Resource" id="Resource_a7f6c"]
+script = ExtResource("3_b4bcu")
+enemy = ExtResource("4_lr4ge")
+
+[sub_resource type="Resource" id="Resource_q8uii"]
+script = ExtResource("3_b4bcu")
+enemy = ExtResource("4_lr4ge")
+
+[resource]
+script = ExtResource("2_dd5yh")
+id = &"demo.encounter.coven"
+display_name = "Coven"
+tags = Array[StringName]([&"Chapter.Coven"])
+slots = Array[ExtResource("3_b4bcu")]([SubResource("Resource_ukk8t"), SubResource("Resource_a7f6c"), SubResource("Resource_q8uii")])

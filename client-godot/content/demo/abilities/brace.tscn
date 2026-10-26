@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ml0sp"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_5p30h"]
+[ext_resource type="Resource" path="res://content/demo/effects/defense_up.tres" id="3_eua5g"]
+[ext_resource type="Animation" path="res://content/demo/animations/brace.tres" id="4_cpw2y"]
+
+[sub_resource type="Resource" id="Resource_xm70p"]
+script = ExtResource("2_5p30h")
+id = &"brace"
+effect = ExtResource("3_eua5g")
+
+[node name="Brace" type="Node" unique_id=297002009]
+script = ExtResource("1_ml0sp")
+targeting = 5
+executions = Array[ExtResource("2_5p30h")]([SubResource("Resource_xm70p")])
+animation = ExtResource("4_cpw2y")
+ability_tag = &"Ability.Brace"

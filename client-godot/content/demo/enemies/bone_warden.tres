@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/shield_bash.tscn" id="1_emlun"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bone_wall.tscn" id="2_o4rlx"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ossuary.tscn" id="3_8q2rj"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="4_jx5iy"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="5_13qwe"]
+[ext_resource type="Script" path="res://combat/tactical_brain.gd" id="6_5bvih"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="7_0ic6u"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/bone_warden_ward.tres" id="8_m2jpu"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="9_abm1b"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="10_yy86d"]
+
+[sub_resource type="Resource" id="Resource_hbw4o"]
+script = ExtResource("6_5bvih")
+ult_when_party_down = true
+ult_when_ally_hp_below_x100 = 4000
+
+[sub_resource type="Resource" id="Resource_mn57s"]
+script = ExtResource("7_0ic6u")
+ability_set = ExtResource("8_m2jpu")
+hp_below_x100 = 4000
+
+[resource]
+script = ExtResource("9_abm1b")
+phases = Array[ExtResource("7_0ic6u")]([SubResource("Resource_mn57s")])
+id = &"demo.enemy.bone_warden"
+attribute_set = ExtResource("5_13qwe")
+abilities = Array[PackedScene]([ExtResource("1_emlun"), ExtResource("2_o4rlx"), ExtResource("3_8q2rj"), ExtResource("4_jx5iy")])
+brain = SubResource("Resource_hbw4o")
+display_name = "Bone Warden"
+display_color = Color(0.98039216, 0.92156863, 0.84313726, 1)
+tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Warden", &"Weakness.Fire", &"Immune.Control"])
+stats_x100 = Dictionary[String, int]({
+"atk": 28000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 24000,
+"energy": 0,
+"hp": 260000,
+"max_hp": 260000,
+"max_toughness": 20000,
+"spd": 8500,
+"toughness": 20000,
+"weakness_dmg": 15000
+})

@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_24wey"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_mxvvo"]
+[ext_resource type="Resource" path="res://content/demo/effects/ward.tres" id="3_lshwq"]
+[ext_resource type="Animation" path="res://content/demo/animations/bless.tres" id="4_my450"]
+
+[sub_resource type="Resource" id="Resource_eg5so"]
+script = ExtResource("2_mxvvo")
+id = &"ward"
+effect = ExtResource("3_lshwq")
+
+[node name="Bless" type="Node" unique_id=357146208]
+script = ExtResource("1_24wey")
+targeting = 3
+executions = Array[ExtResource("2_mxvvo")]([SubResource("Resource_eg5so")])
+animation = ExtResource("4_my450")
+ability_tag = &"Ability.Bless"

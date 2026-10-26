@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/searing_bite.tscn" id="1_svuth"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_8uynp"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="3_hc63i"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="4_j5h7r"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="5_ix6mj"]
+
+[resource]
+script = ExtResource("4_j5h7r")
+id = &"demo.enemy.cinder_hound"
+attribute_set = ExtResource("2_8uynp")
+abilities = Array[PackedScene]([ExtResource("1_svuth")])
+display_name = "Cinder Hound"
+display_color = Color(1, 0.64705884, 0, 1)
+tags = Array[StringName]([&"Enemy.Type.Hound", &"Resist.Fire", &"Weakness.Ice"])
+stats_x100 = Dictionary[String, int]({
+"atk": 30000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 9000,
+"energy": 0,
+"hp": 38000,
+"max_hp": 38000,
+"max_toughness": 4000,
+"spd": 13000,
+"toughness": 4000,
+"weakness_dmg": 15000
+})

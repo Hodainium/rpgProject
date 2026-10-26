@@ -1,0 +1,37 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_kqecl"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_keg5c"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_35pyc"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="4_16m3h"]
+[ext_resource type="Animation" path="res://content/demo/animations/meltdown.tres" id="5_5nrkw"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="6_oyx5e"]
+
+[sub_resource type="Resource" id="Resource_grswn"]
+script = ExtResource("2_keg5c")
+id = &"melt"
+effect = ExtResource("3_35pyc")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 9000
+
+[sub_resource type="Resource" id="Resource_n6v4k"]
+script = ExtResource("2_keg5c")
+id = &"burn"
+effect = ExtResource("4_16m3h")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 5000
+chance_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_6jmhq"]
+script = ExtResource("6_oyx5e")
+require_all_tags = Array[StringName]([&"State.Phase.Three"])
+
+[node name="Meltdown" type="Node" unique_id=39605956]
+script = ExtResource("1_kqecl")
+targeting = 1
+executions = Array[ExtResource("2_keg5c")]([SubResource("Resource_grswn"), SubResource("Resource_n6v4k")])
+animation = ExtResource("5_5nrkw")
+ability_tag = &"Ability.Meltdown"
+activation_query = SubResource("Resource_6jmhq")

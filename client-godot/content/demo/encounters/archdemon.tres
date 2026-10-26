@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_wwf14"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_q4v5q"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_h5u23"]
+[ext_resource type="Resource" path="res://content/demo/enemies/bound_demon.tres" id="4_8utha"]
+[ext_resource type="Resource" path="res://content/demo/variants/elite.tres" id="5_xfjc6"]
+[ext_resource type="Resource" path="res://content/demo/enemies/cultist.tres" id="6_budxt"]
+
+[sub_resource type="Resource" id="Resource_gncod"]
+script = ExtResource("3_h5u23")
+enemy = ExtResource("4_8utha")
+variant = ExtResource("5_xfjc6")
+
+[sub_resource type="Resource" id="Resource_vcb1g"]
+script = ExtResource("3_h5u23")
+enemy = ExtResource("6_budxt")
+
+[resource]
+script = ExtResource("2_q4v5q")
+id = &"demo.encounter.archdemon"
+display_name = "Archdemon"
+tags = Array[StringName]([&"Chapter.Coven"])
+slots = Array[ExtResource("3_h5u23")]([SubResource("Resource_gncod"), SubResource("Resource_vcb1g")])

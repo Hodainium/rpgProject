@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_5ijk7"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_nhoyk"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_dwnun"]
+[ext_resource type="Animation" path="res://content/demo/animations/devour.tres" id="4_q266l"]
+
+[sub_resource type="Resource" id="Resource_kdeo6"]
+script = ExtResource("2_nhoyk")
+id = &"devour"
+effect = ExtResource("3_dwnun")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 18000
+
+[node name="Devour" type="Node" unique_id=1239247827]
+script = ExtResource("1_5ijk7")
+executions = Array[ExtResource("2_nhoyk")]([SubResource("Resource_kdeo6")])
+animation = ExtResource("4_q266l")
+ability_tag = &"Ability.Devour"

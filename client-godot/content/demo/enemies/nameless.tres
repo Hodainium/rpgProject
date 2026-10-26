@@ -1,0 +1,55 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/unmake.tscn" id="1_w683n"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/entropy.tscn" id="2_3vpka"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/silence.tscn" id="3_0yqcg"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/oblivion.tscn" id="4_x74ww"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="5_g7kjf"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="6_p80ho"]
+[ext_resource type="Script" path="res://combat/tactical_brain.gd" id="7_2rbkd"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="8_sbdya"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/nameless_two.tres" id="9_ududd"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/nameless_three.tres" id="10_j6rfp"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="11_n5sce"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="12_vf8aj"]
+
+[sub_resource type="Resource" id="Resource_r3w6p"]
+script = ExtResource("7_2rbkd")
+ult_when_party_down = true
+ult_when_ally_hp_below_x100 = 5000
+
+[sub_resource type="Resource" id="Resource_s0qnc"]
+script = ExtResource("8_sbdya")
+ability_set = ExtResource("9_ududd")
+clear_debuffs = true
+hp_below_x100 = 6600
+
+[sub_resource type="Resource" id="Resource_fsh7p"]
+script = ExtResource("8_sbdya")
+ability_set = ExtResource("10_j6rfp")
+clear_debuffs = true
+hp_below_x100 = 3300
+
+[resource]
+script = ExtResource("11_n5sce")
+phases = Array[ExtResource("8_sbdya")]([SubResource("Resource_s0qnc"), SubResource("Resource_fsh7p")])
+id = &"demo.enemy.nameless"
+attribute_set = ExtResource("6_p80ho")
+abilities = Array[PackedScene]([ExtResource("1_w683n"), ExtResource("2_3vpka"), ExtResource("3_0yqcg"), ExtResource("4_x74ww"), ExtResource("5_g7kjf")])
+brain = SubResource("Resource_r3w6p")
+display_name = "The Nameless"
+display_color = Color(0.18431373, 0.30980393, 0.30980393, 1)
+tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Nameless", &"Resist.Physical", &"Resist.Ice", &"Weakness.Fire"])
+stats_x100 = Dictionary[String, int]({
+"atk": 46000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 34000,
+"energy": 0,
+"hp": 1600000,
+"max_hp": 1600000,
+"max_toughness": 30000,
+"spd": 11500,
+"toughness": 30000,
+"weakness_dmg": 15000
+})

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/molten_core.tscn" id="1_gjf8n"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_ko1at"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_lxrp2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_te8lh"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_gxvm3"]
+
+[sub_resource type="Resource" id="Resource_fgfsg"]
+script = ExtResource("3_lxrp2")
+abilities = Array[PackedScene]([ExtResource("1_gjf8n")])
+
+[resource]
+script = ExtResource("5_gxvm3")
+id = &"demo.item.molten_core"
+display_name = "Molten Core"
+description = "Fire hits set the target ablaze: 80 Fire damage for 2 turns."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary"])
+price = 12
+grants = SubResource("Resource_fgfsg")

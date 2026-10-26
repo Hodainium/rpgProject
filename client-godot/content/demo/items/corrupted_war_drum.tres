@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_2nhpb"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_drum.tres" id="2_h7b3s"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_d2kw0"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_bskka"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_bri2x"]
+
+[sub_resource type="Resource" id="Resource_u434q"]
+script = ExtResource("3_d2kw0")
+effects = Array[ExtResource("1_2nhpb")]([ExtResource("2_h7b3s")])
+
+[resource]
+script = ExtResource("5_bri2x")
+id = &"demo.item.corrupted_war_drum"
+display_name = "Corrupted Drum"
+description = "The whole party: +12 SPD, −10% DEF."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+price = 0
+grants = SubResource("Resource_u434q")
+applies_to = 1

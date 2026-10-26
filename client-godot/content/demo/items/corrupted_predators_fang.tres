@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_ckdug"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_fang.tres" id="2_g3b3s"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_5pb0h"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_ft8pe"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_v1om1"]
+
+[sub_resource type="Resource" id="Resource_4fvga"]
+script = ExtResource("3_5pb0h")
+effects = Array[ExtResource("1_ckdug")]([ExtResource("2_g3b3s")])
+
+[resource]
+script = ExtResource("5_v1om1")
+id = &"demo.item.corrupted_predators_fang"
+display_name = "Corrupted Fang"
+description = "+50% damage to Broken enemies; −15% damage to the rest."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+price = 0
+grants = SubResource("Resource_4fvga")

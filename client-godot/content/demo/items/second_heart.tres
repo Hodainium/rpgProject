@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_flngm"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_e0rou"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/second_heart.tscn" id="3_v27yf"]
+
+[resource]
+script = ExtResource("2_e0rou")
+id = &"demo.item.second_heart"
+display_name = "Second Heart"
+description = "Revive an ally with 50% HP (once)."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary"])
+price = 12
+kind = 1
+use_ability = ExtResource("3_v27yf")

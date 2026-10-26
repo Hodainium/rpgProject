@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/halo.tscn" id="1_6n1ug"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_x46q7"]
+[ext_resource type="Resource" path="res://content/demo/effects/halo.tres" id="3_yrd3t"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_gg0r4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_gc35p"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_yfub7"]
+
+[sub_resource type="Resource" id="Resource_h0i8s"]
+script = ExtResource("4_gg0r4")
+abilities = Array[PackedScene]([ExtResource("1_6n1ug")])
+effects = Array[ExtResource("2_x46q7")]([ExtResource("3_yrd3t")])
+
+[resource]
+script = ExtResource("6_yfub7")
+id = &"demo.item.halo"
+display_name = "Halo"
+description = "Ward at the start of every battle; +10% healing given."
+tags = Array[StringName]([&"Pool.Boss", &"Pool.Vault", &"Item.Rarity.Epic"])
+price = 9
+grants = SubResource("Resource_h0i8s")

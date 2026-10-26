@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_0p02s"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_wxjs1"]
+[ext_resource type="Resource" path="res://content/demo/effects/freeze.tres" id="3_gxrg0"]
+[ext_resource type="Animation" path="res://content/demo/animations/corrupted_lantern.tres" id="4_ccc46"]
+
+[sub_resource type="Resource" id="Resource_we3ku"]
+script = ExtResource("2_wxjs1")
+id = &"freeze"
+effect = ExtResource("3_gxrg0")
+chance_x100 = 5000
+
+[node name="CorruptedLantern" type="Node" unique_id=1788310257]
+script = ExtResource("1_0p02s")
+executions = Array[ExtResource("2_wxjs1")]([SubResource("Resource_we3ku")])
+animation = ExtResource("4_ccc46")
+ability_tag = &"Ability.Passive.Corruptedlantern"
+trigger_event_tag = &"Event.Damage.Dealt.Ice"

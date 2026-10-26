@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_7qkbr"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_qs6xv"]
+[ext_resource type="Resource" path="res://content/demo/effects/rally.tres" id="3_hotj2"]
+[ext_resource type="Animation" path="res://content/demo/animations/stoke.tres" id="4_4140t"]
+
+[sub_resource type="Resource" id="Resource_5tlu2"]
+script = ExtResource("2_qs6xv")
+id = &"stoke"
+effect = ExtResource("3_hotj2")
+
+[node name="Stoke" type="Node" unique_id=2115079114]
+script = ExtResource("1_7qkbr")
+targeting = 4
+executions = Array[ExtResource("2_qs6xv")]([SubResource("Resource_5tlu2")])
+animation = ExtResource("4_4140t")
+ability_tag = &"Ability.Stoke"

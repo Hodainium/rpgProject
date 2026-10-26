@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="FloorGenRules" format=3]
+
+[ext_resource type="Script" path="res://game/defs/floor_gen_rules.gd" id="1_7qong"]
+
+[resource]
+script = ExtResource("1_7qong")
+id = &"demo.rules.forge"
+grid_size = Vector2i(11, 10)
+base_rooms = 7
+rooms_per_depth = 1
+random_extra_rooms = 1
+max_rooms = 10
+special_room_tags = Array[StringName]([&"Room.Type.Treasure", &"Room.Type.Shop"])

@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_c785f"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_34yxm"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_tr2sq"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="4_6f58b"]
+[ext_resource type="Animation" path="res://content/demo/animations/searing_bite.tres" id="5_lde6w"]
+
+[sub_resource type="Resource" id="Resource_wbbwj"]
+script = ExtResource("2_34yxm")
+id = &"bite"
+effect = ExtResource("3_tr2sq")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+
+[sub_resource type="Resource" id="Resource_nqf7k"]
+script = ExtResource("2_34yxm")
+id = &"burn"
+effect = ExtResource("4_6f58b")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 4000
+chance_x100 = 10000
+
+[node name="SearingBite" type="Node" unique_id=1622975903]
+script = ExtResource("1_c785f")
+executions = Array[ExtResource("2_34yxm")]([SubResource("Resource_wbbwj"), SubResource("Resource_nqf7k")])
+animation = ExtResource("5_lde6w")
+ability_tag = &"Ability.Searingbite"

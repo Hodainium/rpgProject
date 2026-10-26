@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_6tm7k"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_7sbmr"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_bghwt"]
+[ext_resource type="Resource" path="res://content/demo/enemies/void_wraith.tres" id="4_v31vr"]
+
+[sub_resource type="Resource" id="Resource_8susg"]
+script = ExtResource("3_bghwt")
+enemy = ExtResource("4_v31vr")
+
+[sub_resource type="Resource" id="Resource_f4sjy"]
+script = ExtResource("3_bghwt")
+enemy = ExtResource("4_v31vr")
+
+[resource]
+script = ExtResource("2_7sbmr")
+id = &"demo.encounter.wraiths"
+display_name = "Wraiths"
+tags = Array[StringName]([&"Chapter.Void"])
+slots = Array[ExtResource("3_bghwt")]([SubResource("Resource_8susg"), SubResource("Resource_f4sjy")])

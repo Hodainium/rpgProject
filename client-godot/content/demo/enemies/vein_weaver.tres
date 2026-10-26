@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/entangle_lash.tscn" id="1_5fwew"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hemorrhage.tscn" id="2_pgqj3"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_vwtxt"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="4_l4ipf"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="5_3ndh5"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="6_e4c4h"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="7_dava8"]
+
+[sub_resource type="Resource" id="Resource_bas80"]
+script = ExtResource("4_l4ipf")
+pattern = Array[StringName]([&"Ability.Entanglelash", &"Ability.Hemorrhage"])
+
+[resource]
+script = ExtResource("6_e4c4h")
+id = &"demo.enemy.vein_weaver"
+attribute_set = ExtResource("3_vwtxt")
+abilities = Array[PackedScene]([ExtResource("1_5fwew"), ExtResource("2_pgqj3")])
+brain = SubResource("Resource_bas80")
+display_name = "Vein Weaver"
+display_color = Color(0.8627451, 0.078431375, 0.23529412, 1)
+tags = Array[StringName]([&"Enemy.Type.Weaver", &"Resist.Ice", &"Weakness.Fire"])
+stats_x100 = Dictionary[String, int]({
+"atk": 24000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 10000,
+"energy": 0,
+"hp": 44000,
+"max_hp": 44000,
+"max_toughness": 4000,
+"spd": 11500,
+"toughness": 4000,
+"weakness_dmg": 15000
+})

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="AbilitySet" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_hragy"]
+[ext_resource type="Resource" path="res://content/demo/effects/haste.tres" id="2_6slh2"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_j4qwb"]
+
+[resource]
+script = ExtResource("3_j4qwb")
+effects = Array[ExtResource("1_hragy")]([ExtResource("2_6slh2")])
+tags = Array[StringName]([&"State.Phase.Two"])

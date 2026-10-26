@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_knr4f"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_aoarp"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_x4aus"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_fimci"]
+
+[sub_resource type="Resource" id="Resource_k4k0f"]
+script = ExtResource("3_x4aus")
+value_x100 = -2000
+attribute_name = "toughness_dmg"
+
+[resource]
+script = ExtResource("4_fimci")
+policy = 2
+modifiers = Array[ExtResource("2_aoarp")]([SubResource("Resource_k4k0f")])

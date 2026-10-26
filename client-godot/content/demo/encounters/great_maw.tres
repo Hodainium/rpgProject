@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_j1kn4"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_u3jkj"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_qwinn"]
+[ext_resource type="Resource" path="res://content/demo/enemies/gutter_maw.tres" id="4_ecxi5"]
+[ext_resource type="Resource" path="res://content/demo/variants/elite.tres" id="5_ru51l"]
+[ext_resource type="Resource" path="res://content/demo/enemies/leech.tres" id="6_papqv"]
+
+[sub_resource type="Resource" id="Resource_gurll"]
+script = ExtResource("3_qwinn")
+enemy = ExtResource("4_ecxi5")
+variant = ExtResource("5_ru51l")
+
+[sub_resource type="Resource" id="Resource_obmlj"]
+script = ExtResource("3_qwinn")
+enemy = ExtResource("6_papqv")
+
+[resource]
+script = ExtResource("2_u3jkj")
+id = &"demo.encounter.great_maw"
+display_name = "Great maw"
+tags = Array[StringName]([&"Chapter.Hollow"])
+slots = Array[ExtResource("3_qwinn")]([SubResource("Resource_gurll"), SubResource("Resource_obmlj")])

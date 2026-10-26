@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_qhtft"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_qh8xo"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_ypg8l"]
+[ext_resource type="Resource" path="res://content/demo/enemies/abyssal_hulk.tres" id="4_6qna1"]
+[ext_resource type="Resource" path="res://content/demo/variants/elite.tres" id="5_lj8yl"]
+[ext_resource type="Resource" path="res://content/demo/enemies/void_wraith.tres" id="6_y42bg"]
+
+[sub_resource type="Resource" id="Resource_7ur6l"]
+script = ExtResource("3_ypg8l")
+enemy = ExtResource("4_6qna1")
+variant = ExtResource("5_lj8yl")
+
+[sub_resource type="Resource" id="Resource_yhqvr"]
+script = ExtResource("3_ypg8l")
+enemy = ExtResource("6_y42bg")
+
+[resource]
+script = ExtResource("2_qh8xo")
+id = &"demo.encounter.deep_hulk"
+display_name = "Deep hulk"
+tags = Array[StringName]([&"Chapter.Void"])
+slots = Array[ExtResource("3_ypg8l")]([SubResource("Resource_7ur6l"), SubResource("Resource_yhqvr")])

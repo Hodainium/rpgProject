@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_6ov5v"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_1dj5w"]
+[ext_resource type="Resource" path="res://content/demo/effects/poison.tres" id="3_ammcx"]
+[ext_resource type="Animation" path="res://content/demo/animations/bile.tres" id="4_hjsau"]
+
+[sub_resource type="Resource" id="Resource_utahk"]
+script = ExtResource("2_1dj5w")
+id = &"poison"
+effect = ExtResource("3_ammcx")
+chance_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_jxlul"]
+script = ExtResource("2_1dj5w")
+id = &"poison_again"
+effect = ExtResource("3_ammcx")
+chance_x100 = 10000
+
+[node name="Bile" type="Node" unique_id=1718945795]
+script = ExtResource("1_6ov5v")
+executions = Array[ExtResource("2_1dj5w")]([SubResource("Resource_utahk"), SubResource("Resource_jxlul")])
+animation = ExtResource("4_hjsau")
+ability_tag = &"Ability.Bile"

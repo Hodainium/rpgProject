@@ -15,6 +15,6 @@ script = ExtResource("5_xnk2d")
 id = &"demo.item.frost_needle"
 display_name = "Frost Needle"
 description = "Physical damage also deals 30 Ice damage."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Uncommon"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
 price = 6
 grants = SubResource("Resource_fl073")

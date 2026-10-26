@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/corrupted_band.tscn" id="1_41wyd"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_3lgtk"]
+[ext_resource type="Resource" path="res://content/demo/effects/corrupted_band_cost.tres" id="3_4imuu"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_6ahnx"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="5_4hddn"]
+
+[sub_resource type="Resource" id="Resource_c7uph"]
+script = ExtResource("4_6ahnx")
+abilities = Array[PackedScene]([ExtResource("1_41wyd")])
+effects = Array[ExtResource("2_3lgtk")]([ExtResource("3_4imuu")])
+
+[resource]
+script = ExtResource("5_4hddn")
+id = &"demo.equipment.corrupted_duelists_band"
+display_name = "Corrupted Band"
+description = "Critical hits trigger a follow-up: 60% ATK Physical. −10% max HP."
+slot = &"Equipment.Slot.Accessory"
+grants = SubResource("Resource_c7uph")
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary"])
+price = 0

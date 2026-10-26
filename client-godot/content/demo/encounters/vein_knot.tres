@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_31g4k"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_s78mr"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_m6keh"]
+[ext_resource type="Resource" path="res://content/demo/enemies/leech.tres" id="4_ss434"]
+[ext_resource type="Resource" path="res://content/demo/enemies/vein_weaver.tres" id="5_4erxi"]
+
+[sub_resource type="Resource" id="Resource_w4bwy"]
+script = ExtResource("3_m6keh")
+enemy = ExtResource("4_ss434")
+
+[sub_resource type="Resource" id="Resource_abqrw"]
+script = ExtResource("3_m6keh")
+enemy = ExtResource("5_4erxi")
+
+[sub_resource type="Resource" id="Resource_rl2f7"]
+script = ExtResource("3_m6keh")
+enemy = ExtResource("4_ss434")
+
+[resource]
+script = ExtResource("2_s78mr")
+id = &"demo.encounter.vein_knot"
+display_name = "Vein knot"
+tags = Array[StringName]([&"Chapter.Hollow"])
+slots = Array[ExtResource("3_m6keh")]([SubResource("Resource_w4bwy"), SubResource("Resource_abqrw"), SubResource("Resource_rl2f7")])

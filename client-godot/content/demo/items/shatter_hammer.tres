@@ -15,6 +15,6 @@ script = ExtResource("5_6mbo1")
 id = &"demo.item.shatter_hammer"
 display_name = "Shatter Hammer"
 description = "+50% toughness damage."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
 price = 8
 grants = SubResource("Resource_7yn37")

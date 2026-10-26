@@ -15,6 +15,6 @@ script = ExtResource("5_wd611")
 id = &"demo.item.breakers_oath"
 display_name = "Breaker's Oath"
 description = "Breaking an enemy: +20 ult charge and +15% ATK for 2 turns."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Epic"])
 price = 9
 grants = SubResource("Resource_iqpi5")

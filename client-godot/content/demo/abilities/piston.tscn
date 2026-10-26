@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_o5l6f"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_vb048"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_rc376"]
+[ext_resource type="Animation" path="res://content/demo/animations/piston.tres" id="4_q253k"]
+
+[sub_resource type="Resource" id="Resource_whm5i"]
+script = ExtResource("2_vb048")
+id = &"piston"
+effect = ExtResource("3_rc376")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 14000
+toughness_x100 = 3000
+
+[node name="Piston" type="Node" unique_id=1562073100]
+script = ExtResource("1_o5l6f")
+executions = Array[ExtResource("2_vb048")]([SubResource("Resource_whm5i")])
+animation = ExtResource("4_q253k")
+ability_tag = &"Ability.Piston"
