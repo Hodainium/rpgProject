@@ -12,6 +12,8 @@ var host: Node
 static var update_goldens: bool = false
 
 var failures := PackedStringArray()
+## Errors this test causes on purpose (expect_error); any other script or engine error fails it (TestErrorLog).
+var expected_errors: Array[String] = []
 var _battles: Array[Battle] = []
 static var _content: ContentIndex
 
@@ -26,6 +28,29 @@ func eq(actual: Variant, expected: Variant, message: String = "") -> void:
 		failures.append("%s: expected %s (%s), got %s (%s)" % [message, expected, type_string(typeof(expected)), actual, type_string(typeof(actual))])
 	elif actual != expected:
 		failures.append("%s: expected %s, got %s" % [message, expected, actual])
+
+
+## The test causes an error whose text contains `part` on purpose (once per call). The runner fails a test on every
+## other script or engine error, and when an expected one never comes.
+func expect_error(part: String) -> void:
+	expected_errors.append(part)
+
+
+## Called by run_tests.gd with the errors caught during the test: expected ones are consumed, the rest are failures.
+func check_errors(found: Array[String]) -> void:
+	for text in found:
+		var at := -1
+		for index in expected_errors.size():
+			if text.contains(expected_errors[index]):
+				at = index
+				break
+		if at >= 0:
+			expected_errors.remove_at(at)
+		else:
+			failures.append(text)
+	for part in expected_errors:
+		failures.append("expected an error containing '%s'; none came" % part)
+	expected_errors.clear()
 
 
 func after_each() -> void:

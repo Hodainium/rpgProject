@@ -1,7 +1,8 @@
 ## In-house GDScript test runner (spec "Test runner"). Runs as a scene so GodotGAS's autoloads exist:
 ##   godot --headless --path client-godot res://tests/run_tests.tscn [-- --filter <text>] [-- --update-goldens]
 ##     [-- --shard i/n]   (only the tests whose index in file-then-method order is i mod n; tools/godot_tests.sh)
-## Discovers res://tests/**/test_*.gd, runs every test_* method, exits 1 on any failure.
+## Discovers res://tests/**/test_*.gd, runs every test_* method, exits 1 on any failure. A script or engine error during a
+## test (TestErrorLog) fails it unless the test expected it (TestCase.expect_error); one outside any test fails the run.
 extends Node
 
 const TEST_ROOT: String = "res://tests/"
@@ -19,6 +20,10 @@ func _ready() -> void:
 		if parts.size() == 2 and parts[0].is_valid_int() and parts[1].is_valid_int() and int(parts[1]) > 0:
 			shard = [int(parts[0]), int(parts[1])]
 
+	var errors := TestErrorLog.new()
+	OS.add_logger(errors)
+	# Errors raised between tests (loading a test file, the runner itself).
+	var stray: Array[String] = []
 	var passed := 0
 	var failed := PackedStringArray()
 	var index := -1
@@ -43,10 +48,13 @@ func _ready() -> void:
 			if index % shard[1] != shard[0]:
 				continue
 			Watchdog.beat(label)
+			stray.append_array(errors.take())
 			var test: TestCase = script.new()
 			test.host = self
 			await test.call(method)
 			test.after_each()
+			await get_tree().process_frame  # deferred calls the test queued run now and count as its errors
+			test.check_errors(errors.take())
 			if test.failures.is_empty():
 				passed += 1
 				print("  ok    ", label)
@@ -56,6 +64,13 @@ func _ready() -> void:
 				for failure in test.failures:
 					print("          ", failure)
 
+	stray.append_array(errors.take())
+	OS.remove_logger(errors)
+	if not stray.is_empty():
+		failed.append("(outside any test)")
+		print("  FAIL  errors outside any test (loading a test file?)")
+		for text in stray:
+			print("          ", text)
 	print("\n%d passed, %d failed" % [passed, failed.size()])
 	get_tree().quit(1 if not failed.is_empty() or passed == 0 else 0)
 
