@@ -102,6 +102,8 @@ func _check_unit(unit: UnitDefinition) -> void:
 		_warning("incomplete", path + "::abilities", "%s has no abilities yet" % unit.id)
 	for index in unit.abilities.size():
 		_check_skill_scene(unit.abilities[index], "%s::abilities[%d]" % [path, index], unit.id)
+	if unit is CharacterDefinition and unit.level_effect != null and not _stacks(unit.level_effect):
+		_error("level_not_stacking", path + "::level_effect", "%s's level effect refreshes instead of stacking; it would count once" % unit.id)
 	if unit is CharacterDefinition:
 		for index in unit.learnable_skills.size():
 			_check_skill_scene(unit.learnable_skills[index], "%s::learnable_skills[%d]" % [path, index], unit.id)
@@ -689,6 +691,17 @@ func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 	var path := structure.resource_path
 	_check_rarity_weights(structure)
 	_check_routes(structure)
+	# Spec playable-demo 3.11: the XP curve rises; a rest stop can't start a fight (it has no room).
+	for index in range(1, structure.xp_to_level.size()):
+		if structure.xp_to_level[index] <= structure.xp_to_level[index - 1]:
+			_error("xp_curve_order", path + "::xp_to_level", "level %d needs %d XP, not more than level %d's %d" % [
+				index + 2, structure.xp_to_level[index], index + 1, structure.xp_to_level[index - 1]])
+			break
+	if structure.rest_event != null:
+		for page in structure.rest_event.pages:
+			for choice in (page.choices if page != null else []):
+				if choice != null and choice.outcomes.any(func(outcome) -> bool: return outcome is StartEncounter):
+					_error("rest_event_encounter", path + "::rest_event", "%s starts an encounter; a rest stop has no room" % structure.rest_event.id)
 	if structure.floors.is_empty():
 		_error("dangling_ref", path + "::floors", "%s has no floors" % structure.id)
 	for floor_index in structure.floors.size():

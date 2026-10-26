@@ -96,7 +96,7 @@ func test_demo_run_completes() -> void:
 	for record in report["runs"]:
 		check(record["status"] in [RunState.WON, RunState.LOST], "seed %d ends won or lost" % record["seed"])
 		if record["status"] == RunState.WON:
-			eq(record["floorReached"], 2, "seed %d: a won run cleared both floors" % record["seed"])
+			eq(record["floorReached"], content.runs[DESCENT].floors.size(), "seed %d: a won run cleared every floor" % record["seed"])
 
 
 func test_demo_events() -> void:

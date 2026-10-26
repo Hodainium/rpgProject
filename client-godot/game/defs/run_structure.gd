@@ -33,6 +33,16 @@ extends Resource
 ## Saved form of `rarity_weights` (×100 whole numbers).
 @export_storage var rarity_weights_x100: Dictionary[StringName, int] = {}
 
+@export_group("Experience")
+## Spec playable-demo 3.11 (D28): XP every living member gains per enemy beaten in a won battle (per boss: xp_per_boss).
+@export var xp_per_enemy: int = 0
+@export var xp_per_boss: int = 0
+## Total XP for level 2, 3, 4...; rising. Empty: no XP and no levels in this run.
+@export var xp_to_level: Array[int] = []
+@export_group("")
+## Spec playable-demo 3.11 (D29): shown when the party takes the stairs, before the next floor is built (a rest stop).
+@export var rest_event: EventDefinition
+
 const RARITY_PREFIX: String = "Item.Rarity."
 
 

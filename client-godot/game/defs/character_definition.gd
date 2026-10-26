@@ -11,6 +11,9 @@ extends UnitDefinition
 ## Skills this character may learn during a run (and that its loadouts may give). A battle only accepts learned
 ## skills found here or in the base abilities.
 @export var learnable_skills: Array[PackedScene] = []
+## Spec playable-demo 3.11 (D28): growth, applied once per level above 1 at battle start and in field mode (it must
+## stack: FREE stacking). Empty: levels change nothing in battle.
+@export var level_effect: GameplayEffect
 
 
 ## The scene for a learnable or base skill with this ability tag, or null.

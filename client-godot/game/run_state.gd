@@ -127,9 +127,12 @@ func canonical_lines() -> PackedStringArray:
 		slot_tags.sort()
 		for tag in slot_tags:
 			gear.append("%s=%s" % [tag, entry["equipment"][tag]])
-		lines.append("member=%d|%s|%d|%s|%s|%s|%d|%s|%s|%s|%s" % [entry["slot"], entry["character"], entry["level"],
+		var line := "member=%d|%s|%d|%s|%s|%s|%d|%s|%s|%s|%s" % [entry["slot"], entry["character"], entry["level"],
 			entry["hp"], entry["mp"], entry["energy"], 1 if entry["alive"] else 0, ",".join(entry["skills"]),
-			",".join(entry["items"]), ",".join(slots), ",".join(gear)])
+			",".join(entry["items"]), ",".join(slots), ",".join(gear)]
+		if int(entry.get("xp", 0)) > 0:
+			line += "|xp=%d" % entry["xp"]  # spec playable-demo 3.11; never on a run without XP
+		lines.append(line)
 	if not armor.is_empty():
 		lines.append("armor=%s" % ",".join(armor))
 	if map != null:

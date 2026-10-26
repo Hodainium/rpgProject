@@ -57,8 +57,8 @@ func _ready() -> void:
 # --- Depth scaling (ten floors) ------------------------------------------------------------------------------------------
 
 func _scaling() -> void:
-	var hp := [0, 10, 10, 20, 30, 45, 80, 100, 120, 140]  # floors 3-6 softened (spec 3.9)
-	var atk := [10, 20, 30, 40, 50, 60, 70, 85, 100, 115]
+	var hp := [0, 10, 10, 20, 30, 45, 80, 70, 80, 90]  # floors 3-6 softened (spec 3.9), 8-10 (3.11 tuning)
+	var atk := [10, 20, 30, 40, 50, 60, 70, 70, 75, 80]
 	var def := [0, 10, 15, 20, 30, 40, 50, 60, 70, 80]
 	var steps: Array[GameplayEffect] = []
 	for depth in 10:
@@ -256,13 +256,13 @@ func _enemies_and_encounters() -> void:
 	_brained("cinder_hound", "Cinder Hound", Color.ORANGE, _stats_of(380, 300, 90, 130, 40), ["searing_bite"],
 		[&"Enemy.Type.Hound", &"Resist.Fire", &"Weakness.Ice"], null, [])
 	_brained("anvil_guard", "Anvil Guard", Color.DIM_GRAY, _stats_of(700, 260, 300, 80, 120), ["hammer_down", "brace"],
-		[&"Enemy.Type.Anvil", &"Drain.Fire", &"Weakness.Ice"], _pattern([&"Ability.Hammerdown", &"Ability.Brace",
+		[&"Enemy.Type.Anvil", &"Resist.Fire", &"Weakness.Ice"], _pattern([&"Ability.Hammerdown", &"Ability.Brace",
 		&"Ability.Hammerdown"]), [])
 	_brained("smelter", "Smelter", Color.CHOCOLATE, _stats_of(420, 200, 120, 105, 40), ["stoke", "slag"],
 		[&"Enemy.Type.Smelter", &"Weakness.Physical"], _pattern([&"Ability.Stoke", &"Ability.Slag", &"Ability.Slag"]), [])
-	_phase_set("forgemaster_molten", [&"State.Phase.Two", &"Drain.Fire"], [], ["defense_up"])
+	_phase_set("forgemaster_molten", [&"State.Phase.Two", &"Resist.Fire"], [], ["defense_up"])
 	_phase_set("forgemaster_meltdown", [&"State.Phase.Three"], ["meltdown"], [])
-	_brained("forgemaster", "Forgemaster", Color.FIREBRICK, _stats_of(5200, 340, 240, 100, 180),
+	_brained("forgemaster", "Forgemaster", Color.FIREBRICK, _stats_of(4200, 340, 240, 100, 180),
 		["forge_hammer", "fire_bolt", "crucible", "ult_charge_hit"], [boss, &"Enemy.Type.Forgemaster", &"Resist.Fire",
 		&"Weakness.Ice"], _tactical(50), [_phase(60, "forgemaster_molten", false), _phase(30, "forgemaster_meltdown", true)])
 	_brained("brass_colossus", "Brass Colossus", Color.GOLDENROD, _stats_of(6400, 360, 360, 75, 300),
@@ -282,7 +282,7 @@ func _enemies_and_encounters() -> void:
 	_brained("vein_weaver", "Vein Weaver", Color.CRIMSON, _stats_of(440, 240, 100, 115, 40), ["entangle_lash", "hemorrhage"],
 		[&"Enemy.Type.Weaver", &"Resist.Ice", &"Weakness.Fire"], _pattern([&"Ability.Entanglelash", &"Ability.Hemorrhage"]), [])
 	_phase_set("mother_heart_bleeding", [&"State.Phase.Two"], ["bleeding_out"], [])
-	_brained("mother_heart", "Mother Heart", Color.MEDIUM_VIOLET_RED, _stats_of(7000, 320, 220, 90, 200),
+	_brained("mother_heart", "Mother Heart", Color.MEDIUM_VIOLET_RED, _stats_of(5500, 320, 220, 90, 200),
 		["pulse", "heart_regen", "systole", "ult_charge_hit"], [boss, &"Enemy.Type.Heart", &"Weakness.Fire"],
 		_pattern([&"Ability.Pulse", &"Ability.Bleedingout", &"Ability.Pulse", &"Ability.Heartregen"]),
 		[_phase(50, "mother_heart_bleeding", false)])
@@ -316,7 +316,7 @@ func _enemies_and_encounters() -> void:
 		[&"Enemy.Type.Mimic", &"Weakness.Physical"], null, [])
 	_brained("vault_sentry", "Vault Sentry", Color.STEEL_BLUE, _stats_of(1100, 360, 380, 80, 160), ["lockdown", "thorn_mail"],
 		[&"Enemy.Type.Sentry", &"Drain.Ice", &"Weakness.Fire"], null, [])
-	_save("effects/collector_per_item", _infinite({"max_hp": 5, "atk": 5, "def": 5}, true))  # +5% per piece held
+	_save("effects/collector_per_item", _infinite({"max_hp": 2, "atk": 2, "def": 2}, true))  # +2% per piece held
 	_phase_set("collector_hoard", [&"State.Phase.Two"], [], ["ward", "haste"])
 	# The final boss of the light route mirrors the build (H9) and grows per piece held (H10).
 	var collector := EnemyDefinition.new()
@@ -324,7 +324,7 @@ func _enemies_and_encounters() -> void:
 	collector.display_name = "The Collector"
 	collector.display_color = Color.DARK_GOLDENROD
 	collector.attribute_set = _attributes
-	_stats(collector, _stats_of(9000, 380, 300, 110, 260))
+	_stats(collector, _stats_of(5000, 380, 300, 110, 260))
 	for ability in ["appraise", "dispel", "gilded_ray", "liquidate", "ult_charge_hit"]:
 		collector.abilities.append(_r["abilities/" + ability])
 	collector.tags.assign([boss, &"Enemy.Type.Collector", &"Weakness.Physical"])
@@ -344,7 +344,7 @@ func _enemies_and_encounters() -> void:
 		[&"Enemy.Type.Demon", &"Drain.Fire", &"Weakness.Ice"], _pattern([&"Ability.Hellfire", &"Ability.Rend"]), [])
 	_phase_set("witch_two", [&"State.Phase.Two"], [], ["ward"])
 	_phase_set("witch_three", [&"State.Phase.Three"], ["hellfire"], ["haste"])
-	_brained("high_witch", "High Witch", Color.INDIGO, _stats_of(9000, 400, 260, 110, 220),
+	_brained("high_witch", "High Witch", Color.INDIGO, _stats_of(5500, 400, 260, 110, 220),
 		["witch_bolt", "hex_all", "dispel", "doom", "black_mass", "ult_charge_hit"], [boss, &"Enemy.Type.Witch",
 		&"Resist.Ice", &"Weakness.Fire"], _tactical(50), [_phase(60, "witch_two", false), _phase(25, "witch_three", true)])
 	_encounter("coven", "Coven", [coven], [["cultist", null], ["cultist", null], ["cultist", null]])
@@ -359,7 +359,7 @@ func _enemies_and_encounters() -> void:
 		[&"Enemy.Type.Hulk", &"Weakness.Fire"], _pattern([&"Ability.Abysscrush", &"Ability.Tremor"]), [])
 	_phase_set("nameless_two", [&"State.Phase.Two"], [], ["haste"])
 	_phase_set("nameless_three", [&"State.Phase.Three"], [], ["ward", "defense_up"])
-	_brained("nameless", "The Nameless", Color.DARK_SLATE_GRAY, _stats_of(16000, 460, 340, 115, 300),
+	_brained("nameless", "The Nameless", Color.DARK_SLATE_GRAY, _stats_of(9000, 460, 340, 115, 300),
 		["unmake", "entropy", "silence", "oblivion", "ult_charge_hit"], [boss, &"Enemy.Type.Nameless", &"Resist.Physical",
 		&"Resist.Ice", &"Weakness.Fire"], _tactical(50), [_phase(66, "nameless_two", true), _phase(33, "nameless_three", true)])
 	_encounter("wraiths", "Wraiths", [void_tag], [["void_wraith", null], ["void_wraith", null]])

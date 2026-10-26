@@ -178,7 +178,7 @@ func _begin_run(content_index: ContentIndex, character_ids: Array, seed_text: St
 ## The character's loadout seeds its run state once (spec 3.1): learned skills, items, equipment.
 func _new_member(slot: int, character: CharacterDefinition) -> Dictionary:
 	var member := {
-		"slot": slot, "character": character.id, "level": 1, "hp": 0, "mp": null, "energy": null, "alive": true,
+		"slot": slot, "character": character.id, "level": 1, "xp": 0, "hp": 0, "mp": null, "energy": null, "alive": true,
 		"skills": [], "items": [], "use_slots": [], "equipment": {},
 	}
 	var loadout := character.default_loadout
@@ -266,6 +266,12 @@ func next_floor(chapter_id: StringName = &"") -> String:
 				return String(chapter.id)))
 		entry["chapter"] = String(chapter_id)  # only on a choice, so older logs are unchanged
 	run_log.append(entry)
+	# Spec playable-demo 3.11 (D29): the rest stop opens first; the next floor starts when it ends.
+	if structure.rest_event != null:
+		state.event = {"cell": -1, "event": structure.rest_event.id, "page": 0, "rest_to": state.floor_index + 1,
+			"chapter": String(chapter_id)}
+		event_page_shown.emit(structure.rest_event.id, 0)
+		return ""
 	return enter_floor(state.floor_index + 1, chapter_id)
 
 
@@ -425,10 +431,74 @@ func fight(controller: Object, gate: PresentationGate = null) -> String:
 		_grant_rewards(content.encounters.get(StringName(_tally["lastEncounter"])))
 		if not _active():
 			return runner_error
+		_award_xp(snapshot["enemies"])
+		_roll_drops(snapshot["enemies"], cell)
 		_clear_room(cell, true)
 	else:
 		_end(RunState.LOST)
 	return ""
+
+
+# --- Experience, levels and drops (spec playable-demo 3.11) -----------------------------------------------------------
+
+## XP for a won battle: xp_per_enemy per enemy beaten (xp_per_boss for an Enemy.Boss), to every living member.
+func _award_xp(enemies: Array) -> void:
+	if structure == null or structure.xp_to_level.is_empty():
+		return
+	var total := 0
+	for enemy in enemies:
+		var definition: UnitDefinition = content.units.get(StringName(str(enemy.get("unitDefId", ""))))
+		var boss := definition != null and definition.tags.has(&"Enemy.Boss")
+		total += structure.xp_per_boss if boss else structure.xp_per_enemy
+	gain_xp(total, null)
+
+
+## Outcome API (GainXp): XP for every living member, or only `character`; level-ups follow at once.
+func gain_xp(amount: int, character: CharacterDefinition) -> void:
+	if structure == null or structure.xp_to_level.is_empty() or amount <= 0:
+		return
+	for member in state.party:
+		if member["alive"] and (character == null or member["character"] == character.id):
+			member["xp"] = int(member.get("xp", 0)) + amount
+	_check_levels()
+
+
+## Outcome API (GainLevel): free levels for every living member, or only `character`; XP rises to the new level's start.
+func gain_levels(count: int, character: CharacterDefinition) -> void:
+	if structure == null or structure.xp_to_level.is_empty() or count <= 0:
+		return
+	for member in state.party:
+		if member["alive"] and (character == null or member["character"] == character.id):
+			var target := mini(int(member["level"]) + count, structure.xp_to_level.size() + 1)
+			member["xp"] = maxi(int(member.get("xp", 0)), structure.xp_to_level[target - 2] if target >= 2 else 0)
+	_check_levels()
+
+
+## Raises each member's level to what its XP has reached (levels never fall); several at once is fine.
+func _check_levels() -> void:
+	var curve: Array[int] = structure.xp_to_level
+	for member in state.party:
+		var level := 1
+		for threshold in curve:
+			if int(member.get("xp", 0)) >= threshold:
+				level += 1
+		if level > int(member["level"]):
+			message.emit("%s reaches level %d" % [member["character"], level])
+			member["level"] = level
+	party_changed.emit()
+
+
+## Castlevania-style drops: one roll per beaten enemy that has a drop_item, on the stream floor/<n>/item_drop/<cell>
+## (its own stream, so the coin roll never moves).
+func _roll_drops(enemies: Array, cell: int) -> void:
+	var stream := RunSeeds.rng(state.run_seed, "floor/%d/item_drop/%d" % [state.floor_index, cell])
+	for enemy in enemies:
+		var definition := content.units.get(StringName(str(enemy.get("unitDefId", "")))) as EnemyDefinition
+		if definition == null or definition.drop_item == null or definition.drop_chance_x100 <= 0:
+			continue
+		if RunSeeds.roll(stream, definition.drop_chance_x100):
+			message.emit("%s dropped %s" % [definition.display_name, definition.drop_item.display_name])
+			give_item(definition.drop_item, null, null)
 
 
 ## Spec playable-demo 3.7: the encounter's rewards after a won battle, in order. Event directives (go to page, start
@@ -600,6 +670,8 @@ func choose(choice_index: int) -> String:
 			outcome.apply(self)
 		if not _active():
 			return runner_error
+	if state.event.has("rest_to") and _directive == "encounter":
+		_directive = ""  # a rest stop has no room to fight in (validator: rest_event_encounter)
 	match _directive:
 		"page":
 			state.event["page"] = _directive_page
@@ -615,6 +687,10 @@ func choose(choice_index: int) -> String:
 			state.map.cells[cell]["content"]["enemies"] = pending_battle["enemies"]
 			battle_requested.emit(battle_snapshot())
 		_:
+			if state.event.has("rest_to"):
+				var rest: Dictionary = state.event
+				state.event = {}
+				return enter_floor(int(rest["rest_to"]), StringName(str(rest["chapter"])))
 			state.event = {}
 			_clear_room(cell, false)
 	return ""

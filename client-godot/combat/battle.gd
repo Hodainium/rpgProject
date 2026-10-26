@@ -267,9 +267,16 @@ func _party_kit(member: Dictionary, definition: UnitDefinition, content: Content
 		grants.append({"set": usable.grants})
 		if bool(use_slot.get("ready", false)):
 			grants.append({"ability": usable.use_ability, "item": usable.id})
+	# Spec playable-demo 3.11 (D28): the class's growth, once per level above 1, from the snapshot's level.
+	var growth: Array = []
+	var character := definition as CharacterDefinition
+	if character != null and character.level_effect != null:
+		for count in maxi(int(member.get("level", 1)) - 1, 0):
+			growth.append(character.level_effect)
 	return {
 		"skills": skills,
 		"grants": grants,
+		"extra_effects": growth,
 		"carry": {
 			BattleUnit.HP: member.get("hp"),
 			BattleUnit.MP: member.get("mp"),
