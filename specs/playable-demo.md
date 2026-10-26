@@ -110,6 +110,13 @@ first violation → report entry {seed, floor, battle seq, action index, invaria
 A violation is a **bug report**, never tuned away in content. The chaos stream is dev-only: it never reaches the run
 log, so a chaos run's log replays like any other.
 
+### 2.3d Sharded reports (2026-10-26)
+One report can run as shards in parallel Godot processes: each shard plays a seed range with `--records` (its
+per-run records and options beside the report), and `seed_report --merge <shards...> --out <report>` summarizes the
+joined records exactly as one process would (tested: three shards equal one run). `game/tools/play_sharded.sh <shards>
+<out> <from> <count> [options]` does both, after a parse check of the tool (a script that doesn't parse leaves Godot
+idling until `--quit-after`). Balancing runs the gold standard first, alone: the smart policy with four members.
+
 ### 2.4 Authoring loop (unchanged tools, now on a whole run)
 Builder scene `game/tools/build_demo_run.tscn` adds the approved new files to `content/demo/` (never overwrites, like
 the earlier builders; run with your go-ahead). Then: `sync_tags.tscn --add-missing` for the new chapter tags →
