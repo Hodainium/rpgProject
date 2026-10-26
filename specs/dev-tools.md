@@ -637,6 +637,22 @@ specs/roadmap.md, CLAUDE.md, client-godot/CLAUDE.md   status, current-state tabl
 16. **Templates read stats from the nearest `@tool` attribute set in the editor** (a hand-written subclass such as
     `DemoUnitAttributes` can't be instantiated there).
 
+## Headless safeguards and parallel runs (added 2026-10-26)
+Two hangs so far (2026-10-19, 2026-10-26) left a headless Godot idling after a script failed to load, and from the
+outside a stalled run looks the same as a slow one. Every headless run now has a liveness signal and a hard stop, and
+independent work uses the machine's cores.
+
+| Layer | Where | Rule |
+|---|---|---|
+| **Watchdog** (in the engine) | autoload `Watchdog` (`game/dev/watchdog.gd`), active only when `DisplayServer` is headless | Quits with **70** when the main scene's root script failed to load (the scene declares a script, the node has none: a parse error), and with **124** after `--idle-limit` seconds (default 180) without a `Watchdog.beat(label)`. Prints `[watchdog] alive: <beats>, last <label>` every 30 s while beats arrive (silence means no progress). Beats: each test (`run_tests`), each seed and battle (play report), each script line (`dev_run`) |
+| **Watcher** (outside) | `tools/watch.sh [--idle S] [--timeout S] [--log F] [--name N] -- <command>` | Runs any command with its output in a log; every 30 s prints `[watch:<name>] <seconds>, <log size>: <last line>`; kills the whole process tree (Windows `taskkill /T`) and exits **124** when the log stays silent for `--idle` seconds (default 180) or the run passes `--timeout` (default 3600). Catches a frozen engine too, where the watchdog can't run |
+| **Parallel tests** | `run_tests.tscn -- --shard i/n` (test files whose sorted index is i mod n); `tools/godot_tests.sh [-j N] [-- runner args]` | Runs N watched shards (default 8), merges the `ok`/`FAIL` lines and totals, exits 1 on any failure or stall. `--update-goldens` always runs as one shard (goldens are written once) |
+| **Parallel reports** | `game/tools/play_sharded.sh` (2.3d) | Shards go through `tools/watch.sh` |
+| **.NET** | `tools/dotnet_test.sh [args]` | `dotnet test` through the watcher (the test platform already runs projects and classes in parallel) |
+
+Builders, imports and golden updates stay sequential (they write shared files). Claude runs every headless Godot and
+`dotnet test` command through these tools.
+
 ## Remaining work
 - `kill` queued during an enemy turn: tested since `content-pass` (`test_kill_queued_during_enemy_turn`, driven by
   the battle's signals).
