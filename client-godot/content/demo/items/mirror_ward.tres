@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/mirror_ward.tscn" id="1_4wn20"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_1xjjw"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_x44mi"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_mbbwx"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_p80au"]
+
+[sub_resource type="Resource" id="Resource_kxww2"]
+script = ExtResource("3_x44mi")
+abilities = Array[PackedScene]([ExtResource("1_4wn20")])
+
+[resource]
+script = ExtResource("5_p80au")
+id = &"demo.item.mirror_ward"
+display_name = "Mirror Ward"
+description = "Heal 60 HP whenever a status roll involving you misses."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+price = 6
+grants = SubResource("Resource_kxww2")

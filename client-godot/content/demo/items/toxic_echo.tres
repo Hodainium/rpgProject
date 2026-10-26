@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/toxic_echo.tscn" id="1_turil"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_xpe65"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ev6u2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_5mrfy"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_2dpd0"]
+
+[sub_resource type="Resource" id="Resource_q0nj8"]
+script = ExtResource("3_ev6u2")
+abilities = Array[PackedScene]([ExtResource("1_turil")])
+
+[resource]
+script = ExtResource("5_2dpd0")
+id = &"demo.item.toxic_echo"
+display_name = "Toxic Echo"
+description = "Hitting a weakness of a Poisoned enemy triggers a follow-up: 30% ATK Physical."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 8
+grants = SubResource("Resource_q0nj8")

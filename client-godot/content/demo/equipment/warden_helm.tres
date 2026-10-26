@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_nl1w7"]
+[ext_resource type="Resource" path="res://content/demo/effects/warden_helm.tres" id="2_i7m8j"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_pgk2v"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_xlfk8"]
+
+[sub_resource type="Resource" id="Resource_ibr4v"]
+script = ExtResource("3_pgk2v")
+effects = Array[ExtResource("1_nl1w7")]([ExtResource("2_i7m8j")])
+
+[resource]
+script = ExtResource("4_xlfk8")
+id = &"demo.equipment.warden_helm"
+display_name = "Warden Helm"
+description = "Immune to Freeze and Stun."
+slot = &"Equipment.Slot.Head"
+grants = SubResource("Resource_ibr4v")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Rare"])
+price = 9

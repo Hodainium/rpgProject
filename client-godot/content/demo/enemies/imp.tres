@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/fire_bolt.tscn" id="1_niidd"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_nuooy"]
+[ext_resource type="Script" path="res://combat/tactical_brain.gd" id="3_876s5"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="4_vkfq1"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="5_gem4n"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="6_u5xyq"]
+
+[sub_resource type="Resource" id="Resource_uh5o6"]
+script = ExtResource("3_876s5")
+
+[resource]
+script = ExtResource("5_gem4n")
+id = &"demo.enemy.imp"
+attribute_set = ExtResource("2_nuooy")
+abilities = Array[PackedScene]([ExtResource("1_niidd")])
+brain = SubResource("Resource_uh5o6")
+display_name = "Fire Imp"
+display_color = Color(1, 0.27058825, 0, 1)
+tags = Array[StringName]([&"Enemy.Type.Imp", &"Resist.Fire", &"Weakness.Ice"])
+stats_x100 = Dictionary[String, int]({
+"atk": 24000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 6000,
+"energy": 0,
+"hp": 26000,
+"max_hp": 26000,
+"max_toughness": 3000,
+"spd": 11500,
+"toughness": 3000,
+"weakness_dmg": 15000
+})

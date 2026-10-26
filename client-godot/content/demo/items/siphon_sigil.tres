@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/siphon_sigil.tscn" id="1_ikfww"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_asbcq"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_mlbl4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_wp7tc"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_lfmco"]
+
+[sub_resource type="Resource" id="Resource_ep6o8"]
+script = ExtResource("3_mlbl4")
+abilities = Array[PackedScene]([ExtResource("1_ikfww")])
+
+[resource]
+script = ExtResource("5_lfmco")
+id = &"demo.item.siphon_sigil"
+display_name = "Siphon Sigil"
+description = "Each hit you drain gives +10 ult charge."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+price = 5
+grants = SubResource("Resource_ep6o8")

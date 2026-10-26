@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/spit.tscn" id="1_dj0w3"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_ad6h8"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="3_wawxy"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="4_8h113"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="5_dse27"]
+
+[resource]
+script = ExtResource("4_8h113")
+id = &"demo.enemy.toad"
+attribute_set = ExtResource("2_ad6h8")
+abilities = Array[PackedScene]([ExtResource("1_dj0w3")])
+display_name = "Bog Toad"
+display_color = Color(0.33333334, 0.41960785, 0.18431373, 1)
+tags = Array[StringName]([&"Enemy.Type.Toad", &"Weakness.Fire"])
+stats_x100 = Dictionary[String, int]({
+"atk": 20000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 12000,
+"energy": 0,
+"hp": 38000,
+"max_hp": 38000,
+"max_toughness": 4000,
+"spd": 8500,
+"toughness": 4000,
+"weakness_dmg": 15000
+})

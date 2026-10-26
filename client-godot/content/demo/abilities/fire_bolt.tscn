@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_6wmgn"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_axi1u"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_jr2f3"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="4_a5lot"]
+[ext_resource type="Animation" path="res://content/demo/animations/fire_bolt.tres" id="5_6u7x5"]
+
+[sub_resource type="Resource" id="Resource_cdmje"]
+script = ExtResource("2_axi1u")
+id = &"bolt"
+effect = ExtResource("3_jr2f3")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+
+[sub_resource type="Resource" id="Resource_xqqkk"]
+script = ExtResource("2_axi1u")
+id = &"burn"
+effect = ExtResource("4_a5lot")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 3000
+chance_x100 = 10000
+
+[node name="FireBolt" type="Node" unique_id=396069026]
+script = ExtResource("1_6wmgn")
+executions = Array[ExtResource("2_axi1u")]([SubResource("Resource_cdmje"), SubResource("Resource_xqqkk")])
+animation = ExtResource("5_6u7x5")
+ability_tag = &"Ability.Firebolt"

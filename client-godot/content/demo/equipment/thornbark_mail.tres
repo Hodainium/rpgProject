@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/thornbark_mail.tscn" id="1_fginy"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_7wpg2"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_vcmcd"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_p41ce"]
+
+[sub_resource type="Resource" id="Resource_ruphc"]
+script = ExtResource("3_vcmcd")
+abilities = Array[PackedScene]([ExtResource("1_fginy")])
+
+[resource]
+script = ExtResource("4_p41ce")
+id = &"demo.equipment.thornbark_mail"
+display_name = "Thornbark Mail"
+description = "When hit, Poison the attacker."
+slot = &"Equipment.Slot.Body"
+grants = SubResource("Resource_ruphc")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 7

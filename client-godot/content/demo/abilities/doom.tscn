@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_j5ocb"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_e4quo"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_pcpur"]
+[ext_resource type="Animation" path="res://content/demo/animations/doom.tres" id="4_a86m5"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_oktyn"]
+
+[sub_resource type="Resource" id="Resource_ewpci"]
+script = ExtResource("2_e4quo")
+id = &"doom"
+effect = ExtResource("3_pcpur")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 18000
+toughness_x100 = 3000
+
+[sub_resource type="Resource" id="Resource_unbdd"]
+script = ExtResource("5_oktyn")
+require_all_tags = Array[StringName]([&"State.Phase.Three"])
+
+[node name="Doom" type="Node" unique_id=118161728]
+script = ExtResource("1_j5ocb")
+executions = Array[ExtResource("2_e4quo")]([SubResource("Resource_ewpci")])
+animation = ExtResource("4_a86m5")
+ability_tag = &"Ability.Doom"
+activation_query = SubResource("Resource_unbdd")

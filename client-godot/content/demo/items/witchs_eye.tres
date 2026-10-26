@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_vy3xp"]
+[ext_resource type="Resource" path="res://content/demo/effects/witchs_eye.tres" id="2_iqqhv"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_2npgi"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_ei508"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_nw03h"]
+
+[sub_resource type="Resource" id="Resource_vt7v5"]
+script = ExtResource("3_2npgi")
+effects = Array[ExtResource("1_vy3xp")]([ExtResource("2_iqqhv")])
+
+[resource]
+script = ExtResource("5_nw03h")
+id = &"demo.item.witchs_eye"
+display_name = "Witch's Eye"
+description = "Debuffs you apply last 1 more turn."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 6
+grants = SubResource("Resource_vt7v5")

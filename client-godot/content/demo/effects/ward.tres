@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_t3qjp"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_1hqmx"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_i6tm0"]
+
+[resource]
+script = ExtResource("3_i6tm0")
+stacking_policy = 1
+policy = 3
+max_stacks = 1
+duration_turns = 2
+granted_tags = Array[StringName]([&"Status.Buff.Ward", &"Immune.Control"])

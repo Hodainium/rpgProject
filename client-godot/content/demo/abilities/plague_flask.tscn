@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_g2d47"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_rfo51"]
+[ext_resource type="Resource" path="res://content/demo/effects/poison.tres" id="3_5l0jq"]
+[ext_resource type="Animation" path="res://content/demo/animations/plague_flask.tres" id="4_vnpyu"]
+
+[sub_resource type="Resource" id="Resource_d465s"]
+script = ExtResource("2_rfo51")
+id = &"poison"
+effect = ExtResource("3_5l0jq")
+
+[node name="PlagueFlask" type="Node" unique_id=235774694]
+script = ExtResource("1_g2d47")
+targeting = 1
+executions = Array[ExtResource("2_rfo51")]([SubResource("Resource_d465s")])
+animation = ExtResource("4_vnpyu")
+ability_tag = &"Ability.Item.Plague"

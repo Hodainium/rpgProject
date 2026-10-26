@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_n1maj"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_t2ufx"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_xv6wy"]
+[ext_resource type="Resource" path="res://content/demo/effects/slow.tres" id="4_pif7v"]
+[ext_resource type="Animation" path="res://content/demo/animations/chill.tres" id="5_fxqux"]
+
+[sub_resource type="Resource" id="Resource_uyfx1"]
+script = ExtResource("2_t2ufx")
+id = &"chill"
+effect = ExtResource("3_xv6wy")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_iyejx"]
+script = ExtResource("2_t2ufx")
+id = &"slow"
+effect = ExtResource("4_pif7v")
+chance_x100 = 10000
+
+[node name="Chill" type="Node" unique_id=1105448292]
+script = ExtResource("1_n1maj")
+executions = Array[ExtResource("2_t2ufx")]([SubResource("Resource_uyfx1"), SubResource("Resource_iyejx")])
+animation = ExtResource("5_fxqux")
+ability_tag = &"Ability.Chill"

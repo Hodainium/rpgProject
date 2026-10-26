@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_yocab"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_b5wqa"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/plague_flask.tscn" id="3_xpya0"]
+
+[resource]
+script = ExtResource("2_b5wqa")
+id = &"demo.item.plague_flask"
+display_name = "Plague Flask"
+description = "All enemies: 2 stacks of Poison (25 per stack each turn, 3 turns)."
+tags = Array[StringName]([&"Pool.Shop", &"Item.Rarity.Common"])
+price = 4
+kind = 1
+use_ability = ExtResource("3_xpya0")

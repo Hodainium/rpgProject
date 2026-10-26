@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_bdd6i"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_hpcif"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_ku0ln"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_87638"]
+
+[sub_resource type="Resource" id="Resource_evd0a"]
+script = ExtResource("3_ku0ln")
+value_x100 = 1500
+attribute_name = "spd"
+operation = 1
+
+[resource]
+script = ExtResource("4_87638")
+stacking_policy = 1
+policy = 3
+max_stacks = 1
+duration_turns = 2
+modifiers = Array[ExtResource("2_hpcif")]([SubResource("Resource_evd0a")])
+granted_tags = Array[StringName]([&"Status.Buff.Haste"])

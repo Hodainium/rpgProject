@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="AbilitySet" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/rockfall.tscn" id="1_7k77r"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_vofu7"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_y6ci5"]
+
+[resource]
+script = ExtResource("3_y6ci5")
+abilities = Array[PackedScene]([ExtResource("1_7k77r")])
+tags = Array[StringName]([&"State.Phase.Two"])

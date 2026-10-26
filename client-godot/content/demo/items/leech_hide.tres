@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_qqo7t"]
+[ext_resource type="Resource" path="res://content/demo/effects/leech_hide.tres" id="2_oyt8a"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ha533"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_ef4r4"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_b0snd"]
+
+[sub_resource type="Resource" id="Resource_bhexx"]
+script = ExtResource("3_ha533")
+effects = Array[ExtResource("1_qqo7t")]([ExtResource("2_oyt8a")])
+
+[resource]
+script = ExtResource("5_b0snd")
+id = &"demo.item.leech_hide"
+display_name = "Leech Hide"
+description = "You drain Physical: Physical hits heal you."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Rare"])
+price = 12
+grants = SubResource("Resource_bhexx")

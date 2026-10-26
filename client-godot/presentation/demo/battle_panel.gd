@@ -75,6 +75,18 @@ func _on_battle_started(battle: Battle) -> void:
 	battle.unit_recovered.connect(func(_u): _refresh_stats())
 	battle.one_more_started.connect(func(unit_id): _main.show_message("ONE MORE! %s acts again" % _name(_battle.unit_by_id(unit_id))))
 	battle.interrupt_started.connect(_on_interrupt_started)
+	# Spec content-pass: skipped turns, resisted statuses, drains, boss phases, delays.
+	battle.turn_skipped.connect(func(unit_id): _main.show_message("%s can't act and loses the turn" % _name(_battle.unit_by_id(unit_id))))
+	battle.status_resisted.connect(func(_source, target_id, effect_path):
+		_main.show_message("%s resisted %s" % [_name(_battle.unit_by_id(target_id)), String(effect_path).get_file().get_basename().capitalize()]))
+	battle.damage_drained.connect(func(_source, target_id, amount):
+		_turn.text = "%s  drains %d" % [_name(_battle.unit_by_id(target_id)), amount / 100]
+		_refresh_stats())
+	battle.phase_changed.connect(func(unit_id, phase): _main.show_message("%s enters phase %d!" % [_name(_battle.unit_by_id(unit_id)), phase + 1]))
+	battle.action_delayed.connect(func(_u, _p): _refresh_stats())
+	battle.unit_downed.connect(func(unit_id, _by):
+		_main.show_message("%s is KNOCKED DOWN!" % _name(_battle.unit_by_id(unit_id)))
+		_refresh_stats())
 	_refresh_stats()
 	_update_visible()
 
@@ -86,7 +98,7 @@ func _on_interrupt_started(unit_id: StringName, ability_tag: StringName) -> void
 
 func _on_damage_dealt(_source: StringName, target_id: StringName, amount: int, hit_tags: Array[StringName]) -> void:
 	var marks := PackedStringArray()
-	for tag in [&"Hit.Critical", &"Hit.Weakness", &"Hit.FollowUp"]:
+	for tag in [&"Hit.Critical", &"Hit.Weakness", &"Hit.Resisted", &"Hit.FollowUp"]:
 		if hit_tags.has(tag):
 			marks.append(String(tag).get_slice(".", 1).to_upper())
 	if not marks.is_empty():
@@ -262,13 +274,27 @@ func _toughness_text(unit: BattleUnit) -> String:
 		text += "  [%s%s] %d/%d" % ["#".repeat(filled), "-".repeat(6 - filled), unit.stat(Battle.TOUGHNESS) / 100, maximum / 100]
 	if unit.asc.has_tag_exact(Battle.BROKEN_TAG):
 		text += "  BROKEN"
-	var weak := PackedStringArray()
-	for tag in unit.asc._active_tags:
-		if String(tag).begins_with("Weakness."):
-			weak.append(String(tag).get_slice(".", 1))
-	weak.sort()
-	if not weak.is_empty():
-		text += "  weak " + ", ".join(weak)
+	if unit.asc.has_tag_exact(Battle.DOWNED_TAG):
+		text += "  KNOCKED DOWN"
+	# Spec content-pass: affinities (weak, resist, drain) and active statuses with turns and stacks.
+	for affinity in [["Weakness.", "weak"], ["Resist.", "resist"], ["Drain.", "drain"]]:
+		var types := PackedStringArray()
+		for tag in unit.asc._active_tags:
+			if String(tag).begins_with(affinity[0]):
+				types.append(String(tag).get_slice(".", 1))
+		types.sort()
+		if not types.is_empty():
+			text += "  %s %s" % [affinity[1], ", ".join(types)]
+	var statuses := PackedStringArray()
+	for status in unit.statuses():
+		var label := _short(StringName(status["tag"]))
+		if int(status["stacks"]) > 1:
+			label += "×%d" % status["stacks"]
+		if int(status["turns"]) >= 0:
+			label += " %d" % status["turns"]
+		statuses.append(label)
+	if not statuses.is_empty():
+		text += "  [" + " · ".join(statuses) + "]"
 	return text
 
 

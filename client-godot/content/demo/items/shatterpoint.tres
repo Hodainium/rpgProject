@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/shatterpoint.tscn" id="1_482xb"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_6b6to"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_nuuov"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_lqqke"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_wy1a1"]
+
+[sub_resource type="Resource" id="Resource_nswok"]
+script = ExtResource("3_nuuov")
+abilities = Array[PackedScene]([ExtResource("1_482xb")])
+
+[resource]
+script = ExtResource("5_wy1a1")
+id = &"demo.item.shatterpoint"
+display_name = "Shatterpoint"
+description = "Breaking an enemy with Ice makes it Vulnerable."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 8
+grants = SubResource("Resource_nswok")

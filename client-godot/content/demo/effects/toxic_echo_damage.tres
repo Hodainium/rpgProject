@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_d3krx"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="2_vxtqj"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_standard_damage.gd" id="3_1aliu"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="4_1rqu7"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="5_clp7u"]
+
+[sub_resource type="Resource" id="Resource_5vhh6"]
+script = ExtResource("1_d3krx")
+require_all_tags = Array[StringName]([&"Status.Debuff.Poison"])
+
+[sub_resource type="Resource" id="Resource_0b2uj"]
+script = ExtResource("3_1aliu")
+
+[resource]
+script = ExtResource("5_clp7u")
+application_query = SubResource("Resource_5vhh6")
+executions = Array[ExtResource("2_vxtqj")]([SubResource("Resource_0b2uj")])

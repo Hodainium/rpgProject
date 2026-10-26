@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/frost_lantern.tscn" id="1_wxy6i"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_5syi3"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_glrfl"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_gm5er"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_xfvex"]
+
+[sub_resource type="Resource" id="Resource_2ipfk"]
+script = ExtResource("3_glrfl")
+abilities = Array[PackedScene]([ExtResource("1_wxy6i")])
+
+[resource]
+script = ExtResource("5_xfvex")
+id = &"demo.item.frost_lantern"
+display_name = "Frost Lantern"
+description = "Ice damage has a 25% chance to Freeze the target."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 8
+grants = SubResource("Resource_2ipfk")

@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bleed_blast.tscn" id="1_xdxof"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hex_all.tscn" id="2_r62su"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/doom.tscn" id="3_q3ufc"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/death_ray.tscn" id="4_yjh4s"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="5_vdq6b"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="6_oqy5b"]
+[ext_resource type="Script" path="res://combat/tactical_brain.gd" id="7_mtdjp"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="8_8glv5"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/lich_phase_2.tres" id="9_wjkvx"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/lich_phase_3.tres" id="10_jgyv7"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="11_dygn1"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="12_03ctg"]
+
+[sub_resource type="Resource" id="Resource_33dfj"]
+script = ExtResource("7_mtdjp")
+ult_when_party_down = true
+ult_when_ally_hp_below_x100 = 5000
+
+[sub_resource type="Resource" id="Resource_4nrou"]
+script = ExtResource("8_8glv5")
+ability_set = ExtResource("9_wjkvx")
+hp_below_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_gcpto"]
+script = ExtResource("8_8glv5")
+ability_set = ExtResource("10_jgyv7")
+clear_debuffs = true
+hp_below_x100 = 2500
+
+[resource]
+script = ExtResource("11_dygn1")
+phases = Array[ExtResource("8_8glv5")]([SubResource("Resource_4nrou"), SubResource("Resource_gcpto")])
+id = &"demo.enemy.lich"
+attribute_set = ExtResource("6_oqy5b")
+abilities = Array[PackedScene]([ExtResource("1_xdxof"), ExtResource("2_r62su"), ExtResource("3_q3ufc"), ExtResource("4_yjh4s"), ExtResource("5_vdq6b")])
+brain = SubResource("Resource_33dfj")
+display_name = "Lich"
+display_color = Color(0.28235295, 0.23921569, 0.54509807, 1)
+tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Lich", &"Resist.Ice", &"Weakness.Physical"])
+stats_x100 = Dictionary[String, int]({
+"atk": 30000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 20000,
+"energy": 0,
+"hp": 480000,
+"max_hp": 480000,
+"max_toughness": 15000,
+"spd": 10000,
+"toughness": 15000,
+"weakness_dmg": 15000
+})

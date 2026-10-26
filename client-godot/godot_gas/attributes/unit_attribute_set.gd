@@ -29,6 +29,8 @@ var def_pen: AttributeData = AttributeData.new(0.0)
 var heal_mult: AttributeData = AttributeData.new(10000.0)
 var heal_taken: AttributeData = AttributeData.new(10000.0)
 var energy_regen: AttributeData = AttributeData.new(10000.0)
+var debuff_turns: AttributeData = AttributeData.new(0.0)
+var resist_dmg: AttributeData = AttributeData.new(5000.0)
 
 
 ## The safety pipeline: Clamps stats before they are officially changed.

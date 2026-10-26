@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_pqmot"]
+[ext_resource type="Resource" path="res://content/demo/effects/salamander_heart.tres" id="2_fgrcr"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_yy2eq"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_cj1qq"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_3fn8b"]
+
+[sub_resource type="Resource" id="Resource_av8gj"]
+script = ExtResource("3_yy2eq")
+effects = Array[ExtResource("1_pqmot")]([ExtResource("2_fgrcr")])
+
+[resource]
+script = ExtResource("5_3fn8b")
+id = &"demo.item.salamander_heart"
+display_name = "Salamander Heart"
+description = "You drain Fire (Fire hits heal you), but you become weak to Ice."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Rare"])
+price = 10
+grants = SubResource("Resource_av8gj")

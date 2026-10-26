@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_yy7ku"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_88ytw"]
+[ext_resource type="Resource" path="res://content/demo/effects/mirror_heal.tres" id="3_qgomv"]
+[ext_resource type="Animation" path="res://content/demo/animations/mirror_ward.tres" id="4_fl8rc"]
+
+[sub_resource type="Resource" id="Resource_q36mo"]
+script = ExtResource("2_88ytw")
+id = &"mend"
+effect = ExtResource("3_qgomv")
+
+[node name="MirrorWard" type="Node" unique_id=1688601019]
+script = ExtResource("1_yy7ku")
+targeting = 5
+executions = Array[ExtResource("2_88ytw")]([SubResource("Resource_q36mo")])
+animation = ExtResource("4_fl8rc")
+ability_tag = &"Ability.Passive.Mirrorward"
+trigger_event_tag = &"Event.Status.Resisted"

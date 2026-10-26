@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_jislg"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_mqam1"]
+[ext_resource type="Resource" path="res://content/demo/effects/bleed.tres" id="3_icker"]
+[ext_resource type="Animation" path="res://content/demo/animations/serrated_edge.tres" id="4_h2gvb"]
+
+[sub_resource type="Resource" id="Resource_ya1kg"]
+script = ExtResource("2_mqam1")
+id = &"bleed"
+effect = ExtResource("3_icker")
+
+[node name="SerratedEdge" type="Node" unique_id=1241708513]
+script = ExtResource("1_jislg")
+executions = Array[ExtResource("2_mqam1")]([SubResource("Resource_ya1kg")])
+animation = ExtResource("4_h2gvb")
+ability_tag = &"Ability.Passive.Serratededge"
+trigger_event_tag = &"Event.Damage.Dealt.Critical"

@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_4aeqb"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_e4cu3"]
+[ext_resource type="Resource" path="res://content/demo/effects/cleanse.tres" id="3_r0w6k"]
+[ext_resource type="Resource" path="res://content/demo/effects/regen.tres" id="4_0clm4"]
+[ext_resource type="Animation" path="res://content/demo/animations/purify.tres" id="5_bv7sx"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_heal.tres" id="6_kdafu"]
+
+[sub_resource type="Resource" id="Resource_rdrfh"]
+script = ExtResource("2_e4cu3")
+id = &"cleanse"
+effect = ExtResource("3_r0w6k")
+
+[sub_resource type="Resource" id="Resource_je1k1"]
+script = ExtResource("2_e4cu3")
+id = &"regen"
+effect = ExtResource("4_0clm4")
+
+[node name="Purify" type="Node" unique_id=1602140460]
+script = ExtResource("1_4aeqb")
+targeting = 4
+executions = Array[ExtResource("2_e4cu3")]([SubResource("Resource_rdrfh"), SubResource("Resource_je1k1")])
+animation = ExtResource("5_bv7sx")
+ability_tag = &"Ability.Purify"
+cost_effect = ExtResource("6_kdafu")

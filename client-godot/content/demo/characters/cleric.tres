@@ -12,6 +12,10 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="10_charge"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="11_charge_hit"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/resurrection.tscn" id="12_resurrection"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/purify.tscn" id="13_purify"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="14_break_physical"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="15_break_fire"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="16_break_ice"]
 
 [sub_resource type="Resource" id="Resource_ud7a5"]
 script = ExtResource("7_m2hih")
@@ -21,7 +25,7 @@ items = Array[ExtResource("5_2mrxd")]([ExtResource("6_djwlh")])
 script = ExtResource("8_o24qk")
 id = &"demo.character.cleric"
 attribute_set = ExtResource("3_ouh10")
-abilities = Array[PackedScene]([ExtResource("9_ult"), ExtResource("1_qi6ye"), ExtResource("2_ixx4u"), ExtResource("10_charge"), ExtResource("11_charge_hit"), ExtResource("12_resurrection")])
+abilities = Array[PackedScene]([ExtResource("9_ult"), ExtResource("1_qi6ye"), ExtResource("2_ixx4u"), ExtResource("10_charge"), ExtResource("11_charge_hit"), ExtResource("12_resurrection"), ExtResource("13_purify"), ExtResource("14_break_physical"), ExtResource("15_break_fire"), ExtResource("16_break_ice")])
 display_name = "Cleric"
 display_color = Color(0.18039216, 0.54509807, 0.34117648, 1)
 tags = Array[StringName]([&"Character.Cleric"])

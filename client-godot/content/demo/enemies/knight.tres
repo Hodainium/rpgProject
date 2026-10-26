@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/shield_bash.tscn" id="1_rg768"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_ck6s7"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="3_5n7vj"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="4_jp4hl"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="5_kk3kh"]
+
+[resource]
+script = ExtResource("4_jp4hl")
+id = &"demo.enemy.knight"
+attribute_set = ExtResource("2_ck6s7")
+abilities = Array[PackedScene]([ExtResource("1_rg768")])
+display_name = "Knight"
+display_color = Color(0.46666667, 0.53333336, 0.6, 1)
+tags = Array[StringName]([&"Enemy.Type.Knight", &"Weakness.Ice", &"Immune.Control"])
+stats_x100 = Dictionary[String, int]({
+"atk": 26000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 26000,
+"energy": 0,
+"hp": 52000,
+"max_hp": 52000,
+"max_toughness": 8000,
+"spd": 9000,
+"toughness": 8000,
+"weakness_dmg": 15000
+})

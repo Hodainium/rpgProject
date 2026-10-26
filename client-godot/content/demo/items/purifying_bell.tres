@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_k0gwa"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_mmp6b"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/purifying_bell.tscn" id="3_yl6dy"]
+
+[resource]
+script = ExtResource("2_mmp6b")
+id = &"demo.item.purifying_bell"
+display_name = "Purifying Bell"
+description = "Cleanse every debuff from the party. Ready again after 2 won battles."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+price = 8
+kind = 1
+use_ability = ExtResource("3_yl6dy")
+use_mode = 1
+cooldown_battles = 2

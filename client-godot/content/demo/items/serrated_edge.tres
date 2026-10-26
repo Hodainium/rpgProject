@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/serrated_edge.tscn" id="1_uabty"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_lbjie"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_7cmys"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_vt7rt"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_pyqjw"]
+
+[sub_resource type="Resource" id="Resource_1yfs8"]
+script = ExtResource("3_7cmys")
+abilities = Array[PackedScene]([ExtResource("1_uabty")])
+
+[resource]
+script = ExtResource("5_pyqjw")
+id = &"demo.item.serrated_edge"
+display_name = "Serrated Edge"
+description = "Critical hits make the target Bleed (6% of max HP per turn, 2 turns)."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+price = 6
+grants = SubResource("Resource_1yfs8")

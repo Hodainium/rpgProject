@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_xsmqe"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_percent_of_max.gd" id="2_tn5hq"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_fwe2j"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_31rwf"]
+
+[sub_resource type="Resource" id="Resource_64ngf"]
+script = ExtResource("2_tn5hq")
+percent_x100 = 600
+target_bonus = "heal_taken"
+
+[resource]
+script = ExtResource("4_31rwf")
+stacking_policy = 1
+policy = 3
+period = 1.0
+max_stacks = 1
+duration_turns = 2
+executions = Array[ExtResource("1_xsmqe")]([SubResource("Resource_64ngf")])
+granted_tags = Array[StringName]([&"Status.Buff.Regen"])

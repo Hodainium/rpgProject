@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_f8ou8"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_mcuxr"]
+[ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="3_n58e4"]
+[ext_resource type="Animation" path="res://content/demo/animations/shatterpoint.tres" id="4_j6c0s"]
+
+[sub_resource type="Resource" id="Resource_fwljd"]
+script = ExtResource("2_mcuxr")
+id = &"crack"
+effect = ExtResource("3_n58e4")
+
+[node name="Shatterpoint" type="Node" unique_id=1152817694]
+script = ExtResource("1_f8ou8")
+executions = Array[ExtResource("2_mcuxr")]([SubResource("Resource_fwljd")])
+animation = ExtResource("4_j6c0s")
+ability_tag = &"Ability.Passive.Shatterpoint"
+trigger_event_tag = &"Event.Damage.Dealt.Break.Ice"

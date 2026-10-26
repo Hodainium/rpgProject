@@ -11,6 +11,6 @@ func pre_attribute_change(attribute_name: String, proposed_value: float) -> floa
 			return maxf(proposed_value, 100.0)
 		"crit_rate":
 			return clampf(proposed_value, 0.0, 10000.0)
-		"atk", "def", "crit_dmg", "max_mp":
+		"atk", "def", "crit_dmg", "max_mp", "debuff_turns", "resist_dmg":
 			return maxf(proposed_value, 0.0)
 	return super(attribute_name, proposed_value)

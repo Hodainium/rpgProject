@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/tacticians_ring.tscn" id="1_xgo5n"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_11um1"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_88k8r"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_ykijc"]
+
+[sub_resource type="Resource" id="Resource_id2l1"]
+script = ExtResource("3_88k8r")
+abilities = Array[PackedScene]([ExtResource("1_xgo5n")])
+
+[resource]
+script = ExtResource("4_ykijc")
+id = &"demo.equipment.tacticians_ring"
+display_name = "Tactician's Ring"
+description = "Taunt at the start of every battle (enemies must target you)."
+slot = &"Equipment.Slot.Accessory"
+grants = SubResource("Resource_id2l1")
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+price = 8

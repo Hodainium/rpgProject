@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_cplqg"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_wdodb"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_aae81"]
+[ext_resource type="Resource" path="res://content/demo/effects/freeze.tres" id="4_wi675"]
+[ext_resource type="Animation" path="res://content/demo/animations/break_ice.tres" id="5_aj238"]
+
+[sub_resource type="Resource" id="Resource_0r3xo"]
+script = ExtResource("2_wdodb")
+id = &"burst"
+effect = ExtResource("3_aae81")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 5000
+
+[sub_resource type="Resource" id="Resource_s76r5"]
+script = ExtResource("2_wdodb")
+id = &"freeze"
+effect = ExtResource("4_wi675")
+chance_x100 = 6500
+
+[node name="BreakIce" type="Node" unique_id=599359959]
+script = ExtResource("1_cplqg")
+executions = Array[ExtResource("2_wdodb")]([SubResource("Resource_0r3xo"), SubResource("Resource_s76r5")])
+animation = ExtResource("5_aj238")
+ability_tag = &"Ability.Passive.Break.Ice"
+trigger_event_tag = &"Event.Damage.Dealt.Break.Ice"

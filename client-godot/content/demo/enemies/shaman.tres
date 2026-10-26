@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hex.tscn" id="1_kx3f3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/mend.tscn" id="2_3hkyw"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/dispel.tscn" id="3_rgulc"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="4_0ltw2"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="5_qufkc"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="6_pj3wo"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="7_3l04v"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="8_yksap"]
+
+[sub_resource type="Resource" id="Resource_0cab3"]
+script = ExtResource("5_qufkc")
+pattern = Array[StringName]([&"Ability.Hex", &"Ability.Mend", &"Ability.Dispel"])
+
+[resource]
+script = ExtResource("7_3l04v")
+id = &"demo.enemy.shaman"
+attribute_set = ExtResource("4_0ltw2")
+abilities = Array[PackedScene]([ExtResource("1_kx3f3"), ExtResource("2_3hkyw"), ExtResource("3_rgulc")])
+brain = SubResource("Resource_0cab3")
+display_name = "Shaman"
+display_color = Color(0.7294118, 0.33333334, 0.827451, 1)
+tags = Array[StringName]([&"Enemy.Type.Shaman", &"Weakness.Physical"])
+stats_x100 = Dictionary[String, int]({
+"atk": 18000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 10000,
+"energy": 0,
+"hp": 30000,
+"max_hp": 30000,
+"max_toughness": 3000,
+"spd": 10500,
+"toughness": 3000,
+"weakness_dmg": 15000
+})
