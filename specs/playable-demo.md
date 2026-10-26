@@ -141,7 +141,7 @@ client-only slice. The contracts here are Godot content types and the run-layer 
 | `--play` mode, `--policy auto\|chaos`, `--illegal <percent>` | `game/tools/seed_report.gd` | 2.3, 2.3b |
 | `ChaosController`, `InvariantChecker` | `game/dev/` | 2.3b; the checker reads state only, never changes it |
 | `RunController.run_summary() -> Dictionary` | `game/run_controller.gd` | Read-only, derived from `run_log` and state: battles won, enemies defeated, items and armor picked up, coins earned and spent, floors cleared, ended in (room, encounter). Used by `run_end_view` and the report |
-| Export presets `Windows Desktop` / `Dev` / `Full`, `tools/export.sh`, `tools/release_check.sh`, `game/dev/build_entry.tscn`, `addons/rpg_dev/export_plugin.gd` | `client-godot/export_presets.cfg`, `tools/` | 3.12 (D5, D33–D35); builds in `build/` (gitignored) |
+| Export presets `Windows Desktop` / `Dev` / `Full`, `tools/export.sh`, `tools/release_check.sh`, `game/dev/build_entry.tscn`; the GodotGAS patches (F6, 3.12 D34) | `client-godot/export_presets.cfg`, `tools/` | 3.12 (D5, D33–D35); builds in `build/` (gitignored) |
 
 ### 3.2 Tags (your `godot_gas/` registry)
 `Chapter.Cellar`, `Chapter.Crypt` (added through `sync_tags.tscn --add-missing`). `Chapter.Demo` stays the shared demo
@@ -180,7 +180,8 @@ Consequence, accepted unless you say otherwise: the one-floor run no longer roll
 | F2 | No whole-run balance view; `RunPlayer` lives in `tests/` | 2.3: `seed_report --play`, `autorun`, `RunPlayer` in `game/dev/` | `test_seed_report_play` (fixtures, 5 seeds, deterministic JSON, golden `seed_report_play.json`), `test_autorun_command` |
 | F3 | Validator doesn't check a run end to end (a floor slot whose chapter has no boss room or no boss encounter only fails at generation) | Rule `run_floor_unplayable` (error): for each floor slot and chapter, the boss room query, boss encounter query and the special-room tags each match ≥ 1 | broken fixture `runs/no_boss_floor.tres` |
 | F5 | Auto-play never makes bad or illegal moves, so nothing stresses wrong decisions; nothing checks battle invariants or record → replay on whole runs | 2.3b: chaos policy, illegal moves, invariant checker, replay of every battle | `test_chaos_policy` (fixtures, 5 seeds, all checks on, deterministic report), one `test_illegal_<case>` per illegal move (refused, no state change, no log entry, no RNG draw) |
-| F4 | Release-build behaviour of `Dev` never checked (dev-tools manual checklist) | 3.12: `Dev.is_inert_for`, `load_commands(debug_build)`, the player filter, the release check; recorded in `specs/dev-tools.md` | `test_dev_inert_rule`, `test_console_registry` (release ignores `user://dev_commands/`), `test_export_presets`, `test_export_keeps_what_runs` (per preset), `test_export_patches`, `test_content_roots`; `tools/release_check.sh` once per export; a floor played by hand in the player build |
+| F6 | Every Godot run leaked at exit (4 objects, 3 resources: GodotGAS `GameplayEffect` and the two scripts it holds): Godot 4.7.2 keeps a script alive when it `@export`s a typed array of its own class (`overflow_effects: Array[GameplayEffect]`); order-dependent, every editor-binary run, about 3 in 5 dev-build runs | The one approved on-disk GodotGAS patch (2026-10-26): `Array[Resource]` (holds GameplayEffects only; nothing in `content/` uses it); recorded in `client-godot/CLAUDE.md` section 0. Second leak, debug template only: a UI sound playing when `dev_run` quit left its playback in the audio server (`Cursor1.wav`, the Hover sound: tearing screens down fires `mouse_entered`, so stopping sounds first is not enough); `Watchdog.quit(code)` frees the current scene, then lets the mixer settle (3 frames, 0.1 s) before quitting, used by `dev_run` | `test_no_leak_at_exit` (the game in a child process prints no exit leak), `test_no_self_typed_exports` (no such export in the addon or our code); both fail with the original line. Audio: 8 of 8 dev-build `dev_run` runs clean (was 5 of 5 leaking) |
+| F4 | Release-build behaviour of `Dev` never checked (dev-tools manual checklist) | 3.12: `Dev.is_inert_for`, `load_commands(debug_build)`, the player filter, the release check; recorded in `specs/dev-tools.md` | `test_dev_inert_rule`, `test_console_registry` (release ignores `user://dev_commands/`), `test_export_presets`, `test_export_keeps_what_runs` (per preset), `test_godotgas_patches`, `test_content_roots`; `tools/release_check.sh` once per export; a floor played by hand in the player build |
 | F… | Found while building | Added here and in `/sync-spec` | |
 
 ### 3.6 Shell (your `presentation/demo/`; D3)
@@ -495,16 +496,16 @@ controllers in `game/dev/` (`chaos_controller`, `content_validator`, `dev_report
 builds have no `tests/fixtures/`); a saved root the build lacks falls back to `res://content/`; the title menu hides
 the picker when there is one root.
 
-**GodotGAS export patch (D34):** GodotGAS 1.1.2 names `EditorInterface` in runtime code
+**GodotGAS patch for exports (D34, revised 2026-10-26):** GodotGAS 1.1.2 names `EditorInterface` in runtime code
 (`managers/gameplay_cue_manager.gd` once, `utilities/project_settings.gd` twice; guarded by
 `Engine.is_editor_hint()`, but GDScript resolves the name at parse time and export templates have no editor
-classes), so in any export the `GameplayCueManager` autoload fails to load. The addon stays untouched:
-`addons/rpg_dev/export_plugin.gd` (registered by our editor plugin) skips those files and adds patched copies at the
-same paths (`EditorInterface.` → `Engine.get_singleton(&"EditorInterface").`, the same object in the editor, never
-reached in a game); the patch table is `addons/rpg_dev/export_patches.gd`. Each patch must match exactly as listed,
-or the file ships unpatched with "RPG export:" in the log and `tools/export.sh` fails. **Scripts export as text**
-(`script_export_mode=0`, every preset): with binary tokens GDScript's own exporter takes every script before a
-project plugin sees it, and resource customization stores a `.res` that GDScript can't resolve as a dependency.
+classes), so in any export the `GameplayCueManager` autoload failed to load. Fixed in the addon on disk, like the
+leak in F6: those lines reach it through `Engine.get_singleton(&"EditorInterface")` (the same object in the editor,
+never reached in a game), each marked "rpgProject patch". `test_godotgas_patches` fails when a GodotGAS update
+brings a bare editor class name back into a runtime script (and names the line); `test_cue_manager_loaded` checks
+the autoload in any build, the full export included. Scripts export as binary tokens, as by default. (First built as
+an export-time plugin that patched only the exported copies and needed text script export; replaced at the user's
+request.)
 
 **Release check (D35):** `tools/release_check.sh <shots folder> [player|dev]` (through `tools/watch.sh`; the work is
 `tools/release_check.py`): starts the build in a 1600×900 window with its own log file, waits for the title screen,
@@ -517,11 +518,11 @@ played on the exported dev build with `dev_run` in a window.
 **No .NET assembly yet:** the project has no C# scripts, so an export has no `data_rpgDemo_*` folder. Slice 2 (the
 first C# script, server sync) must check that the export carries `Rpg.Client`.
 
-**As built, 2026-10-26:** the player pack is 5.3 MB (dev 5.5, full 6.9). The release check passes on the player build
+**As built, 2026-10-26:** the player pack is 5.0 MB (dev 5.2, full 6.4). The release check passes on the player build
 (title screen, console area unchanged, no errors in the log) and on the dev control (console opened, 76% of its area
-changed). The full build runs the suite: 338 passed, 4 skipped (the export tests). The dev build played seed 7's
-first floor in a window (treasure, shop, the merchant event, the Golem won, both members to level 2). Not fixed here:
-`dev_run` leaks a few objects at exit ("ObjectDB instances leaked", "resources still in use"), the same in the editor.
+changed). The full build runs the suite: 340 passed, 5 skipped (the tests that read project source). The dev build played seed 7's
+first floor in a window (treasure, shop, the merchant event, the Golem won, both members to level 2). The exit leaks
+seen on the way are fixed (3.5 F6).
 
 ## 4. Failure modes
 Server failure scenarios (root `CLAUDE.md` 1–7): **none apply** (no server, no wire change). What this slice
@@ -549,7 +550,7 @@ protects is that **adding a second run and a second floor doesn't change any exi
 | Rarity weights change existing pools | Only when set; empty weights use the old draw | `test_rarity_weights` (fixtures: same picks without weights; with weights the draw counts follow them over many seeds) |
 | Export ships the console | `Dev` inert in release (dev-tools spec); command files not in the player pack | F4: tests and `tools/release_check.sh` |
 | A shipped file needs an excluded one (parse error in the build only) | Export fails to start or a screen breaks | `test_export_keeps_what_runs` per preset |
-| GodotGAS upgrade changes a patched line | Export stops with the file named (3.12 D34) | `test_export_patches` |
+| A GodotGAS upgrade brings a patched bug back | The test names the file and line; re-apply the patch (3.12 D34, F6) | `test_godotgas_patches` |
 
 ## 5. Observability
 N/A: client-only slice, no service runs. Local signals: the auto-play report (2.3), the validator report, the script
@@ -586,7 +587,8 @@ once each; play one floor in the exported player build (`build/demo/rpgDemo.exe`
 screen with no console and no errors is automated (`tools/release_check.sh`, F4, 3.12).
 
 **Export tests (3.12):** `test_export_presets`, `test_export_keeps_what_runs` (each preset's exclusions are closed
-over their dependencies), `test_export_patches` (the GodotGAS patches match and parse), `test_content_roots`,
+over their dependencies), `test_godotgas_patches` (no editor class names in GodotGAS runtime scripts, no
+self-typed exports, the cue manager loaded), `test_no_leak_at_exit`, `test_content_roots`,
 `test_dev_inert_rule`, `test_console_registry` (a release build ignores `user://dev_commands/`); the whole suite
 also runs inside the `full` build (`tools/godot_tests.sh --build build/full/rpgDemo.console.exe`).
 
@@ -691,5 +693,6 @@ Decided 2026-10-26 by the user (amendment E, 3.12):
 - **D5 as built:** a release preset `Windows Desktop` to `build/demo/` (repo root), the player exclusions in 3.12.
 - **D33 export levels** `player`, `dev` (minimal dev tools) and `full` (everything), one preset each, so Claude can
   drive and test exported builds.
-- **D34 patch GodotGAS at export time,** never on disk.
+- **D34 patch GodotGAS on disk** (revised the same day; first built as an export-time patch), with a test that fails
+  when an update brings the bug back.
 - **D35 a release check script** for what can be checked from outside the player build; a floor played by hand.

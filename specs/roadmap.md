@@ -124,8 +124,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   copies count as eidolons, order-book prices, gems buy packs and dust comes only from cards. Root `CLAUDE.md`,
   `game-design.md` and `server-authority.md` follow. At the user's request.
 - 2026-10-26: 1d step E: three export levels instead of one (player release build; dev and full debug builds with
-  the dev tools, or everything incl. tests, so Claude can drive and test exported builds), a GodotGAS export-time
-  patch (its cue manager names an editor class in runtime code) and a release check script. Spec `playable-demo`
+  the dev tools, or everything incl. tests, so Claude can drive and test exported builds), two patched GodotGAS
+  bugs (an editor class name in runtime code broke every export; a self-typed export leaked at exit), each with a
+  test that fails when an update brings it back, and a release check script. Spec `playable-demo`
   3.12. At the user's request.
 - 2026-10-26: 1d `playable-demo` grew (amendments C2 and C3, in the slice spec): encounter grants, brains and
   rewards, armor always to the inventory, rarity tiers with pool weights; then the full ten-floor Descent (six

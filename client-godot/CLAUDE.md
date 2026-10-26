@@ -15,7 +15,7 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
 | `presentation/` | **User** | Battle scenes, UI, VFX, animation, flare. Listens to `combat/` signals and never changes combat state. |
 | `godot_gas/` | **User** (via GodotGAS dashboard) | Tag registry, attribute drafts, generated files. |
 | `tests/fixtures/` | System (Claude) | Frozen test-only content for system tests. Never references `content/`. |
-| `addons/GodotGAS/` | Vendored | Never edited by anyone; upgrade only by replacing the whole addon. |
+| `addons/GodotGAS/` | Vendored | Never edited by anyone; upgrade only by replacing the whole addon. **Approved on-disk patches (2026-10-26, user), each marked "rpgProject patch" in the file:** `effects/gameplay_effect.gd` `overflow_effects` is `Array[Resource]`, not `Array[GameplayEffect]` (Godot 4.7.2 leaks a script at exit that @exports a typed array of its own class); `managers/gameplay_cue_manager.gd` and `utilities/project_settings.gd` reach `EditorInterface` through `Engine.get_singleton` (a bare editor class name fails to parse in export templates, so the cue manager autoload broke every export). `test_godotgas_patches` fails when an upgrade brings either bug back; re-apply the patch then, or drop it once upstream fixed it. No other addon edits without the user's OK. |
 
 - `content/`, `presentation/` and `godot_gas/` have `ask` permission rules: every edit there prompts the user.
   Create files there only when a spec needs them or the user asks, and edit them with minimal `Edit`s.
