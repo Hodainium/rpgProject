@@ -14,7 +14,9 @@ const DEFAULTS: Dictionary = {"run": "", "party": [], "policy": "auto", "illegal
 ## Plays seeds from..from+count-1. options: DEFAULTS keys ("party" [] = drawn per seed, see party_for();
 ## "illegal" a percent; "check" = invariants and replay, always on for chaos). The result also holds "failures" (each
 ## failing battle's request and traces, too big for the report file): take it out before saving; see save_failures().
-static func many(content: ContentIndex, host: Node, from: int, count: int, options: Dictionary = {}) -> Dictionary:
+## `keep_records`: also "records" and "options", for a shard that merge() joins later (spec 2.3d).
+static func many(content: ContentIndex, host: Node, from: int, count: int, options: Dictionary = {},
+		keep_records: bool = false) -> Dictionary:
 	var opts := _options(content, options)
 	var runs: Array[Dictionary] = []
 	var failures: Array = []
@@ -24,7 +26,26 @@ static func many(content: ContentIndex, host: Node, from: int, count: int, optio
 		runs.append(record)
 	var report := summarize(runs, opts, from, count)
 	report["failures"] = failures
+	if keep_records:
+		report["records"] = runs  # per-run records, for merge() (take out before saving the report)
+		report["options"] = opts
 	return report
+
+
+## Spec playable-demo 2.3d: one report from shards of the same options (each shard's "records" and "options"),
+## exactly as if the seeds had run in one process: the records are joined in seed order and summarized again.
+static func merge(shards: Array) -> Dictionary:
+	var runs: Array[Dictionary] = []
+	for shard in shards:
+		for record in shard["records"]:
+			runs.append(record)
+	runs.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["seed"]) < int(b["seed"]))
+	var from: int = int(runs[0]["seed"]) if not runs.is_empty() else 0
+	var opts: Dictionary = shards[0]["options"].duplicate()
+	for key in opts:
+		if opts[key] is float and opts[key] == floorf(opts[key]):
+			opts[key] = int(opts[key])  # whole numbers come back from JSON as floats
+	return summarize(runs, opts, from, runs.size())
 
 
 ## One seed: {"seed", "status", "stop", "runnerError", "summary", "bossEntry", "battles", "violations", "runHash",
@@ -231,7 +252,7 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 			report["lost"] += 1
 			SeedReport._count(report["deaths"], summary["endedIn"]["encounter"])
 		if not summary.is_empty():
-			SeedReport._count(report["floorReached"], str(summary["floorReached"]))
+			SeedReport._count(report["floorReached"], str(int(summary["floorReached"])))  # merged records come through JSON
 			coins.append(int(summary["coinsSpent"]))
 		for entry in record["bossEntry"]:
 			var key := "floor %d" % entry["floor"]

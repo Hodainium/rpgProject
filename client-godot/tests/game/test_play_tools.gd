@@ -204,3 +204,17 @@ static func _unique(values: Array) -> Array:
 		if not result.has(value):
 			result.append(value)
 	return result
+
+
+## Spec playable-demo 2.3d: a report split into shards (each through JSON, as the shard files are) and merged is the
+## report of one process over the same seeds.
+func test_sharded_report_merges() -> void:
+	var options := {"policy": "smart", "party_size": "mixed", "check": true}
+	var whole := await PlayReport.many(fixtures(), host, 1, 6, options)
+	whole.erase("failures")
+	var shards: Array = []
+	for range_spec in [[1, 2], [3, 3], [6, 1]]:
+		var shard := await PlayReport.many(fixtures(), host, range_spec[0], range_spec[1], options, true)
+		shards.append(JSON.parse_string(JSON.stringify({"options": shard["options"], "records": shard["records"]})))
+	var merged := PlayReport.merge(shards)
+	eq(WireJson.stringify(merged), WireJson.stringify(whole), "three shards merge into the one-process report")

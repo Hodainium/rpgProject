@@ -8,6 +8,8 @@
 ##     -- --play [--policy auto|smart|chaos] [--illegal 20] [--chaos 100] [--chaos-from 1] [--check] [--trace]
 ##        [--party a,b | --party-size 1-4|mixed (default 4)] [--max-steps 2000]   (chaos below 100% or from a later floor plays on top of smart)
 ##   (give --quit-after a large frame count: every battle step takes frames)
+## Shards (spec playable-demo 2.3d): run seed ranges in parallel processes with --records, then
+##     -- --merge shard1.json shard2.json ... --out all.json   (game/tools/play_sharded.sh does both)
 extends Node
 
 
@@ -20,6 +22,9 @@ func _ready() -> void:
 	if picked["error"] != "":
 		print("seed_report: %s: %s" % [root, picked["error"]])
 		get_tree().quit(1)
+		return
+	if args.has("--merge"):
+		_merge(args)
 		return
 	if args.has("--play"):
 		await _play(content, args)
@@ -50,9 +55,13 @@ func _play(content: ContentIndex, args: PackedStringArray) -> void:
 		"chaos_from": int(_arg(args, "--chaos-from", "1")),
 		"party_size": _arg(args, "--party-size", "4") if _arg(args, "--party-size", "4") == "mixed" else int(_arg(args, "--party-size", "4"))}
 	var report := await PlayReport.many(content, self, int(_arg(args, "--from", "1")), int(_arg(args, "--count", "100")),
-		options)
+		options, true)
 	var failures: Array = report["failures"]
 	report.erase("failures")
+	var records: Array = report["records"]
+	var shard_options: Dictionary = report["options"]
+	report.erase("records")
+	report.erase("options")
 	print(PlayReport.text(report))
 	var out := _arg(args, "--out", "")
 	if out != "":
@@ -61,8 +70,39 @@ func _play(content: ContentIndex, args: PackedStringArray) -> void:
 		file.close()
 		for path in PlayReport.save_failures(failures, out):
 			print("  saved " + path)
+		if args.has("--records"):
+			var shard := FileAccess.open(out.get_basename() + ".records.json", FileAccess.WRITE)
+			shard.store_string(JSON.stringify({"options": shard_options, "records": records}))
+			shard.close()
 	var stopped: bool = report["stopped"] > 0 or not report["violations"].is_empty()
 	get_tree().quit(3 if stopped else 0)
+
+
+## --merge a.json b.json ... --out all.json: one report from shards written with --records (spec playable-demo 2.3d).
+func _merge(args: PackedStringArray) -> void:
+	var shards: Array = []
+	var at := args.find("--merge") + 1
+	while at < args.size() and not args[at].begins_with("--"):
+		var text := FileAccess.get_file_as_string(args[at].get_basename() + ".records.json")
+		var parsed: Variant = JSON.parse_string(text) if text != "" else null
+		if not parsed is Dictionary:
+			print("seed_report: no records for %s (run the shard with --records)" % args[at])
+			get_tree().quit(1)
+			return
+		shards.append(parsed)
+		at += 1
+	if shards.is_empty():
+		print("seed_report: --merge needs shard reports")
+		get_tree().quit(1)
+		return
+	var report := PlayReport.merge(shards)
+	print(PlayReport.text(report))
+	var out := _arg(args, "--out", "")
+	if out != "":
+		var file := FileAccess.open(out, FileAccess.WRITE)
+		file.store_string(JSON.stringify(report, "  ", false))
+		file.close()
+	get_tree().quit(3 if report["stopped"] > 0 or not report["violations"].is_empty() else 0)
 
 
 static func _arg(args: PackedStringArray, name: String, fallback: String) -> String:

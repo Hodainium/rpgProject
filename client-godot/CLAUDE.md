@@ -162,6 +162,9 @@ from C#.**
   [--check] --count 200 --out <report.json>` (large `--quit-after`). Auto plays `RunPlayer`'s policy; chaos plays
   bad and illegal moves on its own seeded stream, checks invariants and replays every battle; failing battles are saved
   next to the report for `replay_main` / `trace_main --diff`. Exit 3 on a stopped run or a violation.
+  Balance on the gold standard first, alone: `game/tools/play_sharded.sh 12 <out.json> 1 300 --policy smart
+  --party-size 4 --check` (12 parallel shards, merged exactly; about 45 s instead of 4 min). Other policies only
+  after it is on target.
 - **Check content:** `res://game/tools/validate_content.tscn` (exit 3 on content errors) and the `test_content_valid`
   content test. Seed statistics: `res://game/tools/seed_report.tscn -- --count 1000 --floor 0`.
 - Rebuild generated dev and test data only on purpose: `game/tools/build_dev_content.tscn` (dev effects and stat items),
