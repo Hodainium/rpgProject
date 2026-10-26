@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ufd6h"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ujcxd"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_o7iux"]
+[ext_resource type="Animation" path="res://content/demo/animations/searing_slash.tres" id="4_vt8vr"]
+
+[sub_resource type="Resource" id="Resource_gqwvl"]
+script = ExtResource("2_ujcxd")
+id = &"slash"
+effect = ExtResource("3_o7iux")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+toughness_x100 = 3000
+
+[node name="SearingSlash" type="Node" unique_id=2039047284]
+script = ExtResource("1_ufd6h")
+executions = Array[ExtResource("2_ujcxd")]([SubResource("Resource_gqwvl")])
+animation = ExtResource("4_vt8vr")
+ability_tag = &"Ability.Searingslash"

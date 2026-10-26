@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_q8p2h"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_3kyga"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_sn5jf"]
+[ext_resource type="Animation" path="res://content/demo/animations/frost_jab.tres" id="4_dqv6f"]
+
+[sub_resource type="Resource" id="Resource_2abmt"]
+script = ExtResource("2_3kyga")
+id = &"jab"
+effect = ExtResource("3_sn5jf")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+toughness_x100 = 3000
+
+[node name="FrostJab" type="Node" unique_id=854294647]
+script = ExtResource("1_q8p2h")
+executions = Array[ExtResource("2_3kyga")]([SubResource("Resource_2abmt")])
+animation = ExtResource("4_dqv6f")
+ability_tag = &"Ability.Frostjab"

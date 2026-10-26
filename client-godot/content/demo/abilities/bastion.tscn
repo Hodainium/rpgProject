@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ln8a4"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_oksru"]
+[ext_resource type="Resource" path="res://content/demo/effects/ward.tres" id="3_u20ic"]
+[ext_resource type="Resource" path="res://content/demo/effects/defense_up.tres" id="4_cy5s2"]
+[ext_resource type="Animation" path="res://content/demo/animations/bastion.tres" id="5_3mwj3"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="6_w2fjv"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="7_8cpiy"]
+
+[sub_resource type="Resource" id="Resource_a0oum"]
+script = ExtResource("2_oksru")
+id = &"ward"
+effect = ExtResource("3_u20ic")
+
+[sub_resource type="Resource" id="Resource_ukbed"]
+script = ExtResource("2_oksru")
+id = &"guard"
+effect = ExtResource("4_cy5s2")
+
+[node name="Bastion" type="Node" unique_id=146611151]
+script = ExtResource("1_ln8a4")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_oksru")]([SubResource("Resource_a0oum"), SubResource("Resource_ukbed")])
+animation = ExtResource("5_3mwj3")
+ability_tag = &"Ability.Ult.Bastion"
+activation_query = ExtResource("6_w2fjv")
+cost_effect = ExtResource("7_8cpiy")

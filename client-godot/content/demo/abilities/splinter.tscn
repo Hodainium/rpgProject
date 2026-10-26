@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_jq68p"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_w5mkt"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_yg32c"]
+[ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="4_upcry"]
+[ext_resource type="Animation" path="res://content/demo/animations/splinter.tres" id="5_qd1g5"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_10.tres" id="6_idbxg"]
+
+[sub_resource type="Resource" id="Resource_4lhum"]
+script = ExtResource("2_w5mkt")
+id = &"splinter"
+effect = ExtResource("3_yg32c")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 6000
+toughness_x100 = 5000
+
+[sub_resource type="Resource" id="Resource_f8o1n"]
+script = ExtResource("2_w5mkt")
+id = &"crack"
+effect = ExtResource("4_upcry")
+chance_x100 = 10000
+
+[node name="Splinter" type="Node" unique_id=2016608078]
+script = ExtResource("1_jq68p")
+executions = Array[ExtResource("2_w5mkt")]([SubResource("Resource_4lhum"), SubResource("Resource_f8o1n")])
+animation = ExtResource("5_qd1g5")
+ability_tag = &"Ability.Splinter"
+cost_effect = ExtResource("6_idbxg")

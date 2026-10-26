@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_xn8wx"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ypy7e"]
+[ext_resource type="Resource" path="res://content/demo/effects/poison.tres" id="3_wromi"]
+[ext_resource type="Resource" path="res://content/demo/effects/bleed.tres" id="4_7ipm6"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="5_0c4p7"]
+[ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="6_3wyya"]
+[ext_resource type="Animation" path="res://content/demo/animations/pandemic.tres" id="7_nrvo7"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="8_rjln5"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="9_rilfj"]
+
+[sub_resource type="Resource" id="Resource_ttyol"]
+script = ExtResource("2_ypy7e")
+id = &"poison"
+effect = ExtResource("3_wromi")
+chance_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_48qdb"]
+script = ExtResource("2_ypy7e")
+id = &"bleed"
+effect = ExtResource("4_7ipm6")
+chance_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_fx8u0"]
+script = ExtResource("2_ypy7e")
+id = &"burn"
+effect = ExtResource("5_0c4p7")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 6000
+chance_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_sgsvm"]
+script = ExtResource("2_ypy7e")
+id = &"expose"
+effect = ExtResource("6_3wyya")
+chance_x100 = 10000
+
+[node name="Pandemic" type="Node" unique_id=1140593249]
+script = ExtResource("1_xn8wx")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_ypy7e")]([SubResource("Resource_ttyol"), SubResource("Resource_48qdb"), SubResource("Resource_fx8u0"), SubResource("Resource_sgsvm")])
+animation = ExtResource("7_nrvo7")
+ability_tag = &"Ability.Ult.Pandemic"
+activation_query = ExtResource("8_rjln5")
+cost_effect = ExtResource("9_rilfj")

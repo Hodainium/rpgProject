@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_rt74p"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_6c2d0"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_j2c5a"]
+[ext_resource type="Animation" path="res://content/demo/animations/frost_nova.tres" id="4_e1u1a"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_20.tres" id="5_epxae"]
+
+[sub_resource type="Resource" id="Resource_3xwdr"]
+script = ExtResource("2_6c2d0")
+id = &"nova"
+effect = ExtResource("3_j2c5a")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 7000
+
+[node name="FrostNova" type="Node" unique_id=882458881]
+script = ExtResource("1_rt74p")
+targeting = 1
+executions = Array[ExtResource("2_6c2d0")]([SubResource("Resource_3xwdr")])
+animation = ExtResource("4_e1u1a")
+ability_tag = &"Ability.Frostnova"
+cost_effect = ExtResource("5_epxae")

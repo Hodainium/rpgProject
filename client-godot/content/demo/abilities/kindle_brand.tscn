@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_udtso"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_8f0dr"]
+[ext_resource type="Resource" path="res://content/demo/effects/seared.tres" id="3_alqwu"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="4_l66li"]
+[ext_resource type="Animation" path="res://content/demo/animations/kindle_brand.tres" id="5_1w1yp"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_15.tres" id="6_u07g2"]
+
+[sub_resource type="Resource" id="Resource_miga4"]
+script = ExtResource("2_8f0dr")
+id = &"sear"
+effect = ExtResource("3_alqwu")
+
+[sub_resource type="Resource" id="Resource_ynwc0"]
+script = ExtResource("2_8f0dr")
+id = &"brand"
+effect = ExtResource("4_l66li")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 15000
+toughness_x100 = 5000
+
+[node name="KindleBrand" type="Node" unique_id=1197338939]
+script = ExtResource("1_udtso")
+executions = Array[ExtResource("2_8f0dr")]([SubResource("Resource_miga4"), SubResource("Resource_ynwc0")])
+animation = ExtResource("5_1w1yp")
+ability_tag = &"Ability.Kindlebrand"
+cost_effect = ExtResource("6_u07g2")

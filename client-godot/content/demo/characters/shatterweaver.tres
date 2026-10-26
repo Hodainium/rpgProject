@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/shatter_chorus.tscn" id="1_f6e6d"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/fault_line.tscn" id="2_fe3i4"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/fracture_field.tscn" id="3_3lahc"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/splinter.tscn" id="4_b55tj"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/resonance.tscn" id="5_7neym"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/chorus_echo.tscn" id="6_bfs10"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="7_5mf0x"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="8_gl12k"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="9_gkiwo"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="10_k0y32"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="11_jixo4"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="12_wmt23"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="13_ab228"]
+
+[resource]
+script = ExtResource("13_ab228")
+id = &"demo.character.shatterweaver"
+attribute_set = ExtResource("12_wmt23")
+abilities = Array[PackedScene]([ExtResource("1_f6e6d"), ExtResource("2_fe3i4"), ExtResource("3_3lahc"), ExtResource("4_b55tj"), ExtResource("5_7neym"), ExtResource("6_bfs10"), ExtResource("7_5mf0x"), ExtResource("8_gl12k"), ExtResource("9_gkiwo"), ExtResource("10_k0y32"), ExtResource("11_jixo4")])
+display_name = "Shatterweaver"
+display_color = Color(0.9411765, 0.5019608, 0.5019608, 1)
+tags = Array[StringName]([&"Character.Shatterweaver"])
+stats_x100 = Dictionary[String, int]({
+"atk": 38000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 23000,
+"energy": 0,
+"hp": 82000,
+"max_hp": 82000,
+"max_mp": 11000,
+"max_toughness": 0,
+"mp": 11000,
+"spd": 11800,
+"toughness": 0
+})

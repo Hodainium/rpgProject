@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_nihy0"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_h3b6p"]
+[ext_resource type="Resource" path="res://content/demo/effects/fracture.tres" id="3_te5gt"]
+[ext_resource type="Animation" path="res://content/demo/animations/chorus_echo.tres" id="4_kvmyg"]
+
+[sub_resource type="Resource" id="Resource_k8826"]
+script = ExtResource("2_h3b6p")
+id = &"fracture"
+effect = ExtResource("3_te5gt")
+
+[node name="ChorusEcho" type="Node" unique_id=656401648]
+script = ExtResource("1_nihy0")
+targeting = 4
+executions = Array[ExtResource("2_h3b6p")]([SubResource("Resource_k8826")])
+animation = ExtResource("4_kvmyg")
+ability_tag = &"Ability.Passive.Chorusecho"
+trigger_event_tag = &"Event.Ability.Used.Ultimate"

@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_f5iuw"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_82e1y"]
+[ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="3_yc5ue"]
+[ext_resource type="Resource" path="res://content/demo/effects/slow.tres" id="4_hpmjr"]
+[ext_resource type="Animation" path="res://content/demo/animations/discord.tres" id="5_llf2l"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_15.tres" id="6_qur43"]
+
+[sub_resource type="Resource" id="Resource_s3g5p"]
+script = ExtResource("2_82e1y")
+id = &"expose"
+effect = ExtResource("3_yc5ue")
+chance_x100 = 8000
+
+[sub_resource type="Resource" id="Resource_mnmbg"]
+script = ExtResource("2_82e1y")
+id = &"slow"
+effect = ExtResource("4_hpmjr")
+chance_x100 = 5000
+
+[node name="Discord" type="Node" unique_id=1591668807]
+script = ExtResource("1_f5iuw")
+targeting = 1
+executions = Array[ExtResource("2_82e1y")]([SubResource("Resource_s3g5p"), SubResource("Resource_mnmbg")])
+animation = ExtResource("5_llf2l")
+ability_tag = &"Ability.Discord"
+cost_effect = ExtResource("6_qur43")

@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/rain_of_arrows.tscn" id="1_dr1t7"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/quick_shot.tscn" id="2_0eq47"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/mark_prey.tscn" id="3_p23b7"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hunters_instinct.tscn" id="4_ibmui"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/quarry.tscn" id="5_2f7b6"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="6_jcgs8"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="7_pwlar"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="8_d5wog"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="9_62iy8"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="10_61i68"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_x5wjs"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_0rhvb"]
+
+[resource]
+script = ExtResource("12_0rhvb")
+id = &"demo.character.ranger"
+attribute_set = ExtResource("11_x5wjs")
+abilities = Array[PackedScene]([ExtResource("1_dr1t7"), ExtResource("2_0eq47"), ExtResource("3_p23b7"), ExtResource("4_ibmui"), ExtResource("5_2f7b6"), ExtResource("6_jcgs8"), ExtResource("7_pwlar"), ExtResource("8_d5wog"), ExtResource("9_62iy8"), ExtResource("10_61i68")])
+display_name = "Ranger"
+display_color = Color(0.13333334, 0.54509807, 0.13333334, 1)
+tags = Array[StringName]([&"Character.Ranger"])
+stats_x100 = Dictionary[String, int]({
+"atk": 48000,
+"crit_dmg": 5000,
+"crit_rate": 2000,
+"def": 22000,
+"energy": 0,
+"hp": 85000,
+"max_hp": 85000,
+"max_mp": 8000,
+"max_toughness": 0,
+"mp": 8000,
+"spd": 11500,
+"toughness": 0
+})

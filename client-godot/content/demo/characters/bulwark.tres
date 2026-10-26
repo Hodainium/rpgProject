@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bastion.tscn" id="1_lkssy"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/shield_slam.tscn" id="2_kpqss"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/fortify.tscn" id="3_10f0t"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/retaliation.tscn" id="4_g1y82"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/fury_rising.tscn" id="5_buwk1"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="6_5d0pu"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="7_a3lw0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="8_yiltl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="9_1gw1t"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="10_tdsui"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_m78rq"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_8xh45"]
+
+[resource]
+script = ExtResource("12_8xh45")
+id = &"demo.character.bulwark"
+attribute_set = ExtResource("11_m78rq")
+abilities = Array[PackedScene]([ExtResource("1_lkssy"), ExtResource("2_kpqss"), ExtResource("3_10f0t"), ExtResource("4_g1y82"), ExtResource("5_buwk1"), ExtResource("6_5d0pu"), ExtResource("7_a3lw0"), ExtResource("8_yiltl"), ExtResource("9_1gw1t"), ExtResource("10_tdsui")])
+display_name = "Bulwark"
+display_color = Color(0.7411765, 0.7176471, 0.41960785, 1)
+tags = Array[StringName]([&"Character.Bulwark"])
+stats_x100 = Dictionary[String, int]({
+"atk": 32000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 42000,
+"energy": 0,
+"hp": 140000,
+"max_hp": 140000,
+"max_mp": 6000,
+"max_toughness": 0,
+"mp": 6000,
+"spd": 9000,
+"toughness": 0
+})

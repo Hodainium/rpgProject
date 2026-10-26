@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_50n4s"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_c8f06"]
+[ext_resource type="Resource" path="res://content/demo/effects/seared.tres" id="3_honc5"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="4_3nj8p"]
+[ext_resource type="Animation" path="res://content/demo/animations/fyrefly_strike.tres" id="5_1x2fx"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="6_wtdfp"]
+
+[sub_resource type="Resource" id="Resource_yw8ts"]
+script = ExtResource("2_c8f06")
+id = &"sear"
+effect = ExtResource("3_honc5")
+
+[sub_resource type="Resource" id="Resource_mqha8"]
+script = ExtResource("2_c8f06")
+id = &"strike"
+effect = ExtResource("4_3nj8p")
+damage_mode = 2
+targets = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 20000
+toughness_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_e1vca"]
+script = ExtResource("2_c8f06")
+id = &"splash"
+effect = ExtResource("4_3nj8p")
+damage_mode = 2
+targets = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 8000
+
+[sub_resource type="Resource" id="Resource_w1phs"]
+script = ExtResource("6_wtdfp")
+require_all_tags = Array[StringName]([&"State.Combustion"])
+
+[node name="FyreflyStrike" type="Node" unique_id=877742265]
+script = ExtResource("1_50n4s")
+targeting = 2
+executions = Array[ExtResource("2_c8f06")]([SubResource("Resource_yw8ts"), SubResource("Resource_mqha8"), SubResource("Resource_e1vca")])
+animation = ExtResource("5_1x2fx")
+ability_tag = &"Ability.Fyreflystrike"
+activation_query = SubResource("Resource_w1phs")

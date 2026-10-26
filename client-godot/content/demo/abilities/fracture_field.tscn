@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_yomy8"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_137l4"]
+[ext_resource type="Resource" path="res://content/demo/effects/fracture.tres" id="3_80s7b"]
+[ext_resource type="Animation" path="res://content/demo/animations/fracture_field.tres" id="4_vxn3g"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_15.tres" id="5_q0mlj"]
+
+[sub_resource type="Resource" id="Resource_rbahh"]
+script = ExtResource("2_137l4")
+id = &"fracture"
+effect = ExtResource("3_80s7b")
+
+[node name="FractureField" type="Node" unique_id=1130117483]
+script = ExtResource("1_yomy8")
+targeting = 4
+executions = Array[ExtResource("2_137l4")]([SubResource("Resource_rbahh")])
+animation = ExtResource("4_vxn3g")
+ability_tag = &"Ability.Fracturefield"
+cost_effect = ExtResource("5_q0mlj")

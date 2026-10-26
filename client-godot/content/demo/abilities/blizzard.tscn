@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_fpwvk"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_wsms8"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_ob3oo"]
+[ext_resource type="Resource" path="res://content/demo/effects/slow.tres" id="4_117he"]
+[ext_resource type="Animation" path="res://content/demo/animations/blizzard.tres" id="5_2h7q4"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_20.tres" id="6_wfn72"]
+
+[sub_resource type="Resource" id="Resource_86x85"]
+script = ExtResource("2_wsms8")
+id = &"storm"
+effect = ExtResource("3_ob3oo")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 7000
+
+[sub_resource type="Resource" id="Resource_8qv4h"]
+script = ExtResource("2_wsms8")
+id = &"slow"
+effect = ExtResource("4_117he")
+chance_x100 = 10000
+
+[node name="Blizzard" type="Node" unique_id=1243669655]
+script = ExtResource("1_fpwvk")
+targeting = 1
+executions = Array[ExtResource("2_wsms8")]([SubResource("Resource_86x85"), SubResource("Resource_8qv4h")])
+animation = ExtResource("5_2h7q4")
+ability_tag = &"Ability.Blizzard"
+cost_effect = ExtResource("6_wfn72")

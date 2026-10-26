@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_t3e48"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_4dkd1"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_iugyw"]
+[ext_resource type="Animation" path="res://content/demo/animations/fireburst.tres" id="4_npun1"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_15.tres" id="5_0xdsc"]
+
+[sub_resource type="Resource" id="Resource_ytnga"]
+script = ExtResource("2_4dkd1")
+id = &"burst"
+effect = ExtResource("3_iugyw")
+damage_mode = 2
+targets = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 14000
+
+[sub_resource type="Resource" id="Resource_muhup"]
+script = ExtResource("2_4dkd1")
+id = &"splash"
+effect = ExtResource("3_iugyw")
+damage_mode = 2
+targets = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 6000
+
+[node name="Fireburst" type="Node" unique_id=181217705]
+script = ExtResource("1_t3e48")
+targeting = 2
+executions = Array[ExtResource("2_4dkd1")]([SubResource("Resource_ytnga"), SubResource("Resource_muhup")])
+animation = ExtResource("4_npun1")
+ability_tag = &"Ability.Fireburst"
+cost_effect = ExtResource("5_0xdsc")

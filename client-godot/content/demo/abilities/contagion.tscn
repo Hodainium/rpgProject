@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_0ffh6"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ayixo"]
+[ext_resource type="Resource" path="res://content/demo/effects/poison.tres" id="3_uoqrg"]
+[ext_resource type="Animation" path="res://content/demo/animations/contagion.tres" id="4_ixorl"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_15.tres" id="5_yd8t7"]
+
+[sub_resource type="Resource" id="Resource_oylru"]
+script = ExtResource("2_ayixo")
+id = &"poison"
+effect = ExtResource("3_uoqrg")
+chance_x100 = 8000
+
+[sub_resource type="Resource" id="Resource_rcwwh"]
+script = ExtResource("2_ayixo")
+id = &"poison_again"
+effect = ExtResource("3_uoqrg")
+chance_x100 = 8000
+
+[node name="Contagion" type="Node" unique_id=615341588]
+script = ExtResource("1_0ffh6")
+targeting = 1
+executions = Array[ExtResource("2_ayixo")]([SubResource("Resource_oylru"), SubResource("Resource_rcwwh")])
+animation = ExtResource("4_ixorl")
+ability_tag = &"Ability.Contagion"
+cost_effect = ExtResource("5_yd8t7")

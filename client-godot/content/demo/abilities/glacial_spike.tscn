@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ht4ue"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ppis8"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_fbthg"]
+[ext_resource type="Resource" path="res://content/demo/effects/freeze.tres" id="4_w8b6x"]
+[ext_resource type="Animation" path="res://content/demo/animations/glacial_spike.tres" id="5_hcis1"]
+[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_15.tres" id="6_wm0ka"]
+
+[sub_resource type="Resource" id="Resource_l81ab"]
+script = ExtResource("2_ppis8")
+id = &"spike"
+effect = ExtResource("3_fbthg")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 16000
+
+[sub_resource type="Resource" id="Resource_f3bu8"]
+script = ExtResource("2_ppis8")
+id = &"freeze"
+effect = ExtResource("4_w8b6x")
+chance_x100 = 3500
+
+[node name="GlacialSpike" type="Node" unique_id=1919928491]
+script = ExtResource("1_ht4ue")
+executions = Array[ExtResource("2_ppis8")]([SubResource("Resource_l81ab"), SubResource("Resource_f3bu8")])
+animation = ExtResource("5_hcis1")
+ability_tag = &"Ability.Glacialspike"
+cost_effect = ExtResource("6_wm0ka")

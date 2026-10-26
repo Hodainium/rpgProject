@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_pbmr7"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_u4res"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_t1rdo"]
+[ext_resource type="Resource" path="res://content/demo/effects/freeze.tres" id="4_yab0y"]
+[ext_resource type="Animation" path="res://content/demo/animations/absolute_zero.tres" id="5_ooq1e"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="6_a8aux"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="7_syfv5"]
+
+[sub_resource type="Resource" id="Resource_0ktad"]
+script = ExtResource("2_u4res")
+id = &"zero"
+effect = ExtResource("3_t1rdo")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 16000
+
+[sub_resource type="Resource" id="Resource_qrhx7"]
+script = ExtResource("2_u4res")
+id = &"freeze"
+effect = ExtResource("4_yab0y")
+chance_x100 = 5000
+
+[node name="AbsoluteZero" type="Node" unique_id=47220745]
+script = ExtResource("1_pbmr7")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_u4res")]([SubResource("Resource_0ktad"), SubResource("Resource_qrhx7")])
+animation = ExtResource("5_ooq1e")
+ability_tag = &"Ability.Ult.Absolutezero"
+activation_query = ExtResource("6_a8aux")
+cost_effect = ExtResource("7_syfv5")

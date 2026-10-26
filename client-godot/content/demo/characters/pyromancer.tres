@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/supernova.tscn" id="1_srm27"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ember.tscn" id="2_jpiyj"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ignite.tscn" id="3_py410"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/inferno.tscn" id="4_rs6ek"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/kindling.tscn" id="5_adcfs"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="6_2t3b8"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="7_337kf"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="8_sghug"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="9_glrdo"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="10_k0q66"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_o1rwa"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_apcyj"]
+
+[resource]
+script = ExtResource("12_apcyj")
+id = &"demo.character.pyromancer"
+attribute_set = ExtResource("11_o1rwa")
+abilities = Array[PackedScene]([ExtResource("1_srm27"), ExtResource("2_jpiyj"), ExtResource("3_py410"), ExtResource("4_rs6ek"), ExtResource("5_adcfs"), ExtResource("6_2t3b8"), ExtResource("7_337kf"), ExtResource("8_sghug"), ExtResource("9_glrdo"), ExtResource("10_k0q66")])
+display_name = "Pyromancer"
+display_color = Color(1, 0.27058825, 0, 1)
+tags = Array[StringName]([&"Character.Pyromancer"])
+stats_x100 = Dictionary[String, int]({
+"atk": 50000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 20000,
+"energy": 0,
+"energy_regen": 12500,
+"hp": 78000,
+"max_hp": 78000,
+"max_mp": 12000,
+"max_toughness": 0,
+"mp": 12000,
+"spd": 11000,
+"toughness": 0
+})

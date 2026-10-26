@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_fcwr0"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_c5wtu"]
+[ext_resource type="Resource" path="res://content/demo/effects/combustion.tres" id="3_2rwo4"]
+[ext_resource type="Animation" path="res://content/demo/animations/complete_combustion.tres" id="4_e805r"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_d8a24"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_6l1c5"]
+
+[sub_resource type="Resource" id="Resource_fwdla"]
+script = ExtResource("2_c5wtu")
+id = &"combust"
+effect = ExtResource("3_2rwo4")
+
+[node name="CompleteCombustion" type="Node" unique_id=1786552054]
+script = ExtResource("1_fcwr0")
+targeting = 5
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_c5wtu")]([SubResource("Resource_fwdla")])
+animation = ExtResource("4_e805r")
+ability_tag = &"Ability.Ult.Combustion"
+activation_query = ExtResource("5_d8a24")
+cost_effect = ExtResource("6_6l1c5")

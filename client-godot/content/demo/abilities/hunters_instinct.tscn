@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_guf8b"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_r8b2l"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_cokwc"]
+[ext_resource type="Animation" path="res://content/demo/animations/hunters_instinct.tres" id="4_arccf"]
+
+[sub_resource type="Resource" id="Resource_lj8kw"]
+script = ExtResource("2_r8b2l")
+id = &"volley"
+effect = ExtResource("3_cokwc")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+
+[node name="HuntersInstinct" type="Node" unique_id=1873576769]
+script = ExtResource("1_guf8b")
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+executions = Array[ExtResource("2_r8b2l")]([SubResource("Resource_lj8kw")])
+animation = ExtResource("4_arccf")
+ability_tag = &"Ability.Passive.Huntersinstinct"
+trigger_event_tag = &"Event.Damage.Dealt.Weakness"

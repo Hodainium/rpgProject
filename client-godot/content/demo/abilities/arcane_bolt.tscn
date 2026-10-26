@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_4lata"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_e4lb8"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_ih62j"]
+[ext_resource type="Animation" path="res://content/demo/animations/arcane_bolt.tres" id="4_uro1m"]
+
+[sub_resource type="Resource" id="Resource_xmdum"]
+script = ExtResource("2_e4lb8")
+id = &"bolt"
+effect = ExtResource("3_ih62j")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 9000
+
+[node name="ArcaneBolt" type="Node" unique_id=969172166]
+script = ExtResource("1_4lata")
+executions = Array[ExtResource("2_e4lb8")]([SubResource("Resource_xmdum")])
+animation = ExtResource("4_uro1m")
+ability_tag = &"Ability.Arcanebolt"

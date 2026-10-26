@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_rbb1a"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_2nuo8"]
+[ext_resource type="Resource" path="res://content/demo/effects/class_charge_10.tres" id="3_6756d"]
+[ext_resource type="Animation" path="res://content/demo/animations/virulence.tres" id="4_xsmw6"]
+
+[sub_resource type="Resource" id="Resource_5clcp"]
+script = ExtResource("2_2nuo8")
+id = &"charge"
+effect = ExtResource("3_6756d")
+
+[node name="Virulence" type="Node" unique_id=768454603]
+script = ExtResource("1_rbb1a")
+targeting = 5
+executions = Array[ExtResource("2_2nuo8")]([SubResource("Resource_5clcp")])
+animation = ExtResource("4_xsmw6")
+ability_tag = &"Ability.Passive.Virulence"
+trigger_event_tag = &"Event.Status.Resisted"

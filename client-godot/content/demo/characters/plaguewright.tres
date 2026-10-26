@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/pandemic.tscn" id="1_wr4yf"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/infect.tscn" id="2_54xvd"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/contagion.tscn" id="3_d3fmv"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/lingering_malady.tscn" id="4_00smm"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/virulence.tscn" id="5_xdb2a"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="6_wcvw5"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="7_srlb3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="8_q2aip"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="9_u0575"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="10_5m4we"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_s4ls4"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_jn2kp"]
+
+[resource]
+script = ExtResource("12_jn2kp")
+id = &"demo.character.plaguewright"
+attribute_set = ExtResource("11_s4ls4")
+abilities = Array[PackedScene]([ExtResource("1_wr4yf"), ExtResource("2_54xvd"), ExtResource("3_d3fmv"), ExtResource("4_00smm"), ExtResource("5_xdb2a"), ExtResource("6_wcvw5"), ExtResource("7_srlb3"), ExtResource("8_q2aip"), ExtResource("9_u0575"), ExtResource("10_5m4we")])
+display_name = "Plaguewright"
+display_color = Color(0.6039216, 0.8039216, 0.19607843, 1)
+tags = Array[StringName]([&"Character.Plaguewright"])
+stats_x100 = Dictionary[String, int]({
+"atk": 40000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"debuff_turns": 100,
+"def": 22000,
+"energy": 0,
+"hp": 82000,
+"max_hp": 82000,
+"max_mp": 12000,
+"max_toughness": 0,
+"mp": 12000,
+"spd": 11200,
+"toughness": 0
+})

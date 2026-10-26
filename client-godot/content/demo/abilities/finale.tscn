@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_8gc4p"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ck5d1"]
+[ext_resource type="Resource" path="res://content/demo/effects/finale.tres" id="3_cfsah"]
+[ext_resource type="Animation" path="res://content/demo/animations/finale.tres" id="4_t7l5e"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_wnhmk"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_sad68"]
+
+[sub_resource type="Resource" id="Resource_uicub"]
+script = ExtResource("2_ck5d1")
+id = &"finale"
+effect = ExtResource("3_cfsah")
+delay_x100 = -10000
+
+[node name="Finale" type="Node" unique_id=1736324378]
+script = ExtResource("1_8gc4p")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_ck5d1")]([SubResource("Resource_uicub")])
+animation = ExtResource("4_t7l5e")
+ability_tag = &"Ability.Ult.Finale"
+activation_query = ExtResource("5_wnhmk")
+cost_effect = ExtResource("6_sad68")

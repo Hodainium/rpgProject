@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ggifk"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_w5fod"]
+[ext_resource type="Resource" path="res://content/demo/effects/fury.tres" id="3_68oex"]
+[ext_resource type="Resource" path="res://content/demo/effects/class_charge_10.tres" id="4_nuin1"]
+[ext_resource type="Animation" path="res://content/demo/animations/fury_rising.tres" id="5_qesv1"]
+
+[sub_resource type="Resource" id="Resource_qdslg"]
+script = ExtResource("2_w5fod")
+id = &"fury"
+effect = ExtResource("3_68oex")
+
+[sub_resource type="Resource" id="Resource_sokbn"]
+script = ExtResource("2_w5fod")
+id = &"charge"
+effect = ExtResource("4_nuin1")
+
+[node name="FuryRising" type="Node" unique_id=1338061084]
+script = ExtResource("1_ggifk")
+targeting = 5
+executions = Array[ExtResource("2_w5fod")]([SubResource("Resource_qdslg"), SubResource("Resource_sokbn")])
+animation = ExtResource("5_qesv1")
+ability_tag = &"Ability.Passive.Furyrising"
+trigger_event_tag = &"Event.Damage.Taken"

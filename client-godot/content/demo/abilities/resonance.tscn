@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_uftgw"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ogoqo"]
+[ext_resource type="Resource" path="res://content/demo/effects/class_charge_20.tres" id="3_3qaey"]
+[ext_resource type="Animation" path="res://content/demo/animations/resonance.tres" id="4_apshm"]
+
+[sub_resource type="Resource" id="Resource_2hu2p"]
+script = ExtResource("2_ogoqo")
+id = &"charge"
+effect = ExtResource("3_3qaey")
+
+[node name="Resonance" type="Node" unique_id=1786182365]
+script = ExtResource("1_uftgw")
+targeting = 5
+executions = Array[ExtResource("2_ogoqo")]([SubResource("Resource_2hu2p")])
+animation = ExtResource("4_apshm")
+ability_tag = &"Ability.Passive.Resonance"
+trigger_event_tag = &"Event.Damage.Dealt.Break"

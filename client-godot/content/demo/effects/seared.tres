@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_0amb7"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="2_dvkc4"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_hd601"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_xh3yk"]
+
+[sub_resource type="Resource" id="Resource_tcbnf"]
+script = ExtResource("1_0amb7")
+ignore_tags = Array[StringName]([&"Immune.Exposed", &"Immune.Debuff"])
+
+[resource]
+script = ExtResource("4_xh3yk")
+policy = 3
+duration_turns = 2
+application_query = SubResource("Resource_tcbnf")
+granted_tags = Array[StringName]([&"Weakness.Fire", &"Status.Debuff.Exposed"])

@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_rmhyf"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_sgvvg"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_wajcp"]
+[ext_resource type="Animation" path="res://content/demo/animations/shatter_chorus.tres" id="4_6q55t"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_x57t8"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_qfgyr"]
+
+[sub_resource type="Resource" id="Resource_cr1e8"]
+script = ExtResource("2_sgvvg")
+id = &"chorus"
+effect = ExtResource("3_wajcp")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 6000
+toughness_x100 = 8000
+
+[node name="ShatterChorus" type="Node" unique_id=2011578152]
+script = ExtResource("1_rmhyf")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_sgvvg")]([SubResource("Resource_cr1e8")])
+animation = ExtResource("4_6q55t")
+ability_tag = &"Ability.Ult.Shatterchorus"
+activation_query = ExtResource("5_x57t8")
+cost_effect = ExtResource("6_qfgyr")

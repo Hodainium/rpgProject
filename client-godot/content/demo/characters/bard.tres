@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/finale.tscn" id="1_tpfkk"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/dissonance.tscn" id="2_75h4w"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/anthem.tscn" id="3_4p8fd"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/discord.tscn" id="4_v3fao"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/encore.tscn" id="5_fq47u"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="6_q1r8r"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="7_4k0bs"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="8_3m1w6"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="9_8dbjv"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="10_xwxqm"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_kxksa"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_ch5xb"]
+
+[resource]
+script = ExtResource("12_ch5xb")
+id = &"demo.character.bard"
+attribute_set = ExtResource("11_kxksa")
+abilities = Array[PackedScene]([ExtResource("1_tpfkk"), ExtResource("2_75h4w"), ExtResource("3_4p8fd"), ExtResource("4_v3fao"), ExtResource("5_fq47u"), ExtResource("6_q1r8r"), ExtResource("7_4k0bs"), ExtResource("8_3m1w6"), ExtResource("9_8dbjv"), ExtResource("10_xwxqm")])
+display_name = "Bard"
+display_color = Color(1, 0.4117647, 0.7058824, 1)
+tags = Array[StringName]([&"Character.Bard"])
+stats_x100 = Dictionary[String, int]({
+"atk": 38000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 24000,
+"energy": 0,
+"hp": 85000,
+"max_hp": 85000,
+"max_mp": 11000,
+"max_toughness": 0,
+"mp": 11000,
+"spd": 12000,
+"toughness": 0
+})

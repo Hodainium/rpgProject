@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_jlhww"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_34iyl"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_bh4g4"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="4_lbj1a"]
+[ext_resource type="Animation" path="res://content/demo/animations/supernova.tres" id="5_q35c8"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="6_qs8wb"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="7_s5ysu"]
+
+[sub_resource type="Resource" id="Resource_u4mh2"]
+script = ExtResource("2_34iyl")
+id = &"nova"
+effect = ExtResource("3_bh4g4")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 22000
+
+[sub_resource type="Resource" id="Resource_j1m0s"]
+script = ExtResource("2_34iyl")
+id = &"burn"
+effect = ExtResource("4_lbj1a")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 10000
+chance_x100 = 10000
+
+[node name="Supernova" type="Node" unique_id=675565531]
+script = ExtResource("1_jlhww")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+executions = Array[ExtResource("2_34iyl")]([SubResource("Resource_u4mh2"), SubResource("Resource_j1m0s")])
+animation = ExtResource("5_q35c8")
+ability_tag = &"Ability.Ult.Supernova"
+activation_query = ExtResource("6_qs8wb")
+cost_effect = ExtResource("7_s5ysu")
