@@ -1,6 +1,8 @@
 ## Script runner (spec dev-tools 2.6): plays a text file of console commands without a window and writes the final
 ## state as JSON. One command per line; blank lines and lines starting with # are skipped. Battles run on auto unless
-## --manual (then use `act`). Exit 0 ok, 2 when a command failed (the line is named), 1 tool error.
+## --manual (then use `act`). Exit 0 ok, 2 when a command failed or raised a script or engine error (the line is named,
+## the errors are printed and in the JSON as the command's "errors"; errors while starting are "startupErrors"),
+## 1 tool error.
 ##   godot --headless --path client-godot --quit-after 100000 res://game/tools/dev_run.tscn -- --script run.txt
 ##     [--out state.json] [--content-root res://content/] [--commands <folder of throwaway commands>] [--manual]
 ##     [--window --shots <folder>]   (--window: run without --headless so `shot <name>` can capture the screen)
@@ -12,9 +14,11 @@ const SETTLE_FRAMES: int = 20000
 
 var console: DevConsole
 var game: GameMain
+var _errors := ScriptErrorLog.new()
 
 
 func _ready() -> void:
+	OS.add_logger(_errors)
 	var args := OS.get_cmdline_user_args()
 	var script_path := _arg(args, "--script", "")
 	if script_path == "" or not FileAccess.file_exists(script_path):
@@ -42,6 +46,10 @@ func _ready() -> void:
 
 	var results: Array = []
 	var failed_lines := PackedStringArray()
+	var startup_errors := _errors.take()
+	_print_errors(startup_errors)
+	if not startup_errors.is_empty():
+		failed_lines.append("startup: %d script or engine error(s)" % startup_errors.size())
 	var number := 0
 	for line in FileAccess.get_file_as_string(script_path).split("\n"):
 		number += 1
@@ -53,12 +61,20 @@ func _ready() -> void:
 		var result: Dictionary = await console.execute(text)
 		await _settle()
 		print(result["text"])
-		results.append({"line": number, "command": text, "ok": result["ok"], "reply": result["text"]})
-		if not result["ok"]:
-			failed_lines.append("line %d: %s" % [number, text])
+		var entry := {"line": number, "command": text, "ok": result["ok"], "reply": result["text"]}
+		var errors := _errors.take()
+		_print_errors(errors)
+		if not errors.is_empty():
+			entry["errors"] = errors
+		results.append(entry)
+		if not result["ok"] or not errors.is_empty():
+			failed_lines.append("line %d: %s%s" % [number, text,
+				" (%d script or engine error(s))" % errors.size() if not errors.is_empty() else ""])
 	var report := DevReport.state_of(game.run)
 	report["commands"] = results
 	report["failed"] = Array(failed_lines)
+	if not startup_errors.is_empty():
+		report["startupErrors"] = startup_errors
 	if not console.message_log.is_empty():
 		report["messages"] = Array(console.message_log)  # spec gameplay-messages 2.4: `messages on` in the script
 	var out := _arg(args, "--out", "")
@@ -68,7 +84,13 @@ func _ready() -> void:
 		file.close()
 	print("dev_run: %d command(s), %d failed%s" % [results.size(), failed_lines.size(),
 		("\n  " + "\n  ".join(failed_lines)) if not failed_lines.is_empty() else ""])
+	OS.remove_logger(_errors)
 	get_tree().quit(2 if not failed_lines.is_empty() else 0)
+
+
+func _print_errors(errors: Array[String]) -> void:
+	for text in errors:
+		print("ERROR (dev_run caught): ", text)
 
 
 ## Waits until no battle is being fought (auto plays it) or a party member waits for `act`.

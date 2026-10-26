@@ -291,10 +291,48 @@ func test_dev_script_runner() -> void:
 	check(failed["failed"][0].contains("line 2"), "and names the line")
 
 
-func _runner(script: String, out: String) -> int:
+func _runner(script: String, out: String, extra: Array = []) -> int:
 	var args := ["--headless", "--path", ProjectSettings.globalize_path("res://"), "--quit-after", "100000",
 		"res://game/tools/dev_run.tscn", "--", "--script", script, "--out", out, "--content-root", FIXTURES]
-	return OS.execute(OS.get_executable_path(), args)
+	return OS.execute(OS.get_executable_path(), args + extra)
+
+
+## A command that raises a script error fails its line (exit 2), even though its reply looks fine: the JSON names the
+## line and carries the error. The throwaway command is removed from user://dev_commands/ afterwards.
+func test_dev_script_runner_catches_errors() -> void:
+	var folder := SCRATCH + "boom_commands/"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(folder))
+	_write(folder + "boom.gd", "extends DevCommand
+
+
+func _init() -> void:
+	name = \"boom\"
+	usage = \"boom\"
+" +
+		"	help = \"Test only: raises a script error.\"
+
+
+func run(_ctx: DevContext, _args: PackedStringArray) -> String:
+" +
+		"	var values := {}
+	return values.nope
+")
+	var script := ProjectSettings.globalize_path(SCRATCH + "boom.txt")
+	var out := ProjectSettings.globalize_path(SCRATCH + "boom.json")
+	_write(SCRATCH + "boom.txt", "new %s 7
+boom
+state
+" % PARTY)
+	var code := _runner(script, out, ["--commands", ProjectSettings.globalize_path(folder)])
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(DevConsole.USER_COMMANDS_DIR + "boom.gd"))
+	eq(code, 2, "a script error fails the run")
+	var state: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(out))
+	eq(state["failed"].size(), 1, "one failed line")
+	check(state["failed"][0].contains("line 2: boom") and state["failed"][0].contains("1 script or engine error"),
+		"the boom line is named with its error count: %s" % [state["failed"]])
+	check(state["commands"][1]["ok"] and state["commands"][1]["errors"][0].contains("'nope'"),
+		"the reply was ok, the error is in the JSON")
+	check(not state["commands"][2].has("errors"), "the next command is clean")
 
 
 static func _stat(run: RunController, slot: int, attribute_name: String) -> int:

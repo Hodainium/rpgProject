@@ -1,8 +1,9 @@
 ## In-house GDScript test runner (spec "Test runner"). Runs as a scene so GodotGAS's autoloads exist:
 ##   godot --headless --path client-godot res://tests/run_tests.tscn [-- --filter <text>] [-- --update-goldens]
 ##     [-- --shard i/n]   (only the tests whose index in file-then-method order is i mod n; tools/godot_tests.sh)
-## Discovers res://tests/**/test_*.gd, runs every test_* method, exits 1 on any failure. A script or engine error during a
-## test (TestErrorLog) fails it unless the test expected it (TestCase.expect_error); one outside any test fails the run.
+## Discovers res://tests/**/test_*.gd, runs every test_* method, exits 1 on any failure. A script or engine error
+## during a test (ScriptErrorLog) fails it unless the test expected it (TestCase.expect_error); one outside any test
+## fails the run.
 extends Node
 
 const TEST_ROOT: String = "res://tests/"
@@ -20,7 +21,7 @@ func _ready() -> void:
 		if parts.size() == 2 and parts[0].is_valid_int() and parts[1].is_valid_int() and int(parts[1]) > 0:
 			shard = [int(parts[0]), int(parts[1])]
 
-	var errors := TestErrorLog.new()
+	var errors := ScriptErrorLog.new()
 	OS.add_logger(errors)
 	# Errors raised between tests (loading a test file, the runner itself).
 	var stray: Array[String] = []

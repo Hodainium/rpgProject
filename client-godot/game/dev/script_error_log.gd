@@ -1,10 +1,11 @@
-## Spec combat-replay-core "Test runner": catches every error raised while the tests run, so none passes silently.
+## Catches every error raised while it is installed (OS.add_logger), so none passes silently: the test runner (spec
+## combat-replay-core "Test runner"), the play reports and the script runner (spec dev-tools) use it.
 ## A GDScript runtime error (invalid access, bad call…) only aborts the function it happened in and the caller goes on
-## with a default value; without this the test would still report ok. Kept: script errors and engine errors
-## (ERR_FAIL… in C++, e.g. a missing node). Ignored: warnings, and push_error(), which system code uses on purpose
-## (RunController's runner errors; their tests check the returned error instead).
-## Installed with OS.add_logger() by run_tests.gd; the logger may be called from any thread.
-class_name TestErrorLog
+## with a default value; without this a test, a report or a script run would still say ok. Kept: script errors and
+## engine errors (ERR_FAIL… in C++, e.g. a missing node). Ignored: warnings, and push_error(), which system code uses on
+## purpose (RunController's runner errors; their tests check the returned error, reports count stopped runs).
+## The logger may be called from any thread.
+class_name ScriptErrorLog
 extends Logger
 
 var _mutex := Mutex.new()

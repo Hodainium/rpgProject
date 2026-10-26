@@ -10,10 +10,15 @@
 ##   (give --quit-after a large frame count: every battle step takes frames)
 ## Shards (spec playable-demo 2.3d): run seed ranges in parallel processes with --records, then
 ##     -- --merge shard1.json shard2.json ... --out all.json   (game/tools/play_sharded.sh does both)
+## Every mode also exits 3 on any script or engine error (ScriptErrorLog), printed at the end; with --play they are in
+## the report too ("errors", per seed).
 extends Node
+
+var _errors := ScriptErrorLog.new()
 
 
 func _ready() -> void:
+	OS.add_logger(_errors)
 	var args := OS.get_cmdline_user_args()
 	var root := _arg(args, "--content-root", "res://content/")
 	var content := ContentIndex.new(root)
@@ -21,7 +26,7 @@ func _ready() -> void:
 	var picked := RunController.pick_run(content, run_id)
 	if picked["error"] != "":
 		print("seed_report: %s: %s" % [root, picked["error"]])
-		get_tree().quit(1)
+		_quit(1)
 		return
 	if args.has("--merge"):
 		_merge(args)
@@ -37,14 +42,14 @@ func _ready() -> void:
 		var file := FileAccess.open(out, FileAccess.WRITE)
 		file.store_string(JSON.stringify(report, "  ", false))
 		file.close()
-	get_tree().quit(3 if not report["failures"].is_empty() else 0)
+	_quit(3 if not report["failures"].is_empty() else 0)
 
 
 func _play(content: ContentIndex, args: PackedStringArray) -> void:
 	var policy := _arg(args, "--policy", "auto")
 	if not PlayReport.POLICIES.has(policy):
 		print("seed_report: --policy is one of %s" % ", ".join(PlayReport.POLICIES))
-		get_tree().quit(1)
+		_quit(1)
 		return
 	var party: Array = []
 	for id in _arg(args, "--party", "").split(",", false):
@@ -75,7 +80,7 @@ func _play(content: ContentIndex, args: PackedStringArray) -> void:
 			shard.store_string(JSON.stringify({"options": shard_options, "records": records}))
 			shard.close()
 	var stopped: bool = report["stopped"] > 0 or not report["violations"].is_empty()
-	get_tree().quit(3 if stopped else 0)
+	_quit(3 if stopped else 0, report["errors"])
 
 
 ## --merge a.json b.json ... --out all.json: one report from shards written with --records (spec playable-demo 2.3d).
@@ -87,13 +92,13 @@ func _merge(args: PackedStringArray) -> void:
 		var parsed: Variant = JSON.parse_string(text) if text != "" else null
 		if not parsed is Dictionary:
 			print("seed_report: no records for %s (run the shard with --records)" % args[at])
-			get_tree().quit(1)
+			_quit(1)
 			return
 		shards.append(parsed)
 		at += 1
 	if shards.is_empty():
 		print("seed_report: --merge needs shard reports")
-		get_tree().quit(1)
+		_quit(1)
 		return
 	var report := PlayReport.merge(shards)
 	print(PlayReport.text(report))
@@ -102,7 +107,26 @@ func _merge(args: PackedStringArray) -> void:
 		var file := FileAccess.open(out, FileAccess.WRITE)
 		file.store_string(JSON.stringify(report, "  ", false))
 		file.close()
-	get_tree().quit(3 if report["stopped"] > 0 or not report["violations"].is_empty() else 0)
+	# The shards' errors are in the report (their processes exited 3 already); this process only checks its own.
+	if not report["errors"].is_empty():
+		print("seed_report: the shards had %d script or engine error(s)" % report["errors"].size())
+	_quit(3 if report["stopped"] > 0 or not report["violations"].is_empty() or not report["errors"].is_empty() else 0)
+
+
+## Quits with `code`, or 3 when this process raised script or engine errors (printed, except those already in the
+## play report's `reported` list).
+func _quit(code: int, reported: Array = []) -> void:
+	var errors := _errors.take()
+	OS.remove_logger(_errors)
+	for entry in reported:
+		errors.erase(entry["error"])
+	if not errors.is_empty() or not reported.is_empty():
+		print("seed_report: %d script or engine error(s)" % (errors.size() + reported.size()))
+		for text in errors.slice(0, 20):
+			print("  " + text)
+		if code == 0:
+			code = 3
+	get_tree().quit(code)
 
 
 static func _arg(args: PackedStringArray, name: String, fallback: String) -> String:

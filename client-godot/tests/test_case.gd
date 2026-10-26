@@ -12,7 +12,7 @@ var host: Node
 static var update_goldens: bool = false
 
 var failures := PackedStringArray()
-## Errors this test causes on purpose (expect_error); any other script or engine error fails it (TestErrorLog).
+## Errors this test causes on purpose (expect_error); any other script or engine error fails it (ScriptErrorLog).
 var expected_errors: Array[String] = []
 var _battles: Array[Battle] = []
 static var _content: ContentIndex

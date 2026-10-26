@@ -15,16 +15,22 @@ const DEFAULTS: Dictionary = {"run": "", "party": [], "policy": "auto", "illegal
 ## "illegal" a percent; "check" = invariants and replay, always on for chaos). The result also holds "failures" (each
 ## failing battle's request and traces, too big for the report file): take it out before saving; see save_failures().
 ## `keep_records`: also "records" and "options", for a shard that merge() joins later (spec 2.3d).
+## Every script or engine error raised while a seed plays (ScriptErrorLog) goes into that seed's record and the
+## report's "errors", so a run that broke the game's code never looks like a normal result.
 static func many(content: ContentIndex, host: Node, from: int, count: int, options: Dictionary = {},
 		keep_records: bool = false) -> Dictionary:
 	var opts := _options(content, options)
 	var runs: Array[Dictionary] = []
 	var failures: Array = []
+	var errors := ScriptErrorLog.new()
+	OS.add_logger(errors)
 	for seed_value in range(from, from + count):
-		_beat("seed %d" % seed_value)
+		_beat("seed %d" % seed_value)  # an error between seeds goes to the next seed's record
 		var record := await play_one(content, host, seed_value, opts)
+		record["errors"] = errors.take()
 		failures.append_array(record["failures"])
 		runs.append(record)
+	OS.remove_logger(errors)
 	var report := summarize(runs, opts, from, count)
 	report["failures"] = failures
 	if keep_records:
@@ -50,14 +56,15 @@ static func merge(shards: Array) -> Dictionary:
 
 
 ## One seed: {"seed", "status", "stop", "runnerError", "summary", "bossEntry", "battles", "violations", "runHash",
-## "failures"} (failures: replay requests and traces for violations, kept out of the summary).
+## "failures", "errors"} (failures: replay requests and traces for violations, kept out of the summary; errors: filled
+## by many()).
 static func play_one(content: ContentIndex, host: Node, seed_value: int, options: Dictionary) -> Dictionary:
 	var opts := _options(content, options)
 	var run := RunController.new()
 	run.name = "PlayReportRun"
 	host.add_child(run)
 	var record := {"seed": seed_value, "party": [], "status": "", "stop": "", "runnerError": "", "summary": {}, "bossEntry": [],
-		"battles": [], "violations": [], "runHash": "", "failures": []}
+		"battles": [], "violations": [], "runHash": "", "failures": [], "errors": []}
 	var party := party_for(content, seed_value, opts)
 	record["party"] = party
 	var error := run.start_run(content, party, str(seed_value), StringName(opts["run"]))
@@ -236,7 +243,8 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 		"chaosPercent": opts["chaos"] if opts["policy"] == "chaos" else 0,
 		"chaosFrom": opts["chaos_from"] if opts["policy"] == "chaos" else 0, "won": 0, "lost": 0, "stopped": 0,
 		"winPercentX100": 0, "deaths": {}, "floorReached": {}, "bossEntryHpPercent": {}, "turnsPerBattle": {},
-		"coinsSpent": {}, "refused": {}, "bySize": {}, "byCharacter": {}, "byParty": {}, "violations": [], "runs": []}
+		"coinsSpent": {}, "refused": {}, "bySize": {}, "byCharacter": {}, "byParty": {}, "violations": [], "errors": [],
+		"runs": []}
 	var boss_hp := {}
 	var turns := {}
 	var coins: Array[int] = []
@@ -278,6 +286,8 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 			for case in battle.get("refused", {}):
 				report["refused"][case] = report["refused"].get(case, 0) + battle["refused"][case]
 		report["violations"].append_array(record["violations"])
+		for text in record.get("errors", []):
+			report["errors"].append({"seed": record["seed"], "error": text})
 		report["runs"].append({"seed": record["seed"], "status": record["status"], "stop": record["stop"],
 			"runnerError": record["runnerError"], "party": record["party"], "floorReached": summary.get("floorReached", 0),
 			"battles": record["battles"].size(), "violations": record["violations"].size(), "runHash": record["runHash"]})
@@ -343,6 +353,9 @@ static func text(report: Dictionary) -> String:
 	for violation in report["violations"].slice(0, 20):
 		lines.append("    seed %d, floor %d, battle %d (%s): %s %s" % [violation["seed"], violation["floor"],
 			violation["battle"], violation["encounter"], violation["invariant"], violation.get("detail", "")])
+	lines.append("  script or engine errors: %d" % report["errors"].size())
+	for entry in report["errors"].slice(0, 20):
+		lines.append("    seed %d: %s" % [entry["seed"], entry["error"]])
 	for record in report["runs"]:
 		if record["stop"] != "" or record["runnerError"] != "":
 			lines.append("  STOPPED seed %d: %s" % [record["seed"], record["runnerError"] if record["runnerError"] != "" else record["stop"]])

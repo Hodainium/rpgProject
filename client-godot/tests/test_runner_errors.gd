@@ -1,6 +1,6 @@
 ## Spec combat-replay-core "Test runner": errors never pass silently. Each test here causes an error on purpose and
-## declares it with expect_error(); without that declaration the runner would fail the test (TestErrorLog). If capture
-## broke, the expectation would go unmet and these tests would fail instead.
+## declares it with expect_error(); without that declaration the runner would fail the test (ScriptErrorLog). If
+## capture broke, the expectation would go unmet and these tests would fail instead.
 extends TestCase
 
 

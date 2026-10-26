@@ -121,6 +121,32 @@ func test_run_summary() -> void:
 const PLAY_GOLDEN: String = GOLDEN + "game/seed_report_play.json"
 
 
+static func _read_missing(values: Dictionary) -> Variant:
+	return values.nope
+
+
+## A script error while a seed plays goes into that seed's record and the report's "errors" (and its text), also
+## through a shard merge; a clean report has none. The error comes from a message listener on the first floor of seed 2.
+func test_play_report_counts_errors() -> void:
+	var armed := [false]  # [armed]: the next floor entered raises one error, then disarms
+	var handle := GameplayMessages.listen(GameplayMessageRouter.RUN_FLOOR_ENTERED, func(_channel, _message):
+		if armed[0]:
+			armed[0] = false
+			_read_missing({}))
+	expect_error("Invalid access to property or key 'nope'")
+	var clean := await PlayReport.many(fixtures(), host, 1, 1, {"party": PARTY})
+	armed[0] = true
+	var report := await PlayReport.many(fixtures(), host, 2, 1, {"party": PARTY}, true)
+	handle.unregister()
+	eq(clean["errors"], [], "a clean report has no errors")
+	eq(report["errors"].size(), 1, "one error in seed 2")
+	check(not report["errors"].is_empty() and report["errors"][0]["seed"] == 2
+		and report["errors"][0]["error"].contains("'nope'"), "attributed to seed 2: %s" % [report["errors"]])
+	check(PlayReport.text(report).contains("script or engine errors: 1"), "the text says so")
+	var merged := PlayReport.merge([{"options": report["options"], "records": report["records"]}])
+	eq(merged["errors"], report["errors"], "a merged report keeps them")
+
+
 ## Spec playable-demo 2.3: the auto policy over fixture seeds, deterministic, pinned by a golden.
 func test_seed_report_play() -> void:
 	var options := {"party": PARTY, "check": true}
