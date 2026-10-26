@@ -83,6 +83,37 @@ func test_demo_run_full_descent() -> void:
 		check(crypt.has(id), "%s appears on the Crypt in 30 seeds" % id)
 
 
+## Spec playable-demo 4: each floor draws from its own seed stream (`floor/<n>/…`). A chapter's two floors share the
+## chapter, so if the second reused the first's stream they would come out identical: for the same seed, the Cellar's
+## floors 1 and 2 (and the Crypt's 3 and 4) differ in layout, rooms, encounters, enemies or pickups.
+func test_demo_floors_differ_per_seed() -> void:
+	var content := _demo()
+	if content == null:
+		print("    skipped: %s not built" % DESCENT)
+		return
+	for seed_value in range(1, 21):
+		for first in [0, 2]:
+			var a := SeedReport.floor_of(content, seed_value, first, null, DESCENT)
+			var b := SeedReport.floor_of(content, seed_value, first + 1, null, DESCENT)
+			var where := "seed %d floors %d and %d" % [seed_value, first + 1, first + 2]
+			eq([a["error"], b["error"]], ["", ""], where + " generate")
+			if a["error"] != "" or b["error"] != "":
+				continue
+			eq(a["chapter"], b["chapter"], where + " share a chapter")
+			check(_floor_signature(a["map"]) != _floor_signature(b["map"]), where + " differ")
+
+
+## A floor's shape and contents (cells, roles, rooms, encounters, enemies, pickups); never stats, so depth scaling
+## alone can't make two floors differ.
+func _floor_signature(map: FloorMap) -> String:
+	var lines := PackedStringArray()
+	for index in map.sorted_indices():
+		var cell: Dictionary = map.cells[index]
+		lines.append("%d %s %s %s %s" % [index, cell["role"], cell.get("room", ""), var_to_str(cell.get("content", {})),
+			var_to_str(cell.get("pickups", []))])
+	return "\n".join(lines)
+
+
 ## The auto policy plays whole runs to an end (won or lost; never a runner error, a dead end or the step cap), and a
 ## run that beats the Golem takes the stairs.
 func test_demo_run_completes() -> void:
