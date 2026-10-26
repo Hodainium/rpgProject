@@ -431,11 +431,13 @@ The demo's **Waystation**: "A quiet waystation between floors. The lamps are war
 **Healing events (D30, `Event.Demo`):** Healing Spring (drink: heal 35%; bathe: heal 70%, pay 10 coins), Wandering
 Medic (15 coins: full heal and revive the fallen), Old Tutor (a free level for the party, or 40 XP each and 10 coins).
 
-**Food drops (D31):** `ScalingRules.food_drop_chance` (typed %) and `food_query`. After a won battle, one roll on the
-stream `floor/<n>/food/<cell>`; a hit gives one item from the query, as an event gift. Food heals the moment it drops
-(its `on_pickup` heals, then it removes itself), so it never needs a slot. Demo food (`Pool.Food`, Common unless
-noted): Rations (party 10% HP), Roast Haunch (party 20% HP), Honey Cake (party 30% MP), Hearty Feast (Rare: party 35% HP
-and 20% MP). The Descent's scaling: 35% chance per won battle.
+**Food drops (D31, Castlevania IGA style):** `EnemyDefinition.drop_item: ItemDefinition` and `drop_chance` (typed %,
+low). After a won battle, one roll per beaten enemy that has a drop, on the stream `floor/<n>/drop/<cell>` (after the
+coin roll); a hit gives the item to the first member who can hold it, like an event gift (lost with a warning when
+nobody can). Food is a **usable consumable** the player uses in battle or on the map, so the waystation and a healer
+stay the main recovery. Demo food (`Pool.Food`, never in item pools): Rations (one ally heals 15% HP; Common), Roast
+Haunch (one ally heals 30% HP), Honey Cake (one ally regains 40% MP), Hearty Feast (the party heals 25% HP; Rare).
+Chances 2–6%, on some enemies only (beasts and brutes drop meat, casters cake), up to 8% on bosses.
 
 **Demo numbers (D32):** `xp_per_enemy` 20, `xp_per_boss` 120; `xp_to_level`: 60, 150, 270, 420, 600, 810, 1050, 1320,
 1620, 1950, 2310, 2700, 3120, 3570 (levels 2–15). Growth per level: damage dealers +6% max HP, +8% ATK, +4% DEF;
@@ -593,5 +595,6 @@ Decided 2026-10-26 by the user (amendment C6, 3.11):
 - **D28 characters gain XP from every battle and level up** after any battle or event; events can grant XP or a level.
 - **D29 a rest stop between floors** (Persona's subway was only the concept; not a subway).
 - **D30 events that heal** the party.
-- **D31 enemies drop food** that heals the party.
+- **D31 some enemies have a low chance to drop food** (2–8%), a usable item, Castlevania style; the rest stop and a healer
+  are the main recovery.
 - **D32 (to review):** the numbers in 3.11.
