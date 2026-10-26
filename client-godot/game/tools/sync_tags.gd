@@ -1,8 +1,9 @@
 ## Tag checkpoint: checks the tags in use against the GodotGAS registry, then regenerates gameplay_tags.gd with the
 ## addon's own generator (the same call the dashboard makes when a tag is added or removed).
 ##
-## Checked: every field marked "gas::tag" (GodotGAS's and ours) in every resource and scene under res://content/, plus
-## the tags the code itself uses (SYSTEM_TAGS). Reported: tags in use but not registered (with where), tags with a bad
+## Checked: every field marked "gas::tag" (GodotGAS's and ours) in every resource and scene under res://content/ and
+## res://presentation/ (the UI policy, layers and slots, spec ui-framework), plus the tags the code itself uses
+## (SYSTEM_TAGS and the UI state tags). Reported: tags in use but not registered (with where), tags with a bad
 ## format, and registered tags nothing uses (info only; nothing is ever removed).
 ## Writes only gameplay_tags.gd. With --add-missing it also adds the missing tags through the registry's own
 ## add_tag() (which validates the format, sorts, saves and regenerates). Exit code 1 while anything is missing.
@@ -11,6 +12,7 @@ extends Node
 
 const SETTINGS := preload("res://addons/GodotGAS/utilities/project_settings.gd")
 const CONTENT_ROOT: String = "res://content/"
+const PRESENTATION_ROOT: String = "res://presentation/"
 const TAG_HINT: String = "gas::tag"
 ## Tags the code reads or sends by name (spec game-skeleton 3.6, combat-replay-core).
 const SYSTEM_TAGS: Array[StringName] = [
@@ -27,6 +29,8 @@ const SYSTEM_TAGS: Array[StringName] = [
 	&"State.Controlled", &"State.Taunting", &"State.Downed", &"Status.Debuff", &"Event.Turn.Skipped", &"Event.Status.Resisted",
 	&"Event.Battle.Interrupt", &"Event.Unit.PhaseChanged", &"Event.Ability.Used.Ultimate", &"Hit.Drained",
 	&"Event.Damage.Dealt.Drained", &"Event.Damage.Taken.Drained",
+	# Spec ui-framework: the layers the framework pushes to by name (confirm dialogs, UIPushButton's default).
+	&"UI.Layer.Menu", &"UI.Layer.Modal",
 ]
 const FORMAT: String = "^([A-Z][a-zA-Z0-9]*)(\\.[A-Z][a-zA-Z0-9]*)*$"
 
@@ -41,9 +45,10 @@ func _ready() -> void:
 		push_error("sync_tags: no tag registry at " + registry_path)
 		get_tree().quit(1)
 		return
-	for tag in SYSTEM_TAGS:
+	for tag in SYSTEM_TAGS + UIState.ALL:
 		_note(tag, "code (system tag)")
 	_scan(CONTENT_ROOT)
+	_scan(PRESENTATION_ROOT)
 
 	var registered := {}
 	for tag in registry.tags:

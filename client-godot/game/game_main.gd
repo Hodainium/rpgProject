@@ -1,6 +1,8 @@
 ## The playable client shell (spec game-skeleton 3.7): owns the content root and the RunController, and hosts the
-## screens. The screens are your scenes (defaults in res://presentation/demo/); each one's root script has
-## `setup(main: GameMain)` and wires itself to the signals below and to `main.run`'s signals.
+## UI and the 3D room view. The UI is data (spec ui-framework): a UIPolicy (default
+## res://presentation/demo/ui/ui_policy.tres) names the layout, the screens and the panels, and a UIManager shows them
+## by UI state; screens get a UIContext instead of this node. The room view, unit view and sound board are your scenes
+## with `setup(main: GameMain)` (defaults in res://presentation/demo/).
 ##
 ## Holds no game rules: every change goes through RunController. Battles are fought here with an ActionRecorder (the
 ## battle panel submits the player's picks) and a ViewGate (the room view plays the animations).
@@ -16,20 +18,19 @@ signal battle_prepared(recorder: ActionRecorder, gate: ViewGate)
 signal content_changed(content: ContentIndex)
 ## A sandbox run (spec dev-tools 2.2) was left through the run-end screen.
 signal sandbox_closed
+## A line for the player (run messages, battle calls, refusals); the policy's message panel shows it.
+signal message_shown(text: String)
 
 const VIEW_DIR: String = "res://presentation/demo/"
+const UI_POLICY: String = "res://presentation/demo/ui/ui_policy.tres"
 const SETTINGS_PATH: String = "user://game_main.cfg"
 const CONTENT_ROOTS: Array[String] = ["res://content/", "res://tests/fixtures/"]
 
-@export var menu_view: PackedScene
-@export var map_view: PackedScene
+## Spec ui-framework: every screen and panel, as data. Empty: res://presentation/demo/ui/ui_policy.tres.
+@export var ui_policy: UIPolicy
+## The 3D room (a Node3D with setup(main)); not UI.
 @export var room_view: PackedScene
 @export var unit_view: PackedScene
-@export var battle_panel: PackedScene
-@export var event_panel: PackedScene
-@export var pickup_panel: PackedScene
-@export var party_panel: PackedScene
-@export var run_end_view: PackedScene
 ## UI sounds and stingers (a Node with setup(main)); ability and hit sounds come from animations and GameplayCues.
 @export var sound_board: PackedScene
 
@@ -39,10 +40,16 @@ var run: RunController
 var mode: String = "menu"
 ## The current battle's recorder (the party's input), for the dev console's battle commands.
 var recorder: ActionRecorder
+## The current battle's presentation gate (a battle panel created after battle_prepared reads it here).
+var gate: ViewGate
 ## Abilities resolve without waiting for their animations (the dev script runner).
 var skip_animations: bool = false
+## Spec ui-framework: shows the policy's screens; null when the policy failed to load (see the error label).
+var ui: UIManager
+## The last message shown (a message panel created later reads it).
+var last_message: String = ""
 
-var _message: Label
+var _error_label: Label
 
 
 func _ready() -> void:
@@ -53,33 +60,49 @@ func _ready() -> void:
 	var world := Node3D.new()
 	world.name = "World"
 	add_child(world)
-	var ui := CanvasLayer.new()
-	ui.name = "UI"
-	add_child(ui)
+	var canvas := CanvasLayer.new()
+	canvas.name = "UI"
+	add_child(canvas)
 	var missing := PackedStringArray()
 	unit_view = _view(unit_view, "unit_view", missing)
 	var room := _view(room_view, "room_view_3d", missing)
 	if room != null:
 		_add_view(room.instantiate(), world)
-	for pair in [[sound_board, "sound_board"], [menu_view, "menu"], [map_view, "map_view"], [battle_panel, "battle_panel"], [event_panel, "event_panel"],
-			[pickup_panel, "pickup_panel"], [party_panel, "party_panel"], [run_end_view, "run_end_view"]]:
-		var scene := _view(pair[0], pair[1], missing)
-		if scene != null:
-			_add_view(scene.instantiate(), ui)
-	_message = Label.new()
-	_message.name = "Message"
-	_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	ui.add_child(_message)
-	_message.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_message.offset_left = 8
-	_message.offset_top = -28
-	_message.offset_right = -8
-	_message.offset_bottom = -4
+	var sounds := _view(sound_board, "sound_board", missing)
+	if sounds != null:
+		_add_view(sounds.instantiate(), canvas)
+	var problem := _build_ui(canvas)
 	if not missing.is_empty():
-		show_message("Missing screens: %s. Run res://game/tools/build_demo.tscn once, or set them on GameMain."
-			% ", ".join(missing))
+		problem += ("\n" if problem != "" else "") + "Missing views: %s (res://presentation/demo/)." % ", ".join(missing)
+	if problem != "":
+		_error_label = Label.new()
+		_error_label.name = "UIError"
+		_error_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_error_label.text = problem
+		canvas.add_child(_error_label)
+		_error_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		push_warning("GameMain: " + problem)
 	load_content()
 	set_mode("menu")
+
+
+## Spec ui-framework 2.1: the UI policy's layout under `canvas`. "" or why it failed (the game still runs headless and
+## from the console).
+func _build_ui(canvas: CanvasLayer) -> String:
+	var policy := ui_policy
+	if policy == null and ResourceLoader.exists(UI_POLICY):
+		policy = load(UI_POLICY) as UIPolicy
+	if policy == null:
+		return "No UI policy: set GameMain.ui_policy or create %s." % UI_POLICY
+	ui = UIManager.new()
+	ui.name = "UIManager"
+	add_child(ui)
+	var problem: String = ui.setup(self, policy, canvas)
+	if problem != "":
+		ui.queue_free()
+		ui = null
+		return "UI policy %s: %s" % [policy.resource_path, problem]
+	return ""
 
 
 ## Switches the content root (res://content/ or the test fixtures) and remembers it.
@@ -154,6 +177,20 @@ func _new_run() -> void:
 	set_mode("run")
 
 
+## A player setting from user://game_main.cfg (the menu's last party, battle speed…); `fallback` when unset.
+static func load_setting(section: String, key: String, fallback: Variant) -> Variant:
+	var settings := ConfigFile.new()
+	settings.load(SETTINGS_PATH)
+	return settings.get_value(section, key, fallback)
+
+
+static func save_setting(section: String, key: String, value: Variant) -> void:
+	var settings := ConfigFile.new()
+	settings.load(SETTINGS_PATH)
+	settings.set_value(section, key, value)
+	settings.save(SETTINGS_PATH)
+
+
 func back_to_menu() -> void:
 	if run != null and run.state != null and run.state.sandbox:
 		sandbox_closed.emit()
@@ -166,15 +203,15 @@ func set_mode(new_mode: String) -> void:
 
 
 func show_message(text: String) -> void:
-	if _message != null:
-		_message.text = text
+	last_message = text
+	message_shown.emit(text)
 	if run != null and run.runner_error != "" and mode == "run":
 		set_mode("end")
 
 
 func _on_battle_requested(_snapshot: Dictionary) -> void:
 	recorder = ActionRecorder.new()
-	var gate := ViewGate.new()
+	gate = ViewGate.new()
 	battle_prepared.emit(recorder, gate)
 	if skip_animations:
 		gate.skip_all = true

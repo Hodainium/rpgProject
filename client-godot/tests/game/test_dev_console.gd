@@ -318,7 +318,7 @@ func test_tool_parity() -> void:
 	var pairs := {"dock Create": "create", "dock Validate": "validate", "room grid": "grid", "Play buttons": "play",
 		"seed runner": "seeds", "screenshot": "shot", "party panel Equip": "wear", "party panel Unequip": "unwear",
 		"animation preview": "anim", "battle panel status line": "status", "menu run picker": "new",
-		"seed report --play": "autorun"}
+		"seed report --play": "autorun", "UI buttons, Back and screens (spec ui-framework)": "ui"}
 	for action in pairs:
 		check(console.commands.has(pairs[action]), "%s has the command %s" % [action, pairs[action]])
 	# The inspector grid commits *_result() through undo/redo; the console applies the same functions.

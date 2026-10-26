@@ -1,5 +1,6 @@
 ## One-time builder for the example set (spec game-skeleton 3.8): writes the demo content into res://content/demo/
-## and the demo screens' scenes into res://presentation/demo/, through ResourceSaver (exactly what the editor saves).
+## and the demo room and unit views into res://presentation/demo/, through ResourceSaver (exactly what the editor saves).
+## The screens are no longer made here: the UI is res://presentation/demo/ui/ (spec ui-framework).
 ##
 ## It never overwrites: a file that already exists is skipped and the existing one is used, so your edits survive a
 ## rerun. It writes nowhere else. Values are placeholders typed as a designer would (Fixed.from_typed stores them x100).
@@ -14,10 +15,7 @@ const ALLOWED_ROOTS: Array[String] = [CONTENT, SCREENS]
 const GENERATED_SET: String = "res://godot_gas/attributes/unit_attribute_set.gd"
 const ATTRIBUTES: String = CONTENT + "attributes/demo_unit_attributes.gd"
 const DAMAGE_CALC: String = CONTENT + "exec_calcs/exec_calc_standard_damage.gd"
-const SCREEN_ROOTS: Dictionary = {
-	"menu": "Control", "map_view": "Control", "room_view_3d": "Node3D", "battle_panel": "Control",
-	"event_panel": "Control", "pickup_panel": "Control", "party_panel": "Control", "run_end_view": "Control",
-}
+const SCREEN_ROOTS: Dictionary = {"room_view_3d": "Node3D"}
 
 var _made := PackedStringArray()
 var _skipped := PackedStringArray()
