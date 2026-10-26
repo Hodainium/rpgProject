@@ -936,7 +936,7 @@ func field_options() -> Array[Dictionary]:
 					targets.append(candidate.slot)
 				if targets.is_empty():
 					continue
-			options.append({"slot": member["slot"], "ability": ability.ability_tag,
+			options.append({"slot": member["slot"], "ability": ability.ability_tag, "name": AbilityName.of(ability),
 				"item": unit.item_abilities.get(ability.ability_tag, &""), "targets": targets})
 	battle.free()
 	return options

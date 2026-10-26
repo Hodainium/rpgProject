@@ -27,7 +27,8 @@ func attach(battle: Battle, encounter_id: StringName, router: GameplayMessageRou
 	battle.one_more_started.connect(func(unit):
 		_send(GameplayMessageRouter.BATTLE_ONE_MORE, &"Verb.OneMore", unit, unit))
 	battle.interrupt_started.connect(func(unit, ability_tag):
-		_send(GameplayMessageRouter.BATTLE_INTERRUPT, &"Verb.Interrupt", unit, &"", 0, [ability_tag]))
+		_send(GameplayMessageRouter.BATTLE_INTERRUPT, &"Verb.Interrupt", unit, &"", 0, [ability_tag],
+			{"abilityName": AbilityName.of_tag(_battle.unit_by_id(unit), ability_tag)}))
 	# magnitude: the phase entered, counted from 1.
 	battle.phase_changed.connect(func(unit, phase):
 		_send(GameplayMessageRouter.BATTLE_PHASE, &"Verb.Phase", unit, unit, phase + 1))

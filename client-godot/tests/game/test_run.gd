@@ -120,7 +120,8 @@ func test_usable_items_and_slots() -> void:
 	var run := _start()
 	_kill(run, 3)
 	var feather := run.field_options().filter(func(o): return o["ability"] == &"Fixture.Ability.Feather")
-	eq(feather, [{"slot": 1, "ability": &"Fixture.Ability.Feather", "item": &"fixture.item.feather", "targets": [3]}],
+	eq(feather, [{"slot": 1, "ability": &"Fixture.Ability.Feather", "name": "Feather", "item": &"fixture.item.feather",
+		"targets": [3]}],
 		"the feather is a field option aimed only at the dead")
 	eq(await run.use_field(1, &"Fixture.Ability.Feather", 3), [], "revive on the map")
 	eq([run.state.member(3)["alive"], run.state.member(3)["hp"]], [true, 20000], "revived with the effect's HP")
