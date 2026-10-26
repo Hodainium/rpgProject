@@ -256,7 +256,8 @@ func _install_floor(map: FloorMap, pools: Dictionary, clear_start: bool) -> void
 ## After the boss: the next floor, or the run is won after the last one (that happens in _clear_room).
 ## `chapter_id`: the route picked at the stairs when the next floor is a CHOICE (next_floor_choices()).
 func next_floor(chapter_id: StringName = &"") -> String:
-	if not _active() or not state.boss_cleared or state.floor_index + 1 >= structure.floors.size() or state.sandbox:
+	if not _active() or not state.boss_cleared or state.floor_index + 1 >= structure.floors.size() or state.sandbox \
+			or not state.event.is_empty():
 		return "the next floor is not open"
 	var choices := next_floor_choices()
 	var entry := {"type": "next_floor", "floor": state.floor_index}
@@ -483,7 +484,9 @@ func _check_levels() -> void:
 			if int(member.get("xp", 0)) >= threshold:
 				level += 1
 		if level > int(member["level"]):
-			message.emit("%s reaches level %d" % [member["character"], level])
+			var character: UnitDefinition = content.units.get(member["character"])
+			message.emit("%s reaches level %d" % [character.display_name if character != null else String(member["character"]),
+				level])
 			member["level"] = level
 	party_changed.emit()
 

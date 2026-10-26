@@ -9,11 +9,22 @@ func test_game_scripts_compile() -> void:
 		check(script != null and script.can_instantiate(), "%s compiles" % path)
 
 
-static func _scripts(directory: String) -> PackedStringArray:
+## Spec playable-demo 6: your screens under res://presentation/ compile and their scenes load. No test plays them, so
+## a parse error there only showed in a window run (2026-10-26).
+func test_presentation_scripts_compile() -> void:
+	for path in _scripts("res://presentation/"):
+		var script := load(path) as GDScript
+		check(script != null and script.can_instantiate(), "%s compiles" % path)
+	for path in _scripts("res://presentation/", ".tscn"):
+		var scene := load(path) as PackedScene
+		check(scene != null and scene.can_instantiate(), "%s loads" % path)
+
+
+static func _scripts(directory: String, extension: String = ".gd") -> PackedStringArray:
 	var found := PackedStringArray()
 	for name in ResourceLoader.list_directory(directory):
 		if name.ends_with("/"):
-			found.append_array(_scripts(directory + name))
-		elif name.ends_with(".gd"):
+			found.append_array(_scripts(directory + name, extension))
+		elif name.ends_with(extension):
 			found.append(directory + name)
 	return found

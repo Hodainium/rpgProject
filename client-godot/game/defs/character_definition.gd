@@ -6,6 +6,10 @@ extends UnitDefinition
 @export var portrait: Texture2D
 ## Shown in the character picker. (Unlocks through gacha come with the hub.)
 @export var selectable: bool = true
+## Spec playable-demo 3.6: shown in the party select ("Support: buffs and debuffs"); text only, no rule reads it.
+@export var role: String = ""
+## Spec playable-demo 3.6: a line or two about the class, shown in the party select.
+@export_multiline var description: String = ""
 ## (A Birthright-like item is an ItemDefinition whose `character` is this character: it only appears in pools while
 ## this character is in the party. There is no field here, because two files pointing at each other can't be loaded.)
 ## Skills this character may learn during a run (and that its loadouts may give). A battle only accepts learned
