@@ -116,6 +116,21 @@ static func pick_weighted(stream: RandomNumberGenerator, entries: Array) -> Vari
 	return null
 
 
+## pick_weighted with weights given apart from the entries (same draw: one randi_range over the total).
+static func pick_weighted_by(stream: RandomNumberGenerator, entries: Array, weights: Array[int]) -> Variant:
+	var total := 0
+	for weight in weights:
+		total += maxi(weight, 0)
+	if total <= 0:
+		return null
+	var roll := stream.randi_range(0, total - 1)
+	for index in entries.size():
+		roll -= maxi(weights[index], 0)
+		if roll < 0:
+			return entries[index]
+	return null
+
+
 ## A percentage roll: chance_x100 is the typed % × 100 (5.25% = 525).
 static func roll(stream: RandomNumberGenerator, chance_x100: int) -> bool:
 	return stream.randi_range(0, 9999) < chance_x100

@@ -32,6 +32,8 @@ var last_hit_by: BattleUnit = null
 ## Spec content-pass: actions a PatternBrain has chosen for this unit (its place in the pattern), and the boss phases
 ## it has entered. Hashed only when non-zero, so units without them hash as before.
 var pattern_step: int = 0
+## Spec playable-demo 3.7: an encounter slot's brain override (null: the definition's brain).
+var brain_override: EnemyBrain = null
 var phase_index: int = 0
 
 

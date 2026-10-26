@@ -309,7 +309,18 @@ func _add_enemies_v2(snapshot: Dictionary, encounter: EncounterDefinition, conte
 			entries.append({"slot": index + 1, "definition": slot.enemy, "loadout": loadout, "variant": slot.variant})
 	for entry in entries:
 		var kit := _enemy_kit(entry["loadout"], entry["variant"], scaling_effect)
-		_add_unit(StringName("E%d" % entry["slot"]), BattleUnit.Side.ENEMY, entry["slot"], entry["definition"], 1, kit)
+		# Spec playable-demo 3.7: the encounter's grants, then its slot's (from content, by encounter id and slot number).
+		var encounter_slot: EncounterSlot = null
+		var number: int = entry["slot"]
+		if number >= 1 and number <= encounter.slots.size():
+			encounter_slot = encounter.slots[number - 1]
+		for ability_set in [encounter.grants, encounter_slot.grants if encounter_slot != null else null]:
+			if ability_set != null:
+				kit["grants"].append({"set": ability_set})
+		var id := StringName("E%d" % number)
+		_add_unit(id, BattleUnit.Side.ENEMY, number, entry["definition"], 1, kit)
+		if encounter_slot != null and encounter_slot.brain != null:
+			unit_by_id(id).brain_override = encounter_slot.brain
 	return ""
 
 
@@ -635,8 +646,7 @@ func _ult_window(controller: Object) -> void:
 			return
 		if not enemy.alive:
 			continue
-		var brain: EnemyBrain = enemy.definition.brain if enemy.definition.brain != null else EnemyBrain.new()
-		var choice := brain.choose_interrupt(enemy, self)
+		var choice := _brain_of(enemy).choose_interrupt(enemy, self)
 		if StringName(str(choice.get("ability", ""))) == &"":
 			continue
 		var problem := validate_interrupt(enemy, choice, false)
@@ -874,6 +884,13 @@ func state_hash() -> String:
 	return result["hash"]
 
 
+## An enemy's brain: its encounter slot's override, else its definition's, else the default (spec playable-demo 3.7).
+static func _brain_of(unit: BattleUnit) -> EnemyBrain:
+	if unit.brain_override != null:
+		return unit.brain_override
+	return unit.definition.brain if unit.definition.brain != null else EnemyBrain.new()
+
+
 func _take_action(actor: BattleUnit, controller: Object) -> Dictionary:
 	var choice: Dictionary
 	if actor.is_party():
@@ -900,8 +917,7 @@ func _take_action(actor: BattleUnit, controller: Object) -> Dictionary:
 				reject(problem[0], problem[1])
 				return {}
 	else:
-		var brain: EnemyBrain = actor.definition.brain if actor.definition.brain != null else EnemyBrain.new()
-		choice = brain.choose(actor, self)
+		choice = _brain_of(actor).choose(actor, self)
 		if StringName(str(choice.get("ability", ""))) == &"":
 			return {}
 		var problem := validate_action(actor, choice)

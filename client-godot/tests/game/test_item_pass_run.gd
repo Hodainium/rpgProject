@@ -151,13 +151,16 @@ func test_armor_never_repeats() -> void:
 	run.free()
 
 
-func test_give_equipment_replaced_goes_to_inventory() -> void:
+## Spec playable-demo 3.7 (D9): GiveEquipment never equips; pieces go to the armor inventory in order.
+func test_give_equipment_goes_to_inventory() -> void:
 	var run := _armory()
-	var knight: CharacterDefinition = fixtures().characters[&"fixture.character.knight"]
-	run.give_equipment(fixtures().equipment[CAP], knight)
-	run.give_equipment(fixtures().equipment[HELM], knight)
-	eq(run.state.member(1)["equipment"][HEAD], HELM, "GiveEquipment equips directly")
-	eq(run.state.armor, [CAP], "and the replaced piece goes to the inventory instead of being lost")
+	var worn_before: Dictionary = run.state.member(1)["equipment"].duplicate()
+	run.give_equipment(fixtures().equipment[CAP])
+	run.give_equipment(fixtures().equipment[HELM])
+	eq(run.state.member(1)["equipment"], worn_before, "nothing is worn")
+	eq(run.state.armor, [CAP, HELM], "both pieces are in the armor inventory")
+	eq(run.equip(1, HELM), "", "and can be equipped from there")
+	eq(run.state.member(1)["equipment"][HEAD], HELM, "the helm is worn after equip")
 	run.free()
 
 

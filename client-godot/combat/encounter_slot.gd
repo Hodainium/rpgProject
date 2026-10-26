@@ -9,3 +9,8 @@ extends Resource
 @export var loadout: Loadout
 ## Optional: always use this elite variant (skips the elite roll).
 @export var variant: EnemyVariant
+## Spec playable-demo 3.7: granted to this enemy only, after the encounter's grants. Run battles (v2 snapshots) only.
+@export var grants: AbilitySet
+## Spec playable-demo 3.7: replaces the enemy definition's brain for this slot (e.g. a PatternBrain that uses a granted
+## skill). Run battles (v2 snapshots) only.
+@export var brain: EnemyBrain

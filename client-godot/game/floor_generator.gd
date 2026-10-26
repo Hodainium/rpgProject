@@ -288,6 +288,17 @@ func resolve_enemies(encounter: EncounterDefinition, room: RoomDefinition, is_bo
 	return enemies
 
 
+## Spec playable-demo 3.7: a weighted pick of items or pieces with the run's rarity weights; without weights exactly
+## RunSeeds.pick_weighted (so content without them draws as before).
+func _pick_pooled(stream: RandomNumberGenerator, candidates: Array) -> Variant:
+	if run_structure == null or run_structure.rarity_weights_x100.is_empty():
+		return RunSeeds.pick_weighted(stream, candidates)
+	var weights: Array[int] = []
+	for entry in candidates:
+		weights.append(run_structure.weighted(entry))
+	return RunSeeds.pick_weighted_by(stream, candidates, weights)
+
+
 ## A fixed item, or one picked from the pool (unlocked, not held, not seen this run).
 ## Falls back to the run structure's fallback_item.
 func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNumberGenerator, pools: Dictionary) -> ItemDefinition:
@@ -301,7 +312,7 @@ func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNum
 		if pools.get("held", []).has(item_id) or pools.get("seen", []).has(item_id):
 			continue
 		candidates.append(item)
-	var picked: ItemDefinition = RunSeeds.pick_weighted(stream, candidates)
+	var picked: ItemDefinition = _pick_pooled(stream, candidates)
 	if picked == null and run_structure != null:
 		picked = run_structure.fallback_item
 	return picked
@@ -327,7 +338,7 @@ func pick_pickup(fixed_item: ItemDefinition, fixed_equipment: EquipmentDefinitio
 			if pools.get("held", []).has(id) or pools.get("seen", []).has(id):
 				continue
 			candidates.append(entry)
-	var picked: Resource = RunSeeds.pick_weighted(stream, candidates)
+	var picked: Resource = _pick_pooled(stream, candidates)
 	if picked == null and run_structure != null:
 		picked = run_structure.fallback_item
 	return picked

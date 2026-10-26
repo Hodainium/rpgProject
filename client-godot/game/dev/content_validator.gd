@@ -164,14 +164,18 @@ func _check_pattern(enemy: EnemyDefinition) -> void:
 	for phase in enemy.phases:
 		if phase != null and phase.ability_set != null:
 			scenes.append_array(phase.ability_set.abilities)
+	_check_pattern_steps(brain, scenes, enemy.resource_path + "::brain", enemy.id)
+
+
+func _check_pattern_steps(brain: PatternBrain, scenes: Array, where_brain: String, owner: StringName) -> void:
 	for index in brain.pattern.size():
 		var tag := brain.pattern[index]
-		var where := "%s::brain.pattern[%d]" % [enemy.resource_path, index]
+		var where := "%s.pattern[%d]" % [where_brain, index]
 		var found: Array = scenes.filter(func(scene) -> bool: return scene != null and SkillTags.tag_of(scene) == tag)
 		if found.is_empty():
-			_error("pattern_unknown_ability", where, "%s's pattern step %s is not one of its abilities" % [enemy.id, tag])
+			_error("pattern_unknown_ability", where, "%s's pattern step %s is not one of its abilities" % [owner, tag])
 		elif _is_ult(found[0], true) or _trigger_of(found[0]) != &"":
-			_error("pattern_unknown_ability", where, "%s's pattern step %s is an ult or a passive, not a turn action" % [enemy.id, tag])
+			_error("pattern_unknown_ability", where, "%s's pattern step %s is an ult or a passive, not a turn action" % [owner, tag])
 
 
 ## Spec content-pass 2.4: a definition whose own tags give one damage type two affinities (Drain wins over Weak, Weak
@@ -375,6 +379,26 @@ func _check_encounter(encounter: EncounterDefinition) -> void:
 			_error("dangling_ref", where, "slot %d of %s has no enemy" % [index + 1, encounter.id])
 			continue
 		_check_loadout_ref(slot.loadout, encounter.id, str(index + 1), where + ".loadout")
+		# Spec playable-demo 3.7: per-slot grants and brain (its pattern may use the slot's loadout skills and grants).
+		if slot.grants != null:
+			_check_ability_set(slot.grants, where + ".grants")
+		var pattern := slot.brain as PatternBrain
+		if pattern != null:
+			var scenes: Array = slot.enemy.abilities.duplicate()
+			if slot.loadout != null:
+				scenes.append_array(slot.loadout.skills)
+			for ability_set in [encounter.grants, slot.grants]:
+				if ability_set != null:
+					scenes.append_array(ability_set.abilities)
+			if slot.enemy is EnemyDefinition:
+				for phase in slot.enemy.phases:
+					if phase != null and phase.ability_set != null:
+						scenes.append_array(phase.ability_set.abilities)
+			_check_pattern_steps(pattern, scenes, where + ".brain", slot.enemy.id)
+	if encounter.grants != null:
+		_check_ability_set(encounter.grants, path + "::grants")
+	for index in encounter.rewards.size():
+		_check_outcome(encounter.rewards[index], "%s::rewards[%d]" % [path, index], null)
 	_check_weight(encounter, path)
 
 
@@ -626,6 +650,7 @@ func _check_layout(layout: FloorLayout) -> void:
 
 func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 	var path := structure.resource_path
+	_check_rarity_weights(structure)
 	if structure.floors.is_empty():
 		_error("dangling_ref", path + "::floors", "%s has no floors" % structure.id)
 	for floor_index in structure.floors.size():
@@ -645,6 +670,35 @@ func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 				if result["error"] != "":
 					_error("generation_fails", where, "floor %d, chapter %s, seed %d: %s" % [floor_index, chapter.id, seed_value, result["error"]])
 					break
+
+
+## Spec playable-demo 3.7: rarity weights name Item.Rarity.* tags some item or piece has; with weights, every pooled
+## item and piece should have a rarity (it keeps its own weight otherwise).
+func _check_rarity_weights(structure: RunStructure) -> void:
+	if structure.rarity_weights_x100.is_empty():
+		return
+	var where := structure.resource_path + "::rarity_weights"
+	var used := {}
+	var unrated := PackedStringArray()
+	for table in [content.items, content.equipment]:
+		for id in _sorted(table):
+			var entry: Resource = table[id]
+			var rated := false
+			for tag in entry.tags:
+				if String(tag).begins_with(RunStructure.RARITY_PREFIX):
+					used[tag] = true
+					rated = true
+			var pooled: bool = not entry.tags.is_empty() if table == content.equipment else entry.tags.any(
+				func(tag) -> bool: return String(tag).contains("Pool."))
+			if pooled and not rated and not entry.tags.has(&"Dev"):
+				unrated.append(String(id))
+	for tag in structure.rarity_weights_x100:
+		if not String(tag).begins_with(RunStructure.RARITY_PREFIX):
+			_warning("rarity_unknown", where, "%s is not an %s* tag" % [tag, RunStructure.RARITY_PREFIX])
+		elif not used.has(tag):
+			_warning("rarity_unknown", where, "no item or piece has %s" % tag)
+	for id in unrated:
+		_warning("no_rarity", where, "%s is in a pool but has no %s* tag, so it keeps its own weight" % [id, RunStructure.RARITY_PREFIX])
 
 
 ## Spec playable-demo 2.2: with several runs, exactly one should be default_run (an empty run id starts it).

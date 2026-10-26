@@ -12,10 +12,11 @@ func test_demo_content() -> void:
 		return
 	var content := ContentIndex.new("res://content/")
 	eq(Array(content.problems), [], "the content root loads cleanly")
-	eq(content.runs.size(), 1, "one RunStructure")
-	if content.runs.size() != 1 or not content.problems.is_empty():
+	var picked := RunController.pick_run(content)
+	eq(picked["error"], "", "a run is picked without an id (the only or the default one)")
+	if picked["error"] != "" or not content.problems.is_empty():
 		return
-	var structure: RunStructure = content.runs.values()[0]
+	var structure: RunStructure = picked["run"]
 	var party: Array = []
 	for id in content.characters:
 		if party.size() < 4 and content.characters[id].selectable:

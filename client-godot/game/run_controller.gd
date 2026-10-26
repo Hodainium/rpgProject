@@ -402,10 +402,26 @@ func fight(controller: Object, gate: PresentationGate = null) -> String:
 	battle_finished.emit(battle.outcome)
 	if won:
 		_tally["enemiesDefeated"] += snapshot["enemies"].size()
+		_grant_rewards(content.encounters.get(StringName(_tally["lastEncounter"])))
+		if not _active():
+			return runner_error
 		_clear_room(cell, true)
 	else:
 		_end(RunState.LOST)
 	return ""
+
+
+## Spec playable-demo 3.7: the encounter's rewards after a won battle, in order. Event directives (go to page, start
+## an encounter) mean nothing here and are dropped.
+func _grant_rewards(encounter: EncounterDefinition) -> void:
+	if encounter == null:
+		return
+	for outcome in encounter.rewards:
+		if outcome != null:
+			outcome.apply(self)
+		if not _active():
+			return
+	_directive = ""
 
 
 ## What happened in the last battle, for the dev report (spec item-pass 3.1): hits with their hit tags, triggered
@@ -912,17 +928,10 @@ func remove_item(item: ItemDefinition) -> void:
 	party_changed.emit()
 
 
-func give_equipment(piece: EquipmentDefinition, character: CharacterDefinition) -> void:
-	if piece == null:
-		return
-	var slot := state.member_slot(character.id) if character != null else 0
-	if slot == 0:
-		for member in state.party:
-			if member["alive"]:
-				slot = member["slot"]
-				break
-	if slot != 0:
-		_wear(state.member(slot), piece)
+## Spec playable-demo 3.7 (D9): armor from outcomes goes to the armor inventory; nothing is worn on its own.
+func give_equipment(piece: EquipmentDefinition) -> void:
+	if piece != null:
+		_receive_equipment(piece)
 
 
 func event_go_to_page(page: int) -> void:
@@ -990,7 +999,7 @@ func dev_equip(piece: EquipmentDefinition, slot: int) -> String:
 	if member.is_empty():
 		return "no member in slot %d" % slot
 	dev_log("equip", [piece.id, member["slot"]])
-	give_equipment(piece, content.characters.get(member["character"]))
+	_wear(member, piece)  # the cheat wears it at once; whatever was in the slot goes to the armor inventory
 	return ""
 
 

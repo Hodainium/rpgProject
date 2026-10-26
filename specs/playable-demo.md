@@ -184,6 +184,26 @@ Consequence, accepted unless you say otherwise: the one-floor run no longer roll
 - Ability animations: every demo ability already moves or spins the cube (`Body` position and rotation tracks);
   where you want a **flash**, it is an extra track on your animation files, done in the design break, not here.
 
+### 3.7 Amendment C2 (2026-10-26, D7–D10): encounter grants, rewards, armor to the inventory, rarity weights
+Found while building C: an encounter couldn't change its enemies (no Ice drain on the Wisp choir), the default brain
+never uses an extra skill (no Entangle with a row delay), an event fight couldn't drop anything, and event armor was
+worn at once. Rarity tags existed but did nothing.
+| Change | Where | Rule |
+|---|---|---|
+| `EncounterDefinition.grants: AbilitySet` | `combat/encounter_definition.gd` | Granted to **every** enemy of the encounter (tags, effects, abilities), after the variant (D8) |
+| `EncounterSlot.grants: AbilitySet`, `EncounterSlot.brain: EnemyBrain` | `combat/encounter_slot.gd` | One enemy: its grants after the encounter's; `brain` replaces the definition's brain for that enemy |
+| Battle setup | `combat/battle.gd`, `battle_unit.gd` | v2 snapshots only (run battles): read from the encounter by `encounterId` and slot number, so the verifier rebuilds them from content. **No wire change**; v1 and encounters without them build exactly as before (goldens unchanged) |
+| `EncounterDefinition.rewards: Array[RunOutcome]` | `combat/encounter_definition.gd`, `game/run_controller.gd` | Applied in order after a **won** battle (rooms and event fights alike), before the room clears; logged by the battle entry they follow; gift picks draw from the existing `floor/<n>/gift/<k>` stream |
+| `GiveEquipment` puts the piece in the armor inventory (D9) | `game/defs/outcomes/give_equipment.gd`, `RunController.give_equipment` | Never worn on its own; its `character` field is removed. Only a character's starting loadout is worn at run start |
+| `RunStructure.rarity_weights` (typed %, stored ×100 by `Item.Rarity.*` tag) | `game/defs/run_structure.gd`, `game/floor_generator.gd`, `game/run_seeds.gd` | A pool candidate's weight is its own weight × its rarity's weight / 100 (no rarity tag: ×1). Empty = picks exactly as before (fixtures unchanged) |
+| Validator | `game/dev/content_validator.gd` | grants and rewards checked like ability sets and event outcomes; `rarity_unknown` (warning) for a weight on a tag no item uses; `no_rarity` (warning) for a pooled item or piece without an `Item.Rarity.*` tag when the run has weights |
+
+Content (your files, D10, each shown as `old → new`): tags `Item.Rarity.Uncommon` and `Item.Rarity.Legendary`; a
+tier per item and armor piece (proposal table in chat, approved before editing); The Descent's weights Common 60,
+Uncommon 25, Rare 12, Legendary 3; Wisp choir grants `Drain.Ice` to every wisp; Bound dead's first Toad gets an
+Entangle skill with a row `delay` and a `PatternBrain` (closes content-pass 8); the knight duel rewards the Warden
+Helm; the wounded knight's paid helm goes to the armor inventory.
+
 ## 4. Failure modes
 Server failure scenarios (root `CLAUDE.md` 1–7): **none apply** (no server, no wire change). What this slice
 protects is that **adding a second run and a second floor doesn't change any existing replay**, which scenario 5
@@ -205,6 +225,9 @@ protects is that **adding a second run and a second floor doesn't change any exi
 | Chaos policy changes the battle's RNG | Can't: own `dev/chaos/<seq>` stream; checked by replaying without the policy | `test_chaos_policy` |
 | Speed toggle changes combat | Can't: `time_scale` affects presentation; combat awaits only the gate | `test_demo_run_two_floors` headless (no view) vs a scripted window run with 2× give the same run hash (manual, once) |
 | Cursed chest's 20% damage on a dead or low member | Existing outcome rules (`apply_party_effect` skips the dead unless `include_dead`; whether it can kill is pinned as built, not changed here) | `test_demo_events` pins the built rule, direction only |
+| Encounter grants or a slot brain change replays | Read from content by encounter id and slot; the verifier builds the same units | `test_encounter_grants_replay` (record → replay Verified), existing goldens unchanged |
+| Rewards on a lost battle | Never applied | `test_encounter_rewards` |
+| Rarity weights change existing pools | Only when set; empty weights use the old draw | `test_rarity_weights` (fixtures: same picks without weights; with weights the draw counts follow them over many seeds) |
 | Export ships the console | `Dev` inert in release (dev-tools spec) | F4 manual check |
 
 ## 5. Observability
@@ -251,6 +274,8 @@ B2. F5: illegal-move tests first (they pin how the battle refuses today; a crash
    with its test), then `ChaosController`, `InvariantChecker`, `--policy chaos`; a first chaos report on the demo.
 C. Your files, after approval: tags, the 3.4 edits (`old → new`), then `build_demo_run.tscn` for the new content;
    `test_demo_run.gd`. First `--play` report shared with you.
+C2. 3.7: system first (encounter grants, slot brain, rewards, armor to inventory, rarity weights, validator, tests),
+   then your files after the rarity table is approved.
 D. Shell (3.6), each file shown as a diff.
 E. Export preset, `build/` in `.gitignore`, F4 check; then the design break: your tuning on the report.
 F. `/sync-spec playable-demo`, roadmap ✅, root `CLAUDE.md` table (`content/demo/` now a two-floor run), the
@@ -280,3 +305,10 @@ when made.
 - **D6 balance stays your call:** the report informs, no test asserts a win rate. Suggested target for the dumb
   policy, only as a starting point: it wins 20–40% of seeds and most deaths are on floor 1, so a human who reads
   weaknesses wins most runs.
+
+Decided 2026-10-26 by the user (amendment C2, 3.7):
+- **D7 rarity:** four tiers (Common, Uncommon, Rare, Legendary) that weight pool picks, the weights in content.
+- **D8 encounters** can grant to every enemy and per slot, override a slot's brain, and reward a win.
+- **D9 armor never auto-equips:** drops, pickups, purchases and event rewards go to the armor inventory; a
+  character's starting loadout is still worn at run start.
+- **D10** the demo content in 3.7, each existing file shown as `old → new` first.
