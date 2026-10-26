@@ -114,6 +114,89 @@ func _floor_signature(map: FloorMap) -> String:
 	return "\n".join(lines)
 
 
+## Spec playable-demo 4 and 3.6: the battle speed is presentation only. The same seed and the same (auto) choices
+## give the same battle and run hash with animations skipped, at 1× and at 2×, played through GameMain with the demo
+## views and the battle panel's own Skip and Speed buttons; at 1× and 2× the gate waits on the animations' execute
+## keys while Engine.time_scale runs at that speed.
+func test_demo_battle_speed_keeps_combat() -> void:
+	var content := _demo()
+	if content == null:
+		print("    skipped: %s not built" % DESCENT)
+		return
+	var skipped := await _speed_run(0.0)
+	var normal := await _speed_run(1.0)
+	var fast := await _speed_run(2.0)
+	eq(skipped["error"], "", "the skipped run fights")
+	eq(normal["error"], "", "the 1× run fights")
+	eq(fast["error"], "", "the 2× run fights")
+	eq(normal["timeScale"], 1.0, "the 1× battle plays at time scale 1")
+	eq(fast["timeScale"], 2.0, "the 2× battle plays at time scale 2")
+	check(not normal["skipAll"] and not fast["skipAll"], "both wait on the animations")
+	eq(normal["finalHash"], skipped["finalHash"], "1× fights the same battle as no animations")
+	eq(fast["finalHash"], normal["finalHash"], "2× fights the same battle as 1×")
+	eq(fast["runHash"], normal["runHash"], "and the run hash is the same")
+	eq(skipped["runHash"], normal["runHash"], "with or without animations")
+
+
+## Plays the first battle next to the start of the first seed that has one: `speed` 0 skips animations, else the
+## battle panel's Skip is off and Speed is pressed until Engine.time_scale is `speed`. Never writes settings.
+func _speed_run(speed: float) -> Dictionary:
+	var result := {"error": "", "finalHash": "", "runHash": "", "timeScale": 0.0, "skipAll": true}
+	var game: GameMain = load("res://game/game_main.tscn").instantiate()
+	game.skip_animations = speed == 0.0
+	host.add_child(game)
+	var console := DevConsole.new(host.get_tree())
+	console.keep_history = false
+	console.load_commands(false)  # built-ins only: user://dev_commands/ is shared with parallel shards
+	console.attach(game)
+	console.auto_battle = true
+	var cell := -1
+	for seed_value in range(1, 31):
+		result["error"] = game.start_run(_party(game.content), str(seed_value), DESCENT)
+		if result["error"] != "":
+			break
+		cell = _next_battle(game.run)
+		if cell >= 0:
+			break
+	if result["error"] == "" and cell < 0:
+		result["error"] = "no seed in 1–30 has a battle next to the start"
+	if result["error"] == "":
+		var run := game.run
+		# Runs before the panel's own battle_started handler, which then applies the speed the label shows.
+		run.battle_started.connect(func(battle: Battle) -> void:
+			if speed > 0.0:
+				var skip := game.find_child("Skip", true, false) as BaseButton
+				var faster := game.find_child("Speed", true, false) as Button
+				if skip != null:
+					skip.button_pressed = false
+				for press in 3:
+					if faster == null or faster.text == "%d×" % int(speed):
+						break
+					faster.pressed.emit()
+			battle.turn_started.connect(func(_unit, _turn) -> void:
+				result["timeScale"] = Engine.time_scale
+				result["skipAll"] = game.gate.skip_all, CONNECT_ONE_SHOT))
+		result["error"] = run.enter_room(cell)
+		if result["error"] == "":
+			await run.battle_finished
+			var battles := run.run_log.filter(func(entry: Dictionary) -> bool: return entry["type"] == "battle")
+			result["finalHash"] = battles[-1]["finalHash"] if not battles.is_empty() else ""
+			result["runHash"] = run.state.run_hash()
+	game.queue_free()
+	await host.get_tree().process_frame
+	Engine.time_scale = 1.0
+	return result
+
+
+## A normal battle room the run can enter from where it stands, or -1.
+func _next_battle(run: RunController) -> int:
+	for index in run.state.map.sorted_indices():
+		var data: Dictionary = run.state.map.cells[index]
+		if run.can_enter(index) and data["role"] != FloorMap.ROLE_BOSS and data["content"]["kind"] == "encounter":
+			return index
+	return -1
+
+
 ## The auto policy plays whole runs to an end (won or lost; never a runner error, a dead end or the step cap), and a
 ## run that beats the Golem takes the stairs.
 func test_demo_run_completes() -> void:
