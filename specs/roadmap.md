@@ -16,6 +16,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c4b. `atomic-battles` | ✅ Done | 2026-10-22 |
 | 1c5. `content-pass` | ✅ Done (2026-10-25) | 2026-10-22 |
 | 1d. `playable-demo` | 🔨 Implementing (A–C6 done: tools, the ten-floor Descent, 11 classes, XP and rest; smart 4-member 35.7%; D screens done; D2 `ui-framework` (Lyra-style UI) done; D3 `gameplay-messages` (Lyra-style message bus) done; E Windows export done (player, dev and full builds, release check); next the design break: your tuning on the smart 4-member report, then F `/sync-spec`) | 2026-10-26 |
+| 1e. `auto-battle` | ⬜ Not started (smart auto play as a player feature) | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
 | 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
 | 3. `battle-verify` | ⬜ Not started | |
@@ -123,6 +124,8 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   exactly-once trades, a house account that buys at the dust rate and relists its stock). Decided by the user: held
   copies count as eidolons, order-book prices, gems buy packs and dust comes only from cards. Root `CLAUDE.md`,
   `game-design.md` and `server-authority.md` follow. At the user's request.
+- 2026-10-26: Added 1e `auto-battle` after 1d and before slice 2: smart auto play becomes a player feature (one shared
+  policy for the battle panel and the reports, ability roles as GAS tags). At the user's request.
 - 2026-10-26: 1d step E: three export levels instead of one (player release build; dev and full debug builds with
   the dev tools, or everything incl. tests, so Claude can drive and test exported builds), two patched GodotGAS
   bugs (an editor class name in runtime code broke every export; a self-typed export leaked at exit), each with a
@@ -331,6 +334,16 @@ content, so 1d is spent building a run rather than fixing tools or inventing mec
 Grows 1b's example set (`content/demo/`, `presentation/demo/`) into the full demo, built with the 1c tools: coloured-cube units whose ability animations jump, spin or flash;
 demo AttributeSet and tags made the GodotGAS way; a short run through battles, an event, a treasure room, a shop and a
 boss. **Includes adjusting the dev tools** wherever building the demo exposes limits or wrong assumptions in them.
+
+### 1e. `auto-battle`
+**Purpose:** smart auto play as a player feature (client-only). Today the battle panel's Auto plays the first usable
+ability on the first target, while the smart policy that the balance reports measure (`SmartController`, spec
+`playable-demo` 3.9) is a dev tool left out of the player build. One policy, shipped: the battle panel's Auto and the
+dev reports use the same system code, so the reports measure what players get. Abilities say what they do through GAS
+tags (heal, revive, buff…) instead of the file-name guess the dev policy uses today, checked by the validator.
+Player options to settle in the spec: Auto per battle or run-wide (and a setting), whether Auto may spend ults, a
+Simple / Smart choice. Auto picks are ordinary player inputs in the action log (replayed and verified like manual
+ones; no wire change); whether to record that a battle was played on Auto, for analytics (4b), is a spec decision.
 
 ### 2. `run-checkout` (Part A of `specs/server-authority.md`)
 **First hookup to the server: runs, floor seeds, SQL, Redis.** The server starts a run and issues **floor seeds**
