@@ -50,7 +50,9 @@ enum InstigatorStackingPolicy {
 ## The maximum number of stacks this effect can accumulate. 0 means infinite.
 @export var max_stacks: int = 0
 ## Effects to apply to the target when the stack limit is reached and a new stack is attempted.
-@export var overflow_effects: Array[GameplayEffect] = []
+## rpgProject patch (client-godot/CLAUDE.md section 0): Array[Resource], not Array[GameplayEffect]. An exported typed
+## array of the script's own class leaks the script at exit in Godot 4.7.2. Holds GameplayEffects only.
+@export var overflow_effects: Array[Resource] = []
 ## If true, hitting the stack cap and attempting to add another stack will completely purge this effect.
 @export var clear_stack_on_overflow: bool = false
 

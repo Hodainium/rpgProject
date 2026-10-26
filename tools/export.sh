@@ -4,8 +4,7 @@
 #   player: preset "Windows Desktop", release template, the game only        -> build/demo/rpgDemo.exe
 #   dev:    preset "Windows Desktop Dev", debug template, + console and tools -> build/dev/rpgDemo.exe (+ .console.exe)
 #   full:   preset "Windows Desktop Full", debug template, everything (tests) -> build/full/rpgDemo.exe (+ .console.exe)
-# The build folder is emptied first. Exit 1 when the export fails, a GodotGAS export patch no longer matches
-# ("RPG export:" in the log) or the .exe or .pck is missing; 124 on a stall.
+# The build folder is emptied first. Exit 1 when the export fails or the .exe or .pck is missing; 124 on a stall.
 set -uo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 godot=${GODOT:-/h/Godot/Godot_v4.7.2-stable_mono_win64_console.exe}
@@ -23,7 +22,6 @@ log="$out/../export-$level.log"
 	"$godot" --headless --path "$root/client-godot" "$mode" "$preset" "../build/$dir/rpgDemo.exe"
 code=$?
 if (( code != 0 )); then echo "export.sh: export failed (exit $code), log $log"; exit "$code"; fi
-if grep -q 'RPG export:' "$log"; then grep 'RPG export:' "$log"; echo "export.sh: an export patch failed, log $log"; exit 1; fi
 for file in rpgDemo.exe rpgDemo.pck; do
 	[[ -f $out/$file ]] || { echo "export.sh: $file missing, log $log"; exit 1; }
 done

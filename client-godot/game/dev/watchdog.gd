@@ -24,6 +24,9 @@ const EXIT_ERROR_STALLED: int = 71
 const ERROR_GRACE_MS: int = 30000
 ## Errors kept for the stop message.
 const ERRORS_SHOWN: int = 10
+## quit(): frames and audio time for stopped sounds to leave the audio server.
+const QUIT_SETTLE_FRAMES: int = 3
+const QUIT_SETTLE_SECONDS: float = 0.1
 
 var active: bool = false
 var idle_limit_ms: int = DEFAULT_IDLE_LIMIT * 1000
@@ -56,6 +59,21 @@ func _ready() -> void:
 	_last_alive_ms = _last_beat_ms
 	OS.add_logger(_errors)
 	_check_main_scene.call_deferred()
+
+
+## Quits after the scene and its sounds are gone. A sound still playing at quit leaves its playback in the audio
+## server, which leaks it at exit ("resources still in use"). Stopping sounds is not enough: while screens are torn
+## down, a control under the mouse gets mouse_entered and the sound board plays Hover. So the current scene is freed
+## first (freeing a player stops it, and nothing is left to start one), then the mixer gets a few frames and a moment
+## of audio time to drop the playbacks. For tools that quit while the game's UI may still be sounding.
+func quit(code: int = 0) -> void:
+	var tree := get_tree()
+	if tree.current_scene != null:
+		tree.current_scene.queue_free()
+	for frame in QUIT_SETTLE_FRAMES:
+		await tree.process_frame
+	await tree.create_timer(QUIT_SETTLE_SECONDS, true, false, true).timeout
+	tree.quit(code)
 
 
 ## Progress: call it at each unit of work (a test, a seed, a battle, a script line).

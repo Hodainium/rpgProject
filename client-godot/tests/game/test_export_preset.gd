@@ -1,11 +1,10 @@
-## Spec playable-demo 3.12 (D5, D33, D34): the export presets player / dev / full (export_presets.cfg). A shipped script or
+## Spec playable-demo 3.12 (D5, D33): the export presets player / dev / full (export_presets.cfg). A shipped script or
 ## scene that names an excluded class, preloads an excluded file or loads it as an ext_resource would fail to parse in
 ## that build only, so these tests catch it here instead of in the build. They read project source: skipped inside an
 ## exported build.
 extends TestCase
 
 const PRESETS: String = "res://export_presets.cfg"
-const ExportPatches := preload("res://addons/rpg_dev/export_patches.gd")
 ## Scanned for references; the vendored addon never names our classes.
 const SKIP_DIRS: Array[String] = ["res://.godot/", "res://addons/GodotGAS/"]
 ## preset name -> [export path]
@@ -24,7 +23,6 @@ func test_export_presets() -> void:
 	for name in presets:
 		var preset: Dictionary = presets[name]
 		eq(preset["export_path"], LEVELS[name][0], "%s exports to its build folder" % name)
-		eq(preset["script_export_mode"], 0, "%s exports scripts as text (the GodotGAS patch needs it)" % name)
 	var player: Dictionary = presets["Windows Desktop"]
 	for path in ["res://tests/run_tests.gd", "res://game/tools/dev_run.gd", "res://game/dev/commands/give.gd",
 			"res://game/dev/content/items", "res://addons/rpg_dev/plugin.gd", "res://combat/headless/replay_main.gd",
@@ -64,22 +62,6 @@ func test_export_keeps_what_runs() -> void:
 		eq(Array(_broken_references(excludes, files)), [], "%s: no shipped file depends on an excluded one" % preset_name)
 
 
-## The export patches still match GodotGAS exactly, and the patched files parse without editor classes.
-func test_export_patches() -> void:
-	if skip_in_export():
-		return
-	for path in ExportPatches.PATCHES:
-		var source := FileAccess.get_file_as_string(path)
-		var result := ExportPatches.patch(path, source)
-		eq(result["error"], "", "%s patches cleanly" % path)
-		check(not result["text"].contains("EditorInterface."), "%s names no editor class after the patch" % path)
-		var script := GDScript.new()
-		script.source_code = result["text"]
-		eq(script.reload(), OK, "%s parses after the patch" % path)
-	var drift := ExportPatches.patch(ExportPatches.PATCHES.keys()[0], "no match here")
-	check(drift["error"].contains("expected 1"), "a patch that no longer matches is an error naming the file")
-
-
 ## The title menu offers only the content roots the build has (the export leaves tests/fixtures out).
 func test_content_roots() -> void:
 	if skip_in_export():
@@ -87,7 +69,7 @@ func test_content_roots() -> void:
 	eq(GameMain.content_roots(), GameMain.CONTENT_ROOTS, "both roots exist in the project")
 
 
-## preset name -> {export_path, script_export_mode, excludes}
+## preset name -> {export_path, features, excludes}
 func _presets() -> Dictionary:
 	var file := ConfigFile.new()
 	var result := {}
@@ -103,7 +85,6 @@ func _presets() -> Dictionary:
 				excludes.append(part.strip_edges())
 		result[file.get_value(section, "name", "")] = {
 			"export_path": file.get_value(section, "export_path", ""),
-			"script_export_mode": file.get_value(section, "script_export_mode", -1),
 			"features": file.get_value(section, "custom_features", ""),
 			"excludes": excludes,
 		}

@@ -85,7 +85,7 @@ func _ready() -> void:
 	print("dev_run: %d command(s), %d failed%s" % [results.size(), failed_lines.size(),
 		("\n  " + "\n  ".join(failed_lines)) if not failed_lines.is_empty() else ""])
 	OS.remove_logger(_errors)
-	get_tree().quit(2 if not failed_lines.is_empty() else 0)
+	Watchdog.quit(2 if not failed_lines.is_empty() else 0)
 
 
 func _print_errors(errors: Array[String]) -> void:

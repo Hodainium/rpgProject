@@ -5,11 +5,9 @@ extends EditorPlugin
 
 const ContentDock := preload("res://addons/rpg_dev/content_dock.gd")
 const RpgInspector := preload("res://addons/rpg_dev/rpg_inspector.gd")
-const ExportPlugin := preload("res://addons/rpg_dev/export_plugin.gd")
 
 var _dock: Control
 var _inspector: EditorInspectorPlugin
-var _export: EditorExportPlugin
 
 
 func _enter_tree() -> void:
@@ -19,13 +17,10 @@ func _enter_tree() -> void:
 	_inspector = RpgInspector.new()
 	_inspector.undo_redo = get_undo_redo()
 	add_inspector_plugin(_inspector)
-	_export = ExportPlugin.new()
-	add_export_plugin(_export)
 
 
 func _exit_tree() -> void:
 	remove_inspector_plugin(_inspector)
-	remove_export_plugin(_export)
 	remove_control_from_docks(_dock)
 	_dock.queue_free()
 

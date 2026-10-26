@@ -150,7 +150,10 @@ static func get_svg_icon(path: String) -> Texture2D:
 	var svg_text = file.get_as_text()
 	file.close()
 	
-	var theme = EditorInterface.get_editor_theme()
+	# rpgProject patch (client-godot/CLAUDE.md section 0): EditorInterface through Engine.get_singleton. A bare
+	# editor class name fails to parse in export templates, and the cue manager autoload depends on this script.
+	var editor_interface: Object = Engine.get_singleton(&"EditorInterface")
+	var theme = editor_interface.get_editor_theme()
 	var font_color = "#" + theme.get_color("font_color", "Editor").to_html(false)
 	
 	svg_text = svg_text.replace("#e0e0e0", font_color)
@@ -159,7 +162,7 @@ static func get_svg_icon(path: String) -> Texture2D:
 	svg_text = svg_text.replace("#FFFFFF", font_color)
 	
 	var img = Image.new()
-	var editor_scale = EditorInterface.get_editor_scale()
+	var editor_scale = editor_interface.get_editor_scale()
 	var err = img.load_svg_from_string(svg_text, editor_scale)
 	
 	if err == OK:
