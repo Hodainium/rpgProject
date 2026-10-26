@@ -173,7 +173,7 @@ func test_wear_commands_and_items() -> void:
 	game.load_content()
 	var console := DevConsole.new(host.get_tree())
 	console.keep_history = false
-	console.load_commands()
+	console.load_commands(false)  # built-ins only: user://dev_commands/ is shared with parallel shards
 	console.attach(game)
 	var ok := func(line: String) -> Dictionary:
 		var result: Dictionary = await console.execute(line)

@@ -72,7 +72,7 @@ func test_new_command_run_id() -> void:
 	game.content = _two_runs("fixture.run.second", false)
 	var console := DevConsole.new(host.get_tree())
 	console.keep_history = false
-	console.load_commands()
+	console.load_commands(false)  # built-ins only: user://dev_commands/ is shared with parallel shards
 	console.attach(game)
 	var listed := game.runs()
 	eq(listed.size(), 2, "GameMain.runs() lists both")
@@ -185,7 +185,7 @@ func test_autorun_command() -> void:
 	game.load_content()
 	var console := DevConsole.new(host.get_tree())
 	console.keep_history = false
-	console.load_commands()
+	console.load_commands(false)  # built-ins only: user://dev_commands/ is shared with parallel shards
 	console.attach(game)
 	check((await console.execute("new " + ",".join(PARTY) + " 7"))["ok"], "a run starts")
 	var played: Dictionary = await console.execute("autorun")

@@ -22,7 +22,7 @@ func _session() -> Array:
 	_games.append(game)
 	var console := DevConsole.new(host.get_tree())
 	console.keep_history = false
-	console.load_commands()
+	console.load_commands(false)  # built-ins only: user://dev_commands/ is shared with parallel shards
 	console.attach(game)
 	console.auto_battle = true
 	return [game, console]
@@ -355,7 +355,7 @@ static func _write(path: String, text: String) -> void:
 func test_tool_parity() -> void:
 	var console := DevConsole.new()
 	console.keep_history = false
-	console.load_commands()
+	console.load_commands(false)  # built-ins only: user://dev_commands/ is shared with parallel shards
 	var pairs := {"dock Create": "create", "dock Validate": "validate", "room grid": "grid", "Play buttons": "play",
 		"seed runner": "seeds", "screenshot": "shot", "party panel Equip": "wear", "party panel Unequip": "unwear",
 		"animation preview": "anim", "battle panel status line": "status", "menu run picker": "new",
