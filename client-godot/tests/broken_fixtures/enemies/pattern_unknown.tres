@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_vfesw"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_rpxoo"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="3_1egyn"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="4_wdu17"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="5_pew41"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="6_bejyj"]
+
+[sub_resource type="Resource" id="Resource_jywih"]
+script = ExtResource("3_1egyn")
+pattern = Array[StringName]([&"Broken.Ability.Nowhere"])
+
+[resource]
+script = ExtResource("5_pew41")
+id = &"broken.enemy.pattern_unknown"
+attribute_set = ExtResource("2_rpxoo")
+abilities = Array[PackedScene]([ExtResource("1_vfesw")])
+brain = SubResource("Resource_jywih")

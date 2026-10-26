@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_hgiji"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_i7cea"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/noop.tres" id="3_lera3"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/rally.tres" id="4_44vpf"]
+
+[sub_resource type="Resource" id="Resource_y3ufo"]
+script = ExtResource("2_i7cea")
+id = &"advance"
+effect = ExtResource("3_lera3")
+delay_x100 = -2500
+
+[node name="Rally" type="Node" unique_id=280022736]
+script = ExtResource("1_hgiji")
+targeting = 3
+executions = Array[ExtResource("2_i7cea")]([SubResource("Resource_y3ufo")])
+animation = ExtResource("4_44vpf")
+ability_tag = &"Fixture.Ability.Rally"

@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_x8ow8"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ult_locked.tscn" id="2_6phka"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ult_breakout.tscn" id="3_txkdi"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/full_charge.tscn" id="4_wqc7k"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_status_attribute_set.gd" id="5_hlp64"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="6_c4o33"]
+
+[resource]
+script = ExtResource("6_c4o33")
+id = &"fixture.character.breaker"
+attribute_set = ExtResource("5_hlp64")
+abilities = Array[PackedScene]([ExtResource("1_x8ow8"), ExtResource("2_6phka"), ExtResource("3_txkdi"), ExtResource("4_wqc7k")])
+display_name = "Breaker"
+display_color = Color(0, 0.5019608, 0.5019608, 1)
+tags = Array[StringName]([&"Fixture.Character.Breaker"])
+stats_x100 = Dictionary[String, int]({
+"atk": 40000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 30000,
+"energy": 0,
+"hp": 100000,
+"max_hp": 100000,
+"max_mp": 10000,
+"max_toughness": 0,
+"mp": 10000,
+"spd": 10000,
+"toughness": 0,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

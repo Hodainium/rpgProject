@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/controlled_without_status.tscn" id="1_qvaw1"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_rrin3"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="3_nbmad"]
+
+[resource]
+script = ExtResource("3_nbmad")
+id = &"broken.character.controlled_without_status"
+attribute_set = ExtResource("2_rrin3")
+abilities = Array[PackedScene]([ExtResource("1_qvaw1")])

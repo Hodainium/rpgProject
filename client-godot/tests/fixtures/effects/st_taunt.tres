@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_yo245"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_ky48l"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_43328"]
+
+[resource]
+script = ExtResource("3_43328")
+stacking_policy = 1
+policy = 3
+max_stacks = 1
+duration_turns = 2
+granted_tags = Array[StringName]([&"Status.Buff.Taunt", &"State.Taunting"])

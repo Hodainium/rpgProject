@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_eqrjw"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_apusx"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/effects/controlled_without_status.tres" id="3_mniwr"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/strike.tres" id="4_1u6te"]
+
+[sub_resource type="Resource" id="Resource_uox7s"]
+script = ExtResource("2_apusx")
+id = &"hit"
+effect = ExtResource("3_mniwr")
+damage_mode = 2
+
+[node name="Strike" type="Node" unique_id=1933697684]
+script = ExtResource("1_eqrjw")
+executions = Array[ExtResource("2_apusx")]([SubResource("Resource_uox7s")])
+animation = ExtResource("4_1u6te")
+ability_tag = &"Broken.Ability.ControlledWithoutStatus"

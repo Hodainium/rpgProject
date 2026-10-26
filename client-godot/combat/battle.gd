@@ -30,6 +30,15 @@ signal unit_recovered(unit_id: StringName)
 signal one_more_started(unit_id: StringName)
 ## Spec ult-interrupts: a unit (party or enemy) casts its ult out of turn.
 signal interrupt_started(unit_id: StringName, ability_tag: StringName)
+## Spec content-pass (read-only, for presentation and the dev report): a controlled unit lost its turn (H1); a status
+## roll missed (H2); a hit was drained and healed its target (2.4); a boss entered a phase (H5); an action value moved (H6).
+signal turn_skipped(unit_id: StringName)
+signal status_resisted(source_id: StringName, target_id: StringName, effect_path: String)
+signal damage_drained(source_id: StringName, target_id: StringName, amount: int)
+signal phase_changed(unit_id: StringName, phase: int)
+signal action_delayed(unit_id: StringName, percent: int)
+## Spec content-pass H7: an enemy hit a party unit's weakness (the attacker is owed a One More).
+signal unit_downed(unit_id: StringName, by_id: StringName)
 
 const TURN_LIMIT: int = 1000
 const ONGOING: String = "Ongoing"
@@ -68,6 +77,34 @@ const MAX_TOUGHNESS: String = "max_toughness"
 const BREAK_DELAY: int = 2500
 ## Loose tag on every unit in field mode; abilities use it in their activation_query (map-only / battle-only).
 const IN_FIELD_TAG: StringName = &"State.Infield"
+## Spec content-pass H1: a unit with this rule tag (granted by Freeze, Stun… beside their Status.Debuff.* tag) loses
+## its turn: no action, nothing logged, but its turn ticks and countdowns still run.
+const CONTROLLED_TAG: StringName = &"State.Controlled"
+## Sent to a controlled unit whose turn was skipped. Payload: {"source", "target": the unit}.
+const EVENT_TURN_SKIPPED: StringName = &"Event.Turn.Skipped"
+## Spec content-pass H2: a status roll missed. Sent to source and target. Payload: {"source", "target", "row", "tags",
+## "effect": the effect's resource path}.
+const EVENT_STATUS_RESISTED: StringName = &"Event.Status.Resisted"
+## Spec content-pass 2.4: a hit the target drains (Hit.Drained, from the damage ExecCalc) heals it instead.
+const HIT_DRAINED: StringName = &"Hit.Drained"
+## Spec content-pass H4: a breaking hit also sends Event.Damage.Dealt/Taken.Break.<DamageType>; an action also sends
+## Event.Ability.Used.<X> for each Ability.Type.<X> asset tag; an out-of-turn ult sends Event.Battle.Interrupt to its
+## caster ({"source", "target": the caster, "ability"}).
+const ABILITY_TYPE_PREFIX: String = "Ability.Type."
+const EVENT_BATTLE_INTERRUPT: StringName = &"Event.Battle.Interrupt"
+## Spec content-pass H5: sent to a boss as it enters a phase. Payload: {"source", "target": the unit, "phase": n (1-based)}.
+const EVENT_PHASE_CHANGED: StringName = &"Event.Unit.PhaseChanged"
+## Spec content-pass 2.2: while a party unit has this rule tag (Taunt), enemies' single-target actions must target a
+## taunting unit.
+const TAUNTING_TAG: StringName = &"State.Taunting"
+## Prefix of the debuff tags a boss phase's clear_debuffs removes.
+const DEBUFF_TAG: StringName = &"Status.Debuff"
+## Spec content-pass H7 (Persona): party units are never Broken. An enemy hit on a party unit's weakness downs it
+## (this rule tag) and gives the attacker a One More; a Downed unit grants no other until its next turn starts.
+const DOWNED_TAG: StringName = &"State.Downed"
+## Spec content-pass H8: extra turns (whole turns, ×100) on the turn-based debuffs a unit's rows apply.
+const DEBUFF_TURNS: String = "debuff_turns"
+const HIT_WEAKNESS: StringName = &"Hit.Weakness"
 
 ## The battle's single seeded RNG. Combat draws from nothing else.
 var rng := RandomNumberGenerator.new()
@@ -371,6 +408,8 @@ func run(controller: Object) -> void:
 
 		if actor.asc.has_tag_exact(BROKEN_TAG):
 			_recover(actor)
+		if actor.asc.has_tag_exact(DOWNED_TAG):
+			actor.asc.clear_tag(DOWNED_TAG)
 		actor.asc.turn_start()
 		actor.asc.send_gameplay_event(EVENT_TURN_START, {"source": actor, "target": actor})
 		await _drain_triggers()
@@ -379,7 +418,12 @@ func run(controller: Object) -> void:
 
 		var action: Dictionary = {}
 		if actor.alive and outcome == ONGOING:
-			action = await _take_action(actor, controller)
+			if actor.asc.has_tag_exact(CONTROLLED_TAG):
+				# Spec content-pass H1: no decision is asked for (nothing logged); the turn's ticks still run below.
+				turn_skipped.emit(actor.unit_id)
+				actor.asc.send_gameplay_event(EVENT_TURN_SKIPPED, {"source": actor, "target": actor})
+			else:
+				action = await _take_action(actor, controller)
 			if not is_running() and outcome == ONGOING:
 				break
 			await _drain_triggers()
@@ -449,6 +493,14 @@ func _break(target: BattleUnit, breaker: BattleUnit) -> void:
 	unit_broken.emit(target.unit_id, breaker.unit_id)
 
 
+## Spec content-pass H7: a party unit hit on its weakness is Downed and the enemy that hit it is owed a One More.
+func _down(target: BattleUnit, attacker: BattleUnit) -> void:
+	target.asc.add_tag(DOWNED_TAG)
+	if not one_more_queue.has(attacker):
+		one_more_queue.append(attacker)
+	unit_downed.emit(target.unit_id, attacker.unit_id)
+
+
 ## At a Broken unit's next turn start: toughness back to its maximum (through an instant effect), Broken removed.
 func _recover(unit: BattleUnit) -> void:
 	var missing := unit.stat(MAX_TOUGHNESS) - unit.stat(TOUGHNESS)
@@ -470,6 +522,18 @@ func _recover(unit: BattleUnit) -> void:
 
 ## Units an ability could target, in slot order: living ones, or for the dead-ally modes only dead allies.
 func target_candidates(actor: BattleUnit, ability: BattleAbility) -> Array[BattleUnit]:
+	var result := _side_candidates(actor, ability)
+	# Spec content-pass 2.2 (Taunt): an enemy's single-target or blast ability may only aim at taunting party units
+	# while one is alive. (A blast still splashes onto the taunter's neighbours: _expand_targets reads every unit.)
+	if not actor.is_party() and ability.targets_enemies() and ability.needs_target():
+		var taunting := result.filter(func(unit: BattleUnit) -> bool: return unit.asc.has_tag_exact(TAUNTING_TAG))
+		if not taunting.is_empty():
+			result.assign(taunting)
+	return result
+
+
+## Living units on the side an ability reaches (or dead allies for the dead-ally modes), in slot order.
+func _side_candidates(actor: BattleUnit, ability: BattleAbility) -> Array[BattleUnit]:
 	var opposing := ability.targets_enemies()
 	var want_dead := ability.targets_dead()
 	var result: Array[BattleUnit] = []
@@ -618,6 +682,8 @@ func _interrupt(caster: BattleUnit, choice: Dictionary, controller: Object) -> v
 		else:
 			_fail("enemy ult %s failed to activate" % ability.ability_tag)
 		return
+	caster.asc.send_gameplay_event(EVENT_BATTLE_INTERRUPT, {"source": caster, "target": caster,
+		"ability": ability.ability_tag})
 	await _drain_triggers()
 	_check_deaths()
 	_check_end()
@@ -683,23 +749,78 @@ func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionR
 		row.apply_override(spec)
 		if ability.is_follow_up():
 			spec.inject_tag(HIT_FOLLOW_UP)
-		unit.asc.apply_effect_spec_to_target(spec, target.asc)
 		hit_ids.append(target.unit_id)
-		# A break needs the target to survive the hit (a killing blow is just a kill).
+		if not _status_lands(unit, target, row):
+			continue
+		_extend_debuff(unit, row, spec)
+		var landed := unit.asc.apply_effect_spec_to_target(spec, target.asc)
+		# Spec content-pass H6: a landed row with a delay moves the target's action value (negative = advance).
+		if landed != null and row.delay_x100 != 0 and not field_mode and target.is_up():
+			turn_manager.delay(target, row.delay_x100)
+			action_delayed.emit(target.unit_id, row.delay_x100)
+		# A break needs the target to survive the hit (a killing blow is just a kill). Party units never break (H7).
 		if toughness_before > 0 and target.stat(TOUGHNESS) <= 0 and target.stat(BattleUnit.HP) > 0 \
-				and not target.asc.has_tag_exact(BROKEN_TAG) and not field_mode:
+				and not target.asc.has_tag_exact(BROKEN_TAG) and not field_mode and not target.is_party():
 			_break(target, unit)
 			spec.inject_tag(HIT_BREAK)
+		if target.is_party() and not unit.is_party() and spec.dynamic_tags.has(HIT_WEAKNESS) \
+				and target.stat(BattleUnit.HP) > 0 and not target.asc.has_tag_exact(DOWNED_TAG) and not field_mode:
+			_down(target, unit)
 		var damage := hp_before - target.stat(BattleUnit.HP)
-		if damage > 0:
+		if spec.dynamic_tags.has(HIT_DRAINED):
+			_send_drain_events(unit, target, -damage, row, spec)
+		elif damage > 0:
 			_send_damage_events(unit, target, damage, row, spec)
 	execution_resolved.emit(unit.unit_id, row.id, hit_ids)
 	if schema_version >= 2:
 		_check_revives()
 
 
+## Spec content-pass H2 / D13: whether a row's status lands on `target`. A row without a chance, or with 100% or more,
+## always lands and draws nothing; below 100% it takes one battle-RNG roll. An effect whose application_query refuses
+## the target (immunity) draws nothing either (GodotGAS then refuses it). A miss sends Event.Status.Resisted to both units.
+func _status_lands(source: BattleUnit, target: BattleUnit, row: ExecutionRow) -> bool:
+	# Field mode never rolls: run-level randomness comes from RunSeeds streams only (client-godot/CLAUDE.md 3).
+	if row.chance_x100 <= 0 or row.chance_x100 >= Fixed.ONE_HUNDRED_PERCENT or field_mode:
+		return true
+	if row.effect.application_query != null and not row.effect.application_query.matches(target.asc):
+		return true
+	if rng.randi_range(0, 9999) < row.chance_x100:
+		return true
+	var payload := {"source": source, "target": target, "row": row.id, "tags": row.tags,
+		"effect": row.effect.resource_path}
+	source.asc.send_gameplay_event(EVENT_STATUS_RESISTED, payload)
+	if target != source:
+		target.asc.send_gameplay_event(EVENT_STATUS_RESISTED, payload)
+	status_resisted.emit(source.unit_id, target.unit_id, row.effect.resource_path)
+	return false
+
+
+## Spec content-pass H8: a turn-based debuff applied by a row lasts the source's debuff_turns more turns (whole turns
+## only). Set on the spec before it lands, so a GodotGAS refresh copies the longer count.
+@warning_ignore("integer_division")
+func _extend_debuff(source: BattleUnit, row: ExecutionRow, spec: GameplayEffectSpec) -> void:
+	if field_mode or row.effect.policy != GameplayEffect.DurationPolicy.TURN_BASED or not row.applies_debuff():
+		return
+	var extra := source.stat(DEBUFF_TURNS) / 100
+	if extra > 0:
+		spec.remaining_turns += extra
+
+
+## Spec content-pass 2.4: a drained hit healed its target by `amount`. Only Event.Damage.Dealt.Drained (source) and
+## Event.Damage.Taken.Drained (target): the plain Dealt/Taken events need damage, so "when hit" passives stay silent.
+func _send_drain_events(source: BattleUnit, target: BattleUnit, amount: int, row: ExecutionRow,
+		spec: GameplayEffectSpec) -> void:
+	var payload := {"source": source, "target": target, "amount": amount, "row": row.id, "tags": row.tags,
+		"hit_tags": Battle.hit_tags_of(spec)}
+	source.asc.send_gameplay_event(StringName("%s.Drained" % EVENT_DAMAGE_DEALT), payload)
+	target.asc.send_gameplay_event(StringName("%s.Drained" % EVENT_DAMAGE_TAKEN), payload)
+	damage_drained.emit(source.unit_id, target.unit_id, amount)
+
+
 ## Event.Damage.Dealt (source) and Event.Damage.Taken (target), plus .<X> for each Damage.Type.<X> row tag, then
-## .<X> for each Hit.<X> tag on the spec (sorted). Only queues triggers; they run when the battle drains the queue.
+## .<X> for each Hit.<X> tag on the spec (sorted), then (a breaking hit) .Break.<X> per damage type. Only queues
+## triggers; they run when the battle drains the queue.
 func _send_damage_events(source: BattleUnit, target: BattleUnit, damage: int, row: ExecutionRow,
 		spec: GameplayEffectSpec) -> void:
 	var hit_tags := Battle.hit_tags_of(spec)
@@ -716,6 +837,11 @@ func _send_damage_events(source: BattleUnit, target: BattleUnit, damage: int, ro
 		var hit_kind := String(tag).trim_prefix(HIT_TAG_PREFIX)
 		source.asc.send_gameplay_event(StringName("%s.%s" % [EVENT_DAMAGE_DEALT, hit_kind]), payload)
 		target.asc.send_gameplay_event(StringName("%s.%s" % [EVENT_DAMAGE_TAKEN, hit_kind]), payload)
+	# Spec content-pass H4: per-type break effects listen to Event.Damage.Dealt.Break.<DamageType>.
+	if hit_tags.has(HIT_BREAK):
+		for damage_type in row.damage_types():
+			source.asc.send_gameplay_event(StringName("%s.Break.%s" % [EVENT_DAMAGE_DEALT, damage_type]), payload)
+			target.asc.send_gameplay_event(StringName("%s.Break.%s" % [EVENT_DAMAGE_TAKEN, damage_type]), payload)
 	damage_dealt.emit(source.unit_id, target.unit_id, damage, hit_tags)
 
 
@@ -804,7 +930,16 @@ func _activate(actor: BattleUnit, ability: BattleAbility, target: BattleUnit) ->
 	payload["unit"] = actor
 	var activated: bool = await ability.try_activate(payload)
 	if activated and not field_mode:
-		actor.asc.send_gameplay_event(EVENT_ABILITY_USED, {"source": actor, "target": actor, "ability": tag})
+		var used := {"source": actor, "target": actor, "ability": tag}
+		actor.asc.send_gameplay_event(EVENT_ABILITY_USED, used)
+		# Spec content-pass H4: Event.Ability.Used.<X> per Ability.Type.<X> asset tag (sorted), e.g. Used.Ultimate.
+		var types: Array[String] = []
+		for asset_tag in ability.asset_tags:
+			if String(asset_tag).begins_with(ABILITY_TYPE_PREFIX):
+				types.append(String(asset_tag).trim_prefix(ABILITY_TYPE_PREFIX))
+		types.sort()
+		for type in types:
+			actor.asc.send_gameplay_event(StringName("%s.%s" % [EVENT_ABILITY_USED, type]), used)
 	if activated and actor.item_abilities.has(tag):
 		used_items.append({"unit": actor.unit_id, "item": actor.item_abilities[tag]})
 		actor.item_abilities.erase(tag)
@@ -855,7 +990,7 @@ func _expand_targets(actor: BattleUnit, ability: BattleAbility, target: BattleUn
 			targets = target_candidates(actor, ability)
 		BattleAbility.Targeting.BLAST_ENEMY:
 			primary = target
-			for candidate in target_candidates(actor, ability):
+			for candidate in _side_candidates(actor, ability):
 				if absi(candidate.slot - target.slot) <= 1:
 					targets.append(candidate)
 		BattleAbility.Targeting.ALL_ENEMIES, BattleAbility.Targeting.ALL_ALLIES:
@@ -912,6 +1047,29 @@ func _check_deaths() -> void:
 			var killer := _killer_of(dead)
 			if killer != null and killer.alive:
 				killer.asc.send_gameplay_event(EVENT_UNIT_KILLED, {"source": killer, "target": dead})
+	_check_phases()
+
+
+## Spec content-pass H5: each living enemy with boss phases enters every phase whose threshold its HP is now below, in
+## order, once each (after deaths, so a killing blow starts no phase). Triggers queued here run at the next drain.
+func _check_phases() -> void:
+	if field_mode:
+		return
+	for unit in _units:
+		var enemy := unit.definition as EnemyDefinition
+		if enemy == null or enemy.phases.is_empty() or not unit.alive:
+			continue
+		while unit.phase_index < enemy.phases.size():
+			var phase: BossPhase = enemy.phases[unit.phase_index]
+			if phase == null or not phase.reached(unit.stat(BattleUnit.HP), unit.stat(BattleUnit.MAX_HP)):
+				break
+			unit.phase_index += 1
+			if phase.clear_debuffs:
+				unit.asc.remove_effects_with_tag(DEBUFF_TAG)
+			if phase.ability_set != null:
+				unit.grant_set(phase.ability_set)
+			phase_changed.emit(unit.unit_id, unit.phase_index)
+			unit.asc.send_gameplay_event(EVENT_PHASE_CHANGED, {"source": unit, "target": unit, "phase": unit.phase_index})
 
 
 ## The unit whose effect last lowered `dead`'s HP, or null (none, or the unit itself, e.g. a dev kill).
@@ -930,6 +1088,7 @@ func _lay_down(unit: BattleUnit) -> void:
 	if not unit.asc.has_tag_exact(BattleUnit.DEAD_TAG):
 		unit.asc.add_tag(BattleUnit.DEAD_TAG)
 	unit.asc.clear_tag(BROKEN_TAG)
+	unit.asc.clear_tag(DOWNED_TAG)
 
 
 ## v2: a dead unit whose HP an effect raised above 0 comes back, with a fresh action value.

@@ -11,6 +11,7 @@ const SLEEPY_SCRIPT := preload("res://tests/fixtures/abilities/sleepy_ability.gd
 const ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_attribute_set.gd")
 const RUN_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_run_attribute_set.gd")
 const BREAK_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_break_attribute_set.gd")
+const STATUS_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_status_attribute_set.gd")
 ## Run-world folders (spec game-skeleton 6, "Fixtures").
 const WORLD_DIRECTORIES: Array[String] = ["characters", "enemies", "loadouts", "variants", "equipment", "items", "events",
 	"rooms", "chapters", "scaling", "floor_rules", "runs", "layouts"]
@@ -34,6 +35,7 @@ func _ready() -> void:
 	_build_run_world()
 	_build_item_pass()
 	_build_ult_interrupts()
+	_build_content_pass()
 	_build_views()
 	print("Fixtures under %s: %d file(s) written" % [ROOT, _written])
 	get_tree().quit(0)
@@ -572,6 +574,236 @@ func _build_ult_interrupts() -> void:
 		no_break, ["strike", "ult_shield", "full_charge"], Color.SLATE_GRAY, BREAK_ATTRIBUTE_SET)
 	warden.tags.assign([&"Fixture.Character.Warden"])
 	_save_world("characters", "warden", warden)
+
+
+## Spec content-pass: statuses (DoT, stacking, control, taunt, immunity, cleanse, delay and advance), affinities
+## (drain, resist), per-type break effects, ult-reacting passives, boss phases and the two brains. New units use
+## FixtureStatusAttributeSet; nothing carries a pool or chapter tag, so floor generation never sees it.
+func _build_content_pass() -> void:
+	var D := ExecutionRow.DamageMode
+	var T := ExecutionRow.Targets
+	var B := BattleAbility.Targeting
+	var physical := [&"Damage.Type.Physical"]
+	var fire := [&"Damage.Type.Fire"]
+	var ice := [&"Damage.Type.Ice"]
+	var ult := {"cost": _effects["ult_cost"], "asset_tags": [BattleAbility.ULTIMATE_TAG]}
+	var not_controlled := _query([])
+	not_controlled.ignore_tags.assign([&"State.Controlled"])
+
+	# Statuses.
+	var burn := _status(2, [&"Status.Debuff.Burn"])
+	burn.period = 1.0
+	burn.executions.append(DAMAGE_SCRIPT.new())  # a typed DoT: each tick runs the damage ExecCalc (affinities apply)
+	_save_effect("st_burn", burn)
+	var poison := _status(3, [&"Status.Debuff.Poison"])
+	poison.period = 1.0
+	poison.modifiers.append(_modifier("hp", GameplayEffectModifier.Operation.ADD, -20))  # 20 HP per stack per tick
+	poison.max_stacks = 5
+	_save_effect("st_poison", poison)
+	_save_effect("st_freeze", _status(1, [&"Status.Debuff.Freeze", &"State.Controlled"]))
+	var stun := _status(1, [&"Status.Debuff.Stun", &"State.Controlled"])
+	stun.application_query = _query([])
+	stun.application_query.ignore_tags.assign([&"Immune.Control"])
+	_save_effect("st_stun", stun)
+	_save_effect("st_taunt", _status(2, [&"Status.Buff.Taunt", &"State.Taunting"]))
+	_save_effect("st_ward", _status(2, [&"Status.Buff.Ward", &"Immune.Control"]))
+	var vulnerable := _status(2, [&"Status.Debuff.Vulnerable"])
+	vulnerable.modifiers.append(_modifier("def", GameplayEffectModifier.Operation.PERCENT_ADD, -10))
+	vulnerable.max_stacks = 3
+	_save_effect("st_vulnerable", vulnerable)
+	var entangle := _status(2, [&"Status.Debuff.Entangle"])
+	entangle.modifiers.append(_modifier("spd", GameplayEffectModifier.Operation.PERCENT_ADD, -10))
+	_save_effect("st_entangle", entangle)
+	var cleanse := GameplayEffect.new()
+	cleanse.policy = GameplayEffect.DurationPolicy.INSTANT
+	cleanse.remove_effects_with_tags.assign([&"Status.Debuff"])
+	_save_effect("st_cleanse", cleanse)
+	# Affinities (worn: infinite effects that grant the tags).
+	_save_effect("drain_fire_implant", _granting([&"Drain.Fire", &"Weakness.Ice"]))
+	_save_effect("resist_ice", _granting([&"Resist.Ice"]))
+	_save_effect("drain_physical", _granting([&"Drain.Physical"]))
+	_save_effect("ult_refund", _instant("energy", 20))
+
+	# Party abilities.
+	_ability("hex_burn", "Fixture.Ability.HexBurn", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 40, T.ALL, fire),
+		_row("dot", "st_burn", D.FLAT, 30, T.ALL, fire)], [[0.3, "hit"], [0.5, "dot"]])
+	var freeze_row := _row("freeze", "st_freeze", D.USE_EFFECT, 0, T.ALL)
+	freeze_row.chance_x100 = Fixed.from_typed(50)
+	_ability("frost_hex", "Fixture.Ability.FrostHex", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 40, T.ALL, ice),
+		freeze_row], [[0.3, "hit"], [0.5, "freeze"]])
+	_ability("toxic_cloud", "Fixture.Ability.ToxicCloud", B.ALL_ENEMIES, [_row("dot", "st_poison", D.USE_EFFECT, 0, T.ALL)],
+		[[0.3, "dot"], [0.5, "dot"]])
+	_ability("ult_purify", "Fixture.Ability.UltPurify", B.ALL_ALLIES, [_row("cleanse", "st_cleanse", D.USE_EFFECT, 0, T.ALL)],
+		[[0.3, "cleanse"]], [], null, ult.merged({"query": not_controlled}))
+	_ability("provoke", "Fixture.Ability.Provoke", B.SELF, [_row("taunt", "st_taunt", D.USE_EFFECT, 0, T.ALL)], [[0.3, "taunt"]])
+	var entangle_row := _row("entangle", "st_entangle", D.USE_EFFECT, 0, T.ALL)
+	entangle_row.delay_x100 = Fixed.from_typed(30)
+	_ability("entangle", "Fixture.Ability.Entangle", B.SINGLE_ENEMY, [entangle_row], [[0.3, "entangle"]])
+	var rally_row := _row("advance", "noop", D.USE_EFFECT, 0, T.ALL)
+	rally_row.delay_x100 = Fixed.from_typed(-25)
+	_ability("rally", "Fixture.Ability.Rally", B.SINGLE_ALLY, [rally_row], [[0.3, "advance"]])
+	_ability("ward", "Fixture.Ability.Ward", B.SELF, [_row("ward", "st_ward", D.USE_EFFECT, 0, T.ALL)], [[0.3, "ward"]])
+	var ice_slash := _row("hit", "damage", D.SCALED, 50, T.ALL, ice)
+	ice_slash.toughness_x100 = Fixed.from_typed(30)
+	_ability("ice_slash", "Fixture.Ability.IceSlash", B.SINGLE_ENEMY, [ice_slash], [[0.3, "hit"]])
+	_ability("ult_locked", "Fixture.Ability.UltLocked", B.SINGLE_ENEMY, [_row("hit", "damage", D.SCALED, 100, T.ALL)],
+		[[0.3, "hit"]], [], null, ult.merged({"query": not_controlled}))
+	_ability("ult_breakout", "Fixture.Ability.UltBreakout", B.SELF, [_row("cleanse", "st_cleanse", D.USE_EFFECT, 0, T.ALL)],
+		[[0.3, "cleanse"]], [], null, ult)
+	# Per-type break effects (spec content-pass D2: passives on the breaker, triggered by H4's combined events).
+	_ability("break_fire", "Fixture.Ability.BreakFire", B.SINGLE_ENEMY, [_row("burst", "damage", D.FLAT, 30, T.ALL, fire),
+		_row("dot", "st_burn", D.FLAT, 20, T.ALL, fire)], [[0.1, "burst"], [0.2, "dot"]], [], null,
+		{"trigger": &"Event.Damage.Dealt.Break.Fire"})
+	var break_freeze := _row("freeze", "st_freeze", D.USE_EFFECT, 0, T.ALL)
+	break_freeze.chance_x100 = Fixed.from_typed(65)
+	_ability("break_ice", "Fixture.Ability.BreakIce", B.SINGLE_ENEMY, [_row("burst", "damage", D.FLAT, 30, T.ALL, ice),
+		break_freeze], [[0.1, "burst"], [0.2, "freeze"]], [], null, {"trigger": &"Event.Damage.Dealt.Break.Ice"})
+	# Passives that react to the new events (H4, drain).
+	_ability("overcharge", "Fixture.Ability.Overcharge", B.SELF, [_row("charge", "ult_refund", D.USE_EFFECT, 0, T.ALL)],
+		[[0.0, "charge"]], [], null, {"trigger": &"Event.Ability.Used.Ultimate"})
+	_ability("interrupter", "Fixture.Ability.Interrupter", B.SELF, [_row("charge", "energy_up", D.USE_EFFECT, 0, T.ALL)],
+		[[0.0, "charge"]], [], null, {"trigger": &"Event.Battle.Interrupt"})
+	_ability("siphon", "Fixture.Ability.Siphon", B.SELF, [_row("charge", "energy_up", D.USE_EFFECT, 0, T.ALL)],
+		[[0.0, "charge"]], [], null, {"trigger": &"Event.Damage.Taken.Drained"})
+
+	# Enemy abilities.
+	var touch_freeze := _row("freeze", "st_freeze", D.USE_EFFECT, 0, T.ALL)
+	touch_freeze.chance_x100 = Fixed.from_typed(50)
+	_ability("frost_touch", "Fixture.Ability.FrostTouch", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 50, T.ALL, ice),
+		touch_freeze], [[0.3, "hit"], [0.5, "freeze"]])
+	_ability("spit", "Fixture.Ability.Spit", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 30, T.ALL, physical),
+		_row("dot", "st_poison", D.USE_EFFECT, 0, T.ALL)], [[0.3, "hit"], [0.5, "dot"]])
+	_ability("fire_bolt", "Fixture.Ability.FireBolt", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 60, T.ALL, fire)],
+		[[0.3, "hit"]])
+	var bash := _row("hit", "damage", D.FLAT, 60, T.ALL, physical)
+	bash.toughness_x100 = Fixed.from_typed(30)
+	var bash_stun := _row("stun", "st_stun", D.USE_EFFECT, 0, T.ALL)
+	bash_stun.chance_x100 = Fixed.from_typed(40)
+	_ability("bash", "Fixture.Ability.Bash", B.SINGLE_ENEMY, [bash, bash_stun], [[0.3, "hit"], [0.5, "stun"]])
+	var phase_1 := _query([])
+	phase_1.ignore_tags.assign([&"State.Phase.Two"])
+	var phase_2 := _query([&"State.Phase.Two"])
+	phase_2.ignore_tags.assign([&"State.Phase.Three"])
+	var blast_main := _row("main", "damage", D.FLAT, 80, T.PRIMARY, physical)
+	blast_main.toughness_x100 = Fixed.from_typed(30)
+	_ability("bleed_blast", "Fixture.Ability.BleedBlast", B.BLAST_ENEMY, [blast_main,
+		_row("splash", "damage", D.FLAT, 40, T.ADJACENT, physical)], [[0.3, "main"], [0.32, "splash"]], [], null,
+		{"query": phase_1})
+	_ability("hex_all", "Fixture.Ability.HexAll", B.ALL_ENEMIES, [_row("hit", "damage", D.FLAT, 40, T.ALL, physical),
+		_row("hex", "st_vulnerable", D.USE_EFFECT, 0, T.ALL)], [[0.3, "hit"], [0.5, "hex"]], [], null, {"query": phase_2})
+	var doom_bolt := _row("hit", "damage", D.FLAT, 120, T.ALL, physical)
+	doom_bolt.toughness_x100 = Fixed.from_typed(30)
+	_ability("doom_bolt", "Fixture.Ability.DoomBolt", B.SINGLE_ENEMY, [doom_bolt], [[0.3, "hit"]], [], null,
+		{"query": _query([&"State.Phase.Three"])})
+	_ability("death_ray", "Fixture.Ability.DeathRay", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 150, T.ALL, ice)],
+		[[0.3, "hit"]], [], null, ult)
+
+	# Items.
+	_item("implant", [], ItemDefinition.Kind.PASSIVE, _ability_set(["siphon"], ["drain_fire_implant"]))
+	_item("frostguard", [], ItemDefinition.Kind.PASSIVE, _ability_set([], ["resist_ice"]))
+	_item("leech", [], ItemDefinition.Kind.PASSIVE, _ability_set([], ["drain_physical"]))
+	_item("overcharge_coil", [], ItemDefinition.Kind.PASSIVE, _ability_set(["overcharge", "interrupter"], []))
+
+	# Characters.
+	var core := {"crit_rate": 0, "crit_dmg": 50, "max_mp": 100, "mp": 100, "energy": 0}
+	var no_toughness := {"max_toughness": 0, "toughness": 0, "weakness_dmg": 150, "toughness_dmg": 0, "broken_dmg": 0}
+	var hexer := CharacterDefinition.new()
+	_fill_unit(hexer, "fixture.character.hexer", {"max_hp": 1100, "hp": 1100, "atk": 400, "def": 200, "spd": 105}.merged(core),
+		no_toughness, ["hex_burn", "frost_hex", "toxic_cloud", "strike", "ult_purify",
+		"full_charge", "recharge", "break_fire", "break_ice"], Color.DARK_ORCHID, STATUS_ATTRIBUTE_SET)
+	hexer.tags.assign([&"Fixture.Character.Hexer"])
+	_save_world("characters", "hexer", hexer)
+	var guard := CharacterDefinition.new()
+	_fill_unit(guard, "fixture.character.guard", {"max_hp": 1600, "hp": 1600, "atk": 300, "def": 400, "spd": 95}.merged(core),
+		no_toughness, ["provoke", "strike", "rally", "entangle", "ice_slash", "ward", "break_fire", "break_ice"],
+		Color.DARK_SLATE_BLUE,
+		STATUS_ATTRIBUTE_SET)
+	guard.tags.assign([&"Fixture.Character.Guard"])
+	_save_world("characters", "guard", guard)
+	var guard_weak := CharacterDefinition.new()  # weak to Physical, no toughness: knocked down, never Broken (H7)
+	_fill_unit(guard_weak, "fixture.character.guard_weak", {"max_hp": 1600, "hp": 1600, "atk": 300, "def": 400,
+		"spd": 95}.merged(core), no_toughness, ["provoke", "strike", "ice_slash"], Color.MIDNIGHT_BLUE, STATUS_ATTRIBUTE_SET)
+	guard_weak.tags.assign([&"Fixture.Character.Guard", &"Weakness.Physical"])
+	_save_world("characters", "guard_weak", guard_weak)
+	var breaker := CharacterDefinition.new()
+	_fill_unit(breaker, "fixture.character.breaker", {"max_hp": 1000, "hp": 1000, "atk": 400, "def": 300,
+		"spd": 100}.merged(core), no_toughness, ["strike", "ult_locked", "ult_breakout", "full_charge"], Color.TEAL,
+		STATUS_ATTRIBUTE_SET)
+	breaker.tags.assign([&"Fixture.Character.Breaker"])
+	_save_world("characters", "breaker", breaker)
+
+	# Enemies.
+	var enemy_core := {"crit_rate": 0, "crit_dmg": 50, "max_mp": 0, "mp": 0, "energy": 0}
+	_status_enemy("toad", {"max_hp": 1400, "hp": 1400, "atk": 200, "def": 100, "spd": 90}, enemy_core, {"max_toughness": 30,
+		"toughness": 30, "weakness_dmg": 150}, ["spit"], [&"Weakness.Fire"], null, [])
+	_status_enemy("wisp", {"max_hp": 1200, "hp": 1200, "atk": 200, "def": 100, "spd": 110}, enemy_core, {"max_toughness": 30,
+		"toughness": 30, "weakness_dmg": 150}, ["frost_touch"], [&"Weakness.Fire", &"Weakness.Physical"],
+		null, [])
+	_status_enemy("imp", {"max_hp": 1000, "hp": 1000, "atk": 250, "def": 100, "spd": 100}, enemy_core, {"max_toughness": 30,
+		"toughness": 30, "weakness_dmg": 150}, ["fire_bolt"], [&"Resist.Fire", &"Weakness.Ice"], null, [])
+	_status_enemy("knight", {"max_hp": 1800, "hp": 1800, "atk": 250, "def": 300, "spd": 95}, enemy_core, {"max_toughness": 60,
+		"toughness": 60, "weakness_dmg": 150}, ["bash"], [&"Weakness.Ice", &"Immune.Control"], null, [])
+	var drums := PatternBrain.new()
+	drums.pattern.assign([&"Fixture.Ability.Claw", &"Fixture.Ability.Claw", &"Fixture.Ability.Bash"])
+	_status_enemy("drummer", {"max_hp": 1000, "hp": 1000, "atk": 250, "def": 200, "spd": 100}, enemy_core, {"max_toughness": 30,
+		"toughness": 30, "weakness_dmg": 150}, ["claw", "bash"], [&"Weakness.Fire"], drums, [])
+	var lich_brain := TacticalBrain.new()
+	lich_brain.ult_when_party_down = true
+	var second := _phase_set("lich_phase_2", [&"State.Phase.Two"])
+	var third := _phase_set("lich_phase_3", [&"State.Phase.Three"])
+	_status_enemy("lich", {"max_hp": 2000, "hp": 2000, "atk": 300, "def": 200, "spd": 105}, enemy_core, {"max_toughness": 60,
+		"toughness": 60, "weakness_dmg": 150}, ["bleed_blast", "hex_all", "doom_bolt", "death_ray", "rage_charge"],
+		[&"Resist.Ice", &"Weakness.Physical", &"Enemy.Boss"], lich_brain,
+		[_phase(60, second, false), _phase(25, third, true)])
+	_world_encounter("status_trial", [], [["wisp", null], ["toad", null], ["imp", null]], 1)
+	_world_encounter("lich_court", [], [["lich", null], ["drummer", null]], 1)
+	_world_encounter("knight_one", [], [["knight", null]], 1)
+
+
+## A turn-based status that refreshes instead of stacking (REFRESH_DURATION, max 1); callers raise max_stacks.
+func _status(turns: int, granted: Array) -> GameplayEffect:
+	var effect := GameplayEffect.new()
+	effect.policy = GameplayEffect.DurationPolicy.TURN_BASED
+	effect.duration_turns = turns
+	effect.granted_tags.assign(granted)
+	effect.stacking_policy = GameplayEffect.StackingPolicy.REFRESH_DURATION
+	effect.max_stacks = 1
+	return effect
+
+
+func _granting(granted: Array) -> GameplayEffect:
+	var effect := GameplayEffect.new()
+	effect.policy = GameplayEffect.DurationPolicy.INFINITE
+	effect.granted_tags.assign(granted)
+	return effect
+
+
+## A boss phase's AbilitySet, saved on its own (its tags mark the phase for activation queries).
+func _phase_set(name: String, tags: Array) -> AbilitySet:
+	var path := ROOT + "loadouts/%s.tres" % name
+	var ability_set := AbilitySet.new()
+	ability_set.tags.assign(tags)
+	_save(ability_set, path)
+	return load(path)
+
+
+func _phase(hp_below: float, ability_set: AbilitySet, clear_debuffs: bool) -> BossPhase:
+	var phase := BossPhase.new()
+	phase.hp_below_x100 = Fixed.from_typed(hp_below)
+	phase.ability_set = ability_set
+	phase.clear_debuffs = clear_debuffs
+	return phase
+
+
+func _status_enemy(name: String, core: Dictionary, extra: Dictionary, break_stats: Dictionary, ability_names: Array,
+		tags: Array, brain: EnemyBrain, phases: Array) -> void:
+	var enemy := EnemyDefinition.new()
+	_fill_unit(enemy, "fixture.enemy." + name, core.merged(extra), {"toughness_dmg": 0, "broken_dmg": 0}.merged(break_stats),
+		ability_names, Color.OLIVE_DRAB, STATUS_ATTRIBUTE_SET)
+	enemy.tags.assign(tags)
+	enemy.brain = brain
+	enemy.phases.assign(phases)
+	_save_world("enemies", name, enemy)
 
 
 ## Spec animation-sets: a probe view (UnitAnimator root, a Body node) and a set of short animations with known

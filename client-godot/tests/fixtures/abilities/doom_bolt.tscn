@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_806ue"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_dv48y"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_keqqp"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/doom_bolt.tres" id="4_msdki"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_uxr8b"]
+
+[sub_resource type="Resource" id="Resource_yyyx1"]
+script = ExtResource("2_dv48y")
+id = &"hit"
+effect = ExtResource("3_keqqp")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Physical"])
+flat_damage_x100 = 12000
+toughness_x100 = 3000
+
+[sub_resource type="Resource" id="Resource_plisk"]
+script = ExtResource("5_uxr8b")
+require_all_tags = Array[StringName]([&"State.Phase.Three"])
+
+[node name="DoomBolt" type="Node" unique_id=810092623]
+script = ExtResource("1_806ue")
+executions = Array[ExtResource("2_dv48y")]([SubResource("Resource_yyyx1")])
+animation = ExtResource("4_msdki")
+ability_tag = &"Fixture.Ability.DoomBolt"
+activation_query = SubResource("Resource_plisk")

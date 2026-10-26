@@ -203,6 +203,41 @@ func test_skip_and_animated_same_hash() -> void:
 		view.queue_free()
 
 
+## Spec content-pass 3.8 (animation-sets gap): `view` is an @export_file, which the inspector stores as the picked
+## scene's uid:// path, so moving the scene keeps the link. Such a path survives a save, resolves through view_scene
+## and passes the validator.
+func test_view_path_is_uid() -> void:
+	var property: Dictionary = UnitDefinition.new().get_property_list().filter(func(p): return p["name"] == "view")[0]
+	eq(property["hint"], PROPERTY_HINT_FILE, "view is an @export_file")
+	# Files saved headless carry no uid (the editor assigns them), so give a copy of the probe view one, as the editor would.
+	var first_path := "user://animation_sets_uid_view.tscn"
+	ResourceSaver.save(load(PROBE_VIEW), first_path)
+	var id := ResourceUID.create_id()
+	ResourceSaver.set_uid(first_path, id)
+	ResourceUID.add_id(id, first_path)
+	var uid := ResourceUID.id_to_text(id)
+	check(uid.begins_with("uid://"), "the copy has a uid: " + uid)
+	var definition := EnemyDefinition.new()
+	definition.id = &"test.enemy.uid_view"
+	definition.view = uid
+	ResourceSaver.save(definition, "user://animation_sets_uid_enemy.tres")
+	var loaded: UnitDefinition = ResourceLoader.load("user://animation_sets_uid_enemy.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	eq(loaded.view, uid, "a uid:// view survives a save")
+	var scene := UnitAnimator.view_scene(loaded, null)
+	check(scene != null and scene.resource_path == first_path, "and resolves to the view scene")
+	var validator := ContentValidator.new(fixtures())
+	validator._check_view(loaded)
+	eq(validator.issues.filter(func(issue): return issue.code == "view_missing").size(), 0, "the validator accepts it")
+	# Moving the scene (the editor rewrites the uid cache) keeps the definition's link: the same uid, a new path.
+	var moved_path := "user://animation_sets_uid_view_moved.tscn"
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(first_path), ProjectSettings.globalize_path(moved_path))
+	ResourceUID.set_id(id, moved_path)
+	var moved := UnitAnimator.view_scene(loaded, null)
+	check(moved != null and moved.resource_path == moved_path, "after a move the same uid finds the scene")
+	ResourceUID.remove_id(id)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(moved_path))
+
+
 func test_headless_never_loads_views() -> void:
 	check(typeof(UnitDefinition.new().view) == TYPE_STRING, "UnitDefinition.view is a path, not a scene")
 	var view_path := "user://animation_sets_probe_view.tscn"

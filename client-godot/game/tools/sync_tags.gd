@@ -23,6 +23,10 @@ const SYSTEM_TAGS: Array[StringName] = [
 	&"Event.Damage.Dealt.Break", &"Event.Damage.Taken.Break", &"Event.Damage.Dealt.FollowUp", &"Event.Damage.Taken.FollowUp",
 	# Spec ult-interrupts: abilities cast out of turn.
 	&"Ability.Type.Ultimate",
+	# Spec content-pass: control and taunt rule tags, the status and phase events, drains, combined break and ult events.
+	&"State.Controlled", &"State.Taunting", &"State.Downed", &"Status.Debuff", &"Event.Turn.Skipped", &"Event.Status.Resisted",
+	&"Event.Battle.Interrupt", &"Event.Unit.PhaseChanged", &"Event.Ability.Used.Ultimate", &"Hit.Drained",
+	&"Event.Damage.Dealt.Drained", &"Event.Damage.Taken.Drained",
 ]
 const FORMAT: String = "^([A-Z][a-zA-Z0-9]*)(\\.[A-Z][a-zA-Z0-9]*)*$"
 

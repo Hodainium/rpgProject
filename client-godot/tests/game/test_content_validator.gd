@@ -14,6 +14,7 @@ const EXPECTED_ERRORS: Array = [
 	["zero_weights", "chapters/zero_weights.tres"], ["generation_fails", "runs/run.tres"],
 	["bad_equipment", "equipment/bad_equipment.tres"], ["placement_both", "rooms/placement_both.tres"],
 	["ult_triggered", "characters/ult_triggered.tres"],
+	["phase_order", "enemies/phase_order.tres"], ["pattern_unknown_ability", "enemies/pattern_unknown.tres"],
 ]
 const EXPECTED_WARNINGS: Array = [
 	["incomplete", "encounters/incomplete.tres"], ["empty_item_pool", "rooms/empty_item_pool.tres"],
@@ -22,6 +23,10 @@ const EXPECTED_WARNINGS: Array = [
 	["view_missing", "characters/view_missing.tres"], ["animation_set_loop", "views/bad_set_view.tscn"],
 	["animation_set_profile", "views/bad_set_view.tscn"], ["ability_montage_path", "characters/bad_view_set.tres"],
 	["ult_no_cost", "enemies/uncharged.tres"], ["ult_no_charge", "enemies/uncharged.tres"],
+	["ult_ignores_control", "enemies/uncharged.tres"], ["affinity_conflict", "enemies/affinity_conflict.tres"],
+	["chance_on_damage", "characters/chance_on_damage.tres"],
+	["controlled_without_status", "characters/controlled_without_status.tres"],
+	["party_toughness", "characters/party_toughness.tres"],
 ]
 
 

@@ -1,0 +1,27 @@
+# Content-pass smoke run (spec content-pass 6): statuses, affinities and the new fights on the demo party, on auto.
+# godot --headless --path client-godot --quit-after 200000 res://game/tools/dev_run.tscn -- --script res://game/dev/scripts/content_pass.txt --out <state.json>
+# The JSON's lastBattle adds skipped turns, missed status rolls, drains, boss phases, delays and every unit's statuses at
+# the end ("end" event). Single items are covered by test_demo_content_pass.
+new demo.character.warrior,demo.character.cleric 5
+room demo.room.start
+give demo.item.satchel 1
+give demo.item.salamander_heart 1
+give demo.item.siphon_sigil 1
+give demo.item.frost_lantern 1
+give demo.item.serrated_edge 1
+give demo.item.overcharge_coil 1
+give demo.item.plague_flask 1
+give demo.item.frostguard_charm 2
+give demo.item.hexbreaker_charm 2
+give demo.item.mirror_ward 2
+give demo.item.last_rites 2
+equip demo.equipment.tacticians_ring 1
+equip demo.equipment.thornbark_mail 1
+equip demo.equipment.warden_helm 2
+state
+spawn demo.encounter.fire_court
+spawn demo.encounter.bog
+spawn demo.encounter.vanguard
+spawn demo.encounter.golem
+spawn demo.encounter.lich
+state json

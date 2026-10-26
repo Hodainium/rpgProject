@@ -13,7 +13,9 @@ const SINGLE_DOOR_MASKS: Array[int] = [1, 2, 4, 8]
 ## Spec item-pass 3.5: a trigger in one of the battle's event families must be an event the battle sends (typos such as
 ## Event.Damage.Delt never fire). Other triggers (e.g. an effect's own event_tags) aren't checked.
 const BATTLE_EVENT_PREFIXES: Array[String] = ["Event.Damage.", "Event.Unit.", "Event.Battle.", "Event.Turn.",
-	"Event.Ability.", "Event.Attack."]
+	"Event.Ability.", "Event.Attack.", "Event.Status."]
+## Spec content-pass 2.4: affinity tag prefixes, one per damage type each (Drain > Weak > Resist in the ExecCalc).
+const AFFINITY_PREFIXES: Array[String] = ["Weakness.", "Resist.", "Drain."]
 
 var content: ContentIndex
 var issues: Array[ValidationIssue] = []
@@ -110,8 +112,13 @@ func _check_unit(unit: UnitDefinition) -> void:
 		_check_loadout(unit.default_loadout, unit)
 	elif unit.default_loadout != null and unit is CharacterDefinition:
 		_check_loadout_skills(unit.default_loadout, unit, path + "::default_loadout")
+	if unit is CharacterDefinition and int(unit.stats_x100.get("max_toughness", 0)) > 0:
+		_warning("party_toughness", path + "::stats", "%s has toughness, but party characters are never Broken (a weakness hit knocks them down)" % unit.id)
 	if unit is EnemyDefinition:
 		_check_enemy_charge(unit)
+		_check_phases(unit)
+		_check_pattern(unit)
+	_check_affinities(unit)
 	_check_view(unit)
 
 
@@ -128,6 +135,57 @@ func _check_enemy_charge(enemy: EnemyDefinition) -> void:
 	if scenes.any(func(scene) -> bool: return _is_ult(scene)) \
 			and not scenes.any(func(scene) -> bool: return _trigger_of(scene) != &""):
 		_warning("ult_no_charge", enemy.resource_path, "%s has an ult but no triggered passive to charge it" % enemy.id)
+
+
+## Spec content-pass H5: phases in order of strictly decreasing hp_below, each between 0 and 100%.
+func _check_phases(enemy: EnemyDefinition) -> void:
+	var previous := Fixed.ONE_HUNDRED_PERCENT + 1
+	for index in enemy.phases.size():
+		var phase: BossPhase = enemy.phases[index]
+		var where := "%s::phases[%d]" % [enemy.resource_path, index]
+		if phase == null:
+			_error("dangling_ref", where, "%s has an empty phase entry" % enemy.id)
+			continue
+		if phase.hp_below_x100 <= 0 or phase.hp_below_x100 >= previous:
+			_error("phase_order", where, "%s's phase %d (below %s%%) must be above 0%% and below the phase before it"
+				% [enemy.id, index + 1, Fixed.to_display(phase.hp_below_x100)])
+		previous = phase.hp_below_x100
+		_check_ability_set(phase.ability_set, where + ".ability_set")
+
+
+## Spec content-pass 2.2: every PatternBrain step names a turn action the enemy has (its abilities or a phase's).
+## An ult or a triggered passive in the pattern would stop the battle with a runner error.
+func _check_pattern(enemy: EnemyDefinition) -> void:
+	var brain := enemy.brain as PatternBrain
+	if brain == null:
+		return
+	var scenes: Array = enemy.abilities.duplicate()
+	for phase in enemy.phases:
+		if phase != null and phase.ability_set != null:
+			scenes.append_array(phase.ability_set.abilities)
+	for index in brain.pattern.size():
+		var tag := brain.pattern[index]
+		var where := "%s::brain.pattern[%d]" % [enemy.resource_path, index]
+		var found: Array = scenes.filter(func(scene) -> bool: return scene != null and SkillTags.tag_of(scene) == tag)
+		if found.is_empty():
+			_error("pattern_unknown_ability", where, "%s's pattern step %s is not one of its abilities" % [enemy.id, tag])
+		elif _is_ult(found[0], true) or _trigger_of(found[0]) != &"":
+			_error("pattern_unknown_ability", where, "%s's pattern step %s is an ult or a passive, not a turn action" % [enemy.id, tag])
+
+
+## Spec content-pass 2.4: a definition whose own tags give one damage type two affinities (Drain wins over Weak, Weak
+## over Resist, so one tag is dead). Items and effects combining at run time are fine.
+func _check_affinities(unit: UnitDefinition) -> void:
+	var by_type := {}
+	for tag in unit.tags:
+		for prefix in AFFINITY_PREFIXES:
+			if String(tag).begins_with(prefix):
+				var damage_type := String(tag).trim_prefix(prefix)
+				by_type[damage_type] = by_type.get(damage_type, []) + [String(tag)]
+	for damage_type in by_type:
+		if by_type[damage_type].size() > 1:
+			_warning("affinity_conflict", unit.resource_path + "::tags", "%s has %s: only one affinity per damage type counts (Drain > Weak > Resist)"
+				% [unit.id, ", ".join(by_type[damage_type])])
 
 
 ## Spec animation-sets: the unit's view scene, its animation set and its abilities' tracks against the view. Warnings
@@ -190,6 +248,7 @@ func _check_skill_scene(scene: PackedScene, path: String, owner: StringName) -> 
 				and not _battle_events().has(trigger):
 			_warning("trigger_unregistered", path, "%s triggers on %s, which the battle never sends" % [scene.resource_path, trigger])
 		_check_ult(scene, path)
+		_check_rows(scene, path)
 
 
 ## Spec ult-interrupts: an ult (asset tag Ability.Type.Ultimate) is cast out of turn, so it can't be a triggered
@@ -201,8 +260,37 @@ func _check_ult(scene: PackedScene, path: String) -> void:
 	var ability := scene.instantiate() as BattleAbility
 	if ability.is_triggered():
 		_error("ult_triggered", path, "%s is tagged %s but is a triggered passive" % [scene.resource_path, BattleAbility.ULTIMATE_TAG])
-	elif ability.cost_effect == null:
-		_warning("ult_no_cost", path, "%s is an ult without a cost effect: it would fire at every ult window" % scene.resource_path)
+	else:
+		if ability.cost_effect == null:
+			_warning("ult_no_cost", path, "%s is an ult without a cost effect: it would fire at every ult window" % scene.resource_path)
+		# Spec content-pass D3: a controlled unit can't ult because each ult's activation query says so.
+		var query := ability.activation_query
+		if query == null or not (query.ignore_tags.has(Battle.CONTROLLED_TAG) or query.ignore_exact_tags.has(Battle.CONTROLLED_TAG)):
+			_warning("ult_ignores_control", path, "%s doesn't require lacking %s: it fires while frozen or stunned (a breakout ult?)"
+				% [scene.resource_path, Battle.CONTROLLED_TAG])
+	ability.free()
+
+
+## Spec content-pass: a status chance on a damage row (H2 would skip the damage on a miss); a control effect without
+## a Status.Debuff.* tag (nothing shows why the unit lost its turn).
+func _check_rows(scene: PackedScene, path: String) -> void:
+	var key := "rows|" + scene.resource_path
+	if _visited.has(key):
+		return
+	_visited[key] = true
+	var ability := scene.instantiate() as BattleAbility
+	if ability == null:
+		return
+	for row in ability.executions:
+		if row == null or row.effect == null:
+			continue
+		var effect := row.effect
+		if row.chance_x100 > 0 and effect.policy == GameplayEffect.DurationPolicy.INSTANT and not effect.executions.is_empty():
+			_warning("chance_on_damage", path, "%s's row %s rolls a status chance on an instant damage effect" % [ability.ability_tag, row.id])
+		if effect.granted_tags.has(Battle.CONTROLLED_TAG) \
+				and not effect.granted_tags.any(func(tag) -> bool: return String(tag).begins_with(Battle.DEBUFF_TAG + ".")):
+			_warning("controlled_without_status", path, "%s grants %s without a %s.* tag" % [effect.resource_path,
+				Battle.CONTROLLED_TAG, Battle.DEBUFF_TAG])
 	ability.free()
 
 
@@ -229,9 +317,11 @@ func _battle_events() -> Dictionary:
 		return _known_events
 	for tag in [Battle.EVENT_BATTLE_START, Battle.EVENT_TURN_START, Battle.EVENT_TURN_END, Battle.EVENT_DAMAGE_DEALT,
 			Battle.EVENT_DAMAGE_TAKEN, Battle.EVENT_UNIT_DIED, Battle.EVENT_ABILITY_USED, Battle.EVENT_ATTACK_FOLLOW_UP,
-			Battle.EVENT_UNIT_KILLED, Battle.EVENT_ONE_MORE]:
+			Battle.EVENT_UNIT_KILLED, Battle.EVENT_ONE_MORE, Battle.EVENT_TURN_SKIPPED, Battle.EVENT_STATUS_RESISTED,
+			Battle.EVENT_BATTLE_INTERRUPT, Battle.EVENT_PHASE_CHANGED]:
 		_known_events[tag] = true
-	var kinds: Array = [Battle.HIT_BREAK, Battle.HIT_FOLLOW_UP]
+	var kinds: Array = [Battle.HIT_BREAK, Battle.HIT_FOLLOW_UP, Battle.HIT_DRAINED, BattleAbility.ULTIMATE_TAG,
+		BattleAbility.FOLLOW_UP_TAG]
 	var registry: GameplayTagRegistry = load(SETTINGS.get_registry_tag_path())
 	if registry != null:
 		kinds.append_array(registry.tags)
@@ -241,6 +331,12 @@ func _battle_events() -> Dictionary:
 				var suffix := String(tag).trim_prefix(prefix)
 				_known_events[StringName("%s.%s" % [Battle.EVENT_DAMAGE_DEALT, suffix])] = true
 				_known_events[StringName("%s.%s" % [Battle.EVENT_DAMAGE_TAKEN, suffix])] = true
+				# Spec content-pass H4: a breaking hit of a damage type.
+				if prefix == Battle.DAMAGE_TYPE_PREFIX:
+					_known_events[StringName("%s.Break.%s" % [Battle.EVENT_DAMAGE_DEALT, suffix])] = true
+					_known_events[StringName("%s.Break.%s" % [Battle.EVENT_DAMAGE_TAKEN, suffix])] = true
+		if String(tag).begins_with(Battle.ABILITY_TYPE_PREFIX):
+			_known_events[StringName("%s.%s" % [Battle.EVENT_ABILITY_USED, String(tag).trim_prefix(Battle.ABILITY_TYPE_PREFIX)])] = true
 	return _known_events
 
 

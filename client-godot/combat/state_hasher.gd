@@ -36,6 +36,12 @@ static func canonical_lines(battle: Battle) -> Dictionary:
 	for unit in battle.units():  # sorted by unit id
 		var id := String(unit.unit_id)
 		lines.append("unit=%s|alive=%d|av=%d" % [id, 1 if unit.alive else 0, battle.turn_manager.av.get(unit, 0)])
+		# Spec content-pass: a PatternBrain's place and the boss phases entered. Only when non-zero, so every
+		# existing hash is unchanged.
+		if unit.pattern_step != 0:
+			lines.append("pattern=%s|%d" % [id, unit.pattern_step])
+		if unit.phase_index != 0:
+			lines.append("phase=%s|%d" % [id, unit.phase_index])
 
 		for attribute_name in _attribute_names(unit.asc):
 			var data := unit.asc.get_attribute(attribute_name)

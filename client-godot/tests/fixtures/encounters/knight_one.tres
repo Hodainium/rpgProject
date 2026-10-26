@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_b8ntx"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_d2tcf"]
+[ext_resource type="Resource" path="res://tests/fixtures/enemies/knight.tres" id="3_6fp76"]
+
+[sub_resource type="Resource" id="Resource_lfmf6"]
+script = ExtResource("2_d2tcf")
+enemy = ExtResource("3_6fp76")
+
+[resource]
+script = ExtResource("1_b8ntx")
+id = &"fixture.encounter.knight_one"
+display_name = "Knight One"
+slots = Array[ExtResource("2_d2tcf")]([SubResource("Resource_lfmf6")])

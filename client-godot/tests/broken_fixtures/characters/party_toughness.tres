@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_eba85"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_6jhgj"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="3_gta7w"]
+
+[resource]
+script = ExtResource("3_gta7w")
+id = &"broken.character.party_toughness"
+attribute_set = ExtResource("2_6jhgj")
+abilities = Array[PackedScene]([ExtResource("1_eba85")])
+stats_x100 = Dictionary[String, int]({
+"max_toughness": 6000,
+"toughness": 6000
+})

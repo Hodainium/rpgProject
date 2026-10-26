@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/hex_burn.tscn" id="1_id6sl"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/frost_hex.tscn" id="2_fcrf5"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/toxic_cloud.tscn" id="3_ne8d8"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="4_7hljb"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ult_purify.tscn" id="5_1uh0o"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/full_charge.tscn" id="6_42v62"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/recharge.tscn" id="7_wtu3q"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/break_fire.tscn" id="8_7sjkx"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/break_ice.tscn" id="9_ifr02"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_status_attribute_set.gd" id="10_bw3w4"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="11_bbcag"]
+
+[resource]
+script = ExtResource("11_bbcag")
+id = &"fixture.character.hexer"
+attribute_set = ExtResource("10_bw3w4")
+abilities = Array[PackedScene]([ExtResource("1_id6sl"), ExtResource("2_fcrf5"), ExtResource("3_ne8d8"), ExtResource("4_7hljb"), ExtResource("5_1uh0o"), ExtResource("6_42v62"), ExtResource("7_wtu3q"), ExtResource("8_7sjkx"), ExtResource("9_ifr02")])
+display_name = "Hexer"
+display_color = Color(0.6, 0.19607843, 0.8, 1)
+tags = Array[StringName]([&"Fixture.Character.Hexer"])
+stats_x100 = Dictionary[String, int]({
+"atk": 40000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 20000,
+"energy": 0,
+"hp": 110000,
+"max_hp": 110000,
+"max_mp": 10000,
+"max_toughness": 0,
+"mp": 10000,
+"spd": 10500,
+"toughness": 0,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

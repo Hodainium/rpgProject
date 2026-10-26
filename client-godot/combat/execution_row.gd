@@ -58,10 +58,30 @@ const TOUGHNESS_TAG: StringName = &"Data.Toughness"
 		_warn_decimals("toughness", typed)
 		toughness_x100 = Fixed.from_typed(typed)
 
+## Spec content-pass H2 / D13: the chance (typed %, e.g. 65) that this row's effect lands; one battle-RNG roll per
+## target when it is below 100%. 0 (the default) always lands and draws nothing.
+@export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var chance: float:
+	get:
+		return Fixed.to_display(chance_x100)
+	set(typed):
+		_warn_decimals("chance", typed)
+		chance_x100 = Fixed.from_typed(typed)
+
+## Spec content-pass H6: when this row's effect lands, the target's action is delayed by this share (typed %, e.g. 30)
+## of its full action value; a negative value advances it (never past 0). 0 = no change.
+@export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var delay: float:
+	get:
+		return Fixed.to_display(delay_x100)
+	set(typed):
+		_warn_decimals("delay", typed)
+		delay_x100 = Fixed.from_typed(typed)
+
 ## Saved forms (×100 whole numbers).
 @export_storage var flat_damage_x100: int = 0
 @export_storage var multiplier_x100: int = 10000
 @export_storage var toughness_x100: int = 0
+@export_storage var chance_x100: int = 0
+@export_storage var delay_x100: int = 0
 
 
 ## Puts this row's damage override and toughness damage on a spec through GodotGAS's SetByCaller mechanism, and its
@@ -76,6 +96,21 @@ func apply_override(spec: GameplayEffectSpec) -> void:
 		spec.set_set_by_caller_magnitude(TOUGHNESS_TAG, float(toughness_x100))
 	for tag in tags:
 		spec.inject_tag(tag)
+
+
+## Damage types on this row (Physical, Fire… from Damage.Type.<X> tags), in row order.
+func damage_types() -> Array[String]:
+	var result: Array[String] = []
+	for tag in tags:
+		if String(tag).begins_with(Battle.DAMAGE_TYPE_PREFIX):
+			result.append(String(tag).trim_prefix(Battle.DAMAGE_TYPE_PREFIX))
+	return result
+
+
+## Whether this row's effect is a debuff: it grants a Status.Debuff.* tag (spec content-pass H8).
+func applies_debuff() -> bool:
+	return effect != null and effect.granted_tags.any(
+		func(tag) -> bool: return String(tag).begins_with(Battle.DEBUFF_TAG + "."))
 
 
 func _warn_decimals(field: String, typed: float) -> void:

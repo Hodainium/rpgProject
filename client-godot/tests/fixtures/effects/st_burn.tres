@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_0u5cd"]
+[ext_resource type="Script" path="res://tests/fixtures/exec_calcs/fixture_damage.gd" id="2_0n8oa"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_qch2t"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_7wgoh"]
+
+[sub_resource type="Resource" id="Resource_do1ch"]
+script = ExtResource("2_0n8oa")
+
+[resource]
+script = ExtResource("4_7wgoh")
+stacking_policy = 1
+policy = 3
+period = 1.0
+max_stacks = 1
+duration_turns = 2
+executions = Array[ExtResource("1_0u5cd")]([SubResource("Resource_do1ch")])
+granted_tags = Array[StringName]([&"Status.Debuff.Burn"])

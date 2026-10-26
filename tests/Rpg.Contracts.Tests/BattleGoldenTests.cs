@@ -58,9 +58,10 @@ public class BattleGoldenTests
     {
         // duel, squad, squad tampered, run v2, break (item-pass: One More entries carry "extra": true),
         // ult and ult tampered (ult-interrupts: out-of-turn ults carry "interrupt": true), and the atomic-battles
-        // tampered pair that reach the end of the battle (FinalHashMismatch, OutcomeMismatch).
-        Assert.Equal(9, Requests().Count);
-        Assert.Equal(9, Results().Count);
+        // tampered pair that reach the end of the battle (FinalHashMismatch, OutcomeMismatch), and content-pass's status
+        // and boss battles (statuses, affinities, skipped party turns, phases) with the tampered skip (TurnMismatch).
+        Assert.Equal(12, Requests().Count);
+        Assert.Equal(12, Results().Count);
     }
 
     private static TheoryData<string> Files(Func<string, bool> filter)

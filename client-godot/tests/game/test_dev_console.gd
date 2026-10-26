@@ -317,7 +317,7 @@ func test_tool_parity() -> void:
 	console.load_commands()
 	var pairs := {"dock Create": "create", "dock Validate": "validate", "room grid": "grid", "Play buttons": "play",
 		"seed runner": "seeds", "screenshot": "shot", "party panel Equip": "wear", "party panel Unequip": "unwear",
-		"animation preview": "anim"}
+		"animation preview": "anim", "battle panel status line": "status"}
 	for action in pairs:
 		check(console.commands.has(pairs[action]), "%s has the command %s" % [action, pairs[action]])
 	# The inspector grid commits *_result() through undo/redo; the console applies the same functions.
@@ -408,6 +408,59 @@ func test_console_ult() -> void:
 	var battle_entry: Dictionary = run.run_log[run.run_log.size() - 1]
 	var interrupts: Array = battle_entry["actionLog"]["actions"].filter(func(entry): return entry.get("interrupt", false))
 	check(interrupts.size() > 1, "auto battle casts ready ults out of turn: %d interrupts" % interrupts.size())
+
+
+## Spec content-pass: `status` lists a unit's statuses (turns, stacks) in battle and is refused outside one.
+func test_status_command() -> void:
+	var session := _session()
+	await _ok(session, "new %s 7" % PARTY)
+	check(not (await _run(session, "status"))["ok"], "status outside a battle is refused")
+	session[1].auto_battle = false
+	await _ok(session, "spawn fixture.encounter.pack")
+	var battle: Battle = session[0].run.get_node("RunBattle")
+	var enemy := battle.unit_by_id(&"E1")
+	for i in 2:
+		enemy.asc.apply_gameplay_effect(load(FIXTURES + "effects/st_poison.tres"), enemy.asc, 1)
+	eq((await _ok(session, "status E1"))["text"], "E1: Poison×2 3", "status shows stacks and turns left")
+	check(not (await _run(session, "status E9"))["ok"], "an unknown unit is refused")
+	check((await _ok(session, "status"))["text"].contains("P1: -"), "status alone lists every unit")
+
+
+## Spec content-pass 3.8 (dev-tools remaining work): `kill` sent while an enemy acts is queued and applied at the next
+## party decision, through the same RunController call the command makes.
+func test_kill_queued_during_enemy_turn() -> void:
+	var session := _session()
+	await _ok(session, "new %s 7" % PARTY)
+	var run: RunController = session[0].run
+	session[1].auto_battle = false
+	await _ok(session, "spawn fixture.encounter.pack")
+	var battle: Battle = run.get_node("RunBattle")
+	var queued := []
+	battle.turn_started.connect(func(unit_id: StringName, turn: int) -> void:
+		if queued.is_empty() and String(unit_id).begins_with("E"):
+			queued.append(turn)
+			check(session[0].recorder.waiting_for == &"", "no party member waits during an enemy turn")
+			var reply: Dictionary = await session[1].execute("kill enemies")
+			check(reply["ok"], "kill is accepted during an enemy turn: " + reply["text"]))
+	for attempt in 6:
+		if not queued.is_empty() or run.pending_battle.is_empty():
+			break
+		var waiting: StringName = session[0].recorder.waiting_for
+		var unit: BattleUnit = battle.unit_by_id(waiting)
+		var strike := unit.ability_by_tag(&"Fixture.Ability.Strike")
+		await _run(session, "act %s %s" % [strike.ability_tag, battle.target_candidates(unit, strike)[0].unit_id])
+	check(not queued.is_empty(), "an enemy turn came")
+	if not run.pending_battle.is_empty() and session[0].recorder.waiting_for != &"":
+		var waiting: StringName = session[0].recorder.waiting_for
+		var unit: BattleUnit = battle.unit_by_id(waiting)
+		var strike := unit.ability_by_tag(&"Fixture.Ability.Strike")
+		await _run(session, "act %s %s" % [strike.ability_tag, battle.target_candidates(unit, strike)[0].unit_id])
+	check(run.pending_battle.is_empty(), "the queued kill ended the battle at the next party decision")
+	var battle_entry: Dictionary = run.run_log.filter(func(entry): return entry["type"] == "battle").back()
+	eq(battle_entry["outcome"], Battle.VICTORY, "won through the kill")
+	var kills: Array = battle_entry["actionLog"]["actions"].filter(func(entry): return entry["ability"] == "Dev.Kill")
+	eq(kills.size(), 1, "the kill is logged once")
+	check(not kills.is_empty() and int(kills[0]["turn"]) > int(queued[0]), "at a party decision after the enemy turn")
 
 
 func test_console_battle_edges() -> void:

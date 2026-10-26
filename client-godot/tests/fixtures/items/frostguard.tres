@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_jl56i"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/resist_ice.tres" id="2_sgw77"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_hi16c"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_38oj5"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_ln018"]
+
+[sub_resource type="Resource" id="Resource_g65e4"]
+script = ExtResource("3_hi16c")
+effects = Array[ExtResource("1_jl56i")]([ExtResource("2_sgw77")])
+
+[resource]
+script = ExtResource("5_ln018")
+id = &"fixture.item.frostguard"
+display_name = "Frostguard"
+price = 3
+grants = SubResource("Resource_g65e4")

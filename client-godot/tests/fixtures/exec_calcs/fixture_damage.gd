@@ -7,6 +7,10 @@
 ##             target is Broken: toughness −= Data.Toughness × (100% + source.toughness_dmg)       (spec item-pass 3.3)
 ##   broken:   target has State.Broken → × (100% + source.broken_dmg)
 ##   crit: rng.randi_range(0, 9999) < crit_rate  →  RawDmg × (100% + crit_dmg), Hit.Critical
+## Spec content-pass 2.4 (affinities, Drain > Weak > Resist):
+##   drain:  row has Damage.Type.<X>, target has Drain.<X> → the target heals RawDmg × heal_taken (100% without the
+##           attribute), Hit.Drained; nothing else (no crit roll, no toughness)
+##   resist: not weak, target has Resist.<X> → × target.resist_dmg (50% without the attribute), Hit.Resisted
 ##
 ## Draws exactly one RNG value per hit, so every replay exercises the battle RNG. The weakness, toughness and broken
 ## parts only apply to units with those attributes (FixtureBreakAttributeSet), so older fixtures are unchanged.
@@ -15,6 +19,8 @@ extends GameplayExecutionCalculation
 
 const DEF_CONSTANT: int = 100000  # 1000.00
 const WEAKNESS_PREFIX: String = "Weakness."
+const DRAIN_PREFIX: String = "Drain."
+const RESIST_PREFIX: String = "Resist."
 
 
 @warning_ignore("integer_division")
@@ -35,7 +41,15 @@ func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Di
 	var def_multiplier := Fixed.ONE_HUNDRED_PERCENT - def * Fixed.ONE_HUNDRED_PERCENT / (def + DEF_CONSTANT)
 	var damage := Fixed.pct(base, def_multiplier)
 	var deltas := {}
-	if _hits_weakness(spec, target_asc) and target_asc.has_attribute("weakness_dmg"):
+	if _hits_affinity(spec, target_asc, DRAIN_PREFIX):
+		spec.inject_tag(&"Hit.Drained")
+		var heal_taken := _stat(target_asc, "heal_taken") if target_asc.has_attribute("heal_taken") else Fixed.ONE_HUNDRED_PERCENT
+		return {"hp": float(Fixed.pct(damage, heal_taken))}
+	var weak := _hits_weakness(spec, target_asc)
+	if not weak and _hits_affinity(spec, target_asc, RESIST_PREFIX):
+		damage = Fixed.pct(damage, _stat(target_asc, "resist_dmg") if target_asc.has_attribute("resist_dmg") else 5000)
+		spec.inject_tag(&"Hit.Resisted")
+	if weak and target_asc.has_attribute("weakness_dmg"):
 		damage = Fixed.pct(damage, _stat(target_asc, "weakness_dmg"))
 		spec.inject_tag(&"Hit.Weakness")
 		var toughness := int(spec.get_set_by_caller_magnitude(ExecutionRow.TOUGHNESS_TAG))
@@ -52,10 +66,14 @@ func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Di
 
 ## The spec carries a Damage.Type.<X> tag (from its execution row) and the target has Weakness.<X>.
 static func _hits_weakness(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> bool:
+	return _hits_affinity(spec, target_asc, WEAKNESS_PREFIX)
+
+
+## The spec carries a Damage.Type.<X> tag and the target has <prefix><X> (Weakness., Drain., Resist.).
+static func _hits_affinity(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent, prefix: String) -> bool:
 	for tag in spec.dynamic_tags:
 		if String(tag).begins_with(Battle.DAMAGE_TYPE_PREFIX):
-			var weakness := StringName(WEAKNESS_PREFIX + String(tag).trim_prefix(Battle.DAMAGE_TYPE_PREFIX))
-			if target_asc.has_tag_exact(weakness):
+			if target_asc.has_tag_exact(StringName(prefix + String(tag).trim_prefix(Battle.DAMAGE_TYPE_PREFIX))):
 				return true
 	return false
 

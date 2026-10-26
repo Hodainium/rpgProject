@@ -207,6 +207,45 @@ func _ready() -> void:
 	var uncharged := EnemyDefinition.new()
 	_unit(uncharged, "broken.enemy.uncharged", [strike, free_ult])
 	_save("enemies", "uncharged", uncharged)
+
+	# Spec content-pass: boss phases out of order, a pattern step the enemy lacks, two affinities for one type (enemies);
+	# a status chance on a damage row and a control effect without a Status.Debuff.* tag (characters).
+	var out_of_order := EnemyDefinition.new()
+	_unit(out_of_order, "broken.enemy.phase_order", [strike])
+	for hp_below in [50.0, 60.0]:
+		var phase := BossPhase.new()
+		phase.hp_below_x100 = Fixed.from_typed(hp_below)
+		out_of_order.phases.append(phase)
+	_save("enemies", "phase_order", out_of_order)
+	var drummer := EnemyDefinition.new()
+	_unit(drummer, "broken.enemy.pattern_unknown", [strike])
+	var pattern := PatternBrain.new()
+	pattern.pattern.assign([&"Broken.Ability.Nowhere"])
+	drummer.brain = pattern
+	_save("enemies", "pattern_unknown", drummer)
+	var torn := EnemyDefinition.new()
+	_unit(torn, "broken.enemy.affinity_conflict", [strike])
+	torn.tags.assign([&"Drain.Fire", &"Weakness.Fire"])
+	_save("enemies", "affinity_conflict", torn)
+	var gamble := _row_scene(strike, "chance_on_damage", null)
+	var gambler := CharacterDefinition.new()
+	_unit(gambler, "broken.character.chance_on_damage", [gamble])
+	_save("characters", "chance_on_damage", gambler)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(ROOT + "effects"))
+	var silent := GameplayEffect.new()
+	silent.policy = GameplayEffect.DurationPolicy.TURN_BASED
+	silent.granted_tags.assign([Battle.CONTROLLED_TAG])
+	var silent_path := ROOT + "effects/controlled_without_status.tres"
+	if _rebuild or not ResourceLoader.exists(silent_path):
+		ResourceSaver.save(silent, silent_path)
+	var hush := _row_scene(strike, "controlled_without_status", load(silent_path))
+	var hushed := CharacterDefinition.new()
+	_unit(hushed, "broken.character.controlled_without_status", [hush])
+	_save("characters", "controlled_without_status", hushed)
+	var armored := CharacterDefinition.new()
+	_unit(armored, "broken.character.party_toughness", [strike])
+	armored.stats_x100.assign({"max_toughness": 6000, "toughness": 6000})
+	_save("characters", "party_toughness", armored)
 	print("Broken fixtures built under ", ROOT)
 	get_tree().quit(0)
 
@@ -219,6 +258,27 @@ func _ult_scene(base: PackedScene, name: String, trigger: StringName) -> PackedS
 		ability.ability_tag = StringName("Broken.Ability." + name.to_pascal_case())
 		ability.asset_tags.assign([BattleAbility.ULTIMATE_TAG])
 		ability.trigger_event_tag = trigger
+		var scene := PackedScene.new()
+		scene.pack(ability)
+		ResourceSaver.save(scene, path)
+		ability.free()
+	return load(path)
+
+
+## A copy of `base` whose first row rolls a 50% status chance (`effect` null: keeps the row's damage effect), saved
+## as abilities/<name>.tscn.
+func _row_scene(base: PackedScene, name: String, effect: GameplayEffect) -> PackedScene:
+	var path := ROOT + "abilities/%s.tscn" % name
+	if _rebuild or not ResourceLoader.exists(path):
+		var ability := base.instantiate() as BattleAbility
+		ability.ability_tag = StringName("Broken.Ability." + name.to_pascal_case())
+		var row: ExecutionRow = ability.executions[0].duplicate()
+		row.chance_x100 = Fixed.from_typed(50)
+		if effect != null:
+			row.effect = effect
+			row.chance_x100 = 0
+		var rows: Array[ExecutionRow] = [row]
+		ability.executions = rows
 		var scene := PackedScene.new()
 		scene.pack(ability)
 		ResourceSaver.save(scene, path)

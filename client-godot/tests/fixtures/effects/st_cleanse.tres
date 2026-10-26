@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_134f8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_1phh8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_u6ms5"]
+
+[resource]
+script = ExtResource("3_u6ms5")
+remove_effects_with_tags = Array[StringName]([&"Status.Debuff"])

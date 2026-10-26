@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/siphon.tscn" id="1_xsdx5"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_lpu84"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/drain_fire_implant.tres" id="3_2k58a"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_pjdc4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_4snsi"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_httot"]
+
+[sub_resource type="Resource" id="Resource_mfrff"]
+script = ExtResource("4_pjdc4")
+abilities = Array[PackedScene]([ExtResource("1_xsdx5")])
+effects = Array[ExtResource("2_lpu84")]([ExtResource("3_2k58a")])
+
+[resource]
+script = ExtResource("6_httot")
+id = &"fixture.item.implant"
+display_name = "Implant"
+price = 3
+grants = SubResource("Resource_mfrff")

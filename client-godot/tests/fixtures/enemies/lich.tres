@@ -1,0 +1,57 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/bleed_blast.tscn" id="1_6q0ch"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/hex_all.tscn" id="2_abbsa"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/doom_bolt.tscn" id="3_wc323"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/death_ray.tscn" id="4_rqiqx"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/rage_charge.tscn" id="5_q2lwv"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_status_attribute_set.gd" id="6_bj6ku"]
+[ext_resource type="Script" path="res://combat/tactical_brain.gd" id="7_x1hon"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="8_oqdpx"]
+[ext_resource type="Resource" path="res://tests/fixtures/loadouts/lich_phase_2.tres" id="9_4y57a"]
+[ext_resource type="Resource" path="res://tests/fixtures/loadouts/lich_phase_3.tres" id="10_8yfgr"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="11_6u71a"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="12_6x0ky"]
+
+[sub_resource type="Resource" id="Resource_4pfop"]
+script = ExtResource("7_x1hon")
+ult_when_party_down = true
+
+[sub_resource type="Resource" id="Resource_lcju6"]
+script = ExtResource("8_oqdpx")
+ability_set = ExtResource("9_4y57a")
+hp_below_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_0acnj"]
+script = ExtResource("8_oqdpx")
+ability_set = ExtResource("10_8yfgr")
+clear_debuffs = true
+hp_below_x100 = 2500
+
+[resource]
+script = ExtResource("11_6u71a")
+phases = Array[ExtResource("8_oqdpx")]([SubResource("Resource_lcju6"), SubResource("Resource_0acnj")])
+id = &"fixture.enemy.lich"
+attribute_set = ExtResource("6_bj6ku")
+abilities = Array[PackedScene]([ExtResource("1_6q0ch"), ExtResource("2_abbsa"), ExtResource("3_wc323"), ExtResource("4_rqiqx"), ExtResource("5_q2lwv")])
+brain = SubResource("Resource_4pfop")
+display_name = "Lich"
+display_color = Color(0.41960785, 0.5568628, 0.13725491, 1)
+tags = Array[StringName]([&"Resist.Ice", &"Weakness.Physical", &"Enemy.Boss"])
+stats_x100 = Dictionary[String, int]({
+"atk": 30000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 20000,
+"energy": 0,
+"hp": 200000,
+"max_hp": 200000,
+"max_mp": 0,
+"max_toughness": 6000,
+"mp": 0,
+"spd": 10500,
+"toughness": 6000,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

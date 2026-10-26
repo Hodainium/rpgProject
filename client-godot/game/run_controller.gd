@@ -361,6 +361,21 @@ func _record_battle(battle: Battle) -> void:
 	battle.unit_recovered.connect(func(unit): battle_log.append({"event": "recover", "unit": String(unit)}))
 	battle.one_more_started.connect(func(unit): battle_log.append({"event": "oneMore", "unit": String(unit)}))
 	battle.unit_died.connect(func(unit): battle_log.append({"event": "death", "unit": String(unit)}))
+	# Spec content-pass: skipped turns, missed status rolls, drained hits, boss phases, action delays, and every
+	# unit's statuses when the battle ends.
+	battle.turn_skipped.connect(func(unit): battle_log.append({"event": "skip", "unit": String(unit)}))
+	battle.status_resisted.connect(func(source, target, effect):
+		battle_log.append({"event": "statusResisted", "source": String(source), "target": String(target), "effect": effect}))
+	battle.damage_drained.connect(func(source, target, amount):
+		battle_log.append({"event": "drain", "source": String(source), "target": String(target), "amount": amount}))
+	battle.phase_changed.connect(func(unit, phase): battle_log.append({"event": "phase", "unit": String(unit), "phase": phase}))
+	battle.action_delayed.connect(func(unit, percent):
+		battle_log.append({"event": "delay", "unit": String(unit), "percent": percent}))
+	battle.battle_ended.connect(func(_outcome, _hash):
+		var statuses := {}
+		for unit in battle.units():
+			statuses[String(unit.unit_id)] = unit.statuses()
+		battle_log.append({"event": "end", "statuses": statuses}))
 
 
 ## The party's run state as BattleSnapshot party members (spec 3.5). `full` leaves HP/MP null (= full).

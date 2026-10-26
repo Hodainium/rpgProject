@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_1ixwn"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ijtmx"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_ipn6w"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/bleed_blast.tres" id="4_1qx5w"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_4kd8n"]
+
+[sub_resource type="Resource" id="Resource_gqqo5"]
+script = ExtResource("2_ijtmx")
+id = &"main"
+effect = ExtResource("3_ipn6w")
+damage_mode = 1
+targets = 1
+tags = Array[StringName]([&"Damage.Type.Physical"])
+flat_damage_x100 = 8000
+toughness_x100 = 3000
+
+[sub_resource type="Resource" id="Resource_lue7d"]
+script = ExtResource("2_ijtmx")
+id = &"splash"
+effect = ExtResource("3_ipn6w")
+damage_mode = 1
+targets = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+flat_damage_x100 = 4000
+
+[sub_resource type="Resource" id="Resource_45jb3"]
+script = ExtResource("5_4kd8n")
+ignore_tags = Array[StringName]([&"State.Phase.Two"])
+
+[node name="BleedBlast" type="Node" unique_id=401171930]
+script = ExtResource("1_1ixwn")
+targeting = 2
+executions = Array[ExtResource("2_ijtmx")]([SubResource("Resource_gqqo5"), SubResource("Resource_lue7d")])
+animation = ExtResource("4_1qx5w")
+ability_tag = &"Fixture.Ability.BleedBlast"
+activation_query = SubResource("Resource_45jb3")

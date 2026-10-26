@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/provoke.tscn" id="1_4mugt"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="2_yfss8"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/rally.tscn" id="3_qtef2"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/entangle.tscn" id="4_ptaap"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ice_slash.tscn" id="5_anwbm"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ward.tscn" id="6_joul4"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/break_fire.tscn" id="7_ghdjv"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/break_ice.tscn" id="8_5an31"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_status_attribute_set.gd" id="9_8i1gl"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="10_bab86"]
+
+[resource]
+script = ExtResource("10_bab86")
+id = &"fixture.character.guard"
+attribute_set = ExtResource("9_8i1gl")
+abilities = Array[PackedScene]([ExtResource("1_4mugt"), ExtResource("2_yfss8"), ExtResource("3_qtef2"), ExtResource("4_ptaap"), ExtResource("5_anwbm"), ExtResource("6_joul4"), ExtResource("7_ghdjv"), ExtResource("8_5an31")])
+display_name = "Guard"
+display_color = Color(0.28235295, 0.23921569, 0.54509807, 1)
+tags = Array[StringName]([&"Fixture.Character.Guard"])
+stats_x100 = Dictionary[String, int]({
+"atk": 30000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 40000,
+"energy": 0,
+"hp": 160000,
+"max_hp": 160000,
+"max_mp": 10000,
+"max_toughness": 0,
+"mp": 10000,
+"spd": 9500,
+"toughness": 0,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

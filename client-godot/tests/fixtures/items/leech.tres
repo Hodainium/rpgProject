@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_31obw"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/drain_physical.tres" id="2_oy8ec"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_tma6k"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_i2fmn"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_cop03"]
+
+[sub_resource type="Resource" id="Resource_aau25"]
+script = ExtResource("3_tma6k")
+effects = Array[ExtResource("1_31obw")]([ExtResource("2_oy8ec")])
+
+[resource]
+script = ExtResource("5_cop03")
+id = &"fixture.item.leech"
+display_name = "Leech"
+price = 3
+grants = SubResource("Resource_aau25")

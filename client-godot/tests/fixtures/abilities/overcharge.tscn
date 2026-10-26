@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_fa3cm"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_h73tg"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/ult_refund.tres" id="3_e0t8u"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/overcharge.tres" id="4_fh2fr"]
+
+[sub_resource type="Resource" id="Resource_lorfp"]
+script = ExtResource("2_h73tg")
+id = &"charge"
+effect = ExtResource("3_e0t8u")
+
+[node name="Overcharge" type="Node" unique_id=360011954]
+script = ExtResource("1_fa3cm")
+targeting = 5
+executions = Array[ExtResource("2_h73tg")]([SubResource("Resource_lorfp")])
+animation = ExtResource("4_fh2fr")
+ability_tag = &"Fixture.Ability.Overcharge"
+trigger_event_tag = &"Event.Ability.Used.Ultimate"

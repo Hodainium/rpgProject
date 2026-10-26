@@ -118,6 +118,25 @@ func test_armor_inventory() -> void:
 	run.free()
 
 
+## Spec content-pass 3.8 (item-pass gap): a dead character can be equipped; the piece is in the next battle's snapshot
+## and its grants are on the unit (they stay while it is dead, so they count once it is revived).
+func test_equip_dead_character() -> void:
+	var run := _armory()
+	var def_before := _def(run, 1)
+	eq(run.take(_placement_of(run, HELM), 1), "", "the helm is taken")
+	run.state.member(1)["hp"] = 0
+	eq(run.equip(1, HELM), "", "a dead character can be equipped")
+	eq(run.state.member(1)["equipment"][HEAD], HELM, "the piece is worn")
+	var capture: Dictionary = run.party_capture(false)[0]
+	check(capture["equipmentIds"].has(String(HELM)), "the next battle snapshot carries it")
+	var battle := run._field_battle(0)
+	var unit := battle.unit_by_id(&"P1")
+	check(not unit.alive, "the member is still dead in the field")
+	eq(unit.stat("def"), def_before + def_before / 10, "and already has the helm's +10% DEF for when it is revived")
+	battle.free()
+	run.free()
+
+
 func test_armor_never_repeats() -> void:
 	var run := _armory()
 	run.take(_placement_of(run, HELM), 1)

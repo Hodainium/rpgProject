@@ -29,6 +29,10 @@ var warnings := PackedStringArray()
 ## The unit whose effect last lowered this unit's HP (a hit or a DoT tick), for Event.Unit.Killed (spec item-pass 3.1).
 ## Not hashed: replay recomputes it, and it changes nothing the hash covers.
 var last_hit_by: BattleUnit = null
+## Spec content-pass: actions a PatternBrain has chosen for this unit (its place in the pattern), and the boss phases
+## it has entered. Hashed only when non-zero, so units without them hash as before.
+var pattern_step: int = 0
+var phase_index: int = 0
 
 
 ## Builds the unit under `parent` (which must be inside the scene tree so GodotGAS's _ready hooks run).
@@ -152,6 +156,33 @@ func _grant_ability(scene: PackedScene, item_id: StringName) -> void:
 	asc.add_child(ability)
 	if item_id != &"":
 		item_abilities[ability.ability_tag] = item_id
+
+
+## Spec content-pass H5: grants an AbilitySet mid-battle (a boss phase): its abilities, then its effects, then its tags,
+## in the same order a battle start grants sets.
+func grant_set(ability_set: AbilitySet) -> void:
+	for scene in ability_set.abilities:
+		_grant_ability(scene, &"")
+	for effect in ability_set.effects:
+		if effect != null:
+			asc.apply_gameplay_effect(effect, asc, level)
+	for tag in ability_set.tags:
+		asc.add_tag(tag)
+
+
+## Spec content-pass: the unit's active statuses (effects granting a Status.* tag), sorted by tag, for presentation, the
+## console's `status` and the dev report: [{"tag", "turns": remaining (-1 if not turn-based), "stacks"}].
+func statuses() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for active_effect in asc._active_effects:
+		var effect := active_effect.get_effect_def()
+		for tag in effect.granted_tags:
+			if String(tag).begins_with("Status."):
+				var turn_based := effect.policy == GameplayEffect.DurationPolicy.TURN_BASED
+				result.append({"tag": String(tag), "turns": active_effect.spec.remaining_turns if turn_based else -1,
+					"stacks": active_effect.stack_count})
+	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["tag"] < b["tag"])
+	return result
 
 
 ## Removes an ability for the rest of the battle (a usable item after its one use).

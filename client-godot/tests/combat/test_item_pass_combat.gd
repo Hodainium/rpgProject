@@ -43,10 +43,12 @@ func test_hit_tag_events() -> void:
 	var hits := []
 	battle.damage_dealt.connect(func(_source, target, amount, hit_tags): hits.append([target, amount, hit_tags]))
 	await battle._activate(duelist, _ability(duelist, "FireSlash"), first)
+	# Spec content-pass H4: a breaking hit ends with Break.<DamageType>.
 	eq(_tags(dealt, DAMAGE_DEALT_PREFIX), ["Event.Damage.Dealt", "Event.Damage.Dealt.Fire", "Event.Damage.Dealt.Break",
-		"Event.Damage.Dealt.Weakness"], "damage type events, then one event per hit tag, sorted")
+		"Event.Damage.Dealt.Weakness", "Event.Damage.Dealt.Break.Fire"],
+		"damage type events, then one event per hit tag, sorted, then the break per damage type")
 	eq(_tags(taken, "Event.Damage.Taken"), ["Event.Damage.Taken", "Event.Damage.Taken.Fire", "Event.Damage.Taken.Break",
-		"Event.Damage.Taken.Weakness"], "the target gets the Taken versions")
+		"Event.Damage.Taken.Weakness", "Event.Damage.Taken.Break.Fire"], "the target gets the Taken versions")
 	# ATK 500 × 50% = 250, DEF 0, weakness damage taken 200% → 500.
 	eq(hits, [[&"E1", 50000, [&"Hit.Break", &"Hit.Weakness"]]], "damage_dealt carries the amount and hit tags")
 	var payload: Dictionary = dealt.filter(func(event): return event[0] == &"Event.Damage.Dealt")[0][1]

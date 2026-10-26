@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_8d3ev"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_62ien"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="3_3rngx"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="4_j6vnl"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="5_a40mw"]
+
+[resource]
+script = ExtResource("4_j6vnl")
+id = &"broken.enemy.affinity_conflict"
+attribute_set = ExtResource("2_62ien")
+abilities = Array[PackedScene]([ExtResource("1_8d3ev")])
+tags = Array[StringName]([&"Drain.Fire", &"Weakness.Fire"])

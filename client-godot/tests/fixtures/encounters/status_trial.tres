@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="1_rt4lb"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="2_mubku"]
+[ext_resource type="Resource" path="res://tests/fixtures/enemies/wisp.tres" id="3_eesai"]
+[ext_resource type="Resource" path="res://tests/fixtures/enemies/toad.tres" id="4_k7mhp"]
+[ext_resource type="Resource" path="res://tests/fixtures/enemies/imp.tres" id="5_0c3q6"]
+
+[sub_resource type="Resource" id="Resource_bkjpu"]
+script = ExtResource("2_mubku")
+enemy = ExtResource("3_eesai")
+
+[sub_resource type="Resource" id="Resource_tl6nt"]
+script = ExtResource("2_mubku")
+enemy = ExtResource("4_k7mhp")
+
+[sub_resource type="Resource" id="Resource_js3xl"]
+script = ExtResource("2_mubku")
+enemy = ExtResource("5_0c3q6")
+
+[resource]
+script = ExtResource("1_rt4lb")
+id = &"fixture.encounter.status_trial"
+display_name = "Status Trial"
+slots = Array[ExtResource("2_mubku")]([SubResource("Resource_bkjpu"), SubResource("Resource_tl6nt"), SubResource("Resource_js3xl")])

@@ -154,6 +154,31 @@ func test_weakness_break_and_follow_up_items() -> void:
 	eq(battle.used_items.map(func(entry): return entry["item"]), [&"demo.item.fire_bomb"], "the bomb is used up")
 
 
+## Spec content-pass 3.8 (item-pass gaps): on a Slime (weak to Fire) a Physical hit is a plain hit that leaves its
+## toughness alone, while a Fire hit is a weakness hit that breaks it; the Broken Slime recovers full toughness at its
+## next turn start, as the battle's turn loop does it.
+func test_demo_slime_fire_vs_physical_and_recovery() -> void:
+	if not _ready_to_test():
+		return
+	var battle := _battle(_snapshot([], "slime_pair", [], [{"itemId": "demo.item.fire_bomb", "ready": true}]))
+	var slime := battle.unit_by_id(&"E1")
+	var other := battle.unit_by_id(&"E2")
+	var hits := []
+	battle.damage_dealt.connect(func(_s, target, _a, hit_tags): hits.append([target, hit_tags]))
+	var toughness := slime.stat(Battle.TOUGHNESS)
+	# The Physical check on the second Slime: a softened Slime would die to the bomb, and a kill is never a break.
+	await _act(battle, &"P1", &"Ability.Strike", &"E2")
+	check(not hits.is_empty() and not hits[-1][1].has(&"Hit.Weakness"), "a Physical Strike is no weakness hit on a Slime")
+	eq(other.stat(Battle.TOUGHNESS), other.stat(Battle.MAX_TOUGHNESS), "and deals no toughness damage")
+	await _act(battle, &"P1", &"Ability.Item.Firebomb", &"E1")
+	check(hits[-1][1].has(&"Hit.Weakness"), "Fire is")
+	check(slime.asc.has_tag_exact(Battle.BROKEN_TAG), "and breaks it")
+	check(slime.stat(Battle.TOUGHNESS) < toughness, "its toughness is spent")
+	battle._recover(slime)
+	check(not slime.asc.has_tag_exact(Battle.BROKEN_TAG), "at its next turn start the Slime recovers")
+	eq(slime.stat(Battle.TOUGHNESS), slime.stat(Battle.MAX_TOUGHNESS), "with full toughness")
+
+
 func test_armor_passives() -> void:
 	if not _ready_to_test():
 		return

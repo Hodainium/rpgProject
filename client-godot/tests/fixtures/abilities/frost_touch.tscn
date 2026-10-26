@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_40ybn"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_7wkxm"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_y2nux"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/st_freeze.tres" id="4_xgqgt"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/frost_touch.tres" id="5_7evi2"]
+
+[sub_resource type="Resource" id="Resource_5433l"]
+script = ExtResource("2_7wkxm")
+id = &"hit"
+effect = ExtResource("3_y2nux")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Ice"])
+flat_damage_x100 = 5000
+
+[sub_resource type="Resource" id="Resource_7efmn"]
+script = ExtResource("2_7wkxm")
+id = &"freeze"
+effect = ExtResource("4_xgqgt")
+chance_x100 = 5000
+
+[node name="FrostTouch" type="Node" unique_id=292040924]
+script = ExtResource("1_40ybn")
+executions = Array[ExtResource("2_7wkxm")]([SubResource("Resource_5433l"), SubResource("Resource_7efmn")])
+animation = ExtResource("5_7evi2")
+ability_tag = &"Fixture.Ability.FrostTouch"

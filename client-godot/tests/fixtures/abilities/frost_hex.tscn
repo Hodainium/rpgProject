@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_1pksd"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_7o1ng"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_xxdjj"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/st_freeze.tres" id="4_mwuve"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/frost_hex.tres" id="5_ecv2h"]
+
+[sub_resource type="Resource" id="Resource_txdr4"]
+script = ExtResource("2_7o1ng")
+id = &"hit"
+effect = ExtResource("3_xxdjj")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Ice"])
+flat_damage_x100 = 4000
+
+[sub_resource type="Resource" id="Resource_frmk5"]
+script = ExtResource("2_7o1ng")
+id = &"freeze"
+effect = ExtResource("4_mwuve")
+chance_x100 = 5000
+
+[node name="FrostHex" type="Node" unique_id=937848705]
+script = ExtResource("1_1pksd")
+executions = Array[ExtResource("2_7o1ng")]([SubResource("Resource_txdr4"), SubResource("Resource_frmk5")])
+animation = ExtResource("5_ecv2h")
+ability_tag = &"Fixture.Ability.FrostHex"

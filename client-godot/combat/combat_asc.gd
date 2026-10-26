@@ -27,6 +27,9 @@ func _ready() -> void:
 
 
 ## Turn start: tick periodic TURN_BASED effects (DoTs/HoTs), then count down their duration.
+## Spec content-pass H3: a stacked periodic effect (REFRESH_DURATION with max_stacks) ticks once per stack, in stack
+## order; GodotGAS keeps every stack's spec in stack_specs (the first is the wrapper's own spec) but would tick only
+## one. One countdown per effect, since stacking refreshes the wrapper's duration.
 func turn_start() -> void:
 	_in_own_turn = true
 	for i in range(_active_effects.size() - 1, -1, -1):
@@ -37,9 +40,10 @@ func turn_start() -> void:
 		if spec.effect_def.tick_on_turn_start and not active_effect.is_suppressed:
 			for cue_tag in spec.effect_def.periodic_cue_tags:
 				execute_cue(cue_tag, {"target": get_parent()})
-			_trigger_effect_events(spec)
-			_evaluate_spec(spec)
-			_commit_spec_math(spec)
+			for stack_spec in active_effect.stack_specs:
+				_trigger_effect_events(stack_spec)
+				_evaluate_spec(stack_spec)
+				_commit_spec_math(stack_spec)
 		spec.remaining_turns -= 1
 		if spec.remaining_turns <= 0:
 			remove_active_effect(active_effect)
@@ -84,6 +88,19 @@ func send_gameplay_event(event_tag: StringName, payload: Variant = null) -> void
 	for ability in _active_abilities:
 		if ability is BattleAbility and ability.trigger_event_tag == event_tag:
 			battle.triggers.push(get_parent(), ability, event_tag, payload)
+
+
+## Spec content-pass (cleanse and dispel): removes every active effect granting `tag` or one of its children, as UE
+## GAS does, so a Cleanse lists Status.Debuff instead of every debuff. GodotGAS alone matches the exact tag only.
+## Also used by GameplayEffect.remove_effects_with_tags.
+func remove_effects_with_tag(tag: StringName) -> void:
+	var prefix := String(tag) + "."
+	for i in range(_active_effects.size() - 1, -1, -1):
+		var active_effect: ActiveGameplayEffect = _active_effects[i]
+		for granted in active_effect.get_effect_def().granted_tags:
+			if granted == tag or String(granted).begins_with(prefix):
+				remove_active_effect(active_effect)
+				break
 
 
 func _on_active_effect_added(active_effect: ActiveGameplayEffect) -> void:

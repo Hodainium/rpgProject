@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_xik1i"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_n4bud"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_4twb6"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/fire_bolt.tres" id="4_j7hyo"]
+
+[sub_resource type="Resource" id="Resource_slap1"]
+script = ExtResource("2_n4bud")
+id = &"hit"
+effect = ExtResource("3_4twb6")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 6000
+
+[node name="FireBolt" type="Node" unique_id=1785027715]
+script = ExtResource("1_xik1i")
+executions = Array[ExtResource("2_n4bud")]([SubResource("Resource_slap1")])
+animation = ExtResource("4_j7hyo")
+ability_tag = &"Fixture.Ability.FireBolt"

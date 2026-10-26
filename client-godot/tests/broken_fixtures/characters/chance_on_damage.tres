@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/chance_on_damage.tscn" id="1_ocqmm"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_xnskk"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="3_lac56"]
+
+[resource]
+script = ExtResource("3_lac56")
+id = &"broken.character.chance_on_damage"
+attribute_set = ExtResource("2_xnskk")
+abilities = Array[PackedScene]([ExtResource("1_ocqmm")])

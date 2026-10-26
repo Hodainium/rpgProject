@@ -6,3 +6,5 @@ extends UnitDefinition
 
 ## Elite variants this enemy can roll (chance from the chapter's ScalingRules).
 @export var variants: Array[EnemyVariant] = []
+## Spec content-pass H5: boss phases, in order of strictly decreasing hp_below. Empty for ordinary enemies.
+@export var phases: Array[BossPhase] = []

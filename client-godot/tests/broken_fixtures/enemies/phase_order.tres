@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_x2mjk"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_aayjt"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="3_avxml"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="4_mrsur"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="5_1yg7a"]
+
+[sub_resource type="Resource" id="Resource_h2r5y"]
+script = ExtResource("3_avxml")
+hp_below_x100 = 5000
+
+[sub_resource type="Resource" id="Resource_24ib8"]
+script = ExtResource("3_avxml")
+hp_below_x100 = 6000
+
+[resource]
+script = ExtResource("4_mrsur")
+phases = Array[ExtResource("3_avxml")]([SubResource("Resource_h2r5y"), SubResource("Resource_24ib8")])
+id = &"broken.enemy.phase_order"
+attribute_set = ExtResource("2_aayjt")
+abilities = Array[PackedScene]([ExtResource("1_x2mjk")])

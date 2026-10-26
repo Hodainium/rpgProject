@@ -1,0 +1,1 @@
+{"schemaVersion":1,"battleId":"status-seed-3","verdict":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"TurnMismatch","turn":4,"detail":"log entry says turn 2, P2 acts on turn 4"},"outcome":"Ongoing","turns":4,"finalStateHash":"5b9bf6f7a6ce3f630d9447f0225416bf87cb8f2d653dfd498a60efaa0055c13d","engineVersion":"4.7.2.stable.mono.official.ed1daf0bf"}

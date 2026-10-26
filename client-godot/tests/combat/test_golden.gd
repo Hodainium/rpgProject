@@ -21,7 +21,19 @@ static func _scenarios() -> Dictionary:
 			["fixture.item.chaser_charm"], "11"),
 		# Spec ult-interrupts: ults in both windows ("interrupt": true), chains, an enemy ult, ult breaks with One More.
 		"ult-seed-7": preload("res://tests/combat/test_ult_interrupts.gd").ult_snapshot(),
+		# Spec content-pass: statuses, affinities and a frozen party turn (no entry); a boss with phases, a pattern brain,
+		# party weakness hits with enemy One Mores (H7) and ults timed on a Downed party member.
+		"status-seed-3": status_golden_snapshot(),
+		"boss-seed-5": preload("res://tests/combat/test_bosses.gd").boss_snapshot("5"),
 	}
+
+
+## Spec content-pass: the status trial with the guard taunting (so enemies aim at it) while it holds the Fire-drain
+## implant, and the hexer holding Frostguard: DoT stacks, statuses rolled and resisted, drained and resisted hits, a
+## frozen party turn skipped, a cleansing ult.
+static func status_golden_snapshot(seed_text: String = "3") -> Dictionary:
+	return preload("res://tests/combat/test_statuses.gd").status_snapshot(["hexer", "guard"], "status_trial", seed_text,
+		{1: ["frostguard"], 2: ["implant"]})
 
 
 ## Spec atomic-battles: a close ult trial (both ultists on half HP) whose outcome hangs on one interrupt. Not a golden
@@ -46,9 +58,9 @@ func test_golden_replays() -> void:
 		if name.ends_with(".json") and not name.ends_with(".result.json") and not name.ends_with(".trace.json"):
 			requests.append(name.trim_suffix(".json"))
 	requests.sort()
-	eq(Array(requests), ["break-seed-11", "duel-seed-1", "run-v2-seed-7", "squad-seed-42", "squad-seed-42-tampered-final",
-		"squad-seed-42-tampered-target", "ult-close-seed-2-tampered-outcome", "ult-seed-7", "ult-seed-7-tampered-turn"],
-		"golden set")
+	eq(Array(requests), ["boss-seed-5", "break-seed-11", "duel-seed-1", "run-v2-seed-7", "squad-seed-42",
+		"squad-seed-42-tampered-final", "squad-seed-42-tampered-target", "status-seed-3", "status-seed-3-tampered-skip",
+		"ult-close-seed-2-tampered-outcome", "ult-seed-7", "ult-seed-7-tampered-turn"], "golden set")
 	for name in requests:
 		check(FileAccess.file_exists(GOLDEN + name + ".trace.json"), "%s has a committed trace" % name)
 		var expected := FileAccess.get_file_as_string(GOLDEN + name + ".result.json")
@@ -139,12 +151,30 @@ func _write_goldens() -> void:
 	var outcome := copy(await record(_close_ult_snapshot()))
 	outcome["actionLog"]["actions"].remove_at(11)  # one party entry fewer: the rest still fits, the party now loses
 	requests["ult-close-seed-2-tampered-outcome"] = outcome
+	# Spec content-pass H1: an entry claimed for a turn the simulation skips (the party unit is frozen) → TurnMismatch.
+	var skip := await _first_party_skip(status_golden_snapshot())
+	var skipped := copy(requests["status-seed-3"])
+	var actions: Array = skipped["actionLog"]["actions"]
+	var at := 0
+	while at < actions.size() and int(actions[at]["turn"]) < int(skip["turn"]):
+		at += 1
+	actions.insert(at, {"turn": skip["turn"], "actor": str(skip["unit"]), "ability": "Fixture.Ability.Strike", "target": "E1"})
+	requests["status-seed-3-tampered-skip"] = skipped
 	for name in requests:
 		_write(GOLDEN + name + ".json", WireJson.stringify(requests[name]))
 		var replayed := _replay_fresh_process(GOLDEN + name + ".json")
 		_write(GOLDEN + name + ".result.json", replayed["text"])
 		_write(GOLDEN + name + ".trace.json", _trace_fresh_process(GOLDEN + name + ".json"))
 	print("    goldens rewritten under ", GOLDEN)
+
+
+## The first party turn the battle skips because the unit is controlled: {"unit", "turn"}.
+func _first_party_skip(snap: Dictionary) -> Dictionary:
+	var battle := new_battle(snap)
+	var skips := []
+	battle.turn_skipped.connect(func(unit_id): if String(unit_id).begins_with("P"): skips.append({"unit": unit_id, "turn": battle.turn}))
+	await battle.run(ScriptedController.new())
+	return skips[0]
 
 
 static func _write(path: String, text: String) -> void:
