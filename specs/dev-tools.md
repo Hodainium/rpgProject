@@ -649,6 +649,7 @@ independent work uses the machine's cores.
 | **Parallel tests** | `run_tests.tscn -- --shard i/n` (test files whose sorted index is i mod n); `tools/godot_tests.sh [-j N] [-- runner args]` | Runs N watched shards (default 8), merges the `ok`/`FAIL` lines and totals, exits 1 on any failure or stall. `--update-goldens` always runs as one shard (goldens are written once) |
 | **Parallel reports** | `game/tools/play_sharded.sh` (2.3d) | Shards go through `tools/watch.sh` |
 | **.NET** | `tools/dotnet_test.sh [args]` | `dotnet test` through the watcher (the test platform already runs projects and classes in parallel) |
+| **Silent runs** (2026-10-26, user) | `tools/watch.sh` exports `RPG_MUTE=1` (unless set); `Watchdog._ready` mutes the Master bus when `RPG_MUTE=1` or the user arg `--mute` | Window runs Claude starts make no noise. Sounds still play and mix into the muted bus, so audio errors still show; `RPG_MUTE=0 tools/watch.sh ...` keeps the sound |
 
 Builders, imports and golden updates stay sequential (they write shared files). Claude runs every headless Godot and
 `dotnet test` command through these tools.

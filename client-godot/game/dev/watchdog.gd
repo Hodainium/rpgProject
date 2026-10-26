@@ -6,6 +6,10 @@
 ## - No Watchdog.beat(label) for --idle-limit seconds (default 180): print the last label and quit with 124.
 ## - While beats arrive, print an "alive" line every 30 s, so a watcher outside sees progress as output.
 ## A frozen main thread stops this node too; tools/watch.sh catches that from outside.
+##
+## Silent runs (any display server): with the environment variable RPG_MUTE=1 (tools/watch.sh sets it, so every run
+## Claude starts) or the user arg --mute, the Master bus is muted. Sounds still play, mix and report errors; only
+## the speakers stay quiet. RPG_MUTE=0 tools/watch.sh ... runs with sound.
 extends Node
 
 const DEFAULT_IDLE_LIMIT: int = 180
@@ -24,6 +28,9 @@ var _beats_at_alive: int = 0
 
 
 func _ready() -> void:
+	if OS.get_environment("RPG_MUTE") == "1" or OS.get_cmdline_user_args().has("--mute"):
+		AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), true)
+		print("Watchdog: audio muted (RPG_MUTE=1 or --mute); sounds still play into a muted Master bus")
 	active = DisplayServer.get_name() == "headless"
 	set_process(active)
 	if not active:

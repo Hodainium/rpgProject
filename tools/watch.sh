@@ -4,7 +4,10 @@
 # The command's output goes to --log (a temp file by default). Every 30 s: "[watch:LABEL] <s>, <KB>: <last line>".
 # When the log stays silent for --idle seconds (default 180) or the run passes --timeout (default 3600), the whole
 # process tree is killed and the exit code is 124; otherwise the command's own exit code.
+# Godot runs started here are silent: RPG_MUTE=1 makes the Watchdog autoload mute the Master bus (sounds still play
+# and mix, the speakers stay quiet). RPG_MUTE=0 tools/watch.sh ... keeps the sound.
 set -uo pipefail
+export RPG_MUTE=${RPG_MUTE:-1}
 idle=180; total=3600; log=""; name=job
 while [[ $# -gt 0 && $1 != "--" ]]; do
 	case $1 in
