@@ -391,6 +391,32 @@ func test_console_messages() -> void:
 	check(not (await _run(session, "messages on Battle"))["ok"], "a channel must be a Message tag")
 
 
+## Promoted screenshot helpers (spec dev-tools): `xp` / `xp level` (on a copy of the run with an XP curve; the
+## fixtures have none), `bossdone` and `goto`, each a logged cheat that refuses what it can't do.
+func test_console_xp_bossdone_goto() -> void:
+	var session := _session()
+	await _ok(session, "new %s 7" % PARTY)
+	var game: GameMain = session[0]
+	check(not (await _run(session, "xp 100"))["ok"], "a run without an XP curve refuses xp")
+	var structure: RunStructure = game.run.structure.duplicate()
+	structure.xp_to_level.assign([100, 300, 600])
+	game.run.structure = structure
+	await _ok(session, "xp 150")
+	eq(game.run.state.party.map(func(member) -> int: return member["level"]), [2, 2], "150 XP: level 2 for both")
+	await _ok(session, "xp level 2 1")
+	eq([game.run.state.member(1)["level"], game.run.state.member(2)["level"]], [4, 2], "two free levels for slot 1 only")
+	await _ok(session, "bossdone")
+	check(game.run.state.boss_cleared and game.run.state.status == RunState.ACTIVE, "the stairs open on floor 1")
+	check(not (await _run(session, "bossdone"))["ok"], "a beaten boss is refused")
+	await _ok(session, "goto boss")
+	eq(game.run.state.map.cells[game.run.state.current_cell]["role"], FloorMap.ROLE_BOSS, "goto walks into the boss room")
+	check(not (await _run(session, "goto nowhere"))["ok"], "an unknown room is refused")
+	var cheats: Array = game.run.run_log.filter(func(entry) -> bool: return entry["type"] == "dev").map(
+		func(entry) -> String: return entry["command"])
+	eq(cheats, ["xp", "level", "bossdone", "goto"], "every cheat is logged")
+	check(game.run.state.dev, "and the run is marked dev")
+
+
 ## Spec animation-sets: `anim` shows a unit's view and set, plays a slot, refuses unknown slots; `create animation_set`
 ## writes a set that falls back to the default one.
 func test_console_anim_and_animation_set_template() -> void:

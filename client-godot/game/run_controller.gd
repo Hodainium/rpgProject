@@ -1264,6 +1264,64 @@ func dev_reveal() -> String:
 	return ""
 
 
+## `goto`: moves into any room of the floor (no need to be next to a visited one); it then plays as if entered.
+func dev_goto(index: int) -> String:
+	if not _active():
+		return "no run"
+	if not pending_battle.is_empty() or not state.event.is_empty():
+		return "not while a battle or an event is open"
+	if not state.map.cells.has(index):
+		return "no cell %d on this floor" % index
+	if index == state.current_cell:
+		return "already in cell %d" % index
+	dev_log("goto", [index])
+	_enter_cell(index)
+	return ""
+
+
+## `bossdone`: the floor's boss counts as beaten (its room cleared; no battle, rewards, drops or XP), so the stairs
+## open; on the last floor the run is won.
+func dev_boss_done() -> String:
+	if not _active():
+		return "no run"
+	if not pending_battle.is_empty() or not state.event.is_empty():
+		return "not while a battle or an event is open"
+	if state.boss_cleared:
+		return "the boss is already beaten"
+	var boss := -1
+	for index in state.map.sorted_indices():
+		if state.map.cells[index]["role"] == FloorMap.ROLE_BOSS:
+			boss = index
+	if boss < 0:
+		return "this floor has no boss room"
+	dev_log("bossdone", [])
+	state.map.cells[boss]["visited"] = true
+	_clear_room(boss, false)
+	return ""
+
+
+## `xp`: XP (the GainXp path) or free levels (GainLevel) for every living member, or only `slot`'s character.
+func dev_xp(amount: int, levels: bool, slot: int) -> String:
+	if not _active():
+		return "no run"
+	if structure.xp_to_level.is_empty():
+		return "run %s has no XP curve (xp_to_level)" % structure.id
+	if amount <= 0:
+		return "the amount must be above 0"
+	var character: CharacterDefinition = null
+	if slot > 0:
+		var member := state.member(slot)
+		if member.is_empty():
+			return "no member in slot %d" % slot
+		character = content.characters.get(member["character"])
+	dev_log("level" if levels else "xp", [amount, slot])
+	if levels:
+		gain_levels(amount, character)
+	else:
+		gain_xp(amount, character)
+	return ""
+
+
 ## kill / heal in battle: queued on the recorder, applied by the battle at the next party decision.
 func dev_battle(command: String, effect: GameplayEffect, targets: String, recorder: ActionRecorder) -> String:
 	if pending_battle.is_empty() or recorder == null:
