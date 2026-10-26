@@ -139,6 +139,126 @@ func test_demo_events() -> void:
 	run.free()
 
 
+## Spec playable-demo 3.11 (D29, D30): the healing events, the Old Tutor and the Waystation rest stop do what their
+## text says (direction only: HP up, the fallen up, a level or XP more, coins as named).
+func test_demo_c6_events() -> void:
+	var content := _demo()
+	if content == null:
+		print("    skipped: %s not built" % DESCENT)
+		return
+	# Healing Spring: drinking heals; bathing needs 10 coins, takes them and heals more than drinking.
+	var run := _start(content)
+	_hurt(run)
+	var hurt_hp := _party_hp(run)
+	_open(run, &"demo.event.healing_spring")
+	check(not run.choice_enabled(1), "bathing needs 10 coins")
+	eq(run.choose(0), "", "drink")
+	var drunk_hp := _party_hp(run)
+	check(drunk_hp > hurt_hp, "drinking heals")
+	run.free()
+	run = _start(content)
+	_hurt(run)
+	run.add_coins(10)
+	_open(run, &"demo.event.healing_spring")
+	eq(run.choose(1), "", "bathe")
+	eq(run.state.coins, 0, "10 coins paid")
+	check(_party_hp(run) > drunk_hp, "bathing heals more than drinking")
+	run.free()
+	# Wandering Medic: needs 15 coins; full heal and the fallen get up.
+	run = _start(content)
+	_hurt(run, true)
+	_open(run, &"demo.event.wandering_medic")
+	check(not run.choice_enabled(0), "the medic needs 15 coins")
+	run.add_coins(15)
+	eq(run.choose(0), "", "pay the medic")
+	eq(run.state.coins, 0, "15 coins paid")
+	check(run.state.party.all(func(member: Dictionary) -> bool: return member["alive"]), "the fallen get up")
+	var stats := run.party_stats()
+	for slot in stats:
+		eq(stats[slot][BattleUnit.HP], stats[slot][BattleUnit.MAX_HP], "member %d fully healed" % slot)
+	run.free()
+	# Old Tutor: the lesson gives everyone a level; the purse gives XP and 10 coins.
+	run = _start(content)
+	var levels := _levels(run)
+	_open(run, &"demo.event.old_tutor")
+	eq(run.choose(0), "", "take the lesson")
+	for index in levels.size():
+		eq(run.state.party[index]["level"], levels[index] + 1, "member %d gains a level" % run.state.party[index]["slot"])
+	run.free()
+	run = _start(content)
+	var xp_before: Array = run.state.party.map(func(member: Dictionary) -> int: return int(member.get("xp", 0)))
+	_open(run, &"demo.event.old_tutor")
+	eq(run.choose(1), "", "take the purse")
+	eq(run.state.coins, 10, "10 coins")
+	for index in xp_before.size():
+		check(int(run.state.party[index].get("xp", 0)) > xp_before[index], "member %d gains XP" % run.state.party[index]["slot"])
+	run.free()
+	# Waystation (The Descent's rest stop): rest heals HP and MP and raises the fallen; train gives a level; move on
+	# changes nothing.
+	run = _start(content)
+	eq(run.structure.rest_event.id, &"demo.event.waystation", "the Waystation is the rest stop between floors")
+	_hurt(run, true)
+	hurt_hp = _party_hp(run)
+	var hurt_mp := _party_mp(run)
+	_open(run, &"demo.event.waystation")
+	eq(run.choose(0), "", "rest")
+	check(_party_hp(run) > hurt_hp, "resting heals")
+	check(_party_mp(run) > hurt_mp, "resting restores MP")
+	check(run.state.party.all(func(member: Dictionary) -> bool: return member["alive"]), "the fallen get up")
+	run.free()
+	run = _start(content)
+	levels = _levels(run)
+	_open(run, &"demo.event.waystation")
+	eq(run.choose(1), "", "train")
+	eq(_levels(run), levels.map(func(level: int) -> int: return level + 1), "everyone gains a level")
+	run.free()
+	run = _start(content)
+	_hurt(run)
+	var hp_before := _party_hp(run)
+	_open(run, &"demo.event.waystation")
+	eq(run.choose(2), "", "move on")
+	eq(_party_hp(run), hp_before, "moving on heals nobody")
+	eq(_levels(run), levels, "and trains nobody")
+	run.free()
+
+
+## Every member down to 10% HP and no MP; with `one_down`, the last member has fallen.
+func _hurt(run: RunController, one_down: bool = false) -> void:
+	var stats := run.party_stats()
+	for member in run.state.party:
+		member["hp"] = int(stats[member["slot"]][BattleUnit.MAX_HP]) / 10
+		if member["mp"] != null:
+			member["mp"] = 0
+	if one_down:
+		var last: Dictionary = run.state.party[run.state.party.size() - 1]
+		last["hp"] = 0
+		last["alive"] = false
+	check(_party_hp(run) < _party_max_hp(run), "the party is hurt before the event")
+	if one_down:
+		check(run.party_stats().size() == run.state.party.size() and not run.state.party.all(
+			func(member: Dictionary) -> bool: return member["alive"]), "a member is down before the event")
+
+
+func _party_max_hp(run: RunController) -> int:
+	var total := 0
+	var stats := run.party_stats()
+	for slot in stats:
+		total += int(stats[slot].get(BattleUnit.MAX_HP, 0))
+	return total
+
+
+func _levels(run: RunController) -> Array:
+	return run.state.party.map(func(member: Dictionary) -> int: return int(member["level"]))
+
+
+func _party_mp(run: RunController) -> int:
+	var total := 0
+	var stats := run.party_stats()
+	for slot in stats:
+		total += int(stats[slot].get(BattleUnit.MP, 0))
+	return total
+
+
 func _open(run: RunController, event_id: StringName) -> void:
 	run.state.event = {"cell": run.state.current_cell, "event": event_id, "page": 0}
 
