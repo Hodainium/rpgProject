@@ -540,7 +540,7 @@ protects is that **adding a second run and a second floor doesn't change any exi
 | Two runs flagged default | Validator error `run_default_twice` (none flagged: warning `run_no_default`) | broken fixtures `runs/default_a.tres`, `runs/default_b.tres` |
 | Unknown `run=` id | Command fails, names the id; menu can't offer it | `test_run_picker` |
 | A floor that can't generate (no boss room for its chapter) | Validator error before play (F3: `empty_query` / `zero_weights`); at generation the existing runner error | broken fixture `chapters/empty_query.tres` |
-| Second floor's battles draw from the wrong stream | Can't: floor seeds are `floor/<n>/…` (`RunSeeds`), unchanged | existing `test_generation` (fixtures); on demo content not asserted (`test_demo_run_full_descent` checks each floor's chapter and boss, not that floor 1 differs from floor 0; open, 6) |
+| Second floor's battles draw from the wrong stream | Can't: floor seeds are `floor/<n>/…` (`RunSeeds`), unchanged | existing `test_generation` (fixtures), plus `test_demo_floors_differ_per_seed`: for seeds 1–20, a chapter's two floors (Cellar 1–2, Crypt 3–4) differ in layout, rooms, encounters, enemies or pickups |
 | Report differs between two runs of the same seeds | Not allowed: one process, sequential seeds, no wall-clock in the JSON | `test_seed_report_play` runs it twice and compares |
 | Illegal move submitted (chaos or a player's UI bug) | Refused: no state change, no log entry, no RNG draw; the decision is asked again | `test_illegal_moves_refused` |
 | Illegal move found in a log on replay | 2002 `IllegalAbility` / `InvalidTarget` (existing reasons) | existing tampered goldens |
@@ -588,9 +588,8 @@ existing fixtures and goldens stay byte-identical.
   Wandering Medic (needs 15 coins; full heal, the fallen get up), Old Tutor (a level each, or XP and 10 coins), the
   Waystation as The Descent's rest stop (rest heals HP and MP and raises the fallen; train gives a level; move on
   changes nothing).
-
-**Open after the 2026-10-26 sync (untested on demo content):** no demo test asserts that floor 1 differs from floor 0
-for the same seed.
+- `test_demo_floors_differ_per_seed` (4): for the same seed, a chapter's two floors are generated differently (each
+  floor draws from its own `floor/<n>/…` stream).
 
 **Golden vectors:** no new combat golden (no battle rule changes). `seed_report_play.json` (fixtures) pins the
 report's shape and determinism. A recorded demo run is **not** a golden (your tuning would break it daily); the slice
