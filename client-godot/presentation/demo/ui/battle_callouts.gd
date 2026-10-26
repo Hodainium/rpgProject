@@ -1,7 +1,8 @@
 ## HUD overlay (UI.Slot.Hud.Overlay while UI.State.Run.Battle): the battle's call-outs (BROKEN!, ONE MORE!, phases,
 ## resisted statuses, knocked down, skipped turns, ults unleashed), from the Message.Battle channel (spec
 ## gameplay-messages). Each line shows for `seconds` (real time, so the battle speed never shortens it); at most
-## `max_lines` at once, the oldest first out. The texts are the formats below; a channel without one shows nothing.
+## `max_lines` at once, the oldest first out. A battle's start and end clear the lines. The texts are the formats
+## below; a channel without one shows nothing.
 extends UIScreen
 
 @export var seconds: float = 2.0
@@ -23,6 +24,8 @@ func _on_message(channel: StringName, message: VerbMessage) -> void:
 	var instigator: String = message.data.get("instigatorName", String(message.instigator))
 	var target: String = message.data.get("targetName", String(message.target))
 	match channel:
+		GameplayMessageRouter.BATTLE_STARTED, GameplayMessageRouter.BATTLE_ENDED:
+			_clear()  # a new or finished battle: earlier call-outs no longer apply
 		GameplayMessageRouter.BATTLE_BROKEN:
 			_show(broken_format % target)
 		GameplayMessageRouter.BATTLE_ONE_MORE:
@@ -37,6 +40,12 @@ func _on_message(channel: StringName, message: VerbMessage) -> void:
 			_show(downed_format % target)
 		GameplayMessageRouter.BATTLE_INTERRUPT:
 			_show(interrupt_format % [instigator, message.data.get("abilityName", "")])
+
+
+func _clear() -> void:
+	for line in %Lines.get_children():
+		%Lines.remove_child(line)
+		line.queue_free()
 
 
 func _show(text: String) -> void:
