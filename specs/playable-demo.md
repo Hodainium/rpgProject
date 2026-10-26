@@ -116,6 +116,9 @@ per-run records and options beside the report), and `seed_report --merge <shards
 joined records exactly as one process would (tested: three shards equal one run). `game/tools/play_sharded.sh <shards>
 <out> <from> <count> [options]` does both, after a parse check of the tool (a script that doesn't parse leaves Godot
 idling until `--quit-after`). Balancing runs the gold standard first, alone: the smart policy with four members.
+Errors (2026-10-26): every script or engine error raised while a seed plays is in that seed's record and the report's
+`"errors"` (`{"seed", "error"}`, also after a merge) and its text; the tool then exits 3. `play_sharded.sh` exits
+with the merged report's code, or with a shard's own code (124, 71, 70, 1) when one didn't finish.
 
 ### 2.4 Authoring loop (unchanged tools, now on a whole run)
 Builder scene `game/tools/build_demo_run.tscn` adds the approved new files to `content/demo/` (never overwrites, like

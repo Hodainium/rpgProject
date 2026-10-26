@@ -117,15 +117,17 @@ from C#.**
 ## 4. Running tests and replays
 - **Headless Godot must always exit:** run it through `../tools/watch.sh` (liveness every 30 s; killed with exit 124
   after 180 s of silence) and pass `--quit-after <frames>`. The `Watchdog` autoload quits a headless run whose main
-  scene script failed to load (exit 70) or that gets no `Watchdog.beat()` for `--idle-limit` seconds (default 180, exit
-  124); call `Watchdog.beat(label)` in any new long-running tool loop. Script errors once left headless scenes idling
+  scene script failed to load (exit 70), that gets no `Watchdog.beat()` for `--idle-limit` seconds (default 180, exit
+  124), or that makes no progress for 30 s after a script or engine error (exit 71, the errors printed); call
+  `Watchdog.beat(label)` in any new long-running tool loop. **No error passes silently:** tests, play reports,
+  `seed_report` and `dev_run` fail on any script or engine error (`ScriptErrorLog`; `push_error` is allowed). Script errors once left headless scenes idling
   (9 minutes in 2026-10-19, six report shards in 2026-10-26). Game goldens live in `tests/fixtures/golden/game/`.
 - **Parallel by default:** the suite runs as `../tools/godot_tests.sh` (shards by test, default 8); reports shard
   with `game/tools/play_sharded.sh`; independent jobs start together and are waited on.
 - **System tests:** `godot --headless --path client-godot res://tests/run_tests.tscn` (add `-- --filter <text>` to
   narrow). They run as a **scene**, not with `--script`: GodotGAS needs its `GameplayCueManager` autoload, which
   `--script` mode doesn't load. A test file that fails to compile counts as a failure, and so does any script or
-  engine error during a test (`TestErrorLog`; a test that causes one on purpose calls `expect_error("text")`).
+  engine error during a test (`ScriptErrorLog`; a test that causes one on purpose calls `expect_error("text")`).
   `push_error()` is deliberate logging and never fails a test.
 - **Goldens:** regenerate only on purpose with `-- --update-goldens --filter test_golden`, then rerun the C# tests
   (`BattleGoldenTests` cross-checks the same files).
@@ -156,7 +158,8 @@ from C#.**
 - **Play the game headless** with the script runner: one console command per line in a text file, then
   `godot --headless --path client-godot --quit-after 100000 res://game/tools/dev_run.tscn -- --script <file>
   --out <state.json> [--content-root res://tests/fixtures/] [--commands <folder>] [--manual]`. Battles run on auto
-  unless `--manual` (then `act`). Exit 0 ok, 2 a command failed (named), 1 tool error. `--window --shots <dir>` (no
+  unless `--manual` (then `act`). Exit 0 ok, 2 a command failed or raised a script or engine error (named; the JSON
+  has the command's `"errors"`), 1 tool error. `--window --shots <dir>` (no
   `--headless`) lets `shot <name>` save screenshots.
 - **Add a command:** copy `game/dev/commands/_template.gd` (one file, found automatically; give it a test). For a
   one-off check, write it in the scratchpad and pass `--commands <folder>`: it is copied to `user://dev_commands/` and
@@ -168,7 +171,8 @@ from C#.**
 - **Play whole runs headless** (spec `playable-demo`): `res://game/tools/seed_report.tscn -- --play [--policy chaos]
   [--check] --count 200 --out <report.json>` (large `--quit-after`). Auto plays `RunPlayer`'s policy; chaos plays
   bad and illegal moves on its own seeded stream, checks invariants and replays every battle; failing battles are saved
-  next to the report for `replay_main` / `trace_main --diff`. Exit 3 on a stopped run or a violation.
+  next to the report for `replay_main` / `trace_main --diff`. Exit 3 on a stopped run, a violation or a script or
+  engine error (the report's `"errors"`, per seed).
   Balance on the gold standard first, alone: `game/tools/play_sharded.sh 12 <out.json> 1 300 --policy smart
   --party-size 4 --check` (12 parallel shards, merged exactly; about 45 s instead of 4 min). Other policies only
   after it is on target.

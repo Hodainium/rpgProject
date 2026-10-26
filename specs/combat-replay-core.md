@@ -404,7 +404,7 @@ A small in-house runner, `client-godot/tests/run_tests.gd` (system), run with
 `godot --headless --path client-godot res://tests/run_tests.tscn` (a scene, see implementation decision 9). It discovers `res://tests/**/test_*.gd`,
 runs every `test_*` method, prints results and exits non-zero on any failure. No new addon.
 **Errors never pass silently (2026-10-26):** a GDScript runtime error only aborts the function it happens in, so a
-test used to report ok after one. The runner installs `TestErrorLog` (`tests/runner_error_log.gd`, a Godot `Logger`):
+test used to report ok after one. The runner installs `ScriptErrorLog` (`game/dev/script_error_log.gd`, a Godot `Logger`):
 every script error and engine error during a test fails that test (message, file and line), unless the test declared
 it with `expect_error(part)`, and an expected error that never comes fails it too; errors between tests (loading a
 test file) fail the run. `push_error()` and warnings are deliberate logging and never fail a test. Pinned by
