@@ -16,6 +16,8 @@ TestResults/
 # Godot
 client-godot/.godot/
 client-godot/export/
+# Exported builds (spec playable-demo D5)
+/build/
 client-godot/mono_crash.*
 client-godot/android/
 

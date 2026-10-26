@@ -109,9 +109,8 @@ func test_golden_trace_explains_a_change() -> void:
 func _trace_fresh_process(request_path: String) -> String:
 	var out_path := ProjectSettings.globalize_path("user://golden-trace.json")
 	DirAccess.remove_absolute(out_path)
-	var args := PackedStringArray(["--headless", "--quit-after", "200000", "--path", ProjectSettings.globalize_path("res://"),
-		TRACE_SCENE, "--", "--in", ProjectSettings.globalize_path(request_path), "--out", out_path, "--lines",
-		"--content-root", FIXTURES])
+	var args := PackedStringArray(["--headless", "--quit-after", "200000"]) + scene_args(TRACE_SCENE, [
+		"--in", ProjectSettings.globalize_path(request_path), "--out", out_path, "--lines", "--content-root", FIXTURES])
 	OS.execute(OS.get_executable_path(), args)
 	return FileAccess.get_file_as_string(out_path)
 
@@ -120,7 +119,7 @@ func _trace_fresh_process(request_path: String) -> String:
 func _replay_fresh_process(request_path: String) -> Dictionary:
 	var out_path := ProjectSettings.globalize_path("user://golden-replay-result.json")
 	DirAccess.remove_absolute(out_path)
-	var args := PackedStringArray(["--headless", "--path", ProjectSettings.globalize_path("res://"), REPLAY_SCENE, "--",
+	var args := PackedStringArray(["--headless"]) + scene_args(REPLAY_SCENE, [
 		"--in", ProjectSettings.globalize_path(request_path), "--out", out_path, "--content-root", FIXTURES])
 	var exit_code := OS.execute(OS.get_executable_path(), args)
 	return {"exit": exit_code, "text": FileAccess.get_file_as_string(out_path)}

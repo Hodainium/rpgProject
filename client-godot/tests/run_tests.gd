@@ -1,6 +1,8 @@
 ## In-house GDScript test runner (spec "Test runner"). Runs as a scene so GodotGAS's autoloads exist:
 ##   godot --headless --path client-godot res://tests/run_tests.tscn [-- --filter <text>] [-- --update-goldens]
 ##     [-- --shard i/n]   (only the tests whose index in file-then-method order is i mod n; tools/godot_tests.sh)
+## Also runs inside the `full` exported build (spec playable-demo 3.12): tests that read project source skip themselves
+## there (TestCase.skip_in_export) and count as skipped.
 ## Discovers res://tests/**/test_*.gd, runs every test_* method, exits 1 on any failure. A script or engine error
 ## during a test (ScriptErrorLog) fails it unless the test expected it (TestCase.expect_error); one outside any test
 ## fails the run.
@@ -26,6 +28,7 @@ func _ready() -> void:
 	# Errors raised between tests (loading a test file, the runner itself).
 	var stray: Array[String] = []
 	var passed := 0
+	var skipped := 0
 	var failed := PackedStringArray()
 	var index := -1
 	for path in _test_scripts(TEST_ROOT):
@@ -56,7 +59,10 @@ func _ready() -> void:
 			test.after_each()
 			await get_tree().process_frame  # deferred calls the test queued run now and count as its errors
 			test.check_errors(errors.take())
-			if test.failures.is_empty():
+			if test.failures.is_empty() and test.skipped != "":
+				skipped += 1
+				print("  skip  ", label, " (", test.skipped, ")")
+			elif test.failures.is_empty():
 				passed += 1
 				print("  ok    ", label)
 			else:
@@ -72,7 +78,7 @@ func _ready() -> void:
 		print("  FAIL  errors outside any test (loading a test file?)")
 		for text in stray:
 			print("          ", text)
-	print("\n%d passed, %d failed" % [passed, failed.size()])
+	print("\n%d passed, %d failed%s" % [passed, failed.size(), ", %d skipped" % skipped if skipped > 0 else ""])
 	get_tree().quit(1 if not failed.is_empty() or passed == 0 else 0)
 
 

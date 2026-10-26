@@ -12,10 +12,33 @@ var host: Node
 static var update_goldens: bool = false
 
 var failures := PackedStringArray()
+## Why the test did not run ("" = it ran); set by skip_in_export().
+var skipped: String = ""
 ## Errors this test causes on purpose (expect_error); any other script or engine error fails it (ScriptErrorLog).
 var expected_errors: Array[String] = []
 var _battles: Array[Battle] = []
 static var _content: ContentIndex
+
+
+## True inside an exported build (spec playable-demo 3.12, the `full` level), where project source, export presets
+## and the editor's files are not in the pack: the test returns at once and counts as skipped. Only for tests that
+## read source or editor files; game behaviour must be tested in every build.
+func skip_in_export() -> bool:
+	if OS.has_feature("template"):
+		skipped = "reads project source (exported build)"
+		return true
+	return false
+
+
+## Arguments for a child Godot process (OS.execute with OS.get_executable_path()) that opens `scene` with `user_args`:
+## the project path and scene in the editor binary, build_entry's --scene user arg in an exported dev or full build
+## (export templates take no scene on the command line; spec playable-demo 3.12). Engine flags go before these.
+static func scene_args(scene: String, user_args: Array) -> PackedStringArray:
+	var args := PackedStringArray(["--", "--scene", scene] if OS.has_feature("template")
+		else ["--path", ProjectSettings.globalize_path("res://"), scene, "--"])
+	for arg in user_args:
+		args.append(str(arg))
+	return args
 
 
 func check(condition: bool, message: String) -> void:

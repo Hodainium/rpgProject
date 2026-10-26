@@ -166,17 +166,16 @@ func test_trace_two_processes() -> void:
 	for run in 2:
 		var out_path := ProjectSettings.globalize_path("user://trace-two-processes-%d.json" % run)
 		DirAccess.remove_absolute(out_path)
-		var exit_code := OS.execute(OS.get_executable_path(), PackedStringArray(["--headless", "--quit-after", "20000",
-			"--path", ProjectSettings.globalize_path("res://"), TRACE_SCENE, "--", "--in", request_path, "--out", out_path,
-			"--lines", "--content-root", FIXTURES]))
+		var exit_code := OS.execute(OS.get_executable_path(), PackedStringArray(["--headless", "--quit-after", "20000"])
+			+ scene_args(TRACE_SCENE, ["--in", request_path, "--out", out_path, "--lines", "--content-root", FIXTURES]))
 		eq(exit_code, 0, "trace_main run %d verifies" % run)
 		outputs.append(out_path)
 	var first := FileAccess.get_file_as_string(outputs[0])
 	check(first.length() > 0, "trace_main wrote a trace")
 	eq(FileAccess.get_file_as_string(outputs[1]), first, "two fresh processes write identical traces")
 	var printed: Array = []
-	var diff_exit := OS.execute(OS.get_executable_path(), PackedStringArray(["--headless", "--quit-after", "20000",
-		"--path", ProjectSettings.globalize_path("res://"), TRACE_SCENE, "--", "--diff", outputs[0], outputs[1]]), printed)
+	var diff_exit := OS.execute(OS.get_executable_path(), PackedStringArray(["--headless", "--quit-after", "20000"])
+		+ scene_args(TRACE_SCENE, ["--diff", outputs[0], outputs[1]]), printed)
 	eq(diff_exit, 0, "trace_main --diff exits 0 on matching traces")
 	check("".join(printed).contains("traces match"), "trace_main --diff prints the result")
 

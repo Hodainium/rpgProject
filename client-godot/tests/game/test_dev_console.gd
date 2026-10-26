@@ -85,6 +85,9 @@ func test_console_registry() -> void:
 	eq(console.commands["give"].get_script().resource_path, "res://game/dev/commands/give.gd", "a built-in can't be replaced")
 	check(Array(console.warnings).any(func(warning: String) -> bool: return warning.contains("zz_shadow")), "the clash is reported")
 	eq((await console.execute("zzprobe"))["text"], "probe ok", "and it runs")
+	console.load_commands(false)
+	check(not console.commands.has("zzprobe"), "a release build ignores user://dev_commands/")
+	check(console.commands.has("give"), "but keeps the built-ins")
 	DirAccess.remove_absolute(folder.path_join("zz_probe.gd"))
 	DirAccess.remove_absolute(folder.path_join("zz_shadow.gd"))
 
@@ -292,9 +295,9 @@ func test_dev_script_runner() -> void:
 
 
 func _runner(script: String, out: String, extra: Array = []) -> int:
-	var args := ["--headless", "--path", ProjectSettings.globalize_path("res://"), "--quit-after", "100000",
-		"res://game/tools/dev_run.tscn", "--", "--script", script, "--out", out, "--content-root", FIXTURES]
-	return OS.execute(OS.get_executable_path(), args + extra)
+	var args := PackedStringArray(["--headless", "--quit-after", "100000"]) + scene_args("res://game/tools/dev_run.tscn",
+		["--script", script, "--out", out, "--content-root", FIXTURES] + extra)
+	return OS.execute(OS.get_executable_path(), args)
 
 
 ## A command that raises a script error fails its line (exit 2), even though its reply looks fine: the JSON names the

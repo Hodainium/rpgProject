@@ -57,6 +57,8 @@ func _ready() -> void:
 	var settings := ConfigFile.new()
 	if settings.load(SETTINGS_PATH) == OK:
 		content_root = settings.get_value("game", "content_root", content_root)
+	if not content_roots().has(content_root):
+		content_root = CONTENT_ROOTS[0]  # e.g. the fixtures, saved in the editor, are not in an export
 	var world := Node3D.new()
 	world.name = "World"
 	add_child(world)
@@ -103,6 +105,13 @@ func _build_ui(canvas: CanvasLayer) -> String:
 		ui = null
 		return "UI policy %s: %s" % [policy.resource_path, problem]
 	return ""
+
+
+## The content roots this build has: an export leaves tests/ out (spec playable-demo D5), so only res://content/.
+static func content_roots() -> Array[String]:
+	var roots: Array[String] = []
+	roots.assign(CONTENT_ROOTS.filter(func(path: String): return DirAccess.dir_exists_absolute(path)))
+	return roots
 
 
 ## Switches the content root (res://content/ or the test fixtures) and remembers it.

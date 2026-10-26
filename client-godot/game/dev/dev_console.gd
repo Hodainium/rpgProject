@@ -47,11 +47,11 @@ func _init(scene_tree: SceneTree = null) -> void:
 
 
 ## Loads every DevCommand file: built-in ones, then (debug builds) throwaway ones.
-func load_commands() -> void:
+func load_commands(debug_build: bool = OS.is_debug_build()) -> void:
 	commands.clear()
 	warnings.clear()
 	_load_dir(COMMANDS_DIR, false)
-	if OS.is_debug_build():
+	if debug_build:
 		_load_dir(USER_COMMANDS_DIR, true)
 
 

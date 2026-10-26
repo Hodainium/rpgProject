@@ -40,7 +40,12 @@ func cheats_allowed() -> bool:
 
 ## No console headless (the verifier, tests, the script runner) or in a release build.
 static func is_inert() -> bool:
-	return DisplayServer.get_name() == "headless" or not OS.is_debug_build()
+	return is_inert_for(DisplayServer.get_name(), OS.is_debug_build())
+
+
+## The rule behind is_inert(), testable without an export (spec playable-demo F4).
+static func is_inert_for(display_name: String, debug_build: bool) -> bool:
+	return display_name == "headless" or not debug_build
 
 
 func _input(event: InputEvent) -> void:

@@ -72,3 +72,12 @@ func test_dev_inert_headless() -> void:
 	if dev != null and DisplayServer.get_name() == "headless":
 		eq(dev.get_child_count(), 0, "no console UI headless")
 		check(not dev.is_processing_input(), "no input handling headless")
+
+
+## Spec playable-demo F4: the rule the exported release build relies on (no export needed to check it).
+func test_dev_inert_rule() -> void:
+	var dev_script: GDScript = load("res://game/dev/dev.gd")
+	check(dev_script.is_inert_for("headless", true), "inert headless (the verifier, tests)")
+	check(dev_script.is_inert_for("headless", false), "inert headless in release")
+	check(dev_script.is_inert_for("Windows", false), "inert in a release window build")
+	check(not dev_script.is_inert_for("Windows", true), "active only in a debug window build")
