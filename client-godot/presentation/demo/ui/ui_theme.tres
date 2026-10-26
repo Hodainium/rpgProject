@@ -1,0 +1,39 @@
+[gd_resource type="Theme" format=3]
+
+[sub_resource type="StyleBoxFlat" id="panel"]
+bg_color = Color(0.15, 0.15, 0.16, 0.96)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[resource]
+PanelContainer/styles/panel = SubResource("panel")
+Caption/base_type = &"Label"
+Caption/colors/font_color = Color(0.75, 0.75, 0.75, 1)
+Caption/font_sizes/font_size = 13
+CardTitle/base_type = &"Label"
+CardTitle/colors/font_outline_color = Color(0, 0, 0, 1)
+CardTitle/constants/outline_size = 10
+CardTitle/font_sizes/font_size = 44
+HeaderLarge/base_type = &"Label"
+HeaderLarge/font_sizes/font_size = 28
+MapCellCleared/base_type = &"Button"
+MapCellCleared/colors/font_color = Color(0.7, 0.9, 0.7, 1)
+MapCellCurrent/base_type = &"Button"
+MapCellCurrent/colors/font_color = Color(1, 0.84, 0, 1)
+MapCellCurrent/colors/font_disabled_color = Color(1, 0.84, 0, 1)
+Muted/base_type = &"Label"
+Muted/colors/font_color = Color(0.75, 0.75, 0.75, 1)
+RarityCommon/base_type = &"Label"
+RarityCommon/colors/font_color = Color(0.9, 0.9, 0.9, 1)
+RarityEpic/base_type = &"Label"
+RarityEpic/colors/font_color = Color(0.8, 0.5, 1, 1)
+RarityLegendary/base_type = &"Label"
+RarityLegendary/colors/font_color = Color(1, 0.75, 0.3, 1)
+RarityRare/base_type = &"Label"
+RarityRare/colors/font_color = Color(0.45, 0.7, 1, 1)
+Title/base_type = &"Label"
+Title/font_sizes/font_size = 22
+Warning/base_type = &"Label"
+Warning/colors/font_color = Color(1, 0.55, 0.5, 1)

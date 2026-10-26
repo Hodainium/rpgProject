@@ -1,0 +1,53 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/run_menu.gd" id="1_menu"]
+[ext_resource type="Script" path="res://game/ui/ui_back_button.gd" id="2_back"]
+[ext_resource type="Script" path="res://game/ui/ui_push_button.gd" id="3_push"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/settings.tscn" id="4_settings"]
+
+[node name="RunMenu" type="CenterContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+focus_on_activate = NodePath("Panel/Margin/Box/Resume")
+
+[node name="Panel" type="PanelContainer" parent="."]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="Box" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Panel/Margin/Box"]
+layout_mode = 2
+theme_type_variation = &"Title"
+text = "Paused"
+horizontal_alignment = 1
+
+[node name="Resume" type="Button" parent="Panel/Margin/Box"]
+layout_mode = 2
+text = "Resume"
+script = ExtResource("2_back")
+
+[node name="Settings" type="Button" parent="Panel/Margin/Box"]
+layout_mode = 2
+text = "Settings"
+script = ExtResource("3_push")
+screen = ExtResource("4_settings")
+layer = &"UI.Layer.GameMenu"
+
+[node name="Abandon" type="Button" parent="Panel/Margin/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Abandon run"

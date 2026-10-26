@@ -1,0 +1,145 @@
+[gd_resource type="Resource" script_class="UIPolicy" format=3]
+
+[ext_resource type="Script" path="res://game/ui/ui_policy.gd" id="1_policy"]
+[ext_resource type="Script" path="res://game/ui/ui_screen_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://game/ui/ui_extension.gd" id="3_ext"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="4_query"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/layout.tscn" id="5_layout"]
+[ext_resource type="Theme" path="res://presentation/demo/ui/ui_theme.tres" id="6_theme"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/title_menu.tscn" id="10_title"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/hud.tscn" id="11_hud"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/run_end.tscn" id="12_end"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/run_menu.tscn" id="13_run_menu"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/confirm_dialog.tscn" id="14_confirm"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/map_panel.tscn" id="20_map"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/stairs_panel.tscn" id="21_stairs"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/pickup_panel.tscn" id="22_pickup"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/party_panel.tscn" id="23_party"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/field_panel.tscn" id="24_field"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/event_panel.tscn" id="25_event"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/battle_panel.tscn" id="26_battle"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/floor_card.tscn" id="27_card"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/message_line.tscn" id="28_message"]
+
+[sub_resource type="Resource" id="when_menu"]
+script = ExtResource("4_query")
+require_all_tags = Array[StringName]([&"UI.State.Menu"])
+
+[sub_resource type="Resource" id="when_run"]
+script = ExtResource("4_query")
+require_all_tags = Array[StringName]([&"UI.State.Run"])
+
+[sub_resource type="Resource" id="when_end"]
+script = ExtResource("4_query")
+require_all_tags = Array[StringName]([&"UI.State.End"])
+
+[sub_resource type="Resource" id="when_map"]
+script = ExtResource("4_query")
+require_all_tags = Array[StringName]([&"UI.State.Run.Map"])
+
+[sub_resource type="Resource" id="when_stairs"]
+script = ExtResource("4_query")
+require_all_tags = Array[StringName]([&"UI.State.Run.Stairs"])
+
+[sub_resource type="Resource" id="when_pickup"]
+script = ExtResource("4_query")
+require_all_tags = Array[StringName]([&"UI.State.Run.Pickup"])
+
+[sub_resource type="Resource" id="when_event"]
+script = ExtResource("4_query")
+require_all_tags = Array[StringName]([&"UI.State.Run.Event"])
+
+[sub_resource type="Resource" id="when_battle"]
+script = ExtResource("4_query")
+require_all_tags = Array[StringName]([&"UI.State.Run.Battle"])
+
+[sub_resource type="Resource" id="screen_title"]
+script = ExtResource("2_rule")
+scene = ExtResource("10_title")
+layer = &"UI.Layer.Menu"
+active_when = SubResource("when_menu")
+clears_layer = &"UI.Layer.GameMenu"
+
+[sub_resource type="Resource" id="screen_hud"]
+script = ExtResource("2_rule")
+scene = ExtResource("11_hud")
+layer = &"UI.Layer.Game"
+active_when = SubResource("when_run")
+
+[sub_resource type="Resource" id="screen_end"]
+script = ExtResource("2_rule")
+scene = ExtResource("12_end")
+layer = &"UI.Layer.Menu"
+active_when = SubResource("when_end")
+clears_layer = &"UI.Layer.GameMenu"
+
+[sub_resource type="Resource" id="back_run_menu"]
+script = ExtResource("2_rule")
+scene = ExtResource("13_run_menu")
+layer = &"UI.Layer.GameMenu"
+active_when = SubResource("when_map")
+
+[sub_resource type="Resource" id="panel_map"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Hud.Right"
+scene = ExtResource("20_map")
+active_when = SubResource("when_run")
+
+[sub_resource type="Resource" id="panel_stairs"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Hud.Right"
+scene = ExtResource("21_stairs")
+order = 10
+active_when = SubResource("when_stairs")
+
+[sub_resource type="Resource" id="panel_pickup"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Hud.Right"
+scene = ExtResource("22_pickup")
+order = 20
+active_when = SubResource("when_pickup")
+
+[sub_resource type="Resource" id="panel_party"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Hud.Left"
+scene = ExtResource("23_party")
+active_when = SubResource("when_run")
+
+[sub_resource type="Resource" id="panel_field"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Hud.Left"
+scene = ExtResource("24_field")
+order = 10
+active_when = SubResource("when_map")
+
+[sub_resource type="Resource" id="panel_event"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Hud.Center"
+scene = ExtResource("25_event")
+active_when = SubResource("when_event")
+
+[sub_resource type="Resource" id="panel_battle"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Hud.Bottom"
+scene = ExtResource("26_battle")
+active_when = SubResource("when_battle")
+
+[sub_resource type="Resource" id="panel_card"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Hud.Overlay"
+scene = ExtResource("27_card")
+active_when = SubResource("when_run")
+
+[sub_resource type="Resource" id="panel_message"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Footer"
+scene = ExtResource("28_message")
+
+[resource]
+script = ExtResource("1_policy")
+layout = ExtResource("5_layout")
+theme = ExtResource("6_theme")
+screens = Array[ExtResource("2_rule")]([SubResource("screen_title"), SubResource("screen_hud"), SubResource("screen_end")])
+extensions = Array[ExtResource("3_ext")]([SubResource("panel_map"), SubResource("panel_stairs"), SubResource("panel_pickup"), SubResource("panel_party"), SubResource("panel_field"), SubResource("panel_event"), SubResource("panel_battle"), SubResource("panel_card"), SubResource("panel_message")])
+back_screens = Array[ExtResource("2_rule")]([SubResource("back_run_menu")])
+confirm_scene = ExtResource("14_confirm")

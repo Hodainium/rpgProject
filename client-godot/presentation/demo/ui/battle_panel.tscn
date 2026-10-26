@@ -1,0 +1,68 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/battle_panel.gd" id="1_battle"]
+[ext_resource type="Script" path="res://game/ui/ui_list.gd" id="2_list"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/action_button.tscn" id="3_button"]
+
+[node name="BattlePanel" type="PanelContainer"]
+script = ExtResource("1_battle")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Columns" type="HBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Stats" type="Label" parent="Margin/Columns"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+
+[node name="Right" type="VBoxContainer" parent="Margin/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Toggles" type="HBoxContainer" parent="Margin/Columns/Right"]
+layout_mode = 2
+
+[node name="Turn" type="Label" parent="Margin/Columns/Right/Toggles"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Skip" type="CheckBox" parent="Margin/Columns/Right/Toggles"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Skip animations"
+
+[node name="Auto" type="CheckBox" parent="Margin/Columns/Right/Toggles"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Auto"
+
+[node name="Speed" type="Button" parent="Margin/Columns/Right/Toggles"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+tooltip_text = "Battle speed (animations only)"
+text = "1×"
+
+[node name="Actions" type="HFlowContainer" parent="Margin/Columns/Right"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2_list")
+entry_scene = ExtResource("3_button")
+
+[node name="Ults" type="HFlowContainer" parent="Margin/Columns/Right"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("2_list")
+entry_scene = ExtResource("3_button")

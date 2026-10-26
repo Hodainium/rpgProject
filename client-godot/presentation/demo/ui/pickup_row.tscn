@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/pickup_row.gd" id="1_row"]
+
+[node name="PickupRow" type="VBoxContainer"]
+theme_override_constants/separation = 2
+script = ExtResource("1_row")
+
+[node name="Row" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Name" type="Label" parent="Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+autowrap_mode = 3
+
+[node name="GiveTo" type="OptionButton" parent="Row"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Take" type="Button" parent="Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Take"
+
+[node name="Description" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Caption"
+autowrap_mode = 3

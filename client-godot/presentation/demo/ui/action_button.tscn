@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/action_button.gd" id="1_button"]
+
+[node name="ActionButton" type="Button"]
+custom_minimum_size = Vector2(40, 32)
+script = ExtResource("1_button")

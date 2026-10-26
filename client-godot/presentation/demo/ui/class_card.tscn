@@ -1,0 +1,32 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/class_card.gd" id="1_card"]
+[ext_resource type="Script" path="res://game/ui/ui_push_button.gd" id="2_push"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/class_details.tscn" id="3_details"]
+
+[node name="ClassCard" type="VBoxContainer"]
+custom_minimum_size = Vector2(420, 0)
+theme_override_constants/separation = 2
+script = ExtResource("1_card")
+
+[node name="Row" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Pick" type="CheckBox" parent="Row"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Details" type="Button" parent="Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Details"
+flat = true
+script = ExtResource("2_push")
+screen = ExtResource("3_details")
+
+[node name="Kit" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Caption"
+autowrap_mode = 3
