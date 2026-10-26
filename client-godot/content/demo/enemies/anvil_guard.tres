@@ -20,7 +20,7 @@ abilities = Array[PackedScene]([ExtResource("1_0ch0b"), ExtResource("2_0qe7k")])
 brain = SubResource("Resource_vhn2k")
 display_name = "Anvil Guard"
 display_color = Color(0.4117647, 0.4117647, 0.4117647, 1)
-tags = Array[StringName]([&"Enemy.Type.Anvil", &"Drain.Fire", &"Weakness.Ice"])
+tags = Array[StringName]([&"Enemy.Type.Anvil", &"Resist.Fire", &"Weakness.Ice"])
 stats_x100 = Dictionary[String, int]({
 "atk": 26000,
 "crit_dmg": 5000,

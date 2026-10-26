@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/items/rations.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/latch.tscn" id="1_i854s"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_bnyuc"]
 [ext_resource type="Script" path="res://combat/boss_phase.gd" id="3_0cxwr"]
@@ -14,6 +15,8 @@ abilities = Array[PackedScene]([ExtResource("1_i854s")])
 display_name = "Leech"
 display_color = Color(0.54509807, 0, 0, 1)
 tags = Array[StringName]([&"Enemy.Type.Leech", &"Resist.Physical", &"Weakness.Fire"])
+drop_item = ExtResource("90_drop")
+drop_chance_x100 = 300
 stats_x100 = Dictionary[String, int]({
 "atk": 26000,
 "crit_dmg": 5000,

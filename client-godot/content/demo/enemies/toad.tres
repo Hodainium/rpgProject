@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/items/roast_haunch.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/spit.tscn" id="1_dj0w3"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_ad6h8"]
 [ext_resource type="Script" path="res://combat/boss_phase.gd" id="3_wawxy"]
@@ -14,6 +15,8 @@ abilities = Array[PackedScene]([ExtResource("1_dj0w3")])
 display_name = "Bog Toad"
 display_color = Color(0.33333334, 0.41960785, 0.18431373, 1)
 tags = Array[StringName]([&"Enemy.Type.Toad", &"Weakness.Fire"])
+drop_item = ExtResource("90_drop")
+drop_chance_x100 = 300
 stats_x100 = Dictionary[String, int]({
 "atk": 20000,
 "crit_dmg": 5000,

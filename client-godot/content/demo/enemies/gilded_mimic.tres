@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/items/hearty_feast.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/snap.tscn" id="1_41532"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_qvrel"]
 [ext_resource type="Script" path="res://combat/boss_phase.gd" id="3_ahqru"]
@@ -14,6 +15,8 @@ abilities = Array[PackedScene]([ExtResource("1_41532")])
 display_name = "Gilded Mimic"
 display_color = Color(1, 0.84313726, 0, 1)
 tags = Array[StringName]([&"Enemy.Type.Mimic", &"Weakness.Physical"])
+drop_item = ExtResource("90_drop")
+drop_chance_x100 = 300
 stats_x100 = Dictionary[String, int]({
 "atk": 42000,
 "crit_dmg": 5000,

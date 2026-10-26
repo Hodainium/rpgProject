@@ -7,4 +7,4 @@
 [resource]
 script = ExtResource("3_y2e7m")
 effects = Array[ExtResource("1_cejhw")]([ExtResource("2_j1jjk")])
-tags = Array[StringName]([&"State.Phase.Two", &"Drain.Fire"])
+tags = Array[StringName]([&"State.Phase.Two", &"Resist.Fire"])

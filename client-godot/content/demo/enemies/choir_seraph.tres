@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/items/honey_cake.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/hymn.tscn" id="1_hgufc"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/bless.tscn" id="2_6cq8y"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_j6oba"]
@@ -21,6 +22,8 @@ brain = SubResource("Resource_twx2y")
 display_name = "Choir Seraph"
 display_color = Color(1, 1, 0.8784314, 1)
 tags = Array[StringName]([&"Enemy.Type.Seraph", &"Resist.Ice"])
+drop_item = ExtResource("90_drop")
+drop_chance_x100 = 400
 stats_x100 = Dictionary[String, int]({
 "atk": 26000,
 "crit_dmg": 5000,

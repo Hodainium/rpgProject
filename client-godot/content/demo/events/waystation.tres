@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_d5aet"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_8il4e"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_au4vs"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_uirf1"]
+[ext_resource type="Resource" path="res://content/demo/effects/waystation_heal.tres" id="5_tfwmo"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="6_lqh4o"]
+[ext_resource type="Resource" path="res://content/demo/effects/waystation_mp.tres" id="7_kjg0t"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_level.gd" id="8_cssed"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="9_yno3n"]
+
+[sub_resource type="Resource" id="Resource_51b1d"]
+script = ExtResource("6_lqh4o")
+effect = ExtResource("5_tfwmo")
+include_dead = true
+
+[sub_resource type="Resource" id="Resource_p7c2w"]
+script = ExtResource("6_lqh4o")
+effect = ExtResource("7_kjg0t")
+
+[sub_resource type="Resource" id="Resource_nc3ca"]
+script = ExtResource("2_8il4e")
+label = "Rest (heal 50% HP and MP; the fallen get up)"
+outcomes = Array[ExtResource("4_uirf1")]([SubResource("Resource_51b1d"), SubResource("Resource_p7c2w")])
+
+[sub_resource type="Resource" id="Resource_j6qog"]
+script = ExtResource("8_cssed")
+
+[sub_resource type="Resource" id="Resource_85m3n"]
+script = ExtResource("2_8il4e")
+label = "Train (everyone gains a level)"
+outcomes = Array[ExtResource("4_uirf1")]([SubResource("Resource_j6qog")])
+
+[sub_resource type="Resource" id="Resource_evkc7"]
+script = ExtResource("2_8il4e")
+label = "Move on"
+
+[sub_resource type="Resource" id="Resource_ik62e"]
+script = ExtResource("1_d5aet")
+text = "A quiet waystation between floors. The lamps are warm."
+choices = Array[ExtResource("2_8il4e")]([SubResource("Resource_nc3ca"), SubResource("Resource_85m3n"), SubResource("Resource_evkc7")])
+
+[resource]
+script = ExtResource("9_yno3n")
+id = &"demo.event.waystation"
+display_name = "Waystation"
+pages = Array[ExtResource("1_d5aet")]([SubResource("Resource_ik62e")])

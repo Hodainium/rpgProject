@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/items/honey_cake.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/hex.tscn" id="1_kx3f3"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/mend.tscn" id="2_3hkyw"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/dispel.tscn" id="3_rgulc"]
@@ -22,6 +23,8 @@ brain = SubResource("Resource_0cab3")
 display_name = "Shaman"
 display_color = Color(0.7294118, 0.33333334, 0.827451, 1)
 tags = Array[StringName]([&"Enemy.Type.Shaman", &"Weakness.Physical"])
+drop_item = ExtResource("90_drop")
+drop_chance_x100 = 400
 stats_x100 = Dictionary[String, int]({
 "atk": 18000,
 "crit_dmg": 5000,

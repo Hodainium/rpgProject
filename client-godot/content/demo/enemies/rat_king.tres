@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/items/roast_haunch.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/gnaw.tscn" id="1_7vynq"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/swarm.tscn" id="2_qc6rd"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_ycfva"]
@@ -28,6 +29,8 @@ brain = SubResource("Resource_g3er7")
 display_name = "Rat King"
 display_color = Color(0.54509807, 0.27058825, 0.07450981, 1)
 tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Rat", &"Weakness.Fire"])
+drop_item = ExtResource("90_drop")
+drop_chance_x100 = 600
 stats_x100 = Dictionary[String, int]({
 "atk": 30000,
 "crit_dmg": 5000,

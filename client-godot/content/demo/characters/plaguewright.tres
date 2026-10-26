@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/pandemic.tscn" id="1_wr4yf"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/infect.tscn" id="2_54xvd"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/contagion.tscn" id="3_d3fmv"]
@@ -21,6 +22,7 @@ abilities = Array[PackedScene]([ExtResource("1_wr4yf"), ExtResource("2_54xvd"), 
 display_name = "Plaguewright"
 display_color = Color(0.6039216, 0.8039216, 0.19607843, 1)
 tags = Array[StringName]([&"Character.Plaguewright"])
+level_effect = ExtResource("90_growth")
 stats_x100 = Dictionary[String, int]({
 "atk": 40000,
 "crit_dmg": 5000,

@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/items/honey_cake.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/hex.tscn" id="1_wayxl"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/curse.tscn" id="2_d7lhj"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_rrih1"]
@@ -21,6 +22,8 @@ brain = SubResource("Resource_jhl7u")
 display_name = "Cultist"
 display_color = Color(0.54509807, 0, 0.54509807, 1)
 tags = Array[StringName]([&"Enemy.Type.Cultist", &"Weakness.Physical"])
+drop_item = ExtResource("90_drop")
+drop_chance_x100 = 300
 stats_x100 = Dictionary[String, int]({
 "atk": 30000,
 "crit_dmg": 5000,

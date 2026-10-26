@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/items/hearty_feast.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/pulse.tscn" id="1_3cimd"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/heart_regen.tscn" id="2_87cgr"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/systole.tscn" id="3_y2p7m"]
@@ -30,14 +31,16 @@ brain = SubResource("Resource_2sdb5")
 display_name = "Mother Heart"
 display_color = Color(0.78039217, 0.08235294, 0.52156866, 1)
 tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Heart", &"Weakness.Fire"])
+drop_item = ExtResource("90_drop")
+drop_chance_x100 = 800
 stats_x100 = Dictionary[String, int]({
 "atk": 32000,
 "crit_dmg": 5000,
 "crit_rate": 500,
 "def": 22000,
 "energy": 0,
-"hp": 700000,
-"max_hp": 700000,
+"hp": 550000,
+"max_hp": 550000,
 "max_toughness": 20000,
 "spd": 9000,
 "toughness": 20000,

@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/meteor.tscn" id="1_143hu"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/arcane_bolt.tscn" id="2_4yc2v"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/fireburst.tscn" id="3_mpnna"]
@@ -21,6 +22,7 @@ abilities = Array[PackedScene]([ExtResource("1_143hu"), ExtResource("2_4yc2v"), 
 display_name = "Arcanist"
 display_color = Color(0.5764706, 0.4392157, 0.85882354, 1)
 tags = Array[StringName]([&"Character.Arcanist"])
+level_effect = ExtResource("90_growth")
 stats_x100 = Dictionary[String, int]({
 "atk": 52000,
 "crit_dmg": 5000,

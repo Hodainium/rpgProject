@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/items/rations.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/bite.tscn" id="1_516rm"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_brqa1"]
 [ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="3_i52vf"]
@@ -18,6 +19,8 @@ abilities = Array[PackedScene]([ExtResource("1_516rm")])
 display_name = "Bat"
 display_color = Color(0.5764706, 0.4392157, 0.85882354, 1)
 tags = Array[StringName]([&"Enemy.Type.Bat", &"Weakness.Ice"])
+drop_item = ExtResource("90_drop")
+drop_chance_x100 = 400
 stats_x100 = Dictionary[String, int]({
 "atk": 26000,
 "crit_dmg": 5000,

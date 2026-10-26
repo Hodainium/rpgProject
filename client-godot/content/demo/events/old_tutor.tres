@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_nda24"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_0vyne"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_xm7ex"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_mca1i"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_level.gd" id="5_hqtb4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_xp.gd" id="6_61pmj"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="7_qjks2"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="8_0asu6"]
+
+[sub_resource type="Resource" id="Resource_2671q"]
+script = ExtResource("5_hqtb4")
+
+[sub_resource type="Resource" id="Resource_0m5on"]
+script = ExtResource("2_0vyne")
+label = "Take the lesson (everyone gains a level)"
+outcomes = Array[ExtResource("4_mca1i")]([SubResource("Resource_2671q")])
+
+[sub_resource type="Resource" id="Resource_vbqw1"]
+script = ExtResource("6_61pmj")
+amount = 40
+
+[sub_resource type="Resource" id="Resource_ik6s0"]
+script = ExtResource("7_qjks2")
+amount = 10
+
+[sub_resource type="Resource" id="Resource_s3qdg"]
+script = ExtResource("2_0vyne")
+label = "Take the purse (40 XP each and 10 coins)"
+outcomes = Array[ExtResource("4_mca1i")]([SubResource("Resource_vbqw1"), SubResource("Resource_ik6s0")])
+
+[sub_resource type="Resource" id="Resource_bc5kt"]
+script = ExtResource("2_0vyne")
+label = "Leave"
+
+[sub_resource type="Resource" id="Resource_qhsg1"]
+script = ExtResource("1_nda24")
+text = "An old tutor offers a lesson, or a purse for listening."
+choices = Array[ExtResource("2_0vyne")]([SubResource("Resource_0m5on"), SubResource("Resource_s3qdg"), SubResource("Resource_bc5kt")])
+
+[resource]
+script = ExtResource("8_0asu6")
+id = &"demo.event.old_tutor"
+display_name = "Old Tutor"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_nda24")]([SubResource("Resource_qhsg1")])

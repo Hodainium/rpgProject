@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/growth_tank.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/bastion.tscn" id="1_lkssy"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/shield_slam.tscn" id="2_kpqss"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/fortify.tscn" id="3_10f0t"]
@@ -21,6 +22,7 @@ abilities = Array[PackedScene]([ExtResource("1_lkssy"), ExtResource("2_kpqss"), 
 display_name = "Bulwark"
 display_color = Color(0.7411765, 0.7176471, 0.41960785, 1)
 tags = Array[StringName]([&"Character.Bulwark"])
+level_effect = ExtResource("90_growth")
 stats_x100 = Dictionary[String, int]({
 "atk": 32000,
 "crit_dmg": 5000,

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_uugp8"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_percent_of_max.gd" id="2_0nsmw"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_yi43g"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_auytt"]
+
+[sub_resource type="Resource" id="Resource_k3qlf"]
+script = ExtResource("2_0nsmw")
+attribute = "mp"
+max_attribute = "max_mp"
+percent_x100 = 5000
+
+[resource]
+script = ExtResource("4_auytt")
+executions = Array[ExtResource("1_uugp8")]([SubResource("Resource_k3qlf")])

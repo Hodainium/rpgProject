@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_yal1k"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_sp7n4"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hearty_feast.tscn" id="3_07q2p"]
+
+[resource]
+script = ExtResource("2_sp7n4")
+id = &"demo.item.hearty_feast"
+display_name = "Hearty Feast"
+description = "The party heals 25% of max HP."
+tags = Array[StringName]([&"Pool.Food", &"Item.Rarity.Rare"])
+price = 6
+kind = 1
+use_ability = ExtResource("3_07q2p")

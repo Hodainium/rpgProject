@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/shatter_chorus.tscn" id="1_f6e6d"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/fault_line.tscn" id="2_fe3i4"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/fracture_field.tscn" id="3_3lahc"]
@@ -22,6 +23,7 @@ abilities = Array[PackedScene]([ExtResource("1_f6e6d"), ExtResource("2_fe3i4"), 
 display_name = "Shatterweaver"
 display_color = Color(0.9411765, 0.5019608, 0.5019608, 1)
 tags = Array[StringName]([&"Character.Shatterweaver"])
+level_effect = ExtResource("90_growth")
 stats_x100 = Dictionary[String, int]({
 "atk": 38000,
 "crit_dmg": 5000,

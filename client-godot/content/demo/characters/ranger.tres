@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/rain_of_arrows.tscn" id="1_dr1t7"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/quick_shot.tscn" id="2_0eq47"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/mark_prey.tscn" id="3_p23b7"]
@@ -21,6 +22,7 @@ abilities = Array[PackedScene]([ExtResource("1_dr1t7"), ExtResource("2_0eq47"), 
 display_name = "Ranger"
 display_color = Color(0.13333334, 0.54509807, 0.13333334, 1)
 tags = Array[StringName]([&"Character.Ranger"])
+level_effect = ExtResource("90_growth")
 stats_x100 = Dictionary[String, int]({
 "atk": 48000,
 "crit_dmg": 5000,

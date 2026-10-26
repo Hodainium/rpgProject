@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/absolute_zero.tscn" id="1_xyo8l"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/frost_jab.tscn" id="2_x6h0j"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/glacial_spike.tscn" id="3_j4p6b"]
@@ -21,6 +22,7 @@ abilities = Array[PackedScene]([ExtResource("1_xyo8l"), ExtResource("2_x6h0j"), 
 display_name = "Cryomancer"
 display_color = Color(0, 0.7490196, 1, 1)
 tags = Array[StringName]([&"Character.Cryomancer"])
+level_effect = ExtResource("90_growth")
 stats_x100 = Dictionary[String, int]({
 "atk": 47000,
 "crit_dmg": 5000,

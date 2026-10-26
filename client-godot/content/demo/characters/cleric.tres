@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/strike.tscn" id="1_qi6ye"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/heal.tscn" id="2_ixx4u"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_ouh10"]
@@ -29,6 +30,7 @@ abilities = Array[PackedScene]([ExtResource("9_ult"), ExtResource("1_qi6ye"), Ex
 display_name = "Cleric"
 display_color = Color(0.18039216, 0.54509807, 0.34117648, 1)
 tags = Array[StringName]([&"Character.Cleric"])
+level_effect = ExtResource("90_growth")
 default_loadout = SubResource("Resource_ud7a5")
 stats_x100 = Dictionary[String, int]({
 "atk": 35000,

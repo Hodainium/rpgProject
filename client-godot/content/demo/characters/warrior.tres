@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/strike.tscn" id="1_abaht"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_4hcp5"]
 [ext_resource type="Script" path="res://combat/equipment_definition.gd" id="3_y2yup"]
@@ -33,6 +34,7 @@ abilities = Array[PackedScene]([ExtResource("10_ult"), ExtResource("1_abaht"), E
 display_name = "Warrior"
 display_color = Color(0.27450982, 0.50980395, 0.7058824, 1)
 tags = Array[StringName]([&"Character.Warrior"])
+level_effect = ExtResource("90_growth")
 default_loadout = SubResource("Resource_xidmk")
 stats_x100 = Dictionary[String, int]({
 "atk": 50000,

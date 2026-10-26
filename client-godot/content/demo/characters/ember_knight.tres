@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/complete_combustion.tscn" id="1_bg6cx"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/searing_slash.tscn" id="2_m0w4g"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/kindle_brand.tscn" id="3_32yo1"]
@@ -20,6 +21,7 @@ abilities = Array[PackedScene]([ExtResource("1_bg6cx"), ExtResource("2_m0w4g"), 
 display_name = "Ember Knight"
 display_color = Color(1, 0.3882353, 0.2784314, 1)
 tags = Array[StringName]([&"Character.EmberKnight"])
+level_effect = ExtResource("90_growth")
 stats_x100 = Dictionary[String, int]({
 "atk": 50000,
 "broken_dmg": 4000,

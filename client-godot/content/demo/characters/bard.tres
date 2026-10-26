@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/finale.tscn" id="1_tpfkk"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/dissonance.tscn" id="2_75h4w"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/anthem.tscn" id="3_4p8fd"]
@@ -21,6 +22,7 @@ abilities = Array[PackedScene]([ExtResource("1_tpfkk"), ExtResource("2_75h4w"), 
 display_name = "Bard"
 display_color = Color(1, 0.4117647, 0.7058824, 1)
 tags = Array[StringName]([&"Character.Bard"])
+level_effect = ExtResource("90_growth")
 stats_x100 = Dictionary[String, int]({
 "atk": 38000,
 "crit_dmg": 5000,

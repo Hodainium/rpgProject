@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/items/roast_haunch.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/bile.tscn" id="1_5dlkv"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/devour.tscn" id="2_cgnl8"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_uw3s7"]
@@ -21,6 +22,8 @@ brain = SubResource("Resource_8j7r5")
 display_name = "Gutter Maw"
 display_color = Color(0.41960785, 0.5568628, 0.13725491, 1)
 tags = Array[StringName]([&"Enemy.Type.Maw", &"Weakness.Ice"])
+drop_item = ExtResource("90_drop")
+drop_chance_x100 = 500
 stats_x100 = Dictionary[String, int]({
 "atk": 30000,
 "crit_dmg": 5000,

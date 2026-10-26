@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_q7cuh"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_hrr7d"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_4qhgi"]
+[ext_resource type="Script" path="res://game/defs/conditions/coins_at_least.gd" id="4_1j8qb"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_tlik4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_coins.gd" id="6_jvf27"]
+[ext_resource type="Resource" path="res://content/demo/effects/medic_heal.tres" id="7_f2uog"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="8_6j4ql"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="9_bixhk"]
+
+[sub_resource type="Resource" id="Resource_2ya58"]
+script = ExtResource("4_1j8qb")
+amount = 15
+
+[sub_resource type="Resource" id="Resource_7dqll"]
+script = ExtResource("6_jvf27")
+amount = 15
+
+[sub_resource type="Resource" id="Resource_t3uye"]
+script = ExtResource("8_6j4ql")
+effect = ExtResource("7_f2uog")
+include_dead = true
+
+[sub_resource type="Resource" id="Resource_le1ub"]
+script = ExtResource("2_hrr7d")
+label = "Pay 15 coins (full heal, the fallen get up)"
+conditions = Array[ExtResource("3_4qhgi")]([SubResource("Resource_2ya58")])
+outcomes = Array[ExtResource("5_tlik4")]([SubResource("Resource_7dqll"), SubResource("Resource_t3uye")])
+
+[sub_resource type="Resource" id="Resource_3ayj5"]
+script = ExtResource("2_hrr7d")
+label = "Decline"
+
+[sub_resource type="Resource" id="Resource_775vx"]
+script = ExtResource("1_q7cuh")
+text = "\"Fifteen coins and I'll patch up the lot of you, even the ones lying down.\""
+choices = Array[ExtResource("2_hrr7d")]([SubResource("Resource_le1ub"), SubResource("Resource_3ayj5")])
+
+[resource]
+script = ExtResource("9_bixhk")
+id = &"demo.event.wandering_medic"
+display_name = "Wandering Medic"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_q7cuh")]([SubResource("Resource_775vx")])

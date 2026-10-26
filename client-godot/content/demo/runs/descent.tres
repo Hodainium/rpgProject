@@ -12,6 +12,7 @@
 [ext_resource type="Resource" path="res://content/demo/chapters/coven.tres" id="10_coven"]
 [ext_resource type="Resource" path="res://content/demo/chapters/vault.tres" id="11_vault"]
 [ext_resource type="Resource" path="res://content/demo/chapters/void.tres" id="12_void"]
+[ext_resource type="Resource" path="res://content/demo/events/waystation.tres" id="13_rest"]
 
 [sub_resource type="Resource" id="Resource_5oori"]
 script = ExtResource("2_o757x")
@@ -47,6 +48,10 @@ floors = Array[ExtResource("2_o757x")]([SubResource("Resource_5oori"), SubResour
 fallback_item = ExtResource("1_qxoat")
 equipment_slots = Array[StringName]([&"Equipment.Slot.Weapon", &"Equipment.Slot.Head", &"Equipment.Slot.Body", &"Equipment.Slot.Arms", &"Equipment.Slot.Legs", &"Equipment.Slot.Accessory"])
 default_run = true
+xp_per_enemy = 20
+xp_per_boss = 120
+xp_to_level = Array[int]([60, 150, 270, 420, 600, 810, 1050, 1320, 1620, 1950, 2310, 2700, 3120, 3570])
+rest_event = ExtResource("13_rest")
 rarity_weights_x100 = Dictionary[StringName, int]({
 &"Item.Rarity.Common": 6000,
 &"Item.Rarity.Rare": 2500,

@@ -7,13 +7,13 @@
 
 [sub_resource type="Resource" id="Resource_8hkoi"]
 script = ExtResource("3_n3vmf")
-value_x100 = 12000
+value_x100 = 8000
 attribute_name = "max_hp"
 operation = 1
 
 [sub_resource type="Resource" id="Resource_cengf"]
 script = ExtResource("3_n3vmf")
-value_x100 = 10000
+value_x100 = 7500
 attribute_name = "atk"
 operation = 1
 

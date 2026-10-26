@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/supernova.tscn" id="1_srm27"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/ember.tscn" id="2_jpiyj"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/ignite.tscn" id="3_py410"]
@@ -21,6 +22,7 @@ abilities = Array[PackedScene]([ExtResource("1_srm27"), ExtResource("2_jpiyj"), 
 display_name = "Pyromancer"
 display_color = Color(1, 0.27058825, 0, 1)
 tags = Array[StringName]([&"Character.Pyromancer"])
+level_effect = ExtResource("90_growth")
 stats_x100 = Dictionary[String, int]({
 "atk": 50000,
 "crit_dmg": 5000,
