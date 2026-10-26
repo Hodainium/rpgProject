@@ -204,6 +204,126 @@ Uncommon 25, Rare 12, Legendary 3; Wisp choir grants `Drain.Ice` to every wisp; 
 Entangle skill with a row `delay` and a `PatternBrain` (closes content-pass 8); the knight duel rewards the Warden
 Helm; the wounded knight's paid helm goes to the armor inventory.
 
+### 3.8 Amendment C3 (2026-10-26, D11–D18): the full Descent, 10 floors, two ending routes
+The demo becomes a full Isaac-shaped run, longer and harder, so wins and losses spread out and the play report and
+chaos policy see far more mechanic paths. **Content values are a proposal for review (D14);** once built they live in
+the content files.
+
+**Run shape** (`demo.run.descent`; every floor ends in a boss):
+| Floors | Chapter (theme) | Special rooms | Bosses (pool; seeded, never twice in a chapter) |
+|---|---|---|---|
+| 1–2 | The Cellar (existing) | Treasure, Shop | the Golem, **the Rat King** (new) |
+| 3–4 | The Crypt (existing) | Treasure, Shop | the Lich, **the Bone Warden** (new) |
+| 5–6 | **The Ember Forge** (fire, constructs) | Treasure, Shop | **the Forgemaster**, **the Brass Colossus** |
+| 7–8 | **The Hollow** (flesh and blood, like Isaac's Utero) | **none** | **the Mother Heart**, **the Twin Hearts** (a two-unit boss) |
+| 9 light | **The Silent Cathedral** (holy, like Isaac's Cathedral) | **none** | **the Hallowed Judge** |
+| 10 light | **The Vault** (gilded, like Isaac's Chest) | **4 Treasure** rooms, a Shop | **the Collector** (final boss: mirror and per-item scaling) |
+| 9 dark | **The Black Coven** (occult, like Isaac's Sheol) | **none** | **the High Witch** |
+| 10 dark | **The Void** (like Isaac's Dark Room) | **3 Altar** rooms (corrupted items for max HP) | **the Nameless** (final boss: just hard, no mirror) |
+
+**Ending route (D15):** after the floor-8 boss the player picks the route at the stairs, like Isaac's light beam and
+trapdoor: the light route (Cathedral → Vault) or the dark route (Coven → Void). Floor 10 follows the route of floor 9.
+
+Item sources where there are no item rooms: every boss encounter **rewards** one `Pool.Boss` item (3.7 rewards), and
+events still appear. The Vault's treasure rooms draw from `Pool.Treasure` and a new `Pool.Vault`.
+
+**System (two battle hooks and one generator option; no wire change):**
+| Hook | Where | Rule |
+|---|---|---|
+| **H9 Mirror** (D11): `EnemyDefinition.mirror_party_items: bool` | `combat/battle.gd` (v2 setup) | The boss is also granted the `grants` AbilitySet of every **item and armor piece the party holds** (from the snapshot's `items`, `equipmentIds`, `useSlots`; party slot order, then the order listed). Usable items' use abilities are not copied. A party-wide item applies to the boss's side. A passive the boss already has is skipped, as for party members |
+| **H10 Per-item scaling** (D11): `EnemyDefinition.per_item_effect: GameplayEffect` | same | Applied once per item and armor piece held (the same count as H9), after floor scaling. The effect must stack (validator error `per_item_not_stacking`) |
+| **Boss rotation** (D12): `ChapterDefinition.boss_rotation: bool` (default false) | `game/floor_generator.gd` | The chapter's boss candidates (sorted ids) are shuffled once per run by the stream `chapter/<chapter id>/bosses`; the chapter's floor *k* (counted over the run's floor slots) takes entry *k* mod *n*. Stateless: nothing new in the run state or the run hash. Off = today's pick, so fixtures don't change |
+| **Route choice** (D15): `FloorSlot.pick: RANDOM \| CHOICE \| ROUTE` (default RANDOM), `ChapterDefinition.route_tag` (`Route.Light`, `Route.Dark`) | `game/defs/floor_slot.gd`, `game/run_controller.gd`, `game/dev/seed_report.gd` | RANDOM: today's seeded pick (`floor/<n>/chapter`). CHOICE: `next_floor(chapter_id)` names one of the slot's chapters; the run log's `next_floor` entry gets `"chapter"` (only on CHOICE slots, so old logs are unchanged); no draw. ROUTE: the slot's chapter whose `route_tag` matches the previous floor's chapter; no draw. The auto and chaos policies pick a CHOICE from their own stream `dev/route/<floor>`, so reports cover both routes. The seed report takes `--route <chapter id>` (default the first) |
+| **Price in max HP** (D17): `RoomPlacement.price_item: ItemDefinition`, `ItemDefinition.stackable: bool` | `game/defs/`, `game/floor_generator.gd`, `RunController.take` | A pedestal with a price item costs no coins: taking it gives the buyer the price item too (a curse such as Void Scar, −10% max HP), even past their item capacity. A stackable item may be held several times; each copy's effects apply in battle (its passives once). Logged as a `buy`; the items travel in the snapshot's existing `items` list (no wire change) |
+| Validator | `game/dev/content_validator.gd` | `boss_rotation_short` (warning): a rotating chapter with fewer bosses than its floors in a run; `per_item_not_stacking` (error); `choice_slot_single` (warning): a CHOICE slot with one chapter; `route_unmatched` (error): a ROUTE slot with no chapter for a route its previous slot can give; `price_item_not_stackable` (warning) |
+
+Both hooks read only the snapshot and content, so the verifier rebuilds the same boss; fixtures and goldens without
+them are byte-identical. A new combat golden `mirror-seed-9` (a fixture mirror boss against a fixture party holding
+items and armor) pins H9 and H10.
+
+**Depth scaling** `demo.scaling.descent` (typed %, enemies only; replaces `basic` on the Cellar and the Crypt, so
+`one_floor` also uses floor 1's step): floors 1–10 HP +0/10/20/35/50/65/80/100/120/140, ATK
++10/20/30/40/50/60/70/85/100/115, DEF +0/10/15/20/30/40/50/60/70/80.
+
+**New enemies** (stats as typed; for scale, the Warrior has 1000 HP / 500 ATK and the Cleric 800 HP / 350 ATK; the
+Golem has 2000 HP and the Lich 4800):
+| Enemy | Chapter | HP / ATK / DEF / SPD / toughness | Affinities | Moves and brain |
+|---|---|---|---|---|
+| Rat King (boss) | Cellar | 2400 / 300 / 180 / 115 / 120 | weak Fire | Gnaw (Physical, Bleed 60%), Swarm (all, Physical); at 50% a Frenzy phase (Haste, Swarm unlocked); PatternBrain |
+| Bone Warden (boss) | Crypt | 3600 / 280 / 320 / 85 / 200 | resist Physical, weak Fire, Immune.Control | Shield Bash (Stun 40%), Bone Wall (Defense Up and Taunt); at 40% a Ward phase; ult Ossuary (all, Physical) |
+| Cinder Hound | Forge | 380 / 300 / 90 / 130 / 40 | resist Fire, weak Ice | Searing Bite (Fire, Burn) |
+| Anvil Guard | Forge | 700 / 260 / 300 / 80 / 120 | drain Fire, weak Ice | Hammer Down (Physical, heavy toughness damage), Brace (Defense Up) |
+| Smelter | Forge | 420 / 200 / 120 / 105 / 40 | weak Physical | Stoke (allies' ATK up), Slag (Fire, Slow); PatternBrain |
+| Forgemaster (boss) | Forge | 5200 / 340 / 240 / 100 / 180 | resist Fire, weak Ice | Hammer, Fire Bolt; at 60% Molten Armor (drain Fire, Defense Up); at 30% Meltdown (all, Fire, Burn); TacticalBrain ult |
+| Brass Colossus (boss) | Forge | 6400 / 360 / 360 / 75 / 300 | weak Ice and Physical | Piston (Physical), ult Overheat (all, Fire); breaking it is the way in (toughness 300) |
+| Leech | Hollow | 360 / 260 / 80 / 120 / 30 | drain Physical, weak Fire | Latch (Physical, Bleed) |
+| Gutter Maw | Hollow | 900 / 300 / 140 / 80 / 60 | weak Ice | Bile (2 stacks of Poison), Devour (Physical, heavy) |
+| Vein Weaver | Hollow | 440 / 240 / 100 / 115 / 40 | resist Ice, weak Fire | Entangle Lash (row delay), Hemorrhage (all, Bleed 50%); PatternBrain |
+| Mother Heart (boss) | Hollow | 7000 / 320 / 220 / 90 / 200 | weak Fire | Pulse (all, Physical), Regen on itself; at 50% Bleeding Out (all, Bleed and Vulnerable); ult Systole |
+| Twin Hearts (boss pair) | Hollow | 2 × 3600 / 340 / 200 / 100 / 120 | one weak Fire, one weak Ice | Pulse, Mend on the other; ult when the other is below 50% (TacticalBrain) |
+| Choir Seraph | Cathedral | 520 / 260 / 160 / 120 / 60 | resist Ice | Hymn (heal allies, Regen), Ward on an ally |
+| Penitent Knight | Cathedral | 900 / 360 / 340 / 85 / 120 | resist Physical, Immune.Control | Shield Bash (Stun), Provoke (Taunt) |
+| Hallowed Judge (boss) | Cathedral | 9000 / 400 / 300 / 105 / 240 | resist Fire, weak Physical | Smite, Dispel (party buffs), Purify on itself; phases at 60% and 25%; ult Judgement (single, Doom-like) |
+| Gilded Mimic | Vault | 600 / 420 / 150 / 125 / 60 | weak Physical | Snap (Physical, high crit) |
+| Vault Sentry | Vault | 1100 / 360 / 380 / 80 / 160 | drain Ice, weak Fire | Lockdown (Freeze 50%), Spiked Plating (strikes back when hit) |
+| The Collector (final boss) | Vault | 9000 / 380 / 300 / 110 / 260; **mirror**; **+5% HP, ATK and DEF per item held** | weak Physical | Appraise (Vulnerable), Repossess (Dispel), Gilded Ray (all, Ice); at 50% a Hoard phase (Ward and Haste); ult Liquidate (single, huge) |
+
+Encounters (normal ones tagged `Chapter.<X>`): Forge 4 (hound pack, anvil and smelter, mixed, elite anvil), Hollow 4
+(leeches, maw and weaver, mixed, elite maw), Cathedral 3 (seraph and knight, two knights and a seraph, elite knight),
+Vault 3 (mimics, sentry and mimic, elite sentry). Boss rooms: one per new chapter (the Golem's den's placements); the
+Rat King and the Bone Warden use their chapter's existing boss room.
+
+**New items (24; tier and pools):**
+| Chapter | Items |
+|---|---|
+| Forge (Pool.Treasure, Pool.Shop) | Tempered Edge (Rare: +15% ATK, +20% toughness damage), Bellows (Rare: +15 ult charge on a break), Quench Flask (Common, usable: cleanse the party, 150 Ice to all enemies), Ember Heart (Epic: +20% Fire damage), Slag Plate (armor, Rare: +80 DEF, resist Fire, −6 SPD), Molten Core (Legendary, Pool.Boss: Fire hits Burn the target) |
+| Hollow (Pool.Boss, events) | Blood Pact (Epic: +25% damage dealt, Bleed yourself at battle start), Heartstring (Rare: heal 10% max HP on a kill), Clotting Salve (Common, usable: cleanse and Regen one ally), Scar Ring (Epic: resist Physical), Vein Cloak (armor, Rare: +150 max HP, immune to Bleed), Second Heart (Legendary, usable, consumable: revive an ally at 50% HP; an automatic once-per-run revive would need a new hook) |
+| Cathedral (Pool.Boss, Pool.Vault) | Halo (Epic: Ward at battle start, +10% healing given), Censer (Rare: Regen on the party at battle start), Relic Shard (Rare: +12% crit rate), Holy Water (Common, usable: cleanse all, heal 20%), Vestment (armor, Epic: +60 DEF, +40 max MP), Seraph Wing (Legendary: +12 SPD for the party) |
+| Vault (Pool.Vault, Pool.Treasure) | Gilded Idol (Common: 25 coins on pickup), Ledger (Rare: +2 coins per room cleared), Golden Fleece (Epic: +20% max HP), Appraiser's Loupe (Rare: +20% weakness damage), Crown (armor, Legendary: +10% ATK, DEF and SPD), Mimic Tooth (Epic: crits Bleed the target and heal you 30 HP) |
+
+**Rarity (D16):** four tiers Common, Rare, Epic, Legendary. Today's tiers shift up: Uncommon → Rare, Rare → Epic
+(49 files, one tag each); `Item.Rarity.Uncommon` leaves the registry and `Item.Rarity.Epic` joins it. The Descent's
+weights: Common 60, Rare 25, Epic 12, Legendary 3.
+
+**The dark route's enemies:**
+| Enemy | Chapter | HP / ATK / DEF / SPD / toughness | Affinities | Moves and brain |
+|---|---|---|---|---|
+| Cultist | Coven | 480 / 300 / 120 / 115 / 40 | weak Physical | Hex (Vulnerable), Curse (Weaken); PatternBrain |
+| Bound Demon | Coven | 1200 / 420 / 240 / 90 / 140 | drain Fire, weak Ice | Hellfire (Fire, Burn), Rend (Physical, Bleed) |
+| High Witch (boss) | Coven | 9000 / 400 / 260 / 110 / 220 | resist Ice, weak Fire | Hex All, Dispel, Doom; phases at 60% (Ward each turn) and 25% (Haste, Hellfire unlocked); TacticalBrain ult Black Mass (all, Ice) |
+| Void Wraith | Void | 800 / 440 / 160 / 130 / 60 | drain Ice, resist Physical | Chill Touch (Ice, Freeze 40%), Fade (Defense Up) |
+| Abyssal Hulk | Void | 1800 / 480 / 360 / 80 / 200 | weak Fire | Crush (Physical, heavy toughness), Quake (all) |
+| The Nameless (final boss) | Void | 16000 / 460 / 340 / 115 / 300 (no mirror) | resist Physical and Ice, weak Fire | Unmake (single, huge), Entropy (all, Bleed and Slow), Silence (Stun 50%); phases at 66% and 33%, each clearing its debuffs; ult Oblivion (all, huge) |
+
+Encounters: Coven 3 (cultists, demon and cultist, elite demon), Void 3 (wraiths, hulk and wraith, elite hulk). Boss
+rooms: one per chapter. **The Void's altars:** `Room.Type.Altar` (a new special room type), two pedestals each,
+`Pool.Void`, price item **Void Scar** (Common, `Item.Curse`, stackable: −10% max HP).
+
+**Corrupted items (D18; 15, `Pool.Void`, `Item.Corrupted`, the same tier as the original):** stronger flipsides of
+all five legendaries and ten epics, each with a drawback.
+| Original | Corrupted flipside |
+|---|---|
+| Executioner's Seal | crits trigger a 90% ATK follow-up; you take 10% more damage |
+| Leech Hide | drain Physical and Ice; weak to Fire |
+| Salamander Heart | drain Fire, +20% Fire damage; weak to Ice and Physical |
+| Guardian Totem | the party +50 DEF; the party −8 SPD |
+| Duelist's Band (armor) | crits trigger a 60% ATK follow-up; −10% max HP |
+| Berserker Brand | +40% damage dealt; +20% damage taken |
+| Bounty Mark | on a kill +40 ult charge and heal 120 HP; −15% healing received |
+| Breaker's Oath | on a break +40 ult charge and +30% ATK for 2 turns; −20% toughness damage |
+| Hunter's Mark | weakness hits trigger an 80% ATK follow-up; −10% crit rate |
+| Overcharge Coil | after each ult +40 ult charge; −30 max MP (an item can't change an ult's cost) |
+| Predator's Fang | +50% damage to Broken enemies; −15% damage to the rest |
+| Vampire Fang | heal 35 HP per hit dealt; −20% max HP |
+| Thorn Mail | strike back for 150 when hit; −40 DEF |
+| War Drum | the party +12 SPD; the party −10% DEF |
+| Frost Lantern | Ice hits Freeze 50% of the time; you become weak to Fire |
+
+Edits to your existing files for C3 (each shown `old → new` when made): `runs/descent.tres` (ten floor slots;
+`one_floor` unchanged), `chapters/cellar.tres` and `chapters/crypt.tres` (`boss_rotation = true`, scaling `basic` →
+`descent`), the Golem and Lich encounters (a `Pool.Boss` reward each), the 49 rarity retags, and the tag registry
+(`Item.Rarity.Uncommon` removed; new tags added through `sync_tags --add-missing`).
+
 ## 4. Failure modes
 Server failure scenarios (root `CLAUDE.md` 1–7): **none apply** (no server, no wire change). What this slice
 protects is that **adding a second run and a second floor doesn't change any existing replay**, which scenario 5
@@ -274,6 +394,9 @@ B2. F5: illegal-move tests first (they pin how the battle refuses today; a crash
    with its test), then `ChaosController`, `InvariantChecker`, `--policy chaos`; a first chaos report on the demo.
 C. Your files, after approval: tags, the 3.4 edits (`old → new`), then `build_demo_run.tscn` for the new content;
    `test_demo_run.gd`. First `--play` report shared with you.
+C3. 3.8: H9 mirror, H10 per-item scaling, boss rotation, validator rules, the `mirror-seed-9` golden and system tests
+   (fixtures); then the content builder (`build_full_descent.tscn`), the edits to your files, demo tests, and a play
+   and chaos report on the ten-floor run. Step D (screens) comes after C3.
 C2. 3.7: system first (encounter grants, slot brain, rewards, armor to inventory, rarity weights, validator, tests),
    then your files after the rarity table is approved.
 D. Shell (3.6), each file shown as a diff.
@@ -312,3 +435,15 @@ Decided 2026-10-26 by the user (amendment C2, 3.7):
 - **D9 armor never auto-equips:** drops, pickups, purchases and event rewards go to the armor inventory; a
   character's starting loadout is still worn at run start.
 - **D10** the demo content in 3.7, each existing file shown as `old → new` first.
+
+Decided 2026-10-26 by the user (amendment C3, 3.8):
+- **D11 the final boss mirrors the build:** it copies the passives of the party's held items and armor (H9) and
+  gains stats per item held (H10).
+- **D12 two bosses per 2-floor chapter,** picked by the seed and never twice in a chapter (boss rotation); the
+  Cathedral and the Vault have one fixed boss each.
+- **D13 the full content set** (3.8), and **C3 inside 1d,** before step D.
+- **D14 (to review):** the content values in 3.8.
+- **D15 two ending routes,** picked by the player at the floor-8 stairs (Cathedral → Vault, or Coven → Void).
+- **D16 rarity is Common, Rare, Epic, Legendary;** today's Uncommon → Rare and Rare → Epic. Replaces D7's tier names.
+- **D17 the Void sells corrupted items for max HP** (a stackable curse item as the price).
+- **D18 fifteen corrupted items:** the five legendaries and ten epics; the Void's final boss doesn't mirror.

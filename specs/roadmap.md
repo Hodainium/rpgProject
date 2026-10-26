@@ -123,6 +123,10 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   exactly-once trades, a house account that buys at the dust rate and relists its stock). Decided by the user: held
   copies count as eidolons, order-book prices, gems buy packs and dust comes only from cards. Root `CLAUDE.md`,
   `game-design.md` and `server-authority.md` follow. At the user's request.
+- 2026-10-26: 1d `playable-demo` grew (amendments C2 and C3, in the slice spec): encounter grants, brains and
+  rewards, armor always to the inventory, rarity tiers with pool weights; then the full ten-floor Descent (six
+  chapters: Cellar, Crypt, Ember Forge, Hollow with no item rooms, Silent Cathedral, the Vault with a final boss that
+  mirrors the party's items), before the screens. At the user's request.
 
 
 ## Design tuning: any time, not just in breaks
