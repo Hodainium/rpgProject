@@ -17,6 +17,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c5. `content-pass` | ✅ Done (2026-10-25) | 2026-10-22 |
 | 1d. `playable-demo` | 🔨 Implementing (A–C6 done: tools, the ten-floor Descent, 11 classes, XP and rest; smart 4-member 35.33% (2026-10-27); D screens done; D2 `ui-framework` (Lyra-style UI) done; D3 `gameplay-messages` (Lyra-style message bus) done; E Windows export done (player, dev and full builds, release check); next the design break: your tuning on the smart 4-member report, then F `/sync-spec`) | 2026-10-26 |
 | 1e. `auto-battle` | ✅ Done (`AutoPolicy` as the player's Auto, `Ability.Role.*` tags incl. RestoreMP, battle panel and Settings; smart 4-member 35.33%; small follow-ups in the spec) | 2026-10-27 |
+| 1f. `ff7-ui` | 📝 Spec written (FF7 window theme for every screen, FF7-style battle HUD with Honkai turn order; exploration HUD with Lyra-style toasts and a battle feed; Equipment, Armor, Use Item, Use Ability and Status screens; F6 and F10–F14 awaiting approval) | 2026-10-27 |
+| 1f2. `keys-and-gear` | ⬜ Not started (keys as a second currency that opens item rooms and shops, the Accessory and Weapon slots with new pieces, one logged swap action for gear and a logged move for use items, Field / Battle usage tags on abilities, a room-reveal item that shows unexplored event rooms on the map) | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
 | 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
 | 3. `battle-verify` | ⬜ Not started | |
@@ -124,6 +126,11 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   exactly-once trades, a house account that buys at the dust rate and relists its stock). Decided by the user: held
   copies count as eidolons, order-book prices, gems buy packs and dust comes only from cards. Root `CLAUDE.md`,
   `game-design.md` and `server-authority.md` follow. At the user's request.
+- 2026-10-27: Added 1f `ff7-ui` after 1e and before slice 2: an FF7 window theme shared by every screen (old ones
+  restyled), an FF7-style battle HUD (party window, command window with hints, Honkai turn order) and a new
+  exploration HUD (toasts, Equipment, Armor, Use Item and Use Ability menus). Client-only. Added 1f2 `keys-and-gear`
+  right after it for the mechanics those menus need (keys, accessories and weapons, logged swaps, Field / Battle
+  usage tags). At the user's request.
 - 2026-10-26: Added 1e `auto-battle` after 1d and before slice 2: smart auto play becomes a player feature (one shared
   policy for the battle panel and the reports, ability roles as GAS tags). At the user's request.
 - 2026-10-26: 1d step E: three export levels instead of one (player release build; dev and full debug builds with
@@ -344,6 +351,23 @@ tags (heal, revive, buff…) instead of the file-name guess the dev policy uses 
 Player options to settle in the spec: Auto per battle or run-wide (and a setting), whether Auto may spend ults, a
 Simple / Smart choice. Auto picks are ordinary player inputs in the action log (replayed and verified like manual
 ones; no wire change); whether to record that a battle was played on Auto, for analytics (4b), is a spec decision.
+
+### 1f. `ff7-ui`
+**Purpose:** the game's look and battle screen, client-only (spec `specs/ff7-ui.md`). One theme with FF7 blue
+gradient windows that every screen and every later UI element uses; a battle HUD with a party window (HP, MP, ult bar,
+ULT button at any time), a command window (Attack, Ability, Block, Item, hints) and the Honkai turn order; on the
+map, Isaac-style toasts (pickups, floor and chapter), a battle feed, and Equipment, Armor, Use Item, Use Ability and
+Status screens. Built on the existing
+Lyra-style UI framework and message bus; no wire change, run hashes and replays unchanged.
+
+### 1f2. `keys-and-gear`
+**Purpose:** the game mechanics the new exploration menus need (client-only, run rules, so run logs and hashes
+change and the scripted run golden is regenerated on purpose). Keys: a second run currency like Isaac's; a cleared
+room may drop one (seeded chance, a "You found a key!" toast); item rooms and shops are locked and cost a key to enter.
+Gear: Accessory is a real armor slot with more accessories, Weapon is an equipment slot with more weapons, and use items
+sit in Item slots. Equipping a piece or a use item another character holds swaps the two, as a logged run action.
+Abilities and items say where they work with GAS tags (Field, Battle, or both), shown as [Field Only], [Battles Only] or
+[Field and Battles] and checked by the validator; the Use Item and Use Ability menus read them.
 
 ### 2. `run-checkout` (Part A of `specs/server-authority.md`)
 **First hookup to the server: runs, floor seeds, SQL, Redis.** The server starts a run and issues **floor seeds**
