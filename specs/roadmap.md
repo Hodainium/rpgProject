@@ -18,8 +18,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1d. `playable-demo` | 🔨 Implementing (A–C6 done: tools, the ten-floor Descent, 11 classes, XP and rest; smart 4-member 35.33% (2026-10-27); D screens done; D2 `ui-framework` (Lyra-style UI) done; D3 `gameplay-messages` (Lyra-style message bus) done; E Windows export done (player, dev and full builds, release check); next the design break: your tuning on the smart 4-member report, then F `/sync-spec`) | 2026-10-26 |
 | 1e. `auto-battle` | ✅ Done (`AutoPolicy` as the player's Auto, `Ability.Role.*` tags incl. RestoreMP, battle panel and Settings; smart 4-member 35.33%; small follow-ups in the spec) | 2026-10-27 |
 | 1f. `ff7-ui` | ✅ Done (spec synced; FF7 theme on every screen, battle HUD, toasts and battle feed, exploration HUD and map views, Equipment/Armor/Use/Status screens, Block and Basic tags, descriptions; 389 Godot tests; smart 4-member 35.33%; small follow-ups in the spec's section 6) | 2026-10-27 |
-| 1f2. `keys-and-gear` | ✅ Done (spec synced; smart 4-member 33.33%; a keyed golden carried to 1f3; keys as a second currency that opens item rooms and shops, the Accessory and Weapon slots with new pieces, one logged swap action for gear and a logged move for use items, Field / Battle usage tags on abilities, a room-reveal item that shows unexplored event rooms on the map) | |
-| 1f3. `skill-points` | ⬜ Not started (design pass: MP works like Honkai's Skill Points at today's numeric scale; basic attacks give SP back, abilities cost about 2–3 basics' worth, some about one; SP items and ability costs retuned; plus a scripted-run golden that includes keys and chests, left over from 1f2) | |
+| 1f2. `keys-and-gear` | ✅ Done (spec synced; smart 4-member 33.33%; keyed golden and follow-ups done; keys as a second currency that opens item rooms and shops, the Accessory and Weapon slots with new pieces, one logged swap action for gear and a logged move for use items, Field / Battle usage tags on abilities, a room-reveal item that shows unexplored event rooms on the map) | |
+| 1f3. `skill-points` | ⬜ Not started (design pass: MP works like Honkai's Skill Points at today's numeric scale; basic attacks give SP back, abilities cost about 2–3 basics' worth, some about one; SP items and ability costs retuned) | |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
 | 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
 | 3. `battle-verify` | ⬜ Not started | |
@@ -375,9 +375,7 @@ Abilities and items say where they work with GAS tags (Field, Battle, or both), 
 while keeping today's numeric scale (not 5 SP, but pools like 67, 143 or 205), with Persona as the reference for the
 numbers: a basic attack gives SP back, an ability costs about two to three basic attacks' worth (a few cost about
 one), so the turn rhythm is "attack, attack, ability" as in Honkai. Ability costs and the SP items (Ether and the
-other MP restores) are retuned to match; the smart 4-member report stays the balance gate. Also carried over from
-1f2: a golden scripted run on a keyed fixture run, so keys, chests and locks are pinned by a golden too (today they
-are pinned by `test_keys_and_gear` only). Spec: `specs/skill-points.md` (to write with `/spec`).
+other MP restores) are retuned to match; the smart 4-member report stays the balance gate. Spec: `specs/skill-points.md` (to write with `/spec`).
 
 ### 2. `run-checkout` (Part A of `specs/server-authority.md`)
 **First hookup to the server: runs, floor seeds, SQL, Redis.** The server starts a run and issues **floor seeds**
