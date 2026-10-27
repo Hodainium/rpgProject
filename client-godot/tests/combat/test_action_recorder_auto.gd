@@ -4,6 +4,7 @@
 extends TestCase
 
 const Golden := preload("res://tests/combat/test_golden.gd")
+const Ults := preload("res://tests/combat/test_ult_interrupts.gd")
 
 
 ## An autopilot that always picks an ability nobody has (refused by the battle), or nothing (`empty`).
@@ -105,3 +106,29 @@ func test_auto_refusal_falls_back_to_the_player() -> void:
 		check(not recorder.entries.any(func(entry) -> bool: return entry["ability"] == "Stub.Ability.Nowhere"),
 			"a refused pick is never logged")
 		check(battle.outcome != "", "the battle ends")
+
+
+## Spec auto-battle 4: the player's ult press beats Auto. Ultists start with full ult charge against three enemies, so
+## Auto would cast an ult at the first window; P1's press (Snipe on E2) fires there first, and Auto never casts a second
+## P1 ult in that window (the charge is spent). The battle still verifies.
+func test_press_beats_auto() -> void:
+	var snap := Ults.ult_snapshot()
+	var battle := new_battle(snap)
+	var recorder := ActionRecorder.new()
+	recorder.autopilot = _pilot()
+	recorder.submit_ult(&"P1", Ults.SNIPE, &"E2")
+	await battle.run(recorder)
+	check(battle.runner_error == "", "no runner error: " + battle.runner_error)
+	var entries: Array = recorder.entries
+	check(not entries.is_empty(), "the battle was played")
+	if entries.is_empty():
+		return
+	var first: Dictionary = entries[0]
+	eq([first["actor"], first["ability"], first["target"], first.get("interrupt", false)],
+		["P1", String(Ults.SNIPE), "E2", true], "the press fires first, as pressed")
+	var window := entries.filter(func(entry: Dictionary) -> bool:
+		return entry["actor"] == "P1" and entry.get("interrupt", false) and int(entry["turn"]) == int(first["turn"]))
+	eq(window.size(), 1, "Auto casts no second P1 ult in the same window")
+	eq(recorder.auto_picks, entries.size() - 1, "every other entry was Auto's")
+	var result := await replay({"snapshot": snap, "actionLog": recorder.action_log(battle)})
+	eq(result["verdict"], "Verified", "a press mixed with Auto picks verifies")
