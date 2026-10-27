@@ -13,6 +13,7 @@ effect = ExtResource("3_tidv4")
 [node name="HeartyFeast" type="Node" unique_id=1474149510]
 script = ExtResource("1_gb4dw")
 targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Heal"])
 executions = Array[ExtResource("2_fhnxb")]([SubResource("Resource_qcjga")])
 animation = ExtResource("4_dqyk1")
 ability_tag = &"Ability.Item.Heartyfeast"

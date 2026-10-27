@@ -28,6 +28,7 @@ multiplier_x100 = 5000
 [node name="IceBlast" type="Node" unique_id=755833307]
 script = ExtResource("1_aqmo0")
 targeting = 2
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_bu8aa")]([SubResource("Resource_q35ep"), SubResource("Resource_0kopl")])
 animation = ExtResource("4_pgwa2")
 ability_tag = &"Ability.Iceblast"

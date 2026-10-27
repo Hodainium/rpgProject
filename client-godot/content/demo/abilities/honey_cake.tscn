@@ -13,6 +13,7 @@ effect = ExtResource("3_ihcwa")
 [node name="HoneyCake" type="Node" unique_id=859688731]
 script = ExtResource("1_xnog0")
 targeting = 3
+asset_tags = Array[StringName]([&"Ability.Role.RestoreMP"])
 executions = Array[ExtResource("2_38vk2")]([SubResource("Resource_1twwy")])
 animation = ExtResource("4_yd012")
 ability_tag = &"Ability.Item.Honeycake"

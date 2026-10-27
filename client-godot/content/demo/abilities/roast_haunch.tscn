@@ -13,6 +13,7 @@ effect = ExtResource("3_vaw5r")
 [node name="RoastHaunch" type="Node" unique_id=1105319257]
 script = ExtResource("1_6jokm")
 targeting = 3
+asset_tags = Array[StringName]([&"Ability.Role.Heal"])
 executions = Array[ExtResource("2_y0wgl")]([SubResource("Resource_alp3r")])
 animation = ExtResource("4_mdj2d")
 ability_tag = &"Ability.Item.Roasthaunch"

@@ -15,6 +15,7 @@ multiplier_x100 = 9000
 
 [node name="ArcaneBolt" type="Node" unique_id=969172166]
 script = ExtResource("1_4lata")
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_e4lb8")]([SubResource("Resource_xmdum")])
 animation = ExtResource("4_uro1m")
 ability_tag = &"Ability.Arcanebolt"

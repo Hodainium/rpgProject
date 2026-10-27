@@ -17,6 +17,7 @@ multiplier_x100 = 7000
 [node name="FrostNova" type="Node" unique_id=882458881]
 script = ExtResource("1_rt74p")
 targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_6c2d0")]([SubResource("Resource_3xwdr")])
 animation = ExtResource("4_e1u1a")
 ability_tag = &"Ability.Frostnova"

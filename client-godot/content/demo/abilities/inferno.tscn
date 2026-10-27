@@ -27,6 +27,7 @@ chance_x100 = 10000
 [node name="Inferno" type="Node" unique_id=1566375908]
 script = ExtResource("1_hw6vv")
 targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
 executions = Array[ExtResource("2_6sgpi")]([SubResource("Resource_kar8j"), SubResource("Resource_3yjtd")])
 animation = ExtResource("5_hcbdq")
 ability_tag = &"Ability.Inferno"

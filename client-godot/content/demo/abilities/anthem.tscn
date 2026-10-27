@@ -20,6 +20,7 @@ effect = ExtResource("4_dgjom")
 [node name="Anthem" type="Node" unique_id=1671114371]
 script = ExtResource("1_kxoo3")
 targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Buff"])
 executions = Array[ExtResource("2_kqtl3")]([SubResource("Resource_kgq4g"), SubResource("Resource_p6kp8")])
 animation = ExtResource("5_0ap2r")
 ability_tag = &"Ability.Anthem"

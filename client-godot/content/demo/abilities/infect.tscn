@@ -22,6 +22,7 @@ chance_x100 = 6000
 
 [node name="Infect" type="Node" unique_id=852099467]
 script = ExtResource("1_ckca5")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
 executions = Array[ExtResource("2_ht2le")]([SubResource("Resource_56s38"), SubResource("Resource_buaht")])
 animation = ExtResource("5_60jiy")
 ability_tag = &"Ability.Infect"

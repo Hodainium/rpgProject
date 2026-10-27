@@ -16,7 +16,7 @@ delay_x100 = -10000
 [node name="Finale" type="Node" unique_id=1736324378]
 script = ExtResource("1_8gc4p")
 targeting = 4
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Buff"])
 executions = Array[ExtResource("2_ck5d1")]([SubResource("Resource_uicub")])
 animation = ExtResource("4_t7l5e")
 ability_tag = &"Ability.Ult.Finale"

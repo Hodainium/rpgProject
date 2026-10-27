@@ -6,10 +6,17 @@ extends UIScreen
 @export var speed_format: String = "%d×"
 
 
-func bind(_context: UIContext) -> void:
+func bind(context: UIContext) -> void:
 	for speed in speeds:
 		%Speed.add_item(speed_format % int(speed))
 	%Speed.select(maxi(speeds.find(float(GameMain.load_setting("settings", "battle_speed", speeds[0]))), 0))
 	%Speed.item_selected.connect(func(index): GameMain.save_setting("settings", "battle_speed", speeds[index]))
 	%Skip.button_pressed = GameMain.load_setting("settings", "skip_animations", false)
 	%Skip.toggled.connect(func(on): GameMain.save_setting("settings", "skip_animations", on))
+	# Spec auto-battle: whether a new run starts on Auto (A1), and whether Auto casts ults (A2, applies at once).
+	%AutoBattle.button_pressed = GameMain.load_setting("settings", "auto_battle", false)
+	%AutoBattle.toggled.connect(func(on): GameMain.save_setting("settings", "auto_battle", on))
+	%AutoUlts.button_pressed = GameMain.load_setting("settings", "auto_ults", true)
+	%AutoUlts.toggled.connect(func(on):
+		GameMain.save_setting("settings", "auto_ults", on)
+		context.main.auto_ults = on)

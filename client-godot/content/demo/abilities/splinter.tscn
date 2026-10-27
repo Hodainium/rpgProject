@@ -24,6 +24,7 @@ chance_x100 = 10000
 
 [node name="Splinter" type="Node" unique_id=2016608078]
 script = ExtResource("1_jq68p")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
 executions = Array[ExtResource("2_w5mkt")]([SubResource("Resource_4lhum"), SubResource("Resource_f8o1n")])
 animation = ExtResource("5_qd1g5")
 ability_tag = &"Ability.Splinter"

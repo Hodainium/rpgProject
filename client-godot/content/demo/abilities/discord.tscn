@@ -22,6 +22,7 @@ chance_x100 = 5000
 [node name="Discord" type="Node" unique_id=1591668807]
 script = ExtResource("1_f5iuw")
 targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Debuff"])
 executions = Array[ExtResource("2_82e1y")]([SubResource("Resource_s3g5p"), SubResource("Resource_mnmbg")])
 animation = ExtResource("5_llf2l")
 ability_tag = &"Ability.Discord"

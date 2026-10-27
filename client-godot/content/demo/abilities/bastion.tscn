@@ -21,7 +21,7 @@ effect = ExtResource("4_cy5s2")
 [node name="Bastion" type="Node" unique_id=146611151]
 script = ExtResource("1_ln8a4")
 targeting = 4
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Buff"])
 executions = Array[ExtResource("2_oksru")]([SubResource("Resource_a0oum"), SubResource("Resource_ukbed")])
 animation = ExtResource("5_3mwj3")
 ability_tag = &"Ability.Ult.Bastion"

@@ -14,6 +14,7 @@ tags = Array[StringName]([&"Damage.Type.Physical"])
 
 [node name="QuickShot" type="Node" unique_id=1655187046]
 script = ExtResource("1_ovhr0")
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_65yla")]([SubResource("Resource_gx7on")])
 animation = ExtResource("4_c2bf1")
 ability_tag = &"Ability.Quickshot"

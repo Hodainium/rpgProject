@@ -13,6 +13,7 @@ effect = ExtResource("3_6cyoq")
 [node name="PurifyingBell" type="Node" unique_id=1944150847]
 script = ExtResource("1_a8bvp")
 targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Cleanse"])
 executions = Array[ExtResource("2_4w5sg")]([SubResource("Resource_xs6bo")])
 animation = ExtResource("4_fyt64")
 ability_tag = &"Ability.Item.Bell"

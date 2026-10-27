@@ -3,6 +3,8 @@
 ## (dead allies for revives); a row of ult buttons for every party member, pressable at any time (spec ult-interrupts:
 ## the press fires at the next ult window); Skip animations, Auto and the battle speed (presentation only: the gate
 ## still waits on each animation's execute keys, so replay is unaffected). Buttons are action_button entries.
+## Spec auto-battle: Auto is GameMain.auto_battle (the smart AutoPolicy for the rest of the run); the panel shows and
+## toggles it, and shows the choices whenever the recorder hands a decision back.
 ## Defaults for speed and skip come from the Settings screen (user://game_main.cfg, [settings]).
 extends UIScreen
 
@@ -30,6 +32,7 @@ func bind(context: UIContext) -> void:
 		if _gate != null:
 			_gate.skip_all = on)
 	%Auto.toggled.connect(_on_auto_toggled)
+	%Auto.set_pressed_no_signal(context.main.auto_battle)
 	%Speed.pressed.connect(_on_speed_pressed)
 	context.main.battle_prepared.connect(_on_battle_prepared)
 	context.on_run(self, &"battle_started", _on_battle_started)
@@ -51,6 +54,7 @@ func _on_battle_prepared(recorder: ActionRecorder, gate: ViewGate) -> void:
 		return
 	_recorder = recorder
 	_gate = gate
+	%Auto.set_pressed_no_signal(ctx.main.auto_battle)
 	if %Skip.button_pressed:
 		_gate.skip_all = true  # never turns off a skip GameMain set (the script runner)
 	_recorder.action_requested.connect(_on_action_requested)
@@ -77,10 +81,12 @@ func _on_action_rejected(unit_id: StringName, reason: String, detail: String) ->
 	_show_abilities(_waiting)
 
 
-## Turning Auto on also acts for the unit that is already waiting.
+## Auto takes a waiting decision at once (the recorder wakes): clear its choices.
 func _on_auto_toggled(on: bool) -> void:
-	if on and _waiting != null and _battle != null:
-		_auto_pick(_waiting)
+	ctx.main.auto_battle = on
+	if on and _waiting != null:
+		_waiting = null
+		%Actions.set_items([])
 
 
 func _on_battle_started(battle: Battle) -> void:
@@ -124,9 +130,6 @@ func _on_action_requested(unit_id: StringName, turn: int) -> void:
 	if turn > 0:
 		%Turn.text = "Turn %d: %s" % [turn, _name(unit)]
 	_refresh_stats()
-	if %Auto.button_pressed:
-		_auto_pick.call_deferred(unit)
-		return
 	_show_abilities(unit)
 
 
@@ -153,32 +156,6 @@ func _submit(ability: BattleAbility, target_id: StringName) -> void:
 	_waiting = null
 	%Actions.set_items([])
 	_recorder.submit_action(ability.ability_tag, target_id)
-
-
-## Auto: every ready ult first (they fire at once and the unit is asked again), then the first usable ability on the
-## first valid target (for watching several battles in a row).
-func _auto_pick(unit: BattleUnit) -> void:
-	if _recorder == null or _recorder.waiting_for != unit.unit_id:
-		return
-	for member in _battle.units():
-		if not member.is_party() or not member.alive:
-			continue
-		for ult in member.ultimate_abilities():
-			var targets := _battle.target_candidates(member, ult)
-			if member.asc.can_activate_ability(ult) and (not ult.needs_target() or not targets.is_empty()):
-				_recorder.submit_ult(member.unit_id, ult.ability_tag, targets[0].unit_id if ult.needs_target() else &"")
-				return
-	for ability in unit.action_abilities():
-		if not unit.asc.can_activate_ability(ability):
-			continue
-		if not ability.needs_target():
-			_submit(ability, &"")
-			return
-		var targets := _battle.target_candidates(unit, ability)
-		if not targets.is_empty():
-			_submit(ability, targets[0].unit_id)
-			return
-	_show_abilities(unit)
 
 
 func _refresh_stats() -> void:

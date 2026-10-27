@@ -15,7 +15,7 @@ effect = ExtResource("3_3dltd")
 [node name="Resurrection" type="Node" unique_id=683304768]
 script = ExtResource("1_pg5dv")
 targeting = 6
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Revive"])
 activation_query = ExtResource("6_ctrl")
 executions = Array[ExtResource("2_fxvht")]([SubResource("Resource_a6b14")])
 animation = ExtResource("4_4wsk3")

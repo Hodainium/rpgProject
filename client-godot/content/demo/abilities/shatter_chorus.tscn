@@ -19,7 +19,7 @@ toughness_x100 = 8000
 [node name="ShatterChorus" type="Node" unique_id=2011578152]
 script = ExtResource("1_rmhyf")
 targeting = 1
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage"])
 executions = Array[ExtResource("2_sgvvg")]([SubResource("Resource_cr1e8")])
 animation = ExtResource("4_6q55t")
 ability_tag = &"Ability.Ult.Shatterchorus"
