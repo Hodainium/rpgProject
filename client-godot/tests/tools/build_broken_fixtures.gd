@@ -298,6 +298,13 @@ func _ready() -> void:
 	_unit(roles, "broken.character.roles", [_role_scene(strike, "role_missing", []),
 		_role_scene(strike, "role_mismatch", [AutoPolicy.ROLE_DAMAGE, AutoPolicy.ROLE_HEAL])])
 	_save("characters", "roles", roles)
+
+	# Spec ff7-ui F4: two abilities tagged Ability.Type.Basic make Attack ambiguous (basic_ability_multiple).
+	var two_basics := CharacterDefinition.new()
+	var basic := [AutoPolicy.ROLE_DAMAGE, &"Ability.Type.Basic"]
+	_unit(two_basics, "broken.character.two_basics", [_role_scene(strike, "basic_a", basic),
+		_role_scene(strike, "basic_b", basic)])
+	_save("characters", "two_basics", two_basics)
 	print("Broken fixtures built under ", ROOT)
 	get_tree().quit(0)
 

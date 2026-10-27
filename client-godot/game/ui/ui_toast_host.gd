@@ -149,6 +149,8 @@ func _show(toast: Dictionary) -> void:
 	var node := _entry(toast)
 	var until := -1.0 if toast["pinned"] else _now() + float(toast["seconds"])
 	_live.append({"toast": toast, "node": node, "until": until})
+	if StringName(toast.get("sound", &"")) != &"" and is_inside_tree():
+		get_tree().call_group("sound_board", "play", String(toast["sound"]))
 	toast_shown.emit(toast)
 
 

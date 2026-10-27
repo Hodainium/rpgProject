@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/basic_a.tscn" id="1_eajsm"]
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/basic_b.tscn" id="2_2t7ke"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="3_rovjk"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="4_6sa83"]
+
+[resource]
+script = ExtResource("4_6sa83")
+id = &"broken.character.two_basics"
+attribute_set = ExtResource("3_rovjk")
+abilities = Array[PackedScene]([ExtResource("1_eajsm"), ExtResource("2_2t7ke")])

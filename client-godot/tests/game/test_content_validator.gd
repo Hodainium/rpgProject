@@ -18,6 +18,7 @@ const EXPECTED_ERRORS: Array = [
 	["run_default_twice", "runs/default_b.tres"], ["per_item_not_stacking", "enemies/per_item_refresh.tres"],
 	["route_unmatched", "runs/route_unmatched.tres"],
 	["role_missing", "characters/roles.tres"], ["role_mismatch", "characters/roles.tres"],
+	["basic_ability_multiple", "characters/two_basics.tres"],
 ]
 const EXPECTED_WARNINGS: Array = [
 	["incomplete", "encounters/incomplete.tres"], ["empty_item_pool", "rooms/empty_item_pool.tres"],
@@ -31,6 +32,7 @@ const EXPECTED_WARNINGS: Array = [
 	["controlled_without_status", "characters/controlled_without_status.tres"],
 	["party_toughness", "characters/party_toughness.tres"], ["choice_slot_single", "runs/choice_single.tres"],
 	["boss_rotation_short", "chapters/rotation_short.tres"], ["price_item_not_stacking", "rooms/price_refresh.tres"],
+	["basic_ability_missing", "characters/roles.tres"], ["ability_description_missing", "characters/roles.tres"],
 ]
 
 

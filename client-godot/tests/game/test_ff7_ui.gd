@@ -321,3 +321,75 @@ func test_description_pass() -> void:
 	var text := FileAccess.get_file_as_string(path)
 	eq(text.count("description = "), 1, "replaced, never doubled")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+## Presentation check (reads res://presentation/, direction only; spec ff7-ui 6): every text colour of the theme reads
+## on the FF7 window: 4.5:1 or better against the window's middle colour (where lists and rows sit), and the default
+## white also against its lighter top band. Disabled text is exempt (WCAG).
+func test_theme_contrast() -> void:
+	const THEME := "res://presentation/demo/ui/ui_theme.tres"
+	if not ResourceLoader.exists(THEME):
+		print("    skipped: no %s" % THEME)
+		return
+	var theme: Theme = load(THEME)
+	var window := theme.get_stylebox("panel", "PanelContainer") as UIWindowStyle
+	check(window != null, "the default panel is the FF7 window style")
+	if window == null:
+		return
+	var label := theme.get_color("font_color", "Label")
+	check(_contrast(label, window.top) >= 4.5, "white on the window's top band: %.2f" % _contrast(label, window.top))
+	for variation in ["Caption", "Muted", "Greyed", "Gold", "Warning", "RarityCommon", "RarityRare", "RarityEpic",
+			"RarityLegendary", "FeedCritical", "FeedBroken", "FeedDown", "FeedUlt", "FeedHeal", "RowNameActive"]:
+		if not theme.has_color("font_color", variation):
+			continue
+		var color := theme.get_color("font_color", variation)
+		var ratio := _contrast(color, window.middle)
+		check(ratio >= 4.5, "%s on the window: %.2f:1" % [variation, ratio])
+
+
+static func _contrast(a: Color, b: Color) -> float:
+	var la := _luminance(a)
+	var lb := _luminance(b)
+	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
+
+
+static func _luminance(color: Color) -> float:
+	var linear := color.srgb_to_linear()
+	return 0.2126 * linear.r + 0.7152 * linear.g + 0.0722 * linear.b
+
+
+class SoundProbe:
+	extends Node
+	var played: Array = []
+
+	func play(sound_name: String) -> void:
+		played.append(sound_name)
+
+
+func test_toast_sound() -> void:
+	var probe := SoundProbe.new()
+	probe.add_to_group("sound_board")
+	host.add_child(probe)
+	_nodes.append(probe)
+	var th := _host([_rule(&"Message.Test.Loud", "loud", {"sound": &"Item"}), _rule(&"Message.Test.Quiet", "quiet")],
+		UIToastSet.Stack.STACK, 4)
+	_verb(&"Message.Test.Loud", &"Verb.Take")
+	_verb(&"Message.Test.Quiet", &"Verb.Take")
+	eq(th.toasts().size(), 2, "both show")
+	eq(probe.played, ["Item"], "a rule's sound plays through the sound board when its toast shows; no sound, no call")
+
+
+## Spec ff7-ui 3.4 (gear_slot_unknown, direction only): the demo Equipment and Armor columns name the Descent's slots,
+## which the fixture runs don't list, so checking the demo menu against fixture content reports them; the demo
+## content itself has none.
+func test_validator_gear_slots() -> void:
+	const MENU := "res://presentation/demo/ui/explore_menu.tscn"
+	if not ResourceLoader.exists(MENU):
+		print("    skipped: no %s" % MENU)
+		return
+	var node: Node = load(MENU).instantiate()
+	var issues: Array[ValidationIssue] = []
+	UIPolicyCheck._check_parts(node, MENU, fixtures(), issues)
+	check(not issues.is_empty() and issues.all(func(issue) -> bool: return issue.code == "gear_slot_unknown"),
+		"columns on slots the content doesn't list: gear_slot_unknown")
+	node.free()
