@@ -253,7 +253,9 @@ func _install_floor(map: FloorMap, pools: Dictionary, clear_start: bool) -> void
 		% [state.run_seed, state.floor_index, state.chapter_id, state.map.cells.size(), state.map.attempts])
 	_run_hooks("on_floor_start")
 	floor_entered.emit(state.floor_index)
-	_send(GameplayMessageRouter.RUN_FLOOR_ENTERED, &"Verb.Enter", &"", state.chapter_id, state.floor_index + 1)
+	var chapter: ChapterDefinition = content.chapters.get(state.chapter_id)
+	_send(GameplayMessageRouter.RUN_FLOOR_ENTERED, &"Verb.Enter", &"", state.chapter_id, state.floor_index + 1, [],
+		{"chapterName": chapter.display_name if chapter != null and chapter.display_name != "" else String(state.chapter_id)})
 
 
 ## After the boss: the next floor, or the run is won after the last one (that happens in _clear_room).
@@ -338,6 +340,16 @@ func can_enter(index: int) -> bool:
 		if state.map.cells[neighbour]["visited"]:
 			return true
 	return false
+
+
+## Spec ff7-ui 2.11: whether the map may show what kind of room `index` is. Item rooms, shops and boss rooms show from
+## next door (Isaac rule); an event room only once visited, unless the map is revealed (the dev reveal today; a
+## room-reveal item in keys-and-gear). Read-only.
+func room_type_known(index: int) -> bool:
+	if state == null or state.map == null or not state.map.cells.has(index):
+		return false
+	var data: Dictionary = state.map.cells[index]
+	return data["visited"] or state.revealed or str(data["content"].get("kind", "")) != "event"
 
 
 func enter_room(index: int) -> String:
@@ -942,6 +954,59 @@ func field_options() -> Array[Dictionary]:
 	return options
 
 
+## Spec ff7-ui 2.9 (read-only): every action ability and use item of every member, for the Use Item and Use Ability
+## screens: [{"slot", "ability", "name", "item" (the item id or &""), "usable" (on the map, now), "targets" (slots a
+## SINGLE_* pick may aim at), "hint" (AbilityHint)}]. The usable ones are exactly field_options().
+func field_catalog() -> Array[Dictionary]:
+	var catalog: Array[Dictionary] = []
+	if not _active():
+		return catalog
+	var options := {}
+	for option in field_options():
+		options["%d/%s" % [option["slot"], option["ability"]]] = option
+	var battle := _field_battle(0)
+	if battle == null:
+		return catalog
+	for member in state.party:
+		var unit := battle.unit_by_id(StringName("P%d" % member["slot"]))
+		if unit == null:
+			continue
+		for ability in unit.action_abilities():
+			var option: Dictionary = options.get("%d/%s" % [member["slot"], ability.ability_tag], {})
+			catalog.append({"slot": member["slot"], "ability": ability.ability_tag, "name": AbilityName.of(ability),
+				"item": unit.item_abilities.get(ability.ability_tag, &""), "usable": not option.is_empty(),
+				"targets": option.get("targets", []), "hint": AbilityHint.of(unit, ability)})
+	battle.free()
+	return catalog
+
+
+## Spec ff7-ui 2.10 (read-only): the member's whole kit for the Status screen, in grant order: [{"name", "kind"
+## ("BASIC", "ABILITY", "ULT", "PASSIVE", "ITEM"), "hint" (AbilityHint)}]. Passives include the helpers every class
+## has (ult charge, break passives); the screen decides what to list.
+func member_kit(slot: int) -> Array[Dictionary]:
+	var kit: Array[Dictionary] = []
+	if not _active() or state.member(slot).is_empty():
+		return kit
+	var battle := _field_battle(0)
+	if battle == null:
+		return kit
+	var unit := battle.unit_by_id(StringName("P%d" % slot))
+	if unit != null:
+		for ability in unit.abilities():
+			var kind := "ABILITY"
+			if unit.item_abilities.has(ability.ability_tag):
+				kind = "ITEM"
+			elif ability.is_ultimate():
+				kind = "ULT"
+			elif ability.is_triggered():
+				kind = "PASSIVE"
+			elif ability.asset_tags.has(&"Ability.Type.Basic"):
+				kind = "BASIC"
+			kit.append({"name": AbilityName.of(ability), "kind": kind, "hint": AbilityHint.of(unit, ability)})
+	battle.free()
+	return kit
+
+
 ## Uses a spell or a held item's ability on the map. Returns [] on success, else [reason, detail].
 func use_field(slot: int, ability_tag: StringName, target_slot: int = 0) -> Array:
 	if not _active() or not pending_battle.is_empty():
@@ -982,6 +1047,47 @@ func _field_battle(seed_value: int, full: bool = false) -> Battle:
 		_stop("field: " + error)
 		return null
 	return battle
+
+
+## Spec ff7-ui 2.10 (F13): the member's stats for the Status screen, read through GAS without changing anything:
+## {"current": {stat: x100}, "base": {stat: x100} (the class at this level, without items or gear), "level", "xp"}.
+## Empty when there is no such member. Nothing is logged.
+func member_stats(slot: int) -> Dictionary:
+	if state == null or state.member(slot).is_empty():
+		return {}
+	var captures := party_capture(false)
+	var bare: Array = []
+	for capture in captures:
+		if int(capture["slot"]) == slot:
+			var copy: Dictionary = capture.duplicate(true)
+			for key in ["skills", "equipmentIds", "items", "useSlots"]:
+				copy[key] = []
+			bare.append(copy)
+	var member := state.member(slot)
+	return {"current": _stats_of(captures, slot), "base": _stats_of(bare, slot), "level": int(member["level"]),
+		"xp": int(member.get("xp", 0))}
+
+
+## The stats shown on the Status screen, in display order.
+const MEMBER_STATS: Array[String] = ["max_hp", "max_mp", "atk", "def", "spd", "crit_rate", "crit_dmg",
+	"weakness_dmg", "toughness_dmg", "broken_dmg", "heal_mult", "heal_taken", "def_pen", "debuff_turns"]
+
+
+func _stats_of(captures: Array, slot: int) -> Dictionary:
+	var battle := Battle.new()
+	battle.name = "StatsBattle"
+	add_child(battle)
+	var stats := {}
+	var snapshot := {"schemaVersion": 2, "battleId": "%s/stats" % state.run_id, "seed": "0", "encounterId": "",
+		"party": captures}
+	if battle.setup_field(snapshot, content) == "":
+		var unit := battle.unit_by_id(StringName("P%d" % slot))
+		if unit != null:
+			for stat_name in MEMBER_STATS:
+				if unit.asc.has_attribute(stat_name):
+					stats[stat_name] = unit.stat(stat_name)
+	battle.free()
+	return stats
 
 
 ## Reads full HP/MP (and ult charge) for every member through GAS (run start).
@@ -1412,6 +1518,15 @@ func _notify(text: String, tags: Array = []) -> void:
 ## Message.Run.ItemTaken for a pickup or purchase (`kind` "take" or "buy") by the member in `slot`.
 func _send_taken(kind: String, slot: int, item: Resource, pickup: Dictionary) -> void:
 	var data := {"targetName": item.display_name}
+	# Spec ff7-ui 2.2: what a pickup toast shows (who got it, its rarity and what it does).
+	var member := state.member(slot)
+	var character: UnitDefinition = content.units.get(member.get("character", &"")) if not member.is_empty() else null
+	if character != null:
+		data["instigatorName"] = character.display_name
+	data["description"] = item.description
+	for tag in item.tags:
+		if String(tag).begins_with("Item.Rarity."):
+			data["rarity"] = String(tag).trim_prefix("Item.Rarity.")
 	if pickup.has("priceItem"):
 		data["priceItem"] = String(pickup["priceItem"])
 	_send(GameplayMessageRouter.RUN_ITEM_TAKEN, &"Verb.Buy" if kind == "buy" else &"Verb.Take",

@@ -34,17 +34,24 @@ const BATTLE_RESISTED: StringName = &"Message.Battle.Resisted"
 const BATTLE_DRAINED: StringName = &"Message.Battle.Drained"
 const BATTLE_TURN_SKIPPED: StringName = &"Message.Battle.TurnSkipped"
 const BATTLE_UNIT_DIED: StringName = &"Message.Battle.UnitDied"
+## Spec ff7-ui 2.2: a unit used an action ability (the battle feed's "X used Y").
+const BATTLE_ABILITY_USED: StringName = &"Message.Battle.AbilityUsed"
 const UI_REFUSED: StringName = &"Message.Ui.Refused"
+## Spec ff7-ui 2.4 / 2.6 (presentation to presentation): what the battle hint window shows (data: name, cost,
+## description, target, usage; or prompt; empty data clears it), and a party row's ULT button press (instigator: the
+## unit) for the command window.
+const UI_HINT: StringName = &"Message.Ui.Hint"
+const UI_ULT_PRESSED: StringName = &"Message.Ui.UltPressed"
 
 ## Every channel and verb the code sends (the tag checkpoint, sync_tags.tscn, checks them against the registry).
 const CHANNELS: Array[StringName] = [NOTIFICATION, RUN_STARTED, RUN_ENDED, RUN_FLOOR_ENTERED, RUN_LEVEL_UP,
 	RUN_ITEM_TAKEN, RUN_ITEM_DROPPED, RUN_CHOICE, BATTLE_STARTED, BATTLE_ENDED, BATTLE_DAMAGE, BATTLE_BROKEN,
 	BATTLE_RECOVERED, BATTLE_DOWNED, BATTLE_ONE_MORE, BATTLE_INTERRUPT, BATTLE_PHASE, BATTLE_RESISTED, BATTLE_DRAINED,
-	BATTLE_TURN_SKIPPED, BATTLE_UNIT_DIED, UI_REFUSED]
+	BATTLE_TURN_SKIPPED, BATTLE_UNIT_DIED, BATTLE_ABILITY_USED, UI_REFUSED, UI_HINT, UI_ULT_PRESSED]
 const VERBS: Array[StringName] = [&"Verb.Start", &"Verb.Win", &"Verb.Lose", &"Verb.Stop", &"Verb.Enter",
 	&"Verb.LevelUp", &"Verb.Take", &"Verb.Buy", &"Verb.Drop", &"Verb.Choose", &"Verb.Damage", &"Verb.Break",
 	&"Verb.Recover", &"Verb.Down", &"Verb.OneMore", &"Verb.Interrupt", &"Verb.Phase", &"Verb.Resist", &"Verb.Drain",
-	&"Verb.Skip", &"Verb.Die", &"Verb.Refuse"]
+	&"Verb.Skip", &"Verb.Die", &"Verb.Use", &"Verb.Refuse", &"Verb.Hint", &"Verb.Press"]
 const NOTIFICATION_TAGS: Array[StringName] = [&"Notification.Warning", &"Notification.Error"]
 
 ## channel -> Array of entries {callback, mode, payload_type, owner: WeakRef or null, removed}

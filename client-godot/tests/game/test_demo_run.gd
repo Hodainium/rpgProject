@@ -139,7 +139,7 @@ func test_demo_battle_speed_keeps_combat() -> void:
 
 
 ## Plays the first battle next to the start of the first seed that has one: `speed` 0 skips animations, else the
-## battle panel's Skip is off and Speed is pressed until Engine.time_scale is `speed`. Never writes settings.
+## command window's Skip is off and Speed is pressed until Engine.time_scale is `speed`. Never writes settings.
 func _speed_run(speed: float) -> Dictionary:
 	var result := {"error": "", "finalHash": "", "runHash": "", "timeScale": 0.0, "skipAll": true}
 	var game: GameMain = load("res://game/game_main.tscn").instantiate()
@@ -170,7 +170,7 @@ func _speed_run(speed: float) -> Dictionary:
 				if skip != null:
 					skip.button_pressed = false
 				for press in 3:
-					if faster == null or faster.text == "%d×" % int(speed):
+					if faster == null or faster.text.ends_with("%d×" % int(speed)):
 						break
 					faster.pressed.emit()
 			battle.turn_started.connect(func(_unit, _turn) -> void:

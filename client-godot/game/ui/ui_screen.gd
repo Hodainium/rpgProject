@@ -79,7 +79,14 @@ func _ui_activate() -> void:
 	if not focus_on_activate.is_empty():
 		var target := get_node_or_null(focus_on_activate) as Control
 		if target != null and target.is_visible_in_tree():
-			target.grab_focus.call_deferred()
+			_focus_later.call_deferred(target)
+
+
+## The focus lands a frame later; by then a rule may have taken the screen (or its button) out of the tree.
+## Untyped on purpose: a freed target can't be passed as a typed Control.
+static func _focus_later(target: Variant) -> void:
+	if is_instance_valid(target) and target.is_inside_tree() and target.is_visible_in_tree():
+		target.grab_focus()
 
 
 func _ui_deactivate() -> void:

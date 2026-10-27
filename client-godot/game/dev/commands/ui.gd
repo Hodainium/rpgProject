@@ -1,7 +1,7 @@
 ## Spec ui-framework 2.6: the UI without a mouse (console parity). `ui` prints the state tags, each layer's stack and
 ## each slot's panels; `ui push <scene path> [layer]` opens a screen; `ui back` is Esc; `ui press <name or text> [n]`
-## presses the n-th (default first) visible, enabled button whose node name or text matches, so window scripts can
-## drive menus (`ui press Details 3`, `ui press "Start run"`).
+## presses the n-th (default first) visible, enabled button whose node name, text or "ui_text" meta matches, so window
+## scripts can drive menus (`ui press Details 3`, `ui press "Start run"`).
 extends DevCommand
 
 
@@ -51,7 +51,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 static func _buttons(root: Node, key: String) -> Array[BaseButton]:
 	var found: Array[BaseButton] = []
 	if root is BaseButton and root.is_visible_in_tree() and not root.disabled:
-		if String(root.name) == key or (root is Button and root.text == key):
+		# A button that draws its label in a child Label (list entries) names it in the "ui_text" meta.
+		if String(root.name) == key or (root is Button and root.text == key) or str(root.get_meta("ui_text", "")) == key:
 			found.append(root)
 	for child in root.get_children():
 		found.append_array(_buttons(child, key))

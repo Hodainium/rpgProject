@@ -69,9 +69,36 @@ func on_spd_changed(unit: BattleUnit, old_spd: float, new_spd: float) -> void:
 	av[unit] = av[unit] * int(old_spd) / int(new_spd)
 
 
+## Spec ff7-ui 2.6 (presentation only, never called by Battle.run): the next `count` turns if nothing changes, as
+## [{"unit": BattleUnit, "av": int}] where av is the action value from now until that turn. Works on a copy of the
+## table with the same rules as next_actor / elapse / reset, so the live order is never touched.
+func preview(count: int) -> Array:
+	var table := av.duplicate()
+	var result: Array = []
+	var elapsed_total := 0
+	for i in count:
+		var best: BattleUnit = null
+		for unit in table:
+			if best == null or _before_in(table, unit, best):
+				best = unit
+		if best == null:
+			break
+		var elapsed: int = table[best]
+		elapsed_total += elapsed
+		result.append({"unit": best, "av": elapsed_total})
+		for unit in table:
+			table[unit] -= elapsed
+		table[best] = full_av(best)
+	return result
+
+
 func _goes_before(a: BattleUnit, b: BattleUnit) -> bool:
-	if av[a] != av[b]:
-		return av[a] < av[b]
+	return _before_in(av, a, b)
+
+
+static func _before_in(table: Dictionary, a: BattleUnit, b: BattleUnit) -> bool:
+	if table[a] != table[b]:
+		return table[a] < table[b]
 	if a.side != b.side:
 		return a.side == BattleUnit.Side.PARTY
 	return a.slot < b.slot

@@ -28,9 +28,11 @@ const ROLE_BUFF: StringName = &"Ability.Role.Buff"
 const ROLE_CLEANSE: StringName = &"Ability.Role.Cleanse"
 ## Restores MP (Ether, Honey Cake). Auto never picks it on its own.
 const ROLE_RESTORE_MP: StringName = &"Ability.Role.RestoreMP"
+## Spec ff7-ui F3: Block (guard until the next turn). Auto never picks it; it is the player's call.
+const ROLE_GUARD: StringName = &"Ability.Role.Guard"
 ## Every role an ability may carry (the validator rejects others).
 const ROLES: Array[StringName] = [ROLE_DAMAGE, ROLE_DEBUFF, ROLE_DISPEL, ROLE_HEAL, ROLE_REVIVE, ROLE_BUFF, ROLE_CLEANSE,
-	ROLE_RESTORE_MP]
+	ROLE_RESTORE_MP, ROLE_GUARD]
 const BUFF_TAG: String = "Status.Buff"
 
 
@@ -298,7 +300,7 @@ func _best_ult_target(battle: Battle, unit: BattleUnit, ability: BattleAbility) 
 func _activatable(unit: BattleUnit) -> Array[BattleAbility]:
 	var result: Array[BattleAbility] = []
 	for ability in unit.action_abilities():
-		if unit.asc.can_activate_ability(ability) and _allowed(unit, ability):
+		if unit.asc.can_activate_ability(ability) and _allowed(unit, ability) and not ability.asset_tags.has(ROLE_GUARD):
 			result.append(ability)
 	return result
 

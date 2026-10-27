@@ -107,6 +107,7 @@ func _check_unit(unit: UnitDefinition) -> void:
 	if unit is CharacterDefinition:
 		for index in unit.learnable_skills.size():
 			_check_skill_scene(unit.learnable_skills[index], "%s::learnable_skills[%d]" % [path, index], unit.id, true)
+		_check_basic(unit)
 	if unit is EnemyDefinition:
 		for index in unit.variants.size():
 			if unit.variants[index] == null:
@@ -263,6 +264,25 @@ func _check_skill_scene(scene: PackedScene, path: String, owner: StringName, par
 		_check_roles(scene, path, party)
 
 
+## Spec ff7-ui F4: Attack is the class's ability tagged Ability.Type.Basic: none hides Attack (basic_ability_missing,
+## warning), more than one is ambiguous (basic_ability_multiple, error).
+func _check_basic(unit: CharacterDefinition) -> void:
+	var basics := PackedStringArray()
+	for scene in unit.abilities:
+		var ability := scene.instantiate() as BattleAbility if scene != null else null
+		if ability == null:
+			continue
+		if ability.asset_tags.has(&"Ability.Type.Basic"):
+			basics.append(String(ability.ability_tag))
+		ability.free()
+	var path := unit.resource_path + "::abilities"
+	if basics.is_empty():
+		_warning("basic_ability_missing", path, "%s has no Ability.Type.Basic ability: the battle's Attack is hidden" % unit.id)
+	elif basics.size() > 1:
+		_error("basic_ability_multiple", path, "%s has %d Ability.Type.Basic abilities (%s): Attack needs one" % [unit.id,
+			basics.size(), ", ".join(basics)])
+
+
 ## Spec ult-interrupts: an ult (asset tag Ability.Type.Ultimate) is cast out of turn, so it can't be a triggered
 ## passive, and without a cost (ult charge) it could fire at every window.
 func _check_ult(scene: PackedScene, path: String) -> void:
@@ -299,6 +319,10 @@ func _check_roles(scene: PackedScene, path: String, party: bool) -> void:
 	if ability == null:
 		return
 	var roles: Array = ability.asset_tags.filter(func(tag) -> bool: return String(tag).begins_with(AutoPolicy.ROLE_PREFIX))
+	# Spec ff7-ui F5: the battle hint and the Status screen show it (game/tools/build_description_pass.tscn drafts one).
+	if party and not party_checked and ability.description == "" and not ability.is_triggered():
+		_warning("ability_description_missing", path, "%s has no description (game/tools/build_description_pass.tscn drafts one)"
+			% ability.ability_tag)
 	if party and roles.is_empty() and not ability.is_triggered():
 		_error("role_missing", path, "%s has no %s* tag: Auto can't tell what it does (game/tools/build_role_pass.tscn proposes one)"
 			% [ability.ability_tag, AutoPolicy.ROLE_PREFIX])
@@ -311,7 +335,8 @@ func _check_roles(scene: PackedScene, path: String, party: bool) -> void:
 			problems.append("%s is not a role (%s)" % [role, ", ".join(AutoPolicy.ROLES)])
 		elif role in [AutoPolicy.ROLE_DAMAGE, AutoPolicy.ROLE_DEBUFF, AutoPolicy.ROLE_DISPEL] and not ability.targets_enemies():
 			problems.append("%s on a move that doesn't target enemies" % role)
-		elif role in [AutoPolicy.ROLE_HEAL, AutoPolicy.ROLE_BUFF, AutoPolicy.ROLE_CLEANSE, AutoPolicy.ROLE_RESTORE_MP] and ability.targets_enemies():
+		elif role in [AutoPolicy.ROLE_HEAL, AutoPolicy.ROLE_BUFF, AutoPolicy.ROLE_CLEANSE, AutoPolicy.ROLE_RESTORE_MP,
+				AutoPolicy.ROLE_GUARD] and ability.targets_enemies():
 			problems.append("%s on a move that targets enemies" % role)
 	if ability.targets_dead() and not roles.has(AutoPolicy.ROLE_REVIVE):
 		problems.append("targets dead allies but has no %s" % AutoPolicy.ROLE_REVIVE)

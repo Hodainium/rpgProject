@@ -70,6 +70,15 @@ func pending_interrupts() -> int:
 	return _interrupts.size()
 
 
+## Spec ff7-ui 2.5 (read-only, for the party window and the turn order): the queued presses, oldest first, as copies
+## {"unit", "ability", "target"}.
+func pending_ults() -> Array[Dictionary]:
+	var presses: Array[Dictionary] = []
+	for press in _interrupts:
+		presses.append(press.duplicate())
+	return presses
+
+
 ## BETWEEN window: the next queued press that can fire now, else (Auto) the autopilot's ult, or {}. Never waits.
 func interrupt(battle: Battle) -> Dictionary:
 	_from_auto = false

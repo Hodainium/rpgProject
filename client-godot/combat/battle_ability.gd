@@ -32,6 +32,9 @@ const ULTIMATE_TAG: StringName = &"Ability.Type.Ultimate"
 @export var executions: Array[ExecutionRow] = []
 ## Required. Its `execute(&"<row id>")` method-track keys are the source of truth for the execution sequence.
 @export var animation: Animation
+## Spec ff7-ui 2.6: what the ability does, for the player (battle hints, the Status screen). Text only: never read by
+## combat, never in a log or the state hash.
+@export_multiline var description: String = ""
 
 
 ## True when this targeting needs a target unit id in the action.

@@ -2,7 +2,8 @@
 ## ActionRecorder does. It never touches the battle RNG (the player's choices are inputs, not simulation).
 ##
 ## Policy: each unit rotates through its own abilities in grant order (so every ability gets used), skipping ones
-## that can't activate; the target is picked by turn number among the valid candidates (slot order).
+## that can't activate and Block (Ability.Role.Guard, spec ff7-ui F3: the player's call, never a stand-in's); the
+## target is picked by turn number among the valid candidates (slot order).
 ## Ults (spec ult-interrupts): a party unit whose ult can activate casts it, units in odd slots at the BETWEEN window and
 ## units in even slots at a DECISION window (any member's), so one battle covers both; each unit cycles its ults.
 class_name ScriptedController
@@ -17,11 +18,14 @@ func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 	var ult := _ready_ult(battle, 0)
 	if not ult.is_empty():
 		return ult
-	var abilities := unit.action_abilities()
+	var abilities := unit.action_abilities().filter(
+		func(ability: BattleAbility) -> bool: return not ability.asset_tags.has(AutoPolicy.ROLE_GUARD))
+	if abilities.is_empty():
+		return {"ability": &"", "target": &""}
 	var used: int = _uses.get(unit.unit_id, 0)
 	_uses[unit.unit_id] = used + 1
 	for offset in abilities.size():
-		var ability := abilities[(used + offset) % abilities.size()]
+		var ability: BattleAbility = abilities[(used + offset) % abilities.size()]
 		if not unit.asc.can_activate_ability(ability):
 			continue
 		var target: StringName = &""

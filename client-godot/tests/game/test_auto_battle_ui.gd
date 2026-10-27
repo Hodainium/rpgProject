@@ -34,8 +34,8 @@ func test_panel_auto_button() -> void:
 	eq((await console.execute("spawn fixture.encounter.pack"))["ok"], true, "a battle starts")
 	await _until(func() -> bool: return game.recorder != null and game.recorder.waiting_for != &"")
 	var auto := game.find_child("Auto", true, false) as BaseButton
-	var actions := (auto.owner.get_node_or_null("%Actions") if auto != null else null) as Container  # the field panel has an Actions list too
-	check(auto != null and actions != null, "the battle panel is up")
+	var actions := (auto.owner.get_node_or_null("%Entries") if auto != null else null) as Container  # the command window's list (spec ff7-ui 2.4)
+	check(auto != null and actions != null, "the command window is up")
 	if auto == null or actions == null:
 		return
 	check(not auto.button_pressed, "the button shows Auto off")
@@ -53,7 +53,7 @@ func test_panel_auto_button() -> void:
 	eq((await console.execute("spawn fixture.encounter.pack"))["ok"], true, "a second battle starts")
 	await _until(func() -> bool: return game.recorder != recorder and game.recorder.auto_picks > 0)
 	auto = game.find_child("Auto", true, false) as BaseButton
-	actions = (auto.owner.get_node_or_null("%Actions") if auto != null else null) as Container
+	actions = (auto.owner.get_node_or_null("%Entries") if auto != null else null) as Container
 	check(auto != null and auto.button_pressed, "the button shows Auto still on in the next battle")
 	if auto == null:
 		return

@@ -360,7 +360,8 @@ func test_tool_parity() -> void:
 		"seed runner": "seeds", "screenshot": "shot", "party panel Equip": "wear", "party panel Unequip": "unwear",
 		"animation preview": "anim", "battle panel status line": "status", "menu run picker": "new",
 		"seed report --play": "autorun", "UI buttons, Back and screens (spec ui-framework)": "ui",
-		"gameplay message log (spec gameplay-messages)": "messages", "battle panel Auto (spec auto-battle)": "auto"}
+		"gameplay message log (spec gameplay-messages)": "messages", "battle panel Auto (spec auto-battle)": "auto",
+		"Tab: big minimap and the floor toast (spec ff7-ui)": "tab"}
 	for action in pairs:
 		check(console.commands.has(pairs[action]), "%s has the command %s" % [action, pairs[action]])
 	# The inspector grid commits *_result() through undo/redo; the console applies the same functions.

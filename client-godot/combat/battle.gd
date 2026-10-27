@@ -39,6 +39,9 @@ signal phase_changed(unit_id: StringName, phase: int)
 signal action_delayed(unit_id: StringName, percent: int)
 ## Spec content-pass H7: an enemy hit a party unit's weakness (the attacker is owed a One More).
 signal unit_downed(unit_id: StringName, by_id: StringName)
+## Spec ff7-ui 2.2 (read-only, for the battle feed): an action ability was activated by a unit, at a target ("" when
+## it has none). Emitted after activation; nothing in combat listens.
+signal ability_activated(unit_id: StringName, ability_tag: StringName, target_id: StringName)
 
 const TURN_LIMIT: int = 1000
 const ONGOING: String = "Ongoing"
@@ -1005,6 +1008,9 @@ func _activate(actor: BattleUnit, ability: BattleAbility, target: BattleUnit) ->
 	var payload := _expand_targets(actor, ability, target)
 	payload["battle"] = self
 	payload["unit"] = actor
+	# Before activation, so the feed's "X used Y" comes before the hits it causes (activation awaits the animation).
+	if actor.asc.can_activate_ability(ability):
+		ability_activated.emit(actor.unit_id, tag, target.unit_id if target != null else &"")
 	var activated: bool = await ability.try_activate(payload)
 	if activated and not field_mode:
 		var used := {"source": actor, "target": actor, "ability": tag}

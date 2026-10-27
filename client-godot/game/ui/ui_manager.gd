@@ -8,6 +8,8 @@ extends Node
 ## A layer's stack changed (push, pop, remove, clear).
 signal stack_changed(layer: StringName)
 
+## The layer whose screens are menus over the run (spec ff7-ui 2.12: while one is open the state has UI.State.Run.Menu).
+const GAME_MENU: StringName = &"UI.Layer.GameMenu"
 ## Run signals after which the UI state may differ.
 const RUN_SIGNALS: Array[StringName] = [&"floor_entered", &"room_entered", &"room_cleared", &"battle_requested",
 	&"battle_started", &"battle_finished", &"event_page_shown", &"pickups_shown", &"party_changed", &"run_ended",
@@ -45,6 +47,9 @@ func setup(main: GameMain, ui_policy: UIPolicy, parent: Node) -> String:
 		_stacks[stack.layer] = stack
 	_register_points(layout)
 	context = UIContext.new(main, self)
+	stack_changed.connect(func(layer: StringName):
+		if layer == GAME_MENU:
+			refresh_state())
 	if main != null:
 		main.mode_changed.connect(func(_mode): refresh_state())
 		main.run_changed.connect(_on_run_changed)
@@ -104,6 +109,9 @@ func back() -> bool:
 		if top.handles_back():
 			return true
 		if not stack.back_pops or top.owned_by_rule:
+			# Spec ff7-ui 2.4: a HUD panel with pages of its own (the battle command window) steps back first.
+			if _panels_handle_back():
+				return true
 			break
 		remove(top)
 		return true
@@ -111,6 +119,14 @@ func back() -> bool:
 		for rule in policy.back_screens:
 			if rule != null and TagMatch.matches(rule.active_when, context.state):
 				return push(rule.layer, rule.scene) != null
+	return false
+
+
+func _panels_handle_back() -> bool:
+	for placed in _panels.values():
+		for panel in placed.values():
+			if panel is UIScreen and is_instance_valid(panel) and panel.active and panel.handles_back():
+				return true
 	return false
 
 
@@ -173,6 +189,15 @@ func confirm(text: String, yes_label: String = "Yes", no_label: String = "No") -
 	return answer
 
 
+## The extension point registered for `slot` (the first one), or null. Lets a panel make room for another (spec
+## ff7-ui 2.11: the Tab floor toast centres left of the grown map).
+func point(slot: StringName) -> UIExtensionPoint:
+	for candidate in _points:
+		if _live(candidate) and candidate.slot == slot:
+			return candidate
+	return null
+
+
 ## Each layer's stack and each slot's panels, for the console's `ui` command.
 func dump() -> String:
 	var lines := PackedStringArray(["state: " + ", ".join(context.state)])
@@ -206,6 +231,10 @@ func apply_now() -> void:
 	if context == null or not is_instance_valid(layout):
 		return
 	var tags := UIState.compute(_main.mode if _main != null else "menu", context.run)
+	var menu: UILayerStack = _stacks.get(GAME_MENU)
+	if tags.has(UIState.RUN) and menu != null and menu.top() != null:
+		tags.append(UIState.MENU_OPEN)
+		tags.sort_custom(func(a, b) -> bool: return String(a) < String(b))
 	var changed := tags != context.state
 	context.state = tags
 	for rule in policy.screens:

@@ -93,3 +93,43 @@ func test_spd_buff_in_battle_rescales_turn_order() -> void:
 	poisoner.asc.apply_gameplay_effect(load(FIXTURES + "effects/haste.tres"))
 	eq(poisoner.stat(BattleUnit.SPD), 11460, "SPD 95.5 + 20% = 114.6")
 	eq(battle.turn_manager.av[poisoner], before * 9550 / 11460, "remaining AV rescaled")
+
+
+## Spec ff7-ui 2.6: the turn order panel's look-ahead never touches the live table or the battle's state.
+func test_turn_preview_pure() -> void:
+	var battle := new_battle(squad_snapshot())
+	var before_hash := battle.state_hash()
+	var before_av: Dictionary = battle.turn_manager.av.duplicate()
+	var next := battle.turn_manager.preview(7)
+	eq(next.size(), 7, "seven upcoming turns")
+	eq(battle.turn_manager.av, before_av, "the live AV table is unchanged")
+	eq(battle.state_hash(), before_hash, "the battle's state hash is unchanged")
+	var last := -1
+	for entry in next:
+		check(entry["av"] >= last, "action values never go down along the preview")
+		last = entry["av"]
+
+
+## Spec ff7-ui 2.6: with no speed changes the preview is the order the kernel's own turn steps produce.
+func test_turn_preview_matches() -> void:
+	var battle := new_battle(squad_snapshot())
+	var turns := battle.turn_manager
+	var predicted := turns.preview(12).map(func(entry) -> String: return String(entry["unit"].unit_id))
+	var actual: Array = []
+	for i in 12:
+		var actor := turns.next_actor()
+		turns.elapse(actor)
+		turns.reset(actor)
+		actual.append(String(actor.unit_id))
+	eq(predicted, actual, "preview(12) == the next 12 actors")
+
+
+func test_turn_preview_av_from_now() -> void:
+	var a := _fake("A", BattleUnit.Side.PARTY, 1, 10000)
+	var b := _fake("B", BattleUnit.Side.ENEMY, 1, 16000)
+	var turns := TurnManager.new()
+	turns.add(a)
+	turns.add(b)
+	var next := turns.preview(3)
+	eq(next.map(func(entry) -> String: return String(entry["unit"].unit_id)), ["B", "A", "B"], "B, A, B")
+	eq(next.map(func(entry) -> int: return entry["av"]), [6250, 10000, 12500], "AV counted from now")

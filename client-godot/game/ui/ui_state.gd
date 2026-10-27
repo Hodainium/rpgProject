@@ -17,9 +17,12 @@ const WON: StringName = &"UI.State.End.Won"
 const LOST: StringName = &"UI.State.End.Lost"
 const STOPPED: StringName = &"UI.State.End.Stopped"
 const SANDBOX: StringName = &"UI.State.Sandbox"
+## Spec ff7-ui 2.12: a menu screen (the GameMenu layer) is open over the run; the HUD panels it would cover hide.
+## Set by UIManager from its stacks (not from the run), so compute() never gives it.
+const MENU_OPEN: StringName = &"UI.State.Run.Menu"
 ## Every tag this file can give (for the tag checkpoint).
 const ALL: Array[StringName] = [MENU, RUN, MAP, BATTLE, EVENT, REST, PICKUP, STAIRS, CHOICE, END, WON, LOST, STOPPED,
-	SANDBOX]
+	SANDBOX, MENU_OPEN]
 
 
 ## The tags for GameMain's mode ("menu", "run", "end") and `run`, sorted.

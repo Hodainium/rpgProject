@@ -213,3 +213,8 @@ from C#.**
   panels that redraw state stay on the run's signals. A kill feed or toast stack is a listener + a policy entry.
   Listeners never change run or battle state; the battle kernel never broadcasts (`BattleMessages` bridges the
   battles `GameMain` shows). New channels are `Message.*` tags (`sync_tags`); `messages on` logs them.
+- **Spec ff7-ui: build from the shared parts** (`specs/ff7-ui.md` 2.12). Look comes from `ui_theme.tres` (FF7 windows
+  are `UIWindowStyle`); a new toast is a rule in a `UIToastSet` (`run_toasts.tres`, `battle_feed.tres`), never code; a
+  battle panel extends `UIBattlePanel`; a menu screen inherits `menu_frame.tscn` (Back top left, description window
+  on top, characters at the bottom) and reuses `list_entry`, `member_row`, `map_cell`, `description_window`; hover
+  previews, click selects. Esc reaches HUD panels with pages (`handles_back`). Console: `tab on|off` holds Tab.

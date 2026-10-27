@@ -39,6 +39,13 @@ func attach(battle: Battle, encounter_id: StringName, router: GameplayMessageRou
 		_send(GameplayMessageRouter.BATTLE_DRAINED, &"Verb.Drain", source, target, amount))
 	battle.turn_skipped.connect(func(unit):
 		_send(GameplayMessageRouter.BATTLE_TURN_SKIPPED, &"Verb.Skip", unit, unit))
+	# Spec ff7-ui 2.2: "X used Y" for the battle feed; tags are the ability's asset tags (an ult carries
+	# Ability.Type.Ultimate, so a feed rule can leave ults to Message.Battle.Interrupt).
+	battle.ability_activated.connect(func(unit, ability_tag, target):
+		var actor := _battle.unit_by_id(unit)
+		var ability := actor.ability_by_tag(ability_tag) if actor != null else null
+		_send(GameplayMessageRouter.BATTLE_ABILITY_USED, &"Verb.Use", unit, target, 0,
+			ability.asset_tags if ability != null else [], {"abilityName": AbilityName.of_tag(actor, ability_tag)}))
 	battle.unit_died.connect(func(unit):
 		_send(GameplayMessageRouter.BATTLE_UNIT_DIED, &"Verb.Die", &"", unit))
 	battle.battle_ended.connect(func(outcome: String, _hash):
