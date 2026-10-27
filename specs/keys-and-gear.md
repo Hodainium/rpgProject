@@ -1,6 +1,7 @@
 # Spec: keys-and-gear (slice 1f2)
 
-Status: ✅ Approved 2026-10-27 (all decisions in section 7; D4 deferred, D11 widened to every bot) · Date: 2026-10-27 ·
+Status: ✅ Done 2026-10-27 (synced to the build; remaining work at the end of 6) · all decisions approved
+2026-10-27 (section 7; D4 deferred, D11 widened to every bot) · Date: 2026-10-27 ·
 Roadmap: slice 1f2, after 1f `ff7-ui` (done) and before 2 `run-checkout`.
 Builds on `specs/ff7-ui.md` (the screens, map icons, toasts and follow-ups in its section 6), `specs/game-skeleton.md`
 (run state, run log, `RunSeeds` streams, outcomes and conditions), `specs/item-pass.md` 3.5 (armor inventory,
@@ -80,22 +81,26 @@ are.
 
 ### 2.2 Entering a locked room
 ```
-locked(cell) = cell's special_tag ∈ chapter.floor_rules.locked_room_tags
+locked(cell) = cell's special_tag ∈ chapter.floor_gen_rules.locked_room_tags
+               and the run uses keys (RunStructure.uses_keys(): key or chest drops, or starting keys; the one-floor
+                   run shares the Cellar's rules and never locks)
                and floor_index ≥ RunStructure.unlocked_floors (Isaac: floor 1 open, D3)
-               and not cell["opened"]
+               and not cell["opened"] and not visited, and never in a sandbox
 can_enter(cell)  unchanged (Isaac adjacency); a locked cell is still "enterable" — the key is checked in enter_room
 enter_room(cell):
   locked and no golden key and keys = 0 → refused "Locked: you need a key" (warning toast, nothing logged)
   locked → golden key ? free : keys −= 1;  cell["opened"] = true
   log {"type": "enter_room", "floor", "cell", "unlock": "key" | "golden"}   ("unlock" only when it opened a lock)
   plays the room as today
-map_cell / big map: lock icon and "NEEDS A KEY" while locked(cell); RunController.room_locked(cell) (read-only)
+map_cell / big map: MapCells sets kind "lock" (and "locked": true) while RunController.room_locked(cell) (read-only),
+  so the existing lock icon, LOCKED name and "Locked (needs a key)" text show with no change to the map files
 next_floor → golden_key = false (Isaac: the golden key lasts one floor); keys and chests carry over
 ```
 
 ### 2.3 Opening a chest (any time on the map)
 ```
-Use Item screen lists chests first (D9): "Wooden Chest · OPEN" / "Gilded Chest · OPEN (1 key)"
+Use Item screen lists chests first (D9): "Wooden Chest · OPEN" / "Gilded Chest · OPEN · 1 KEY" (OPEN when free:
+  golden key or Run.Chest.NoKey); hover: CHEST, its description and, when it can't open, why; refused → refuse line
 open_chest(index):
   refused when: in a battle or event, no such chest, a Gilded Chest with no key, no golden key and no Lockpick tag
   log {"type": "open_chest", "floor", "chest": id, "serial": n}
@@ -113,7 +118,8 @@ members" is D6.
 ```
 gear screen SWAP (the piece is worn by another member B, the screen is on member A, slot tag T):
   swap_gear(A, piece):
-    checks, nothing changed yet: A and B exist, B wears piece in T, A ≠ B, not in a battle
+    checks, nothing changed yet: A exists and doesn't already wear piece; B = the first other member wearing piece in T
+    (starting loadouts can give several members the same piece, e.g. each class's Iron Sword); not in a battle
     log {"type": "swap_gear", "floor", "slot": A, "from": B, "equipment": piece}
     A's piece in T (if any) → B's T;  piece → A's T     (nothing passes through the bag)
 EQUIP (from the bag) and TAKE OFF stay equip / unequip, unchanged
@@ -136,15 +142,19 @@ dead members can give and receive (like equip); the 1f greyed text goes away
 BattleAbility.usage(): Field and/or Battle from asset_tags Ability.Usage.Field / Ability.Usage.Battle;
                        neither tag → today's rule (no enemy target and the query allows State.Infield → both,
                        else Battle) so fixtures and untagged content keep working (validator warns)
-refused in battle: Field-only abilities never become legal actions (the battle's action list and ult windows skip
-                   them; a logged one is ActionNotLegal → 2002 in replay)
-refused on the map: Battle-only abilities never appear in field_options() and Battle.perform refuses them in field mode
+enforced once, in CombatASC.can_activate_ability (only for tagged abilities): Field-only needs State.Infield,
+                   Battle-only needs it absent. Every caller (turn actions, ult windows, enemy brains, Auto, field mode)
+                   goes through it.
+refused in battle: a Field-only ability is never a legal action; a logged one is IllegalAbility → 2002 in replay
+refused on the map: Battle-only abilities never appear in field_options() and Battle.perform refuses them (IllegalAbility)
 AbilityHint.usage → [Field Only] | [Battles Only] | [Field and Battles] from usage(); the screens are unchanged
 Auto / smart policy: read the same legality, so nothing extra
 validator: usage_missing (warning), usage_mismatch (error: Field tag but the query forbids State.Infield, Battle tag
            but the query requires it, Field-only with an enemy target)
-build_usage_pass.tscn: drafts tags (enemy target or forbids State.Infield → Battle; requires State.Infield → Field;
-           else both) into a report; writes nothing until you approve (as build_role_pass)
+build_usage_pass.tscn: drafts tags (enemy target, an ult or forbids State.Infield → Battle; requires State.Infield
+           → Field; else both) into a report; --write adds them as a text edit (as build_role_pass). Applied to all 62
+           demo party abilities (2026-10-27), with Provoke, Anthem, Fortify, Fracture Field and Lingering Malady
+           changed to Battle-only by hand (a taunt and turn-based buffs that do nothing on the map)
 ```
 
 ### 2.7 Room reveal
@@ -174,7 +184,8 @@ Runs that never see a key or chest hash exactly as before.
 ### 3.2 System code
 - **`RunController`:**
   - **Methods:** `add_keys`, `give_golden_key`, `give_chest`, `room_locked`, `open_chest`, `swap_gear`, `move_item`,
-    `chests()` (read-only list for the screen).
+    `give_equipment_from`, `reveal_rooms`, `party_hp_at_least`, `chests()` (read-only list for the screen and bots:
+    index, name, `needs_key`, `free`, `can_open`, `why`), and the cheats `dev_keys`, `dev_golden_key`, `dev_chest`.
   - **Changes:** `enter_room` gets the lock check; `_clear_room` gets the drops; `next_floor` drops the golden key;
     `field_options` and `field_catalog` use `usage()`.
 - **`FloorGenRules`:** `locked_room_tags: Array[StringName]` (gas::tag, default empty).
@@ -182,6 +193,8 @@ Runs that never see a key or chest hash exactly as before.
   - **Key and chest fields:** `starting_keys`, `unlocked_floors`, and `key_drop_chance`, `golden_key_chance` and
     `chest_drop_chance` (typed %, stored ×100).
   - **Chest table:** `chest_drops: Array[ChestDrop]` (`chest`, `weight`).
+  - **Helpers:** `uses_keys()` (any key or chest drop, or starting keys) and `MAX_KEYS` (99).
+- **`ContentIndex.chests`:** chests are indexed by id like other content (`chest <id>`, `open_chest`).
 - **New content types (`game/defs/`):**
   - **`ChestDefinition`:** `id`, `display_name`, `description`, `icon`, `needs_key`, `rewards: Array[ChestReward]`.
   - **`ChestReward`:** `weight`, `outcomes: Array[RunOutcome]`, `rolls_min` and `rolls_max` (repeat the outcomes;
@@ -202,7 +215,10 @@ Runs that never see a key or chest hash exactly as before.
   `RUN_CHEST_FOUND`, `RUN_CHEST_OPENED`. Refused entry uses the existing warning toast path.
 - **Tools:**
   - **Validator checks:** `usage_missing`, `usage_mismatch`, `bad_chest` (no rewards, or a weight ≤ 0),
-    `locked_room_tag_unknown`, `run_modifier_unknown`.
+    `locked_room_tag_bad` (a boss, start or normal room tag), `locked_room_tag_unknown` (not a special room tag),
+    `run_modifier_unknown`, and `inline_effect`: a granted effect (item or equipment `grants`) must be its own `.tres`,
+    because the state hash names active effects by file and a battle with an inline one can't replay (found when the
+    new gear was first written with inline effects).
   - **Proposal pass:** `game/tools/build_usage_pass.tscn`.
 - **Dev:**
   - **New console commands:** `keys <n>`, `goldkey`, `chest <id>` (cheats, logged with `dev_log`), `open <index>`
@@ -224,21 +240,25 @@ Runs that never see a key or chest hash exactly as before.
 - **`content/demo/runs/descent.tres`:**
   - **Keys:** `starting_keys = 0`, `unlocked_floors = 1`, `key_drop_chance = 20`, `golden_key_chance = 2`.
   - **Chests:** `chest_drop_chance = 5`, `chest_drops = [Wooden 75, Gilded 25]` (D5).
-- **`content/demo/floor_rules/*.tres`:** `locked_room_tags = [Room.Type.Treasure, Room.Type.Shop]` on every chapter
-  that has those rooms. `void.tres` is not touched (altars are a later slice, D4).
-- **New:** `content/demo/chests/wooden_chest.tres`, `gilded_chest.tres` (D6), plus the items and gear of D8–D10.
+- **`content/demo/floor_rules/`:** `locked_room_tags = [Room.Type.Treasure, Room.Type.Shop]` on `small.tres` (Cellar),
+  `crypt.tres` and `forge.tres`. `vault.tres` stays open (its four Hoards and shop on the light route's last floor;
+  your decision, 2026-10-27) and `void.tres` is not touched (altars are a later slice, D4).
+- **New:** `content/demo/chests/wooden_chest.tres`, `gilded_chest.tres` (D6), plus the items and gear of D8–D10 (each
+  piece's stat effect is its own file in `content/demo/effects/`, named like the piece).
 - **`content/demo/rooms/shop.tres`:** one more shop slot selling a key for 5 coins (Isaac's price; D12).
 - **`content/demo/equipment/iron_sword.tres`:** add `Pool.Treasure`/`Pool.Chest` so it can be found (D8).
 - **`presentation/demo/ui/`:**
   - **`run_toasts.tres`:** rules on `Message.Run.KeyFound` ("You found a key!", "You found a golden key!"),
     `ChestFound` and `ChestOpened`.
-  - **`explore_menu.gd`:** shows "Keys: n" (greyed) under Gold. It is shown always, or only once the run has keys
-    (D13).
+  - **`explore_menu.gd` / `.tscn`:** a greyed `Keys` label under Gold, "Keys: n" (+ " + golden key" while one is
+    held), shown on every run that uses keys (D13).
   - **`gear_screen.gd`:** SWAP calls `swap_gear`, and the Item Slot column gets MOVE HERE and SWAP through
     `move_item`.
-  - **The Use Item screen:** lists the chests (D9).
-  - **Map icons:** read `room_locked`.
-- **Usage tags on every demo ability and use item:** from the pass, after you review its report.
+  - **`use_screen.gd`:** lists the chests (D9).
+  - **`pickup_panel.gd` / `pickup_row.gd`:** a key slot shows as a "Key" row with no "give to" picker (the panel
+    skipped pickups it couldn't look up, so keys were not buyable without this).
+  - **Map icons:** no change (MapCells reports the lock as a kind, 2.2).
+- **Usage tags on every demo party ability and use item:** from the pass (2.6).
 
 ### 3.4 Run log entries (new; old entries unchanged, so old logs replay)
 ```
@@ -256,12 +276,12 @@ makes. None of them goes through the UI.
 
 | Bot | What it does with keys and chests |
 |---|---|
-| `RunPlayer`, auto and smart policies (play report, `autorun`) | Each step on the map, before moving on: open every Wooden Chest, then each Gilded Chest while a key is left over after the floor's unopened locked rooms (or with a golden key or `Run.Chest.NoKey`). Locked rooms: item rooms first, then shops, while keys last. Found gear goes into an empty slot (the first living member with that slot empty, by slot order), never swapping. |
-| `RunPlayer`, chaos policy | The smart moves above, plus on chaos decisions run actions that should be refused (open a Gilded Chest with 0 keys, open an index past the end, enter a locked room with 0 keys, `swap_gear` or `move_item` with a wrong holder or a full slot). Each refusal must leave the run hash unchanged; if it doesn't, that is an invariant failure (exit 3), like a battle invariant. |
+| `RunPlayer`, auto and smart policies (play report, `autorun`) | Each step on the map, before moving on: open every Wooden Chest, then each Gilded Chest while a key is left over after the floor's unopened locked rooms (or with a golden key or `Run.Chest.NoKey`). Buys keys for sale like any affordable pickup. Locked rooms: it explores unlocked rooms as before and opens a lock it can afford (item rooms first, then shops) when its next pick would be the boss room or nothing else is left, so runs without keys play exactly as before. Found gear goes into an empty slot (the first living member with that slot empty, by slot order), never swapping. |
+| `RunPlayer`, chaos policy | The smart moves above, plus, at `--illegal` percent of map steps (stream `dev/chaos/run`), one run action that should be refused (`RunPlayer.RUN_CASES`: `chest_no_key`, `chest_index`, `locked_no_key`, `swap_not_worn`, `swap_self`, `move_not_held`, `move_full`). Each refusal must leave the log and the run hash unchanged; if it doesn't, it is a `run_action_not_refused` violation (exit 3), like a battle invariant. The report's "illegal moves refused" counts these cases next to the battle ones. |
 | Console and `dev_run` scripts | `chests` (list), `open <index>`, `keys <n>`, `goldkey` and `chest <id>`, the last three as logged cheats, plus `swap` and `move`. All work headless, with JSON output in `dev_run`. |
 
 Policy choices draw only from the bots' own `dev/...` streams, never from the run's streams, so the same seed and the
-same policy always play the same run. The play report counts `chestsOpened`, `keysSpent` and `gearWorn` (section 5).
+same policy always play the same run. The play report counts keys and chests (section 5).
 
 ## 4. Failure modes
 - **Atomic actions:**
@@ -282,23 +302,25 @@ same policy always play the same run. The play report counts `chestsOpened`, `ke
     errors if it is), so a floor can always be finished.
   - **No keys:** a floor with locked rooms and no keys is still finishable, because only special dead ends lock.
 - **Chests:**
-  - **Empty pool:** a pool with nothing left falls back to `fallback_item`, as items do. For gear, it gives coins
-    instead (D6).
+  - **Empty pool:** a gear pick with nothing left gives the run's `fallback_item` instead, as item pools do.
   - **Double rolls:** a chest whose reward is `GiveChest` can chain. `Run.Chest.Double` rolls twice, but never
     re-rolls the new chest.
 - **Usage:**
   - **Untagged content:** untagged abilities behave as today, so fixtures and system tests are unaffected.
   - **Legality only:** a mis-tagged demo ability is a validator error. In battle it is only refused, never a crash.
   - **Combat goldens unchanged:** they are on fixtures with no usage tags.
-- **Goldens that change on purpose** (demo content):
-  - **Recorded again:** `run_scripted.json`, `seed_report.json` and `seed_report_play.json`. Each is re-recorded once,
-    with the diff reviewed.
-  - **Unchanged:** floor goldens, seed goldens and every combat golden, which is checked by the suite.
-- **Balance:**
-  - **Expected drop:** locked rooms cut items, so the smart 4-member rate (35.33%) will drop. Chests and keys
-    compensate.
-  - **Gate:** the gate is run after the slice, alone, and reported to you. You tune; Claude doesn't change your values
-    to hit it.
+- **Goldens:** none changed. `run_scripted.json`, `seed_report.json` and `seed_report_play.json` run on the fixtures,
+  whose run has no keys, and runs without keys hash as before. Floor, seed and combat goldens are unchanged too. A
+  golden on a keyed run is carried to 1f3 (roadmap).
+- **Balance** (smart, 4 members, seeds 1–300; the report informs your tuning, no test asserts a rate):
+  - **Before the slice:** 106/300 (35.33%).
+  - **Today's content, bots wearing found gear (D11):** 94/300 (31.33%), 0 violations. Wearing armor makes the
+    Collector, who mirrors the party's held items and armor, the main cause (75 Collector deaths against 67).
+  - **With the slice and the usage tags (2026-10-27):** 100/300 (33.33%). Over the 300 runs: 1705 keys found, 703
+    spent, 284 chests opened, 18 locked rooms left. 2 violations: two Collector battles hit the 1000-turn cap
+    (`turn_limit`).
+  - **Chaos** (48 seeds, 30% of decisions): 18 won, 0 violations, 0 errors; its first run found two bugs, now fixed
+    (`swap_gear` with a piece two members wear; run violations missing the report's fields).
 - **Root acceptance scenarios:** none apply, because this slice has no server. Scenario 5 (tampered log → 2002) later
   covers these entries through the run verifier (4a).
 
@@ -306,14 +328,19 @@ same policy always play the same run. The play report counts `chestsOpened`, `ke
 N/A for Prometheus: client-only, no service.
 - **Dev visibility:**
   - **Console and `dev_run`:** `state` and `dev_run` JSON show keys, golden key and chests.
-  - **Play report:** gains `keysFound`, `keysSpent`, `lockedSkipped` (locked rooms left unopened), `chestsOpened` and
-    `gearWorn` per run (median and total).
+  - **Run summary** (only on runs that use keys): `keys`, `keysFound`, `keysSpent`, `chestsOpened`, `chestsLeft`,
+    `lockedLeft` (locked rooms left unopened). The play report sums them under `"keys"` (`found`, `spent`,
+    `chestsOpened`, `chestsLeft`, `lockedLeft`) and prints one line. Gear worn is not counted.
 - **Later (2b/analytics):** `KeyFound`, `ChestOpened` and `RoomUnlocked` become run events through the outbox. Chest
   and item ids never become Prometheus labels.
 
 ## 6. Test plan
-System tests run on fixtures. A fixture run structure with keys and chests is added in `tests/fixtures/`, so
-`content/` can't fail them.
+System tests run on fixtures, so `content/` can't fail them. Built: `tests/game/test_keys_and_gear.gd` (17 tests),
+two console tests in `test_dev_console.gd`, the gear screen's swap and move in `test_explore_hud.gd`; 408 tests in
+all. The fixtures gain chests (crate, strongbox), crate gear (dagger, hood), the key items (key fob, warden key,
+lockpick, dowsing) and a Field-only and a Battle-only tonic; the keyed run itself is built in memory over them
+(`tests/game/keys_world.gd`), because a second run structure on disk would add a `"run"` field to every fixture
+run's log.
 - **Keys:**
   - **Drops:** the drop chance is honoured from its stream and repeats per seed. There are no drops with chance 0, and
     the fixture runs' hashes are unchanged.
@@ -325,7 +352,7 @@ System tests run on fixtures. A fixture run structure with keys and chests is ad
   - **Which rooms lock:** a locked treasure room or shop is refused with 0 keys (nothing logged, hash unchanged).
     Entering one spends one key and logs `unlock`, and re-entering costs nothing. Floors before `unlocked_floors` are
     open, and the boss room is never locked.
-  - **Map:** `room_locked` drives the lock icon; `test_explore_hud` is extended for it.
+  - **Map:** `room_locked` drives the lock kind in `MapCells` (`test_locked_rooms`).
 - **Chests:**
   - **Timing:** a chest drops and is kept across floors. Opening it on floor n or floor n+1 gives identical contents.
   - **Refusals:** each refusal case changes nothing.
@@ -336,33 +363,44 @@ System tests run on fixtures. A fixture run structure with keys and chests is ad
   - **`move_item`:** moves to a free slot and swaps; a capacity overflow is refused, and the cooldown travels with
     the item.
 - **Usage:**
-  - **Refusals:** a Field-only fixture ability is not a legal battle action, and a logged one replays as 2002
-    `ActionNotLegal`. A Battle-only one is missing from `field_options` and refused by `perform`.
+  - **Refusals:** a Field-only fixture ability is not a legal battle action (`IllegalAbility`). A Battle-only one is
+    missing from `field_options` and refused by `use_field`.
   - **Fallback and labels:** untagged abilities follow today's rule, and `AbilityHint` gives all three labels.
-- **Validator:** a broken fixture for each new check (`usage_missing`, `usage_mismatch`, `bad_chest`,
-  `locked_room_tag_unknown`, `run_modifier_unknown`). The validator over `content/` reports 0 errors after the
-  usage pass.
+- **Validator:** each new check is driven by in-memory broken content (`bad_chest`, `locked_room_tag_bad`,
+  `locked_room_tag_unknown`, `run_modifier_unknown`, `usage_mismatch`, `inline_effect`; `usage_missing` on the
+  untagged fixtures); the broken validator fixtures' `refreshing_curse` is an expected `inline_effect`. The validator
+  over `content/` reports 0 errors and 0 warnings after the usage pass.
+- **Outcomes and conditions:** `GainKeys`, `LoseKeys` (never below 0), `KeysAtLeast` (a golden key doesn't count),
+  `GiveGoldenKey`, `GiveChest` (and one without a chest) and `PartyHpAtLeast` (the dead don't count).
 - **Messages and toasts:**
   - **When they fire:** `KeyFound`, `ChestFound` and `ChestOpened` fire, with no toast on a clear without a drop.
   - **Rules:** the run toast rules match them.
 - **Room reveal:** `RevealRooms(EVENTS)` makes `room_type_known` true for event rooms on the current and next floors
   while the item is held.
-- **Tool parity:** `test_tool_parity` reaches `keys`, `goldkey`, `chest`, `chests`, `open`, `swap` and `move`. The
-  scripted run golden is re-recorded once, on purpose.
+- **Tool parity:** `test_tool_parity` reaches `keys`, `goldkey`, `chest`, `chests`, `open`, `swap` and `move`.
 - **Bots (3.5):**
   - **Fixture run with chests:** on a fixture run with keys and chests, `RunPlayer` (smart) opens every Wooden Chest,
     opens Gilded ones only with a key to spare, opens locked item rooms before shops, and wears found gear in empty
     slots.
   - **Repeatable:** the same seed plays the same run twice.
-  - **Chaos:** it attempts each illegal chest, lock and swap action at least once over a fixed seed set. Every one is
-    refused, the hash is unchanged, and an injected bug (a refusal that changes state) is caught as an invariant
-    failure.
+  - **Chaos:** over seeds 3, 7 and 11 every illegal run action is refused cleanly; `chest_index`, `swap_self` and
+    `move_full` are always tried, and at least four cases in all. An injected bug (a `LeakyRun` whose refusal leaks a
+    coin) is caught as a violation with the report's fields.
   - **`dev_run`:** a script opens a chest headless and reads the result from the JSON output.
 - **Suites:**
   - **Both pass:** `tools/godot_tests.sh` and `tools/dotnet_test.sh` both pass. The C# side is unchanged; its golden
     cross-check still reads the same combat files.
   - **Play report:** the smart 4-member report runs once (`play_sharded.sh`), and its win rate is reported next to
-    35.33%.
+    35.33% (section 4).
+
+**Remaining work (not blocking):**
+- **Keyed golden:** a scripted-run golden on a keyed run, so keys, chests and locks are pinned by a golden too
+  (roadmap 1f3).
+- **Toast rules:** no test checks that `run_toasts.tres` has rules on the three new channels.
+- **UI:** the Use Item chest list, the Keys line and the pickup panel's key row have no screen test (the gear
+  screen's swap and move do).
+- **Chaos coverage:** four of the seven run cases depend on the seed (a Gilded Chest with 0 keys, a reachable locked
+  room with 0 keys, a bag piece, an item to move); the test requires only the three that always build.
 
 ## 7. Decisions (all approved by the user, 2026-10-27, as recommended; D4 deferred, D11 widened)
 Isaac numbers come from the community wikis ([Room Clear Awards](https://bindingofisaacrebirth.wiki.gg/wiki/Room_Clear_Awards),
@@ -407,6 +445,10 @@ they are good as they are for now. Whether they lock or take keys is decided in 
   - **Use item, 10%:** from `Pool.Treasure` (Isaac's card share).
   - **Passive item, 10%:** from `Pool.Treasure` (Isaac's trinket share).
   - **Chests:** Wooden 1%, Gilded 1%.
+- **As built:** the tables live in `content/demo/chests/wooden_chest.tres` and `gilded_chest.tres` (your values). The
+  Gilded table differs from the proposal in three places: the use item and passive shares are one 20% item from
+  `Pool.Treasure` (no tag tells use items from passives), its 1% Gilded and 1% Wooden are one 2% Wooden (a chest can't
+  hold itself), and the 58% pickups are split into coins, keys and a heal (a reward can't roll another chest's table).
 - **"For your active party members" (recommended):** the gear pick prefers a slot that a living member has empty, then
   any slot, and the piece goes to the bag. Nothing is worn on its own (D9 of playable-demo).
 - **Alternative:** one piece per living member. That is generous, so the tables would need retuning.
