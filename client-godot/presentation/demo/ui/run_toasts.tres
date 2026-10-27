@@ -7,8 +7,7 @@
 [sub_resource type="Resource" id="rule_item"]
 script = ExtResource("2_rule")
 channel = &"Message.Run.ItemTaken"
-kicker = "{rarity} · {instigator}"
-title = "{target}"
+title = "{instigator} got [rarity={rarity}]{target}[/rarity]!"
 subtitle = "{description}"
 seconds = 2.6
 
