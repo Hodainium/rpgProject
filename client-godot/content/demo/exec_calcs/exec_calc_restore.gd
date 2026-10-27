@@ -2,6 +2,7 @@
 ##   attribute += amount x source.<source_bonus> x target.<target_bonus>
 ## Heals: attribute "hp", source_bonus "heal_mult", target_bonus "heal_taken". Ult charge: attribute "energy",
 ## target_bonus "energy_regen". An empty bonus name (or a unit without that attribute) counts as 100%.
+## Spec skill-points: SP per basic attack: attribute "mp", amount_attribute "sp_basic", target_bonus "sp_gain", whole.
 @tool
 class_name ExecCalcRestore
 extends GameplayExecutionCalculation
@@ -19,12 +20,23 @@ extends GameplayExecutionCalculation
 @export var source_bonus: String = ""
 ## Multiplier attribute read from the unit receiving it ("" = none).
 @export var target_bonus: String = ""
+## Spec skill-points: read the amount from this attribute of the unit receiving it instead of `amount` ("" = `amount`).
+@export var amount_attribute: String = ""
+## Spec skill-points: truncate the result to a whole number (a multiple of 100 ×100), so no fraction is ever shown.
+@export var whole: bool = false
 
 
 func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Dictionary:
 	if not target_asc.has_attribute(attribute):
 		return {}
-	return {attribute: float(scaled(amount_x100, spec, target_asc, source_bonus, target_bonus))}
+	var amount := amount_x100
+	if amount_attribute != "":
+		var data := target_asc.get_attribute(amount_attribute)
+		amount = int(data.current_value) if data != null else 0
+	var value := scaled(amount, spec, target_asc, source_bonus, target_bonus)
+	if whole:
+		value = value / 100 * 100
+	return {attribute: float(value)}
 
 
 ## amount x source.<source_bonus> x target.<target_bonus>; each multiplier never below 0%.

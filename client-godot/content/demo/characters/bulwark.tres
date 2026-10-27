@@ -14,16 +14,45 @@
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_m78rq"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_8xh45"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sp_gain.tscn" id="98_spgain"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/stalwart.tscn" id="96_lv0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/iron_hide.tscn" id="96_lv1"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/shield_wall.tscn" id="96_lv2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bastion_wall.tscn" id="96_lv3"]
+
+[sub_resource type="Resource" id="LevelSkill_0"]
+script = ExtResource("97_lvl")
+level = 3
+ability = ExtResource("96_lv0")
+
+[sub_resource type="Resource" id="LevelSkill_1"]
+script = ExtResource("97_lvl")
+level = 5
+ability = ExtResource("96_lv1")
+replaces = &"Ability.Fortify"
+
+[sub_resource type="Resource" id="LevelSkill_2"]
+script = ExtResource("97_lvl")
+level = 7
+ability = ExtResource("96_lv2")
+
+[sub_resource type="Resource" id="LevelSkill_3"]
+script = ExtResource("97_lvl")
+level = 9
+ability = ExtResource("96_lv3")
+replaces = &"Ability.Ironhide"
 
 [resource]
 script = ExtResource("12_8xh45")
 id = &"demo.character.bulwark"
 attribute_set = ExtResource("11_m78rq")
-abilities = Array[PackedScene]([ExtResource("1_lkssy"), ExtResource("2_kpqss"), ExtResource("3_10f0t"), ExtResource("4_g1y82"), ExtResource("5_buwk1"), ExtResource("6_5d0pu"), ExtResource("7_a3lw0"), ExtResource("8_yiltl"), ExtResource("9_1gw1t"), ExtResource("10_tdsui"), ExtResource("99_block")])
+abilities = Array[PackedScene]([ExtResource("1_lkssy"), ExtResource("2_kpqss"), ExtResource("3_10f0t"), ExtResource("4_g1y82"), ExtResource("5_buwk1"), ExtResource("6_5d0pu"), ExtResource("7_a3lw0"), ExtResource("8_yiltl"), ExtResource("9_1gw1t"), ExtResource("10_tdsui"), ExtResource("99_block"), ExtResource("98_spgain")])
 display_name = "Bulwark"
 display_color = Color(0.7411765, 0.7176471, 0.41960785, 1)
 tags = Array[StringName]([&"Character.Bulwark"])
 level_effect = ExtResource("90_growth")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
 role = "Tank"
 description = "Taunts, then grows stronger from every hit taken: counters, Fury stacks and ult charge. Bastion shields the party."
 stats_x100 = Dictionary[String, int]({
@@ -37,6 +66,7 @@ stats_x100 = Dictionary[String, int]({
 "max_mp": 6000,
 "max_toughness": 0,
 "mp": 6000,
+"sp_basic": 1900,
 "spd": 9000,
 "toughness": 0
 })

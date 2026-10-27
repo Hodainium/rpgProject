@@ -1,0 +1,35 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_t3e48"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_4dkd1"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_iugyw"]
+[ext_resource type="Animation" path="res://content/demo/animations/fireburst.tres" id="4_npun1"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_123.tres" id="5_0xdsc"]
+
+[sub_resource type="Resource" id="Resource_burst"]
+script = ExtResource("2_4dkd1")
+id = &"burst"
+effect = ExtResource("3_iugyw")
+damage_mode = 2
+targets = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 29000
+
+[sub_resource type="Resource" id="Resource_splash"]
+script = ExtResource("2_4dkd1")
+id = &"splash"
+effect = ExtResource("3_iugyw")
+damage_mode = 2
+targets = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 12500
+
+[node name="Firestorm" type="Node"]
+script = ExtResource("1_t3e48")
+targeting = 2
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_4dkd1")]([SubResource("Resource_burst"), SubResource("Resource_splash")])
+animation = ExtResource("4_npun1")
+ability_tag = &"Ability.Firestorm"
+cost_effect = ExtResource("5_0xdsc")
+description = "Massive Fire damage to one enemy and its neighbours."

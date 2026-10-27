@@ -1,5 +1,8 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/chill_touch.tscn" id="96_secret"]
+
 [ext_resource type="PackedScene" path="res://content/demo/abilities/chill.tscn" id="1_j2h0o"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/freeze_touch.tscn" id="2_pcvy6"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_or6l5"]
@@ -10,7 +13,12 @@
 
 [sub_resource type="Resource" id="Resource_dgc3h"]
 script = ExtResource("4_t28oh")
-pattern = Array[StringName]([&"Ability.Chill", &"Ability.Freezetouch"])
+pattern = Array[StringName]([&"Ability.Chill", &"Ability.Freezetouch", &"Ability.Chilltouch"])
+
+[sub_resource type="Resource" id="LevelSkill_secret"]
+script = ExtResource("97_lvl")
+level = 5
+ability = ExtResource("96_secret")
 
 [resource]
 script = ExtResource("6_w2men")
@@ -18,6 +26,7 @@ id = &"demo.enemy.wisp"
 attribute_set = ExtResource("3_or6l5")
 abilities = Array[PackedScene]([ExtResource("1_j2h0o"), ExtResource("2_pcvy6")])
 brain = SubResource("Resource_dgc3h")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_secret")])
 display_name = "Frost Wisp"
 display_color = Color(0.8784314, 1, 1, 1)
 tags = Array[StringName]([&"Enemy.Type.Wisp", &"Weakness.Fire", &"Weakness.Physical"])

@@ -45,7 +45,7 @@ text = "HP"
 custom_minimum_size = Vector2(104, 0)
 layout_mode = 2
 theme_type_variation = &"Caption"
-text = "MP"
+text = "SP"
 
 [node name="Ult" type="Label" parent="Margin/Box/Header"]
 custom_minimum_size = Vector2(176, 0)

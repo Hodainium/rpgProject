@@ -1,5 +1,11 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/enrage.tres" id="94_enrage"]
+[ext_resource type="Resource" path="res://content/demo/effects/exhaustion.tres" id="93_exhaust"]
+
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/curse.tscn" id="96_secret"]
+
 [ext_resource type="PackedScene" path="res://content/demo/abilities/bleed_blast.tscn" id="1_xdxof"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/hex_all.tscn" id="2_r62su"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/doom.tscn" id="3_q3ufc"]
@@ -17,6 +23,7 @@
 script = ExtResource("7_mtdjp")
 ult_when_party_down = true
 ult_when_ally_hp_below_x100 = 5000
+level_skill_every = 3
 
 [sub_resource type="Resource" id="Resource_4nrou"]
 script = ExtResource("8_8glv5")
@@ -29,13 +36,22 @@ ability_set = ExtResource("10_jgyv7")
 clear_debuffs = true
 hp_below_x100 = 2500
 
+[sub_resource type="Resource" id="LevelSkill_secret"]
+script = ExtResource("97_lvl")
+level = 3
+ability = ExtResource("96_secret")
+
 [resource]
 script = ExtResource("11_dygn1")
 phases = Array[ExtResource("8_8glv5")]([SubResource("Resource_4nrou"), SubResource("Resource_gcpto")])
+overtime_turn = 50
+overtime_effect = ExtResource("94_enrage")
+overtime_party_effect = ExtResource("93_exhaust")
 id = &"demo.enemy.lich"
 attribute_set = ExtResource("6_oqy5b")
 abilities = Array[PackedScene]([ExtResource("1_xdxof"), ExtResource("2_r62su"), ExtResource("3_q3ufc"), ExtResource("4_yjh4s"), ExtResource("5_vdq6b")])
 brain = SubResource("Resource_33dfj")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_secret")])
 display_name = "Lich"
 display_color = Color(0.28235295, 0.23921569, 0.54509807, 1)
 tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Lich", &"Resist.Ice", &"Weakness.Physical"])

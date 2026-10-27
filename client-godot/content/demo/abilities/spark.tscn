@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ar0a5"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_cl06q"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_spark.tres" id="3_v47id"]
+[ext_resource type="Animation" path="res://content/demo/animations/scholars_tome.tres" id="4_nr646"]
+
+[sub_resource type="Resource" id="Resource_insight"]
+script = ExtResource("2_cl06q")
+id = &"insight"
+effect = ExtResource("3_v47id")
+
+[node name="Spark" type="Node"]
+script = ExtResource("1_ar0a5")
+targeting = 5
+executions = Array[ExtResource("2_cl06q")]([SubResource("Resource_insight")])
+animation = ExtResource("4_nr646")
+ability_tag = &"Ability.Passive.Spark"
+trigger_event_tag = &"Event.Damage.Dealt.Weakness"
+description = "Hitting a weakness restores 7 SP."

@@ -5,6 +5,7 @@
 [ext_resource type="Resource" path="res://content/demo/effects/taunt.tres" id="3_6tfrj"]
 [ext_resource type="Resource" path="res://content/demo/effects/defense_up.tres" id="4_pthfw"]
 [ext_resource type="Animation" path="res://content/demo/animations/provoke.tres" id="5_ojmn2"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_49.tres" id="sp_cost"]
 
 [sub_resource type="Resource" id="Resource_gjrv5"]
 script = ExtResource("2_jhjos")
@@ -18,6 +19,7 @@ effect = ExtResource("4_pthfw")
 
 [node name="Provoke" type="Node" unique_id=1219246543]
 script = ExtResource("1_48g7t")
+cost_effect = ExtResource("sp_cost")
 targeting = 5
 asset_tags = Array[StringName]([&"Ability.Role.Buff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_jhjos")]([SubResource("Resource_gjrv5"), SubResource("Resource_5udam")])

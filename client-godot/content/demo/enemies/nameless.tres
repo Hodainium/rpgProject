@@ -1,5 +1,8 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/enrage.tres" id="94_enrage"]
+[ext_resource type="Resource" path="res://content/demo/effects/exhaustion.tres" id="93_exhaust"]
+
 [ext_resource type="PackedScene" path="res://content/demo/abilities/unmake.tscn" id="1_w683n"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/entropy.tscn" id="2_3vpka"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/silence.tscn" id="3_0yqcg"]
@@ -33,6 +36,9 @@ hp_below_x100 = 3300
 [resource]
 script = ExtResource("11_n5sce")
 phases = Array[ExtResource("8_sbdya")]([SubResource("Resource_s0qnc"), SubResource("Resource_fsh7p")])
+overtime_turn = 50
+overtime_effect = ExtResource("94_enrage")
+overtime_party_effect = ExtResource("93_exhaust")
 id = &"demo.enemy.nameless"
 attribute_set = ExtResource("6_p80ho")
 abilities = Array[PackedScene]([ExtResource("1_w683n"), ExtResource("2_3vpka"), ExtResource("3_0yqcg"), ExtResource("4_x74ww"), ExtResource("5_g7kjf")])

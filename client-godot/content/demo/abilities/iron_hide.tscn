@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_q771q"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_h8yr1"]
+[ext_resource type="Resource" path="res://content/demo/effects/defense_up_2.tres" id="3_83rla"]
+[ext_resource type="Resource" path="res://content/demo/effects/taunt.tres" id="4_aw750"]
+[ext_resource type="Animation" path="res://content/demo/animations/fortify.tres" id="5_4jdpa"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_69.tres" id="6_7bfuq"]
+
+[sub_resource type="Resource" id="Resource_guard"]
+script = ExtResource("2_h8yr1")
+id = &"guard"
+effect = ExtResource("3_83rla")
+
+[sub_resource type="Resource" id="Resource_taunt"]
+script = ExtResource("2_h8yr1")
+id = &"taunt"
+effect = ExtResource("4_aw750")
+
+[node name="IronHide" type="Node"]
+script = ExtResource("1_q771q")
+targeting = 5
+asset_tags = Array[StringName]([&"Ability.Role.Buff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_h8yr1")]([SubResource("Resource_guard"), SubResource("Resource_taunt")])
+animation = ExtResource("5_4jdpa")
+ability_tag = &"Ability.Ironhide"
+cost_effect = ExtResource("6_7bfuq")
+description = "+45% DEF and taunt every enemy."

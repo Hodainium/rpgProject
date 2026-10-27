@@ -17,3 +17,4 @@ display_name = "Elite"
 grants = SubResource("Resource_fwiiy")
 display_color = Color(1, 0.84313726, 0, 1)
 coin_bonus = 2
+level_bonus = 2

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_eff"]
+[ext_resource type="Resource" path="res://content/demo/effects/metronome.tres" id="2_metro"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_set"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_item"]
+
+[sub_resource type="Resource" id="Resource_grants"]
+script = ExtResource("3_set")
+effects = Array[ExtResource("1_eff")]([ExtResource("2_metro")])
+
+[resource]
+script = ExtResource("5_item")
+id = &"demo.item.metronome"
+display_name = "Metronome"
+description = "+23% SP gain."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+price = 4
+grants = SubResource("Resource_grants")

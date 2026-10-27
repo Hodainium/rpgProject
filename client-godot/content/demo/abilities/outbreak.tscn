@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_0ffh6"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ayixo"]
+[ext_resource type="Resource" path="res://content/demo/effects/poison.tres" id="3_uoqrg"]
+[ext_resource type="Animation" path="res://content/demo/animations/contagion.tres" id="4_ixorl"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_79.tres" id="5_yd8t7"]
+
+[sub_resource type="Resource" id="Resource_poison"]
+script = ExtResource("2_ayixo")
+id = &"poison"
+effect = ExtResource("3_uoqrg")
+chance_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_again"]
+script = ExtResource("2_ayixo")
+id = &"poison_again"
+effect = ExtResource("3_uoqrg")
+chance_x100 = 10000
+
+[node name="Outbreak" type="Node"]
+script = ExtResource("1_0ffh6")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_ayixo")]([SubResource("Resource_poison"), SubResource("Resource_again")])
+animation = ExtResource("4_ixorl")
+ability_tag = &"Ability.Outbreak"
+cost_effect = ExtResource("5_yd8t7")
+description = "Poisons every enemy twice."

@@ -5,7 +5,7 @@
 [ext_resource type="Resource" path="res://content/demo/effects/defense_up.tres" id="3_83rla"]
 [ext_resource type="Resource" path="res://content/demo/effects/taunt.tres" id="4_aw750"]
 [ext_resource type="Animation" path="res://content/demo/animations/fortify.tres" id="5_4jdpa"]
-[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_10.tres" id="6_7bfuq"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_53.tres" id="6_7bfuq"]
 
 [sub_resource type="Resource" id="Resource_y17ue"]
 script = ExtResource("2_h8yr1")

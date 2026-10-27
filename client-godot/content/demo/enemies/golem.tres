@@ -1,5 +1,11 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/enrage.tres" id="94_enrage"]
+[ext_resource type="Resource" path="res://content/demo/effects/exhaustion.tres" id="93_exhaust"]
+
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/tremor.tscn" id="96_secret"]
+
 [ext_resource type="Resource" path="res://content/demo/items/hearty_feast.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/crush.tscn" id="1_nh0lt"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/bite.tscn" id="2_buk2u"]
@@ -17,7 +23,7 @@
 
 [sub_resource type="Resource" id="Resource_golem_brain"]
 script = ExtResource("11_pattern")
-pattern = Array[StringName]([&"Ability.Crush", &"Ability.Bite", &"Ability.Rockfall"])
+pattern = Array[StringName]([&"Ability.Crush", &"Ability.Bite", &"Ability.Rockfall", &"Ability.Tremor"])
 
 [sub_resource type="Resource" id="Resource_golem_phase_2"]
 script = ExtResource("12_phase")
@@ -25,14 +31,23 @@ ability_set = ExtResource("13_phase_2")
 clear_debuffs = true
 hp_below_x100 = 5000
 
+[sub_resource type="Resource" id="LevelSkill_secret"]
+script = ExtResource("97_lvl")
+level = 3
+ability = ExtResource("96_secret")
+
 [resource]
 script = ExtResource("4_hwwiu")
 variants = Array[ExtResource("5_fjat6")]([ExtResource("6_giant"), ExtResource("7_berserk"), ExtResource("8_swift")])
 phases = Array[ExtResource("12_phase")]([SubResource("Resource_golem_phase_2")])
+overtime_turn = 50
+overtime_effect = ExtResource("94_enrage")
+overtime_party_effect = ExtResource("93_exhaust")
 id = &"demo.enemy.golem"
 attribute_set = ExtResource("3_1to3b")
 abilities = Array[PackedScene]([ExtResource("1_nh0lt"), ExtResource("2_buk2u"), ExtResource("9_quake"), ExtResource("10_charge_hit")])
 brain = SubResource("Resource_golem_brain")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_secret")])
 display_name = "Golem"
 display_color = Color(0.54509807, 0.27058825, 0.07450981, 1)
 tags = Array[StringName]([&"Enemy.Boss", &"Enemy.Type.Golem", &"Weakness.Physical"])

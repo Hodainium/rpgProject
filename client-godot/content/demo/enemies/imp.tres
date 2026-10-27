@@ -1,5 +1,8 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hellfire.tscn" id="96_secret"]
+
 [ext_resource type="PackedScene" path="res://content/demo/abilities/fire_bolt.tscn" id="1_niidd"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_nuooy"]
 [ext_resource type="Script" path="res://combat/tactical_brain.gd" id="3_876s5"]
@@ -9,6 +12,12 @@
 
 [sub_resource type="Resource" id="Resource_uh5o6"]
 script = ExtResource("3_876s5")
+level_skill_every = 3
+
+[sub_resource type="Resource" id="LevelSkill_secret"]
+script = ExtResource("97_lvl")
+level = 5
+ability = ExtResource("96_secret")
 
 [resource]
 script = ExtResource("5_gem4n")
@@ -16,6 +25,7 @@ id = &"demo.enemy.imp"
 attribute_set = ExtResource("2_nuooy")
 abilities = Array[PackedScene]([ExtResource("1_niidd")])
 brain = SubResource("Resource_uh5o6")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_secret")])
 display_name = "Fire Imp"
 display_color = Color(1, 0.27058825, 0, 1)
 tags = Array[StringName]([&"Enemy.Type.Imp", &"Resist.Fire", &"Weakness.Ice"])

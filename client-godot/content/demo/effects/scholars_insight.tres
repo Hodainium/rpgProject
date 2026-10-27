@@ -14,7 +14,7 @@ target_bonus = "energy_regen"
 
 [sub_resource type="Resource" id="Resource_i782f"]
 script = ExtResource("3_pexht")
-value_x100 = 500
+value_x100 = 1100
 attribute_name = "mp"
 
 [resource]

@@ -1,5 +1,8 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/enrage.tres" id="94_enrage"]
+[ext_resource type="Resource" path="res://content/demo/effects/exhaustion.tres" id="93_exhaust"]
+
 [ext_resource type="PackedScene" path="res://content/demo/abilities/forge_hammer.tscn" id="1_0t26f"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/fire_bolt.tscn" id="2_p6vqg"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/crucible.tscn" id="3_hflxu"]
@@ -31,6 +34,9 @@ hp_below_x100 = 3000
 [resource]
 script = ExtResource("10_ri65f")
 phases = Array[ExtResource("7_hxmik")]([SubResource("Resource_b8334"), SubResource("Resource_x1v63")])
+overtime_turn = 50
+overtime_effect = ExtResource("94_enrage")
+overtime_party_effect = ExtResource("93_exhaust")
 id = &"demo.enemy.forgemaster"
 attribute_set = ExtResource("5_j8fp2")
 abilities = Array[PackedScene]([ExtResource("1_0t26f"), ExtResource("2_p6vqg"), ExtResource("3_hflxu"), ExtResource("4_6h8kf")])

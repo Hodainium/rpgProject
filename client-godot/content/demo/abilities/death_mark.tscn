@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_yd2xx"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_65yru"]
+[ext_resource type="Resource" path="res://content/demo/effects/exposed_physical.tres" id="3_6abht"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="4_nx47h"]
+[ext_resource type="Animation" path="res://content/demo/animations/mark_prey.tres" id="5_bi8pl"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_73.tres" id="6_icxyw"]
+
+[sub_resource type="Resource" id="Resource_mark"]
+script = ExtResource("2_65yru")
+id = &"mark"
+effect = ExtResource("3_6abht")
+
+[sub_resource type="Resource" id="Resource_shot"]
+script = ExtResource("2_65yru")
+id = &"shot"
+effect = ExtResource("4_nx47h")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 17000
+
+[node name="DeathMark" type="Node"]
+script = ExtResource("1_yd2xx")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_65yru")]([SubResource("Resource_mark"), SubResource("Resource_shot")])
+animation = ExtResource("5_bi8pl")
+ability_tag = &"Ability.Deathmark"
+cost_effect = ExtResource("6_icxyw")
+description = "Heavy Physical damage to one enemy. Makes it weak to Physical."

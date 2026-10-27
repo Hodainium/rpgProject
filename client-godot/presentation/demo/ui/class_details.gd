@@ -3,9 +3,10 @@
 extends UIScreen
 
 ## The base stats shown, in order, with their labels (attribute keys as in the class's stats).
-@export var shown_stats: Dictionary = {"hp": "HP", "mp": "MP", "atk": "ATK", "def": "DEF", "spd": "SPD"}
+@export var shown_stats: Dictionary = {"hp": "HP", "mp": "SP", "atk": "ATK", "def": "DEF", "spd": "SPD"}
 ## Abilities whose tag starts with one of these are shared by every class and left out of the kit.
-@export var shared_prefixes: PackedStringArray = ["Ability.Passive.Ultcharge", "Ability.Passive.Break"]
+@export var shared_prefixes: PackedStringArray = ["Ability.Passive.Ultcharge", "Ability.Passive.Break",
+	"Ability.Passive.Spgain"]
 
 
 func on_pushed(payload: Dictionary) -> void:

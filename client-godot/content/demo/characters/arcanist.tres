@@ -14,18 +14,47 @@
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_hkoo1"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_u55js"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sp_gain.tscn" id="98_spgain"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/spark.tscn" id="96_lv0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/fireblast.tscn" id="96_lv1"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/wildfire.tscn" id="96_lv2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/firestorm.tscn" id="96_lv3"]
+
+[sub_resource type="Resource" id="LevelSkill_0"]
+script = ExtResource("97_lvl")
+level = 3
+ability = ExtResource("96_lv0")
+
+[sub_resource type="Resource" id="LevelSkill_1"]
+script = ExtResource("97_lvl")
+level = 5
+ability = ExtResource("96_lv1")
+replaces = &"Ability.Fireburst"
+
+[sub_resource type="Resource" id="LevelSkill_2"]
+script = ExtResource("97_lvl")
+level = 7
+ability = ExtResource("96_lv2")
+
+[sub_resource type="Resource" id="LevelSkill_3"]
+script = ExtResource("97_lvl")
+level = 9
+ability = ExtResource("96_lv3")
+replaces = &"Ability.Fireblast"
 
 [resource]
 script = ExtResource("12_u55js")
 id = &"demo.character.arcanist"
 attribute_set = ExtResource("11_hkoo1")
-abilities = Array[PackedScene]([ExtResource("1_143hu"), ExtResource("2_4yc2v"), ExtResource("3_mpnna"), ExtResource("4_43hib"), ExtResource("5_ck8fd"), ExtResource("6_5dn6n"), ExtResource("7_y1p8a"), ExtResource("8_mk0r2"), ExtResource("9_8qoa8"), ExtResource("10_vf6vv"), ExtResource("99_block")])
+abilities = Array[PackedScene]([ExtResource("1_143hu"), ExtResource("2_4yc2v"), ExtResource("3_mpnna"), ExtResource("4_43hib"), ExtResource("5_ck8fd"), ExtResource("6_5dn6n"), ExtResource("7_y1p8a"), ExtResource("8_mk0r2"), ExtResource("9_8qoa8"), ExtResource("10_vf6vv"), ExtResource("99_block"), ExtResource("98_spgain")])
 display_name = "Arcanist"
 display_color = Color(0.5764706, 0.4392157, 0.85882354, 1)
 tags = Array[StringName]([&"Character.Arcanist"])
 level_effect = ExtResource("90_growth")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
 role = "Damage dealer: magic"
-description = "Fire and Ice spells that hit many enemies, at a steep MP cost. Kills refill MP; Meteor burns the whole field."
+description = "Fire and Ice spells that hit many enemies, at a steep SP cost. Kills refill SP; Meteor burns the whole field."
 stats_x100 = Dictionary[String, int]({
 "atk": 52000,
 "crit_dmg": 5000,
@@ -37,6 +66,7 @@ stats_x100 = Dictionary[String, int]({
 "max_mp": 14000,
 "max_toughness": 0,
 "mp": 14000,
+"sp_basic": 1100,
 "spd": 10500,
 "toughness": 0
 })

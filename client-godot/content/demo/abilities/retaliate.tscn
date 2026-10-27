@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_5dtp8"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_sdh07"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_nkl8g"]
+[ext_resource type="Animation" path="res://content/demo/animations/thorn_mail.tres" id="4_ugc8d"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_query"]
+
+[sub_resource type="Resource" id="Resource_thorns"]
+script = ExtResource("2_sdh07")
+id = &"thorns"
+effect = ExtResource("3_nkl8g")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_taunting"]
+script = ExtResource("5_query")
+require_all_tags = Array[StringName]([&"State.Taunting"])
+
+[node name="Retaliate" type="Node"]
+script = ExtResource("1_5dtp8")
+executions = Array[ExtResource("2_sdh07")]([SubResource("Resource_thorns")])
+animation = ExtResource("4_ugc8d")
+ability_tag = &"Ability.Passive.Retaliate"
+activation_query = SubResource("Resource_taunting")
+trigger_event_tag = &"Event.Damage.Taken"
+description = "Hit while taunting: strike back for 60% ATK Physical."

@@ -9,7 +9,7 @@
 script = ExtResource("2_1gyf8")
 attribute = "mp"
 max_attribute = "max_mp"
-percent_x100 = 4000
+percent_x100 = 3300
 
 [resource]
 script = ExtResource("4_u3480")

@@ -13,16 +13,45 @@
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="10_rva7f"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="11_wglm5"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sp_gain.tscn" id="98_spgain"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bellows.tscn" id="96_lv0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/kindle_blaze.tscn" id="96_lv1"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ashen_fury.tscn" id="96_lv2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/kindle_inferno.tscn" id="96_lv3"]
+
+[sub_resource type="Resource" id="LevelSkill_0"]
+script = ExtResource("97_lvl")
+level = 3
+ability = ExtResource("96_lv0")
+
+[sub_resource type="Resource" id="LevelSkill_1"]
+script = ExtResource("97_lvl")
+level = 5
+ability = ExtResource("96_lv1")
+replaces = &"Ability.Kindlebrand"
+
+[sub_resource type="Resource" id="LevelSkill_2"]
+script = ExtResource("97_lvl")
+level = 7
+ability = ExtResource("96_lv2")
+
+[sub_resource type="Resource" id="LevelSkill_3"]
+script = ExtResource("97_lvl")
+level = 9
+ability = ExtResource("96_lv3")
+replaces = &"Ability.Kindleblaze"
 
 [resource]
 script = ExtResource("11_wglm5")
 id = &"demo.character.ember_knight"
 attribute_set = ExtResource("10_rva7f")
-abilities = Array[PackedScene]([ExtResource("1_bg6cx"), ExtResource("2_m0w4g"), ExtResource("3_32yo1"), ExtResource("4_8b8q5"), ExtResource("5_3o3ac"), ExtResource("6_7kcjo"), ExtResource("7_yr5lm"), ExtResource("8_ois3o"), ExtResource("9_51f11"), ExtResource("99_block")])
+abilities = Array[PackedScene]([ExtResource("1_bg6cx"), ExtResource("2_m0w4g"), ExtResource("3_32yo1"), ExtResource("4_8b8q5"), ExtResource("5_3o3ac"), ExtResource("6_7kcjo"), ExtResource("7_yr5lm"), ExtResource("8_ois3o"), ExtResource("9_51f11"), ExtResource("99_block"), ExtResource("98_spgain")])
 display_name = "Ember Knight"
 display_color = Color(1, 0.3882353, 0.2784314, 1)
 tags = Array[StringName]([&"Character.EmberKnight"])
 level_effect = ExtResource("90_growth")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
 role = "Damage dealer: break"
 description = "Brands enemies weak to Fire and breaks them. Complete Combustion unlocks Fyrefly Strike and hits Broken foes hardest."
 stats_x100 = Dictionary[String, int]({
@@ -37,6 +66,7 @@ stats_x100 = Dictionary[String, int]({
 "max_mp": 8000,
 "max_toughness": 0,
 "mp": 8000,
+"sp_basic": 1700,
 "spd": 11200,
 "toughness": 0
 })

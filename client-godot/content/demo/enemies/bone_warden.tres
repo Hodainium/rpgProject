@@ -1,5 +1,8 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Resource" path="res://content/demo/effects/enrage.tres" id="94_enrage"]
+[ext_resource type="Resource" path="res://content/demo/effects/exhaustion.tres" id="93_exhaust"]
+
 [ext_resource type="PackedScene" path="res://content/demo/abilities/shield_bash.tscn" id="1_emlun"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/bone_wall.tscn" id="2_o4rlx"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/ossuary.tscn" id="3_8q2rj"]
@@ -24,6 +27,9 @@ hp_below_x100 = 4000
 [resource]
 script = ExtResource("9_abm1b")
 phases = Array[ExtResource("7_0ic6u")]([SubResource("Resource_mn57s")])
+overtime_turn = 50
+overtime_effect = ExtResource("94_enrage")
+overtime_party_effect = ExtResource("93_exhaust")
 id = &"demo.enemy.bone_warden"
 attribute_set = ExtResource("5_13qwe")
 abilities = Array[PackedScene]([ExtResource("1_emlun"), ExtResource("2_o4rlx"), ExtResource("3_8q2rj"), ExtResource("4_jx5iy")])

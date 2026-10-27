@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ht4ue"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ppis8"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_fbthg"]
+[ext_resource type="Resource" path="res://content/demo/effects/freeze.tres" id="4_w8b6x"]
+[ext_resource type="Animation" path="res://content/demo/animations/glacial_spike.tres" id="5_hcis1"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_99.tres" id="6_wm0ka"]
+
+[sub_resource type="Resource" id="Resource_spike"]
+script = ExtResource("2_ppis8")
+id = &"spike"
+effect = ExtResource("3_fbthg")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 24000
+
+[sub_resource type="Resource" id="Resource_freeze"]
+script = ExtResource("2_ppis8")
+id = &"freeze"
+effect = ExtResource("4_w8b6x")
+chance_x100 = 4500
+
+[node name="GlacialLance" type="Node"]
+script = ExtResource("1_ht4ue")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_ppis8")]([SubResource("Resource_spike"), SubResource("Resource_freeze")])
+animation = ExtResource("5_hcis1")
+ability_tag = &"Ability.Glaciallance"
+cost_effect = ExtResource("6_wm0ka")
+description = "Heavy Ice damage to one enemy. 45% chance to Freeze it."

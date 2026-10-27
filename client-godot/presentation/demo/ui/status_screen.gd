@@ -10,14 +10,18 @@ const TABS: Array[String] = ["info", "held", "stats"]
 @export var level_format: String = "%s · LV %d"
 @export var no_items_text: String = "No held items."
 ## The stat labels shown, in order (keys of RunController.MEMBER_STATS).
-@export var stat_labels: Dictionary = {"max_hp": "Max HP", "max_mp": "Max MP", "atk": "ATK", "def": "DEF",
+@export var stat_labels: Dictionary = {"max_hp": "Max HP", "max_mp": "Max SP", "atk": "ATK", "def": "DEF",
 	"spd": "SPD", "crit_rate": "Crit rate", "crit_dmg": "Crit damage", "weakness_dmg": "Weakness damage",
 	"toughness_dmg": "Break power", "broken_dmg": "Damage to Broken", "heal_mult": "Healing done",
 	"heal_taken": "Healing received", "def_pen": "DEF ignored", "debuff_turns": "Debuff turns"}
 ## Stats shown as percentages (×100 stored: 500 = 5%).
 @export var percent_stats: Array[String] = ["crit_rate", "crit_dmg", "weakness_dmg", "toughness_dmg", "broken_dmg",
 	"heal_mult", "heal_taken", "def_pen"]
-@export var kit_hidden: Array[String] = ["Ult Charge", "Ult Charge Hit", "Break Physical", "Break Fire", "Break Ice"]
+@export var kit_hidden: Array[String] = ["Ult Charge", "Ult Charge Hit", "Break Physical", "Break Fire", "Break Ice",
+	"Sp Gain"]
+## Spec skill-points: after the description of a level skill not reached yet; its row is dimmed.
+@export var unlock_format: String = "Unlocked at level %d."
+@export var locked_alpha: float = 0.45
 
 var _member: int = 0
 var _member_preview: int = 0
@@ -104,7 +108,12 @@ func _draw_info(slot: int, character: UnitDefinition) -> void:
 		var label := Label.new()
 		label.text = entry["name"]
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		label.tooltip_text = str(entry["hint"].get("description", ""))
+		var description := str(entry["hint"].get("description", ""))
+		var unlock := int(entry.get("unlock_level", 0))
+		if unlock > 0:
+			description = (description + " " if description != "" else "") + unlock_format % unlock
+			row.modulate.a = locked_alpha
+		label.tooltip_text = description
 		label.mouse_filter = Control.MOUSE_FILTER_PASS
 		var kind := Label.new()
 		kind.text = entry["kind"]
@@ -145,7 +154,7 @@ func _draw_stats(slot: int) -> void:
 	if not bars.is_empty():
 		var top := Label.new()
 		var row: Dictionary = bars[0]
-		top.text = "HP %d / %d    MP %d / %d    XP %d    ULT %d%%" % [row["hp"], row["hp_max"], row["mp"], row["mp_max"],
+		top.text = "HP %d / %d    SP %d / %d    XP %d    ULT %d%%" % [row["hp"], row["hp_max"], row["mp"], row["mp_max"],
 			stats["xp"], row["ult"]]
 		%Body.add_child(top)
 	var grid := GridContainer.new()

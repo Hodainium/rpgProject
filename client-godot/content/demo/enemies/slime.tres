@@ -1,5 +1,9 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="Script" path="res://combat/enemy_brain.gd" id="95_brain"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bile.tscn" id="96_secret"]
+
 [ext_resource type="PackedScene" path="res://content/demo/abilities/bite.tscn" id="1_uh5gb"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_oqr2d"]
 [ext_resource type="Resource" path="res://content/demo/loadouts/hardened.tres" id="3_5tc3g"]
@@ -10,12 +14,23 @@
 [ext_resource type="Resource" path="res://content/demo/variants/berserk.tres" id="8_berserk"]
 [ext_resource type="Resource" path="res://content/demo/variants/swift.tres" id="9_swift"]
 
+[sub_resource type="Resource" id="LevelSkill_secret"]
+script = ExtResource("97_lvl")
+level = 3
+ability = ExtResource("96_secret")
+
+[sub_resource type="Resource" id="Resource_brain"]
+script = ExtResource("95_brain")
+level_skill_every = 3
+
 [resource]
 script = ExtResource("4_lrcye")
 variants = Array[ExtResource("5_34ibf")]([ExtResource("6_qmabn"), ExtResource("7_giant"), ExtResource("8_berserk"), ExtResource("9_swift")])
 id = &"demo.enemy.slime"
 attribute_set = ExtResource("2_oqr2d")
 abilities = Array[PackedScene]([ExtResource("1_uh5gb")])
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_secret")])
+brain = SubResource("Resource_brain")
 display_name = "Slime"
 display_color = Color(0.19607843, 0.8039216, 0.19607843, 1)
 tags = Array[StringName]([&"Enemy.Type.Slime", &"Weakness.Fire"])

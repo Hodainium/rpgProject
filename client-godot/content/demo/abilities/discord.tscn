@@ -5,7 +5,7 @@
 [ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="3_yc5ue"]
 [ext_resource type="Resource" path="res://content/demo/effects/slow.tres" id="4_hpmjr"]
 [ext_resource type="Animation" path="res://content/demo/animations/discord.tres" id="5_llf2l"]
-[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_15.tres" id="6_qur43"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_79.tres" id="6_qur43"]
 
 [sub_resource type="Resource" id="Resource_s3g5p"]
 script = ExtResource("2_82e1y")

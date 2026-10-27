@@ -21,8 +21,8 @@ effect = ExtResource("7_kjg0t")
 
 [sub_resource type="Resource" id="Resource_nc3ca"]
 script = ExtResource("2_8il4e")
-label = "Rest (heal 50% HP and MP; the fallen get up)"
-outcomes = Array[ExtResource("4_uirf1")]([SubResource("Resource_51b1d"), SubResource("Resource_p7c2w")])
+label = "Rest (heal 50% HP; the fallen get up)"
+outcomes = Array[ExtResource("4_uirf1")]([SubResource("Resource_51b1d")])
 
 [sub_resource type="Resource" id="Resource_j6qog"]
 script = ExtResource("8_cssed")

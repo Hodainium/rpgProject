@@ -14,16 +14,45 @@
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_kxksa"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_ch5xb"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sp_gain.tscn" id="98_spgain"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/tempo.tscn" id="96_lv0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/rousing_anthem.tscn" id="96_lv1"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/harmony.tscn" id="96_lv2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/grand_anthem.tscn" id="96_lv3"]
+
+[sub_resource type="Resource" id="LevelSkill_0"]
+script = ExtResource("97_lvl")
+level = 3
+ability = ExtResource("96_lv0")
+
+[sub_resource type="Resource" id="LevelSkill_1"]
+script = ExtResource("97_lvl")
+level = 5
+ability = ExtResource("96_lv1")
+replaces = &"Ability.Anthem"
+
+[sub_resource type="Resource" id="LevelSkill_2"]
+script = ExtResource("97_lvl")
+level = 7
+ability = ExtResource("96_lv2")
+
+[sub_resource type="Resource" id="LevelSkill_3"]
+script = ExtResource("97_lvl")
+level = 9
+ability = ExtResource("96_lv3")
+replaces = &"Ability.Rousinganthem"
 
 [resource]
 script = ExtResource("12_ch5xb")
 id = &"demo.character.bard"
 attribute_set = ExtResource("11_kxksa")
-abilities = Array[PackedScene]([ExtResource("1_tpfkk"), ExtResource("2_75h4w"), ExtResource("3_4p8fd"), ExtResource("4_v3fao"), ExtResource("5_fq47u"), ExtResource("6_q1r8r"), ExtResource("7_4k0bs"), ExtResource("8_3m1w6"), ExtResource("9_8dbjv"), ExtResource("10_xwxqm"), ExtResource("99_block")])
+abilities = Array[PackedScene]([ExtResource("1_tpfkk"), ExtResource("2_75h4w"), ExtResource("3_4p8fd"), ExtResource("4_v3fao"), ExtResource("5_fq47u"), ExtResource("6_q1r8r"), ExtResource("7_4k0bs"), ExtResource("8_3m1w6"), ExtResource("9_8dbjv"), ExtResource("10_xwxqm"), ExtResource("99_block"), ExtResource("98_spgain")])
 display_name = "Bard"
 display_color = Color(1, 0.4117647, 0.7058824, 1)
 tags = Array[StringName]([&"Character.Bard"])
 level_effect = ExtResource("90_growth")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
 role = "Support: buffs and debuffs"
 description = "Anthem speeds up and strengthens the party, Discord weakens enemies. Finale lets the whole party act at once."
 stats_x100 = Dictionary[String, int]({
@@ -37,6 +66,7 @@ stats_x100 = Dictionary[String, int]({
 "max_mp": 11000,
 "max_toughness": 0,
 "mp": 11000,
+"sp_basic": 1300,
 "spd": 12000,
 "toughness": 0
 })

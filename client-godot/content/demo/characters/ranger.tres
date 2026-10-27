@@ -14,16 +14,45 @@
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_x5wjs"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_0rhvb"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sp_gain.tscn" id="98_spgain"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/steady_aim.tscn" id="96_lv0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/mark_quarry.tscn" id="96_lv1"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/deadeye.tscn" id="96_lv2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/death_mark.tscn" id="96_lv3"]
+
+[sub_resource type="Resource" id="LevelSkill_0"]
+script = ExtResource("97_lvl")
+level = 3
+ability = ExtResource("96_lv0")
+
+[sub_resource type="Resource" id="LevelSkill_1"]
+script = ExtResource("97_lvl")
+level = 5
+ability = ExtResource("96_lv1")
+replaces = &"Ability.Markprey"
+
+[sub_resource type="Resource" id="LevelSkill_2"]
+script = ExtResource("97_lvl")
+level = 7
+ability = ExtResource("96_lv2")
+
+[sub_resource type="Resource" id="LevelSkill_3"]
+script = ExtResource("97_lvl")
+level = 9
+ability = ExtResource("96_lv3")
+replaces = &"Ability.Markquarry"
 
 [resource]
 script = ExtResource("12_0rhvb")
 id = &"demo.character.ranger"
 attribute_set = ExtResource("11_x5wjs")
-abilities = Array[PackedScene]([ExtResource("1_dr1t7"), ExtResource("2_0eq47"), ExtResource("3_p23b7"), ExtResource("4_ibmui"), ExtResource("5_2f7b6"), ExtResource("6_jcgs8"), ExtResource("7_pwlar"), ExtResource("8_d5wog"), ExtResource("9_62iy8"), ExtResource("10_61i68"), ExtResource("99_block")])
+abilities = Array[PackedScene]([ExtResource("1_dr1t7"), ExtResource("2_0eq47"), ExtResource("3_p23b7"), ExtResource("4_ibmui"), ExtResource("5_2f7b6"), ExtResource("6_jcgs8"), ExtResource("7_pwlar"), ExtResource("8_d5wog"), ExtResource("9_62iy8"), ExtResource("10_61i68"), ExtResource("99_block"), ExtResource("98_spgain")])
 display_name = "Ranger"
 display_color = Color(0.13333334, 0.54509807, 0.13333334, 1)
 tags = Array[StringName]([&"Character.Ranger"])
 level_effect = ExtResource("90_growth")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
 role = "Specialist: follow-ups"
 description = "Marks a target to make it weak to Physical; every weakness hit triggers a follow-up shot, and follow-ups charge Rain of Arrows."
 stats_x100 = Dictionary[String, int]({
@@ -37,6 +66,7 @@ stats_x100 = Dictionary[String, int]({
 "max_mp": 8000,
 "max_toughness": 0,
 "mp": 8000,
+"sp_basic": 1500,
 "spd": 11500,
 "toughness": 0
 })

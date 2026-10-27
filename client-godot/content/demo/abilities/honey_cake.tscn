@@ -17,4 +17,4 @@ asset_tags = Array[StringName]([&"Ability.Role.RestoreMP", &"Ability.Usage.Battl
 executions = Array[ExtResource("2_38vk2")]([SubResource("Resource_1twwy")])
 animation = ExtResource("4_yd012")
 ability_tag = &"Ability.Item.Honeycake"
-description = "Restores MP to one ally."
+description = "Restores SP to one ally."

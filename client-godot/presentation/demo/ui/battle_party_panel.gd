@@ -8,11 +8,25 @@ extends UIBattlePanel
 @export var broken_chip: String = "BROKEN"
 @export var downed_chip: String = "KNOCKED DOWN"
 
+## Spec skill-points: the ability hovered in the command window ({"unit": id, "sp": whole SP}), previewed on that
+## member's SP bar; {} when nothing costed is hovered.
+var _preview: Dictionary = {}
+
 
 func bind(context: UIContext) -> void:
 	super(context)
 	GameplayMessages.listen(GameplayMessageRouter.UI_ULT_PRESSED, func(_channel, _message): changed(),
 		GameplayMessageRouter.Match.EXACT, null, self)
+	GameplayMessages.listen(GameplayMessageRouter.UI_HINT, func(_channel, message): _on_hint(message),
+		GameplayMessageRouter.Match.EXACT, null, self)
+
+
+func _on_hint(message: VerbMessage) -> void:
+	var sp := int(message.data.get("spCost", 0))
+	var next := {"unit": StringName(str(message.data.get("unit", ""))), "sp": sp} if sp > 0 else {}
+	if next != _preview:
+		_preview = next
+		changed()
 
 
 func on_recorder(new_recorder: ActionRecorder) -> void:
@@ -42,6 +56,7 @@ func _row(unit: BattleUnit, queued: bool) -> Dictionary:
 		"hp": unit.stat(BattleUnit.HP) / 100, "hp_max": unit.stat(BattleUnit.MAX_HP) / 100,
 		"mp": unit.stat(BattleUnit.MP) / 100 if unit.asc.has_attribute(BattleUnit.MP) else 0,
 		"mp_max": unit.stat(BattleUnit.MAX_MP) / 100 if unit.asc.has_attribute(BattleUnit.MAX_MP) else 0,
+		"mp_preview": int(_preview.get("sp", 0)) if _preview.get("unit") == unit.unit_id else 0,
 		"ult": clampi(energy * 100 / max_energy, 0, 100) if max_energy > 0 else 0,
 		"active": recorder != null and recorder.waiting_for == unit.unit_id,
 		"show_ult": not unit.ultimate_abilities().is_empty(),

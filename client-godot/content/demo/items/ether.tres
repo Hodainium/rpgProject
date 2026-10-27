@@ -8,7 +8,7 @@
 script = ExtResource("2_ewomb")
 id = &"demo.item.ether"
 display_name = "Ether"
-description = "One ally regains 60 MP. Ready again after 3 won battles."
+description = "One ally regains 53 SP. Ready again after 3 won battles."
 tags = Array[StringName]([&"Pool.Shop", &"Item.Rarity.Common"])
 price = 5
 kind = 1

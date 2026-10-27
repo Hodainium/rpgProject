@@ -17,5 +17,6 @@
 script = ExtResource("12_p5dpd")
 id = &"demo.scaling.descent"
 enemy_effects_by_depth = Array[ExtResource("1_gkklw")]([ExtResource("2_unqs7"), ExtResource("3_mr3pj"), ExtResource("4_1x80p"), ExtResource("5_kn223"), ExtResource("6_43pe6"), ExtResource("7_bclj2"), ExtResource("8_yvvvo"), ExtResource("9_4jok4"), ExtResource("10_gq5gu"), ExtResource("11_2w00e")])
+enemy_level_by_depth = Array[int]([1, 1, 3, 3, 5, 5, 7, 7, 9, 9])
 elite_chance_x100 = 2000
 coin_drop_chance_x100 = 8000

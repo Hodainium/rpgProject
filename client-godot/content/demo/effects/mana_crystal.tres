@@ -7,7 +7,7 @@
 
 [sub_resource type="Resource" id="Resource_2ubb8"]
 script = ExtResource("3_5r0y1")
-value_x100 = 4000
+value_x100 = 3700
 attribute_name = "max_mp"
 
 [resource]

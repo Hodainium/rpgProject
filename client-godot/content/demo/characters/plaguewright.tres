@@ -14,16 +14,45 @@
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_s4ls4"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_jn2kp"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sp_gain.tscn" id="98_spgain"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/virulent.tscn" id="96_lv0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/outbreak.tscn" id="96_lv1"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/corrode.tscn" id="96_lv2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/pandemic_bloom.tscn" id="96_lv3"]
+
+[sub_resource type="Resource" id="LevelSkill_0"]
+script = ExtResource("97_lvl")
+level = 3
+ability = ExtResource("96_lv0")
+
+[sub_resource type="Resource" id="LevelSkill_1"]
+script = ExtResource("97_lvl")
+level = 5
+ability = ExtResource("96_lv1")
+replaces = &"Ability.Contagion"
+
+[sub_resource type="Resource" id="LevelSkill_2"]
+script = ExtResource("97_lvl")
+level = 7
+ability = ExtResource("96_lv2")
+
+[sub_resource type="Resource" id="LevelSkill_3"]
+script = ExtResource("97_lvl")
+level = 9
+ability = ExtResource("96_lv3")
+replaces = &"Ability.Outbreak"
 
 [resource]
 script = ExtResource("12_jn2kp")
 id = &"demo.character.plaguewright"
 attribute_set = ExtResource("11_s4ls4")
-abilities = Array[PackedScene]([ExtResource("1_wr4yf"), ExtResource("2_54xvd"), ExtResource("3_d3fmv"), ExtResource("4_00smm"), ExtResource("5_xdb2a"), ExtResource("6_wcvw5"), ExtResource("7_srlb3"), ExtResource("8_q2aip"), ExtResource("9_u0575"), ExtResource("10_5m4we"), ExtResource("99_block")])
+abilities = Array[PackedScene]([ExtResource("1_wr4yf"), ExtResource("2_54xvd"), ExtResource("3_d3fmv"), ExtResource("4_00smm"), ExtResource("5_xdb2a"), ExtResource("6_wcvw5"), ExtResource("7_srlb3"), ExtResource("8_q2aip"), ExtResource("9_u0575"), ExtResource("10_5m4we"), ExtResource("99_block"), ExtResource("98_spgain")])
 display_name = "Plaguewright"
 display_color = Color(0.6039216, 0.8039216, 0.19607843, 1)
 tags = Array[StringName]([&"Character.Plaguewright"])
 level_effect = ExtResource("90_growth")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
 role = "Support: statuses"
 description = "Spreads Poison and Bleed and makes every debuff last longer. Pandemic hits all enemies with Poison, Bleed, Burn and Vulnerable."
 stats_x100 = Dictionary[String, int]({
@@ -38,6 +67,7 @@ stats_x100 = Dictionary[String, int]({
 "max_mp": 12000,
 "max_toughness": 0,
 "mp": 12000,
+"sp_basic": 1300,
 "spd": 11200,
 "toughness": 0
 })

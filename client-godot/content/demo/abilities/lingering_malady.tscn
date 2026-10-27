@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://combat/execution_row.gd" id="2_wd0dt"]
 [ext_resource type="Resource" path="res://content/demo/effects/malady.tres" id="3_tmvxu"]
 [ext_resource type="Animation" path="res://content/demo/animations/lingering_malady.tres" id="4_j8mqc"]
-[ext_resource type="Resource" path="res://content/demo/effects/mp_cost_15.tres" id="5_p3qqt"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_79.tres" id="5_p3qqt"]
 
 [sub_resource type="Resource" id="Resource_ml8ra"]
 script = ExtResource("2_wd0dt")

@@ -1,5 +1,8 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" format=3]
 
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hex_all.tscn" id="96_secret"]
+
 [ext_resource type="Resource" path="res://content/demo/items/honey_cake.tres" id="90_drop"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/hex.tscn" id="1_kx3f3"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/mend.tscn" id="2_3hkyw"]
@@ -12,7 +15,12 @@
 
 [sub_resource type="Resource" id="Resource_0cab3"]
 script = ExtResource("5_qufkc")
-pattern = Array[StringName]([&"Ability.Hex", &"Ability.Mend", &"Ability.Dispel"])
+pattern = Array[StringName]([&"Ability.Hex", &"Ability.Mend", &"Ability.Dispel", &"Ability.Hexall"])
+
+[sub_resource type="Resource" id="LevelSkill_secret"]
+script = ExtResource("97_lvl")
+level = 5
+ability = ExtResource("96_secret")
 
 [resource]
 script = ExtResource("7_3l04v")
@@ -20,6 +28,7 @@ id = &"demo.enemy.shaman"
 attribute_set = ExtResource("4_0ltw2")
 abilities = Array[PackedScene]([ExtResource("1_kx3f3"), ExtResource("2_3hkyw"), ExtResource("3_rgulc")])
 brain = SubResource("Resource_0cab3")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_secret")])
 display_name = "Shaman"
 display_color = Color(0.7294118, 0.33333334, 0.827451, 1)
 tags = Array[StringName]([&"Enemy.Type.Shaman", &"Weakness.Physical"])

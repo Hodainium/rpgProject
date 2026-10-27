@@ -18,20 +18,49 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="15_break_fire"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="16_break_ice"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sp_gain.tscn" id="98_spgain"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/second_wind.tscn" id="96_lv0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/greater_heal.tscn" id="96_lv1"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/grace.tscn" id="96_lv2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/mass_heal.tscn" id="96_lv3"]
 
 [sub_resource type="Resource" id="Resource_ud7a5"]
 script = ExtResource("7_m2hih")
 items = Array[ExtResource("5_2mrxd")]([ExtResource("6_djwlh")])
 
+[sub_resource type="Resource" id="LevelSkill_0"]
+script = ExtResource("97_lvl")
+level = 3
+ability = ExtResource("96_lv0")
+
+[sub_resource type="Resource" id="LevelSkill_1"]
+script = ExtResource("97_lvl")
+level = 5
+ability = ExtResource("96_lv1")
+replaces = &"Ability.Heal"
+
+[sub_resource type="Resource" id="LevelSkill_2"]
+script = ExtResource("97_lvl")
+level = 7
+ability = ExtResource("96_lv2")
+
+[sub_resource type="Resource" id="LevelSkill_3"]
+script = ExtResource("97_lvl")
+level = 9
+ability = ExtResource("96_lv3")
+replaces = &"Ability.Greaterheal"
+
 [resource]
 script = ExtResource("8_o24qk")
 id = &"demo.character.cleric"
 attribute_set = ExtResource("3_ouh10")
-abilities = Array[PackedScene]([ExtResource("9_ult"), ExtResource("1_qi6ye"), ExtResource("2_ixx4u"), ExtResource("10_charge"), ExtResource("11_charge_hit"), ExtResource("12_resurrection"), ExtResource("13_purify"), ExtResource("14_break_physical"), ExtResource("15_break_fire"), ExtResource("16_break_ice"), ExtResource("99_block")])
+abilities = Array[PackedScene]([ExtResource("9_ult"), ExtResource("1_qi6ye"), ExtResource("2_ixx4u"), ExtResource("10_charge"), ExtResource("11_charge_hit"), ExtResource("12_resurrection"), ExtResource("13_purify"), ExtResource("14_break_physical"), ExtResource("15_break_fire"), ExtResource("16_break_ice"), ExtResource("99_block"), ExtResource("98_spgain")])
 display_name = "Cleric"
 display_color = Color(0.18039216, 0.54509807, 0.34117648, 1)
 tags = Array[StringName]([&"Character.Cleric"])
 level_effect = ExtResource("90_growth")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
 role = "Support: healer"
 description = "Keeps the party standing. Heals and Purify in battle; Sanctuary shields everyone, Resurrection brings the fallen back."
 default_loadout = SubResource("Resource_ud7a5")
@@ -46,6 +75,7 @@ stats_x100 = Dictionary[String, int]({
 "max_mp": 10000,
 "max_toughness": 0,
 "mp": 10000,
+"sp_basic": 1300,
 "spd": 11000,
 "toughness": 0
 })

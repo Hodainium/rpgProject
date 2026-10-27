@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_n40vd"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_percent_of_max.gd" id="2_pjdl3"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_l0fwg"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_immune"]
+
+[sub_resource type="Resource" id="Resource_loss"]
+script = ExtResource("2_pjdl3")
+percent_x100 = -300
+
+[sub_resource type="Resource" id="Resource_immune"]
+script = ExtResource("5_immune")
+ignore_tags = Array[StringName]([&"Immune.Exhausted", &"Immune.Debuff"])
+
+[resource]
+script = ExtResource("4_l0fwg")
+application_query = SubResource("Resource_immune")
+stacking_policy = 1
+policy = 3
+period = 1.0
+max_stacks = 99
+duration_turns = 99
+executions = Array[ExtResource("1_n40vd")]([SubResource("Resource_loss")])
+granted_tags = Array[StringName]([&"Status.Debuff.Exhausted"])

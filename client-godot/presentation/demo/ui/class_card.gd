@@ -46,6 +46,13 @@ static func kit_lines(character: CharacterDefinition, shared: PackedStringArray)
 			continue
 		var group := "Ult" if tag.begins_with("Ability.Ult.") else "Passive" if tag.begins_with("Ability.Passive.") else "Skills"
 		groups[group].append(String(scene.get_state().get_node_name(0)).capitalize())
+	# Spec skill-points: the class's level skills in their group, with the level that unlocks them.
+	for row in character.level_skills:
+		if row == null or row.ability == null:
+			continue
+		var tag := String(SkillTags.tag_of(row.ability))
+		var group := "Ult" if tag.begins_with("Ability.Ult.") else "Passive" if tag.begins_with("Ability.Passive.") else "Skills"
+		groups[group].append("%s (Lv %d)" % [String(row.ability.get_state().get_node_name(0)).capitalize(), row.level])
 	var lines := PackedStringArray()
 	for group in groups:
 		if not groups[group].is_empty():

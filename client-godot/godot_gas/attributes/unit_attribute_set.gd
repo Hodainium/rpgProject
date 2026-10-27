@@ -31,6 +31,10 @@ var heal_taken: AttributeData = AttributeData.new(10000.0)
 var energy_regen: AttributeData = AttributeData.new(10000.0)
 var debuff_turns: AttributeData = AttributeData.new(0.0)
 var resist_dmg: AttributeData = AttributeData.new(5000.0)
+var sp_basic: AttributeData = AttributeData.new(0.0)
+var sp_gain: AttributeData = AttributeData.new(10000.0)
+var sp_cost: AttributeData = AttributeData.new(10000.0)
+var level: AttributeData = AttributeData.new(100.0)
 
 
 ## The safety pipeline: Clamps stats before they are officially changed.

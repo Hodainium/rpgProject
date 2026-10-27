@@ -11,6 +11,9 @@ func pre_attribute_change(attribute_name: String, proposed_value: float) -> floa
 			return maxf(proposed_value, 100.0)
 		"crit_rate":
 			return clampf(proposed_value, 0.0, 10000.0)
-		"atk", "def", "crit_dmg", "max_mp", "debuff_turns", "resist_dmg":
+		"atk", "def", "crit_dmg", "max_mp", "debuff_turns", "resist_dmg", "sp_basic", "sp_gain", "sp_cost":
 			return maxf(proposed_value, 0.0)
+		"level":
+			# Spec skill-points D22: read-only. BattleUnit writes it before any effect runs; nothing changes it after.
+			return level.base_value
 	return super(attribute_name, proposed_value)

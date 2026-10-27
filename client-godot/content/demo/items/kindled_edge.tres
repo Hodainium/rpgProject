@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/kindled_edge.tscn" id="1_abil"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_set"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_item"]
+
+[sub_resource type="Resource" id="Resource_grants"]
+script = ExtResource("3_set")
+abilities = Array[PackedScene]([ExtResource("1_abil")])
+
+[resource]
+script = ExtResource("5_item")
+id = &"demo.item.kindled_edge"
+display_name = "Kindled Edge"
+description = "Your Physical hits trigger a follow-up: 35% ATK Fire."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Epic"])
+price = 9
+grants = SubResource("Resource_grants")

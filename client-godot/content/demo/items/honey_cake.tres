@@ -8,7 +8,7 @@
 script = ExtResource("2_5jcvq")
 id = &"demo.item.honey_cake"
 display_name = "Honey Cake"
-description = "One ally regains 40% of max MP."
+description = "One ally regains 33% of max SP."
 tags = Array[StringName]([&"Pool.Food", &"Item.Rarity.Common"])
 price = 3
 kind = 1

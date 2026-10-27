@@ -27,6 +27,14 @@ title = "{target}"
 subtitle = "Level {count}"
 seconds = 2.0
 
+[sub_resource type="Resource" id="rule_skill"]
+script = ExtResource("2_rule")
+channel = &"Message.Run.SkillLearned"
+kicker = "NEW SKILL"
+title = "{targetName} learned {skillName}"
+subtitle = "Level {count}"
+seconds = 2.4
+
 [sub_resource type="Resource" id="rule_key"]
 script = ExtResource("2_rule")
 channel = &"Message.Run.KeyFound"
@@ -49,7 +57,7 @@ seconds = 2.6
 
 [resource]
 script = ExtResource("1_set")
-rules = Array[ExtResource("2_rule")]([SubResource("rule_item"), SubResource("rule_floor"), SubResource("rule_level"), SubResource("rule_key"), SubResource("rule_chest_found"), SubResource("rule_chest_opened")])
+rules = Array[ExtResource("2_rule")]([SubResource("rule_item"), SubResource("rule_floor"), SubResource("rule_level"), SubResource("rule_skill"), SubResource("rule_key"), SubResource("rule_chest_found"), SubResource("rule_chest_opened")])
 max_visible = 1
 max_queued = 5
 entry_scene = ExtResource("3_toast")

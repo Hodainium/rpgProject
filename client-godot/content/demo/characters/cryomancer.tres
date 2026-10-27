@@ -14,16 +14,45 @@
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_v28ry"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_jtjwe"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sp_gain.tscn" id="98_spgain"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="97_lvl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/lingering_cold.tscn" id="96_lv0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/glacial_lance.tscn" id="96_lv1"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/brittle.tscn" id="96_lv2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/glacial_tomb.tscn" id="96_lv3"]
+
+[sub_resource type="Resource" id="LevelSkill_0"]
+script = ExtResource("97_lvl")
+level = 3
+ability = ExtResource("96_lv0")
+
+[sub_resource type="Resource" id="LevelSkill_1"]
+script = ExtResource("97_lvl")
+level = 5
+ability = ExtResource("96_lv1")
+replaces = &"Ability.Glacialspike"
+
+[sub_resource type="Resource" id="LevelSkill_2"]
+script = ExtResource("97_lvl")
+level = 7
+ability = ExtResource("96_lv2")
+
+[sub_resource type="Resource" id="LevelSkill_3"]
+script = ExtResource("97_lvl")
+level = 9
+ability = ExtResource("96_lv3")
+replaces = &"Ability.Glaciallance"
 
 [resource]
 script = ExtResource("12_jtjwe")
 id = &"demo.character.cryomancer"
 attribute_set = ExtResource("11_v28ry")
-abilities = Array[PackedScene]([ExtResource("1_xyo8l"), ExtResource("2_x6h0j"), ExtResource("3_j4p6b"), ExtResource("4_4df2u"), ExtResource("5_tw87l"), ExtResource("6_0lbfh"), ExtResource("7_cmxln"), ExtResource("8_cl0tj"), ExtResource("9_hi4yg"), ExtResource("10_a785i"), ExtResource("99_block")])
+abilities = Array[PackedScene]([ExtResource("1_xyo8l"), ExtResource("2_x6h0j"), ExtResource("3_j4p6b"), ExtResource("4_4df2u"), ExtResource("5_tw87l"), ExtResource("6_0lbfh"), ExtResource("7_cmxln"), ExtResource("8_cl0tj"), ExtResource("9_hi4yg"), ExtResource("10_a785i"), ExtResource("99_block"), ExtResource("98_spgain")])
 display_name = "Cryomancer"
 display_color = Color(0, 0.7490196, 1, 1)
 tags = Array[StringName]([&"Character.Cryomancer"])
 level_effect = ExtResource("90_growth")
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
 role = "Damage dealer: control"
 description = "Ice that freezes and breaks. Glacial Spike and Blizzard lock enemies down; Absolute Zero freezes the whole field."
 stats_x100 = Dictionary[String, int]({
@@ -37,6 +66,7 @@ stats_x100 = Dictionary[String, int]({
 "max_mp": 12000,
 "max_toughness": 0,
 "mp": 12000,
+"sp_basic": 1100,
 "spd": 10500,
 "toughness": 0
 })
