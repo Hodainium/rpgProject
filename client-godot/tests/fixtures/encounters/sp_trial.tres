@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_4gv7p"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_x1s34"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_6ys51"]
+[ext_resource type="Resource" path="res://tests/fixtures/enemies/keeper.tres" id="4_eqebs"]
+
+[sub_resource type="Resource" id="Resource_72f81"]
+script = ExtResource("3_6ys51")
+enemy = ExtResource("4_eqebs")
+
+[sub_resource type="Resource" id="Resource_mdtho"]
+script = ExtResource("3_6ys51")
+enemy = ExtResource("4_eqebs")
+level_bonus = 1
+
+[resource]
+script = ExtResource("2_x1s34")
+id = &"fixture.encounter.sp_trial"
+display_name = "Sp Trial"
+slots = Array[ExtResource("3_6ys51")]([SubResource("Resource_72f81"), SubResource("Resource_mdtho")])

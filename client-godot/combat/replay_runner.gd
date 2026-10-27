@@ -89,9 +89,9 @@ func run_files(in_path: String, out_path: String, content_root: String, host: No
 
 
 func _check_claims(battle: Battle, controller: ReplayController, action_log: Dictionary) -> void:
-	if battle.outcome == Battle.TURN_LIMIT_OUTCOME:
-		battle.reject("TurnLimitExceeded", "no outcome after %d turns" % Battle.TURN_LIMIT)
-	elif controller.remaining() > 0:
+	# Spec skill-points D15: a TurnLimit battle is a legal loss and verifies like any other outcome (the wire's
+	# TurnLimitExceeded reason is no longer produced).
+	if controller.remaining() > 0:
 		battle.reject("TrailingActions", "%d log entries left after the battle ended" % controller.remaining())
 	elif str(action_log["claimedOutcome"]) != battle.outcome:
 		battle.reject("OutcomeMismatch", "claimed %s, simulated %s" % [action_log["claimedOutcome"], battle.outcome])

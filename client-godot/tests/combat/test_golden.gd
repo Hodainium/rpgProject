@@ -8,6 +8,7 @@ extends TestCase
 const PINNED_ENGINE: String = "4.7.2.stable.mono"
 const REPLAY_SCENE: String = "res://combat/headless/replay_main.tscn"
 const TRACE_SCENE: String = "res://combat/headless/trace_main.tscn"
+const SkillPoints := preload("res://tests/combat/test_skill_points.gd")
 
 
 static func _scenarios() -> Dictionary:
@@ -27,6 +28,9 @@ static func _scenarios() -> Dictionary:
 		"boss-seed-5": preload("res://tests/combat/test_bosses.gd").boss_snapshot("5"),
 		# Spec playable-demo 3.8: a mirror boss copying the party's held items and armor, one stack per piece (H9, H10).
 		"mirror-seed-9": preload("res://tests/combat/test_mirror.gd").mirror_snapshot("9"),
+		# Spec skill-points: SP gained on basics, scaled costs, rank II replacing rank I, an enemy's secret skill and the
+		# read-only level.
+		"sp-seed-13": SkillPoints.sp_snapshot("13"),
 	}
 
 
@@ -60,7 +64,8 @@ func test_golden_replays() -> void:
 		if name.ends_with(".json") and not name.ends_with(".result.json") and not name.ends_with(".trace.json"):
 			requests.append(name.trim_suffix(".json"))
 	requests.sort()
-	eq(Array(requests), ["auto-seed-4", "auto-seed-4-tampered-drop", "boss-seed-5", "break-seed-11", "duel-seed-1", "mirror-seed-9", "run-v2-seed-7", "squad-seed-42",
+	eq(Array(requests), ["auto-seed-4", "auto-seed-4-tampered-drop", "boss-seed-5", "break-seed-11", "duel-seed-1", "mirror-seed-9", "run-v2-seed-7",
+		"sp-seed-13", "sp-seed-13-tampered-cost", "sp-seed-13-tampered-unlearned", "squad-seed-42",
 		"squad-seed-42-tampered-final", "squad-seed-42-tampered-target", "status-seed-3", "status-seed-3-tampered-skip",
 		"ult-close-seed-2-tampered-outcome", "ult-seed-7", "ult-seed-7-tampered-turn"], "golden set")
 	for name in requests:
@@ -168,6 +173,9 @@ func _write_goldens() -> void:
 	var auto_actions: Array = unhealed["actionLog"]["actions"]
 	auto_actions.remove_at(auto_actions.find_custom(func(entry) -> bool: return entry["ability"] == "Fixture.Ability.Flask"))
 	requests["auto-seed-4-tampered-drop"] = unhealed
+	# Spec skill-points: a rank I cast the chanter couldn't pay for, and a rank I cast after rank II replaced it (2002).
+	requests["sp-seed-13-tampered-cost"] = SkillPoints.sp_tampered_cost(requests["sp-seed-13"])
+	requests["sp-seed-13-tampered-unlearned"] = SkillPoints.sp_tampered_unlearned(requests["sp-seed-13"])
 	for name in requests:
 		_write(GOLDEN + name + ".json", WireJson.stringify(requests[name]))
 		var replayed := _replay_fresh_process(GOLDEN + name + ".json")

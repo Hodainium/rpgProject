@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/twice_basic.tscn" id="1_xkpjk"]
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/learned_sweep.tscn" id="2_cs4ir"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="3_nhnkj"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="4_bo6x7"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="5_qb6sd"]
+
+[sub_resource type="Resource" id="Resource_qw46s"]
+script = ExtResource("4_bo6x7")
+level = 3
+ability = ExtResource("2_cs4ir")
+
+[resource]
+script = ExtResource("5_qb6sd")
+id = &"broken.character.level_skill_duplicate"
+attribute_set = ExtResource("3_nhnkj")
+abilities = Array[PackedScene]([ExtResource("1_xkpjk"), ExtResource("2_cs4ir")])
+level_skills = Array[ExtResource("4_bo6x7")]([SubResource("Resource_qw46s")])

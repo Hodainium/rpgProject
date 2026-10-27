@@ -43,7 +43,8 @@ signal unit_downed(unit_id: StringName, by_id: StringName)
 ## it has none). Emitted after activation; nothing in combat listens.
 signal ability_activated(unit_id: StringName, ability_tag: StringName, target_id: StringName)
 
-const TURN_LIMIT: int = 1000
+## Spec skill-points D15: a battle with no outcome after this many turns ends as TurnLimit, a loss for the run.
+const TURN_LIMIT: int = 500
 const ONGOING: String = "Ongoing"
 const VICTORY: String = "Victory"
 const DEFEAT: String = "Defeat"
@@ -290,11 +291,13 @@ func _party_kit(member: Dictionary, definition: UnitDefinition, content: Content
 
 func _add_enemies_v2(snapshot: Dictionary, encounter: EncounterDefinition, content: ContentIndex) -> String:
 	var scaling_effect: GameplayEffect = null
+	var depth_level := 1  # spec skill-points D19: the enemies' level before variant and slot bonuses
 	if snapshot.get("scalingId") != null:
 		var rules: ScalingRules = content.scaling.get(StringName(str(snapshot["scalingId"])))
 		if rules == null:
 			return _fail("unknown scaling '%s'" % snapshot["scalingId"])
 		scaling_effect = rules.effect_for_depth(int(snapshot.get("depth", 0)))
+		depth_level = rules.level_for_depth(int(snapshot.get("depth", 0)))
 	var entries: Array = []
 	if snapshot.get("enemies") != null:
 		for entry in snapshot["enemies"]:
@@ -317,11 +320,18 @@ func _add_enemies_v2(snapshot: Dictionary, encounter: EncounterDefinition, conte
 			var slot: EncounterSlot = encounter.slots[index]
 			var loadout: Loadout = slot.loadout if slot.loadout != null else slot.enemy.default_loadout
 			entries.append({"slot": index + 1, "definition": slot.enemy, "loadout": loadout, "variant": slot.variant})
-	var mirror := _mirror_of_party(snapshot, content)
-	if runner_error != "":
-		return runner_error
 	var mirrored := entries.any(func(entry: Dictionary) -> bool:
 		return entry["definition"] is EnemyDefinition and entry["definition"].mirror_party_items)
+	# Spec skill-points D14: the pieces a mirror boss of this encounter never copies.
+	var skip: Array[StringName] = []
+	for entry in entries:
+		if entry["definition"] is EnemyDefinition and entry["definition"].mirror_party_items:
+			for tag in entry["definition"].mirror_skip_tags:
+				if not skip.has(tag):
+					skip.append(tag)
+	var mirror := _mirror_of_party(snapshot, content, skip)
+	if runner_error != "":
+		return runner_error
 	for entry in entries:
 		var kit := _enemy_kit(entry["loadout"], entry["variant"], scaling_effect)
 		# Spec playable-demo 3.8: H9 a mirror boss takes every held item's and armor piece's passives (party-wide ones
@@ -343,7 +353,13 @@ func _add_enemies_v2(snapshot: Dictionary, encounter: EncounterDefinition, conte
 			if ability_set != null:
 				kit["grants"].append({"set": ability_set})
 		var id := StringName("E%d" % number)
-		_add_unit(id, BattleUnit.Side.ENEMY, number, entry["definition"], 1, kit)
+		# Spec skill-points D19, D21: the enemy's level (secret skills) from depth, variant and slot; its GAS level stays 1.
+		var enemy_level := depth_level
+		if entry["variant"] != null:
+			enemy_level += (entry["variant"] as EnemyVariant).level_bonus
+		if encounter_slot != null:
+			enemy_level += encounter_slot.level_bonus
+		_add_unit(id, BattleUnit.Side.ENEMY, number, entry["definition"], maxi(enemy_level, 1), kit, 1)
 		if encounter_slot != null and encounter_slot.brain != null:
 			unit_by_id(id).brain_override = encounter_slot.brain
 	return ""
@@ -352,7 +368,7 @@ func _add_enemies_v2(snapshot: Dictionary, encounter: EncounterDefinition, conte
 ## Spec playable-demo 3.8 (H9, H10): the party's held items and armor from the snapshot, in party slot order, then
 ## each member's items, armor (by slot tag) and use slots. {"holder": grants of holder items, armor and use slots,
 ## "party": grants of party-wide items, "count": pieces held}. Use abilities are never copied.
-func _mirror_of_party(snapshot: Dictionary, content: ContentIndex) -> Dictionary:
+func _mirror_of_party(snapshot: Dictionary, content: ContentIndex, skip: Array[StringName] = []) -> Dictionary:
 	var result := {"holder": [], "party": [], "count": 0}
 	var by_slot: Array = snapshot.get("party", []).duplicate()
 	by_slot.sort_custom(func(a, b) -> bool: return int(a.get("slot", 0)) < int(b.get("slot", 0)))
@@ -363,7 +379,7 @@ func _mirror_of_party(snapshot: Dictionary, content: ContentIndex) -> Dictionary
 				_fail("unknown item '%s'" % item_id)
 				return result
 			result["count"] += 1
-			if item.grants != null:
+			if item.grants != null and not _carries(item.grants, skip):
 				result["party" if item.applies_to == ItemDefinition.AppliesTo.PARTY else "holder"].append({"set": item.grants})
 		var gear: Array[EquipmentDefinition] = []
 		for equipment_id in _list(member, "equipmentIds"):
@@ -375,7 +391,7 @@ func _mirror_of_party(snapshot: Dictionary, content: ContentIndex) -> Dictionary
 		gear.sort_custom(func(a, b) -> bool: return String(a.slot) < String(b.slot))
 		for piece in gear:
 			result["count"] += 1
-			if piece.grants != null:
+			if piece.grants != null and not _carries(piece.grants, skip):
 				result["holder"].append({"set": piece.grants})
 		for use_slot in _list(member, "useSlots"):
 			var usable: ItemDefinition = content.items.get(StringName(str(use_slot.get("itemId", ""))))
@@ -383,9 +399,24 @@ func _mirror_of_party(snapshot: Dictionary, content: ContentIndex) -> Dictionary
 				_fail("unknown item '%s'" % use_slot.get("itemId"))
 				return result
 			result["count"] += 1
-			if usable.grants != null:
+			if usable.grants != null and not _carries(usable.grants, skip):
 				result["holder"].append({"set": usable.grants})
 	return result
+
+
+## Spec skill-points D14: true when the set's tags or its effects' granted tags hold one of `tags` or a tag under one.
+static func _carries(grants: AbilitySet, tags: Array[StringName]) -> bool:
+	if tags.is_empty():
+		return false
+	var carried: Array[StringName] = grants.tags.duplicate()
+	for effect in grants.effects:
+		if effect != null:
+			carried.append_array(effect.granted_tags)
+	for tag in carried:
+		for wanted in tags:
+			if tag == wanted or String(tag).begins_with(String(wanted) + "."):
+				return true
+	return false
 
 
 ## v2 enemy: its loadout (stats, skills, items, equipment), variant and floor scaling.
@@ -486,6 +517,16 @@ func run(controller: Object) -> void:
 		if actor.asc.has_tag_exact(DOWNED_TAG):
 			actor.asc.clear_tag(DOWNED_TAG)
 		actor.asc.turn_start()
+		# Spec skill-points: a soft enrage. An enemy past its overtime turn grows stronger at each of its turns.
+		var enemy_def := actor.definition as EnemyDefinition
+		if actor.alive and enemy_def != null and enemy_def.overtime_turn > 0 and turn >= enemy_def.overtime_turn:
+			if enemy_def.overtime_effect != null:
+				actor.asc.apply_gameplay_effect(enemy_def.overtime_effect, actor.asc, actor.effect_level)
+			if enemy_def.overtime_party_effect != null:
+				for unit in _units:
+					if unit.is_party() and unit.alive:
+						unit.asc.apply_gameplay_effect(enemy_def.overtime_party_effect, actor.asc, actor.effect_level)
+			BattleLog.line(self, "%s is in overtime" % actor.unit_id)
 		actor.asc.send_gameplay_event(EVENT_TURN_START, {"source": actor, "target": actor})
 		await _drain_triggers()
 		_check_deaths()
@@ -496,6 +537,7 @@ func run(controller: Object) -> void:
 			if actor.asc.has_tag_exact(CONTROLLED_TAG):
 				# Spec content-pass H1: no decision is asked for (nothing logged); the turn's ticks still run below.
 				turn_skipped.emit(actor.unit_id)
+				BattleLog.line(self, "%s is controlled: turn skipped" % actor.unit_id)
 				actor.asc.send_gameplay_event(EVENT_TURN_SKIPPED, {"source": actor, "target": actor})
 			else:
 				action = await _take_action(actor, controller)
@@ -524,6 +566,7 @@ func run(controller: Object) -> void:
 	if runner_error == "":
 		final_hash = state_hash()
 		_trace_point("end")
+	BattleLog.line(self, "ended: %s%s" % [outcome, " (%s)" % runner_error if runner_error != "" else ""])
 	battle_ended.emit(outcome, final_hash)
 
 
@@ -588,7 +631,7 @@ func _recover(unit: BattleUnit) -> void:
 			modifier.magnitude_calculation = GameplayEffectModifier.MagnitudeCalculationType.SET_BY_CALLER
 			modifier.set_by_caller_tag = ExecutionRow.TOUGHNESS_TAG
 			_refill_effect.modifiers.append(modifier)
-		var spec := GameplayEffectSpec.new(_refill_effect, GameplayEffectContext.new(unit, unit), unit.level)
+		var spec := GameplayEffectSpec.new(_refill_effect, GameplayEffectContext.new(unit, unit), unit.effect_level)
 		spec.set_set_by_caller_magnitude(ExecutionRow.TOUGHNESS_TAG, float(missing))
 		unit.asc.apply_effect_spec(spec)
 	unit.asc.clear_tag(BROKEN_TAG)
@@ -1012,6 +1055,8 @@ func _activate(actor: BattleUnit, ability: BattleAbility, target: BattleUnit) ->
 	if actor.asc.can_activate_ability(ability):
 		ability_activated.emit(actor.unit_id, tag, target.unit_id if target != null else &"")
 	var activated: bool = await ability.try_activate(payload)
+	BattleLog.line(self, "%s %s -> %s%s" % [actor.unit_id, tag, target.unit_id if target != null else "-",
+		"" if activated else " (refused)"])
 	if activated and not field_mode:
 		var used := {"source": actor, "target": actor, "ability": tag}
 		actor.asc.send_gameplay_event(EVENT_ABILITY_USED, used)
@@ -1036,7 +1081,7 @@ func apply_to_units(effect: GameplayEffect, unit_ids: Array[StringName]) -> void
 	for id in unit_ids:
 		var unit := unit_by_id(id)
 		if unit != null:
-			unit.asc.apply_gameplay_effect(effect, unit.asc, unit.level)
+			unit.asc.apply_gameplay_effect(effect, unit.asc, unit.effect_level)
 	_check_revives()
 	_check_deaths()
 
@@ -1084,9 +1129,10 @@ func _expand_targets(actor: BattleUnit, ability: BattleAbility, target: BattleUn
 	return {"primary": primary, "targets": targets}
 
 
+## `effect_level` -1: the same as `level` (spec skill-points D21; enemies pass 1).
 func _add_unit(id: StringName, side: BattleUnit.Side, slot: int, definition: UnitDefinition, level: int,
-		kit: Dictionary = {}) -> void:
-	_units.append(BattleUnit.create(self, id, side, slot, definition, level, kit))
+		kit: Dictionary = {}, effect_level: int = -1) -> void:
+	_units.append(BattleUnit.create(self, id, side, slot, definition, level, kit, effect_level))
 
 
 func _unit_problem(unit: BattleUnit) -> String:
@@ -1212,6 +1258,8 @@ func _drain_triggers() -> void:
 		payload["unit"] = unit
 		payload["event"] = entry["payload"]
 		var activated: bool = await ability.try_activate(payload)
+		BattleLog.line(self, "  trigger %s %s on %s%s" % [unit.unit_id, ability.ability_tag, entry["event_tag"],
+			"" if activated else " (did not activate)"])
 		if not activated:
 			continue
 		trigger_activated.emit(unit.unit_id, ability.ability_tag, StringName(entry["event_tag"]))

@@ -36,7 +36,7 @@ const _FIELD := "\\{([A-Za-z_][A-Za-z0-9_]*)\\}"
 ## the data keys senders use (BattleMessages, RunController).
 const KNOWN_FIELDS: Array[String] = ["instigator", "target", "amount", "count", "verb", "text", "instigatorName",
 	"targetName", "abilityName", "chapterName", "rarity", "description", "status", "outcome", "priceItem", "error",
-	"sandbox"]
+	"sandbox", "skillName", "skillTag", "replacesTag"]
 
 static var _field_regex: RegEx
 

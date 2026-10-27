@@ -551,11 +551,31 @@ func _check_levels() -> void:
 		if level > int(member["level"]):
 			var character: UnitDefinition = content.units.get(member["character"])
 			var shown := character.display_name if character != null else String(member["character"])
+			var before := int(member["level"])
 			member["level"] = level
 			_notify("%s reaches level %d" % [shown, level])
 			_send(GameplayMessageRouter.RUN_LEVEL_UP, &"Verb.LevelUp", &"", StringName("slot:%d" % member["slot"]), level,
 				[], {"targetName": shown})
+			if character != null:
+				_announce_skills(member, character, shown, before, level)
 	party_changed.emit()
+
+
+## Spec skill-points D18: one message per level skill reached by a level-up (from `before` + 1 to `level`). Nothing is
+## logged: the skills follow from the level, which the run state and its hash already hold.
+func _announce_skills(member: Dictionary, character: UnitDefinition, shown: String, before: int, level: int) -> void:
+	for row in character.level_skills:
+		if row == null or row.ability == null or row.level <= before or row.level > level:
+			continue
+		var ability := row.ability.instantiate() as BattleAbility
+		if ability == null:
+			continue
+		var skill_name := AbilityName.of(ability)
+		var tag := ability.ability_tag
+		ability.free()
+		_notify("%s learned %s" % [shown, skill_name])
+		_send(GameplayMessageRouter.RUN_SKILL_LEARNED, &"Verb.Learn", &"", StringName("slot:%d" % member["slot"]), row.level,
+			[], {"targetName": shown, "skillName": skill_name, "skillTag": String(tag), "replacesTag": String(row.replaces)})
 
 
 ## Castlevania-style drops: one roll per beaten enemy that has a drop_item, on the stream floor/<n>/item_drop/<cell>
@@ -1302,8 +1322,9 @@ func field_catalog() -> Array[Dictionary]:
 
 
 ## Spec ff7-ui 2.10 (read-only): the member's whole kit for the Status screen, in grant order: [{"name", "kind"
-## ("BASIC", "ABILITY", "ULT", "PASSIVE", "ITEM"), "hint" (AbilityHint)}]. Passives include the helpers every class
-## has (ult charge, break passives); the screen decides what to list.
+## ("BASIC", "ABILITY", "ULT", "PASSIVE", "ITEM"), "hint" (AbilityHint), "unlock_level"}]. Passives include the helpers
+## every class has (ult charge, break passives); the screen decides what to list. Spec skill-points: after them, the
+## class's level skills not reached yet, in table order, with "unlock_level" (0 on everything already in the kit).
 func member_kit(slot: int) -> Array[Dictionary]:
 	var kit: Array[Dictionary] = []
 	if not _active() or state.member(slot).is_empty():
@@ -1323,7 +1344,18 @@ func member_kit(slot: int) -> Array[Dictionary]:
 				kind = "PASSIVE"
 			elif ability.asset_tags.has(&"Ability.Type.Basic"):
 				kind = "BASIC"
-			kit.append({"name": AbilityName.of(ability), "kind": kind, "hint": AbilityHint.of(unit, ability)})
+			kit.append({"name": AbilityName.of(ability), "kind": kind, "hint": AbilityHint.of(unit, ability),
+				"unlock_level": 0})
+		for row in unit.definition.level_skills:
+			if row == null or row.ability == null or row.level <= unit.level:
+				continue
+			var locked := row.ability.instantiate() as BattleAbility
+			if locked == null:
+				continue
+			var locked_kind := "ULT" if locked.is_ultimate() else ("PASSIVE" if locked.is_triggered() else "ABILITY")
+			kit.append({"name": AbilityName.of(locked), "kind": locked_kind, "hint": AbilityHint.of(unit, locked),
+				"unlock_level": row.level})
+			locked.free()
 	battle.free()
 	return kit
 

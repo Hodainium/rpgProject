@@ -22,34 +22,33 @@ const USAGE_TEXT := {
 }
 
 
-## {"name", "cost", "description", "target", "usage"} for `ability` (unit may be null).
-static func of(_unit: BattleUnit, ability: BattleAbility) -> Dictionary:
+## {"name", "cost", "description", "target", "usage", "unit", "spCost"} for `ability` (unit may be null; with one,
+## the cost is that unit's, after its cost multiplier). "unit" (its id, "" without one) and "spCost" (whole SP, 0 when
+## free) let the party window preview the SP the move would spend (spec skill-points).
+static func of(unit: BattleUnit, ability: BattleAbility) -> Dictionary:
 	if ability == null:
-		return {"name": "?", "cost": "", "description": "", "target": "", "usage": ""}
+		return {"name": "?", "cost": "", "description": "", "target": "", "usage": "", "unit": "", "spCost": 0}
+	@warning_ignore("integer_division")
+	var sp := CostReader.sp_cost(ability, unit.asc if unit != null else null) / 100
 	return {
 		"name": AbilityName.of(ability),
-		"cost": cost_text(ability),
+		"cost": cost_text(ability, unit),
 		"description": ability.description,
 		"target": TARGET_TEXT.get(ability.targeting, ""),
 		"usage": USAGE_TEXT[ability.usage()],
+		"unit": String(unit.unit_id) if unit != null else "",
+		"spCost": sp,
 	}
 
 
-## "12 MP", "ULT 100%" or "" from the ability's cost effect.
-static func cost_text(ability: GameplayAbility) -> String:
-	if ability == null or ability.cost_effect == null:
-		return ""
+## "12 SP", "ULT 100%" or "" from the ability's cost effect (spec skill-points D10: the player sees SP; the attribute
+## stays mp). With a unit, its cost multiplier applies (CostReader, the number the battle subtracts).
+static func cost_text(ability: GameplayAbility, unit: BattleUnit = null) -> String:
+	var costs := CostReader.cost_of(ability, unit.asc if unit != null else null)
 	var parts := PackedStringArray()
-	for modifier in ability.cost_effect.modifiers:
-		if not modifier is CombatModifier or modifier.value_x100 >= 0:
+	for pair in [["mp", "%s SP"], ["energy", "ULT %s%%"], ["hp", "%s HP"]]:
+		if not costs.has(pair[0]):
 			continue
-		var amount := Fixed.to_display(-modifier.value_x100)
-		var shown := str(int(amount)) if amount == int(amount) else str(amount)
-		match modifier.attribute_name:
-			"mp":
-				parts.append("%s MP" % shown)
-			"energy":
-				parts.append("ULT %s%%" % shown)
-			"hp":
-				parts.append("%s HP" % shown)
+		var amount := Fixed.to_display(int(costs[pair[0]]))
+		parts.append(pair[1] % (str(int(amount)) if amount == int(amount) else str(amount)))
 	return " · ".join(parts)

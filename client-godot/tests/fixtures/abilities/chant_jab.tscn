@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_kspck"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_p0tmb"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_1yeee"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/chant_jab.tres" id="4_x2i3r"]
+
+[sub_resource type="Resource" id="Resource_m521r"]
+script = ExtResource("2_p0tmb")
+id = &"hit"
+effect = ExtResource("3_1yeee")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+
+[node name="ChantJab" type="Node" unique_id=134855624]
+script = ExtResource("1_kspck")
+asset_tags = Array[StringName]([&"Ability.Type.Basic", &"Ability.Role.Damage"])
+executions = Array[ExtResource("2_p0tmb")]([SubResource("Resource_m521r")])
+animation = ExtResource("4_x2i3r")
+ability_tag = &"Fixture.Ability.ChantJab"

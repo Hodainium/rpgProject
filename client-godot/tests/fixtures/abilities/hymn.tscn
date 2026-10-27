@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_q6ns1"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ism1b"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/heal.tres" id="3_nyadd"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/hymn.tres" id="4_1q16d"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/sp_cost_25.tres" id="5_vfdx2"]
+
+[sub_resource type="Resource" id="Resource_vh7dq"]
+script = ExtResource("2_ism1b")
+id = &"heal"
+effect = ExtResource("3_nyadd")
+
+[node name="Hymn" type="Node" unique_id=1625841299]
+script = ExtResource("1_q6ns1")
+targeting = 3
+asset_tags = Array[StringName]([&"Ability.Role.Heal"])
+executions = Array[ExtResource("2_ism1b")]([SubResource("Resource_vh7dq")])
+animation = ExtResource("4_1q16d")
+ability_tag = &"Fixture.Ability.Hymn"
+cost_effect = ExtResource("5_vfdx2")

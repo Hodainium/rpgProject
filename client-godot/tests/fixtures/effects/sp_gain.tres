@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_8xb2c"]
+[ext_resource type="Script" path="res://tests/fixtures/exec_calcs/fixture_sp_restore.gd" id="2_cp568"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_snppk"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_tpsyh"]
+
+[sub_resource type="Resource" id="Resource_a3wcp"]
+script = ExtResource("2_cp568")
+
+[resource]
+script = ExtResource("4_tpsyh")
+executions = Array[ExtResource("1_8xb2c")]([SubResource("Resource_a3wcp")])

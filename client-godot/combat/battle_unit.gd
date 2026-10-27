@@ -12,13 +12,19 @@ const MAX_MP: String = "max_mp"
 const SPD: String = "spd"
 const ENERGY: String = "energy"
 const MAX_ENERGY: String = "max_energy"
+## Spec skill-points D22: the read-only level attribute (×100), where the unit's AttributeSet has one.
+const LEVEL: String = "level"
 ## Loose tag on dead units in v2 battles and the field (spec game-skeleton 3.4).
 const DEAD_TAG: StringName = &"State.Dead"
 
 var unit_id: StringName
 var side: Side
 var slot: int
+## Spec skill-points D21: the unit's real level (party: the snapshot's; enemies: from depth, variant and slot, D19).
+## The read-only `level` attribute holds it ×100 where the AttributeSet has one.
 var level: int
+## The GAS ability and effect level (party: = level; enemies: 1), so levels never change an effect's numbers.
+var effect_level: int
 var definition: UnitDefinition
 var asc: CombatASC
 var alive: bool = true
@@ -46,13 +52,14 @@ var phase_index: int = 0
 ##   (equipment, items, use slots, variant), "extra_effects": Array[GameplayEffect] (floor scaling),
 ##   "carry": {"hp": int or null, "mp": .., "energy": ..}.
 static func create(parent: Node, id: StringName, unit_side: int, unit_slot: int, unit_def: UnitDefinition,
-		unit_level: int, kit: Dictionary = {}) -> BattleUnit:
+		unit_level: int, kit: Dictionary = {}, unit_effect_level: int = -1) -> BattleUnit:
 	var unit := BattleUnit.new()
 	unit.name = String(id)
 	unit.unit_id = id
 	unit.side = unit_side as Side
 	unit.slot = unit_slot
 	unit.level = unit_level
+	unit.effect_level = unit_effect_level if unit_effect_level >= 0 else unit_level
 	unit.definition = unit_def
 	parent.add_child(unit)
 
@@ -61,21 +68,32 @@ static func create(parent: Node, id: StringName, unit_side: int, unit_slot: int,
 	var sets: Array[AttributeSet] = [unit_def.attribute_set.new()]
 	unit.asc.attribute_sets = sets
 	unit.add_child(unit.asc)
+	# Spec skill-points D22: the read-only level, written once the ASC holds its own copy of the set and before any
+	# effect runs (construction, not gameplay); the AttributeSet refuses every later change.
+	var level_data := unit.asc.get_attribute(LEVEL) if unit.asc.has_attribute(LEVEL) else null
+	if level_data != null:
+		level_data.base_value = float(unit_level * 100)
+		level_data.current_value = float(unit_level * 100)
 
 	if kit.is_empty():
 		for scene in unit_def.abilities:
 			var ability := scene.instantiate() as BattleAbility
-			ability.ability_level = unit_level
+			ability.ability_level = unit.effect_level
 			unit.asc.add_child(ability)  # GameplayAbility._ready grants itself to its parent ASC.
 		unit._apply_stats({})
 		return unit
 
 	# v2, steps 1-5 of spec game-skeleton 3.4.
 	var grants: Array = kit.get("grants", [])
+	# Spec skill-points D17, D24: the level skills reached; a row's `replaces` keeps the superseded ability out.
+	var learned := unit_def.level_skills_at(unit_level)
+	var replaced: Array[StringName] = learned["replaced"]
 	for scene in unit_def.abilities:
-		unit._grant_ability(scene, &"")
+		unit._grant_ability(scene, &"", replaced)
 	for scene in kit.get("skills", []):
-		unit._grant_ability(scene, &"")
+		unit._grant_ability(scene, &"", replaced)
+	for scene in learned["grant"]:
+		unit._grant_ability(scene, &"", replaced)
 	for grant in grants:
 		var ability_set: AbilitySet = grant.get("set")
 		if ability_set != null:
@@ -88,10 +106,10 @@ static func create(parent: Node, id: StringName, unit_side: int, unit_slot: int,
 		var ability_set: AbilitySet = grant.get("set")
 		if ability_set != null:
 			for effect in ability_set.effects:
-				unit.asc.apply_gameplay_effect(effect, unit.asc, unit_level)
+				unit.asc.apply_gameplay_effect(effect, unit.asc, unit.effect_level)
 	for effect in kit.get("extra_effects", []):
 		if effect != null:
-			unit.asc.apply_gameplay_effect(effect, unit.asc, unit_level)
+			unit.asc.apply_gameplay_effect(effect, unit.asc, unit.effect_level)
 	for tag in unit_def.tags:
 		unit.asc.add_tag(tag)
 	for grant in grants:
@@ -143,18 +161,21 @@ func _apply_carry(carry: Dictionary) -> void:
 	asc.initialize_attribute_overrides(values)
 
 
-func _grant_ability(scene: PackedScene, item_id: StringName) -> void:
+func _grant_ability(scene: PackedScene, item_id: StringName, skip: Array[StringName] = []) -> void:
 	if scene == null:
 		return
 	var ability := scene.instantiate() as BattleAbility
 	if ability == null:
 		warnings.append("%s: %s is not a BattleAbility scene" % [unit_id, scene.resource_path])
 		return
+	if skip.has(ability.ability_tag):
+		ability.free()
+		return
 	if ability_by_tag(ability.ability_tag) != null:
 		warnings.append("%s already has %s; the duplicate grant is skipped" % [unit_id, ability.ability_tag])
 		ability.free()
 		return
-	ability.ability_level = level
+	ability.ability_level = effect_level
 	asc.add_child(ability)
 	if item_id != &"":
 		item_abilities[ability.ability_tag] = item_id
@@ -167,7 +188,7 @@ func grant_set(ability_set: AbilitySet) -> void:
 		_grant_ability(scene, &"")
 	for effect in ability_set.effects:
 		if effect != null:
-			asc.apply_gameplay_effect(effect, asc, level)
+			asc.apply_gameplay_effect(effect, asc, effect_level)
 	for tag in ability_set.tags:
 		asc.add_tag(tag)
 

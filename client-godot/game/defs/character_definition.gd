@@ -20,9 +20,13 @@ extends UnitDefinition
 @export var level_effect: GameplayEffect
 
 
-## The scene for a learnable or base skill with this ability tag, or null.
+## The scene for a learnable, level or base skill with this ability tag, or null.
 func skill_scene(tag: StringName) -> PackedScene:
-	for scene in abilities + learnable_skills:
+	var scenes: Array[PackedScene] = abilities + learnable_skills
+	for row in level_skills:
+		if row != null and row.ability != null:
+			scenes.append(row.ability)
+	for scene in scenes:
 		if scene != null and SkillTags.tag_of(scene) == tag:
 			return scene
 	return null

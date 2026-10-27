@@ -8,6 +8,13 @@
 ##     -- --play [--policy auto|smart|chaos] [--illegal 20] [--chaos 100] [--chaos-from 1] [--check] [--trace]
 ##        [--party a,b | --party-size 1-4|mixed (default 4)] [--max-steps 2000]   (chaos below 100% or from a later floor plays on top of smart)
 ##   (give --quit-after a large frame count: every battle step takes frames)
+## Spec skill-points D16, D27: --seeds <file> [--seeds-from 0] [--count n] plays a committed seed list (the balance
+## gate: game/dev/balance_seeds.json; --count limits it, e.g. 150 for the quick set) instead of --from/--count;
+## --compare <old report.json> prints what changed against an earlier report (with --play or --merge).
+## --set <res://path.tres>:<property>[/<index or property>...]=<value> (repeatable; value in Godot's var syntax, e.g.
+## [&"Drain"] or 12000; a nested path like executions/0/amount_x100 reaches a sub-resource):
+## a what-if for this process only, applied in memory to the loaded resource; no file changes (spec skill-points D27).
+## --battle-log: BattleLog lines for every battle (actions, triggers, Auto's picks with a reason); also RPG_BATTLE_LOG=1.
 ## Shards (spec playable-demo 2.3d): run seed ranges in parallel processes with --records, then
 ##     -- --merge shard1.json shard2.json ... --out all.json   (game/tools/play_sharded.sh does both)
 ## Every mode also exits 3 on any script or engine error (ScriptErrorLog), printed at the end; with --play they are in
@@ -22,6 +29,12 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	var root := _arg(args, "--content-root", "res://content/")
 	var content := ContentIndex.new(root)
+	# Spec skill-points: --battle-log prints every battle's actions, triggers and Auto's picks (BattleLog).
+	if args.has("--battle-log"):
+		BattleLog.enabled = true
+	if not _apply_sets(args):
+		_quit(1)
+		return
 	var run_id := StringName(_arg(args, "--run", ""))
 	var picked := RunController.pick_run(content, run_id)
 	if picked["error"] != "":
@@ -59,8 +72,19 @@ func _play(content: ContentIndex, args: PackedStringArray) -> void:
 		"max_steps": int(_arg(args, "--max-steps", "2000")), "chaos": int(_arg(args, "--chaos", "100")),
 		"chaos_from": int(_arg(args, "--chaos-from", "1")),
 		"party_size": _arg(args, "--party-size", "4") if _arg(args, "--party-size", "4") == "mixed" else int(_arg(args, "--party-size", "4"))}
-	var report := await PlayReport.many(content, self, int(_arg(args, "--from", "1")), int(_arg(args, "--count", "100")),
-		options, true)
+	var report: Dictionary
+	var seeds_path := _arg(args, "--seeds", "")
+	if seeds_path != "":
+		var seeds := PlayReport.load_seeds(seeds_path, int(_arg(args, "--seeds-from", "0")), int(_arg(args, "--count", "0")))
+		if seeds.is_empty():
+			print("seed_report: no seeds in %s" % seeds_path)
+			_quit(1)
+			return
+		options["seed_set"] = seeds_path.get_file()
+		report = await PlayReport.many_seeds(content, self, seeds, options, true)
+	else:
+		report = await PlayReport.many(content, self, int(_arg(args, "--from", "1")), int(_arg(args, "--count", "100")),
+			options, true)
 	var failures: Array = report["failures"]
 	report.erase("failures")
 	var records: Array = report["records"]
@@ -68,6 +92,7 @@ func _play(content: ContentIndex, args: PackedStringArray) -> void:
 	report.erase("records")
 	report.erase("options")
 	print(PlayReport.text(report))
+	_compare(args, report)
 	var out := _arg(args, "--out", "")
 	if out != "":
 		var file := FileAccess.open(out, FileAccess.WRITE)
@@ -102,6 +127,7 @@ func _merge(args: PackedStringArray) -> void:
 		return
 	var report := PlayReport.merge(shards)
 	print(PlayReport.text(report))
+	_compare(args, report)
 	var out := _arg(args, "--out", "")
 	if out != "":
 		var file := FileAccess.open(out, FileAccess.WRITE)
@@ -111,6 +137,59 @@ func _merge(args: PackedStringArray) -> void:
 	if not report["errors"].is_empty():
 		print("seed_report: the shards had %d script or engine error(s)" % report["errors"].size())
 	_quit(3 if report["stopped"] > 0 or not report["violations"].is_empty() or not report["errors"].is_empty() else 0)
+
+
+## --set path:property=value, each one in memory on the cached resource the content index uses (spec skill-points
+## D27). False (printed) when one can't be applied.
+func _apply_sets(args: PackedStringArray) -> bool:
+	for at in args.size():
+		if args[at] != "--set" or at + 1 >= args.size():
+			continue
+		var text := args[at + 1]
+		var colon := text.find(":", 6)  # after "res://"
+		var equals := text.find("=", colon)
+		if colon < 0 or equals < 0:
+			print("seed_report: --set wants <res://path>:<property>=<value>, got %s" % text)
+			return false
+		var path := text.substr(0, colon)
+		var steps := text.substr(colon + 1, equals - colon - 1).split("/")
+		var target: Variant = load(path) if ResourceLoader.exists(path) else null
+		# A nested path (executions/0/amount_x100) walks properties and array indexes to the object that holds the last one.
+		for step in steps.slice(0, steps.size() - 1):
+			if target is Array and step.is_valid_int() and int(step) < target.size():
+				target = target[int(step)]
+			elif target is Object and step in target:
+				target = target.get(step)
+			else:
+				target = null
+				break
+		var property := steps[steps.size() - 1]
+		if not target is Object or not property in target:
+			print("seed_report: --set: no property %s on %s" % ["/".join(steps), path])
+			return false
+		var value: Variant = str_to_var(text.substr(equals + 1))
+		var current: Variant = target.get(property)
+		if current is Array and value is Array:
+			var typed: Array = current.duplicate()
+			typed.clear()
+			typed.assign(value)
+			value = typed
+		target.set(property, value)
+		print("what-if: %s %s = %s" % [path.get_file(), "/".join(steps), var_to_str(target.get(property))])
+	return true
+
+
+## --compare <old report.json>: what changed against an earlier report (spec skill-points D27).
+func _compare(args: PackedStringArray, report: Dictionary) -> void:
+	var path := _arg(args, "--compare", "")
+	if path == "":
+		return
+	var old: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not old is Dictionary:
+		print("seed_report: cannot read %s to compare" % path)
+		return
+	print("
+".join(PlayReport.compare_text(old, JSON.parse_string(JSON.stringify(report)))))
 
 
 ## Quits with `code`, or 3 when this process raised script or engine errors (printed, except those already in the

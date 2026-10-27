@@ -22,6 +22,9 @@ extends Resource
 @export_custom(PROPERTY_HINT_NONE, "gas::tag") var tags: Array[StringName] = []
 ## The loadout used unless an encounter slot or room placement overrides it.
 @export var default_loadout: Loadout
+## Spec skill-points D17: abilities gained by level (characters: learned skills, ranks and passives; enemies: secret
+## skills at higher levels). Run battles (v2 snapshots) only. Empty: levels grant nothing.
+@export var level_skills: Array[LevelSkill] = []
 
 ## Stats as typed, with up to 2 decimals (e.g. {"atk": 500, "crit_rate": 5.25}). Editor-only view of stats_x100.
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR) var stats: Dictionary[String, float]:
@@ -40,3 +43,16 @@ extends Resource
 
 ## Saved form of `stats` (×100 whole numbers). Applied with initialize_attribute_overrides.
 @export_storage var stats_x100: Dictionary[String, int] = {}
+
+
+## Spec skill-points D17, D24: the level skills reached at `unit_level` ("grant", in table order) and the ability tags
+## those rows replace ("replaced"; a replaced ability, even a reached level skill, is not granted).
+func level_skills_at(unit_level: int) -> Dictionary:
+	var grant: Array[PackedScene] = []
+	var replaced: Array[StringName] = []
+	for row in level_skills:
+		if row != null and row.ability != null and row.level <= unit_level:
+			grant.append(row.ability)
+			if row.replaces != &"":
+				replaced.append(row.replaces)
+	return {"grant": grant, "replaced": replaced}

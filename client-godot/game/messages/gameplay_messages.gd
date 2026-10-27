@@ -25,6 +25,9 @@ const RUN_CHOICE: StringName = &"Message.Run.Choice"
 const RUN_KEY_FOUND: StringName = &"Message.Run.KeyFound"
 const RUN_CHEST_FOUND: StringName = &"Message.Run.ChestFound"
 const RUN_CHEST_OPENED: StringName = &"Message.Run.ChestOpened"
+## Spec skill-points D18: a level-up reached a level skill (target: "slot:<n>"; magnitude: the level; data
+## "targetName" (the character), "skillName", "skillTag", "replacesTag").
+const RUN_SKILL_LEARNED: StringName = &"Message.Run.SkillLearned"
 const BATTLE_STARTED: StringName = &"Message.Battle.Started"
 const BATTLE_ENDED: StringName = &"Message.Battle.Ended"
 const BATTLE_DAMAGE: StringName = &"Message.Battle.Damage"
@@ -49,13 +52,13 @@ const UI_ULT_PRESSED: StringName = &"Message.Ui.UltPressed"
 
 ## Every channel and verb the code sends (the tag checkpoint, sync_tags.tscn, checks them against the registry).
 const CHANNELS: Array[StringName] = [NOTIFICATION, RUN_STARTED, RUN_ENDED, RUN_FLOOR_ENTERED, RUN_LEVEL_UP,
-	RUN_ITEM_TAKEN, RUN_ITEM_DROPPED, RUN_CHOICE, RUN_KEY_FOUND, RUN_CHEST_FOUND, RUN_CHEST_OPENED, BATTLE_STARTED, BATTLE_ENDED, BATTLE_DAMAGE, BATTLE_BROKEN,
+	RUN_ITEM_TAKEN, RUN_ITEM_DROPPED, RUN_CHOICE, RUN_KEY_FOUND, RUN_CHEST_FOUND, RUN_CHEST_OPENED, RUN_SKILL_LEARNED, BATTLE_STARTED, BATTLE_ENDED, BATTLE_DAMAGE, BATTLE_BROKEN,
 	BATTLE_RECOVERED, BATTLE_DOWNED, BATTLE_ONE_MORE, BATTLE_INTERRUPT, BATTLE_PHASE, BATTLE_RESISTED, BATTLE_DRAINED,
 	BATTLE_TURN_SKIPPED, BATTLE_UNIT_DIED, BATTLE_ABILITY_USED, UI_REFUSED, UI_HINT, UI_ULT_PRESSED]
 const VERBS: Array[StringName] = [&"Verb.Start", &"Verb.Win", &"Verb.Lose", &"Verb.Stop", &"Verb.Enter",
 	&"Verb.LevelUp", &"Verb.Take", &"Verb.Buy", &"Verb.Drop", &"Verb.Choose", &"Verb.Damage", &"Verb.Break",
 	&"Verb.Recover", &"Verb.Down", &"Verb.OneMore", &"Verb.Interrupt", &"Verb.Phase", &"Verb.Resist", &"Verb.Drain",
-	&"Verb.Skip", &"Verb.Die", &"Verb.Use", &"Verb.Refuse", &"Verb.Hint", &"Verb.Press"]
+	&"Verb.Skip", &"Verb.Die", &"Verb.Use", &"Verb.Refuse", &"Verb.Hint", &"Verb.Press", &"Verb.Learn"]
 const NOTIFICATION_TAGS: Array[StringName] = [&"Notification.Warning", &"Notification.Error"]
 
 ## channel -> Array of entries {callback, mode, payload_type, owner: WeakRef or null, removed}

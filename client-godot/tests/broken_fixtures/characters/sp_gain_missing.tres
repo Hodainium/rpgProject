@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/gainless_basic.tscn" id="1_2wxeq"]
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/gainless_skill.tscn" id="2_bv2rb"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="3_ekuo7"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="4_isn8m"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="5_d888f"]
+
+[resource]
+script = ExtResource("5_d888f")
+id = &"broken.character.sp_gain_missing"
+attribute_set = ExtResource("3_ekuo7")
+abilities = Array[PackedScene]([ExtResource("1_2wxeq"), ExtResource("2_bv2rb")])

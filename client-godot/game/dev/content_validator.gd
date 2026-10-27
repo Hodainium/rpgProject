@@ -115,6 +115,9 @@ func _check_unit(unit: UnitDefinition) -> void:
 			if unit.variants[index] == null:
 				_error("dangling_ref", "%s::variants[%d]" % [path, index], "%s has an empty variant entry" % unit.id)
 		# Spec playable-demo 3.8 H10: the per-item effect is applied once per piece held, so it must stack.
+		# Spec skill-points: the soft enrage stacks once per turn in overtime, so it must stack too.
+		if unit.overtime_effect != null and not _stacks(unit.overtime_effect):
+			_error("overtime_not_stacking", path + "::overtime_effect", "%s's overtime effect refreshes instead of stacking; it would count once" % unit.id)
 		if unit.per_item_effect != null and not _stacks(unit.per_item_effect):
 			_error("per_item_not_stacking", path + "::per_item_effect", "%s's per-item effect refreshes instead of stacking; it would count once" % unit.id)
 	if unit.default_loadout != null and _is_inline(unit.default_loadout):
@@ -127,8 +130,116 @@ func _check_unit(unit: UnitDefinition) -> void:
 		_check_enemy_charge(unit)
 		_check_phases(unit)
 		_check_pattern(unit)
+	_check_level_skills(unit)
+	if unit is CharacterDefinition:
+		_check_sp(unit)
+	for pair in [["level_effect", unit.get("level_effect")], ["per_item_effect", unit.get("per_item_effect")]]:
+		if pair[1] is GameplayEffect:
+			_check_level_writes(pair[1], "%s::%s" % [path, pair[0]])
 	_check_affinities(unit)
 	_check_view(unit)
+
+
+## Spec skill-points D17, D24: a level row from level 2 up (a level-1 skill belongs in abilities), reachable for a
+## character (at most the max level of a run that uses it), an ability once in the unit's kit, and the usual checks on
+## its scene. An enemy's row is reachable when some depth, variant or slot level can reach it.
+func _check_level_skills(unit: UnitDefinition) -> void:
+	var path := unit.resource_path + "::level_skills"
+	var kit := {}
+	for scene in unit.abilities:
+		if scene != null:
+			kit[SkillTags.tag_of(scene)] = true
+	for index in unit.level_skills.size():
+		var row: LevelSkill = unit.level_skills[index]
+		var where := "%s[%d]" % [path, index]
+		if row == null or row.ability == null:
+			_error("dangling_ref", where, "%s has an empty level skill entry" % unit.id)
+			continue
+		var tag := SkillTags.tag_of(row.ability)
+		if row.level < 2:
+			_error("level_skill_bad_level", where, "%s learns %s at level %d: level-1 skills belong in abilities" % [unit.id, tag, row.level])
+		elif unit is CharacterDefinition and _max_level() > 0 and row.level > _max_level():
+			_error("level_skill_bad_level", where, "%s learns %s at level %d, above every run's max level (%d)" % [unit.id, tag,
+				row.level, _max_level()])
+		elif unit is EnemyDefinition and row.level > _max_enemy_level():
+			_warning("secret_skill_unreachable", where, "%s's %s needs level %d; no depth, variant or slot reaches more than %d"
+				% [unit.id, tag, row.level, _max_enemy_level()])
+		if kit.has(tag):
+			_error("level_skill_duplicate", where, "%s already has %s in its abilities" % [unit.id, tag])
+		kit[tag] = true
+		_check_skill_scene(row.ability, where + ".ability", unit.id, unit is CharacterDefinition)
+
+
+## The highest level any run's XP curve reaches (0: no run has levels).
+func _max_level() -> int:
+	var best := 0
+	for id in content.runs:
+		var structure: RunStructure = content.runs[id]
+		if not structure.xp_to_level.is_empty():
+			best = maxi(best, structure.xp_to_level.size() + 1)
+	return best
+
+
+## The highest enemy level content can produce: the best depth level plus the biggest variant and slot bonuses.
+func _max_enemy_level() -> int:
+	var depth := 1
+	for id in content.scaling:
+		for value in (content.scaling[id] as ScalingRules).enemy_level_by_depth:
+			depth = maxi(depth, value)
+	var variant := 0
+	for id in content.variants:
+		variant = maxi(variant, (content.variants[id] as EnemyVariant).level_bonus)
+	var slot := 0
+	for id in content.encounters:
+		for encounter_slot in (content.encounters[id] as EncounterDefinition).slots:
+			if encounter_slot != null:
+				slot = maxi(slot, encounter_slot.level_bonus)
+	return depth + variant + slot
+
+
+## Spec skill-points 3.2: a character with a basic attack and a costed ability gains SP through a passive on
+## Event.Ability.Used.Basic (sp_gain_missing); a basic attack never costs SP (basic_costed); an SP cost goes through a
+## cost ExecCalc (cost_of) so sp_cost items reach it (cost_unscaled).
+func _check_sp(unit: CharacterDefinition) -> void:
+	var path := unit.resource_path + "::abilities"
+	var has_basic := false
+	var has_costed := false
+	var has_gain := false
+	var scenes: Array = unit.abilities.duplicate()
+	for row in unit.level_skills:
+		if row != null and row.ability != null:
+			scenes.append(row.ability)
+	for scene in scenes:
+		var ability := scene.instantiate() as BattleAbility if scene != null else null
+		if ability == null:
+			continue
+		var sp := CostReader.sp_cost(ability)
+		if ability.trigger_event_tag == &"Event.Ability.Used.Basic":
+			has_gain = true
+		if ability.asset_tags.has(&"Ability.Type.Basic"):
+			has_basic = true
+			if sp > 0:
+				_error("basic_costed", path, "%s's basic attack %s costs SP" % [unit.id, ability.ability_tag])
+		elif sp > 0:
+			has_costed = true
+		if ability.cost_effect != null and ability.cost_effect.modifiers.any(
+				func(modifier) -> bool: return modifier is CombatModifier and modifier.attribute_name == BattleUnit.MP and modifier.value_x100 < 0):
+			_warning("cost_unscaled", path, "%s costs SP through a plain modifier: SP cost items don't reach it (use the cost ExecCalc)"
+				% ability.ability_tag)
+		ability.free()
+	if has_basic and has_costed and not has_gain:
+		_warning("sp_gain_missing", path, "%s has a basic attack and costed abilities but no passive on Event.Ability.Used.Basic: its basics give no SP"
+			% unit.id)
+
+
+## Spec skill-points D22: the level attribute is read-only; an effect that targets it does nothing in battle.
+func _check_level_writes(effect: GameplayEffect, where: String) -> void:
+	if effect == null:
+		return
+	for modifier in effect.modifiers:
+		if modifier != null and modifier.attribute_name == BattleUnit.LEVEL:
+			_error("level_attribute_modified", where, "%s changes the read-only level attribute" % effect.resource_path)
+			return
 
 
 ## Spec ult-interrupts: an enemy with an ult needs something that charges it (a triggered passive on the enemy or in
@@ -162,8 +273,9 @@ func _check_phases(enemy: EnemyDefinition) -> void:
 		_check_ability_set(phase.ability_set, where + ".ability_set")
 
 
-## Spec content-pass 2.2: every PatternBrain step names a turn action the enemy has (its abilities or a phase's).
-## An ult or a triggered passive in the pattern would stop the battle with a runner error.
+## Spec content-pass 2.2: every PatternBrain step names a turn action the enemy has (its abilities, a phase's or, spec
+## skill-points D19, a level skill: below its level the step falls back to the default choice). An ult or a triggered
+## passive in the pattern would stop the battle with a runner error.
 func _check_pattern(enemy: EnemyDefinition) -> void:
 	var brain := enemy.brain as PatternBrain
 	if brain == null:
@@ -172,6 +284,9 @@ func _check_pattern(enemy: EnemyDefinition) -> void:
 	for phase in enemy.phases:
 		if phase != null and phase.ability_set != null:
 			scenes.append_array(phase.ability_set.abilities)
+	for row in enemy.level_skills:
+		if row != null and row.ability != null:
+			scenes.append(row.ability)
 	_check_pattern_steps(brain, scenes, enemy.resource_path + "::brain", enemy.id)
 
 
@@ -376,6 +491,7 @@ func _check_rows(scene: PackedScene, path: String) -> void:
 			_warning("controlled_without_status", path, "%s grants %s without a %s.* tag" % [effect.resource_path,
 				Battle.CONTROLLED_TAG, Battle.DEBUFF_TAG])
 		_check_immunity(effect, path)
+		_check_level_writes(effect, path)
 	ability.free()
 
 
@@ -733,6 +849,8 @@ func _check_ability_set(ability_set: AbilitySet, path: String, party: bool = fal
 			# The state hash names active effects by file (spec combat-replay-core): an inline one can't replay.
 			_error("inline_effect", "%s.effects[%d]" % [path, index],
 				"a granted effect must be its own .tres file, not an inline sub-resource (battles with it can't replay)")
+		else:
+			_check_level_writes(effect, "%s.effects[%d]" % [path, index])
 
 
 func _check_event(event: EventDefinition) -> void:

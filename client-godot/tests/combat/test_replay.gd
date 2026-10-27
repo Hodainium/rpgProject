@@ -107,10 +107,12 @@ func test_claim_mismatch() -> void:
 func test_turn_limit() -> void:
 	var request: Dictionary = await record(snapshot("stalemate", [[1, "pacifist"]]))
 	eq(request["actionLog"]["claimedOutcome"], "TurnLimit", "nobody can deal damage")
+	# Spec skill-points D15: the cap is 500 turns and a TurnLimit battle is a legal loss, so it verifies.
 	var result := await replay(request)
-	eq(result.get("verdict"), "Rejected", "turn limit verdict")
-	eq(result.get("mismatch", {}).get("reason"), "TurnLimitExceeded", "turn limit reason")
-	eq(result.get("turns"), Battle.TURN_LIMIT, "stopped at 1000 turns")
+	eq(result.get("verdict"), "Verified", "turn limit verdict")
+	eq(result.get("outcome"), "TurnLimit", "turn limit outcome")
+	eq(result.get("mismatch"), null, "no mismatch")
+	eq(result.get("turns"), 500, "stopped at 500 turns")
 
 
 func test_zero_frame_rule() -> void:

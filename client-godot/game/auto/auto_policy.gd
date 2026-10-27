@@ -12,12 +12,20 @@
 ## hits two or more enemies, hits a boss, kills its target, or (support ults) revives or heals a hurt party.
 ## Items whose use mode is CONSUMABLE are never used unless Options.consumables (spec auto-battle A4). Ties keep grant
 ## order, then slot order.
+## Spec skill-points 3.4, for a unit with an Ability.Type.Basic ability (others keep MP_RESERVE): basics build SP and a
+## costed move is picked over the best basic only when it scores SPEND_RATIO% of it (a free one: more than it), or when
+## one more basic would overflow max SP (then a buff an ally lacks also goes before the basic); and while the party is in danger (an ally dead or under HEAL_BELOW, or under
+## DANGER_BELOW in a boss fight) a unit with a costed heal or revive never spends below that move's cost.
 class_name AutoPolicy
 extends RefCounted
 
 const HEAL_BELOW: int = 45      # % of max HP
 const MP_RESERVE: int = 30      # % of max MP
 const CLEANSE_AT: int = 2       # debuffs on one ally
+const SPEND_RATIO: int = 150    # % of the best basic's score a costed move must reach (spec skill-points 3.4)
+const DANGER_BELOW: int = 60    # % of max HP: in a boss fight, an ally under it puts the party in danger
+const BASIC_TAG: StringName = &"Ability.Type.Basic"
+const BOSS_TAG: StringName = &"Enemy.Boss"
 const ROLE_PREFIX: String = "Ability.Role."
 const ROLE_DAMAGE: StringName = &"Ability.Role.Damage"
 const ROLE_DEBUFF: StringName = &"Ability.Role.Debuff"
@@ -49,6 +57,9 @@ class Options:
 var options: Options
 ## Items by id, to tell CONSUMABLE items apart (null: every item counts as reusable).
 var content: ContentIndex
+## Why the last choose() picked its move ("ult", "revive", "heal", "cleanse", "ability", "cap", "basic", "best", "buff",
+## "last resort", "fallback"), for BattleLog. Never read by a rule.
+var last_reason: String = ""
 var _fallback: bool = false
 
 
@@ -60,37 +71,110 @@ func _init(policy_options: Options = null, content_index: ContentIndex = null) -
 func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 	var ult := interrupt(battle)
 	if not ult.is_empty():
+		last_reason = "ult"
 		return ult
 	var actions := _activatable(unit)
 	if _fallback:
 		_fallback = false
+		last_reason = "fallback"
 		return _first_legal(battle, unit, actions)
 	var revive := _support(battle, unit, actions, ROLE_REVIVE)
 	if not revive.is_empty():
+		last_reason = "revive"
 		return revive
 	if _party_hurt(battle):
 		var heal := _support(battle, unit, actions, ROLE_HEAL)
 		if not heal.is_empty():
+			last_reason = "heal"
 			return heal
 	var cleanse := _cleanse(battle, unit, actions)
 	if not cleanse.is_empty():
+		last_reason = "cleanse"
 		return cleanse
+	var rhythm := has_basic(unit)
+	var reserve := danger_reserve(battle, unit) if rhythm else 0
 	var best := {}
 	var best_score := -1
+	var best_cost := 0
+	var basic := {}
+	var basic_score := -1
 	for ability in actions:
-		if not ability.targets_enemies() or _saving_mp(unit, ability):
+		if not ability.targets_enemies():
+			continue
+		var is_basic := ability.asset_tags.has(BASIC_TAG)
+		if rhythm and not is_basic and not affordable_above(unit, ability, reserve):
+			continue
+		if not rhythm and _saving_mp(unit, ability):
 			continue
 		for target in _targets(battle, unit, ability):
 			var score := score_of(battle, unit, ability, target)
-			if score > best_score:
+			var choice := {"ability": ability.ability_tag, "target": target.unit_id if ability.needs_target() else &""}
+			if rhythm and is_basic:
+				if score > basic_score:
+					basic_score = score
+					basic = choice
+			elif score > best_score:
 				best_score = score
-				best = {"ability": ability.ability_tag, "target": target.unit_id if ability.needs_target() else &""}
+				best = choice
+				best_cost = CostReader.sp_cost(ability, unit.asc)
+	if rhythm:
+		# Spec skill-points 3.4: spend when it is worth it (or SP would be wasted), else build SP with the basic.
+		@warning_ignore("integer_division")
+		var needed := basic_score * (SPEND_RATIO if best_cost > 0 else 100) / 100
+		var worth := best_score >= needed if best_cost > 0 else best_score > needed
+		if best_score > 0 and (basic.is_empty() or worth or basic_would_overflow(unit)):
+			last_reason = "ability" if worth or basic.is_empty() else "cap"
+			return best
+		# No waste at the cap: a buff an ally lacks (within the danger reserve) before a basic that would overflow.
+		if basic_would_overflow(unit):
+			var payable: Array[BattleAbility] = []
+			for ability in actions:
+				if affordable_above(unit, ability, reserve):
+					payable.append(ability)
+			var buff := _buff(battle, unit, payable)
+			if not buff.is_empty():
+				last_reason = "cap buff"
+				return buff
+		if basic_score > 0:
+			last_reason = "basic"
+			return basic
 	if best_score > 0:
+		last_reason = "best"
 		return best
 	var buff := _buff(battle, unit, actions)
 	if not buff.is_empty():
+		last_reason = "buff"
 		return buff
-	return best if not best.is_empty() else _first_legal(battle, unit, actions)
+	last_reason = "best (no score)" if not best.is_empty() else "last resort"
+	return best if not best.is_empty() else _last_resort(battle, unit, actions)
+
+
+## Spec skill-points (the turn-limit traces): nothing scores, so never feed a drain: the first legal move that isn't an
+## enemy move every one of whose targets drains it; else Block (Ability.Role.Guard); else the first legal move.
+func _last_resort(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -> Dictionary:
+	var safe: Array[BattleAbility] = []
+	for ability in actions:
+		if not ability.targets_enemies() or not _targets(battle, unit, ability).all(
+				func(target: BattleUnit) -> bool: return feeds_drain(ability, target)):
+			safe.append(ability)
+	var pick := _first_legal(battle, unit, safe)
+	if not pick.is_empty():
+		return pick  # a safe move with a target (a "safe" revive with nobody down has none: keep looking)
+	for ability in unit.action_abilities():
+		if has_role(ability, ROLE_GUARD) and unit.asc.can_activate_ability(ability):
+			return {"ability": ability.ability_tag, "target": &""}
+	return _first_legal(battle, unit, actions)
+
+
+## True when one of the ability's damage rows is drained by `target` (the hit would heal it).
+static func feeds_drain(ability: BattleAbility, target: BattleUnit) -> bool:
+	for row in ability.executions:
+		if row == null or row.damage_mode == ExecutionRow.DamageMode.USE_EFFECT:
+			continue
+		var kind := damage_type(row)
+		if kind != "" and target.asc.has_tag_exact(StringName("Drain." + kind)):
+			return true
+	return false
 
 
 ## An ult worth casting now, as an interrupt choice (the BETWEEN window, and first at a decision); {} to hold.
@@ -311,6 +395,67 @@ func _allowed(unit: BattleUnit, ability: BattleAbility) -> bool:
 		return true
 	var item: ItemDefinition = content.items.get(unit.item_abilities[ability.ability_tag])
 	return item == null or item.use_mode != ItemDefinition.UseMode.CONSUMABLE
+
+
+## Spec skill-points 3.4: the rhythm rules apply to a unit that has a basic attack.
+static func has_basic(unit: BattleUnit) -> bool:
+	return unit.action_abilities().any(func(ability: BattleAbility) -> bool: return ability.asset_tags.has(BASIC_TAG))
+
+
+## The SP (×100) a unit keeps back now: while the party is in danger, the cost of its cheapest costed heal or revive;
+## otherwise 0.
+static func danger_reserve(battle: Battle, unit: BattleUnit) -> int:
+	if not party_in_danger(battle):
+		return 0
+	var cheapest := 0
+	for ability in unit.action_abilities():
+		if not (has_role(ability, ROLE_HEAL) or has_role(ability, ROLE_REVIVE)):
+			continue
+		var cost := CostReader.sp_cost(ability, unit.asc)
+		if cost > 0 and (cheapest == 0 or cost < cheapest):
+			cheapest = cost
+	return cheapest
+
+
+## An ally dead or under HEAL_BELOW, or (a boss alive) under DANGER_BELOW.
+static func party_in_danger(battle: Battle) -> bool:
+	var boss := false
+	for other in battle.units():
+		if other.alive and not other.is_party() and other.asc.has_tag(BOSS_TAG):
+			boss = true
+	for member in battle.units():
+		if not member.is_party():
+			continue
+		if not member.alive:
+			return true
+		var percent := _hp_percent(member)
+		if percent < HEAL_BELOW or (boss and percent < DANGER_BELOW):
+			return true
+	return false
+
+
+## True when the unit can pay for `ability` and keep at least `reserve` SP (×100) afterwards.
+static func affordable_above(unit: BattleUnit, ability: BattleAbility, reserve: int) -> bool:
+	var cost := CostReader.sp_cost(ability, unit.asc)
+	if cost == 0:
+		return true
+	return unit.stat(BattleUnit.MP) - cost >= reserve
+
+
+## The SP (×100) one basic attack gives this unit: sp_basic × sp_gain, whole (0 without those attributes).
+@warning_ignore("integer_division")
+static func basic_gain(unit: BattleUnit) -> int:
+	if not unit.asc.has_attribute("sp_basic"):
+		return 0
+	var bonus := unit.stat("sp_gain") if unit.asc.has_attribute("sp_gain") else Fixed.ONE_HUNDRED_PERCENT
+	return Fixed.pct(unit.stat("sp_basic"), maxi(bonus, 0)) / 100 * 100
+
+
+## True when one more basic attack would push SP past max SP (some of its gain would be lost).
+static func basic_would_overflow(unit: BattleUnit) -> bool:
+	var gain := basic_gain(unit)
+	return gain > 0 and unit.asc.has_attribute(BattleUnit.MAX_MP) \
+		and unit.stat(BattleUnit.MP) + gain > unit.stat(BattleUnit.MAX_MP)
 
 
 static func _saving_mp(unit: BattleUnit, ability: BattleAbility) -> bool:

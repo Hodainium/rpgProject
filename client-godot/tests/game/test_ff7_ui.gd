@@ -207,7 +207,7 @@ func _ability(targeting: int, attribute: String, cost_x100: int) -> BattleAbilit
 
 func test_ability_hint() -> void:
 	var mp := AbilityHint.of(null, _ability(BattleAbility.Targeting.SINGLE_ENEMY, "mp", -1200))
-	eq(mp["cost"], "12 MP", "an MP cost")
+	eq(mp["cost"], "12 SP", "an MP cost, shown as SP (spec skill-points D10)")
 	eq(mp["target"], "ONE ENEMY", "who it targets")
 	eq(mp["usage"], AbilityHint.USAGE_BATTLE, "an enemy target: battles only (until the usage tags)")
 	eq(mp["description"], "", "no description: empty, never an error")
@@ -218,7 +218,7 @@ func test_ability_hint() -> void:
 	var hint := AbilityHint.of(null, heal)
 	eq([hint["cost"], hint["target"], hint["usage"], hint["description"]],
 		["", "ONE ALLY", AbilityHint.USAGE_BOTH, "Restores HP to one ally."], "no cost, an ally, field and battles")
-	eq(AbilityHint.of(null, _ability(BattleAbility.Targeting.SINGLE_ENEMY, "mp", -1050))["cost"], "10.5 MP",
+	eq(AbilityHint.of(null, _ability(BattleAbility.Targeting.SINGLE_ENEMY, "mp", -1050))["cost"], "10.5 SP",
 		"two decimals when there are some")
 
 

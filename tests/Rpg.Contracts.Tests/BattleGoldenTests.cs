@@ -61,9 +61,11 @@ public class BattleGoldenTests
         // tampered pair that reach the end of the battle (FinalHashMismatch, OutcomeMismatch), and content-pass's status
         // and boss battles (statuses, affinities, skipped party turns, phases) with the tampered skip (TurnMismatch),
         // and playable-demo's mirror boss (a v2 snapshot whose boss copies the party's items), and auto-battle's battle
-        // played by the player's Auto with its tampered copy (an entry dropped: TurnMismatch).
-        Assert.Equal(15, Requests().Count);
-        Assert.Equal(15, Results().Count);
+        // played by the player's Auto with its tampered copy (an entry dropped: TurnMismatch), and skill-points' battle
+        // (SP gained on basics, scaled costs, level skills) with two tampered copies (an unaffordable and an unlearned
+        // ability: IllegalAbility).
+        Assert.Equal(18, Requests().Count);
+        Assert.Equal(18, Results().Count);
     }
 
     private static TheoryData<string> Files(Func<string, bool> filter)

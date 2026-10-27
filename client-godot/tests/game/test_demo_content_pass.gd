@@ -120,10 +120,12 @@ func test_boss_phases() -> void:
 	DemoItemsHurt.hurt(golem_fight.unit_by_id(&"P1"), golem, golem.stat(BattleUnit.MAX_HP) * 6 / 10)
 	golem_fight._check_deaths()
 	check(golem.asc.has_tag_exact(&"State.Phase.Two"), "below 50% the Golem enters phase 2")
+	# Spec skill-points: the fourth step is Tremor, the Golem's secret skill; a level-1 Golem lacks it and falls back.
 	var after := []
-	for i in 3:
+	for i in 4:
 		after.append(String(pattern.choose(golem, golem_fight)["ability"]))
-	eq(after, ["Ability.Crush", "Ability.Bite", "Ability.Rockfall"], "then its pattern ends with Rockfall")
+	eq(after, ["Ability.Crush", "Ability.Crush", "Ability.Bite", "Ability.Rockfall"],
+		"then its pattern (Tremor falling back to Crush) reaches Rockfall")
 
 
 func test_affinity_items() -> void:
@@ -178,6 +180,8 @@ func test_status_items() -> void:
 	check(not poison.is_empty() and poison[0]["stacks"] == 2, "Plague Flask: 2 stacks on every enemy")
 	var poison_turns: int = (load(DEMO + "effects/poison.tres") as GameplayEffect).duration_turns
 	check(not poison.is_empty() and poison[0]["turns"] == poison_turns + 1, "Witch's Eye: the Poison lasts 1 more turn")
+	# Spec skill-points: Ice Blast costs more SP than a level-1 Warrior's pool; this test is about the items, so top it up.
+	warrior.asc.initialize_attribute_overrides({"max_mp": 10000.0, "mp": 10000.0})
 	await _act(battle, &"P1", &"Ability.Iceblast", &"E1")  # Ice on an Imp: a weakness hit on a poisoned enemy
 	check(fired.has(&"Ability.Passive.Frostlantern"), "Frost Lantern rolls on Ice damage")
 	check(fired.has(&"Ability.Passive.Toxicecho"), "Toxic Echo follows up a weakness hit")

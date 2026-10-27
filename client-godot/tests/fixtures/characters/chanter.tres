@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/chant_burst.tscn" id="1_kgxjn"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/chant_jab.tscn" id="2_dvsrw"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/sp_passive.tscn" id="3_e5rax"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_sp_attribute_set.gd" id="4_x5rrp"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/sp_growth.tres" id="5_01ybk"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="6_ambql"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/chant_burst_2.tscn" id="7_uhxrc"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="8_pn5pd"]
+
+[sub_resource type="Resource" id="Resource_y4cku"]
+script = ExtResource("6_ambql")
+level = 3
+ability = ExtResource("7_uhxrc")
+replaces = &"Fixture.Ability.ChantBurst"
+
+[resource]
+script = ExtResource("8_pn5pd")
+level_effect = ExtResource("5_01ybk")
+id = &"fixture.character.chanter"
+attribute_set = ExtResource("4_x5rrp")
+abilities = Array[PackedScene]([ExtResource("1_kgxjn"), ExtResource("2_dvsrw"), ExtResource("3_e5rax")])
+display_name = "Chanter"
+display_color = Color(0.85490197, 0.4392157, 0.8392157, 1)
+tags = Array[StringName]([&"Fixture.Character.Chanter"])
+level_skills = Array[ExtResource("6_ambql")]([SubResource("Resource_y4cku")])
+stats_x100 = Dictionary[String, int]({
+"atk": 40000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 25000,
+"energy": 0,
+"hp": 120000,
+"max_hp": 120000,
+"max_mp": 6000,
+"max_toughness": 0,
+"mp": 6000,
+"sp_basic": 1700,
+"spd": 10500,
+"toughness": 0,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

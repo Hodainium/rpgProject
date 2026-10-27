@@ -307,8 +307,8 @@ func test_demo_c6_events() -> void:
 	for index in xp_before.size():
 		check(int(run.state.party[index].get("xp", 0)) > xp_before[index], "member %d gains XP" % run.state.party[index]["slot"])
 	run.free()
-	# Waystation (The Descent's rest stop): rest heals HP and MP and raises the fallen; train gives a level; move on
-	# changes nothing.
+	# Waystation (The Descent's rest stop): rest heals HP and raises the fallen (spec skill-points: no SP; SP comes from
+	# basic attacks); train gives a level; move on changes nothing.
 	run = _start(content)
 	eq(run.structure.rest_event.id, &"demo.event.waystation", "the Waystation is the rest stop between floors")
 	_hurt(run, true)
@@ -317,7 +317,7 @@ func test_demo_c6_events() -> void:
 	_open(run, &"demo.event.waystation")
 	eq(run.choose(0), "", "rest")
 	check(_party_hp(run) > hurt_hp, "resting heals")
-	check(_party_mp(run) > hurt_mp, "resting restores MP")
+	eq(_party_mp(run), hurt_mp, "resting restores no SP (spec skill-points)")
 	check(run.state.party.all(func(member: Dictionary) -> bool: return member["alive"]), "the fallen get up")
 	run.free()
 	run = _start(content)
@@ -477,7 +477,7 @@ func test_demo_endings() -> void:
 	check(not content.units[&"demo.enemy.nameless"].mirror_party_items, "the Nameless does not")
 	var corrupted := content.items.values().filter(func(item) -> bool: return item.tags.has(&"Item.Corrupted")).size() \
 		+ content.equipment.values().filter(func(piece) -> bool: return piece.tags.has(&"Item.Corrupted")).size()
-	eq(corrupted, 15, "fifteen corrupted items")
+	eq(corrupted, 16, "sixteen corrupted items (spec skill-points D8 adds the Corrupted Sigil)")
 
 
 ## Spec playable-demo 3.9 (D22): Immune.<Status> refuses that status, Immune.Debuff refuses every debuff, through each

@@ -125,6 +125,9 @@ static func party_scenes(content: ContentIndex) -> Array[String]:
 		for scene in unit.abilities + unit.learnable_skills:
 			if scene != null:
 				found[scene.resource_path] = true
+		for row in unit.level_skills:  # spec skill-points: learned skills and ranks
+			if row != null and row.ability != null:
+				found[row.ability.resource_path] = true
 	for id in content.items:
 		var item: ItemDefinition = content.items[id]
 		if item.use_ability != null:

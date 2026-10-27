@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/chant_burst.tscn" id="1_h4hmg"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/chant_jab.tscn" id="2_xs5ep"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/hymn.tscn" id="3_2dcch"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/sp_passive.tscn" id="4_sv1co"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_sp_attribute_set.gd" id="5_aw5he"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="6_ja5sr"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="7_vqhvp"]
+
+[resource]
+script = ExtResource("7_vqhvp")
+id = &"fixture.character.cantor"
+attribute_set = ExtResource("5_aw5he")
+abilities = Array[PackedScene]([ExtResource("1_h4hmg"), ExtResource("2_xs5ep"), ExtResource("3_2dcch"), ExtResource("4_sv1co")])
+display_name = "Cantor"
+display_color = Color(0.8666667, 0.627451, 0.8666667, 1)
+tags = Array[StringName]([&"Fixture.Character.Cantor"])
+stats_x100 = Dictionary[String, int]({
+"atk": 38000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 25000,
+"energy": 0,
+"hp": 110000,
+"max_hp": 110000,
+"max_mp": 6000,
+"max_toughness": 0,
+"mp": 6000,
+"sp_basic": 1300,
+"spd": 11000,
+"toughness": 0,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

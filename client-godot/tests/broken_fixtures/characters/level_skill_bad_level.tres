@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/learner_basic.tscn" id="1_7ugkg"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_didfv"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="3_hmys7"]
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/learned_sweep.tscn" id="4_kisqq"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="5_r3rbn"]
+
+[sub_resource type="Resource" id="Resource_ptife"]
+script = ExtResource("3_hmys7")
+level = 1
+ability = ExtResource("4_kisqq")
+
+[resource]
+script = ExtResource("5_r3rbn")
+id = &"broken.character.level_skill_bad_level"
+attribute_set = ExtResource("2_didfv")
+abilities = Array[PackedScene]([ExtResource("1_7ugkg")])
+level_skills = Array[ExtResource("3_hmys7")]([SubResource("Resource_ptife")])

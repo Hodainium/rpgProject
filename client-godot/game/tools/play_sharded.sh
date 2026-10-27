@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Spec playable-demo 2.3d: one play report split across parallel headless Godot processes, then merged.
 #   game/tools/play_sharded.sh <shards> <out.json> <from> <count> [seed_report --play options...]
+#   game/tools/play_sharded.sh <shards> <out.json> --seeds <file> <count> [options...]   (spec skill-points D16: the
+#     first <count> seeds of a committed list, e.g. game/dev/balance_seeds.json 600, or 150 for the quick set;
+#     --compare <old.json> goes to the merge)
 # e.g. the gold standard (smart, four members, 300 seeds in 6 shards):
 #   game/tools/play_sharded.sh 6 /tmp/smart4.json 1 300 --policy smart --party-size 4 --check
 # GODOT overrides the Godot console binary. Every shard runs under tools/watch.sh (killed after 240 s of silence) and
@@ -8,7 +11,20 @@
 # Exit: the merged report's code (0, or 3 when a run stopped, an invariant broke or a script or engine error was raised
 # in any shard); a shard that ended any other way (124 hung, 70 or 1 broken tool) wins, named with its log.
 set -euo pipefail
-shards=$1; out=$2; from=$3; count=$4; shift 4
+shards=$1; out=$2
+seeds_file=""
+if [[ $3 == --seeds ]]; then
+	seeds_file=$4; from=0; count=$5; shift 5
+else
+	from=$3; count=$4; shift 4
+fi
+# --compare belongs to the merge, not to the shards.
+compare=()
+args=()
+while (( $# > 0 )); do
+	if [[ $1 == --compare ]]; then compare=(--compare "$2"); shift 2; else args+=("$1"); shift; fi
+done
+set -- ${args[@]+"${args[@]}"}
 godot=${GODOT:-/h/Godot/Godot_v4.7.2-stable_mono_win64_console.exe}
 here=$(cd "$(dirname "$0")/../.." && pwd)
 base=${out%.json}
@@ -27,9 +43,10 @@ for (( i = 0; i < shards; i++ )); do
 	n=$(( left < size ? left : size ))
 	part="$base.shard$i.json"
 	parts+=("$part")
+	if [[ -n $seeds_file ]]; then range=(--seeds "$seeds_file" --seeds-from "$start" --count "$n"); else range=(--from "$start" --count "$n"); fi
 	"$here/../tools/watch.sh" --idle 240 --timeout 3600 --log "$base.shard$i.log" --name "shard$i" -- \
 		"$godot" --headless --path "$here" --quit-after 2000000000 res://game/tools/seed_report.tscn -- \
-		--play --records --from "$start" --count "$n" --out "$part" "$@" &
+		--play --records "${range[@]}" --out "$part" "$@" &
 	pids+=($!)
 done
 status=0
@@ -43,7 +60,7 @@ for i in "${!pids[@]}"; do
 done
 set +e
 timeout 600 "$godot" --headless --path "$here" --quit-after 100000 res://game/tools/seed_report.tscn -- \
-	--merge "${parts[@]}" --out "$out" | grep -v "^Godot Engine\|leaked\|still in use\|object.cpp\|resource.cpp"
+	--merge "${parts[@]}" --out "$out" ${compare[@]+"${compare[@]}"} | grep -v "^Godot Engine\|leaked\|still in use\|object.cpp\|resource.cpp"
 merged=${PIPESTATUS[0]}
 set -e
 (( status != 0 )) && exit "$status"

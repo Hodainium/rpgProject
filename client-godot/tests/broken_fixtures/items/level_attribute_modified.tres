@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_ejtco"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/effects/level_bump.tres" id="2_rq4by"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_1d87j"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_7cl1q"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_fyb74"]
+
+[sub_resource type="Resource" id="Resource_dy47t"]
+script = ExtResource("3_1d87j")
+effects = Array[ExtResource("1_ejtco")]([ExtResource("2_rq4by")])
+
+[resource]
+script = ExtResource("5_fyb74")
+id = &"broken.item.level_attribute_modified"
+grants = SubResource("Resource_dy47t")

@@ -110,8 +110,15 @@ func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 			var pick: Dictionary = autopilot.choose(battle, unit)
 			if not pick.is_empty():
 				_from_auto = true
+				BattleLog.line(battle, "auto %s picks %s -> %s (%s)" % [unit.unit_id, pick.get("ability", ""),
+					pick.get("target", "-"), autopilot.get("last_reason") if autopilot.get("last_reason") != null else "?"])
 				return pick
 			_auto_refusals = AUTO_REFUSALS  # nothing legal: the player decides this one
+			BattleLog.line(battle, "auto %s has no move: waiting for the player" % unit.unit_id)
+			if DisplayServer.get_name() == "headless":
+				# Spec skill-points: with no player headless, this wait never ends (it hung a play report once).
+				push_warning("ActionRecorder: Auto found no move for %s in battle %s turn %d; a headless run waits forever"
+					% [unit.unit_id, battle.battle_id, battle.turn])
 		waiting_for = unit.unit_id
 		action_requested.emit(unit.unit_id, battle.turn)
 		while _pending.is_empty() and _dev.is_empty() and _interrupts.is_empty() and not _auto_on():

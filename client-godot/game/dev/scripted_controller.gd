@@ -4,6 +4,8 @@
 ## Policy: each unit rotates through its own abilities in grant order (so every ability gets used), skipping ones
 ## that can't activate and Block (Ability.Role.Guard, spec ff7-ui F3: the player's call, never a stand-in's); the
 ## target is picked by turn number among the valid candidates (slot order).
+## Spec skill-points D11: a unit with a basic attack skips a costed move that would leave less SP than its heal or
+## revive needs while the party is in danger (AutoPolicy.danger_reserve).
 ## Ults (spec ult-interrupts): a party unit whose ult can activate casts it, units in odd slots at the BETWEEN window and
 ## units in even slots at a DECISION window (any member's), so one battle covers both; each unit cycles its ults.
 class_name ScriptedController
@@ -24,9 +26,16 @@ func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 		return {"ability": &"", "target": &""}
 	var used: int = _uses.get(unit.unit_id, 0)
 	_uses[unit.unit_id] = used + 1
+	var rhythm := AutoPolicy.has_basic(unit)
+	var reserve := AutoPolicy.danger_reserve(battle, unit) if rhythm else 0
 	for offset in abilities.size():
 		var ability: BattleAbility = abilities[(used + offset) % abilities.size()]
 		if not unit.asc.can_activate_ability(ability):
+			continue
+		# Spec skill-points D11: while the party is in danger, keep the SP a heal or revive needs (that move itself
+		# still goes).
+		var support := AutoPolicy.has_role(ability, AutoPolicy.ROLE_HEAL) or AutoPolicy.has_role(ability, AutoPolicy.ROLE_REVIVE)
+		if rhythm and not support and not AutoPolicy.affordable_above(unit, ability, reserve):
 			continue
 		var target: StringName = &""
 		if ability.needs_target():

@@ -12,6 +12,9 @@ const ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_attribut
 const RUN_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_run_attribute_set.gd")
 const BREAK_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_break_attribute_set.gd")
 const STATUS_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_status_attribute_set.gd")
+const SP_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_sp_attribute_set.gd")
+const SP_RESTORE_SCRIPT := preload("res://tests/fixtures/exec_calcs/fixture_sp_restore.gd")
+const SP_COST_SCRIPT := preload("res://tests/fixtures/exec_calcs/fixture_sp_cost.gd")
 ## Run-world folders (spec game-skeleton 6, "Fixtures").
 const WORLD_DIRECTORIES: Array[String] = ["characters", "enemies", "loadouts", "variants", "equipment", "items", "events",
 	"rooms", "chapters", "scaling", "floor_rules", "runs", "layouts", "chests"]
@@ -45,6 +48,7 @@ func _ready() -> void:
 	_build_content_pass()
 	_build_full_descent()
 	_build_keys_and_gear()
+	_build_skill_points()
 	_build_views()
 	print("Fixtures under %s: %d file(s) written" % [ROOT, _written])
 	get_tree().quit(0)
@@ -769,6 +773,94 @@ func _build_content_pass() -> void:
 	_world_encounter("status_trial", [], [["wisp", null], ["toad", null], ["imp", null]], 1)
 	_world_encounter("lich_court", [], [["lich", null], ["drummer", null]], 1)
 	_world_encounter("knight_one", [], [["knight", null]], 1)
+
+
+## Spec skill-points 3.3: SP gain on basic attacks (a passive on Event.Ability.Used.Basic), scaled SP costs, growth of
+## SP gain and max SP per level, level skills (rank II replacing rank I at level 3; an enemy's secret skill reached
+## only through a slot's level bonus) and the read-only level, on FixtureSpAttributeSet. Nothing carries a pool or
+## chapter tag, so floor generation and the run goldens never see it.
+func _build_skill_points() -> void:
+	var D := ExecutionRow.DamageMode
+	var T := ExecutionRow.Targets
+	var B := BattleAbility.Targeting
+	var physical := [&"Damage.Type.Physical"]
+	var gain := GameplayEffect.new()
+	gain.policy = GameplayEffect.DurationPolicy.INSTANT
+	gain.executions.append(SP_RESTORE_SCRIPT.new())
+	_save_effect("sp_gain", gain)
+	_save_effect("sp_cost_25", _sp_cost(25))
+	_save_effect("sp_cost_37", _sp_cost(37))
+	var growth := GameplayEffect.new()
+	growth.policy = GameplayEffect.DurationPolicy.INFINITE
+	growth.modifiers.append(_modifier("sp_gain", GameplayEffectModifier.Operation.PERCENT_ADD, 7))
+	growth.modifiers.append(_modifier("max_mp", GameplayEffectModifier.Operation.PERCENT_ADD, 7))
+	_save_effect("sp_growth", growth)
+	# Rank I is listed first, so the first legal move casts it whenever the SP is there: "jab, jab, burst".
+	_ability("chant_burst", "Fixture.Ability.ChantBurst", B.SINGLE_ENEMY, [_row("hit", "damage", D.SCALED, 220, T.ALL,
+		physical)], [[0.3, "hit"]], [], null, {"cost": _effects["sp_cost_25"]})
+	_ability("chant_burst_2", "Fixture.Ability.ChantBurstTwo", B.SINGLE_ENEMY, [_row("hit", "damage", D.SCALED, 330, T.ALL,
+		physical)], [[0.3, "hit"]], [], null, {"cost": _effects["sp_cost_37"]})
+	_ability("chant_jab", "Fixture.Ability.ChantJab", B.SINGLE_ENEMY, [_row("hit", "damage", D.SCALED, 100, T.ALL,
+		physical)], [[0.3, "hit"]], [], null, {"asset_tags": [&"Ability.Type.Basic"]})
+	_ability("sp_passive", "Fixture.Ability.SpGain", B.SELF, [_row("gain", "sp_gain", D.USE_EFFECT, 0, T.ALL)],
+		[[0.0, "gain"]], [], null, {"trigger": &"Event.Ability.Used.Basic"})
+	_ability("secret_slam", "Fixture.Ability.SecretSlam", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 90, T.ALL,
+		physical)], [[0.3, "hit"]])
+	var no_toughness := {"max_toughness": 0, "toughness": 0, "weakness_dmg": 150, "toughness_dmg": 0, "broken_dmg": 0}
+	var chanter := CharacterDefinition.new()
+	_fill_unit(chanter, "fixture.character.chanter", {"max_hp": 1200, "hp": 1200, "atk": 400, "def": 250, "spd": 105},
+		{"crit_rate": 0, "crit_dmg": 50, "max_mp": 60, "mp": 60, "energy": 0, "sp_basic": 17}.merged(no_toughness),
+		["chant_burst", "chant_jab", "sp_passive"], Color.ORCHID, SP_ATTRIBUTE_SET)
+	chanter.tags.assign([&"Fixture.Character.Chanter"])
+	chanter.level_effect = _effects["sp_growth"]
+	chanter.level_skills.assign([_level_skill(3, "chant_burst_2", &"Fixture.Ability.ChantBurst")])
+	_save_world("characters", "chanter", chanter)
+	# A healer with a basic attack and an SP-costed heal, for the danger reserve (spec skill-points 3.4).
+	_ability("hymn", "Fixture.Ability.Hymn", B.SINGLE_ALLY, [_row("heal", "heal", D.USE_EFFECT, 0, T.ALL)], [[0.3, "heal"]],
+		[], null, {"cost": _effects["sp_cost_25"]})
+	var cantor := CharacterDefinition.new()
+	_fill_unit(cantor, "fixture.character.cantor", {"max_hp": 1100, "hp": 1100, "atk": 380, "def": 250, "spd": 110},
+		{"crit_rate": 0, "crit_dmg": 50, "max_mp": 60, "mp": 60, "energy": 0, "sp_basic": 13}.merged(no_toughness),
+		["chant_burst", "chant_jab", "hymn", "sp_passive"], Color.PLUM, SP_ATTRIBUTE_SET)
+	cantor.tags.assign([&"Fixture.Character.Cantor"])
+	_save_world("characters", "cantor", cantor)
+	var keeper := EnemyDefinition.new()
+	_fill_unit(keeper, "fixture.enemy.keeper", {"max_hp": 2600, "hp": 2600, "atk": 260, "def": 200, "spd": 100},
+		{"crit_rate": 0, "crit_dmg": 50, "max_mp": 0, "mp": 0, "energy": 0, "max_toughness": 30, "toughness": 30,
+		"weakness_dmg": 150}, ["claw"], Color.SIENNA, SP_ATTRIBUTE_SET)
+	keeper.level_skills.assign([_level_skill(2, "secret_slam", &"")])
+	var chant := PatternBrain.new()
+	chant.pattern.assign([&"Fixture.Ability.Claw", &"Fixture.Ability.SecretSlam"])
+	keeper.brain = chant
+	_save_world("enemies", "keeper", keeper)
+	# Two keepers: slot 1 at level 1 (no secret skill: its pattern step falls back), slot 2 one level up (it has it).
+	var trial := EncounterDefinition.new()
+	trial.id = &"fixture.encounter.sp_trial"
+	trial.display_name = "Sp Trial"
+	trial.weight_x100 = Fixed.from_typed(1)
+	for bonus in [0, 1]:
+		var slot := EncounterSlot.new()
+		slot.enemy = _world["enemies/keeper"]
+		slot.level_bonus = bonus
+		trial.slots.append(slot)
+	_save_world("encounters", "sp_trial", trial)
+
+
+func _sp_cost(typed: float) -> GameplayEffect:
+	var effect := GameplayEffect.new()
+	effect.policy = GameplayEffect.DurationPolicy.INSTANT
+	var cost := SP_COST_SCRIPT.new()
+	cost.amount_x100 = Fixed.from_typed(typed)
+	effect.executions.append(cost)
+	return effect
+
+
+func _level_skill(level: int, ability_name: String, replaces: StringName) -> LevelSkill:
+	var row := LevelSkill.new()
+	row.level = level
+	row.ability = _abilities[ability_name]
+	row.replaces = replaces
+	return row
 
 
 ## A turn-based status that refreshes instead of stacking (REFRESH_DURATION, max 1); callers raise max_stacks.

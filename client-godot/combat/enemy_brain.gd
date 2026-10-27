@@ -7,8 +7,16 @@ class_name EnemyBrain
 extends Resource
 
 
+## Spec skill-points D19: on battle turns divisible by this, the unit uses a level skill it has reached (its secret
+## skill, the first in its table that can activate) instead of its usual choice. 0 = never (the default).
+@export var level_skill_every: int = 0
+
+
 ## Returns {"ability": StringName, "target": StringName or &""}. An empty ability means the unit passes its turn.
 func choose(unit: BattleUnit, battle: Battle) -> Dictionary:
+	var secret := level_skill_choice(unit, battle)
+	if not secret.is_empty():
+		return secret
 	for ability in unit.action_abilities():
 		if not unit.asc.can_activate_ability(ability):
 			continue
@@ -16,6 +24,22 @@ func choose(unit: BattleUnit, battle: Battle) -> Dictionary:
 		if not choice.is_empty():
 			return choice
 	return {"ability": &"", "target": &""}
+
+
+## Spec skill-points D19: {"ability", "target"} for a reached level skill when level_skill_every says so, else {}.
+## Reads only the battle turn and the unit's kit, and draws from the RNG only for a chosen skill's target.
+func level_skill_choice(unit: BattleUnit, battle: Battle) -> Dictionary:
+	if level_skill_every <= 0 or battle.turn % level_skill_every != 0:
+		return {}
+	for row in unit.definition.level_skills:
+		if row == null or row.ability == null or row.level > unit.level:
+			continue
+		var ability := unit.ability_by_tag(SkillTags.tag_of(row.ability))
+		if ability != null and not ability.is_triggered() and not ability.is_ultimate() 				and unit.asc.can_activate_ability(ability):
+			var choice := choice_for(unit, battle, ability)
+			if not choice.is_empty():
+				return choice
+	return {}
 
 
 ## Spec ult-interrupts: asked at each BETWEEN ult window. Returns {"ability", "target"} to cast an ult out of turn, or

@@ -305,6 +305,49 @@ func _ready() -> void:
 	_unit(two_basics, "broken.character.two_basics", [_role_scene(strike, "basic_a", basic),
 		_role_scene(strike, "basic_b", basic)])
 	_save("characters", "two_basics", two_basics)
+
+	# Spec skill-points: a level skill at level 1 and one already in the kit (level_skill_bad_level,
+	# level_skill_duplicate), a basic attack with an SP cost (basic_costed), a costed class with no SP gain passive and
+	# a plain-modifier cost (sp_gain_missing, cost_unscaled), a secret skill no level reaches (secret_skill_unreachable)
+	# and an item effect that writes the read-only level (level_attribute_modified).
+	var learned := _role_scene(sweep, "learned_sweep", [AutoPolicy.ROLE_DAMAGE])
+	var learner := CharacterDefinition.new()
+	_unit(learner, "broken.character.level_skill_bad_level", [_role_scene(strike, "learner_basic", basic)])
+	learner.level_skills.assign([_level_row(1, learned)])
+	_save("characters", "level_skill_bad_level", learner)
+	var twice := CharacterDefinition.new()
+	_unit(twice, "broken.character.level_skill_duplicate", [_role_scene(strike, "twice_basic", basic), learned])
+	twice.level_skills.assign([_level_row(3, learned)])
+	_save("characters", "level_skill_duplicate", twice)
+	var plain_cost := GameplayEffect.new()
+	plain_cost.policy = GameplayEffect.DurationPolicy.INSTANT
+	var minus := CombatModifier.new()
+	minus.attribute_name = "mp"
+	minus.value_x100 = -1000
+	plain_cost.modifiers.append(minus)
+	plain_cost = _save("effects", "plain_mp_cost", plain_cost)
+	var costed_basic := CharacterDefinition.new()
+	_unit(costed_basic, "broken.character.basic_costed", [_cost_scene(strike, "costed_basic", basic, plain_cost)])
+	_save("characters", "basic_costed", costed_basic)
+	var no_gain := CharacterDefinition.new()
+	_unit(no_gain, "broken.character.sp_gain_missing", [_role_scene(strike, "gainless_basic", basic),
+		_cost_scene(strike, "gainless_skill", [AutoPolicy.ROLE_DAMAGE], plain_cost)])
+	_save("characters", "sp_gain_missing", no_gain)
+	var hidden := EnemyDefinition.new()
+	_unit(hidden, "broken.enemy.secret_unreachable", [strike])
+	hidden.level_skills.assign([_level_row(9, sweep)])
+	_save("enemies", "secret_unreachable", hidden)
+	var bump := GameplayEffect.new()
+	bump.policy = GameplayEffect.DurationPolicy.INFINITE
+	var raise := CombatModifier.new()
+	raise.attribute_name = "level"
+	raise.value_x100 = 100
+	bump.modifiers.append(raise)
+	bump = _save("effects", "level_bump", bump)
+	var crown := _item("broken.item.level_attribute_modified", [])
+	crown.grants = AbilitySet.new()
+	crown.grants.effects.append(bump)
+	_save("items", "level_attribute_modified", crown)
 	print("Broken fixtures built under ", ROOT)
 	get_tree().quit(0)
 
@@ -357,6 +400,28 @@ func _row_scene(base: PackedScene, name: String, effect: GameplayEffect) -> Pack
 		ResourceSaver.save(scene, path)
 		ability.free()
 	return load(path)
+
+
+## A copy of `base` with `tags` as its asset tags and `cost` as its cost effect, saved as abilities/<name>.tscn.
+func _cost_scene(base: PackedScene, name: String, tags: Array, cost: GameplayEffect) -> PackedScene:
+	var path := ROOT + "abilities/%s.tscn" % name
+	if _rebuild or not ResourceLoader.exists(path):
+		var ability := base.instantiate() as BattleAbility
+		ability.ability_tag = StringName("Broken.Ability." + name.to_pascal_case())
+		ability.asset_tags.assign(tags)
+		ability.cost_effect = cost
+		var scene := PackedScene.new()
+		scene.pack(ability)
+		ResourceSaver.save(scene, path)
+		ability.free()
+	return load(path)
+
+
+func _level_row(level: int, ability: PackedScene) -> LevelSkill:
+	var row := LevelSkill.new()
+	row.level = level
+	row.ability = ability
+	return row
 
 
 func _item(id: String, tags: Array) -> ItemDefinition:

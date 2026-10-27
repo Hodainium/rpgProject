@@ -10,3 +10,5 @@ extends Resource
 @export var display_color: Color = Color.WHITE
 ## Extra coins when a room with this enemy is cleared.
 @export var coin_bonus: int = 0
+## Spec skill-points D19: added to the enemy's level (an Elite +2 reaches secret skills sooner).
+@export var level_bonus: int = 0

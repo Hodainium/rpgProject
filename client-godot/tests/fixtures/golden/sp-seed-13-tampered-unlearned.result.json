@@ -1,0 +1,1 @@
+{"schemaVersion":1,"battleId":"sp-seed-13","verdict":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"IllegalAbility","turn":6,"detail":"P2 has no ability Fixture.Ability.ChantBurst"},"outcome":"Ongoing","turns":6,"finalStateHash":"836a65a22e74c50304e6cb0af2a90182931b877afa2583f8f813a5c9739f1541","engineVersion":"4.7.2.stable.mono.official.ed1daf0bf"}

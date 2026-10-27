@@ -20,6 +20,10 @@ const EXPECTED_ERRORS: Array = [
 	["route_unmatched", "runs/route_unmatched.tres"],
 	["role_missing", "characters/roles.tres"], ["role_mismatch", "characters/roles.tres"],
 	["basic_ability_multiple", "characters/two_basics.tres"],
+	# Spec skill-points.
+	["level_skill_bad_level", "characters/level_skill_bad_level.tres"],
+	["level_skill_duplicate", "characters/level_skill_duplicate.tres"], ["basic_costed", "characters/basic_costed.tres"],
+	["level_attribute_modified", "items/level_attribute_modified.tres"],
 ]
 const EXPECTED_WARNINGS: Array = [
 	["incomplete", "encounters/incomplete.tres"], ["empty_item_pool", "rooms/empty_item_pool.tres"],
@@ -34,6 +38,8 @@ const EXPECTED_WARNINGS: Array = [
 	["party_toughness", "characters/party_toughness.tres"], ["choice_slot_single", "runs/choice_single.tres"],
 	["boss_rotation_short", "chapters/rotation_short.tres"], ["price_item_not_stacking", "rooms/price_refresh.tres"],
 	["basic_ability_missing", "characters/roles.tres"], ["ability_description_missing", "characters/roles.tres"],
+	["sp_gain_missing", "characters/sp_gain_missing.tres"], ["cost_unscaled", "characters/sp_gain_missing.tres"],
+	["secret_skill_unreachable", "enemies/secret_unreachable.tres"],
 ]
 
 

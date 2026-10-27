@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/claw.tscn" id="1_8rmy7"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_sp_attribute_set.gd" id="2_kq7ft"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="3_ru55l"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="4_kp8ux"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/secret_slam.tscn" id="5_n7yld"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="6_sxdi0"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="7_x2bhc"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="8_gk1km"]
+
+[sub_resource type="Resource" id="Resource_fuy0k"]
+script = ExtResource("3_ru55l")
+pattern = Array[StringName]([&"Fixture.Ability.Claw", &"Fixture.Ability.SecretSlam"])
+
+[sub_resource type="Resource" id="Resource_dq7fe"]
+script = ExtResource("4_kp8ux")
+ability = ExtResource("5_n7yld")
+
+[resource]
+script = ExtResource("7_x2bhc")
+id = &"fixture.enemy.keeper"
+attribute_set = ExtResource("2_kq7ft")
+abilities = Array[PackedScene]([ExtResource("1_8rmy7")])
+brain = SubResource("Resource_fuy0k")
+display_name = "Keeper"
+display_color = Color(0.627451, 0.32156864, 0.1764706, 1)
+level_skills = Array[ExtResource("4_kp8ux")]([SubResource("Resource_dq7fe")])
+stats_x100 = Dictionary[String, int]({
+"atk": 26000,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 20000,
+"energy": 0,
+"hp": 260000,
+"max_hp": 260000,
+"max_mp": 0,
+"max_toughness": 3000,
+"mp": 0,
+"spd": 10000,
+"toughness": 3000,
+"weakness_dmg": 15000
+})

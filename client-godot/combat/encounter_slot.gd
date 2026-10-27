@@ -14,3 +14,5 @@ extends Resource
 ## Spec playable-demo 3.7: replaces the enemy definition's brain for this slot (e.g. a PatternBrain that uses a granted
 ## skill). Run battles (v2 snapshots) only.
 @export var brain: EnemyBrain
+## Spec skill-points D19: added to this enemy's level. Run battles (v2 snapshots) only.
+@export var level_bonus: int = 0
