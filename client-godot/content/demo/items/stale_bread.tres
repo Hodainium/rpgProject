@@ -7,5 +7,6 @@
 script = ExtResource("2_nxf8g")
 id = &"demo.item.stale_bread"
 display_name = "Stale Bread"
+description = "Stale and hard. It does nothing."
 tags = Array[StringName]([&"Item.Rarity.Common"])
 price = 1

@@ -15,6 +15,7 @@ abilities = Array[PackedScene]([ExtResource("1_rowpd"), ExtResource("2_tyyho")])
 script = ExtResource("6_4wcg3")
 id = &"demo.item.oath_stone"
 display_name = "Oath Stone"
+description = "At the start of every battle: a Warrior gains +20% ATK; a Cleric heals the party 250 HP."
 tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
 price = 7
 grants = SubResource("Resource_cmvlo")

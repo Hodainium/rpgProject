@@ -8,6 +8,7 @@
 script = ExtResource("2_b2vrq")
 id = &"demo.item.phoenix_feather"
 display_name = "Phoenix Feather"
+description = "One use: brings a fallen ally back with 400 HP."
 tags = Array[StringName]([&"Pool.Shop", &"Item.Rarity.Rare"])
 price = 5
 kind = 1

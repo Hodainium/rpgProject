@@ -8,6 +8,7 @@
 script = ExtResource("2_tscvh")
 id = &"demo.item.potion"
 display_name = "Potion"
+description = "The party heals 250 HP. Ready again after 2 won battles."
 tags = Array[StringName]([&"Pool.Shop", &"Item.Rarity.Common"])
 price = 4
 kind = 1
