@@ -81,12 +81,13 @@ func _on_action_rejected(unit_id: StringName, reason: String, detail: String) ->
 	_show_abilities(_waiting)
 
 
-## Auto takes a waiting decision at once (the recorder wakes): clear its choices.
+## Auto takes a waiting decision at once (the recorder wakes): clear its choices first, since the battle may run on
+## (even to its end) inside the hand-over.
 func _on_auto_toggled(on: bool) -> void:
-	ctx.main.auto_battle = on
 	if on and _waiting != null:
 		_waiting = null
 		%Actions.set_items([])
+	ctx.main.auto_battle = on
 
 
 func _on_battle_started(battle: Battle) -> void:
