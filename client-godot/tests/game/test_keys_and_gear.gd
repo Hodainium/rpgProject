@@ -385,6 +385,55 @@ func test_bots_use_keys_and_chests() -> void:
 	eq(hashes[0], hashes[1], "same seed, same bot: the same run")
 
 
+## The keyed scripted run as a golden (game-skeleton's test_run_scripted, on the keyed run): keys, golden-key-free
+## locks, chests, gear worn and the hash lines that carry them are pinned. Re-record with --update-goldens.
+func test_keyed_run_golden() -> void:
+	var results := []
+	for attempt in 2:
+		var run := _keyed("7")
+		await RunPlayer.play(run)
+		eq(run.runner_error, "", "the keyed scripted run has no runner error")
+		check(run.state.status != RunState.ACTIVE, "the keyed scripted run ends (got %s)" % run.state.status)
+		results.append({"status": run.state.status, "runHash": run.state.run_hash(), "log": run.run_log,
+			"summary": run.run_summary()})
+	var text := WireJson.stringify(results[0])
+	eq(WireJson.stringify(results[1]), text, "same seed and choices: identical keyed run")
+	for kind in ["open_chest", "equip", "battle"]:
+		check(results[0]["log"].any(func(entry: Dictionary) -> bool: return entry["type"] == kind),
+			"the keyed run includes a %s" % kind)
+	check(results[0]["log"].any(func(entry: Dictionary) -> bool: return entry.get("unlock", "") == "key"),
+		"the keyed run opens a lock with a key")
+	var path := GOLDEN + "game/run_keyed.json"
+	if update_goldens:
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(GOLDEN + "game/"))
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(text)
+		file.close()
+	eq(text, FileAccess.get_file_as_string(path), "the keyed run matches its golden")
+
+
+## Every chaos run case (RunPlayer.RUN_CASES) builds on a prepared run and is refused cleanly, whatever the seed.
+func test_chaos_run_cases_all_build() -> void:
+	var run := _keyed()
+	run.give_chest(_chest("strongbox"))  # chest_no_key: 0 keys
+	var vault := KeysWorld.special(run, TREASURE)  # locked_no_key: a locked room next to a visited one
+	run.state.map.cells[run.state.map.neighbours(vault)[0]]["visited"] = true
+	run.give_equipment(fixtures().equipment[&"fixture.equipment.hood"])  # swap_not_worn: a piece in the bag
+	run.give_item(_item("flask"), null, fixtures().characters[&"fixture.character.medic"])  # move_full: both slots full
+	for case in RunPlayer.RUN_CASES:
+		var action := RunPlayer._illegal_action(run, case)
+		check(action.is_valid(), "%s builds on the prepared run" % case)
+		if action.is_valid():
+			_refused(run, action, case)
+	var refused := {}
+	var violations := []
+	for attempt in 40:
+		RunPlayer.try_illegal(run, {"rng": RunSeeds.rng(attempt, "cases"), "illegal_x100": 10000,
+			"violations": violations, "refused": refused})
+	eq(violations, [], "chaos on the prepared run: no violation")
+	eq(refused.keys().size(), RunPlayer.RUN_CASES.size(), "and it tries all seven cases (%s)" % refused)
+
+
 func test_chaos_refuses_run_actions() -> void:
 	var refused := {}
 	var violations := []

@@ -444,7 +444,8 @@ func test_console_xp_bossdone_goto() -> void:
 	var game: GameMain = session[0]
 	check(not (await _run(session, "xp 100"))["ok"], "a run without an XP curve refuses xp")
 	var structure: RunStructure = game.run.structure.duplicate()
-	structure.xp_to_level.assign([100, 300, 600])
+	var curve: Array[int] = [100, 300, 600]
+	structure.xp_to_level = curve  # a new array: duplicate() shares the fixture's, and assign() would change it
 	game.run.structure = structure
 	await _ok(session, "xp 150")
 	eq(game.run.state.party.map(func(member) -> int: return member["level"]), [2, 2], "150 XP: level 2 for both")

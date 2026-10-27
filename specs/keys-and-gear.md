@@ -1,6 +1,6 @@
 # Spec: keys-and-gear (slice 1f2)
 
-Status: ✅ Done 2026-10-27 (synced to the build; remaining work at the end of 6) · all decisions approved
+Status: ✅ Done 2026-10-27 (synced to the build; the follow-ups at the end of 6 are done) · all decisions approved
 2026-10-27 (section 7; D4 deferred, D11 widened to every bot) · Date: 2026-10-27 ·
 Roadmap: slice 1f2, after 1f `ff7-ui` (done) and before 2 `run-checkout`.
 Builds on `specs/ff7-ui.md` (the screens, map icons, toasts and follow-ups in its section 6), `specs/game-skeleton.md`
@@ -310,8 +310,9 @@ same policy always play the same run. The play report counts keys and chests (se
   - **Legality only:** a mis-tagged demo ability is a validator error. In battle it is only refused, never a crash.
   - **Combat goldens unchanged:** they are on fixtures with no usage tags.
 - **Goldens:** none changed. `run_scripted.json`, `seed_report.json` and `seed_report_play.json` run on the fixtures,
-  whose run has no keys, and runs without keys hash as before. Floor, seed and combat goldens are unchanged too. A
-  golden on a keyed run is carried to 1f3 (roadmap).
+  whose run has no keys, and runs without keys hash as before. Floor, seed and combat goldens are unchanged too. A new
+  golden, `golden/game/run_keyed.json` (`test_keyed_run_golden`), pins the keyed run played by `RunPlayer`: seed 7,
+  won on floor 2, three locks opened with keys, a chest opened, found gear worn, and the key and chest counters.
 - **Balance** (smart, 4 members, seeds 1–300; the report informs your tuning, no test asserts a rate):
   - **Before the slice:** 106/300 (35.33%).
   - **Today's content, bots wearing found gear (D11):** 94/300 (31.33%), 0 violations. Wearing armor makes the
@@ -335,9 +336,9 @@ N/A for Prometheus: client-only, no service.
   and item ids never become Prometheus labels.
 
 ## 6. Test plan
-System tests run on fixtures, so `content/` can't fail them. Built: `tests/game/test_keys_and_gear.gd` (17 tests),
-two console tests in `test_dev_console.gd`, the gear screen's swap and move in `test_explore_hud.gd`; 408 tests in
-all. The fixtures gain chests (crate, strongbox), crate gear (dagger, hood), the key items (key fob, warden key,
+System tests run on fixtures, so `content/` can't fail them. Built: `tests/game/test_keys_and_gear.gd` (19 tests),
+two console tests in `test_dev_console.gd`, and in `test_explore_hud.gd` the gear screen's swap and move, the Keys
+line, the Use Item chest list, the pickup panel's key row and the key and chest toasts; 414 tests in all. The fixtures gain chests (crate, strongbox), crate gear (dagger, hood), the key items (key fob, warden key,
 lockpick, dowsing) and a Field-only and a Battle-only tonic; the keyed run itself is built in memory over them
 (`tests/game/keys_world.gd`), because a second run structure on disk would add a `"run"` field to every fixture
 run's log.
@@ -374,7 +375,11 @@ run's log.
   `GiveGoldenKey`, `GiveChest` (and one without a chest) and `PartyHpAtLeast` (the dead don't count).
 - **Messages and toasts:**
   - **When they fire:** `KeyFound`, `ChestFound` and `ChestOpened` fire, with no toast on a clear without a drop.
-  - **Rules:** the run toast rules match them.
+  - **Rules:** `run_toasts.tres` has a rule on each channel, and on the keyed run a cleared room shows "You found a
+    key!" first, with the chest toast queued behind it (`test_run_toasts_cover_keys_and_chests`).
+- **Screens:** the Keys line (hidden without keys, "Keys: 0", "+ golden key"), the Use Item chest list (OPEN, OPEN · 1
+  KEY greyed with no key, pressing OPEN opens it) and the pickup panel's key row (no "give to" picker, Buy) in
+  `test_explore_hud.gd`.
 - **Room reveal:** `RevealRooms(EVENTS)` makes `room_type_known` true for event rooms on the current and next floors
   while the item is held.
 - **Tool parity:** `test_tool_parity` reaches `keys`, `goldkey`, `chest`, `chests`, `open`, `swap` and `move`.
@@ -383,8 +388,10 @@ run's log.
     opens Gilded ones only with a key to spare, opens locked item rooms before shops, and wears found gear in empty
     slots.
   - **Repeatable:** the same seed plays the same run twice.
-  - **Chaos:** over seeds 3, 7 and 11 every illegal run action is refused cleanly; `chest_index`, `swap_self` and
-    `move_full` are always tried, and at least four cases in all. An injected bug (a `LeakyRun` whose refusal leaks a
+  - **Chaos:** over seeds 3, 7 and 11 every illegal run action is refused cleanly. On a prepared run (a strongbox,
+    no keys, a locked room in reach, a piece in the bag, two full item slots) every one of the seven `RUN_CASES`
+    builds and is refused with the log and hash unchanged, and `try_illegal` tries all seven
+    (`test_chaos_run_cases_all_build`). An injected bug (a `LeakyRun` whose refusal leaks a
     coin) is caught as a violation with the report's fields.
   - **`dev_run`:** a script opens a chest headless and reads the result from the JSON output.
 - **Suites:**
@@ -393,14 +400,9 @@ run's log.
   - **Play report:** the smart 4-member report runs once (`play_sharded.sh`), and its win rate is reported next to
     35.33% (section 4).
 
-**Remaining work (not blocking):**
-- **Keyed golden:** a scripted-run golden on a keyed run, so keys, chests and locks are pinned by a golden too
-  (roadmap 1f3).
-- **Toast rules:** no test checks that `run_toasts.tres` has rules on the three new channels.
-- **UI:** the Use Item chest list, the Keys line and the pickup panel's key row have no screen test (the gear
-  screen's swap and move do).
-- **Chaos coverage:** four of the seven run cases depend on the seed (a Gilded Chest with 0 keys, a reachable locked
-  room with 0 keys, a bag piece, an item to move); the test requires only the three that always build.
+**Follow-ups (done 2026-10-27, at your request):** the keyed golden (moved here from 1f3), the toast rule test, the
+screen tests and the seven chaos cases above. Found on the way: `test_console_xp_bossdone_goto` changed the shared
+fixture run's XP curve (`assign()` on a shallow duplicate), which failed a later test in the same shard; fixed.
 
 ## 7. Decisions (all approved by the user, 2026-10-27, as recommended; D4 deferred, D11 widened)
 Isaac numbers come from the community wikis ([Room Clear Awards](https://bindingofisaacrebirth.wiki.gg/wiki/Room_Clear_Awards),

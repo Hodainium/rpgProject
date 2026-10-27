@@ -1,8 +1,9 @@
 ## Spec ff7-ui 6 (stage 5): the exploration HUD. MapCells (system, fixtures): what each map cell shows. Then, under the
 ## demo UI policy on fixture content (presentation, direction only): the party strip, the menu and the map on the map;
 ## a menu screen hides them (UI.State.Run.Menu) and Back brings them back; the minimap never travels, the big map does
-## (and a drag is never a click); the gear screen's EQUIP, SWAP (three logged actions, F11) and TAKE OFF; Use Ability
-## and Status on the menu frame.
+## (and a drag is never a click); the gear screen's EQUIP, SWAP (one logged swap_gear) and TAKE OFF and the item move;
+## Use Ability and Status on the menu frame. Keys and chests (spec keys-and-gear) on the keyed run: the Keys line, the
+## Use Item chest list, the pickup panel's key row and the key and chest toasts.
 extends TestCase
 
 const PARTY: String = "fixture.character.knight,fixture.character.medic"
@@ -168,6 +169,97 @@ func test_gear_swap_composed() -> void:
 	eq([screen.get_node("%Equip").text, screen.get_node("%Equip").disabled], ["MOVE HERE", false], "MOVE HERE")
 	screen._on_equip()
 	eq([run.state.holder_of(feather), run.run_log[-1]["type"]], [second, "move_item"], "moved, one logged action")
+
+
+# --- Keys and chests on screen (spec keys-and-gear 2.3, 3.3, D9, D12, D13) -------------------------------------------
+
+## A GameMain on the keyed fixture run (built in memory, tests/game/keys_world.gd).
+func _keyed_game() -> GameMain:
+	var game: GameMain = load("res://game/game_main.tscn").instantiate()
+	game.skip_animations = true
+	host.add_child(game)
+	_games.append(game)
+	game.content = KeysWorld.content()
+	eq(game.start_run(["fixture.character.knight", "fixture.character.medic"], "7", KeysWorld.RUN_ID), "",
+		"the keyed run starts")
+	await _frames(3)
+	return game
+
+
+func test_keys_line() -> void:
+	var plain := await _game()
+	check(not _find(plain, "ExploreMenu").get_node("%Keys").visible, "no Keys line on a run without keys")
+	var game := await _keyed_game()
+	var menu := _find(game, "ExploreMenu")
+	check(menu.get_node("%Keys").visible, "a run with keys shows the Keys line")
+	eq(menu.get_node("%Keys").text, "Keys: 0", "Keys: 0 included (D13)")
+	game.run.add_keys(2)
+	game.run.give_golden_key()
+	await _frames(2)
+	eq(menu.get_node("%Keys").text, "Keys: 2 + golden key", "it follows the run")
+
+
+func test_use_item_lists_chests() -> void:
+	var game := await _keyed_game()
+	var run := game.run
+	run.give_chest(run.content.chests[&"fixture.chest.crate"])
+	run.give_chest(run.content.chests[&"fixture.chest.strongbox"])
+	var use = game.ui.push(&"UI.Layer.GameMenu", load("res://presentation/demo/ui/use_screen.tscn"), {"mode": "item"})
+	await _frames(2)
+	var entries: Array = use.get_node("%Pool").get_children()
+	eq([entries[0].get_node("%Name").text, entries[0].get_node("%Detail").text, entries[0].disabled],
+		["Crate", "OPEN", false], "a free chest first, OPEN")
+	eq([entries[1].get_node("%Name").text, entries[1].get_node("%Detail").text, entries[1].disabled],
+		["Strongbox", "OPEN · 1 KEY", true], "a chest that needs a key, greyed with no key")
+	entries[0].pressed.emit()
+	await _frames(2)
+	eq([run.state.chests.size(), run.state.armor.size(), run.run_log[-1]["type"]], [1, 1, "open_chest"],
+		"pressing OPEN opens it: one logged action, its gear in the bag")
+
+
+func test_pickup_panel_sells_keys() -> void:
+	var game := await _keyed_game()
+	var run := game.run
+	var cell: int = run.state.current_cell
+	run.state.map.cells[cell]["pickups"].append({"placement": 9, "item": FloorGenerator.KEYS_KIND, "price": 2,
+		"taken": false, "kind": FloorGenerator.KEYS_KIND, "keys": 1})
+	run.add_coins(3)
+	run.pickups_shown.emit(cell)
+	await _frames(3)
+	var panel := _find(game, "PickupPanel")
+	check(panel != null, "the pickup panel shows")
+	var rows: Array = panel.get_node("%Rows").get_children().filter(func(row) -> bool: return row.visible)
+	var key_row = rows.filter(func(row) -> bool: return row.get_node("%Name").text.begins_with("Key"))
+	eq(key_row.size(), 1, "the key slot is a row (got %s)" % [rows.map(func(row): return row.get_node("%Name").text)])
+	if key_row.is_empty():
+		return
+	check(not key_row[0].get_node("%GiveTo").visible, "keys need no 'give to' picker")
+	eq(key_row[0].get_node("%Take").text, "Buy", "a key costs coins")
+	key_row[0].get_node("%Take").pressed.emit()
+	await _frames(2)
+	eq([run.state.keys, run.state.coins], [1, 1], "bought: one key for two coins")
+
+
+## The demo run toasts (presentation/demo/ui/run_toasts.tres) have a rule on each keys-and-gear channel.
+func test_run_toasts_cover_keys_and_chests() -> void:
+	var toasts: UIToastSet = load("res://presentation/demo/ui/run_toasts.tres")
+	var channels: Array = toasts.rules.map(func(rule: UIToastRule) -> StringName: return rule.channel)
+	for channel in [GameplayMessageRouter.RUN_KEY_FOUND, GameplayMessageRouter.RUN_CHEST_FOUND,
+			GameplayMessageRouter.RUN_CHEST_OPENED]:
+		check(channels.has(channel), "a toast rule on %s" % channel)
+	# And one shows: a cleared battle room on the keyed run drops a key and a chest (100% there).
+	var game := await _keyed_game()
+	var normal := KeysWorld.normal(game.run)
+	var host_panel: UIToastHost = _find(game, "RunToasts")
+	host_panel.advance(5.0)  # the floor toast from the run start expires
+	game.run._clear_room(normal, true)
+	await _frames(2)
+	var titles: Array = host_panel.toasts().map(func(toast: Dictionary) -> String: return str(toast.get("title", "")))
+	eq(titles, ["You found a key!"], "the key toast shows first (one at a time)")
+	eq(host_panel.queued(), 1, "the chest toast waits behind it")
+	host_panel.advance(5.0)
+	titles = host_panel.toasts().map(func(toast: Dictionary) -> String: return str(toast.get("title", "")))
+	eq(titles, ["You found a Crate!"], "then the chest toast")
 
 
 func test_use_and_status_screens() -> void:
