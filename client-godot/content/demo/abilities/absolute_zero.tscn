@@ -31,3 +31,4 @@ animation = ExtResource("5_ooq1e")
 ability_tag = &"Ability.Ult.Absolutezero"
 activation_query = ExtResource("6_a8aux")
 cost_effect = ExtResource("7_syfv5")
+description = "Ice damage to every enemy. Weakens every enemy."

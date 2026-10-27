@@ -27,3 +27,4 @@ executions = Array[ExtResource("2_65yru")]([SubResource("Resource_c6ptw"), SubRe
 animation = ExtResource("5_bi8pl")
 ability_tag = &"Ability.Markprey"
 cost_effect = ExtResource("6_icxyw")
+description = "Physical damage to one enemy. Weakens one enemy."

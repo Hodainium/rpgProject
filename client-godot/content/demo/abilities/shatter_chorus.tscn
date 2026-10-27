@@ -25,3 +25,4 @@ animation = ExtResource("4_6q55t")
 ability_tag = &"Ability.Ult.Shatterchorus"
 activation_query = ExtResource("5_x57t8")
 cost_effect = ExtResource("6_qfgyr")
+description = "Physical damage to every enemy."

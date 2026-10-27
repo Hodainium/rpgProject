@@ -22,3 +22,4 @@ animation = ExtResource("4_t7l5e")
 ability_tag = &"Ability.Ult.Finale"
 activation_query = ExtResource("5_wnhmk")
 cost_effect = ExtResource("6_sad68")
+description = "Strengthens the party."

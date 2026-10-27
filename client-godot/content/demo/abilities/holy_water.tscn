@@ -23,3 +23,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Cleanse"])
 executions = Array[ExtResource("2_3ckkc")]([SubResource("Resource_0b7h4"), SubResource("Resource_mowpb")])
 animation = ExtResource("5_egv6t")
 ability_tag = &"Ability.Item.Holywater"
+description = "Restores HP to the party. Removes debuffs from the party."

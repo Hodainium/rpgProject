@@ -21,3 +21,4 @@ executions = Array[ExtResource("2_chi4h")]([SubResource("Resource_ppj25")])
 animation = ExtResource("4_67m5j")
 ability_tag = &"Ability.Ult.Sanctuary"
 cost_effect = ExtResource("5_pi4mx")
+description = "Restores HP to the party."

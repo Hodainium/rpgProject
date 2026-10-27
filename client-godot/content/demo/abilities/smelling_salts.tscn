@@ -17,3 +17,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Revive"])
 executions = Array[ExtResource("2_lfhen")]([SubResource("Resource_6ijq3")])
 animation = ExtResource("4_iw212")
 ability_tag = &"Ability.Item.Salts"
+description = "Brings one fallen ally back."

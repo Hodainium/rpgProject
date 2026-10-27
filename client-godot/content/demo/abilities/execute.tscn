@@ -24,3 +24,4 @@ executions = Array[ExtResource("2_d7vrq")]([SubResource("Resource_twiu6")])
 animation = ExtResource("4_2rfya")
 ability_tag = &"Ability.Ult.Execute"
 cost_effect = ExtResource("5_w7ljm")
+description = "Physical damage to one enemy."

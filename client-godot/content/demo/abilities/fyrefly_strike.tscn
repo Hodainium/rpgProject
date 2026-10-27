@@ -43,3 +43,4 @@ executions = Array[ExtResource("2_c8f06")]([SubResource("Resource_yw8ts"), SubRe
 animation = ExtResource("5_1x2fx")
 ability_tag = &"Ability.Fyreflystrike"
 activation_query = SubResource("Resource_w1phs")
+description = "Fire damage to one enemy and its neighbours. Weakens one enemy and its neighbours."

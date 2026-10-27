@@ -26,3 +26,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", 
 executions = Array[ExtResource("2_ht2le")]([SubResource("Resource_56s38"), SubResource("Resource_buaht")])
 animation = ExtResource("5_60jiy")
 ability_tag = &"Ability.Infect"
+description = "Physical damage to one enemy. Weakens one enemy."

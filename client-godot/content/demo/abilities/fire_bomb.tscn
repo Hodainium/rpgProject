@@ -21,3 +21,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_hua3l")]([SubResource("Resource_7tmok")])
 animation = ExtResource("4_htgqg")
 ability_tag = &"Ability.Item.Firebomb"
+description = "Fire damage to one enemy and its neighbours."

@@ -29,3 +29,4 @@ executions = Array[ExtResource("2_wsms8")]([SubResource("Resource_86x85"), SubRe
 animation = ExtResource("5_2h7q4")
 ability_tag = &"Ability.Blizzard"
 cost_effect = ExtResource("6_wfn72")
+description = "Ice damage to every enemy. Weakens every enemy."

@@ -16,3 +16,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Debuff"])
 executions = Array[ExtResource("2_io3rx")]([SubResource("Resource_hrrdd")])
 animation = ExtResource("4_lxrbs")
 ability_tag = &"Ability.Item.Analyzer"
+description = "Weakens one enemy."

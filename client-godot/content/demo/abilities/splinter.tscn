@@ -29,3 +29,4 @@ executions = Array[ExtResource("2_w5mkt")]([SubResource("Resource_4lhum"), SubRe
 animation = ExtResource("5_qd1g5")
 ability_tag = &"Ability.Splinter"
 cost_effect = ExtResource("6_idbxg")
+description = "Physical damage to one enemy. Weakens one enemy."

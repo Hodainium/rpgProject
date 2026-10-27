@@ -17,3 +17,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Heal"])
 executions = Array[ExtResource("2_y0wgl")]([SubResource("Resource_alp3r")])
 animation = ExtResource("4_mdj2d")
 ability_tag = &"Ability.Item.Roasthaunch"
+description = "Restores HP to one ally."

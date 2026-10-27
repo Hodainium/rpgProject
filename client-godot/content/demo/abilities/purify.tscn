@@ -25,3 +25,4 @@ executions = Array[ExtResource("2_e4cu3")]([SubResource("Resource_rdrfh"), SubRe
 animation = ExtResource("5_bv7sx")
 ability_tag = &"Ability.Purify"
 cost_effect = ExtResource("6_kdafu")
+description = "Restores HP to the party. Strengthens the party. Removes debuffs from the party."

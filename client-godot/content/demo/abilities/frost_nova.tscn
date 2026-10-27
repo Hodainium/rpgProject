@@ -22,3 +22,4 @@ executions = Array[ExtResource("2_6c2d0")]([SubResource("Resource_3xwdr")])
 animation = ExtResource("4_e1u1a")
 ability_tag = &"Ability.Frostnova"
 cost_effect = ExtResource("5_epxae")
+description = "Ice damage to every enemy."

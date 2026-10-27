@@ -32,3 +32,4 @@ executions = Array[ExtResource("2_6sgpi")]([SubResource("Resource_kar8j"), SubRe
 animation = ExtResource("5_hcbdq")
 ability_tag = &"Ability.Inferno"
 cost_effect = ExtResource("6_g1dqi")
+description = "Fire damage to every enemy. Weakens every enemy."

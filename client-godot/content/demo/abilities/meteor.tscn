@@ -25,3 +25,4 @@ animation = ExtResource("4_lq85k")
 ability_tag = &"Ability.Ult.Meteor"
 activation_query = ExtResource("5_i7ldu")
 cost_effect = ExtResource("6_dugp6")
+description = "Fire damage to every enemy."

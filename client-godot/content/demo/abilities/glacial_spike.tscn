@@ -28,3 +28,4 @@ executions = Array[ExtResource("2_ppis8")]([SubResource("Resource_l81ab"), SubRe
 animation = ExtResource("5_hcis1")
 ability_tag = &"Ability.Glacialspike"
 cost_effect = ExtResource("6_wm0ka")
+description = "Ice damage to one enemy. Weakens one enemy."

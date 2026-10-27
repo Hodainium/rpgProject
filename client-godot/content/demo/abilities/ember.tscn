@@ -18,3 +18,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Basic"])
 executions = Array[ExtResource("2_jblx0")]([SubResource("Resource_kkwdb")])
 animation = ExtResource("4_i6hvc")
 ability_tag = &"Ability.Ember"
+description = "Fire damage to one enemy."

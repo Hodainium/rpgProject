@@ -27,3 +27,4 @@ executions = Array[ExtResource("2_82e1y")]([SubResource("Resource_s3g5p"), SubRe
 animation = ExtResource("5_llf2l")
 ability_tag = &"Ability.Discord"
 cost_effect = ExtResource("6_qur43")
+description = "Weakens every enemy."

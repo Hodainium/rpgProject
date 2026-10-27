@@ -21,3 +21,4 @@ executions = Array[ExtResource("2_fxvht")]([SubResource("Resource_a6b14")])
 animation = ExtResource("4_4wsk3")
 ability_tag = &"Ability.Ult.Resurrection"
 cost_effect = ExtResource("5_tjt13")
+description = "Brings one fallen ally back."

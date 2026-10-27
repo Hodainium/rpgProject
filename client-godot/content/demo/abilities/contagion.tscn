@@ -26,3 +26,4 @@ executions = Array[ExtResource("2_ayixo")]([SubResource("Resource_oylru"), SubRe
 animation = ExtResource("4_ixorl")
 ability_tag = &"Ability.Contagion"
 cost_effect = ExtResource("5_yd8t7")
+description = "Weakens every enemy."

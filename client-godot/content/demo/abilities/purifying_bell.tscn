@@ -17,3 +17,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Cleanse"])
 executions = Array[ExtResource("2_4w5sg")]([SubResource("Resource_xs6bo")])
 animation = ExtResource("4_fyt64")
 ability_tag = &"Ability.Item.Bell"
+description = "Removes debuffs from the party."

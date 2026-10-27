@@ -21,3 +21,4 @@ animation = ExtResource("4_e805r")
 ability_tag = &"Ability.Ult.Combustion"
 activation_query = ExtResource("5_d8a24")
 cost_effect = ExtResource("6_6l1c5")
+description = "Strengthens yourself."

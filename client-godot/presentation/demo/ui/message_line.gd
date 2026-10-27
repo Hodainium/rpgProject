@@ -1,5 +1,5 @@
 ## Footer panel (UI.Slot.Footer, always): the last line for the player (run events, level-ups, drops, refusals), from
-## the Message.Notification channel (spec gameplay-messages). Battle call-outs are the battle_callouts panel's; the
+## the Message.Notification channel (spec gameplay-messages). Battle lines are the battle feed's (battle_feed.tscn); the
 ## battle's end ("Battle: Victory") comes from Message.Battle.Ended.
 extends UIScreen
 

@@ -17,3 +17,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Debuff"])
 executions = Array[ExtResource("2_rfo51")]([SubResource("Resource_d465s")])
 animation = ExtResource("4_vnpyu")
 ability_tag = &"Ability.Item.Plague"
+description = "Weakens every enemy."

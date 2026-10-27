@@ -28,3 +28,4 @@ executions = Array[ExtResource("2_8f0dr")]([SubResource("Resource_miga4"), SubRe
 animation = ExtResource("5_1w1yp")
 ability_tag = &"Ability.Kindlebrand"
 cost_effect = ExtResource("6_u07g2")
+description = "Fire damage to one enemy. Weakens one enemy."

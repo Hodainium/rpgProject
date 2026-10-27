@@ -14,13 +14,8 @@
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/map_panel.tscn" id="20_map"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/stairs_panel.tscn" id="21_stairs"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/pickup_panel.tscn" id="22_pickup"]
-[ext_resource type="PackedScene" path="res://presentation/demo/ui/party_panel.tscn" id="23_party"]
-[ext_resource type="PackedScene" path="res://presentation/demo/ui/field_panel.tscn" id="24_field"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/event_panel.tscn" id="25_event"]
-[ext_resource type="PackedScene" path="res://presentation/demo/ui/battle_panel.tscn" id="26_battle"]
-[ext_resource type="PackedScene" path="res://presentation/demo/ui/floor_card.tscn" id="27_card"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/message_line.tscn" id="28_message"]
-[ext_resource type="PackedScene" path="res://presentation/demo/ui/battle_callouts.tscn" id="29_callouts"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/run_toasts.tscn" id="30_run_toasts"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/battle_feed.tscn" id="31_battle_feed"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/battle_party_panel.tscn" id="32_battle_party"]
@@ -118,48 +113,16 @@ scene = ExtResource("22_pickup")
 order = 20
 active_when = SubResource("when_pickup")
 
-[sub_resource type="Resource" id="panel_party"]
-script = ExtResource("3_ext")
-slot = &"UI.Slot.Hud.Left"
-scene = ExtResource("23_party")
-active_when = SubResource("when_run_not_battle")
-
-[sub_resource type="Resource" id="panel_field"]
-script = ExtResource("3_ext")
-slot = &"UI.Slot.Hud.Left"
-scene = ExtResource("24_field")
-order = 10
-active_when = SubResource("when_map")
-
 [sub_resource type="Resource" id="panel_event"]
 script = ExtResource("3_ext")
 slot = &"UI.Slot.Hud.Center"
 scene = ExtResource("25_event")
 active_when = SubResource("when_event")
 
-[sub_resource type="Resource" id="panel_battle"]
-script = ExtResource("3_ext")
-slot = &"UI.Slot.Hud.Bottom"
-scene = ExtResource("26_battle")
-active_when = SubResource("when_battle")
-
-[sub_resource type="Resource" id="panel_card"]
-script = ExtResource("3_ext")
-slot = &"UI.Slot.Hud.Overlay"
-scene = ExtResource("27_card")
-active_when = SubResource("when_run")
-
 [sub_resource type="Resource" id="panel_message"]
 script = ExtResource("3_ext")
 slot = &"UI.Slot.Footer"
 scene = ExtResource("28_message")
-
-[sub_resource type="Resource" id="panel_callouts"]
-script = ExtResource("3_ext")
-slot = &"UI.Slot.Hud.Overlay"
-scene = ExtResource("29_callouts")
-order = 10
-active_when = SubResource("when_battle")
 
 [sub_resource type="Resource" id="panel_run_toasts"]
 script = ExtResource("3_ext")

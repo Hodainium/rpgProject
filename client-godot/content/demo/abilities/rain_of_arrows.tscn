@@ -24,3 +24,4 @@ animation = ExtResource("4_0qwp2")
 ability_tag = &"Ability.Ult.Rainofarrows"
 activation_query = ExtResource("5_4qhso")
 cost_effect = ExtResource("6_02g3a")
+description = "Physical damage to every enemy."

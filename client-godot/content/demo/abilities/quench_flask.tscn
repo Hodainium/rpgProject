@@ -21,3 +21,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_hcg03")]([SubResource("Resource_81ajx")])
 animation = ExtResource("4_3r7f7")
 ability_tag = &"Ability.Item.Quench"
+description = "Ice damage to every enemy."

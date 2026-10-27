@@ -21,3 +21,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_f1utt")]([SubResource("Resource_3e07x")])
 animation = ExtResource("4_cipgs")
 ability_tag = &"Ability.Item.Frostbomb"
+description = "Ice damage to one enemy and its neighbours."

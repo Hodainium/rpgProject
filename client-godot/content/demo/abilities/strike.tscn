@@ -19,3 +19,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Basic"])
 executions = Array[ExtResource("2_0m7rn")]([SubResource("Resource_1e2y8")])
 animation = ExtResource("4_vvujh")
 ability_tag = &"Ability.Strike"
+description = "Physical damage to one enemy."

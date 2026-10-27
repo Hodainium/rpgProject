@@ -23,3 +23,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Buff", &"Ab
 executions = Array[ExtResource("2_8awif")]([SubResource("Resource_oafvy"), SubResource("Resource_6vgyx")])
 animation = ExtResource("5_ndmab")
 ability_tag = &"Ability.Item.Salve"
+description = "Restores HP to one ally. Strengthens one ally. Removes debuffs from one ally."

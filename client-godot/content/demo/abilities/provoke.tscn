@@ -23,3 +23,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Buff"])
 executions = Array[ExtResource("2_jhjos")]([SubResource("Resource_gjrv5"), SubResource("Resource_5udam")])
 animation = ExtResource("5_ojmn2")
 ability_tag = &"Ability.Provoke"
+description = "Strengthens yourself."

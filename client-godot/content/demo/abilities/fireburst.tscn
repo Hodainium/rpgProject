@@ -32,3 +32,4 @@ executions = Array[ExtResource("2_4dkd1")]([SubResource("Resource_ytnga"), SubRe
 animation = ExtResource("4_npun1")
 ability_tag = &"Ability.Fireburst"
 cost_effect = ExtResource("5_0xdsc")
+description = "Fire damage to one enemy and its neighbours."

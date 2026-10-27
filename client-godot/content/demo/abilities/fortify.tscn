@@ -25,3 +25,4 @@ executions = Array[ExtResource("2_h8yr1")]([SubResource("Resource_y17ue"), SubRe
 animation = ExtResource("5_4jdpa")
 ability_tag = &"Ability.Fortify"
 cost_effect = ExtResource("6_7bfuq")
+description = "Strengthens yourself."

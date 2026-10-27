@@ -17,3 +17,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Buff"])
 executions = Array[ExtResource("2_bmwlg")]([SubResource("Resource_vafim")])
 animation = ExtResource("4_yafra")
 ability_tag = &"Ability.Item.Rally"
+description = "Strengthens the party."

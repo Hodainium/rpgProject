@@ -26,3 +26,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", 
 executions = Array[ExtResource("2_pduhy")]([SubResource("Resource_v2d4f"), SubResource("Resource_cwcql")])
 animation = ExtResource("5_goj6m")
 ability_tag = &"Ability.Dissonance"
+description = "Physical damage to one enemy. Weakens one enemy."

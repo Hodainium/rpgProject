@@ -19,3 +19,4 @@ executions = Array[ExtResource("2_yi62s")]([SubResource("Resource_0hxt3")])
 animation = ExtResource("4_rnocn")
 ability_tag = &"Ability.Heal"
 cost_effect = ExtResource("5_gpxk2")
+description = "Restores HP to one ally."

@@ -19,3 +19,4 @@ executions = Array[ExtResource("2_137l4")]([SubResource("Resource_rbahh")])
 animation = ExtResource("4_vxn3g")
 ability_tag = &"Ability.Fracturefield"
 cost_effect = ExtResource("5_q0mlj")
+description = "Strengthens the party."

@@ -19,3 +19,4 @@ executions = Array[ExtResource("2_wd0dt")]([SubResource("Resource_ml8ra")])
 animation = ExtResource("4_j8mqc")
 ability_tag = &"Ability.Lingeringmalady"
 cost_effect = ExtResource("5_p3qqt")
+description = "Strengthens the party."

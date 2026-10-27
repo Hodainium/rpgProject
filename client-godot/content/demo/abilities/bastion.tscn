@@ -27,3 +27,4 @@ animation = ExtResource("5_3mwj3")
 ability_tag = &"Ability.Ult.Bastion"
 activation_query = ExtResource("6_w2fjv")
 cost_effect = ExtResource("7_8cpiy")
+description = "Strengthens the party."

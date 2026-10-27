@@ -31,3 +31,4 @@ executions = Array[ExtResource("2_3rveg")]([SubResource("Resource_xjvyc"), SubRe
 animation = ExtResource("5_11p7r")
 ability_tag = &"Ability.Ignite"
 cost_effect = ExtResource("6_t7su8")
+description = "Fire damage to one enemy. Weakens one enemy."

@@ -19,3 +19,4 @@ asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Basic"])
 executions = Array[ExtResource("2_e4lb8")]([SubResource("Resource_xmdum")])
 animation = ExtResource("4_uro1m")
 ability_tag = &"Ability.Arcanebolt"
+description = "Ice damage to one enemy."
