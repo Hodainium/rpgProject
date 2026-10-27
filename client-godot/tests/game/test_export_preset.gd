@@ -43,6 +43,26 @@ func test_export_presets() -> void:
 	eq(presets["Windows Desktop Full"]["excludes"], PackedStringArray(), "the full build ships everything")
 
 
+## The double-click builds in tools/build_tools/: one .bat per level, each naming a level export.sh accepts, saved with
+## CRLF line endings (cmd misreads LF batch files), and each finds Git Bash and export.sh (`--check`, no export).
+func test_build_bats() -> void:
+	if skip_in_export():
+		return
+	var tools := ProjectSettings.globalize_path("res://").path_join("../tools").simplify_path()
+	var export_sh := FileAccess.get_file_as_string(tools.path_join("export.sh"))
+	for bat in ["_export", "build_player", "build_dev", "build_full"]:
+		var text := FileAccess.get_file_as_string(tools.path_join("build_tools/%s.bat" % bat))
+		check(text != "", "tools/build_tools/%s.bat exists" % bat)
+		check(text.count("\r\n") == text.count("\n"), "%s.bat has CRLF line endings" % bat)
+	for level in ["player", "dev", "full"]:
+		var bat := tools.path_join("build_tools/build_%s.bat" % level)
+		check(FileAccess.get_file_as_string(bat).contains("_export.bat\" %s " % level), "build_%s.bat builds %s" % [level, level])
+		check(export_sh.contains("\t%s) preset=" % level), "export.sh accepts %s" % level)
+		var output := []
+		var code := OS.execute("cmd.exe", ["/c", bat.replace("/", "\\"), "--check"], output, true)
+		eq(code, 0, "build_%s.bat --check finds Git Bash and export.sh: %s" % [level, "".join(output).strip_edges()])
+
+
 ## Per preset: autoloads, the main scene and everything shipped files need ship.
 func test_export_keeps_what_runs() -> void:
 	if skip_in_export():
