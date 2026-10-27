@@ -23,7 +23,7 @@ toughness_x100 = 5000
 
 [node name="KindleBrand" type="Node" unique_id=1197338939]
 script = ExtResource("1_udtso")
-asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_8f0dr")]([SubResource("Resource_miga4"), SubResource("Resource_ynwc0")])
 animation = ExtResource("5_1w1yp")
 ability_tag = &"Ability.Kindlebrand"

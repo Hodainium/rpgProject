@@ -19,7 +19,7 @@ effect = ExtResource("4_dipp1")
 [node name="HolyWater" type="Node" unique_id=2135619767]
 script = ExtResource("1_82wxt")
 targeting = 4
-asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Cleanse"])
+asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Cleanse", &"Ability.Usage.Battle", &"Ability.Usage.Field"])
 executions = Array[ExtResource("2_3ckkc")]([SubResource("Resource_0b7h4"), SubResource("Resource_mowpb")])
 animation = ExtResource("5_egv6t")
 ability_tag = &"Ability.Item.Holywater"

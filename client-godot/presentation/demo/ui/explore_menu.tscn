@@ -35,3 +35,10 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"Greyed"
 text = "Gold: 0"
+
+[node name="Keys" type="Label" parent="Margin/Box"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"Greyed"
+text = "Keys: 0"

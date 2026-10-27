@@ -9,6 +9,8 @@ extends UIScreen
 @export var equipment: GearSet = preload("res://presentation/demo/ui/equipment.tres")
 @export var armor: GearSet = preload("res://presentation/demo/ui/armor.tres")
 @export var gold_format: String = "Gold: %d"
+@export var keys_format: String = "Keys: %d"
+@export var golden_suffix: String = " + golden key"
 
 
 func bind(context: UIContext) -> void:
@@ -27,6 +29,9 @@ func refresh() -> void:
 		_entry("Status", status_screen, {}),
 	])
 	%Gold.text = gold_format % ctx.run.state.coins
+	# Spec keys-and-gear D13: on every run that uses keys, "Keys: 0" included; a golden key adds its mark.
+	%Keys.visible = ctx.run.structure != null and ctx.run.structure.uses_keys()
+	%Keys.text = keys_format % ctx.run.state.keys + (golden_suffix if ctx.run.state.golden_key else "")
 
 
 func _entry(text: String, scene: PackedScene, payload: Dictionary) -> Dictionary:

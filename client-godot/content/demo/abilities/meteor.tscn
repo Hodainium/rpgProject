@@ -19,7 +19,7 @@ toughness_x100 = 6000
 [node name="Meteor" type="Node" unique_id=1040618643]
 script = ExtResource("1_yimmt")
 targeting = 1
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_2evxd")]([SubResource("Resource_dep4x")])
 animation = ExtResource("4_lq85k")
 ability_tag = &"Ability.Ult.Meteor"

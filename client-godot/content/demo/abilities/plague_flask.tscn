@@ -13,7 +13,7 @@ effect = ExtResource("3_5l0jq")
 [node name="PlagueFlask" type="Node" unique_id=235774694]
 script = ExtResource("1_g2d47")
 targeting = 1
-asset_tags = Array[StringName]([&"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Role.Debuff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_rfo51")]([SubResource("Resource_d465s")])
 animation = ExtResource("4_vnpyu")
 ability_tag = &"Ability.Item.Plague"

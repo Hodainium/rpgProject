@@ -14,7 +14,7 @@ effect = ExtResource("3_ekkm5")
 [node name="Heal" type="Node" unique_id=866891359]
 script = ExtResource("1_gjr7v")
 targeting = 3
-asset_tags = Array[StringName]([&"Ability.Role.Heal"])
+asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Usage.Battle", &"Ability.Usage.Field"])
 executions = Array[ExtResource("2_yi62s")]([SubResource("Resource_0hxt3")])
 animation = ExtResource("4_rnocn")
 ability_tag = &"Ability.Heal"

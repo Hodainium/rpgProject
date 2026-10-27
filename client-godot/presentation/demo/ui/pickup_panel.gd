@@ -2,6 +2,10 @@
 ## pickup_row each.
 extends UIScreen
 
+@export var key_name: String = "Key"
+@export var keys_format: String = "%d Keys"
+@export var key_description: String = "Opens one locked room or Gilded Chest."
+
 
 func bind(context: UIContext) -> void:
 	for signal_name in [&"pickups_shown", &"room_entered", &"room_cleared", &"party_changed"]:
@@ -19,6 +23,13 @@ func refresh() -> void:
 	var rows: Array = []
 	for pickup in data["pickups"]:
 		if pickup["taken"]:
+			continue
+		if pickup.get("kind", "") == FloorGenerator.KEYS_KIND:
+			# Spec keys-and-gear D12: keys for sale, shown as a plain item row with no "give to" picker.
+			var key := ItemDefinition.new()
+			key.display_name = key_name if int(pickup["keys"]) == 1 else keys_format % int(pickup["keys"])
+			key.description = key_description
+			rows.append({"run": run, "pickup": pickup, "thing": key, "equipment": false, "keys": true})
 			continue
 		var equipment: bool = pickup.get("kind", "") == FloorGenerator.EQUIPMENT_KIND
 		var thing: Resource = (run.content.equipment if equipment else run.content.items).get(pickup["item"])

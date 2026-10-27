@@ -25,7 +25,7 @@ chance_x100 = 5000
 [node name="AbsoluteZero" type="Node" unique_id=47220745]
 script = ExtResource("1_pbmr7")
 targeting = 1
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_u4res")]([SubResource("Resource_0ktad"), SubResource("Resource_qrhx7")])
 animation = ExtResource("5_ooq1e")
 ability_tag = &"Ability.Ult.Absolutezero"

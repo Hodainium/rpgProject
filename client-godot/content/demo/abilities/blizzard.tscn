@@ -24,7 +24,7 @@ chance_x100 = 10000
 [node name="Blizzard" type="Node" unique_id=1243669655]
 script = ExtResource("1_fpwvk")
 targeting = 1
-asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_wsms8")]([SubResource("Resource_86x85"), SubResource("Resource_8qv4h")])
 animation = ExtResource("5_2h7q4")
 ability_tag = &"Ability.Blizzard"

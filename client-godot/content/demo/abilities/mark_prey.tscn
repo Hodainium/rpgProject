@@ -22,7 +22,7 @@ multiplier_x100 = 8000
 
 [node name="MarkPrey" type="Node" unique_id=472284609]
 script = ExtResource("1_yd2xx")
-asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_65yru")]([SubResource("Resource_c6ptw"), SubResource("Resource_p735m")])
 animation = ExtResource("5_bi8pl")
 ability_tag = &"Ability.Markprey"

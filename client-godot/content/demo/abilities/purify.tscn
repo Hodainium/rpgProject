@@ -20,7 +20,7 @@ effect = ExtResource("4_0clm4")
 [node name="Purify" type="Node" unique_id=1602140460]
 script = ExtResource("1_4aeqb")
 targeting = 4
-asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Buff", &"Ability.Role.Cleanse"])
+asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Buff", &"Ability.Role.Cleanse", &"Ability.Usage.Battle", &"Ability.Usage.Field"])
 executions = Array[ExtResource("2_e4cu3")]([SubResource("Resource_rdrfh"), SubResource("Resource_je1k1")])
 animation = ExtResource("5_bv7sx")
 ability_tag = &"Ability.Purify"

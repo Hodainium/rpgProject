@@ -18,7 +18,7 @@ toughness_x100 = 12000
 
 [node name="Execute" type="Node" unique_id=156071765]
 script = ExtResource("1_xigjt")
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Usage.Battle"])
 activation_query = ExtResource("6_ctrl")
 executions = Array[ExtResource("2_d7vrq")]([SubResource("Resource_twiu6")])
 animation = ExtResource("4_2rfya")

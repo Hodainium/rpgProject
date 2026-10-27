@@ -15,7 +15,7 @@ toughness_x100 = 3000
 
 [node name="FrostJab" type="Node" unique_id=854294647]
 script = ExtResource("1_q8p2h")
-asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Basic"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Basic", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_3kyga")]([SubResource("Resource_2abmt")])
 animation = ExtResource("4_dqv6f")
 ability_tag = &"Ability.Frostjab"

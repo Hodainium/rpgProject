@@ -2,8 +2,8 @@
 ## Item Slot, Item Slot 2; armor.tres: Head, Body, Arms, Legs, Accessory). Characters at the bottom, one button per
 ## slot; hover previews a slot (the list above shows what fits it), click selects it. Item Slot 2 shows only while
 ## someone has two use slots, LOCKED for the others. A piece in the list opens the middle menu: EQUIP (from the bag),
-## SWAP (worn by someone else: three logged actions, unequip, equip, equip), TAKE OFF, CANCEL. Use items can be looked
-## at but not moved until keys-and-gear (F12).
+## SWAP (worn by someone else: one logged swap_gear), TAKE OFF, CANCEL. Another member's use item: MOVE HERE (a free
+## slot) or SWAP, one logged move_item (spec keys-and-gear 2.4, 2.5).
 extends DemoMenuFrame
 
 @export var gear_set: GearSet
@@ -24,7 +24,7 @@ extends DemoMenuFrame
 @export var nothing_text: String = "nothing"
 @export var to_bag_format: String = "%s goes back to the bag."
 @export var empty_slot_text: String = "The slot is empty."
-@export var items_later_text: String = "Moving items between characters arrives with keys-and-gear."
+@export var move_text: String = "MOVE HERE"
 
 ## {"member": slot, "column": GearColumn} or null.
 var _selected: Variant = null
@@ -241,9 +241,15 @@ func _open_menu(piece: Dictionary) -> void:
 	%Where.text = "%s · %s" % [_member_name(ctx.run.state.member(me)).to_upper(), column.title]
 	%PieceName.text = _display_name(piece["id"])
 	if piece["use"]:
-		%Effect.text = items_later_text if not mine else mine_text % _member_name(ctx.run.state.member(me))
-		%Equip.text = "SWAP" if piece["holder"] > 0 and not mine else "EQUIP"
-		%Equip.disabled = true
+		# Spec keys-and-gear 2.5: another member's use item moves here (MOVE HERE) or trades places (SWAP).
+		var other: bool = piece["holder"] > 0 and piece["holder"] != me
+		if other:
+			%Effect.text = swap_format % [_member_name(ctx.run.state.member(piece["holder"])),
+				_display_name(current) if current != &"" else nothing_text]
+		else:
+			%Effect.text = mine_text % _member_name(ctx.run.state.member(me))
+		%Equip.text = "SWAP" if current != &"" else move_text
+		%Equip.disabled = not other
 		%TakeOff.visible = false
 	elif mine:
 		%Effect.text = mine_text % _member_name(ctx.run.state.member(me))
@@ -277,17 +283,13 @@ func _on_equip() -> void:
 		return
 	var run := ctx.run
 	var me: int = _selected["member"]
-	var tag: StringName = _selected["column"].slot
 	var problem := ""
-	if _picked["holder"] > 0:
-		# F11: a swap is three logged actions. Take the piece off its wearer, put it on, give the wearer my old piece.
-		var other: int = _picked["holder"]
-		var mine := _piece_in(_selected)
-		problem = run.unequip(other, tag)
-		if problem == "":
-			problem = run.equip(me, _picked["id"])
-		if problem == "" and mine != &"":
-			problem = run.equip(other, mine)
+	if _picked["use"]:
+		# Spec keys-and-gear 2.5: one logged move (or swap with what this slot holds), checked before anything changes.
+		problem = run.move_item(_picked["holder"], _picked["id"], me, _piece_in(_selected))
+	elif _picked["holder"] > 0:
+		# Spec keys-and-gear 2.4: one logged swap; the wearer gets my old piece (or nothing) back.
+		problem = run.swap_gear(me, _picked["id"])
 	else:
 		problem = run.equip(me, _picked["id"])
 	_after(problem)

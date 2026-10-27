@@ -13,7 +13,7 @@ effect = ExtResource("3_op7nj")
 [node name="RallyHorn" type="Node" unique_id=1100477752]
 script = ExtResource("1_y6xhg")
 targeting = 4
-asset_tags = Array[StringName]([&"Ability.Role.Buff"])
+asset_tags = Array[StringName]([&"Ability.Role.Buff", &"Ability.Usage.Battle", &"Ability.Usage.Field"])
 executions = Array[ExtResource("2_bmwlg")]([SubResource("Resource_vafim")])
 animation = ExtResource("4_yafra")
 ability_tag = &"Ability.Item.Rally"

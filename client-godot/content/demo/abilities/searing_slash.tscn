@@ -15,7 +15,7 @@ toughness_x100 = 3000
 
 [node name="SearingSlash" type="Node" unique_id=2039047284]
 script = ExtResource("1_ufd6h")
-asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Basic"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Basic", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_ujcxd")]([SubResource("Resource_gqwvl")])
 animation = ExtResource("4_vt8vr")
 ability_tag = &"Ability.Searingslash"

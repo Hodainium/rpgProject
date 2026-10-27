@@ -11,3 +11,4 @@ rooms_per_depth = 1
 random_extra_rooms = 1
 max_rooms = 10
 special_room_tags = Array[StringName]([&"Room.Type.Treasure", &"Room.Type.Shop"])
+locked_room_tags = Array[StringName]([&"Room.Type.Treasure", &"Room.Type.Shop"])

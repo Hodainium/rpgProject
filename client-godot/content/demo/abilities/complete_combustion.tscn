@@ -15,7 +15,7 @@ effect = ExtResource("3_2rwo4")
 [node name="CompleteCombustion" type="Node" unique_id=1786552054]
 script = ExtResource("1_fcwr0")
 targeting = 5
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Buff"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Buff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_c5wtu")]([SubResource("Resource_fwdla")])
 animation = ExtResource("4_e805r")
 ability_tag = &"Ability.Ult.Combustion"

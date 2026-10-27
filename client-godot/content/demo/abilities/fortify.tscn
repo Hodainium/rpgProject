@@ -20,7 +20,7 @@ effect = ExtResource("4_aw750")
 [node name="Fortify" type="Node" unique_id=236544854]
 script = ExtResource("1_q771q")
 targeting = 5
-asset_tags = Array[StringName]([&"Ability.Role.Buff"])
+asset_tags = Array[StringName]([&"Ability.Role.Buff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_h8yr1")]([SubResource("Resource_y17ue"), SubResource("Resource_ddsep")])
 animation = ExtResource("5_4jdpa")
 ability_tag = &"Ability.Fortify"

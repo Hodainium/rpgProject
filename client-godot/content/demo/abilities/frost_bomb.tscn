@@ -17,7 +17,7 @@ toughness_x100 = 6000
 [node name="FrostBomb" type="Node" unique_id=2054013626]
 script = ExtResource("1_uybp0")
 targeting = 2
-asset_tags = Array[StringName]([&"Ability.Role.Damage"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_f1utt")]([SubResource("Resource_3e07x")])
 animation = ExtResource("4_cipgs")
 ability_tag = &"Ability.Item.Frostbomb"

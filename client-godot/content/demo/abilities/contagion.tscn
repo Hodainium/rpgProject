@@ -21,7 +21,7 @@ chance_x100 = 8000
 [node name="Contagion" type="Node" unique_id=615341588]
 script = ExtResource("1_0ffh6")
 targeting = 1
-asset_tags = Array[StringName]([&"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Role.Debuff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_ayixo")]([SubResource("Resource_oylru"), SubResource("Resource_rcwwh")])
 animation = ExtResource("4_ixorl")
 ability_tag = &"Ability.Contagion"

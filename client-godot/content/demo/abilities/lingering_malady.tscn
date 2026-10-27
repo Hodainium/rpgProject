@@ -14,7 +14,7 @@ effect = ExtResource("3_tmvxu")
 [node name="LingeringMalady" type="Node" unique_id=600174573]
 script = ExtResource("1_c6b7j")
 targeting = 4
-asset_tags = Array[StringName]([&"Ability.Role.Buff"])
+asset_tags = Array[StringName]([&"Ability.Role.Buff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_wd0dt")]([SubResource("Resource_ml8ra")])
 animation = ExtResource("4_j8mqc")
 ability_tag = &"Ability.Lingeringmalady"

@@ -19,7 +19,7 @@ effect = ExtResource("4_pthfw")
 [node name="Provoke" type="Node" unique_id=1219246543]
 script = ExtResource("1_48g7t")
 targeting = 5
-asset_tags = Array[StringName]([&"Ability.Role.Buff"])
+asset_tags = Array[StringName]([&"Ability.Role.Buff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_jhjos")]([SubResource("Resource_gjrv5"), SubResource("Resource_5udam")])
 animation = ExtResource("5_ojmn2")
 ability_tag = &"Ability.Provoke"

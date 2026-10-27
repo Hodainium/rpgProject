@@ -18,7 +18,7 @@ effect = ExtResource("3_blocking")
 [node name="Block" type="Node"]
 script = ExtResource("1_ability")
 targeting = 5
-asset_tags = Array[StringName]([&"Ability.Role.Guard"])
+asset_tags = Array[StringName]([&"Ability.Role.Guard", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_row")]([SubResource("Resource_guard")])
 animation = ExtResource("4_animation")
 description = "Guard until your next turn: you take half damage."

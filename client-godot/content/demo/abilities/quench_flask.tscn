@@ -17,7 +17,7 @@ toughness_x100 = 3000
 [node name="QuenchFlask" type="Node" unique_id=1874110462]
 script = ExtResource("1_iq53o")
 targeting = 1
-asset_tags = Array[StringName]([&"Ability.Role.Damage"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_hcg03")]([SubResource("Resource_81ajx")])
 animation = ExtResource("4_3r7f7")
 ability_tag = &"Ability.Item.Quench"

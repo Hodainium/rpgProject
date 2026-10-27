@@ -15,7 +15,7 @@ toughness_x100 = 3000
 
 [node name="Strike" type="Node" unique_id=2029591556]
 script = ExtResource("1_efcy5")
-asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Basic"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Basic", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_0m7rn")]([SubResource("Resource_1e2y8")])
 animation = ExtResource("4_vvujh")
 ability_tag = &"Ability.Strike"

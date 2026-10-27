@@ -13,7 +13,7 @@ effect = ExtResource("3_myxlm")
 [node name="Potion" type="Node" unique_id=27809596]
 script = ExtResource("1_1p7lh")
 targeting = 4
-asset_tags = Array[StringName]([&"Ability.Role.Heal"])
+asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Usage.Battle", &"Ability.Usage.Field"])
 executions = Array[ExtResource("2_ok6p8")]([SubResource("Resource_qo1m8")])
 animation = ExtResource("4_f0tvp")
 ability_tag = &"Ability.Item.Potion"

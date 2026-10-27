@@ -13,7 +13,7 @@ effect = ExtResource("3_5y88p")
 [node name="Rations" type="Node" unique_id=634283678]
 script = ExtResource("1_2nxuv")
 targeting = 3
-asset_tags = Array[StringName]([&"Ability.Role.Heal"])
+asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Usage.Battle", &"Ability.Usage.Field"])
 executions = Array[ExtResource("2_l5efc")]([SubResource("Resource_hj1mk")])
 animation = ExtResource("4_vg6tx")
 ability_tag = &"Ability.Item.Rations"

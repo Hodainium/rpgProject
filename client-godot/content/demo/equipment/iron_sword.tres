@@ -14,6 +14,6 @@ script = ExtResource("4_a3qd0")
 id = &"demo.equipment.iron_sword"
 display_name = "Iron Sword"
 description = "+60 ATK."
-tags = Array[StringName]([&"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Chest", &"Item.Rarity.Common"])
 slot = &"Equipment.Slot.Weapon"
 grants = SubResource("Resource_wt8mu")

@@ -28,7 +28,7 @@ chance_x100 = 10000
 [node name="Supernova" type="Node" unique_id=675565531]
 script = ExtResource("1_jlhww")
 targeting = 1
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_34iyl")]([SubResource("Resource_u4mh2"), SubResource("Resource_j1m0s")])
 animation = ExtResource("5_q35c8")
 ability_tag = &"Ability.Ult.Supernova"

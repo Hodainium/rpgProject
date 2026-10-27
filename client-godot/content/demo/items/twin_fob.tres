@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"demo.item.twin_fob"
+display_name = "Twin Fob"
+description = "Every key you find counts twice."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Run.Keys.Double"])
+price = 10

@@ -26,7 +26,7 @@ chance_x100 = 10000
 
 [node name="Ignite" type="Node" unique_id=1509969337]
 script = ExtResource("1_w60lx")
-asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_3rveg")]([SubResource("Resource_xjvyc"), SubResource("Resource_wcyum")])
 animation = ExtResource("5_11p7r")
 ability_tag = &"Ability.Ignite"

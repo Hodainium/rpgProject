@@ -13,7 +13,7 @@ effect = ExtResource("3_a57tk")
 [node name="PhoenixFeather" type="Node" unique_id=1340235608]
 script = ExtResource("1_g7imv")
 targeting = 6
-asset_tags = Array[StringName]([&"Ability.Role.Revive"])
+asset_tags = Array[StringName]([&"Ability.Role.Revive", &"Ability.Usage.Battle", &"Ability.Usage.Field"])
 executions = Array[ExtResource("2_bi7h6")]([SubResource("Resource_banqw")])
 animation = ExtResource("4_hb65e")
 ability_tag = &"Ability.Item.Revive"

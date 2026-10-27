@@ -13,6 +13,19 @@
 [ext_resource type="Resource" path="res://content/demo/chapters/vault.tres" id="11_vault"]
 [ext_resource type="Resource" path="res://content/demo/chapters/void.tres" id="12_void"]
 [ext_resource type="Resource" path="res://content/demo/events/waystation.tres" id="13_rest"]
+[ext_resource type="Script" path="res://game/defs/chest_drop.gd" id="14_chest_drop"]
+[ext_resource type="Resource" path="res://content/demo/chests/wooden_chest.tres" id="15_wooden"]
+[ext_resource type="Resource" path="res://content/demo/chests/gilded_chest.tres" id="16_gilded"]
+
+[sub_resource type="Resource" id="Resource_drop_wooden"]
+script = ExtResource("14_chest_drop")
+chest = ExtResource("15_wooden")
+weight_x100 = 7500
+
+[sub_resource type="Resource" id="Resource_drop_gilded"]
+script = ExtResource("14_chest_drop")
+chest = ExtResource("16_gilded")
+weight_x100 = 2500
 
 [sub_resource type="Resource" id="Resource_5oori"]
 script = ExtResource("2_o757x")
@@ -52,6 +65,11 @@ xp_per_enemy = 20
 xp_per_boss = 120
 xp_to_level = Array[int]([60, 150, 270, 420, 600, 810, 1050, 1320, 1620, 1950, 2310, 2700, 3120, 3570])
 rest_event = ExtResource("13_rest")
+unlocked_floors = 1
+chest_drops = Array[ExtResource("14_chest_drop")]([SubResource("Resource_drop_wooden"), SubResource("Resource_drop_gilded")])
+key_drop_chance_x100 = 2000
+golden_key_chance_x100 = 200
+chest_drop_chance_x100 = 500
 rarity_weights_x100 = Dictionary[StringName, int]({
 &"Item.Rarity.Common": 6000,
 &"Item.Rarity.Rare": 2500,

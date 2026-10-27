@@ -13,7 +13,7 @@ effect = ExtResource("3_7e588")
 [node name="SmellingSalts" type="Node" unique_id=890641790]
 script = ExtResource("1_rvsc7")
 targeting = 6
-asset_tags = Array[StringName]([&"Ability.Role.Revive"])
+asset_tags = Array[StringName]([&"Ability.Role.Revive", &"Ability.Usage.Battle", &"Ability.Usage.Field"])
 executions = Array[ExtResource("2_lfhen")]([SubResource("Resource_6ijq3")])
 animation = ExtResource("4_iw212")
 ability_tag = &"Ability.Item.Salts"

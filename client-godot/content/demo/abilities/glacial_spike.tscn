@@ -23,7 +23,7 @@ chance_x100 = 3500
 
 [node name="GlacialSpike" type="Node" unique_id=1919928491]
 script = ExtResource("1_ht4ue")
-asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_ppis8")]([SubResource("Resource_l81ab"), SubResource("Resource_f3bu8")])
 animation = ExtResource("5_hcis1")
 ability_tag = &"Ability.Glacialspike"

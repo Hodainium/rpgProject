@@ -40,7 +40,7 @@ chance_x100 = 10000
 [node name="Pandemic" type="Node" unique_id=1140593249]
 script = ExtResource("1_xn8wx")
 targeting = 1
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_ypy7e")]([SubResource("Resource_ttyol"), SubResource("Resource_48qdb"), SubResource("Resource_fx8u0"), SubResource("Resource_sgsvm")])
 animation = ExtResource("7_nrvo7")
 ability_tag = &"Ability.Ult.Pandemic"

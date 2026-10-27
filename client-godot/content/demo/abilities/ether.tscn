@@ -13,7 +13,7 @@ effect = ExtResource("3_np1ar")
 [node name="Ether" type="Node" unique_id=78327595]
 script = ExtResource("1_tnn31")
 targeting = 3
-asset_tags = Array[StringName]([&"Ability.Role.RestoreMP"])
+asset_tags = Array[StringName]([&"Ability.Role.RestoreMP", &"Ability.Usage.Battle", &"Ability.Usage.Field"])
 executions = Array[ExtResource("2_n4xbg")]([SubResource("Resource_av4hw")])
 animation = ExtResource("4_mjsuk")
 ability_tag = &"Ability.Item.Ether"

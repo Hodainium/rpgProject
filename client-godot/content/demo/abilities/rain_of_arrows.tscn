@@ -18,7 +18,7 @@ multiplier_x100 = 13000
 [node name="RainOfArrows" type="Node" unique_id=697982007]
 script = ExtResource("1_lmnf6")
 targeting = 1
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_ue1ur")]([SubResource("Resource_8mmii")])
 animation = ExtResource("4_0qwp2")
 ability_tag = &"Ability.Ult.Rainofarrows"

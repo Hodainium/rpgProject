@@ -48,9 +48,10 @@ func set_item(item: Dictionary, _ctx: UIContext) -> void:
 	%Description.visible = thing.description != ""
 	var paid: bool = pickup["price"] > 0 or pickup.has("priceItem")
 	%Take.text = buy_text if paid else take_text
-	%GiveTo.visible = not item["equipment"]
+	var no_holder: bool = item["equipment"] or item.get("keys", false)  # armor and keys go to the party, not a member
+	%GiveTo.visible = not no_holder
 	%GiveTo.clear()
-	if not item["equipment"]:
+	if not no_holder:
 		for member in _run.state.party:
 			var character: UnitDefinition = _run.content.units.get(member["character"])
 			%GiveTo.add_item(character.display_name if character != null else String(member["character"]), member["slot"])

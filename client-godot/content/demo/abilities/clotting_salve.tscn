@@ -19,7 +19,7 @@ effect = ExtResource("4_7uauj")
 [node name="ClottingSalve" type="Node" unique_id=1141992203]
 script = ExtResource("1_iagui")
 targeting = 3
-asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Buff", &"Ability.Role.Cleanse"])
+asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Buff", &"Ability.Role.Cleanse", &"Ability.Usage.Battle", &"Ability.Usage.Field"])
 executions = Array[ExtResource("2_8awif")]([SubResource("Resource_oafvy"), SubResource("Resource_6vgyx")])
 animation = ExtResource("5_ndmab")
 ability_tag = &"Ability.Item.Salve"

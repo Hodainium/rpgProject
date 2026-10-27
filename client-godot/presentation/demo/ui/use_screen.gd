@@ -1,8 +1,8 @@
 ## Spec ff7-ui 2.9 (F14): Use Item and Use Ability, one menu screen with two modes (payload {"mode": "item" or
 ## "ability"}). Use Item: pick an item from the list, then a party member at the bottom. Use Ability: pick a party member
-## first, then one of their abilities, then a target if it needs one. Battle-only entries are greyed; the usage label is
-## today's rule (no enemy target: [Field and Battles]) until the Ability.Usage.* tags. Uses go through
-## RunController.use_field (logged). Back steps back one stage.
+## first, then one of their abilities, then a target if it needs one. Battle-only entries are greyed; the usage label
+## comes from the Ability.Usage.* tags (AbilityHint). Uses go through RunController.use_field (logged). Use Item lists
+## the party's chests first (OPEN, RunController.open_chest; spec keys-and-gear D9). Back steps back one stage.
 extends DemoMenuFrame
 
 enum Stage { MEMBER, LIST, TARGET }
@@ -17,6 +17,9 @@ enum Stage { MEMBER, LIST, TARGET }
 @export var used_format: String = "%s · used on %s"
 @export var used_all_format: String = "%s · used on the party"
 @export var empty_text: String = "Nothing to use."
+@export var open_text: String = "OPEN"
+@export var open_key_text: String = "OPEN · 1 KEY"
+@export var chest_kind_text: String = "CHEST"
 
 var _stage: Stage = Stage.LIST
 var _member: int = 0
@@ -53,6 +56,13 @@ func refresh() -> void:
 		return
 	var catalog := ctx.run.field_catalog()
 	var entries: Array = []
+	if mode == "item" and _stage == Stage.LIST:
+		# Spec keys-and-gear D9: the party's chests first; OPEN needs no target.
+		for chest in ctx.run.chests():
+			entries.append({"text": chest["name"],
+				"detail": open_key_text if chest["needs_key"] and not chest["free"] else open_text,
+				"disabled": not chest["can_open"], "hover": _describe_chest.bind(chest),
+				"action": _open_chest.bind(chest["index"])})
 	if _stage != Stage.MEMBER:
 		for entry in catalog:
 			if (mode == "item") != (entry["item"] != &""):
@@ -93,6 +103,20 @@ func _describe_entry(entry: Dictionary, extra: String = "") -> void:
 	describe({"name": entry.get("name", ""), "kind": str(hint.get("usage", "")),
 		"text": str(hint.get("description", "")),
 		"extra": extra if extra != "" else (held_format % _member_name(entry["slot"]) if mode == "item" else cost)})
+
+
+func _describe_chest(chest: Dictionary) -> void:
+	describe({"name": chest["name"], "kind": chest_kind_text, "text": chest["description"],
+		"extra": chest["why"] if not chest["can_open"] else ""})
+
+
+func _open_chest(index: int) -> void:
+	var problem := ctx.run.open_chest(index)
+	if problem != "":
+		ctx.main.refuse(problem)
+	else:
+		get_tree().call_group("sound_board", "play", "Item")
+	refresh()
 
 
 func _pick(entry: Dictionary) -> void:

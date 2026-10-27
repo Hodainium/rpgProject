@@ -1,0 +1,96 @@
+[gd_resource type="Resource" script_class="ChestDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_out"]
+[ext_resource type="Script" path="res://game/defs/chest_reward.gd" id="2_reward"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="3_query"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_equipment.gd" id="4_gear"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="5_coins"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="6_exec"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_percent_of_max.gd" id="7_percent"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="8_effect"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="9_apply"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_keys.gd" id="10_keys"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="11_item"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_chest.gd" id="12_give_chest"]
+[ext_resource type="Resource" path="res://content/demo/chests/wooden_chest.tres" id="13_wooden"]
+[ext_resource type="Script" path="res://game/defs/chest_definition.gd" id="14_chest"]
+
+[sub_resource type="Resource" id="Resource_gear_query"]
+script = ExtResource("3_query")
+require_all_tags = Array[StringName]([&"Pool.Chest"])
+
+[sub_resource type="Resource" id="Resource_gear"]
+script = ExtResource("4_gear")
+query = SubResource("Resource_gear_query")
+prefer_open_slot = true
+
+[sub_resource type="Resource" id="Resource_reward_gear"]
+script = ExtResource("2_reward")
+outcomes = Array[ExtResource("1_out")]([SubResource("Resource_gear")])
+weight_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_coin"]
+script = ExtResource("5_coins")
+
+[sub_resource type="Resource" id="Resource_reward_coins"]
+script = ExtResource("2_reward")
+outcomes = Array[ExtResource("1_out")]([SubResource("Resource_coin")])
+rolls_min = 3
+rolls_max = 6
+weight_x100 = 2900
+
+[sub_resource type="Resource" id="Resource_key"]
+script = ExtResource("10_keys")
+
+[sub_resource type="Resource" id="Resource_reward_keys"]
+script = ExtResource("2_reward")
+outcomes = Array[ExtResource("1_out")]([SubResource("Resource_key")])
+rolls_max = 2
+weight_x100 = 1500
+
+[sub_resource type="Resource" id="Resource_heal_calc"]
+script = ExtResource("7_percent")
+percent_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_heal_effect"]
+script = ExtResource("8_effect")
+executions = Array[ExtResource("6_exec")]([SubResource("Resource_heal_calc")])
+
+[sub_resource type="Resource" id="Resource_heal"]
+script = ExtResource("9_apply")
+effect = SubResource("Resource_heal_effect")
+
+[sub_resource type="Resource" id="Resource_reward_heal"]
+script = ExtResource("2_reward")
+outcomes = Array[ExtResource("1_out")]([SubResource("Resource_heal")])
+weight_x100 = 1400
+
+[sub_resource type="Resource" id="Resource_item_query"]
+script = ExtResource("3_query")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_item"]
+script = ExtResource("11_item")
+item_query = SubResource("Resource_item_query")
+
+[sub_resource type="Resource" id="Resource_reward_item"]
+script = ExtResource("2_reward")
+outcomes = Array[ExtResource("1_out")]([SubResource("Resource_item")])
+weight_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_chest"]
+script = ExtResource("12_give_chest")
+chest = ExtResource("13_wooden")
+
+[sub_resource type="Resource" id="Resource_reward_chest"]
+script = ExtResource("2_reward")
+outcomes = Array[ExtResource("1_out")]([SubResource("Resource_chest")])
+weight_x100 = 200
+
+[resource]
+script = ExtResource("14_chest")
+id = &"demo.chest.gilded"
+display_name = "Gilded Chest"
+description = "Costs a key: armor or a weapon of any rarity, an item, coins, keys or a heal."
+needs_key = true
+rewards = Array[ExtResource("2_reward")]([SubResource("Resource_reward_gear"), SubResource("Resource_reward_coins"), SubResource("Resource_reward_keys"), SubResource("Resource_reward_heal"), SubResource("Resource_reward_item"), SubResource("Resource_reward_chest")])

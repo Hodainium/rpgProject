@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_out"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_keys.gd" id="2_keys"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="3_item"]
+
+[sub_resource type="Resource" id="Resource_keys"]
+script = ExtResource("2_keys")
+amount = 99
+
+[resource]
+script = ExtResource("3_item")
+id = &"demo.item.skeleton_ring"
+display_name = "Skeleton Ring"
+description = "99 keys."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Legendary"])
+price = 12
+on_pickup = Array[ExtResource("1_out")]([SubResource("Resource_keys")])

@@ -38,7 +38,7 @@ require_all_tags = Array[StringName]([&"State.Combustion"])
 [node name="FyreflyStrike" type="Node" unique_id=877742265]
 script = ExtResource("1_50n4s")
 targeting = 2
-asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
 executions = Array[ExtResource("2_c8f06")]([SubResource("Resource_yw8ts"), SubResource("Resource_mqha8"), SubResource("Resource_e1vca")])
 animation = ExtResource("5_1x2fx")
 ability_tag = &"Ability.Fyreflystrike"

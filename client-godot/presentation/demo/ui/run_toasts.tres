@@ -27,9 +27,29 @@ title = "{target}"
 subtitle = "Level {count}"
 seconds = 2.0
 
+[sub_resource type="Resource" id="rule_key"]
+script = ExtResource("2_rule")
+channel = &"Message.Run.KeyFound"
+title = "You found {targetName}!"
+seconds = 2.0
+
+[sub_resource type="Resource" id="rule_chest_found"]
+script = ExtResource("2_rule")
+channel = &"Message.Run.ChestFound"
+title = "You found a {targetName}!"
+subtitle = "Open it from Use Item."
+seconds = 2.2
+
+[sub_resource type="Resource" id="rule_chest_opened"]
+script = ExtResource("2_rule")
+channel = &"Message.Run.ChestOpened"
+kicker = "{targetName}"
+title = "{description}"
+seconds = 2.6
+
 [resource]
 script = ExtResource("1_set")
-rules = Array[ExtResource("2_rule")]([SubResource("rule_item"), SubResource("rule_floor"), SubResource("rule_level")])
+rules = Array[ExtResource("2_rule")]([SubResource("rule_item"), SubResource("rule_floor"), SubResource("rule_level"), SubResource("rule_key"), SubResource("rule_chest_found"), SubResource("rule_chest_opened")])
 max_visible = 1
 max_queued = 5
 entry_scene = ExtResource("3_toast")
