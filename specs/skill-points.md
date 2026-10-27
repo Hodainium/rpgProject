@@ -1,7 +1,8 @@
 # Spec: skill-points (slice 1f3)
 
-Status: 📝 Draft, decisions answered 2026-10-27 (section 7: D1–D3 and D7–D14 as recommended; D4–D6 retuned to
-odd, per-class numbers; D15 turn limit 500 as a loss; D16 the death map before any balance decision; D17–D20 level skills, to review; D21 one level concept and D22 a read-only `level` attribute, approved) · Date: 2026-10-27 ·
+Status: ✅ Done 2026-10-27 (synced to the build; every decision answered, section 7; the balance rounds in 4.5:
+the smart 4-member gate on the 600 balance seeds wins 31.8%, sound parties 38.9%, about 3 basics per costed ability,
+0 turn limits) · Date: 2026-10-27 ·
 Roadmap: slice 1f3, after 1f2 `keys-and-gear` (done) and before 2 `run-checkout`.
 Builds on `specs/playable-demo.md` (classes 3.10, class growth 3.11, the play report and its smart 4-member gate, the
 H9/H10 mirror), `specs/content-pass.md` H4 (`Event.Ability.Used.<Type>`), `specs/auto-battle.md` (`AutoPolicy`, the
@@ -182,14 +183,35 @@ fixtures' frozen AttributeSets have no `level` attribute, so their hashes don't 
     may read it, like any attribute.
 - **`RunController`:** on a level-up, broadcasts `Message.Run.SkillLearned` for each newly reached skill. No log
   entry; the run hash already has the level.
-- **UI:**
-  - **Status screen:** a "Learns" list ("Lv 4 · Ice Blast"), greyed until reached.
-  - **Toast and feed:** a toast rule and a battle-feed line for `SkillLearned`; the rule is presentation content, so
-    it is added with approval.
-- **Console:** `status <unit>` shows an enemy's level. `skills <slot>` lists learned and upcoming skills. The `xp`
-  cheat already reaches a level.
-- **`AbilityHint.cost_text(ability, unit = null)`:** reads an `ExecCalcCost` cost as well as plain modifiers. With a
-  unit, it shows the cost scaled by that unit's `sp_cost`. The label text follows D10.
+- **UI (as built, the user's call):**
+  - **Status screen:** no separate list. `RunController.member_kit` also lists level skills not reached yet, with
+    `unlock_level`, and the abilities list shows them dimmed with "Unlocked at level X." after the description.
+    Class details add "(Lv X)" next to those skills.
+  - **Toast:** a "NEW SKILL" rule for `Message.Run.SkillLearned` in `run_toasts.tres` (`UIToastRule.KNOWN_FIELDS`
+    gains `skillName`, `skillTag`, `replacesTag`). No battle-feed line: skills are learned between battles.
+  - **SP bar preview:** the battle hint carries `unit` and `spCost`; the party window shows what a hovered ability
+    would leave on that member's SP bar, with the spent part highlighted (`member_row` `mp_preview`).
+- **Console:** `status <unit>` shows each unit's level and, for party units, SP, SP per basic, SP gain and cost %.
+  `skills [slot]` lists learned and upcoming level skills. `battlelog on|off` (below). The `xp` cheat reaches a level.
+  `dev_run`'s JSON party `stats` carry `sp_basic`, `sp_gain`, `sp_cost` and `level` (`RunController.unit_stats`).
+- **`CostReader`** (`combat/cost_reader.gd`): an ability's cost for a unit, from negative modifiers and every cost
+  ExecCalc that offers `cost_of(caster)` (`ExecCalcCost` and its fixture copy). The hint, the bots and the report read
+  costs through it.
+- **`AbilityHint.cost_text(ability, unit = null)`:** through `CostReader`; with a unit, the cost scaled by its
+  `sp_cost`. The label text follows D10.
+- **`BattleLog`** (`combat/battle_log.gd`, added while hunting a hang): an optional, read-only log, one line per action
+  and target (refused marked), triggered passive and its event, skipped turn, overtime, Auto pick with its reason
+  (`AutoPolicy.last_reason`) and outcome. Off by default; on with `RPG_BATTLE_LOG=1` (every tool), `seed_report
+  --battle-log` or `battlelog on`. A headless Auto with no move always warns (it once hung a play report).
+- **Soft enrage** (added after the stall traces): `EnemyDefinition.overtime_turn`, `overtime_effect` (on the enemy)
+  and `overtime_party_effect` (on every living party unit), applied at each of the enemy's turn starts from that
+  battle turn; all off by default. Validator `overtime_not_stacking`.
+- **`EnemyBrain.level_skill_every`** (0 = off): on those battle turns a brain uses a level skill the unit has reached.
+- **Options built off by default:** `RunStructure.sp_start_min` (D2's fallback: a carried SP below that share of max SP
+  starts the battle at it, applied to the battle snapshot) and `EnemyDefinition.mirror_limit` (D13 (b): copy only the
+  first N pieces held, party slot order, and count no more for `per_item_effect`).
+- **Tools:** `seed_report --set` reaches nested values (`executions/0/amount_x100`); the role, usage and cost passes
+  also scan level skills (`RolePass.party_scenes`).
 - **`ContentValidator`:**
   - **Level skills:**
     - `level_skill_bad_level` (error): a level under 2, or above the run's max level for a character (silently
@@ -214,8 +236,11 @@ fixtures' frozen AttributeSets have no `level` attribute, so their hashes don't 
   - **Replay:** `ReplayRunner` verifies a `TurnLimit` battle (`Verified`, outcome `TurnLimit`) instead of rejecting
     it. `MismatchReason.TurnLimitExceeded` stays on the wire, now for a log that still has party entries after the
     battle ended at the cap (tampering).
-  - **Dev checks:** the `InvariantChecker` no longer counts a turn-limit battle as a violation, since it is a legal
-    loss. The play report still counts these battles under `turnLimits`, so stalls stay visible.
+  - **Dev checks:** the `InvariantChecker` still reports a turn-limit battle as the `turn_limit` violation (user,
+    2026-10-27): a stall usually means a broken item or interaction. The player just loses; the report also counts
+    these battles under `turnLimits`.
+  - **Analytics (later):** a `TurnLimit` outcome reaches the player analytics as its own outcome (the battle event's
+    `outcome`), so production stalls can be found too.
   - **Spec sync:** `combat-replay-core.md` is synced at `/sync-spec`.
 - **Tool:** `game/tools/build_cost_pass.tscn`, the same shape as `build_role_pass`. It proposes each party ability's
   tier from the D5 table (by role, targeting and current cost) and prints the table. `--apply` writes only the
@@ -247,13 +272,19 @@ score, buff, first legal. Inside it:
   without one keeps today's `MP_RESERVE` rule. No fixture ability is Basic-tagged today, so `auto-seed-4` and the
   smart/chaos runs on fixtures are unchanged (D12).
 
+**Also built in `AutoPolicy`:**
+- **No waste at the cap:** a buff an ally lacks (within the reserve) goes before a basic that would overflow SP.
+- **Never feed a drain:** when nothing scores, the last resort skips a move every target of which drains it, then
+  Blocks, then takes the first legal move. It always returns a move (an empty pick waits for a player that a
+  headless run never has).
+
 **"auto" (`ScriptedController`, first legal):** it stays the dumb baseline, with one change: a costed move is skipped
 when it would take SP under the danger reserve and the unit has a Basic ability. Without that, "auto" spends a
 healer's SP on its first costed move and the report measures nothing useful (D11).
 
 **Chaos (`ChaosController`):**
-- **Unaffordable moves stay on its illegal list.** A new case targets them on purpose: when the acting unit's SP is
-  under a costed move's scaled cost, that move is picked at the `illegal` rate.
+- **Unaffordable moves stay on its illegal list.** Its existing `unaffordable` case (any move that can't activate)
+  already covers SP costs; no new code, pinned by a test.
 - **Counted:** refusals are counted as `refused.insufficient_resources` in the report, as today.
 - **Legal decisions** are uniform as today, so chaos still wastes SP freely.
 
@@ -299,9 +330,10 @@ Expected, to be confirmed with the real diff at `/implement` (the implementation
 | Demo runs | change | Warrior's Ice Blast moves from his loadout to his level table (D20), so demo run states and run hashes change. No golden pins a demo run. |
 | Turn limit (D15) | no golden changes | no golden battle reaches 500 turns. `test_replay`'s "nobody can deal damage" case changes on purpose: it stops at 500 and is now `Verified` with outcome `TurnLimit`. A new test rejects a log that continues past the cap with `TurnLimitExceeded`. |
 | **New:** `sp-seed-<n>` (+ `.trace.json`, `.result.json`) and `sp-seed-<n>-tampered-cost` (a cost the unit can't afford, so 2002 `IllegalAbility`) | added | proves SP gain, scaled costs and the refusal on replay |
-| `golden/game/run_scripted.json`, `run_keyed.json`, `seed_report.json`, `seed_report_play.json`, floors, seed codes, sandbox | **unchanged** | all run on the fixture world, which has no SP content; bots are gated by D12 |
+| `golden/game/run_scripted.json`, `run_keyed.json`, `seed_report.json`, floors, seed codes, sandbox | **unchanged** | all run on the fixture world, which has no SP content; bots are gated by D12 |
+| `golden/game/seed_report_play.json` | **regenerated on purpose** | the report gained keys (`seedSet`, `analysis`, `sp`, `levelSkills`, `secretSkills`, `bossEntrySpPercent`); its runs and hashes are unchanged |
 | Demo-content tests (smoke, item, ult, content-pass tests, content validator over `content/`) | assertions on MP numbers updated | the demo is the only content that changes |
-| C# cross-check | unchanged, passes | it reads the shapes of the committed goldens |
+| C# cross-check | passes; `GoldenSet_IsComplete` counts 18 goldens (was 15) | the three `sp-seed-13` files |
 
 **Why so few:** the project freezes fixtures on purpose, so a content pass never moves system goldens. If you want the
 scripted runs to show SP too, the alternative is a new fixture run with SP, not a rebuilt old one (D12).
@@ -346,6 +378,28 @@ Hypotheses, in order of likelihood:
 The fix depends on the trace (D14). With D15, these battles end at 500 turns as a loss. A loss at the cap is
 still a symptom to fix, not a design.
 
+**Found (2026-10-27):** hypothesis 1. All six stalls held Leech Hide; the Collector, weak to Physical, sat at full HP
+for 400+ turns. Fixed by `mirror_skip_tags` on `enemies/collector.tres` (the six `Drain.*`/`Resist.*` tags).
+
+### 4.5 Balance rounds (2026-10-27, smart 4-member gate, 600 balance seeds)
+| Round | Change | Win | Sound parties | Basics per ability | Turn limits |
+|---|---|---|---|---|---|
+| Baseline | today's content, 500-turn cap | 31.0% | 35.6% | – | 6 |
+| SP content | SP economy and level content | 47.8% | 47.5% | 0.57 | 5 |
+| Harder | costs ×2.5 (odd, capped at the smallest unlocking pool), the rest restores HP only, Collector skip tags | 33.7% | 39.4% | 2.99 | 7 |
+| Traces | drain-safe Auto, secret skills in brains, Fire and anti-control items | 34.0% | 40.4% | 2.96 | 2 |
+| Overtime | soft enrage and stacking exhaustion on every boss from turn 50 | **31.8%** | **38.9%** | 2.97 | **0** |
+
+- **Where runs end:** floor 10 (the route bosses) holds most losses. The Nameless is the hard boss on purpose
+  (75% lost per attempt: 9000 HP, resists Physical and Ice, weak to Fire, Silence stuns); the user accepts it and
+  wants more items over a nerf.
+- **The turn-limit traces:** 6 of 7 were Auto feeding a drain (Bound Demon drains Fire, Void Wraith and Vault Sentry
+  drain Ice) with no affordable skill, fixed in `AutoPolicy`. The fix exposed a hang (a "safe" revive with no target
+  returned no move; the battle waited for a player). The last ones were a lone Bulwark against Mother Heart, ended by
+  the overtime exhaustion (a flat loss couldn't beat Shield Wall's 5% a turn).
+- **Why costs alone weren't enough:** fights are short and SP carried, so casters opened every fight with a stored
+  ability; the 50% SP at the Waystation refilled them each floor. Removing it is what made the rhythm.
+
 **Root acceptance scenarios:** none apply, because this slice has no server. Scenario 5 (tampered log → 2002) is
 extended on the client by the new `sp-seed-<n>-tampered-cost` golden. Replay mismatches stay verdicts with
 `errorCode` 2002, never an HTTP status.
@@ -355,20 +409,18 @@ N/A for Prometheus: client-only, no service. Never use ability or item ids as me
 projections own those.
 
 **Dev visibility:**
-- **Play report `sp` block** (smart policy and the others), per class:
-  - `basics` and `abilities`: uses.
-  - `spGained` and `spSpent`.
-  - `avgBasicsBetweenAbilities`: the measured rhythm; the target is about 2–3.
-  - `capWaste`: SP lost at the cap.
-  - `bossEntrySpPercent`: the median SP% entering each boss, next to `bossEntryHpPercent`.
-- **Death map (4.3):** `lossesByFloor`, `lossesByRoute`, `lossesByEncounter` (count, share of losses, losses per
-  attempt), `concentration`, `endEntry` (HP%, SP% and level entering the last battle) and `turnLimits`, plus a printed
-  table. `--compare <old report>` prints two maps side by side.
-- **Collector numbers:** `held` per battle and `winByHeld` (4.4), plus a printed table.
-- **Console:** `status <unit>` shows SP, `sp_gain` and `sp_cost`; `dev_run` JSON carries them.
-- **Level skills in the report:**
-  - `skillsLearned`: per class, the level and floor at which each level skill was reached.
-  - `secretSkills`: per enemy, battles fought at or above its secret skill's level, and the times it was used.
+- **Play report `sp`** (per class): `basics`, `abilities`, `spGained`, `spSpent`, `capWaste` and
+  `basicsPerAbilityX100` (the measured rhythm). `bossEntrySpPercent` (per boss floor) sits beside
+  `bossEntryHpPercent`.
+- **`analysis`:** `deathMap` (`lostRuns`, `byFloor` with losses, entered and loss rate, `byChapter`, `byEncounter`
+  with losses, battles, share and losses per attempt, `turnLimits`, `concentration`, `endEntry` HP%, SP% and level),
+  `byRoute` (the floor-9 chapter), `byPair` (with lift), `byFeature`, `sound` and `heldByBoss` (every boss's wins by
+  pieces held, with the crossing point). Each battle record has `held`, `chapter`, `level`, `hpPercent`,
+  `mpPercent`. `--compare <old report>` prints what changed.
+- **`levelSkills`:** per class, the runs that reached each level skill; **`secretSkills`:** per enemy skill, battles at
+  or above its level and uses.
+- **Balance tools:** `game/dev/balance_seeds.json` (600 committed seeds), `--seeds`, `--count`, nested `--set` what-ifs.
+- **Console and `dev_run`:** `status`, `skills`, `battlelog` and the JSON stats (3.2).
 - **Battle HUD:** the cost hint shows the scaled cost (3.2). No new screen.
 
 ## 6. Test plan
@@ -445,100 +497,34 @@ other policies run only once the gate is in the band.
 ## 7. Decisions (answered 2026-10-27)
 **D1. Pool model.** ✅ Per character, as today (Persona). The `mp` attribute, the carry and every UI stay.
 
-**D2. SP between battles.** ✅ Carry over as today. If boss entries at low SP hurt the gate, the fallback is a
-run-level floor, `RunStructure.sp_start_min`; it is proposed only with numbers.
+**D2. SP between battles.** ✅ Carry over as today; the Waystation rest no longer refills SP (4.5), so SP comes from
+basic attacks and items. The fallback `RunStructure.sp_start_min` is built and off.
 
 **D3. Where SP gain lives.** ✅ The `sp_gain.tscn` passive on `Event.Ability.Used.Basic`, listed on each class like
 `ult_charge`. Its amount is the class's `sp_basic` × `sp_gain`.
 
-**D4. Numbers and growth.** ✅ Retuned as asked:
-- **Pools:** today's starting pools stay.
-- **Basic gain:** a little higher than 10, odd, and different per class.
-- **Growth:** +7% per level, for both SP gain and max SP.
-- **Shape:** fighters gain more per basic from smaller pools; casters gain less from bigger ones.
+**D4. Numbers and growth.** ✅ Starting pools as before; SP per basic is a per-class odd number, higher for
+fighters and lower for casters (11–19): `sp_basic` in each `content/demo/characters/*.tres` `stats_x100`. `sp_gain` and
+`max_mp` grow +7% per level in `effects/growth_damage/support/tank.tres`.
 
-Values are whole, truncated (level 8 = 149%, level 15 = 198%).
+**D5. Costs.** ✅ Odd and per ability; stronger and unlocked abilities cost more. The first table was raised to 2.5×
+in the "Harder" round (4.5): each cost ×2.5, rounded to the nearest odd number, capped at the smallest pool among the
+classes that unlock it, so a full pool can always pay. Each ability's cost is its `cost_effect`
+(`effects/sp_cost_<n>.tres`, an `ExecCalcCost`), set with `game/tools/build_cost_pass.tscn` from a JSON table. Ults
+(energy) and Block are free of SP.
 
-| Class | Pool L1 → L8 → L15 | SP per basic L1 → L8 → L15 |
-|---|---|---|
-| Warrior | 60 → 89 → 118 | 17 → 25 → 33 |
-| Bulwark | 60 → 89 → 118 | 19 → 28 → 37 |
-| Ranger | 80 → 119 → 158 | 15 → 22 → 29 |
-| Ember Knight | 80 → 119 → 158 | 17 → 25 → 33 |
-| Cleric | 100 → 149 → 198 | 13 → 19 → 25 |
-| Bard | 110 → 163 → 217 | 13 → 19 → 25 |
-| Shatterweaver | 110 → 163 → 217 | 15 → 22 → 29 |
-| Cryomancer | 120 → 178 → 237 | 11 → 16 → 21 |
-| Plaguewright | 120 → 178 → 237 | 13 → 19 → 25 |
-| Pyromancer | 120 → 178 → 237 | 11 → 16 → 21 |
-| Arcanist | 140 → 208 → 277 | 11 → 16 → 21 |
-
-**D5. Costs.** ✅ Odd and per ability. Stronger abilities cost more, and the two unlocked abilities cost the most
-(Warrior's learnable Ice Blast, and Fyrefly Strike, unlocked by Ember Knight's ult). Each cost is checked to be
-affordable from a full level-1 pool. "Basics" is at level 1 for the class that owns the ability.
-
-| Tier | Basics | Use |
-|---|---|---|
-| Light | about 1 | setup and single-target utility |
-| Standard | about 2.5 | the class's main skill, single heals |
-| Heavy | 3–4 | area damage, cleanses, strong control |
-| Unlocked | 3+ | abilities learned or unlocked mid-run or mid-battle |
-
-| Class (pool, SP per basic) | Ability | Today | Proposed | Tier (basics) |
-|---|---|---|---|---|
-| Warrior (60, 17) | Provoke | free | 19 | Light (1.1) |
-| | Ice Blast (learnable) | 20 | 53 | Unlocked (3.1) |
-| Bulwark (60, 19) | Fortify | 10 | 21 | Light (1.1) |
-| Ranger (80, 15) | Mark Prey | 10 | 17 | Light (1.1) |
-| Ember Knight (80, 17) | Kindle Brand | 15 | 43 | Standard (2.5) |
-| | Fyrefly Strike (unlocked by the ult) | free | 47 | Unlocked (2.8) |
-| Cleric (100, 13) | Heal | 25 | 27 | Standard (2.1) |
-| | Purify | 25 | 37 | Heavy (2.8) |
-| Bard (110, 13) | Discord | 15 | 31 | Standard (2.4) |
-| | Anthem | 15 | 37 | Heavy (2.8) |
-| Shatterweaver (110, 15) | Splinter | 10 | 17 | Light (1.1) |
-| | Fracture Field | 15 | 39 | Standard (2.6) |
-| Cryomancer (120, 11) | Glacial Spike | 15 | 29 | Standard (2.6) |
-| | Blizzard | 20 | 37 | Heavy (3.4) |
-| Plaguewright (120, 13) | Lingering Malady | 15 | 31 | Standard (2.4) |
-| | Contagion | 15 | 33 | Standard (2.5) |
-| Pyromancer (120, 11) | Ignite | 10 | 13 | Light (1.2) |
-| | Inferno | 20 | 37 | Heavy (3.4) |
-| Arcanist (140, 11) | Fireburst | 15 | 29 | Standard (2.6) |
-| | Frost Nova | 20 | 41 | Heavy (3.7) |
-
-- **Unchanged:** ults (energy) and Block.
-- **The cost pass** writes one `sp_cost_<n>.tres` per distinct amount and links each ability to it.
-
-**D6. Free non-basic moves.** ✅ Provoke costs 19, and Fyrefly Strike now costs 47 (D5). Block stays free and gives
-no SP.
+**D6. Free non-basic moves.** ✅ Provoke and Fyrefly Strike cost SP (D5). Block stays free and gives no SP.
 
 **D7. Cost reduction mechanism.** ✅ The `sp_cost` attribute with `ExecCalcCost`, truncated to whole SP, never below
 50% from items.
 
-**D8. New items.** ✅ Retuned to odd numbers in the same spirit.
+**D8. New items.** ✅ Metronome, Cadence Charm, Thrift Sigil, Choir Bell, Corrupted Sigil (`content/demo/items/`)
+and the accessories Tuning Fork and Spellbinder's Loop (`equipment/`), each with its effect in `effects/`. Added after
+the traces (1 in 4.5): Kindled Edge, Frostfire Charm (Fire follow-ups on Physical and Ice hits), Lucid Charm (immune to
+Stun and Freeze) and Clarion Bell (the party starts each battle Warded).
 
-| Item | Effect |
-|---|---|
-| **Metronome** (Common, item) | +23% SP gain |
-| **Cadence Charm** (Rare, item) | +7 SP per basic attack (`sp_basic` +7). Flat, so it is strongest at level 1 (+37% to +64% by class) |
-| **Tuning Fork** (Rare, accessory) | +13% SP gain, +5 SPD |
-| **Choir Bell** (Epic, item, party-wide) | +17% SP gain for every ally |
-| **Thrift Sigil** (Rare, item) | abilities cost 21% less SP |
-| **Spellbinder's Loop** (Epic, accessory) | abilities cost 33% less SP, −10% ATK |
-| **Corrupted Sigil** (Void altar, corrupted) | abilities cost 50% less SP; your basic attacks give no SP (`sp_gain` −100%) |
-
-**D9. SP restores.** ✅ Retuned to odd numbers.
-
-| Item or source | Today | Proposed |
-|---|---|---|
-| Ether | +60, reusable after 3 won battles | +53 |
-| Honey Cake | 40% of max | 33% of max |
-| Waystation | 50% | 50% (unchanged) |
-| Spellweave (Arcanist) | +6 on a kill | +13 |
-| Scholar's Tome | +5 on a weakness hit | +11 (ult charge +15 kept) |
-| Mana Crystal | +40 max MP | +37 max SP |
-| Max-MP gear, Corrupted Coil | as today | unchanged |
+**D9. SP restores.** ✅ Retuned: Ether, Honey Cake, Spellweave, Scholar's Tome and Mana Crystal (their effects in
+`effects/`). The Waystation rest now heals HP only (4.5).
 
 **D10. The label.** ✅ The player sees "SP"; the attribute stays `mp`. Item and ability descriptions in `content/` are
 rewritten with the new numbers.
@@ -550,37 +536,104 @@ fixture with the `sp-seed-<n>` golden proves the mechanic. Existing goldens are 
 reported at `/implement`.
 
 **D13. The mirror.** ✅ Your order: (a) stronger items (the SP items already favour the party), (b)
-`EnemyDefinition.mirror_limit`, (c) the per-item effect. The choice is made only after the death map (D16) and the
+`EnemyDefinition.mirror_limit` (built, off), (c) the per-item effect. The choice is made only after the death map (D16) and the
 `winByHeld` numbers.
 
 **D14. The stalled battles.** ✅ Trace both first. If the mirrored drain is confirmed,
 `EnemyDefinition.mirror_skip_tags` (`Drain.*`, `Resist.*`) is the proposed fix, brought for approval with the trace.
 
 **D15. Turn limit (new).** ✅ 500 turns instead of 1000. Hitting it is a loss (`TurnLimit`, treated as `Defeat` by the
-run, verified on replay); details in 3.2. A turn-limit battle is no longer a dev-check violation, but the report
-counts it.
+run, verified on replay); details in 3.2.
+- **Still a dev violation:** stalls often come from broken items or interactions, so the dev checks keep flagging
+  them (user, 2026-10-27).
+- **Production:** the player simply loses, and the analytics record the outcome later.
 
 **D16. The death map first (new).** ✅ Before any balance decision, the gate run maps where attempts end (4.3). It is
 shown on today's content (with D15), then again after the SP change. Balance proposals come only from those maps.
+- **The balance seeds** are no longer 1–300 but **600 random seeds** (user, 2026-10-27). They are drawn once and
+  committed as `game/dev/balance_seeds.json`, so every report on the gate uses the same runs and two maps compare
+  like for like.
+- **How to run it:** `seed_report --play --seeds <file>` plays a list, and `play_sharded.sh` splits it across shards.
 
-**D17. Level skills as data (new).** (Recommended) A `LevelSkill` resource (`level`, `ability`) and
+**D23. Balance by buffing (new, user 2026-10-27).** ✅ (Amended: the user then asked for a harder game, so costs, the
+rest and overtime were changed to make it harder; underpowered parts are still fixed by buffs and items.) An underpowered party, class or point in the run is fixed by
+buffing or by adding items, never by nerfing the enemies or the run. Ordinary enemies, bosses and the mirror are only
+changed to fix a broken interaction (a stall, a bug), not to lower the difficulty.
+
+**D24. Ranked innate abilities (new, user 2026-10-27).** Every class's innate ability has three ranks, as in Persona
+(Agi → Agilao → Agidyne). Reaching a level swaps in the stronger rank.
+- **Data:** a `LevelSkill` row may name `replaces` (an ability tag). When the row is reached, the new rank is granted
+  and the old one is not.
+- **Replay:** a log that uses rank I after rank II is reached is rejected with 2002 `IllegalAbility`, through the
+  existing "unit has no ability" check.
+- **Bots and UI:** they need nothing new; they read roles and costs. The Status screen shows "Lv 5 · Fireburst II
+  (replaces Fireburst)".
+- **Open, my recommendations:**
+  - **Which ability:** the class's main non-basic, non-ult skill (Warrior: Ice Blast; Cleric: Heal; Arcanist:
+    Fireburst; and so on).
+  - **When:** rank II at level 5, rank III at level 10.
+  - **Each rank is its own scene:** for example `fireburst_2.tscn`. That keeps each rank's damage, cost, name and
+    animation editable on its own. A `build_rank_pass` tool drafts ranks II and III from rank I, for your tuning:
+    damage ×1.5 and ×2.1, cost ×1.33 and ×1.67, rounded to odd numbers.
+- **Alternative:** one scene with GAS ability levels. It is less visible and can't change names or targeting
+  (Persona's Media → Mediarama widens a heal to the whole party).
+
+**D25. Level passives (new, user 2026-10-27).** Levels can also unlock passives that support a class's playstyle.
+They are `LevelSkill` rows whose ability is a triggered passive (like Hunter's Instinct), so they need no new system
+code. My recommendations:
+- **Levels:** one passive at level 3 and one at level 7, so every two or three levels brings something: a passive
+  at 3, rank II at 5, a passive at 7, rank III at 10.
+- **Content:** the passives go in the D20 content table for your approval.
+
+**D26. Party composition in the gate (new, user 2026-10-27).** The overall win rate mixes good and bad parties, so it
+is never read alone. The report adds:
+- **`byPair`:** each pair of classes, with its runs, wins and **lift**: the pair's win rate minus what its two
+  members' own rates predict. Good pairs stand out even with 600 seeds: 55 pairs at about 65 runs each.
+- **`byFeature`:** wins by what the party can do, read from `Ability.Role.*` tags with no ids. Healer, reviver,
+  cleanser, taunt, area damage, and how many damage types it has, shown as with/without.
+- **`byParty`:** stays, but with 330 possible parties each one appears about twice in 600 runs, so it is only a hint.
+- **The gate reads three numbers:** the overall rate, the rate of the parties that have a healer **and** cover two or
+  more damage types ("sound parties"), and the worst class's rate. My recommendation is to aim the D25 35–55% band
+  (playable-demo) at sound parties, and to fix a class or pair that sits well under the others with buffs or items
+  (D23). Whether the overall rate needs its own band is your call.
+
+**D27. Iterate fast (new, user 2026-10-27).** Each balance change is GAS data, so the loop is
+"change a `.tres` → run the gate → compare".
+- **A quick set:** the first 150 seeds of the balance list (`--seeds-limit 150`), about 25 s on 12 shards, for each
+  iteration.
+- **The full 600:** to confirm before a change is proposed to you.
+- **`--compare <previous report>`:** prints the change in the overall rate, sound parties, each class and pair, and
+  the death map.
+- **Iteration without your approval:** only on scratch copies (`--content-root` on a `user://` copy of `content/`).
+  A change reaches your folders only with your approval, as always.
+
+**D17. Level skills as data (new).** ✅ A `LevelSkill` resource (`level`, `ability`) and
 `UnitDefinition.level_skills`, on the base type so characters and enemies share it. Each row is edited in the
 inspector like a loadout. Alternatives:
 - a `level → ability` Dictionary: one ability per level only, and harder to edit;
 - one `AbilitySet` per level: heavier than one row.
 
-**D18. How a character learns (new).** (Recommended) Automatically: reaching a level grants its skills, derived from
+**D18. How a character learns (new).** ✅ Automatically: reaching a level grants its skills, derived from
 the level the run already stores and hashes. Nothing new is logged; the Status screen shows the "Learns" list, and a
 toast plus a battle-feed line announce it. Skills are never forgotten, and there is no slot limit. Learning by
 choice (pick one of two at a level) is a later idea; it would need a logged run action.
 
-**D19. Enemy level (new).** (Recommended) An enemy's level comes only from content:
+**D19. Enemy level (new).** ✅ An enemy's level comes only from content:
 - **By depth:** `ScalingRules.enemy_level_by_depth`. For The Descent: floors 1–2 → 1, 3–4 → 3, 5–6 → 5, 7–8 → 7,
   9–10 → 9.
 - **Plus bonuses:** `EnemyVariant.level_bonus` (Elite +2) and `EncounterSlot.level_bonus`.
 - **Skills only:** the level unlocks secret skills and nothing else. Stats keep coming from the depth scaling,
   so floors don't get stronger twice.
 - **No wire change:** the battle snapshot already carries `scalingId` and `depth`.
+
+**D20 as built.** Every class's `level_skills` (`content/demo/characters/*.tres`): a passive at 3 and 7, its innate
+skill's rank II at 5 and rank III at 9 (`replaces`), names and numbers in the ability scenes. Ranks: Challenge/War Cry,
+Greater/Mass Heal, Fireblast/Firestorm, Rousing/Grand Anthem, Iron Hide/Bastion Wall, Glacial Lance/Tomb, Kindle
+Blaze/Inferno, Outbreak/Pandemic Bloom, Scorch/Immolate, Mark Quarry/Death Mark, Fracture/Shatterstorm. The Warrior
+learns Ice Blast at 3; the Ember Knight's level-3 passive reuses Bellows and the Pyromancer's level-7 passive reuses
+Spellweave; Plague Bloom became Corrode. Enemies: `enemy_level_by_depth` on `scaling/descent.tres`, the Elite variant
++2, and secret skills on the Slime, Bat, Golem, Imp, Wisp, Shaman and Lich (`level_skills`), cast through their
+brains (a pattern step, or `level_skill_every`).
 
 **D21. One level concept (new).** ✅ `BattleUnit.level` is the real level for party members and enemies.
 `effect_level` keeps today's GAS ability and effect levels (party = level, enemies 1), so no existing number moves.
@@ -595,7 +648,7 @@ The separate enemy `skill_level` is dropped.
 - **Hashed:** on units whose AttributeSet has it (the demo and the new SP fixture), so a wrong level is caught on
   replay. The fixtures' frozen sets don't have it, so their goldens stay unchanged.
 
-**D20. Level-skill content (new).** (Recommended)
+**D20. Level-skill content (new).** ✅
 - **In this slice:** the mechanism, plus moving Warrior's Ice Blast from his starting loadout to his level table at
   level 3 (cost 53).
 - **At implementation step 3, for your approval before anything is written:**
@@ -605,8 +658,9 @@ The separate enemy `skill_level` is dropped.
     its phase, Hex All for the Shaman, Frost Nova for the Frost Wisp). New scenes come only where nothing fits.
 
 **Order of work at `/implement`:**
-1. The turn limit (D15) and the measurement tools: the death map, `held`, `winByHeld`, the `sp` block, and the
-   Collector traces. Then the baseline gate run, with the death map and the numbers to you.
+1. The turn limit (D15), the balance seeds (D16) and the measurement tools: the death map, `held`, `winByHeld`,
+   `byPair`, `byFeature`, `--compare`, and the Collector traces. Then the baseline gate run on the 600 seeds, with
+   the death map and the numbers to you. The `sp` block comes with the SP system in step 2.
 2. The system hooks (`ExecCalcRestore` options, `ExecCalcCost`, hint, validator), level skills (D17–D19), one level concept and the
    read-only `level` attribute (D21, D22), and the SP fixture with its golden and tampered copies.
 3. The cost pass and the content (D4, D5, D8, D9 as approved here; the `godot_gas` attributes and tags; Ice Blast
