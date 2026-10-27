@@ -100,6 +100,44 @@ func test_key_and_chest_drops() -> void:
 	eq(silent.size(), 0, "no key, no toast")
 
 
+## Spec keys-and-gear 3.2 / D7: the outcome and condition classes events, chests and item hooks use.
+func test_outcomes_and_conditions() -> void:
+	var run := _keyed()
+	var two := KeysAtLeast.new()
+	two.amount = 2
+	check(not two.holds(run), "KeysAtLeast 2 fails with no keys")
+	var gain := GainKeys.new()
+	gain.amount = 3
+	gain.apply(run)
+	eq(run.state.keys, 3, "GainKeys 3")
+	check(two.holds(run), "KeysAtLeast 2 holds with 3")
+	var lose := LoseKeys.new()
+	lose.amount = 5
+	lose.apply(run)
+	eq(run.state.keys, 0, "LoseKeys never goes below 0")
+	run.give_golden_key()
+	check(not two.holds(run), "a golden key is not counted as keys")
+	run.state.golden_key = false
+	GiveGoldenKey.new().apply(run)
+	check(run.state.golden_key, "GiveGoldenKey")
+	var give := GiveChest.new()
+	give.chest = _chest("crate")
+	give.apply(run)
+	eq(run.state.chests.map(func(held: Dictionary) -> StringName: return held["chest"]), [&"fixture.chest.crate"],
+		"GiveChest puts the chest in the inventory")
+	GiveChest.new().apply(run)
+	eq(run.state.chests.size(), 1, "a GiveChest without a chest does nothing")
+	# PartyHpAtLeast: every living member has at least that share of max HP; the dead don't count.
+	var half := PartyHpAtLeast.new()
+	half.percent = 50
+	check(half.holds(run), "a full party has 50%")
+	var max_hp: int = run.party_stats()[2][BattleUnit.MAX_HP]
+	run.state.member(2)["hp"] = int(max_hp * 0.4)
+	check(not half.holds(run), "one member at 40% fails it")
+	run.state.member(2)["alive"] = false
+	check(half.holds(run), "a dead member doesn't count")
+
+
 func test_keys_cap_and_double() -> void:
 	var run := _keyed()
 	run.add_keys(120)
