@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_2aao8"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/banner.tres" id="2_ejwvi"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_xgg3o"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_xoauq"]
+
+[sub_resource type="Resource" id="Resource_bo2ab"]
+script = ExtResource("3_xgg3o")
+effects = Array[ExtResource("1_2aao8")]([ExtResource("2_ejwvi")])
+
+[resource]
+script = ExtResource("4_xoauq")
+id = &"fixture.equipment.hood"
+display_name = "Hood"
+description = "Fixture armor: hood."
+slot = &"Fixture.Equipment.Slot.Head"
+grants = SubResource("Resource_bo2ab")
+tags = Array[StringName]([&"Fixture.Pool.Crate"])
+price = 2

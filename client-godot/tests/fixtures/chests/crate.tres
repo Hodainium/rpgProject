@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ChestDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/chest_reward.gd" id="1_kgfng"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="2_8pdt6"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="3_6a361"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_equipment.gd" id="4_xsdbo"]
+[ext_resource type="Script" path="res://game/defs/chest_definition.gd" id="5_dv7ua"]
+
+[sub_resource type="Resource" id="Resource_ke3es"]
+script = ExtResource("3_6a361")
+require_all_tags = Array[StringName]([&"Fixture.Pool.Crate"])
+
+[sub_resource type="Resource" id="Resource_50c3m"]
+script = ExtResource("4_xsdbo")
+query = SubResource("Resource_ke3es")
+prefer_open_slot = true
+
+[sub_resource type="Resource" id="Resource_k1lwp"]
+script = ExtResource("1_kgfng")
+outcomes = Array[ExtResource("2_8pdt6")]([SubResource("Resource_50c3m")])
+
+[resource]
+script = ExtResource("5_dv7ua")
+id = &"fixture.chest.crate"
+display_name = "Crate"
+description = "Fixture chest: free, one piece of crate gear."
+rewards = Array[ExtResource("1_kgfng")]([SubResource("Resource_k1lwp")])

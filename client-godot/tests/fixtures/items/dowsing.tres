@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_qw7vn"]
+[ext_resource type="Script" path="res://game/defs/outcomes/reveal_rooms.gd" id="2_6m612"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="3_67ie6"]
+
+[sub_resource type="Resource" id="Resource_h3xnl"]
+script = ExtResource("2_6m612")
+
+[resource]
+script = ExtResource("3_67ie6")
+id = &"fixture.item.dowsing"
+display_name = "Dowsing"
+price = 3
+on_pickup = Array[ExtResource("1_qw7vn")]([SubResource("Resource_h3xnl")])
+on_floor_start = Array[ExtResource("1_qw7vn")]([SubResource("Resource_h3xnl")])

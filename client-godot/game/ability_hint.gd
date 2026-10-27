@@ -13,9 +13,13 @@ const TARGET_TEXT := {
 	BattleAbility.Targeting.SINGLE_DEAD_ALLY: "ONE FALLEN ALLY",
 	BattleAbility.Targeting.ALL_DEAD_ALLIES: "ALL FALLEN ALLIES",
 }
-## Spec ff7-ui F14: until the Ability.Usage.* tags (1f2), usable on the map means it has no enemy target.
+## Spec keys-and-gear 2.6: from BattleAbility.usage() (the Ability.Usage.* tags; untagged: ff7-ui F14's rule).
+const USAGE_FIELD := "[Field Only]"
 const USAGE_BATTLE := "[Battles Only]"
 const USAGE_BOTH := "[Field and Battles]"
+const USAGE_TEXT := {
+	BattleAbility.USAGE_FIELD: USAGE_FIELD, BattleAbility.USAGE_BATTLE: USAGE_BATTLE, BattleAbility.USAGE_BOTH: USAGE_BOTH,
+}
 
 
 ## {"name", "cost", "description", "target", "usage"} for `ability` (unit may be null).
@@ -27,14 +31,8 @@ static func of(_unit: BattleUnit, ability: BattleAbility) -> Dictionary:
 		"cost": cost_text(ability),
 		"description": ability.description,
 		"target": TARGET_TEXT.get(ability.targeting, ""),
-		"usage": USAGE_BATTLE if ability.targets_enemies() or _battles_only(ability) else USAGE_BOTH,
+		"usage": USAGE_TEXT[ability.usage()],
 	}
-
-
-## Refused on the map: its activation query rules out State.Infield (Block).
-static func _battles_only(ability: GameplayAbility) -> bool:
-	var query := ability.activation_query
-	return query != null and (query.ignore_tags.has(Battle.IN_FIELD_TAG) or query.ignore_exact_tags.has(Battle.IN_FIELD_TAG))
 
 
 ## "12 MP", "ULT 100%" or "" from the ability's cost effect.

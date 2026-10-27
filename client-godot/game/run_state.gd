@@ -42,6 +42,14 @@ var dev: bool = false
 var sandbox: bool = false
 ## The console's `reveal`: the map view shows every room. A view flag, not hashed.
 var revealed: bool = false
+## Spec keys-and-gear 2.7: event rooms show their type on this floor (a RevealRooms outcome). A view flag, not hashed.
+var reveal_events: bool = false
+## Spec keys-and-gear 3.1: keys (0-99), the golden key (this floor only), the chest inventory in drop order
+## ({"chest": id, "serial": int}) and the next chest serial (its contents stream is "chest/<serial>").
+var keys: int = 0
+var golden_key: bool = false
+var chests: Array[Dictionary] = []
+var chest_serial: int = 0
 ## Dev commands so far; the k-th one draws from the stream "dev/<k>".
 var dev_commands: int = 0
 
@@ -135,6 +143,12 @@ func canonical_lines() -> PackedStringArray:
 		lines.append(line)
 	if not armor.is_empty():
 		lines.append("armor=%s" % ",".join(armor))
+	if keys > 0 or golden_key or not chests.is_empty() or chest_serial > 0:
+		# Spec keys-and-gear 3.1: only on runs that ever saw a key or a chest, so older runs hash as before.
+		var held := PackedStringArray()
+		for chest in chests:
+			held.append("%s:%d" % [chest["chest"], chest["serial"]])
+		lines.append("keys=%d|golden=%d|chests=%s|serial=%d" % [keys, 1 if golden_key else 0, ",".join(held), chest_serial])
 	if map != null:
 		lines.append_array(map.canonical_lines())
 	if dev:

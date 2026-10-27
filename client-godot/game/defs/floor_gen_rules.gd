@@ -16,6 +16,9 @@ extends Resource
 @export_custom(PROPERTY_HINT_NONE, "gas::tag") var boss_room_tag: StringName = &"Room.Type.Boss"
 ## One dead end each, in this order (e.g. Room.Type.Treasure, Room.Type.Shop).
 @export_custom(PROPERTY_HINT_NONE, "gas::tag") var special_room_tags: Array[StringName] = []
+## Spec keys-and-gear 2.2: special rooms with one of these tags are locked (entering spends a key) from
+## RunStructure.unlocked_floors on. Never the boss room's tag (validator).
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var locked_room_tags: Array[StringName] = []
 
 ## Chance (typed %) that the generator branches into a free neighbour. Editor-only view of branch_chance_x100.
 @export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var branch_chance: float:

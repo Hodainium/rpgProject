@@ -51,6 +51,8 @@ static func validate(content_index: ContentIndex, options: Dictionary = {}) -> A
 		validator._check_event(content_index.events[id])
 	for id in _sorted(content_index.layouts):
 		validator._check_layout(content_index.layouts[id])
+	for id in _sorted(content_index.chests):
+		validator._check_chest(content_index.chests[id])
 	for id in _sorted(content_index.runs):
 		validator._check_run(content_index.runs[id], int(options.get("generate_seeds", 0)))
 	validator._check_default_run()
@@ -323,6 +325,8 @@ func _check_roles(scene: PackedScene, path: String, party: bool) -> void:
 	if party and not party_checked and ability.description == "" and not ability.is_triggered():
 		_warning("ability_description_missing", path, "%s has no description (game/tools/build_description_pass.tscn drafts one)"
 			% ability.ability_tag)
+	if party and not party_checked and not ability.is_triggered():
+		_check_usage(ability, path)
 	if party and roles.is_empty() and not ability.is_triggered():
 		_error("role_missing", path, "%s has no %s* tag: Auto can't tell what it does (game/tools/build_role_pass.tscn proposes one)"
 			% [ability.ability_tag, AutoPolicy.ROLE_PREFIX])
@@ -616,6 +620,14 @@ func _check_chapter(chapter: ChapterDefinition) -> void:
 		["boss", rules.boss_room_tag, SINGLE_DOOR_MASKS]]
 	for tag in rules.special_room_tags:
 		roles.append(["special", tag, SINGLE_DOOR_MASKS])
+	# Spec keys-and-gear 2.2: only special rooms lock; the boss room never does (a floor must stay finishable).
+	for tag in rules.locked_room_tags:
+		if tag == rules.boss_room_tag or tag == rules.start_room_tag or tag == rules.normal_room_tag:
+			_error("locked_room_tag_bad", rules.resource_path + "::locked_room_tags",
+				"%s locks %s rooms; only special rooms may be locked" % [rules.id, tag])
+		elif not rules.special_room_tags.has(tag):
+			_warning("locked_room_tag_unknown", rules.resource_path + "::locked_room_tags",
+				"%s locks %s, which is not one of its special_room_tags" % [rules.id, tag])
 	var uses_encounter_query := {"normal": false, "boss": false}
 	var uses_event_query := false
 	for role in roles:
@@ -684,6 +696,7 @@ func _check_equipment(piece: EquipmentDefinition) -> void:
 		_warning("no_description", path + "::description", "%s has no description" % piece.id)
 	_check_weight(piece, path)
 	_check_ability_set(piece.grants, path + "::grants", true)
+	_check_run_modifiers(piece.tags, path + "::tags")
 
 
 func _check_item(item: ItemDefinition) -> void:
@@ -700,6 +713,7 @@ func _check_item(item: ItemDefinition) -> void:
 		if item.use_mode == ItemDefinition.UseMode.COOLDOWN and item.cooldown_battles <= 0:
 			_error("bad_item", path + "::cooldown_battles", "%s has a COOLDOWN use mode with %d battles" % [item.id, item.cooldown_battles])
 	_check_ability_set(item.grants, path + "::grants", true)
+	_check_run_modifiers(item.tags, path + "::tags")
 	for hook in ["on_pickup", "on_floor_start", "on_room_cleared"]:
 		var outcomes: Array = item.get(hook)
 		for index in outcomes.size():
@@ -712,8 +726,13 @@ func _check_ability_set(ability_set: AbilitySet, path: String, party: bool = fal
 	for index in ability_set.abilities.size():
 		_check_skill_scene(ability_set.abilities[index], "%s.abilities[%d]" % [path, index], &"an ability set", party)
 	for index in ability_set.effects.size():
-		if ability_set.effects[index] == null:
+		var effect: GameplayEffect = ability_set.effects[index]
+		if effect == null:
 			_error("dangling_ref", "%s.effects[%d]" % [path, index], "an empty effect entry")
+		elif effect.resource_path == "" or effect.resource_path.contains("::"):
+			# The state hash names active effects by file (spec combat-replay-core): an inline one can't replay.
+			_error("inline_effect", "%s.effects[%d]" % [path, index],
+				"a granted effect must be its own .tres file, not an inline sub-resource (battles with it can't replay)")
 
 
 func _check_event(event: EventDefinition) -> void:
@@ -745,8 +764,10 @@ func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition) 
 		_error("dangling_ref", where, "GiveItem has neither an item nor an item query")
 	elif outcome is StartEncounter and outcome.encounter == null:
 		_error("dangling_ref", where, "StartEncounter has no encounter")
-	elif outcome is GiveEquipment and outcome.equipment == null:
-		_error("dangling_ref", where, "GiveEquipment has no equipment")
+	elif outcome is GiveEquipment and outcome.equipment == null and outcome.query == null:
+		_error("dangling_ref", where, "GiveEquipment has neither a piece nor a query")
+	elif outcome is GiveChest and outcome.chest == null:
+		_error("dangling_ref", where, "GiveChest has no chest")
 	elif outcome is ApplyPartyEffect and outcome.effect == null:
 		_error("dangling_ref", where, "ApplyPartyEffect has no effect")
 	elif outcome is GoToPage and event != null and (outcome.page < 0 or outcome.page >= event.pages.size()):
@@ -759,9 +780,70 @@ func _check_layout(layout: FloorLayout) -> void:
 		_error("bad_layout", layout.resource_path, problem)
 
 
+## Spec keys-and-gear 2.6: a party action ability (or use item) says where it works; the tags must agree with what it
+## can do (usage_missing warns; usage_mismatch: a Field tag on a move that targets enemies or whose query forbids
+## State.Infield, a Battle-only tag on a move whose query requires State.Infield).
+func _check_usage(ability: BattleAbility, path: String) -> void:
+	if not ability.has_usage_tag():
+		_warning("usage_missing", path, "%s has no Ability.Usage.* tag (game/tools/build_usage_pass.tscn proposes one)"
+			% ability.ability_tag)
+		return
+	var query := ability.activation_query
+	var forbids := query != null and (query.ignore_tags.has(Battle.IN_FIELD_TAG) or query.ignore_exact_tags.has(Battle.IN_FIELD_TAG))
+	var requires := query != null and (query.require_all_tags.has(Battle.IN_FIELD_TAG)
+		or query.require_any_tags.has(Battle.IN_FIELD_TAG) or query.require_exact_tags.has(Battle.IN_FIELD_TAG))
+	var usage := ability.usage()
+	var problem := ""
+	if usage != BattleAbility.USAGE_BATTLE and ability.targets_enemies():
+		problem = "is tagged for the field but targets enemies (there are none on the map)"
+	elif usage != BattleAbility.USAGE_BATTLE and forbids:
+		problem = "is tagged for the field but its activation query forbids %s" % Battle.IN_FIELD_TAG
+	elif usage != BattleAbility.USAGE_FIELD and requires:
+		problem = "is tagged for battles but its activation query requires %s" % Battle.IN_FIELD_TAG
+	if problem != "":
+		_error("usage_mismatch", path, "%s %s" % [ability.ability_tag, problem])
+
+
+## Spec keys-and-gear 3.2: Run.* tags on items and equipment are run modifiers; only the known ones do anything.
+func _check_run_modifiers(tags: Array[StringName], path: String) -> void:
+	for tag in tags:
+		if String(tag).begins_with("Run.") and not tag in [RunController.KEYS_DOUBLE_TAG, RunController.CHEST_DOUBLE_TAG,
+				RunController.CHEST_NO_KEY_TAG]:
+			_error("run_modifier_unknown", path, "%s is not a run modifier (%s, %s, %s)" % [tag,
+				RunController.KEYS_DOUBLE_TAG, RunController.CHEST_DOUBLE_TAG, RunController.CHEST_NO_KEY_TAG])
+
+
+## Spec keys-and-gear 2.3: a chest has rewards with positive weights and outcomes.
+func _check_chest(chest: ChestDefinition) -> void:
+	var path := chest.resource_path
+	if chest.rewards.is_empty():
+		_error("bad_chest", path + "::rewards", "%s has no rewards" % chest.id)
+	if chest.description == "":
+		_warning("no_description", path + "::description", "%s has no description" % chest.id)
+	for index in chest.rewards.size():
+		var reward: ChestReward = chest.rewards[index]
+		var where := "%s::rewards[%d]" % [path, index]
+		if reward == null:
+			_error("bad_chest", where, "an empty reward entry")
+			continue
+		if reward.weight_x100 <= 0:
+			_error("bad_chest", where, "%s's reward %d has weight %s" % [chest.id, index, Fixed.to_display(reward.weight_x100)])
+		if reward.outcomes.is_empty() or reward.rolls_max < 1 or reward.rolls_min > reward.rolls_max:
+			_error("bad_chest", where, "%s's reward %d has no outcomes or bad rolls (%d-%d)" % [chest.id, index,
+				reward.rolls_min, reward.rolls_max])
+		for outcome_index in reward.outcomes.size():
+			_check_outcome(reward.outcomes[outcome_index], "%s::outcomes[%d]" % [where, outcome_index], null)
+
+
 func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 	var path := structure.resource_path
 	_check_rarity_weights(structure)
+	for index in structure.chest_drops.size():
+		var drop: ChestDrop = structure.chest_drops[index]
+		if drop == null or drop.chest == null or drop.weight_x100 <= 0:
+			_error("bad_chest", "%s::chest_drops[%d]" % [path, index], "a chest drop with no chest or a weight ≤ 0")
+	if structure.chest_drop_chance_x100 > 0 and structure.chest_drops.is_empty():
+		_error("bad_chest", path + "::chest_drops", "%s drops chests but lists no chest_drops" % structure.id)
 	_check_routes(structure)
 	# Spec playable-demo 3.11: the XP curve rises; a rest stop can't start a fight (it has no room).
 	for index in range(1, structure.xp_to_level.size()):

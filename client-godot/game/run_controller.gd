@@ -44,6 +44,14 @@ var _tally: Dictionary = {}
 var _directive: String = ""
 var _directive_page: int = 0
 var _directive_encounter: EncounterDefinition
+## Spec keys-and-gear 2.3: while a chest opens, its stream (gifts by query draw from it) and what came out.
+var _chest_rng: RandomNumberGenerator
+var _chest_gifts := PackedStringArray()
+
+## Spec keys-and-gear 3.2: run modifier tags on held items and worn equipment.
+const KEYS_DOUBLE_TAG: StringName = &"Run.Keys.Double"
+const CHEST_DOUBLE_TAG: StringName = &"Run.Chest.Double"
+const CHEST_NO_KEY_TAG: StringName = &"Run.Chest.NoKey"
 
 
 # --- Run and floors -------------------------------------------------------------------------------------------------
@@ -167,6 +175,7 @@ func _begin_run(content_index: ContentIndex, character_ids: Array, seed_text: St
 		if character == null:
 			return _stop("unknown character '%s'" % character_ids[index])
 		state.party.append(_new_member(index + 1, character))
+	state.keys = clampi(structure.starting_keys, 0, RunStructure.MAX_KEYS)
 	_refresh_party(true)
 	if runner_error != "":
 		return runner_error
@@ -239,6 +248,8 @@ func _reset_floor(floor_index: int, chapter: ChapterDefinition) -> void:
 	state.boss_cleared = false
 	state.event = {}
 	pending_battle = {}
+	state.golden_key = false  # spec keys-and-gear 2.2: a golden key lasts one floor
+	state.reveal_events = false
 
 
 ## The generated map becomes the current floor; the start cell is visited (and cleared, except a sandbox room, whose
@@ -311,11 +322,12 @@ func run_summary() -> Dictionary:
 			"battle":
 				counts["battle_won" if entry["outcome"] == Battle.VICTORY else "battle_lost"] += 1
 			"take", "buy":
-				counts["armor" if entry.get("kind", "") == FloorGenerator.EQUIPMENT_KIND else "take"] += 1
+				if entry.get("kind", "") != FloorGenerator.KEYS_KIND:
+					counts["armor" if entry.get("kind", "") == FloorGenerator.EQUIPMENT_KIND else "take"] += 1
 			"choose", "field", "next_floor":
 				counts[entry["type"]] += 1
 	var room := current_room() if state.map != null and state.current_cell >= 0 else null
-	return {
+	var summary := {
 		"status": state.status, "run": String(state.run_structure_id), "seed": RunSeeds.display(state.run_seed),
 		"floorReached": state.floor_index + 1, "floors": structure.floors.size() if structure != null else 0,
 		"floorsCleared": counts["next_floor"] + (1 if state.boss_cleared else 0),
@@ -326,6 +338,19 @@ func run_summary() -> Dictionary:
 		"endedIn": {"floor": state.floor_index + 1, "room": String(room.id) if room != null else "",
 			"encounter": _tally.get("lastEncounter", "") if state.status == RunState.LOST else ""},
 	}
+	if structure != null and structure.uses_keys():
+		# Spec keys-and-gear 5: only on runs with keys, so older summaries are unchanged.
+		summary["keys"] = state.keys
+		summary["keysFound"] = _tally.get("keysFound", 0)
+		summary["keysSpent"] = _tally.get("keysSpent", 0)
+		summary["chestsOpened"] = _tally.get("chestsOpened", 0)
+		summary["chestsLeft"] = state.chests.size()
+		var skipped := 0
+		for index in state.map.cells if state.map != null else {}:
+			if room_locked(index):
+				skipped += 1
+		summary["lockedLeft"] = skipped
+	return summary
 
 
 # --- Map ------------------------------------------------------------------------------------------------------------
@@ -349,13 +374,38 @@ func room_type_known(index: int) -> bool:
 	if state == null or state.map == null or not state.map.cells.has(index):
 		return false
 	var data: Dictionary = state.map.cells[index]
-	return data["visited"] or state.revealed or str(data["content"].get("kind", "")) != "event"
+	return data["visited"] or state.revealed or state.reveal_events or str(data["content"].get("kind", "")) != "event"
+
+
+## Spec keys-and-gear 2.2: a special room whose tag is in the chapter's locked_room_tags, from
+## RunStructure.unlocked_floors on, until a key opened it; never in a run without keys (RunStructure.uses_keys). Read-only.
+func room_locked(index: int) -> bool:
+	if state == null or state.map == null or not state.map.cells.has(index):
+		return false
+	var data: Dictionary = state.map.cells[index]
+	if data["role"] != FloorMap.ROLE_SPECIAL or data.get("opened", false) or data["visited"]:
+		return false
+	if structure == null or not structure.uses_keys() or state.floor_index < structure.unlocked_floors or state.sandbox:
+		return false
+	var current := chapter()
+	var rules: FloorGenRules = current.floor_gen_rules if current != null else null
+	return rules != null and rules.locked_room_tags.has(data["special_tag"])
 
 
 func enter_room(index: int) -> String:
 	if not can_enter(index):
 		return "can't enter that room now"
-	run_log.append({"type": "enter_room", "floor": state.floor_index, "cell": index})
+	var entry := {"type": "enter_room", "floor": state.floor_index, "cell": index}
+	if room_locked(index):
+		if not state.golden_key and state.keys <= 0:
+			return "Locked: you need a key"
+		entry["unlock"] = "golden" if state.golden_key else "key"  # only when a lock opened, so older logs are unchanged
+		if not state.golden_key:
+			state.keys -= 1
+			_tally["keysSpent"] = int(_tally.get("keysSpent", 0)) + 1
+		state.map.cells[index]["opened"] = true
+		party_changed.emit()
+	run_log.append(entry)
 	_enter_cell(index)
 	return ""
 
@@ -630,6 +680,8 @@ func _clear_room(index: int, after_battle: bool) -> void:
 	data["cleared"] = true
 	if after_battle:
 		_drop_coins(index, data)
+		if data["role"] != FloorMap.ROLE_BOSS:
+			_drop_keys_and_chests(index)
 		_run_hooks("on_room_cleared")
 	if data["role"] == FloorMap.ROLE_BOSS:
 		state.boss_cleared = true
@@ -655,6 +707,172 @@ func _drop_coins(index: int, data: Dictionary) -> void:
 				amount += variant.coin_bonus
 	if amount > 0:
 		add_coins(amount)
+
+
+# --- Keys and chests (spec keys-and-gear 2.1-2.3) --------------------------------------------------------------------
+
+## Isaac's room-clear rolls, each on its own per-cell stream: a key (golden with golden_key_chance), then a chest.
+func _drop_keys_and_chests(index: int) -> void:
+	if structure == null:
+		return
+	if structure.key_drop_chance_x100 > 0:
+		var key_rng := RunSeeds.rng(state.run_seed, "floor/%d/key/%d" % [state.floor_index, index])
+		if RunSeeds.roll(key_rng, structure.key_drop_chance_x100):
+			if RunSeeds.roll(key_rng, structure.golden_key_chance_x100):
+				give_golden_key()
+			else:
+				var amount := 2 if _has_modifier(KEYS_DOUBLE_TAG) else 1
+				add_keys(amount)
+				_send_key_found(amount, false)
+	if structure.chest_drop_chance_x100 > 0 and not structure.chest_drops.is_empty():
+		var chest_rng := RunSeeds.rng(state.run_seed, "floor/%d/chest/%d" % [state.floor_index, index])
+		if RunSeeds.roll(chest_rng, structure.chest_drop_chance_x100):
+			var drop: ChestDrop = RunSeeds.pick_weighted(chest_rng, structure.chest_drops)
+			if drop != null and drop.chest != null:
+				give_chest(drop.chest)
+
+
+## Adds (or, negative, takes) keys, kept within 0-99.
+func add_keys(amount: int) -> void:
+	var before := state.keys
+	state.keys = clampi(state.keys + amount, 0, RunStructure.MAX_KEYS)
+	if amount > 0:
+		_tally["keysFound"] = int(_tally.get("keysFound", 0)) + state.keys - before
+		if _chest_rng != null:
+			_chest_gifts.append("%d key%s" % [amount, "" if amount == 1 else "s"])
+	party_changed.emit()
+
+
+func give_golden_key() -> void:
+	if state.golden_key:
+		return
+	state.golden_key = true
+	_send_key_found(0, true)
+	if _chest_rng != null:
+		_chest_gifts.append("a golden key")
+	party_changed.emit()
+
+
+func give_chest(chest: ChestDefinition) -> void:
+	if chest == null:
+		return
+	state.chests.append({"chest": chest.id, "serial": state.chest_serial})
+	state.chest_serial += 1
+	if _chest_rng != null:
+		_chest_gifts.append(chest.display_name)
+	_send(GameplayMessageRouter.RUN_CHEST_FOUND, &"Verb.Drop", &"", chest.id, 0, [],
+		{"targetName": chest.display_name, "description": chest.description})
+	party_changed.emit()
+
+
+## For screens and bots (read-only): the chest inventory in order: [{"index", "chest", "name", "description",
+## "needs_key", "free", "can_open", "why"}]. "why" is the refusal open_chest() would give ("" when it can open).
+func chests() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if state == null:
+		return result
+	for index in state.chests.size():
+		var chest: ChestDefinition = content.chests.get(state.chests[index]["chest"])
+		var why := _chest_problem(index)
+		result.append({"index": index, "chest": state.chests[index]["chest"],
+			"name": chest.display_name if chest != null else String(state.chests[index]["chest"]),
+			"description": chest.description if chest != null else "", "needs_key": chest != null and chest.needs_key,
+			"free": chest == null or not chest.needs_key or state.golden_key or _has_modifier(CHEST_NO_KEY_TAG),
+			"can_open": why == "", "why": why})
+	return result
+
+
+func _chest_problem(index: int) -> String:
+	if not _active() or not pending_battle.is_empty() or not state.event.is_empty():
+		return "not now"
+	if index < 0 or index >= state.chests.size():
+		return "no chest %d" % (index + 1)
+	var chest: ChestDefinition = content.chests.get(state.chests[index]["chest"])
+	if chest == null:
+		return "unknown chest %s" % state.chests[index]["chest"]
+	if chest.needs_key and not state.golden_key and not _has_modifier(CHEST_NO_KEY_TAG) and state.keys <= 0:
+		return "Locked: you need a key"
+	return ""
+
+
+## Opens the chest at `index` (0-based) on the map: pays its key, picks a reward from the chest's own stream "chest/<serial>"
+## (twice with Run.Chest.Double) and runs its outcomes. Logged. Returns "" or why not (nothing changes then).
+func open_chest(index: int) -> String:
+	var problem := _chest_problem(index)
+	if problem != "":
+		return problem
+	var held: Dictionary = state.chests[index]
+	var chest: ChestDefinition = content.chests[held["chest"]]
+	run_log.append({"type": "open_chest", "floor": state.floor_index, "chest": String(chest.id), "serial": held["serial"]})
+	state.chests.remove_at(index)
+	if chest.needs_key and not state.golden_key and not _has_modifier(CHEST_NO_KEY_TAG):
+		state.keys -= 1
+		_tally["keysSpent"] = int(_tally.get("keysSpent", 0)) + 1
+	_tally["chestsOpened"] = int(_tally.get("chestsOpened", 0)) + 1
+	var outer_rng := _chest_rng
+	var outer_gifts := _chest_gifts
+	_chest_rng = RunSeeds.rng(state.run_seed, "chest/%d" % held["serial"])
+	_chest_gifts = PackedStringArray()
+	for roll in 2 if _has_modifier(CHEST_DOUBLE_TAG) else 1:
+		var reward: ChestReward = RunSeeds.pick_weighted(_chest_rng, chest.rewards)
+		if reward == null:
+			continue
+		var times := _chest_rng.randi_range(mini(reward.rolls_min, reward.rolls_max), maxi(reward.rolls_max, 1))
+		for time in times:
+			for outcome in reward.outcomes:
+				if outcome != null and _active():
+					outcome.apply(self)
+	var gifts := _chest_gifts
+	_chest_rng = outer_rng
+	_chest_gifts = outer_gifts
+	_directive = ""  # event directives mean nothing in a chest
+	_send(GameplayMessageRouter.RUN_CHEST_OPENED, &"Verb.Use", &"", chest.id, 0, [],
+		{"targetName": chest.display_name, "description": ", ".join(gifts) if not gifts.is_empty() else "Empty!"})
+	party_changed.emit()
+	return runner_error
+
+
+## True when a held item or worn piece carries the run modifier tag `tag`.
+func _has_modifier(tag: StringName) -> bool:
+	for member in state.party:
+		for item_id in member["items"]:
+			if content.items[item_id].tags.has(tag):
+				return true
+		for use_slot in member["use_slots"]:
+			if content.items[use_slot["item"]].tags.has(tag):
+				return true
+		for slot_tag in member["equipment"]:
+			var piece: EquipmentDefinition = content.equipment.get(member["equipment"][slot_tag])
+			if piece != null and piece.tags.has(tag):
+				return true
+	return false
+
+
+func _send_key_found(amount: int, golden: bool) -> void:
+	var text := "a golden key" if golden else ("a key ring" if amount == 2 else ("%d keys" % amount if amount > 2 else "a key"))
+	_send(GameplayMessageRouter.RUN_KEY_FOUND, &"Verb.Drop", &"", &"key", amount, [],
+		{"targetName": text, "golden": golden})
+
+
+## Spec keys-and-gear 2.7: RevealRooms. all: the whole floor (the dev reveal's flag); else the event rooms' types.
+func reveal_rooms(all: bool) -> void:
+	if all:
+		state.revealed = true
+	else:
+		state.reveal_events = true
+	map_revealed.emit()
+
+
+## Spec keys-and-gear D7 (PartyHpAtLeast): every living member has at least percent_x100 of their max HP.
+func party_hp_at_least(percent_x100: int) -> bool:
+	var stats := party_stats()
+	for member in state.party:
+		if not member["alive"]:
+			continue
+		var max_hp := int(stats.get(member["slot"], {}).get(BattleUnit.MAX_HP, 0))
+		if max_hp > 0 and int(member["hp"]) * 10000 < max_hp * percent_x100:
+			return false
+	return true
 
 
 # --- Events ---------------------------------------------------------------------------------------------------------
@@ -737,6 +955,18 @@ func take(placement: int, slot: int) -> String:
 			return "already taken"
 		if pickup["price"] > state.coins:
 			return "not enough coins"
+		if pickup.get("kind", "") == FloorGenerator.KEYS_KIND:
+			# Spec keys-and-gear D12: a slot selling keys (Isaac's shop key).
+			if state.keys >= RunStructure.MAX_KEYS:
+				return "you can't carry more keys"
+			state.coins -= pickup["price"]
+			_tally["coinsSpent"] += pickup["price"]
+			pickup["taken"] = true
+			run_log.append({"type": "buy" if pickup["price"] > 0 else "take", "floor": state.floor_index,
+				"cell": state.current_cell, "placement": placement, "kind": FloorGenerator.KEYS_KIND})
+			add_keys(int(pickup["keys"]))
+			_send_key_found(int(pickup["keys"]), false)
+			return ""
 		if pickup.get("kind", "") == FloorGenerator.EQUIPMENT_KIND:
 			# Spec item-pass 3.5: armor always goes into the armor inventory; nobody has to hold it.
 			state.coins -= pickup["price"]
@@ -906,6 +1136,97 @@ func unequip(slot: int, slot_tag: StringName) -> String:
 	member["equipment"].erase(slot_tag)
 	party_changed.emit()
 	return ""
+
+
+## Spec keys-and-gear 2.4: puts the piece another member wears on the member in `slot`; whatever this member wore in
+## that equipment slot goes to the other member (nothing passes through the bag). One logged action, checked first.
+func swap_gear(slot: int, piece_id: StringName) -> String:
+	if not _active() or not pending_battle.is_empty():
+		return "not now"
+	var member := state.member(slot)
+	if member.is_empty():
+		return "no member in slot %d" % slot
+	var piece: EquipmentDefinition = content.equipment.get(piece_id)
+	if piece == null:
+		return "unknown equipment %s" % piece_id
+	if member["equipment"].get(piece.slot, &"") == piece_id:
+		return "%s already wears %s" % [member["character"], piece_id]
+	var from := 0  # the first other wearer (starting loadouts can give several members the same piece)
+	for wearer in state.party:
+		if wearer["slot"] != slot and wearer["equipment"].get(piece.slot, &"") == piece_id:
+			from = wearer["slot"]
+			break
+	if from == 0:
+		return "nobody wears %s" % piece_id
+	var other := state.member(from)
+	run_log.append({"type": "swap_gear", "floor": state.floor_index, "slot": slot, "from": from,
+		"equipment": String(piece_id)})
+	var mine: Variant = member["equipment"].get(piece.slot)
+	if mine != null:
+		other["equipment"][piece.slot] = mine
+	else:
+		other["equipment"].erase(piece.slot)
+	member["equipment"][piece.slot] = piece_id
+	party_changed.emit()
+	return ""
+
+
+## Spec keys-and-gear 2.5: moves the use item `item_id` from the member in `from_slot` to the member in `to_slot`: into a
+## free use slot, or (with `swap_item`, an item the receiver holds) in exchange, each taking the other's place. The
+## cooldown travels with the item. Checked first (both capacities must still fit), then one logged action.
+func move_item(from_slot: int, item_id: StringName, to_slot: int, swap_item: StringName = &"") -> String:
+	if not _active() or not pending_battle.is_empty():
+		return "not now"
+	var giver := state.member(from_slot)
+	var receiver := state.member(to_slot)
+	if giver.is_empty() or receiver.is_empty():
+		return "no member in slot %d" % (from_slot if giver.is_empty() else to_slot)
+	if from_slot == to_slot:
+		return "%s already holds %s" % [giver["character"], item_id]
+	var given := _use_slot_index(giver, item_id)
+	if given == -1:
+		return "%s holds no use item %s" % [giver["character"], item_id]
+	var taken := -1
+	if swap_item != &"":
+		taken = _use_slot_index(receiver, swap_item)
+		if taken == -1:
+			return "%s holds no use item %s" % [receiver["character"], swap_item]
+	var giver_slots: Array = giver["use_slots"].duplicate(true)
+	var receiver_slots: Array = receiver["use_slots"].duplicate(true)
+	var moving: Dictionary = giver_slots[given]
+	if taken == -1:
+		giver_slots.remove_at(given)
+		receiver_slots.append(moving)
+	else:
+		giver_slots[given] = receiver_slots[taken]
+		receiver_slots[taken] = moving
+	if receiver_slots.size() > _capacity_with(receiver, receiver_slots):
+		return "%s has no free item slot" % receiver["character"]
+	if giver_slots.size() > _capacity_with(giver, giver_slots):
+		return "%s would hold more items than item slots" % giver["character"]
+	run_log.append({"type": "move_item", "floor": state.floor_index, "slot": from_slot, "item": String(item_id),
+		"to": to_slot, "swap": String(swap_item) if swap_item != &"" else null})
+	giver["use_slots"] = giver_slots
+	receiver["use_slots"] = receiver_slots
+	party_changed.emit()
+	return ""
+
+
+func _use_slot_index(member: Dictionary, item_id: StringName) -> int:
+	for index in member["use_slots"].size():
+		if member["use_slots"][index]["item"] == item_id:
+			return index
+	return -1
+
+
+## The member's use capacity if they held `use_slots` instead (items that add item slots count).
+func _capacity_with(member: Dictionary, use_slots: Array) -> int:
+	var capacity := 1
+	for item_id in member["items"]:
+		capacity += content.items[item_id].extra_use_slots
+	for use_slot in use_slots:
+		capacity += content.items[use_slot["item"]].extra_use_slots
+	return capacity
 
 
 func _receive_equipment(piece: EquipmentDefinition) -> void:
@@ -1104,6 +1425,8 @@ func _refresh_party(full: bool) -> void:
 func add_coins(amount: int) -> void:
 	var before := state.coins
 	state.coins = maxi(state.coins + amount, 0)
+	if _chest_rng != null and amount > 0:
+		_chest_gifts.append("%d coin%s" % [amount, "" if amount == 1 else "s"])
 	if not _tally.is_empty():
 		_tally["coinsEarned" if amount > 0 else "coinsSpent"] += absi(state.coins - before)
 	party_changed.emit()
@@ -1135,8 +1458,10 @@ func apply_member_effect(effect: GameplayEffect, slots: Array, include_dead: boo
 ## Gives `item` (or one picked from `query`) to `character`, or to the first living member who can hold it.
 func give_item(item: ItemDefinition, query: GameplayTagQuery, character: CharacterDefinition) -> void:
 	if item == null:
-		var gift_rng := RunSeeds.rng(state.run_seed, "floor/%d/gift/%d" % [state.floor_index, state.gifts_on_floor])
-		state.gifts_on_floor += 1
+		var gift_rng := _chest_rng
+		if gift_rng == null:  # spec keys-and-gear 2.3: a chest's gifts draw from the chest's own stream
+			gift_rng = RunSeeds.rng(state.run_seed, "floor/%d/gift/%d" % [state.floor_index, state.gifts_on_floor])
+			state.gifts_on_floor += 1
 		var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index)
 		item = generator.pick_item(null, query, gift_rng, _pools())
 		if item == null:
@@ -1153,6 +1478,8 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 		_warn("nobody can hold %s; it is lost" % item.id)
 		return
 	_receive_item(slot, item)
+	if _chest_rng != null:
+		_chest_gifts.append(item.display_name)
 
 
 func remove_item(item: ItemDefinition) -> void:
@@ -1170,6 +1497,30 @@ func remove_item(item: ItemDefinition) -> void:
 func give_equipment(piece: EquipmentDefinition) -> void:
 	if piece != null:
 		_receive_equipment(piece)
+		if _chest_rng != null:
+			_chest_gifts.append(piece.display_name)
+
+
+## Spec keys-and-gear 3.2: a pooled piece matching `query` (GiveEquipment with no fixed piece), from the chest's stream
+## while a chest opens, else the floor's gift stream. prefer_open_slot: a slot some living member has empty first.
+## Nothing left: the run's fallback item instead (as item pools do).
+func give_equipment_from(query: GameplayTagQuery, prefer_open_slot: bool) -> void:
+	var gift_rng := _chest_rng
+	if gift_rng == null:
+		gift_rng = RunSeeds.rng(state.run_seed, "floor/%d/gift/%d" % [state.floor_index, state.gifts_on_floor])
+		state.gifts_on_floor += 1
+	var open_slots: Array[StringName] = []
+	if prefer_open_slot:
+		for slot_tag in equipment_slots():
+			for member in state.party:
+				if member["alive"] and not member["equipment"].has(slot_tag) and not open_slots.has(slot_tag):
+					open_slots.append(slot_tag)
+	var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index)
+	var piece := generator.pick_equipment(query, gift_rng, _pools(), open_slots)
+	if piece != null:
+		give_equipment(piece)
+	elif structure != null and structure.fallback_item != null:
+		give_item(structure.fallback_item, null, null)
 
 
 func event_go_to_page(page: int) -> void:
@@ -1246,6 +1597,33 @@ func dev_coins(amount: int) -> String:
 		return "no run"
 	dev_log("coins", [amount])
 	add_coins(amount)
+	return ""
+
+
+## Spec keys-and-gear 3.2: `keys`, `goldkey` and `chest` cheats.
+func dev_keys(amount: int) -> String:
+	if not _active():
+		return "no run"
+	dev_log("keys", [amount])
+	add_keys(amount)
+	return ""
+
+
+func dev_golden_key() -> String:
+	if not _active():
+		return "no run"
+	dev_log("goldkey", [])
+	give_golden_key()
+	return ""
+
+
+func dev_chest(chest: ChestDefinition) -> String:
+	if not _active():
+		return "no run"
+	if chest == null or not content.chests.has(chest.id):
+		return "that chest is not in the content index"
+	dev_log("chest", [chest.id])
+	give_chest(chest)
 	return ""
 
 

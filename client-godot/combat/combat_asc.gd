@@ -26,6 +26,25 @@ func _ready() -> void:
 	active_effect_added.connect(_on_active_effect_added)
 
 
+## Spec keys-and-gear 2.6: GodotGAS's gatekeeper plus the Ability.Usage.* rule, so every caller (battle actions, ult
+## windows, brains, Auto, field mode) refuses a Field-only ability in battle and a Battle-only one on the map.
+func can_activate_ability(ability: GameplayAbility, emit_failure: bool = false) -> bool:
+	if ability is BattleAbility and not usage_allows(ability):
+		if emit_failure:
+			ability_activation_failed.emit(ability, ActivationError.FAILED_QUERY, {"message": "usage"})
+		return false
+	return super(ability, emit_failure)
+
+
+## Only tagged abilities are checked: Field-only needs State.Infield, Battle-only needs it absent.
+func usage_allows(ability: BattleAbility) -> bool:
+	var field := ability.asset_tags.has(BattleAbility.USAGE_FIELD_TAG)
+	var battle := ability.asset_tags.has(BattleAbility.USAGE_BATTLE_TAG)
+	if field == battle:
+		return true
+	return has_tag_exact(Battle.IN_FIELD_TAG) == field
+
+
 ## Turn start: tick periodic TURN_BASED effects (DoTs/HoTs), then count down their duration.
 ## Spec content-pass H3: a stacked periodic effect (REFRESH_DURATION with max_stacks) ticks once per stack, in stack
 ## order; GodotGAS keeps every stack's spec in stack_specs (the first is the wrapper's own spec) but would tick only

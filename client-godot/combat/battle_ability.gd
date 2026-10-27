@@ -23,6 +23,12 @@ const FOLLOW_UP_TAG: StringName = &"Ability.Type.FollowUp"
 ## An ability with this asset tag is an ult (spec ult-interrupts): never a turn action, cast only as an interrupt at an
 ## ult window. Its cost effect (ult charge) decides when it can fire.
 const ULTIMATE_TAG: StringName = &"Ability.Type.Ultimate"
+## Spec keys-and-gear 2.6: where an ability works. Both tags (or, untagged, today's rule) = field and battles.
+const USAGE_FIELD_TAG: StringName = &"Ability.Usage.Field"
+const USAGE_BATTLE_TAG: StringName = &"Ability.Usage.Battle"
+const USAGE_FIELD: int = 1
+const USAGE_BATTLE: int = 2
+const USAGE_BOTH: int = 3
 
 @export var targeting: Targeting = Targeting.SINGLE_ENEMY
 ## Tags describing the ability itself (UE GAS's AbilityTags, which GodotGAS lacks), e.g. Ability.Type.FollowUp.
@@ -65,6 +71,29 @@ func is_follow_up() -> bool:
 ## An action ability tagged Ability.Type.Ultimate.
 func is_ultimate() -> bool:
 	return not is_triggered() and asset_tags.has(ULTIMATE_TAG)
+
+
+## Spec keys-and-gear 2.6: where it may be used, from its Ability.Usage.* asset tags: USAGE_FIELD, USAGE_BATTLE or
+## USAGE_BOTH. Untagged: today's rule (no enemy target and an activation query that allows State.Infield: both; else
+## battle), which only labels it; untagged abilities are never refused by usage (CombatASC.usage_allows).
+func usage() -> int:
+	var field := asset_tags.has(USAGE_FIELD_TAG)
+	var battle := asset_tags.has(USAGE_BATTLE_TAG)
+	if field and battle:
+		return USAGE_BOTH
+	if field:
+		return USAGE_FIELD
+	if battle:
+		return USAGE_BATTLE
+	var query := activation_query
+	var forbids_field := query != null and (query.ignore_tags.has(Battle.IN_FIELD_TAG)
+		or query.ignore_exact_tags.has(Battle.IN_FIELD_TAG))
+	return USAGE_BATTLE if targets_enemies() or forbids_field else USAGE_BOTH
+
+
+## True when the ability carries an Ability.Usage.* tag (the validator warns about action abilities without one).
+func has_usage_tag() -> bool:
+	return asset_tags.has(USAGE_FIELD_TAG) or asset_tags.has(USAGE_BATTLE_TAG)
 
 
 func row_by_id(row_id: StringName) -> ExecutionRow:

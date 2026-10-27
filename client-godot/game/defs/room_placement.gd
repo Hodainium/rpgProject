@@ -27,3 +27,6 @@ enum Kind {
 ## Spec playable-demo 3.8 (the Void's altars): taking this pickup also gives the taker this item (a curse such as Void
 ## Scar, −10% max HP), whatever their capacity. Usually on a pedestal (no coins).
 @export var price_item: ItemDefinition
+## Spec keys-and-gear D12: SHOP_SLOT / ITEM_PEDESTAL that sells (or gives) this many keys instead of an item; `price`
+## is then the price in coins (-1 counts as 0). 0: an ordinary item slot.
+@export var keys: int = 0

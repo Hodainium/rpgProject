@@ -151,11 +151,23 @@ func test_gear_swap_composed() -> void:
 	eq(run.state.member(second)["equipment"].get(head, &""), &"fixture.equipment.helm", "the second member wears it now")
 	check(not run.state.member(first)["equipment"].has(head), "the first member's old (empty) slot comes back empty")
 	var types: Array = run.run_log.slice(start_log).map(func(entry) -> String: return entry["type"])
-	eq(types, ["equip", "unequip", "equip"], "EQUIP, then SWAP as logged unequip + equip")
+	eq(types, ["equip", "swap_gear"], "EQUIP, then SWAP as one logged swap (spec keys-and-gear 2.4)")
 	screen._open_menu({"id": &"fixture.equipment.helm", "holder": second, "index": 0, "use": false})
 	check(screen.get_node("%TakeOff").visible, "worn here: TAKE OFF")
 	screen._on_take_off()
 	eq(run.state.armor.count(&"fixture.equipment.helm"), 1, "taken off: back in the bag")
+	# Spec keys-and-gear 2.5: another member's use item moves into a free Item Slot as one logged move.
+	var items := GearColumn.new()
+	items.title = "ITEM SLOT"
+	items.use_slot = 1
+	gear_set.columns.assign([items])
+	screen.refresh()
+	var feather: StringName = run.state.party[0]["use_slots"][0]["item"]
+	screen._select({"member": second, "column": items})
+	screen._open_menu({"id": feather, "holder": first, "index": 1, "use": true})
+	eq([screen.get_node("%Equip").text, screen.get_node("%Equip").disabled], ["MOVE HERE", false], "MOVE HERE")
+	screen._on_equip()
+	eq([run.state.holder_of(feather), run.run_log[-1]["type"]], [second, "move_item"], "moved, one logged action")
 
 
 func test_use_and_status_screens() -> void:

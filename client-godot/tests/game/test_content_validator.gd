@@ -6,6 +6,7 @@ const BROKEN: String = "res://tests/broken_fixtures/"
 ## Every error the broken root must report: [code, file under BROKEN ("" = the root itself)].
 const EXPECTED_ERRORS: Array = [
 	["content_index", ""], ["missing_id", ""], ["bad_item", "items/bad_item.tres"],
+	["inline_effect", "items/refreshing_curse.tres"],  # spec keys-and-gear: its granted effect is an inline sub-resource
 	["reserved_tag", "items/reserved_tag.tres"], ["bad_skill", "characters/bad_skill.tres"],
 	["dangling_ref", "encounters/dangling_ref.tres"], ["bad_loadout_ref", "encounters/bad_loadout_ref.tres"],
 	["doors_unsatisfiable", "rooms/doors_unsatisfiable.tres"], ["placement_outside", "rooms/placement_outside.tres"],

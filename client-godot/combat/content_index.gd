@@ -22,6 +22,7 @@ var scaling: Dictionary = {}     # StringName -> ScalingRules
 var floor_rules: Dictionary = {} # StringName -> FloorGenRules
 var runs: Dictionary = {}        # StringName -> RunStructure
 var layouts: Dictionary = {}     # StringName -> FloorLayout
+var chests: Dictionary = {}      # StringName -> ChestDefinition (spec keys-and-gear)
 var problems := PackedStringArray()
 
 
@@ -45,7 +46,7 @@ func overlay(resources: Array) -> ContentIndex:
 	var copy := ContentIndex.new("")
 	copy.root = root
 	for name in ["units", "characters", "encounters", "loadouts", "variants", "equipment", "items", "events", "rooms",
-			"chapters", "scaling", "floor_rules", "runs", "layouts"]:
+			"chapters", "scaling", "floor_rules", "runs", "layouts", "chests"]:
 		copy.set(name, get(name).duplicate())
 	copy.problems = problems.duplicate()
 	for resource in resources:
@@ -95,6 +96,8 @@ func _table_for(resource: Resource) -> Array:
 		return [runs, "run structure"]
 	if resource is FloorLayout:
 		return [layouts, "layout"]
+	if resource is ChestDefinition:
+		return [chests, "chest"]
 	return []
 
 

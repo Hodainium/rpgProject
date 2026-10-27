@@ -17,7 +17,7 @@ static func state_of(run: RunController) -> Dictionary:
 			"equipment": member["equipment"].values().map(func(id) -> String: return String(id)),
 			"gear": _gear(run, member),
 			"skills": _strings(member["skills"])})
-	return {
+	var data := {
 		"seed": RunSeeds.display(state.run_seed), "seedDecimal": str(state.run_seed), "status": state.status,
 		"floor": state.floor_index, "chapter": String(state.chapter_id), "cell": state.current_cell, "coins": state.coins,
 		"party": party, "event": state.event.duplicate(), "battle": not run.pending_battle.is_empty(),
@@ -25,6 +25,13 @@ static func state_of(run: RunController) -> Dictionary:
 		"dev": state.dev, "sandbox": state.sandbox, "runHash": state.run_hash(),
 		"warnings": Array(run.warnings), "runnerError": run.runner_error,
 	}
+	if (run.structure != null and run.structure.uses_keys()) or state.keys > 0 or state.golden_key or state.chest_serial > 0:
+		# Spec keys-and-gear 3.5: keys and chests, only on runs that have them (older reports are unchanged).
+		data["keys"] = state.keys
+		data["goldenKey"] = state.golden_key
+		data["chests"] = run.chests().map(func(chest: Dictionary) -> Dictionary: return {"number": chest["index"] + 1,
+			"chest": String(chest["chest"]), "needsKey": chest["needs_key"], "canOpen": chest["can_open"]})
+	return data
 
 
 ## Spec item-pass 3.5: every equipment slot of the run, filled or not: {slot tag: equipment id or null}.
@@ -52,6 +59,9 @@ static func state_text(run: RunController) -> String:
 			", ".join(member["items"]), ", ".join(member["useSlots"]), ", ".join(member["equipment"])])
 	if not data["armor"].is_empty():
 		lines.append("  armor inventory [%s]" % ", ".join(data["armor"]))
+	if data.has("keys"):
+		lines.append("  keys %d%s  chests [%s]" % [data["keys"], " + golden key" if data["goldenKey"] else "",
+			", ".join(data["chests"].map(func(chest: Dictionary) -> String: return "%d:%s" % [chest["number"], chest["chest"]]))])
 	if data["battle"]:
 		lines.append("  in battle")
 	if not data["event"].is_empty():
@@ -78,11 +88,12 @@ static func map_text(run: RunController) -> String:
 		var pickups := PackedStringArray()
 		for pickup in data["pickups"]:
 			if not pickup["taken"]:
-				pickups.append("%d:%s%s%s" % [pickup["placement"], pickup["item"],
+				pickups.append("%d:%s%s%s%s" % [pickup["placement"], pickup["item"],
 					" [armor]" if pickup.get("kind", "") == FloorGenerator.EQUIPMENT_KIND else "",
+					" x%d" % pickup["keys"] if pickup.get("kind", "") == FloorGenerator.KEYS_KIND else "",
 					"($%d)" % pickup["price"] if pickup["price"] > 0 else ""])
-		lines.append("  %2d %s %-7s %-24s %-28s %s%s%s%s" % [index, data["cell"], data["role"], data["room"], what,
-			"visited " if data["visited"] else "", "cleared " if data["cleared"] else "",
+		lines.append("  %2d %s %-7s %-24s %-28s %s%s%s%s%s" % [index, data["cell"], data["role"], data["room"], what,
+			"visited " if data["visited"] else "", "cleared " if data["cleared"] else "", "LOCKED " if run.room_locked(index) else "",
 			"ENTER " if run.can_enter(index) else "", "pickups " + ", ".join(pickups) if not pickups.is_empty() else ""])
 	return "\n".join(lines)
 

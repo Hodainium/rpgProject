@@ -5,9 +5,10 @@ class_name MapCells
 extends RefCounted
 
 
-## One Dictionary per grid cell in index order: {"index", "shown", "here", "visited", "kind", "enterable"}. "kind" is
-## the room type the map may show: "boss", "event", the special room's tag end ("Treasure", "Shop", "Altar"), or ""
-## (a plain room, the start room, or a type not known yet).
+## One Dictionary per grid cell in index order: {"index", "shown", "here", "visited", "kind", "enterable", "locked"}.
+## "kind" is the room type the map may show: "boss", "event", the special room's tag end ("Treasure", "Shop",
+## "Altar"), "lock" while the room is locked (keys-and-gear), or "" (a plain room, the start room, or a type not known
+## yet).
 static func of(run: RunController) -> Array[Dictionary]:
 	var cells: Array[Dictionary] = []
 	if run == null or run.state == null or run.state.map == null:
@@ -21,6 +22,10 @@ static func of(run: RunController) -> Array[Dictionary]:
 			"visited": shown and data["visited"], "kind": "", "enterable": shown and run.can_enter(index)}
 		if shown and run.room_type_known(index):
 			cell["kind"] = _kind(data)
+		# Spec keys-and-gear 2.2: a locked room shows the lock ("LOCKED", "Locked (needs a key)") until a key opens it.
+		cell["locked"] = shown and run.room_locked(index)
+		if cell["locked"]:
+			cell["kind"] = "lock"
 		cells.append(cell)
 	return cells
 

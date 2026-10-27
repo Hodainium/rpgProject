@@ -10,6 +10,8 @@ extends RefCounted
 const DEV_TAG: StringName = &"Dev"
 ## A pickup's "kind" when it is a piece of equipment (spec item-pass 3.5).
 const EQUIPMENT_KIND: String = "equipment"
+## A pickup's "kind" (and "item") when it sells keys (spec keys-and-gear D12); "keys" holds how many.
+const KEYS_KIND: String = "keys"
 
 var content: ContentIndex
 var run_structure: RunStructure
@@ -207,6 +209,11 @@ func _resolve(map: FloorMap, chapter: ChapterDefinition, pools: Dictionary, over
 			var placement: RoomPlacement = room.placements[number]
 			if placement == null or not placement.kind in [RoomPlacement.Kind.ITEM_PEDESTAL, RoomPlacement.Kind.SHOP_SLOT]:
 				continue
+			if placement.keys > 0:
+				# Spec keys-and-gear D12: a slot that sells keys draws nothing from the loot stream.
+				data["pickups"].append({"placement": number + 1, "item": KEYS_KIND, "price": maxi(placement.price, 0),
+					"taken": false, "kind": KEYS_KIND, "keys": placement.keys})
+				continue
 			var picked := pick_pickup(placement.item, placement.equipment, placement.item_query, loot_rng, pools)
 			if picked == null:
 				continue
@@ -371,6 +378,24 @@ func pick_pickup(fixed_item: ItemDefinition, fixed_equipment: EquipmentDefinitio
 	if picked == null and run_structure != null:
 		picked = run_structure.fallback_item
 	return picked
+
+
+## Spec keys-and-gear 3.2: a piece of pooled equipment matching `query` (not held, not seen; rarity weights). With
+## `prefer_slots`, pieces for those slot tags are picked first when there are any. Null when nothing is left.
+func pick_equipment(query: GameplayTagQuery, stream: RandomNumberGenerator, pools: Dictionary,
+		prefer_slots: Array[StringName] = []) -> EquipmentDefinition:
+	var candidates: Array = []
+	var preferred: Array = []
+	for id in _sorted_ids(content.equipment):
+		var piece: EquipmentDefinition = content.equipment[id]
+		if piece.tags.is_empty() or not Unlocks.is_unlocked(piece) or not TagMatch.matches(query, piece.tags):
+			continue
+		if TagMatch.has(piece.tags, DEV_TAG) or pools.get("held", []).has(id) or pools.get("seen", []).has(id):
+			continue
+		candidates.append(piece)
+		if prefer_slots.has(piece.slot):
+			preferred.append(piece)
+	return _pick_pooled(stream, preferred if not preferred.is_empty() else candidates)
 
 
 ## A room pickup: {"placement", "item": the item or equipment id, "price", "taken"}, plus "kind": "equipment" for a

@@ -74,7 +74,7 @@ func find(kind: String, id: String) -> Resource:
 	return found
 
 
-## The content table for a kind (item, equipment, encounter, event, room, layout, character, unit, chapter).
+## The content table for a kind (item, equipment, encounter, event, room, layout, character, unit, chapter, chest).
 func table_of(kind: String) -> Dictionary:
 	if content == null:
 		return {}
@@ -97,4 +97,6 @@ func table_of(kind: String) -> Dictionary:
 			return content.units
 		"chapter":
 			return content.chapters
+		"chest":
+			return content.chests
 	return {}

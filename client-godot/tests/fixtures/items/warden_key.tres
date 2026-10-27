@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_fwwxv"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_keys.gd" id="2_xk6yy"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="3_h3co4"]
+
+[sub_resource type="Resource" id="Resource_lhr6k"]
+script = ExtResource("2_xk6yy")
+amount = 2
+
+[resource]
+script = ExtResource("3_h3co4")
+id = &"fixture.item.warden_key"
+display_name = "Warden Key"
+tags = Array[StringName]([&"Run.Chest.Double"])
+price = 3
+on_pickup = Array[ExtResource("1_fwwxv")]([SubResource("Resource_lhr6k")])

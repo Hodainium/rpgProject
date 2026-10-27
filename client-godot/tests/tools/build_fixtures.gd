@@ -14,7 +14,7 @@ const BREAK_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_br
 const STATUS_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_status_attribute_set.gd")
 ## Run-world folders (spec game-skeleton 6, "Fixtures").
 const WORLD_DIRECTORIES: Array[String] = ["characters", "enemies", "loadouts", "variants", "equipment", "items", "events",
-	"rooms", "chapters", "scaling", "floor_rules", "runs", "layouts"]
+	"rooms", "chapters", "scaling", "floor_rules", "runs", "layouts", "chests"]
 ## Spec auto-battle: roles the role pass can't read from an ability's rows (its effects carry no Status.* tag).
 ## Every other non-triggered ability gets RolePass.roles_of.
 const ROLE_OVERRIDES: Dictionary = {
@@ -44,6 +44,7 @@ func _ready() -> void:
 	_build_ult_interrupts()
 	_build_content_pass()
 	_build_full_descent()
+	_build_keys_and_gear()
 	_build_views()
 	print("Fixtures under %s: %d file(s) written" % [ROOT, _written])
 	get_tree().quit(0)
@@ -783,6 +784,59 @@ func _build_full_descent() -> void:
 	mirror.per_item_effect = _effects["per_item_boost"]
 	_save_world("enemies", "mirror", mirror)
 	_world_encounter("mirror_hall", [], [["mirror", null]], 1)
+
+
+## Spec keys-and-gear: chests, gear only chests give (Fixture.Pool.Crate), the run-modifier and room-reveal items, and a
+## field-only and a battle-only use item. Nothing here has a chapter or a pool other than the crate's, and no run
+## structure lists it (tests build their keyed run in memory, tests/game/keys_world.gd), so every other fixture run,
+## floor and golden is unchanged.
+func _build_keys_and_gear() -> void:
+	var D := ExecutionRow.DamageMode
+	var T := ExecutionRow.Targets
+	var B := BattleAbility.Targeting
+	var crate_pool := [&"Fixture.Pool.Crate"]
+	_armor("dagger", "Fixture.Equipment.Slot.Weapon", crate_pool, ["blade"])
+	_armor("hood", "Fixture.Equipment.Slot.Head", crate_pool, ["banner"])
+	_ability("field_mend", "Fixture.Ability.FieldMend", B.SINGLE_ALLY, [_row("heal", "heal", D.USE_EFFECT, 0, T.ALL)],
+		[[0.3, "heal"]], [], null, {"asset_tags": [BattleAbility.USAGE_FIELD_TAG], "query": _query([&"State.Infield"])})
+	_ability("battle_flask", "Fixture.Ability.BattleFlask", B.ALL_ALLIES, [_row("heal", "heal", D.USE_EFFECT, 0, T.ALL)],
+		[[0.3, "heal"]], [], null, {"asset_tags": [BattleAbility.USAGE_BATTLE_TAG]})
+	_item("field_tonic", [], ItemDefinition.Kind.USABLE, null,
+		{"use_ability": _abilities["field_mend"], "use_mode": ItemDefinition.UseMode.COOLDOWN, "cooldown_battles": 2})
+	_item("battle_tonic", [], ItemDefinition.Kind.USABLE, null,
+		{"use_ability": _abilities["battle_flask"], "use_mode": ItemDefinition.UseMode.COOLDOWN, "cooldown_battles": 1})
+	_item("key_fob", [RunController.KEYS_DOUBLE_TAG], ItemDefinition.Kind.PASSIVE, null)
+	var two_keys := GainKeys.new()
+	two_keys.amount = 2
+	var on_pickup: Array[RunOutcome] = [two_keys]
+	_item("warden_key", [RunController.CHEST_DOUBLE_TAG], ItemDefinition.Kind.PASSIVE, null, {"on_pickup": on_pickup})
+	_item("lockpick", [RunController.CHEST_NO_KEY_TAG], ItemDefinition.Kind.PASSIVE, null)
+	var reveal: Array[RunOutcome] = [RevealRooms.new()]
+	_item("dowsing", [], ItemDefinition.Kind.PASSIVE, null, {"on_pickup": reveal, "on_floor_start": reveal})
+	var gear := GiveEquipment.new()
+	gear.query = _query(crate_pool)
+	gear.prefer_open_slot = true
+	var crate := ChestDefinition.new()
+	crate.id = &"fixture.chest.crate"
+	crate.display_name = "Crate"
+	crate.description = "Fixture chest: free, one piece of crate gear."
+	crate.rewards.assign([_reward([gear], 1, 1)])
+	_save_world("chests", "crate", crate)
+	var strongbox := ChestDefinition.new()
+	strongbox.id = &"fixture.chest.strongbox"
+	strongbox.display_name = "Strongbox"
+	strongbox.description = "Fixture chest: a key to open, 2-3 coins."
+	strongbox.needs_key = true
+	strongbox.rewards.assign([_reward([_gain(1)], 2, 3)])
+	_save_world("chests", "strongbox", strongbox)
+
+
+func _reward(outcomes: Array, rolls_min: int, rolls_max: int) -> ChestReward:
+	var reward := ChestReward.new()
+	reward.outcomes.assign(outcomes)
+	reward.rolls_min = rolls_min
+	reward.rolls_max = rolls_max
+	return reward
 
 
 func _status(turns: int, granted: Array) -> GameplayEffect:

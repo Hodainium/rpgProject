@@ -39,11 +39,47 @@ extends Resource
 @export var xp_per_boss: int = 0
 ## Total XP for level 2, 3, 4...; rising. Empty: no XP and no levels in this run.
 @export var xp_to_level: Array[int] = []
+@export_group("Keys and chests")
+## Spec keys-and-gear 2.1-2.3 (Isaac-style). Keys the party starts with; floors before this number (1-based count:
+## 1 = the first floor) have no locked rooms.
+@export var starting_keys: int = 0
+@export var unlocked_floors: int = 0
+## Typed percentages (20 = 20%), rolled when a room is cleared after a battle (never the boss room). A key is golden
+## with golden_key_chance. Editor-only views of the ×100 fields; all 0 = no keys or chests in this run.
+@export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var key_drop_chance: float:
+	get:
+		return Fixed.to_display(key_drop_chance_x100)
+	set(typed):
+		key_drop_chance_x100 = Fixed.from_typed(typed)
+@export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var golden_key_chance: float:
+	get:
+		return Fixed.to_display(golden_key_chance_x100)
+	set(typed):
+		golden_key_chance_x100 = Fixed.from_typed(typed)
+@export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var chest_drop_chance: float:
+	get:
+		return Fixed.to_display(chest_drop_chance_x100)
+	set(typed):
+		chest_drop_chance_x100 = Fixed.from_typed(typed)
+## Which chest a chest drop is (weighted).
+@export var chest_drops: Array[ChestDrop] = []
+
+@export_storage var key_drop_chance_x100: int = 0
+@export_storage var golden_key_chance_x100: int = 0
+@export_storage var chest_drop_chance_x100: int = 0
+
 @export_group("")
 ## Spec playable-demo 3.11 (D29): shown when the party takes the stairs, before the next floor is built (a rest stop).
 @export var rest_event: EventDefinition
 
 const RARITY_PREFIX: String = "Item.Rarity."
+## Spec keys-and-gear 2.1: Isaac's key cap.
+const MAX_KEYS: int = 99
+
+
+## True when this run uses keys at all (drops, a start stock or locks): the menu shows "Keys: n" (D13).
+func uses_keys() -> bool:
+	return starting_keys > 0 or key_drop_chance_x100 > 0 or chest_drop_chance_x100 > 0
 
 
 ## A pool candidate's weight ×100 with its rarity applied (spec playable-demo 3.7).

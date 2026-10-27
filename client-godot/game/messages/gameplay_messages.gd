@@ -21,6 +21,10 @@ const RUN_LEVEL_UP: StringName = &"Message.Run.LevelUp"
 const RUN_ITEM_TAKEN: StringName = &"Message.Run.ItemTaken"
 const RUN_ITEM_DROPPED: StringName = &"Message.Run.ItemDropped"
 const RUN_CHOICE: StringName = &"Message.Run.Choice"
+## Spec keys-and-gear 2.1-2.3: a key (data "golden"), a chest found, a chest opened (data "targetName").
+const RUN_KEY_FOUND: StringName = &"Message.Run.KeyFound"
+const RUN_CHEST_FOUND: StringName = &"Message.Run.ChestFound"
+const RUN_CHEST_OPENED: StringName = &"Message.Run.ChestOpened"
 const BATTLE_STARTED: StringName = &"Message.Battle.Started"
 const BATTLE_ENDED: StringName = &"Message.Battle.Ended"
 const BATTLE_DAMAGE: StringName = &"Message.Battle.Damage"
@@ -45,7 +49,7 @@ const UI_ULT_PRESSED: StringName = &"Message.Ui.UltPressed"
 
 ## Every channel and verb the code sends (the tag checkpoint, sync_tags.tscn, checks them against the registry).
 const CHANNELS: Array[StringName] = [NOTIFICATION, RUN_STARTED, RUN_ENDED, RUN_FLOOR_ENTERED, RUN_LEVEL_UP,
-	RUN_ITEM_TAKEN, RUN_ITEM_DROPPED, RUN_CHOICE, BATTLE_STARTED, BATTLE_ENDED, BATTLE_DAMAGE, BATTLE_BROKEN,
+	RUN_ITEM_TAKEN, RUN_ITEM_DROPPED, RUN_CHOICE, RUN_KEY_FOUND, RUN_CHEST_FOUND, RUN_CHEST_OPENED, BATTLE_STARTED, BATTLE_ENDED, BATTLE_DAMAGE, BATTLE_BROKEN,
 	BATTLE_RECOVERED, BATTLE_DOWNED, BATTLE_ONE_MORE, BATTLE_INTERRUPT, BATTLE_PHASE, BATTLE_RESISTED, BATTLE_DRAINED,
 	BATTLE_TURN_SKIPPED, BATTLE_UNIT_DIED, BATTLE_ABILITY_USED, UI_REFUSED, UI_HINT, UI_ULT_PRESSED]
 const VERBS: Array[StringName] = [&"Verb.Start", &"Verb.Win", &"Verb.Lose", &"Verb.Stop", &"Verb.Enter",

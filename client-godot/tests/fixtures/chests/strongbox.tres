@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ChestDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/chest_reward.gd" id="1_n52t5"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="2_akhuv"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="3_dy4a2"]
+[ext_resource type="Script" path="res://game/defs/chest_definition.gd" id="4_bky11"]
+
+[sub_resource type="Resource" id="Resource_g2ubm"]
+script = ExtResource("3_dy4a2")
+
+[sub_resource type="Resource" id="Resource_57ke4"]
+script = ExtResource("1_n52t5")
+outcomes = Array[ExtResource("2_akhuv")]([SubResource("Resource_g2ubm")])
+rolls_min = 2
+rolls_max = 3
+
+[resource]
+script = ExtResource("4_bky11")
+id = &"fixture.chest.strongbox"
+display_name = "Strongbox"
+description = "Fixture chest: a key to open, 2-3 coins."
+needs_key = true
+rewards = Array[ExtResource("1_n52t5")]([SubResource("Resource_57ke4")])

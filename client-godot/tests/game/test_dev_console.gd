@@ -278,6 +278,45 @@ func test_dev_run_replays() -> void:
 	eq(hashes[0], hashes[1], "the same dev commands give the same run hash")
 
 
+## Spec keys-and-gear 3.5: keys, the golden key and chests from the console, as the bots and Claude use them.
+func test_console_keys_and_chests() -> void:
+	var session := _session()
+	await _ok(session, "new %s 7" % PARTY)
+	var run: RunController = session[0].run
+	eq((await _ok(session, "keys 2"))["text"], "keys: 2", "keys cheat")
+	await _ok(session, "chest fixture.chest.strongbox")
+	await _ok(session, "chest fixture.chest.crate")
+	var listed: String = (await _ok(session, "chests"))["text"]
+	check(listed.contains("1. Strongbox (1 key)") and listed.contains("2. Crate"), "chests lists them: %s" % listed)
+	await _ok(session, "open 1")
+	eq([run.state.keys, run.state.chests.size()], [1, 1], "the strongbox cost a key")
+	await _ok(session, "goldkey")
+	check(run.state.golden_key, "golden key cheat")
+	check(not (await _run(session, "open 5"))["ok"], "no chest 5")
+	await _ok(session, "swap fixture.equipment.blade 2")
+	eq(run.state.member(2)["equipment"].get(&"Fixture.Equipment.Slot.Weapon"), &"fixture.equipment.blade", "swap")
+	await _ok(session, "move fixture.item.feather 2")
+	eq(run.state.holder_of(&"fixture.item.feather"), 2, "move")
+	var state: Dictionary = JSON.parse_string((await _ok(session, "state json"))["text"])
+	eq([int(state["keys"]), state["goldenKey"], state["chests"].size()], [1, true, 1], "state json shows keys and chests")
+
+
+func test_dev_script_runner_opens_chests() -> void:
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SCRATCH))
+	var script := ProjectSettings.globalize_path(SCRATCH + "chests.txt")
+	var out := ProjectSettings.globalize_path(SCRATCH + "chests.json")
+	_write(SCRATCH + "chests.txt", "new %s 7
+chest fixture.chest.crate
+chests
+open 1
+state
+" % PARTY)
+	eq(_runner(script, out), 0, "the runner opens a chest headless")
+	var state: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(out))
+	eq(state["chests"], [], "the chest is gone")
+	eq(state["armor"].size(), 1, "its gear is in the bag")
+
+
 func test_dev_script_runner() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SCRATCH))
 	var script := ProjectSettings.globalize_path(SCRATCH + "script.txt")
@@ -361,7 +400,9 @@ func test_tool_parity() -> void:
 		"animation preview": "anim", "battle panel status line": "status", "menu run picker": "new",
 		"seed report --play": "autorun", "UI buttons, Back and screens (spec ui-framework)": "ui",
 		"gameplay message log (spec gameplay-messages)": "messages", "battle panel Auto (spec auto-battle)": "auto",
-		"Tab: big minimap and the floor toast (spec ff7-ui)": "tab"}
+		"Tab: big minimap and the floor toast (spec ff7-ui)": "tab",
+		"gear screen SWAP (spec keys-and-gear)": "swap", "gear screen Item Slot MOVE / SWAP": "move",
+		"Use Item OPEN a chest": "open", "chest list": "chests"}
 	for action in pairs:
 		check(console.commands.has(pairs[action]), "%s has the command %s" % [action, pairs[action]])
 	# The inspector grid commits *_result() through undo/redo; the console applies the same functions.

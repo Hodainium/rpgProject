@@ -32,6 +32,8 @@ const SYSTEM_TAGS: Array[StringName] = [
 	&"Event.Damage.Dealt.Drained", &"Event.Damage.Taken.Drained",
 	# Spec ui-framework: the layers the framework pushes to by name (confirm dialogs, UIPushButton's default).
 	&"UI.Layer.Menu", &"UI.Layer.Modal",
+	# Spec keys-and-gear: where abilities work, and the run modifier tags the run reads from held items.
+	&"Ability.Usage.Field", &"Ability.Usage.Battle", &"Run.Keys.Double", &"Run.Chest.Double", &"Run.Chest.NoKey",
 ]
 const FORMAT: String = "^([A-Z][a-zA-Z0-9]*)(\\.[A-Z][a-zA-Z0-9]*)*$"
 

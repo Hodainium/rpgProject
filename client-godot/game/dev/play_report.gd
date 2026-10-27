@@ -74,7 +74,12 @@ static func play_one(content: ContentIndex, host: Node, seed_value: int, options
 		return record
 	var fight := func(active: RunController) -> void:
 		await fight_pending(active, content, host, opts, record)
-	record["stop"] = await RunPlayer.play(run, int(opts["max_steps"]), fight)
+	# Spec keys-and-gear 3.5: chaos also tries run actions that must be refused (keys, chests, swaps, moves).
+	var run_chaos := {}
+	if opts["policy"] == "chaos":
+		run_chaos = {"rng": RunSeeds.rng(seed_value, "dev/chaos/run"), "illegal_x100": int(opts["illegal"]) * 100,
+			"violations": record["violations"], "refused": record.get_or_add("runRefused", {})}
+	record["stop"] = await RunPlayer.play(run, int(opts["max_steps"]), fight, run_chaos)
 	record["status"] = run.state.status
 	record["runnerError"] = run.runner_error
 	record["summary"] = run.run_summary()
@@ -274,6 +279,13 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 		if not summary.is_empty():
 			SeedReport._count(report["floorReached"], str(int(summary["floorReached"])))  # merged records come through JSON
 			coins.append(int(summary["coinsSpent"]))
+			if summary.has("keysFound"):
+				# Spec keys-and-gear 5: totals over the runs, only when the run uses keys.
+				var totals: Dictionary = report.get_or_add("keys", {"found": 0, "spent": 0, "chestsOpened": 0,
+					"chestsLeft": 0, "lockedLeft": 0})
+				for pair in [["found", "keysFound"], ["spent", "keysSpent"], ["chestsOpened", "chestsOpened"],
+						["chestsLeft", "chestsLeft"], ["lockedLeft", "lockedLeft"]]:
+					totals[pair[0]] += int(summary.get(pair[1], 0))
 		for entry in record["bossEntry"]:
 			var key := "floor %d" % entry["floor"]
 			if not boss_hp.has(key):
@@ -287,6 +299,8 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 			turns[battle["encounter"]].append(int(battle["turns"]))
 			for case in battle.get("refused", {}):
 				report["refused"][case] = report["refused"].get(case, 0) + battle["refused"][case]
+		for case in record.get("runRefused", {}):
+			report["refused"][case] = report["refused"].get(case, 0) + record["runRefused"][case]
 		report["violations"].append_array(record["violations"])
 		for text in record.get("errors", []):
 			report["errors"].append({"seed": record["seed"], "error": text})
@@ -349,6 +363,10 @@ static func text(report: Dictionary) -> String:
 		lines.append("  turns, %s: median %d  max %d" % [key, spread_entry["median"], spread_entry["max"]])
 	if not report["coinsSpent"].is_empty():
 		lines.append("  coins spent per run: median %d  max %d" % [report["coinsSpent"]["median"], report["coinsSpent"]["max"]])
+	if report.has("keys"):
+		var keys: Dictionary = report["keys"]
+		lines.append("  keys found %d  spent %d  ·  chests opened %d, left %d  ·  locked rooms left %d (all runs)" % [
+			keys["found"], keys["spent"], keys["chestsOpened"], keys["chestsLeft"], keys["lockedLeft"]])
 	if report["policy"] == "chaos":
 		lines.append("  illegal moves refused: %s" % _pairs(report["refused"]))
 	lines.append("  violations: %d" % report["violations"].size())

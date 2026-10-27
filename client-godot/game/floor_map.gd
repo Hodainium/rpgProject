@@ -6,7 +6,8 @@
 ##   "content": {"kind": "none" | "encounter" | "event", "encounter": StringName, "event": StringName,
 ##               "enemies": Array of EnemySnapshot dictionaries},
 ##   "pickups": Array of {"placement": int (1-based), "item": StringName, "price": int, "taken": bool},
-##   "visited": bool, "cleared": bool }
+##   "visited": bool, "cleared": bool,
+##   "opened": true (spec keys-and-gear 2.2: only on a locked room a key opened) }
 class_name FloorMap
 extends RefCounted
 
@@ -102,5 +103,6 @@ func canonical_lines() -> PackedStringArray:
 			pickups.append(line)
 		lines.append("cell=%d|%s|%s|%s|%d|%s|%s|%s|%s|%s|%d|%d" % [index, data["role"], data["special_tag"], data["room"],
 			data["doors"], content["kind"], content.get("encounter", ""), content.get("event", ""), ",".join(enemies),
-			",".join(pickups), 1 if data["visited"] else 0, 1 if data["cleared"] else 0])
+			",".join(pickups), 1 if data["visited"] else 0, 1 if data["cleared"] else 0]
+			+ ("|opened" if data.get("opened", false) else ""))
 	return lines

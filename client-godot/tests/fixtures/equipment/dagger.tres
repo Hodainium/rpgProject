@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_4yqkq"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/blade.tres" id="2_lnxpj"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_55tpr"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_g052d"]
+
+[sub_resource type="Resource" id="Resource_jiqr1"]
+script = ExtResource("3_55tpr")
+effects = Array[ExtResource("1_4yqkq")]([ExtResource("2_lnxpj")])
+
+[resource]
+script = ExtResource("4_g052d")
+id = &"fixture.equipment.dagger"
+display_name = "Dagger"
+description = "Fixture armor: dagger."
+slot = &"Fixture.Equipment.Slot.Weapon"
+grants = SubResource("Resource_jiqr1")
+tags = Array[StringName]([&"Fixture.Pool.Crate"])
+price = 2

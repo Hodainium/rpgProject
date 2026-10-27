@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_w27md"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_ipidr"]
+
+[resource]
+script = ExtResource("2_ipidr")
+id = &"fixture.item.lockpick"
+display_name = "Lockpick"
+tags = Array[StringName]([&"Run.Chest.NoKey"])
+price = 3

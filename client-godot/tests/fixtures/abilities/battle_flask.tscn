@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ah1up"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_nm7pn"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/heal.tres" id="3_jquve"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/battle_flask.tres" id="4_q2fdp"]
+
+[sub_resource type="Resource" id="Resource_mvep7"]
+script = ExtResource("2_nm7pn")
+id = &"heal"
+effect = ExtResource("3_jquve")
+
+[node name="BattleFlask" type="Node" unique_id=667226]
+script = ExtResource("1_ah1up")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Usage.Battle", &"Ability.Role.Heal"])
+executions = Array[ExtResource("2_nm7pn")]([SubResource("Resource_mvep7")])
+animation = ExtResource("4_q2fdp")
+ability_tag = &"Fixture.Ability.BattleFlask"
