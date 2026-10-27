@@ -1,7 +1,6 @@
 # Spec: ff7-ui (slice 1f)
 
-Status: 📝 Spec written; all decisions approved 2026-10-27 (F6 with Back top left on every menu screen, F15 added);
-awaiting your go-ahead on the Use Ability redraft ·
+Status: ✅ Done 2026-10-27 (synced to the build; remaining work in 6) · all decisions approved 2026-10-27 ·
 Roadmap: slice 1f, after 1e `auto-battle`; 1f2 `keys-and-gear` follows it · Date: 2026-10-27
 Builds on `specs/ui-framework.md` (policy, slots, entries, theme), `specs/gameplay-messages.md` (the message bus),
 `specs/ult-interrupts.md` (ult presses at any time), `specs/auto-battle.md` (Auto, `Ability.Role.*`).
@@ -64,22 +63,26 @@ UIPolicy.theme (ui_theme.tres) → UIManager sets it on the layout root (unchang
   Label / Button / CheckBox / OptionButton fonts = the window font (F2), white, shadow or outline black 1 px
   Button styles normal/hover/pressed/disabled/focus = transparent / white 14% / white 22% / transparent, dim text
   ProgressBar variations HpBar, MpBar, UltBar (fills: #6fd1ff→#e8f7ff, #8be38f, #b0238f→#ff7ad9)
-  type variations: Window (= PanelContainer look, for any Control), Hint, TurnCard, TurnCardNow, TurnCardUlt,
-                   UltButton, UltButtonQueued, CommandButton, ListEntry, SlotButton, SlotButtonSelected,
-                   SlotButtonPreview, EquippedMark, Toggle, ToggleOn, StatusChip, Toast, FeedLine, Caption,
-                   Greyed (Gold, Keys)
+  type variations: the list lives in ui_theme.tres (WindowPanel, not Window: Window is a Godot class name; Hint,
+                   Toast, FeedLine, TurnCard*, UltButton*, CommandButton/CommandText, ListEntry, SlotButton*,
+                   MemberRow*, RowName*, MapTile*, LegendTile, Toggle*, StatusChip, EquippedMark, Feed*, Gold,
+                   Greyed, Caption…); colours and sizes are tuned there
 any new screen built from PanelContainer / Label / Button already has the look; nothing else to do
 ```
 
 ### 2.2 Toasts (Lyra's accolade host, on our message bus)
 ```
 UIToastHost (UIScreen, in a slot; your scene) owns a UIToastSet (your .tres):
-  rules: Array[UIToastRule]  { channel: Message.* tag, match EXACT|PARTIAL, kicker/title/subtitle formats
-                               (fields from the message: {instigator}, {target}, {amount}, {item}, {rarity}, ...),
-                               when: optional tag query on the message's tags (e.g. Hit.Critical),
-                               seconds, sound, colour variation, priority, cancels: channels it replaces }
+  rules: Array[UIToastRule]  { channel: Message.* tag, match EXACT|PARTIAL, verbs (empty: any),
+                               require_tags / ignore_tags (the message's tags, e.g. Hit.Critical, Ability.Type.Ultimate),
+                               kicker/title/subtitle formats: {instigator} {target} {amount} (magnitude ÷ 100) {count}
+                               {verb} {text} and the message data keys (UIToastRule.KNOWN_FIELDS); unknown = empty,
+                               seconds, sound (played through the sound board when shown), colour variation,
+                               priority, hold_action }
   max_visible (top toast host 1, battle feed 4), stack: QUEUE (one after another) or STACK (lines pile up, oldest out),
-  entry_scene (the toast or feed line scene)
+  max_queued (QUEUE; lowest priority dropped first), clear_on (channels that empty the host),
+  entry_scene (the toast or feed line scene; set_item(toast, ctx), optional leave() to fade out)
+receive(channel, message): hands the host a message sent before it existed (the run's first floor)
 host.bind → GameplayMessages.listen(rule.channel, …) per rule → message arrives → each matching rule makes a toast
   QUEUE: waits its turn; STACK: appended, the oldest leaves past max_visible; each fades after its seconds (real
   time, so battle speed never shortens it)
@@ -89,12 +92,20 @@ hold toasts: a rule with hold_action (input action) shows while the action is he
 Two hosts in the demo policy:
 | Host | Slot | Active | Rules (your set) |
 |---|---|---|---|
-| `run_toasts` (replaces `floor_card`) | `UI.Slot.Hud.Toast` (top centre) | `UI.State.Run` | `Message.Run.ItemTaken` ("RARE ITEM · GIVEN TO RANGER" / name / description), `Message.Run.FloorEntered` ("CHAPTER 2" / "Floor 3 · The Crypt", no subtitle; also the Tab hold), `Message.Run.LevelUp`; 1f2 adds `Message.Run.KeyFound` ("You found a key!") as one more rule |
-| `battle_feed` (replaces `battle_callouts`) | `UI.Slot.Hud.Feed` (top left) | `UI.State.Run.Battle` | `Message.Battle.AbilityUsed` "{instigator} used {ability}"; `Message.Battle.Damage` with `Hit.Critical` "Critical hit!" then "{instigator} did {amount} damage to {target}"; `Broken` "{target} is broken!"; `Downed` and `UnitDied` "{target} is down!"; `Interrupt` "{instigator} unleashed {ability}!"; `OneMore`, `Phase`, `Resisted`, `TurnSkipped` (today's call-out texts, as one-liners) |
+| `run_toasts` (replaced `floor_card`) | `UI.Slot.Hud.Toast` (top centre) | `UI.State.Run` | `run_toasts.tres`: `Message.Run.ItemTaken`, `Message.Run.FloorEntered` (also the Tab hold), `Message.Run.LevelUp`; 1f2 adds `Message.Run.KeyFound` as one more rule. The texts live in the file |
+| `battle_feed` (replaced `battle_callouts`) | `UI.Slot.Hud.Feed` (top left) | `UI.State.Run.Battle` | `battle_feed.tres`: AbilityUsed (ults ignored, left to Interrupt), Damage with `Hit.Critical` then every Damage, Broken, Downed, UnitDied, Interrupt, OneMore, Phase, Resisted, TurnSkipped; clears on `Message.Battle.Started`. The texts live in the file |
+
+Message data added for toasts: `Message.Run.FloorEntered` carries `chapterName`; `Message.Run.ItemTaken` carries
+`instigatorName` (the member), `rarity` and `description`. A pickup reads "Ranger got Hunter's Gloves!" with the item name in its
+rarity colour: the rule's title marks it `[rarity={rarity}]{target}[/rarity]`, and the toast entry (a RichTextLabel
+title, theme variation `ToastTitle`) colours it from the theme's `Rarity<X>` variation (an unknown rarity keeps the
+normal colour).
 
 `Message.Battle.AbilityUsed` is new: `BattleMessages` broadcasts it from a new presentation-only `Battle` signal
-`ability_activated(unit_id, ability_tag, target_id)`, emitted in `Battle._activate`. It has no effect on state or the
-hash (2.6 of `gameplay-messages`: combat never broadcasts; it only emits signals the bridge reads).
+`ability_activated(unit_id, ability_tag, target_id)`, emitted in `Battle._activate` just before activation when the
+ability can activate (so "X used Y" comes before the hits it causes); the message carries the ability's asset tags.
+It has no effect on state or the hash (2.6 of `gameplay-messages`: combat never broadcasts; it only emits signals the
+bridge reads).
 
 ### 2.3 Battle HUD (policy entries, state `UI.State.Run.Battle`)
 ```
@@ -119,7 +130,10 @@ Ability → LIST of unit.action_abilities() minus Basic, Block and items; entry 
 Item    → LIST of unit.item_abilities (the existing use slots)
 Block   → the unit's Block ability (F3) → submit_action(tag, "") at once
 hover/focus a LIST entry → top_window shows its hint (if HINT on); pick → TARGET or submit
-Back (button or Esc through UIScreen.handles_back) → previous page
+Back (button or Esc through UIScreen.handles_back) → previous page; UIManager.back() asks active HUD panels when no
+  layer screen closes, so Esc reaches the command window
+TARGET entries show the target's HP, toughness, BROKEN and weaknesses (what the old battle panel listed); party
+  statuses, BROKEN, KNOCKED DOWN and DOWN are chips on the party rows
 ```
 
 ### 2.5 Ults
@@ -183,7 +197,8 @@ Use Item (screen, GameMenu): the party strip stays at the bottom; description wi
   label: [Field and Battles] when usable on the map, [Battles Only] otherwise (greyed) — today's rule (no enemy
   target); 1f2 replaces it with the Ability.Usage.* tags and adds [Field Only]
   pick an item → party rows become pickable (gold outline) → RunController.use_field(holder, ability, target_slot)
-  ALL_* items apply at once; the result is a run toast ("Ether · used on Arcanist")
+  ALL_* items apply at once; the result is a message-line notification ("Ether · used on Arcanist")
+  the lists come from RunController.field_catalog() (every action ability and use item, with "usable" and targets)
 Use Ability: pick a party member first (rows pickable) → list of that member's field_options() abilities plus the
   rest (greyed, [Battles Only]) → pick → target member if SINGLE_* → use_field(member, ability, target)
 Back (top left, as on every menu screen) steps back one stage (target → list → member → map); while the screen is
@@ -243,11 +258,13 @@ Every screen is assembled from the same small set of scenes (the map cells too: 
 is mostly composition:
 | Component (your scene, system base where noted) | Used by |
 |---|---|
-| `menu_frame.tscn` (root `UIScreen`): **Back at the top left** (`UIBackButton`), description window at the top, a content area, a bottom area; children fill the areas. Opening it hides the HUD panels it would overlap (map, toasts' slot stays) through its policy state `UI.State.Run.Menu` | Equipment, Armor, Use Item, Use Ability, Status, big map, run menu, settings, class details |
+| `menu_frame.tscn` (`DemoMenuFrame`): **Back at the top left** (`UIBackButton`), description window at the top, a content stack (windows top to bottom, characters last). Screens inherit the scene. Opening one sets `UI.State.Run.Menu`, which hides the HUD panels it would overlap | Equipment, Armor, Use Item, Use Ability, Status, big map |
 | `description_window.tscn` (name, kind or usage tag, text, extra line such as "Equipped by") | battle hint, all menu screens, pickup and event panels |
-| `list_window.tscn` (title + `UIList` of `list_entry`; preview vs selected state) | ability, item and ult lists in battle; gear, use and held-item lists |
+| `list_entry.tscn` (name left, detail right; hover, unhover, action; the CommandButton variation for commands) inside each screen's list window (a PanelContainer with a title and a `UIList`) | battle commands and lists, explore menu, gear, use, held-item and status-tab lists |
 | `member_row.tscn` (name, level, statuses, HP, MP, ult; optional ULT button; pickable / selected / preview states) | battle party panel, party strip, use and status screens |
-| `slot_button.tscn` (label, colour, badge; normal / preview / selected / locked) | gear screens, status tabs |
+| slot buttons: plain Buttons with the SlotButton / SlotButtonPreview / SlotButtonSelected / SlotButtonLocked variations | gear screens |
+| `map_cell.tscn` with `MapCells` (system) and `DemoMapIcons` (`map_icons.gd`: icons and names per room kind; Altar uses $) | minimap, Tab view, big map, legend |
+| `party_rows.gd` (`DemoPartyRows`: member_row items from the run outside battle) | party strip, use and status screens |
 | `toast.tscn`, `feed_line.tscn` with `UIToastHost` | run toasts, battle feed, any later toast |
 | `action_button.tscn` (existing generic button entry) | commands, menus, choices |
 Rules: **Back is always top left** on every pushed screen; **list text starts at the window's inner padding** and
@@ -268,7 +285,16 @@ the game.
 | `UIToastSet`, `UIToastRule` (new resources) | 2.2 fields; `UIToastRule.format(message) -> {kicker, title, subtitle}` (pure) |
 | `GearColumn` (new resource) | `title`, `slot: StringName` (`gas::tag`) or `use_slot: int` (1, 2, …; the column shows only while some member has that many use slots; members with fewer show it LOCKED) |
 | `TurnManager.preview(count) -> Array` (new, `combat/turn_manager.gd`) | pure; works on a duplicate of `av`; presentation only (never called by `Battle.run`) |
-| `Battle.ability_activated` (new signal, `combat/battle.gd`) | `(unit_id, ability_tag, target_id)`, emitted in `_activate`; no state change |
+| `Battle.ability_activated` (new signal, `combat/battle.gd`) | `(unit_id, ability_tag, target_id)`, emitted in `_activate` before activation; no state change |
+| `ActionRecorder.pending_ults()` (new, read-only) | copies of the queued ult presses (party window QUEUED, gold turn cards) |
+| `UIBattlePanel` (new, `game/ui/ui_battle_panel.gd`) | base of the battle HUD panels: finds the battle, recorder and gate, redraws once a frame after battle signals |
+| `GearSet` (new resource) | `title`, `columns: Array[GearColumn]` (`equipment.tres`, `armor.tres`) |
+| `MapCells` (new, `game/ui/map_cells.gd`) | `of(run)`: per grid cell shown / here / visited / kind / enterable, through `room_type_known` |
+| `UIManager.point(slot)`, `UIState.MENU_OPEN` | the extension point of a slot; `UI.State.Run.Menu` while the GameMenu layer holds a screen; HUD panels answer Back |
+| `RunController.field_catalog()`, `member_kit(slot)` (new, read-only) | every member's action abilities and use items with usable/targets/hint; the whole kit with BASIC / ABILITY / ULT / PASSIVE / ITEM |
+| `GameplayMessageRouter` | channels `Message.Battle.AbilityUsed`, `Message.Ui.Hint` (the hint window), `Message.Ui.UltPressed` (ULT presses); verbs `Verb.Use`, `Verb.Hint`, `Verb.Press` |
+| Console | `tab on\|off` (holds Tab); `ui press` also matches a button's `ui_text` meta (list entries, map cells, member rows) |
+| `AutoPolicy.ROLE_GUARD`, `ScriptedController` | Auto and the dev stand-in player never pick `Ability.Role.Guard` |
 | `BattleAbility.description` (new export, `combat/battle_ability.gd`) | text only; not part of the state hash or any log |
 | `BattleMessages` | + `Message.Battle.AbilityUsed` (`Verb.Use`, data `abilityName`) |
 | `AbilityHint` (new, `game/ability_hint.gd`) | `static of(unit, ability) -> {name, cost, description, target, usage}` |
@@ -285,18 +311,19 @@ the game.
 | `ui_policy.tres` | 2.3 and 2.7 entries; `battle_panel`, `party_panel`, `field_panel`, `floor_card`, `battle_callouts` entries removed (F7) |
 | `run_toasts.tres`, `battle_feed.tres` (new `UIToastSet`s), `toast.tscn`, `feed_line.tscn` (new entries) | 2.2 |
 | `battle_party_panel`, `party_strip`, `member_row`, `command_panel`, `top_window`, `turn_order_panel`, `turn_card`, `explore_menu` (new) | battle and exploration HUD |
-| `menu_frame`, `description_window`, `list_window`, `list_entry` (new shared components, 2.12) | every menu screen |
+| `menu_frame`, `description_window`, `list_entry`, `party_rows.gd`, `map_icons.gd` (new shared components, 2.12) | every menu screen |
 | `map_panel` (reworked: view only, Tab growth, click opens the big map), `map_cell` (new entry), `big_map` (new screen), `map_legend` (new modal), `icons/map/*.svg` (new: gift, dollar, skull, exclamation, lock) | 2.11 |
-| `gear_screen` (+ `equipment.tres`, `armor.tres`), `slot_button`, `gear_entry`, `gear_menu` (new) | 2.8 |
-| `use_screen` (Use Item and Use Ability, one scene with a mode), `use_entry` (new) | 2.9 |
-| `status_screen`, `stat_row` (new) | 2.10 |
+| `gear_screen` (+ `equipment.tres`, `armor.tres`; the middle menu is part of the screen) (new) | 2.8 |
+| `use_screen` (Use Item and Use Ability, one scene with a mode) (new) | 2.9 |
+| `status_screen` (new) | 2.10 |
 | Every other screen (`title_menu`, `class_card`, `class_details`, `map_panel`, `stairs_panel`, `pickup_panel`, `pickup_row`, `event_panel`, `message_line`, `run_end`, `run_menu`, `settings`, `confirm_dialog`, `action_button`, `armor_row`) | `theme_override_*` entries that fight the theme (fixed colours, flat panel styles) removed or replaced by a variation; sizes and layouts kept. Each file's diff is shown old → new in the implementation summary |
-| `battle_panel`, `party_panel`, `member_card`, `field_panel`, `floor_card`, `battle_callouts` (`.tscn` + `.gd`) | deleted after you confirm (F7) |
+| `battle_panel`, `party_panel`, `member_card`, `field_panel`, `armor_row`, `floor_card`, `battle_callouts` (`.tscn` + `.gd`) | deleted (F7, confirmed) |
 
 ### 3.3 Content (yours), tags and input (your registry and project settings)
 - Tags: `UI.Slot.Hud.Top`, `.Toast`, `.Feed`, `.Bottom.Left`, `.Bottom.Right`; `UI.State.Run.Menu` (a menu screen
   is open: `UIState` sets it while the GameMenu layer holds a `menu_frame` screen); `Message.Battle.AbilityUsed`;
-  `Verb.Use`; `Ability.Type.Basic`, `Ability.Role.Guard`, `State.Blocking`.
+  `Message.Ui.Hint`, `Message.Ui.UltPressed`; `Verb.Use`, `Verb.Hint`, `Verb.Press`; `Ability.Type.Basic`,
+  `Ability.Role.Guard`, `Ability.Block`, `State.Blocking`.
 - Input action `show_floor_info` (Tab) in `project.godot`.
 - Block (F3): `abilities/block.tscn` (no MP, SELF, applies `effects/blocking.tres`: `State.Blocking`, +`resist_dmg`
   until the unit's next turn), asset tags `Ability.Role.Guard`, added to all 11 classes' ability lists.
@@ -379,6 +406,16 @@ Manual gates:
   - battle: commands, ability list with the hint, target, the two-ult chooser, a queued ult, the feed with four lines;
   - run menu, settings, confirm, and the won and lost end screens.
 
+Remaining work (found by /sync-spec, 2026-10-27):
+- **Gear swap pre-check (section 4) not built:** the three actions run in order and stop at the first refusal (a
+  refusal line; the piece may end up in the bag). Checking all three before sending any is still to do (or moot once
+  1f2 adds the single swap action).
+- **The `ui` console dump doesn't list live toasts** (sections 5 and 6).
+- **Untested:** the gear screen's hover preview and the Item Slot 2 column (shown only with two use slots, LOCKED for
+  the others); `test_tool_parity` reaching every command page and menu screen through `ui press` (only `tab` was
+  added); `test_battle_trace_unchanged` as its own test (covered by the unchanged combat goldens and traces); the toast
+  and gear validator rules on broken-fixture files (tested on objects built in code instead).
+
 Implementation order:
 1. `UIWindowStyle`, `TurnManager.preview`, `ability_activated`, `BattleAbility.description`, `AbilityHint`,
    `member_stats` and their tests.
@@ -391,7 +428,7 @@ Implementation order:
 7. Delete the replaced panels once you confirm. Validator rules, shots, both suites.
 
 ## 7. Decisions (all approved by the user, 2026-10-27)
-- **F17 Map icons:** white line icons (gift box, $, skull, !, lock) with no materia orbs; your room is a gold tile
+- **F17 Map icons:** white line icons (gift box, $, skull, !, lock; the Void's Altar rooms use $) with no materia orbs; your room is a gold tile
   without an icon; no start or unexplored marks; event rooms stay unmarked until visited unless room types are
   revealed; the legend is a HELP modal on the big map only (centred, dark overlay); while Tab is held the floor
   toast centres in the space left of the grown map.
@@ -404,11 +441,14 @@ Implementation order:
 - **F1 Window look: a small `UIWindowStyle` StyleBox in GDScript** (approved): the gradient, ring and border are
   inspector fields you can tune, and it scales to any size.
 - **F2 Font: Chakra Petch** (approved), bundled in `presentation/demo/ui/fonts/` with its licence.
-- **F3 Block is a real ability** (approved): one shared content ability on every class that raises `resist_dmg` until
-  the unit's next turn. It needs no combat code and is logged and replayed like any action. You tune its numbers.
+- **F3 Block is a real ability** (approved): one shared content ability on every class, `abilities/block.tscn`,
+  applying `effects/blocking.tres` (lowers `dmg_taken`; `resist_dmg` only scales elementally resisted hits, so it was
+  the wrong stat). Battle-only through its activation query (no `State.Infield`). Auto and the dev stand-in player
+  never pick it. It needs no combat code and is logged and replayed like any action. You tune its numbers.
 - **F4 Attack = the ability tagged `Ability.Type.Basic`** (approved), one per class, checked by the validator.
 - **F5 Descriptions: a `description` field on abilities plus a proposal pass** that drafts texts for you to edit
-  (approved).
+  (approved). Applied: the 61 drafts as written (your approval, 2026-10-27), plus hand-written descriptions for the 9
+  example-set items that had none; the validator reports 0 warnings.
 - **F6 Exploration HUD (rewritten after review):**
   - **Layout:** toasts instead of a banner, the party strip at the bottom left, and a menu at the bottom right
     (Equipment, Armor, Use Item, Use Ability, Status, Gold).
@@ -433,6 +473,6 @@ Implementation order:
   - **Alternative:** pull just that action forward into 1f, which changes run rules and the scripted-run golden.
 - **F13 Status numbers from `RunController.member_stats`:** a read-only call that builds the member's field unit (as
   `field_options` already does) and compares it with the class stats at that level. Nothing is logged.
-- **F14 Field/Battle labels in 1f use today's rule:** usable on the map means no enemy target, shown as
-  [Field and Battles] or [Battles Only]. 1f2 adds the real `Ability.Usage.*` tags and [Field Only], and the labels
+- **F14 Field/Battle labels in 1f use today's rule:** usable on the map means no enemy target and an activation
+  query that allows `State.Infield` (Block's doesn't), shown as [Field and Battles] or [Battles Only]. 1f2 adds the real `Ability.Usage.*` tags and [Field Only], and the labels
   switch over with no UI change.
