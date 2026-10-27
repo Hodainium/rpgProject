@@ -16,6 +16,7 @@ toughness_x100 = 3000
 
 [node name="IceSlash" type="Node" unique_id=1164559332]
 script = ExtResource("1_jwssv")
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_tw4oh")]([SubResource("Resource_g7y58")])
 animation = ExtResource("4_nhbca")
 ability_tag = &"Fixture.Ability.IceSlash"

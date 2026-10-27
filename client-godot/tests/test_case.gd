@@ -139,6 +139,17 @@ func record(snap: Dictionary, gate: PresentationGate = null) -> Dictionary:
 	}
 
 
+## Spec auto-battle: plays a battle with the player's Auto (AutoPolicy, player defaults, through ActionRecorder like
+## the battle panel) and returns the ReplayRequest it produced.
+func record_auto(snap: Dictionary) -> Dictionary:
+	var battle := new_battle(snap)
+	var recorder := ActionRecorder.new()
+	recorder.autopilot = AutoPolicy.new(AutoPolicy.Options.new(), fixtures())
+	await battle.run(recorder)
+	check(battle.runner_error == "", "recording hit a runner error: " + battle.runner_error)
+	return {"snapshot": snap, "actionLog": recorder.action_log(battle)}
+
+
 ## Replays a request in this process.
 func replay(request: Dictionary) -> Dictionary:
 	var runner := ReplayRunner.new()

@@ -13,6 +13,7 @@ effect = ExtResource("3_pqguo")
 [node name="Haste" type="Node" unique_id=1110530034]
 script = ExtResource("1_mlqt8")
 targeting = 3
+asset_tags = Array[StringName]([&"Ability.Role.Buff"])
 executions = Array[ExtResource("2_1cb61")]([SubResource("Resource_e1yqy")])
 animation = ExtResource("4_r0jf3")
 ability_tag = &"Fixture.Ability.Haste"

@@ -422,6 +422,10 @@ are the existing break passives, whose bursts hit a Broken target, so damage to 
 lower still, but most chaos runs reach floor 5 or later. Smaller parties are expected to win less. The report informs
 your tuning; no test asserts a rate.
 
+Last smart 4-member report (2026-10-27, after `auto-battle`: roles, consumables kept, cleanse and buff rules):
+106/300 won (35.33%, was 35.7%), 259 runs reach floor 10, deaths mostly the Nameless (68) and the Collector (67), 0
+violations.
+
 ### 3.11 Amendment C6 (2026-10-26, D28–D32): experience and levels, a rest stop between floors, healing, food drops
 The first four-member reports (smart 0/300) show why balance can't come from numbers alone: the party never grows
 (every member stays level 1 for ten floors) and its HP drains floor after floor (median boss-entry HP 96% on floor 1,

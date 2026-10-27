@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/role_missing.tscn" id="1_0bbn1"]
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/role_mismatch.tscn" id="2_kyl41"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="3_nqpnf"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="4_wkyld"]
+
+[resource]
+script = ExtResource("4_wkyld")
+id = &"broken.character.roles"
+attribute_set = ExtResource("3_nqpnf")
+abilities = Array[PackedScene]([ExtResource("1_0bbn1"), ExtResource("2_kyl41")])

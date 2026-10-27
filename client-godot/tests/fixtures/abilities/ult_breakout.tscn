@@ -14,7 +14,7 @@ effect = ExtResource("3_jba4b")
 [node name="UltBreakout" type="Node" unique_id=197537622]
 script = ExtResource("1_pqwaa")
 targeting = 5
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Cleanse"])
 executions = Array[ExtResource("2_6lquo")]([SubResource("Resource_7jt78")])
 animation = ExtResource("4_vfk51")
 ability_tag = &"Fixture.Ability.UltBreakout"

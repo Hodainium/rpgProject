@@ -14,6 +14,7 @@ delay_x100 = -2500
 [node name="Rally" type="Node" unique_id=280022736]
 script = ExtResource("1_hgiji")
 targeting = 3
+asset_tags = Array[StringName]([&"Ability.Role.Buff"])
 executions = Array[ExtResource("2_i7cea")]([SubResource("Resource_y3ufo")])
 animation = ExtResource("4_44vpf")
 ability_tag = &"Fixture.Ability.Rally"

@@ -12,6 +12,7 @@ effect = ExtResource("3_gtoop")
 
 [node name="Expose" type="Node" unique_id=1875481092]
 script = ExtResource("1_fj1y7")
+asset_tags = Array[StringName]([&"Ability.Role.Debuff"])
 executions = Array[ExtResource("2_44ayw")]([SubResource("Resource_u6pqv")])
 animation = ExtResource("4_dc31w")
 ability_tag = &"Fixture.Ability.Expose"

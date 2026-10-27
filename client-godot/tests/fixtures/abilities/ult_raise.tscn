@@ -14,7 +14,7 @@ effect = ExtResource("3_j1jki")
 [node name="UltRaise" type="Node" unique_id=1422280226]
 script = ExtResource("1_bnd5q")
 targeting = 6
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Revive"])
 executions = Array[ExtResource("2_ufb4h")]([SubResource("Resource_cmf4e")])
 animation = ExtResource("4_dperx")
 ability_tag = &"Fixture.Ability.UltRaise"

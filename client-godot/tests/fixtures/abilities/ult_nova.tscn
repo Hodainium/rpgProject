@@ -18,7 +18,7 @@ toughness_x100 = 3000
 [node name="UltNova" type="Node" unique_id=1111285334]
 script = ExtResource("1_4fhby")
 targeting = 1
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage"])
 executions = Array[ExtResource("2_xmsdi")]([SubResource("Resource_2vdpv")])
 animation = ExtResource("4_jf4b0")
 ability_tag = &"Fixture.Ability.UltNova"

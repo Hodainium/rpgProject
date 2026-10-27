@@ -42,6 +42,7 @@ tracks/1/keys = {
 
 [node name="Strike" type="Node" unique_id=1933697684]
 script = ExtResource("1_ofe80")
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_uoufe")]([SubResource("Resource_jv7aq")])
 animation = SubResource("Animation_wv5wf")
 ability_tag = &"Broken.Ability.FarReach"

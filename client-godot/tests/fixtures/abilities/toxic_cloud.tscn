@@ -13,6 +13,7 @@ effect = ExtResource("3_t72ng")
 [node name="ToxicCloud" type="Node" unique_id=1605659401]
 script = ExtResource("1_q0ihn")
 targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Debuff"])
 executions = Array[ExtResource("2_oj5nx")]([SubResource("Resource_hnhmb")])
 animation = ExtResource("4_13ok8")
 ability_tag = &"Fixture.Ability.ToxicCloud"

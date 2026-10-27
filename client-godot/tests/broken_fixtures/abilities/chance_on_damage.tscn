@@ -14,6 +14,7 @@ chance_x100 = 5000
 
 [node name="Strike" type="Node" unique_id=1933697684]
 script = ExtResource("1_hq4y5")
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_r0iyy")]([SubResource("Resource_1oy13")])
 animation = ExtResource("4_o5ne2")
 ability_tag = &"Broken.Ability.ChanceOnDamage"

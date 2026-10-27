@@ -19,7 +19,7 @@ ignore_tags = Array[StringName]([&"State.Controlled"])
 [node name="UltPurify" type="Node" unique_id=1607685565]
 script = ExtResource("1_nis5f")
 targeting = 4
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Cleanse"])
 executions = Array[ExtResource("2_v7dom")]([SubResource("Resource_igxdc")])
 animation = ExtResource("4_a407j")
 ability_tag = &"Fixture.Ability.UltPurify"

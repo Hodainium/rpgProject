@@ -13,6 +13,7 @@ delay_x100 = 3000
 
 [node name="Entangle" type="Node" unique_id=710164743]
 script = ExtResource("1_jrk3d")
+asset_tags = Array[StringName]([&"Ability.Role.Debuff"])
 executions = Array[ExtResource("2_0aoqc")]([SubResource("Resource_ikcpx")])
 animation = ExtResource("4_8bf0g")
 ability_tag = &"Fixture.Ability.Entangle"

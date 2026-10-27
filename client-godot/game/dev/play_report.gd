@@ -97,11 +97,13 @@ static func fight_pending(run: RunController, content: ContentIndex, host: Node,
 			int(opts["illegal"]) * 100)
 		# Spec playable-demo 3.9: chaos on top of the smart policy, at a rate and from a floor.
 		if int(opts["chaos"]) < 100 or int(opts["chaos_from"]) > 1:
-			controller.base = SmartController.new()
+			controller.base = AutoPolicy.new(AutoPolicy.Options.new(), content)
 			controller.chaos_x100 = int(opts["chaos"]) * 100
 			controller.active = run.state.floor_index + 1 >= int(opts["chaos_from"])
 	elif opts["policy"] == "smart":
-		controller = SmartController.new()
+		# Spec auto-battle: the player's Auto, through the same recorder path as the battle panel.
+		controller = ActionRecorder.new()
+		controller.autopilot = AutoPolicy.new(AutoPolicy.Options.new(), content)
 	else:
 		controller = ScriptedController.new()
 	var seen := {"battle": null, "checker": null, "turns": 0, "mismatch": {}}

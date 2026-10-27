@@ -291,6 +291,13 @@ func _ready() -> void:
 	altar.item = fallback
 	altar.price_item = curse
 	_save("rooms", "price_refresh", _room("price_refresh", [&"Broken.Room"], [altar]))
+
+	# Spec auto-battle: a party ability without a role (role_missing) and one whose role doesn't fit its targeting
+	# (role_mismatch: Heal on an enemy move).
+	var roles := CharacterDefinition.new()
+	_unit(roles, "broken.character.roles", [_role_scene(strike, "role_missing", []),
+		_role_scene(strike, "role_mismatch", [AutoPolicy.ROLE_DAMAGE, AutoPolicy.ROLE_HEAL])])
+	_save("characters", "roles", roles)
 	print("Broken fixtures built under ", ROOT)
 	get_tree().quit(0)
 
@@ -301,8 +308,22 @@ func _ult_scene(base: PackedScene, name: String, trigger: StringName) -> PackedS
 	if _rebuild or not ResourceLoader.exists(path):
 		var ability := base.instantiate() as BattleAbility
 		ability.ability_tag = StringName("Broken.Ability." + name.to_pascal_case())
-		ability.asset_tags.assign([BattleAbility.ULTIMATE_TAG])
+		ability.asset_tags.append(BattleAbility.ULTIMATE_TAG)  # keeps the base's role (spec auto-battle)
 		ability.trigger_event_tag = trigger
+		var scene := PackedScene.new()
+		scene.pack(ability)
+		ResourceSaver.save(scene, path)
+		ability.free()
+	return load(path)
+
+
+## A copy of `base` with exactly `roles` as its asset tags, saved as abilities/<name>.tscn.
+func _role_scene(base: PackedScene, name: String, roles: Array) -> PackedScene:
+	var path := ROOT + "abilities/%s.tscn" % name
+	if _rebuild or not ResourceLoader.exists(path):
+		var ability := base.instantiate() as BattleAbility
+		ability.ability_tag = StringName("Broken.Ability." + name.to_pascal_case())
+		ability.asset_tags.assign(roles)
 		var scene := PackedScene.new()
 		scene.pack(ability)
 		ResourceSaver.save(scene, path)

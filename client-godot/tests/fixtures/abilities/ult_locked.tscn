@@ -19,7 +19,7 @@ ignore_tags = Array[StringName]([&"State.Controlled"])
 
 [node name="UltLocked" type="Node" unique_id=1815826509]
 script = ExtResource("1_gxo0t")
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage"])
 executions = Array[ExtResource("2_81ade")]([SubResource("Resource_v3f1j")])
 animation = ExtResource("4_lk68t")
 ability_tag = &"Fixture.Ability.UltLocked"

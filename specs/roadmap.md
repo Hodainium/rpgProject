@@ -15,8 +15,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1c4. `ult-interrupts` | ✅ Done (spec synced; one known test gap in `specs/ult-interrupts.md` 6) | 2026-10-21 |
 | 1c4b. `atomic-battles` | ✅ Done | 2026-10-22 |
 | 1c5. `content-pass` | ✅ Done (2026-10-25) | 2026-10-22 |
-| 1d. `playable-demo` | 🔨 Implementing (A–C6 done: tools, the ten-floor Descent, 11 classes, XP and rest; smart 4-member 35.7%; D screens done; D2 `ui-framework` (Lyra-style UI) done; D3 `gameplay-messages` (Lyra-style message bus) done; E Windows export done (player, dev and full builds, release check); next the design break: your tuning on the smart 4-member report, then F `/sync-spec`) | 2026-10-26 |
-| 1e. `auto-battle` | 📝 Spec written (`specs/auto-battle.md`, decisions A1–A7 awaiting review) | 2026-10-26 |
+| 1d. `playable-demo` | 🔨 Implementing (A–C6 done: tools, the ten-floor Descent, 11 classes, XP and rest; smart 4-member 35.33% (2026-10-27); D screens done; D2 `ui-framework` (Lyra-style UI) done; D3 `gameplay-messages` (Lyra-style message bus) done; E Windows export done (player, dev and full builds, release check); next the design break: your tuning on the smart 4-member report, then F `/sync-spec`) | 2026-10-26 |
+| 1e. `auto-battle` | 🔨 Implemented, awaiting commit (`AutoPolicy` as the player's Auto, `Ability.Role.*` tags incl. RestoreMP, battle panel and Settings; smart 4-member 35.33%), then `/sync-spec` | 2026-10-27 |
 | 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
 | 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
 | 3. `battle-verify` | ⬜ Not started | |

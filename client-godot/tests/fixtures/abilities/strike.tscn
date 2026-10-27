@@ -13,6 +13,7 @@ damage_mode = 2
 
 [node name="Strike" type="Node" unique_id=1933697684]
 script = ExtResource("1_mkulv")
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_vt0hu")]([SubResource("Resource_jv7aq")])
 animation = ExtResource("4_7tqpu")
 ability_tag = &"Fixture.Ability.Strike"

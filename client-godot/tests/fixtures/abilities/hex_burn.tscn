@@ -24,6 +24,7 @@ flat_damage_x100 = 3000
 
 [node name="HexBurn" type="Node" unique_id=1800768528]
 script = ExtResource("1_shee7")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
 executions = Array[ExtResource("2_7siul")]([SubResource("Resource_ig6sp"), SubResource("Resource_yfrtq")])
 animation = ExtResource("5_0qnwu")
 ability_tag = &"Fixture.Ability.HexBurn"

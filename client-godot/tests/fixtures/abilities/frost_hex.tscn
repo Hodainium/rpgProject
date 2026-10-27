@@ -22,6 +22,7 @@ chance_x100 = 5000
 
 [node name="FrostHex" type="Node" unique_id=937848705]
 script = ExtResource("1_1pksd")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
 executions = Array[ExtResource("2_7o1ng")]([SubResource("Resource_txdr4"), SubResource("Resource_frmk5")])
 animation = ExtResource("5_ecv2h")
 ability_tag = &"Fixture.Ability.FrostHex"

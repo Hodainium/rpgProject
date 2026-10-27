@@ -15,6 +15,13 @@ const STATUS_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_s
 ## Run-world folders (spec game-skeleton 6, "Fixtures").
 const WORLD_DIRECTORIES: Array[String] = ["characters", "enemies", "loadouts", "variants", "equipment", "items", "events",
 	"rooms", "chapters", "scaling", "floor_rules", "runs", "layouts"]
+## Spec auto-battle: roles the role pass can't read from an ability's rows (its effects carry no Status.* tag).
+## Every other non-triggered ability gets RolePass.roles_of.
+const ROLE_OVERRIDES: Dictionary = {
+	"expose": [&"Ability.Role.Debuff"], "guard": [&"Ability.Role.Buff"], "haste": [&"Ability.Role.Buff"],
+	"rally": [&"Ability.Role.Buff"], "ult_sacrifice": [&"Ability.Role.Buff"], "ult_shield": [&"Ability.Role.Buff"],
+	"ult_ward": [&"Ability.Role.Buff"],
+}
 
 var _effects := {}
 var _abilities := {}
@@ -180,6 +187,8 @@ func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, row
 	ability.activation_query = extras.get("query")
 	ability.trigger_event_tag = extras.get("trigger", &"")
 	ability.asset_tags.assign(extras.get("asset_tags", []))
+	if not ability.is_triggered():
+		ability.asset_tags.append_array(ROLE_OVERRIDES.get(name, RolePass.roles_of(ability)))
 	var scene := PackedScene.new()
 	scene.pack(ability)
 	_save(scene, path)

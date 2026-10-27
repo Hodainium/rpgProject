@@ -48,6 +48,18 @@ var skip_animations: bool = false
 var ui: UIManager
 ## Spec gameplay-messages: the current battle's bridge to Message.Battle.* (null between battles).
 var battle_messages: BattleMessages
+## Spec auto-battle (A1): Auto plays the party's decisions for the rest of this run (the battle panel's Auto, the
+## console's `auto`). Presentation state: never in RunState, a log or a hash. Each new run starts from the Settings
+## default `auto_battle` (headless runs always start with Auto off, so a saved setting can't change tests or reports).
+var auto_battle: bool = false:
+	set(value):
+		auto_battle = value
+		_apply_auto()
+## Spec auto-battle (A2): Auto casts ults worth casting (Settings `auto_ults`).
+var auto_ults: bool = true:
+	set(value):
+		auto_ults = value
+		_apply_auto()
 
 var _error_label: Label
 
@@ -183,9 +195,29 @@ func _new_run() -> void:
 	run.battle_started.connect(_on_battle_started)
 	run.battle_finished.connect(func(_outcome): battle_messages = null)
 	run.run_ended.connect(func(_status): set_mode("end"))
+	var windowed := DisplayServer.get_name() != "headless"
+	auto_ults = load_setting("settings", "auto_ults", true)
+	auto_battle = windowed and load_setting("settings", "auto_battle", false)
 	show_message("")
 	run_changed.emit(run)
 	set_mode("run")
+
+
+## Spec auto-battle: the player's Auto policy with the current options (the content root tells consumables apart).
+func make_autopilot() -> AutoPolicy:
+	var options := AutoPolicy.Options.new()
+	options.ults = auto_ults
+	return AutoPolicy.new(options, content)
+
+
+## Gives the current battle's recorder an autopilot while Auto is on, or takes it away.
+func _apply_auto() -> void:
+	if recorder == null:
+		return
+	if auto_battle:
+		recorder.autopilot = make_autopilot()
+	elif recorder.autopilot != null:
+		recorder.autopilot = null
 
 
 ## A player setting from user://game_main.cfg (the menu's last party, battle speed…); `fallback` when unset.
@@ -244,6 +276,7 @@ func _on_battle_started(battle: Battle) -> void:
 func _on_battle_requested(_snapshot: Dictionary) -> void:
 	recorder = ActionRecorder.new()
 	gate = ViewGate.new()
+	_apply_auto()
 	battle_prepared.emit(recorder, gate)
 	if skip_animations:
 		gate.skip_all = true

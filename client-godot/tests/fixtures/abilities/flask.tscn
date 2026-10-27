@@ -13,6 +13,7 @@ effect = ExtResource("3_271o4")
 [node name="Flask" type="Node" unique_id=62579107]
 script = ExtResource("1_27l7s")
 targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Heal"])
 executions = Array[ExtResource("2_7whrd")]([SubResource("Resource_vefhp")])
 animation = ExtResource("4_n60u7")
 ability_tag = &"Fixture.Ability.Flask"

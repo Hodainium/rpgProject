@@ -19,6 +19,7 @@ require_all_tags = Array[StringName]([&"State.Infield"])
 [node name="Mend" type="Node" unique_id=292930169]
 script = ExtResource("1_05h8g")
 targeting = 3
+asset_tags = Array[StringName]([&"Ability.Role.Heal"])
 executions = Array[ExtResource("2_6x5fs")]([SubResource("Resource_pfs2l")])
 animation = ExtResource("4_vtukh")
 ability_tag = &"Fixture.Ability.Mend"

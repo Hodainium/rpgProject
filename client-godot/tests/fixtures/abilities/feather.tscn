@@ -13,6 +13,7 @@ effect = ExtResource("3_7i462")
 [node name="Feather" type="Node" unique_id=399060090]
 script = ExtResource("1_rrm74")
 targeting = 6
+asset_tags = Array[StringName]([&"Ability.Role.Revive"])
 executions = Array[ExtResource("2_iky1r")]([SubResource("Resource_j3j11")])
 animation = ExtResource("4_j7dp7")
 ability_tag = &"Fixture.Ability.Feather"

@@ -360,7 +360,7 @@ func test_tool_parity() -> void:
 		"seed runner": "seeds", "screenshot": "shot", "party panel Equip": "wear", "party panel Unequip": "unwear",
 		"animation preview": "anim", "battle panel status line": "status", "menu run picker": "new",
 		"seed report --play": "autorun", "UI buttons, Back and screens (spec ui-framework)": "ui",
-		"gameplay message log (spec gameplay-messages)": "messages"}
+		"gameplay message log (spec gameplay-messages)": "messages", "battle panel Auto (spec auto-battle)": "auto"}
 	for action in pairs:
 		check(console.commands.has(pairs[action]), "%s has the command %s" % [action, pairs[action]])
 	# The inspector grid commits *_result() through undo/redo; the console applies the same functions.
@@ -499,6 +499,37 @@ func test_console_ult() -> void:
 	var battle_entry: Dictionary = run.run_log[run.run_log.size() - 1]
 	var interrupts: Array = battle_entry["actionLog"]["actions"].filter(func(entry): return entry.get("interrupt", false))
 	check(interrupts.size() > 1, "auto battle casts ready ults out of turn: %d interrupts" % interrupts.size())
+
+
+## Spec auto-battle: `auto on` is the battle panel's Auto: the smart AutoPolicy plays the party (a waiting decision is
+## taken at once), stays on into the next battle of the run, and a new run starts with it off (headless).
+func test_auto_command() -> void:
+	var session := _session()
+	var game: GameMain = session[0]
+	await _ok(session, "new %s 7" % PARTY)
+	session[1].auto_battle = false
+	await _ok(session, "spawn fixture.encounter.pack")
+	check(game.recorder.waiting_for != &"", "a party member waits for the player")
+	var recorder := game.recorder
+	var on := await _ok(session, "auto on ults=off")
+	check(on["text"].contains("on") and on["text"].contains("ults off"), "auto is on, ults held: " + on["text"])
+	check(not session[1].auto_battle, "the console's own first-legal auto stays off")
+	for frame in 3000:
+		if game.run.pending_battle.is_empty():
+			break
+		await host.get_tree().process_frame
+	check(game.run.pending_battle.is_empty(), "Auto finished the battle")
+	check(recorder.auto_picks > 0 and recorder.auto_picks == recorder.entries.size(), "every pick was Auto's: %d of %d"
+		% [recorder.auto_picks, recorder.entries.size()])
+	check(not recorder.entries.any(func(entry) -> bool: return entry.get("interrupt", false)), "ults=off: no ult cast")
+	await _ok(session, "spawn fixture.encounter.pack")
+	check(game.recorder != recorder and game.recorder.auto_picks > 0, "Auto stays on for the next battle of the run")
+	await _ok(session, "auto off")
+	check(not game.auto_battle and game.recorder.autopilot == null, "auto off takes the autopilot away")
+	await _ok(session, "auto on")
+	await _ok(session, "new %s 8" % PARTY)
+	check(not game.auto_battle, "a new run starts with Auto off (headless ignores the Settings default)")
+	check(not (await _run(session, "auto maybe"))["ok"], "a bad argument is refused")
 
 
 ## Spec content-pass: `status` lists a unit's statuses (turns, stacks) in battle and is refused outside one.

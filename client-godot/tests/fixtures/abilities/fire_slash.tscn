@@ -16,6 +16,7 @@ toughness_x100 = 3000
 
 [node name="FireSlash" type="Node" unique_id=747304279]
 script = ExtResource("1_hkcl1")
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_hxlvr")]([SubResource("Resource_n7ss4")])
 animation = ExtResource("4_owvv4")
 ability_tag = &"Fixture.Ability.FireSlash"

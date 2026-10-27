@@ -1,70 +1,111 @@
-## The smart policy (spec playable-demo 3.9, D20): a party controller that plays well, for tests and reports. Dev and
-## tests only. Deterministic and RNG-free (the player's choices are inputs, never simulation); records the ActionLog
-## like ActionRecorder does.
+## Auto play (spec auto-battle): the smart policy as a player feature. The battle panel's Auto and the dev reports'
+## smart policy both use it, through ActionRecorder.autopilot, so the reports measure what players get.
+## Deterministic and RNG-free (the player's choices are inputs, never simulation); it never records anything itself.
 ##
-## Each decision, in order: revive a dead ally; heal when an ally is under HEAL_BELOW of its max HP; otherwise the
-## (ability, target) with the best score. A move is scored by its estimated damage (ATK × multiplier, or flat): × 2 on
-## a weakness, ½ on a resist, never into a drain; × 1.5 when it can break the target, × 1.3 when it can kill it; area
-## moves add every target they hit; a status-only move counts when the target lacks the status. Costed moves wait
-## while MP is under MP_RESERVE (heals excepted). A ready ult is cast when it hits two or more enemies, hits a boss,
-## kills its target, or (support ults) revives or heals a hurt party. Ties keep grant order, then slot order.
-class_name SmartController
+## Each decision, in order: a ready ult worth casting (Options.ults); revive a dead ally (Ability.Role.Revive); heal the
+## most hurt ally when one is under HEAL_BELOW of its max HP (Ability.Role.Heal); cleanse an ally that is controlled or
+## carries CLEANSE_AT or more debuffs (Ability.Role.Cleanse); otherwise the (ability, target) with the best score: its
+## estimated damage (ATK × multiplier, or flat) × 2 on a weakness, ½ on a resist, never into a drain; × 1.5 when it
+## can break the target, × 1.3 when it can kill it; area moves add every target they hit; a status-only move counts
+## when the target lacks the status. Then a buff (Ability.Role.Buff) whose status an ally lacks; then the first legal
+## move. Costed moves wait while MP is under MP_RESERVE (heals and cleanses excepted). A ready ult is cast when it
+## hits two or more enemies, hits a boss, kills its target, or (support ults) revives or heals a hurt party.
+## Items whose use mode is CONSUMABLE are never used unless Options.consumables (spec auto-battle A4). Ties keep grant
+## order, then slot order.
+class_name AutoPolicy
 extends RefCounted
 
 const HEAL_BELOW: int = 45      # % of max HP
 const MP_RESERVE: int = 30      # % of max MP
-const HEAL_WORDS: Array[String] = ["heal", "regen", "revive", "mend", "sanctuary", "salve", "holy", "potion", "restore"]
+const CLEANSE_AT: int = 2       # debuffs on one ally
+const ROLE_PREFIX: String = "Ability.Role."
+const ROLE_DAMAGE: StringName = &"Ability.Role.Damage"
+const ROLE_DEBUFF: StringName = &"Ability.Role.Debuff"
+const ROLE_DISPEL: StringName = &"Ability.Role.Dispel"
+const ROLE_HEAL: StringName = &"Ability.Role.Heal"
+const ROLE_REVIVE: StringName = &"Ability.Role.Revive"
+const ROLE_BUFF: StringName = &"Ability.Role.Buff"
+const ROLE_CLEANSE: StringName = &"Ability.Role.Cleanse"
+## Restores MP (Ether, Honey Cake). Auto never picks it on its own.
+const ROLE_RESTORE_MP: StringName = &"Ability.Role.RestoreMP"
+## Every role an ability may carry (the validator rejects others).
+const ROLES: Array[StringName] = [ROLE_DAMAGE, ROLE_DEBUFF, ROLE_DISPEL, ROLE_HEAL, ROLE_REVIVE, ROLE_BUFF, ROLE_CLEANSE,
+	ROLE_RESTORE_MP]
+const BUFF_TAG: String = "Status.Buff"
 
-var entries: Array[Dictionary] = []
+
+class Options:
+	## Cast ults worth casting (spec auto-battle A2; Settings "auto_ults").
+	var ults: bool = true
+	## Use CONSUMABLE items too (A4: off for players).
+	var consumables: bool = false
+
+	func _to_string() -> String:
+		return "ults=%s consumables=%s" % [ults, consumables]
+
+
+var options: Options
+## Items by id, to tell CONSUMABLE items apart (null: every item counts as reusable).
+var content: ContentIndex
 var _fallback: bool = false
 
 
+func _init(policy_options: Options = null, content_index: ContentIndex = null) -> void:
+	options = policy_options if policy_options != null else Options.new()
+	content = content_index
+
+
 func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
-	var ult := _ult_worth_casting(battle)
+	var ult := interrupt(battle)
 	if not ult.is_empty():
 		return ult
 	var actions := _activatable(unit)
 	if _fallback:
 		_fallback = false
 		return _first_legal(battle, unit, actions)
-	var revive := _support(battle, unit, actions, true)
+	var revive := _support(battle, unit, actions, ROLE_REVIVE)
 	if not revive.is_empty():
 		return revive
 	if _party_hurt(battle):
-		var heal := _support(battle, unit, actions, false)
+		var heal := _support(battle, unit, actions, ROLE_HEAL)
 		if not heal.is_empty():
 			return heal
+	var cleanse := _cleanse(battle, unit, actions)
+	if not cleanse.is_empty():
+		return cleanse
 	var best := {}
 	var best_score := -1
 	for ability in actions:
-		if not ability.targets_enemies():
-			continue
-		if ability.cost_effect != null and _mp_percent(unit) < MP_RESERVE:
+		if not ability.targets_enemies() or _saving_mp(unit, ability):
 			continue
 		for target in _targets(battle, unit, ability):
 			var score := score_of(battle, unit, ability, target)
 			if score > best_score:
 				best_score = score
 				best = {"ability": ability.ability_tag, "target": target.unit_id if ability.needs_target() else &""}
+	if best_score > 0:
+		return best
+	var buff := _buff(battle, unit, actions)
+	if not buff.is_empty():
+		return buff
 	return best if not best.is_empty() else _first_legal(battle, unit, actions)
 
 
+## An ult worth casting now, as an interrupt choice (the BETWEEN window, and first at a decision); {} to hold.
 func interrupt(battle: Battle) -> Dictionary:
-	return _ult_worth_casting(battle)
+	return _ult_worth_casting(battle) if options.ults else {}
 
 
+## The battle refused a pick (it shouldn't: picks come from can_activate_ability and target_candidates): the next one
+## is the first legal move.
 func on_invalid(_battle: Battle, unit: BattleUnit, reason: String, detail: String) -> bool:
-	push_warning("SmartController: %s refused (%s %s); taking the first legal move" % [unit.unit_id, reason, detail])
+	push_warning("AutoPolicy: %s refused (%s %s); taking the first legal move" % [unit.unit_id, reason, detail])
 	_fallback = true
 	return true
 
 
-func after_party_turn(battle: Battle, unit: BattleUnit, action: Dictionary) -> void:
-	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, battle.extra_action))
-
-
-func after_interrupt(battle: Battle, unit: BattleUnit, action: Dictionary) -> void:
-	entries.append(ActionRecorder.entry(battle.turn, unit.unit_id, action, false, true))
+static func has_role(ability: BattleAbility, role: StringName) -> bool:
+	return ability.asset_tags.has(role)
 
 
 # --- Scoring ---------------------------------------------------------------------------------------------------------------
@@ -102,7 +143,7 @@ static func _value_on(unit: BattleUnit, ability: BattleAbility, target: BattleUn
 		elif row.damage_mode == ExecutionRow.DamageMode.FLAT:
 			base = row.flat_damage_x100
 		if base > 0:
-			var kind := _damage_type(row)
+			var kind := damage_type(row)
 			if kind != "" and target.asc.has_tag_exact(StringName("Drain." + kind)):
 				return 0  # never feed a drain
 			if kind != "" and target.asc.has_tag_exact(StringName("Weakness." + kind)):
@@ -124,7 +165,7 @@ static func _value_on(unit: BattleUnit, ability: BattleAbility, target: BattleUn
 	return value
 
 
-static func _damage_type(row: ExecutionRow) -> String:
+static func damage_type(row: ExecutionRow) -> String:
 	for tag in row.tags:
 		if String(tag).begins_with("Damage.Type."):
 			return String(tag).trim_prefix("Damage.Type.")
@@ -133,23 +174,13 @@ static func _damage_type(row: ExecutionRow) -> String:
 
 # --- Support and ults ------------------------------------------------------------------------------------------------------
 
-static func _is_heal(ability: BattleAbility) -> bool:
-	for row in ability.executions:
-		if row != null and row.effect != null:
-			var path := row.effect.resource_path.get_file().to_lower()
-			if HEAL_WORDS.any(func(word: String) -> bool: return path.contains(word)):
-				return true
-	return false
-
-
-## A revive (dead: true) or a heal on the most hurt ally; {} when none applies.
-func _support(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility], dead: bool) -> Dictionary:
+## A revive (ROLE_REVIVE) or a heal (ROLE_HEAL) on the most hurt ally; {} when none applies.
+func _support(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility], role: StringName) -> Dictionary:
 	for ability in actions:
-		var revives := ability.targeting in [BattleAbility.Targeting.SINGLE_DEAD_ALLY, BattleAbility.Targeting.ALL_DEAD_ALLIES]
-		if revives != dead or (not dead and (ability.targets_enemies() or not _is_heal(ability))):
+		if not has_role(ability, role) or ability.targets_enemies():
 			continue
 		var candidates := battle.target_candidates(unit, ability)
-		if candidates.is_empty() and ability.needs_target():
+		if candidates.is_empty() and (ability.needs_target() or role == ROLE_REVIVE):
 			continue
 		if not ability.needs_target():
 			return {"ability": ability.ability_tag, "target": &""}
@@ -158,11 +189,69 @@ func _support(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility], d
 	return {}
 
 
+## A cleanse on the first ally (by slot) that is controlled or carries CLEANSE_AT or more debuffs; {} when none.
+func _cleanse(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -> Dictionary:
+	for ability in actions:
+		if not has_role(ability, ROLE_CLEANSE) or ability.targets_enemies():
+			continue
+		var candidates := battle.target_candidates(unit, ability) if ability.needs_target() else _reached(battle, unit, ability)
+		candidates.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)
+		for ally in candidates:
+			if _afflicted(ally):
+				return {"ability": ability.ability_tag, "target": ally.unit_id if ability.needs_target() else &""}
+	return {}
+
+
+## A buff whose Status.Buff.* tag an ally it reaches lacks (the first such ally by slot); {} when none.
+func _buff(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -> Dictionary:
+	for ability in actions:
+		if not has_role(ability, ROLE_BUFF) or ability.targets_enemies() or _saving_mp(unit, ability):
+			continue
+		var tags := _buff_tags(ability)
+		if tags.is_empty():
+			continue
+		var candidates := battle.target_candidates(unit, ability) if ability.needs_target() else _reached(battle, unit, ability)
+		candidates.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)
+		for ally in candidates:
+			if tags.any(func(tag: StringName) -> bool: return not ally.asc.has_tag_exact(tag)):
+				return {"ability": ability.ability_tag, "target": ally.unit_id if ability.needs_target() else &""}
+	return {}
+
+
+static func _buff_tags(ability: BattleAbility) -> Array[StringName]:
+	var tags: Array[StringName] = []
+	for row in ability.executions:
+		if row == null or row.effect == null:
+			continue
+		for tag in row.effect.granted_tags:
+			if String(tag).begins_with(BUFF_TAG + ".") and not tags.has(tag):
+				tags.append(tag)
+	return tags
+
+
+static func _afflicted(ally: BattleUnit) -> bool:
+	if ally.asc.has_tag_exact(Battle.CONTROLLED_TAG):
+		return true
+	var debuffs := 0
+	for status in ally.statuses():
+		if String(status["tag"]).begins_with(Battle.DEBUFF_TAG + "."):
+			debuffs += 1
+	return debuffs >= CLEANSE_AT
+
+
+## The living allies an untargeted support move reaches (SELF: the unit; ALL_ALLIES: the party).
+static func _reached(battle: Battle, unit: BattleUnit, ability: BattleAbility) -> Array[BattleUnit]:
+	if ability.targeting == BattleAbility.Targeting.SELF:
+		var own: Array[BattleUnit] = [unit]
+		return own
+	return _party(battle)
+
+
 ## The first ready party ult worth casting now, as an interrupt choice; {} to hold.
 func _ult_worth_casting(battle: Battle) -> Dictionary:
 	for unit in _party(battle):
 		for ability in unit.ultimate_abilities():
-			if not unit.asc.can_activate_ability(ability):
+			if not unit.asc.can_activate_ability(ability) or not _allowed(unit, ability):
 				continue
 			var target := _best_ult_target(battle, unit, ability)
 			if target.is_empty():
@@ -190,7 +279,7 @@ func _best_ult_target(battle: Battle, unit: BattleUnit, ability: BattleAbility) 
 		if not (wide or boss or kills):
 			return {}
 		return {"target": best.unit_id if ability.needs_target() else &""}
-	var revives := ability.targeting in [BattleAbility.Targeting.SINGLE_DEAD_ALLY, BattleAbility.Targeting.ALL_DEAD_ALLIES]
+	var revives := has_role(ability, ROLE_REVIVE)
 	if revives and candidates.is_empty():
 		return {}
 	if not revives and not _party_hurt(battle):
@@ -205,12 +294,25 @@ func _best_ult_target(battle: Battle, unit: BattleUnit, ability: BattleAbility) 
 
 # --- Helpers ---------------------------------------------------------------------------------------------------------------
 
-static func _activatable(unit: BattleUnit) -> Array[BattleAbility]:
+## The unit's action abilities that can activate now and that the options allow.
+func _activatable(unit: BattleUnit) -> Array[BattleAbility]:
 	var result: Array[BattleAbility] = []
 	for ability in unit.action_abilities():
-		if unit.asc.can_activate_ability(ability):
+		if unit.asc.can_activate_ability(ability) and _allowed(unit, ability):
 			result.append(ability)
 	return result
+
+
+## False for a CONSUMABLE item's ability unless Options.consumables (spec auto-battle A4).
+func _allowed(unit: BattleUnit, ability: BattleAbility) -> bool:
+	if options.consumables or content == null or not unit.item_abilities.has(ability.ability_tag):
+		return true
+	var item: ItemDefinition = content.items.get(unit.item_abilities[ability.ability_tag])
+	return item == null or item.use_mode != ItemDefinition.UseMode.CONSUMABLE
+
+
+static func _saving_mp(unit: BattleUnit, ability: BattleAbility) -> bool:
+	return ability.cost_effect != null and _mp_percent(unit) < MP_RESERVE
 
 
 static func _targets(battle: Battle, unit: BattleUnit, ability: BattleAbility) -> Array[BattleUnit]:
@@ -230,7 +332,7 @@ static func _first_legal(battle: Battle, unit: BattleUnit, actions: Array[Battle
 		var candidates := battle.target_candidates(unit, ability)
 		if not candidates.is_empty():
 			return {"ability": ability.ability_tag, "target": candidates[0].unit_id}
-	return {"ability": &"", "target": &""}
+	return {}
 
 
 static func _enemies_of(battle: Battle, unit: BattleUnit) -> Array[BattleUnit]:

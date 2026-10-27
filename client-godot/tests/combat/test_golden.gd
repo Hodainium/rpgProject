@@ -60,7 +60,7 @@ func test_golden_replays() -> void:
 		if name.ends_with(".json") and not name.ends_with(".result.json") and not name.ends_with(".trace.json"):
 			requests.append(name.trim_suffix(".json"))
 	requests.sort()
-	eq(Array(requests), ["boss-seed-5", "break-seed-11", "duel-seed-1", "mirror-seed-9", "run-v2-seed-7", "squad-seed-42",
+	eq(Array(requests), ["auto-seed-4", "auto-seed-4-tampered-drop", "boss-seed-5", "break-seed-11", "duel-seed-1", "mirror-seed-9", "run-v2-seed-7", "squad-seed-42",
 		"squad-seed-42-tampered-final", "squad-seed-42-tampered-target", "status-seed-3", "status-seed-3-tampered-skip",
 		"ult-close-seed-2-tampered-outcome", "ult-seed-7", "ult-seed-7-tampered-turn"], "golden set")
 	for name in requests:
@@ -161,12 +161,27 @@ func _write_goldens() -> void:
 		at += 1
 	actions.insert(at, {"turn": skip["turn"], "actor": str(skip["unit"]), "ability": "Fixture.Ability.Strike", "target": "E1"})
 	requests["status-seed-3-tampered-skip"] = skipped
+	# Spec auto-battle: a battle the player's Auto played (through ActionRecorder, like the battle panel), and a copy
+	# without Auto's heal that must be rejected (2002). (A changed target isn't enough here: both grunts die either way.)
+	requests["auto-seed-4"] = await record_auto(auto_snapshot())
+	var unhealed := copy(requests["auto-seed-4"])
+	var auto_actions: Array = unhealed["actionLog"]["actions"]
+	auto_actions.remove_at(auto_actions.find_custom(func(entry) -> bool: return entry["ability"] == "Fixture.Ability.Flask"))
+	requests["auto-seed-4-tampered-drop"] = unhealed
 	for name in requests:
 		_write(GOLDEN + name + ".json", WireJson.stringify(requests[name]))
 		var replayed := _replay_fresh_process(GOLDEN + name + ".json")
 		_write(GOLDEN + name + ".result.json", replayed["text"])
 		_write(GOLDEN + name + ".trace.json", _trace_fresh_process(GOLDEN + name + ".json"))
 	print("    goldens rewritten under ", GOLDEN)
+
+
+## Spec auto-battle: the v2 party (the knight with the Flask and the Feather, a hurt medic, a dead rogue) against the
+## v2 enemies.
+static func auto_snapshot() -> Dictionary:
+	var snap: Dictionary = preload("res://tests/combat/test_battle_v2.gd").v2_snapshot("4")
+	snap["battleId"] = "auto-seed-4"
+	return snap
 
 
 ## The first party turn the battle skips because the unit is controlled: {"unit", "turn"}.

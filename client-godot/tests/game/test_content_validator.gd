@@ -17,6 +17,7 @@ const EXPECTED_ERRORS: Array = [
 	["phase_order", "enemies/phase_order.tres"], ["pattern_unknown_ability", "enemies/pattern_unknown.tres"],
 	["run_default_twice", "runs/default_b.tres"], ["per_item_not_stacking", "enemies/per_item_refresh.tres"],
 	["route_unmatched", "runs/route_unmatched.tres"],
+	["role_missing", "characters/roles.tres"], ["role_mismatch", "characters/roles.tres"],
 ]
 const EXPECTED_WARNINGS: Array = [
 	["incomplete", "encounters/incomplete.tres"], ["empty_item_pool", "rooms/empty_item_pool.tres"],

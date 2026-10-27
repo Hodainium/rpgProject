@@ -14,7 +14,7 @@ effect = ExtResource("3_c24yh")
 [node name="UltSacrifice" type="Node" unique_id=745887157]
 script = ExtResource("1_th6kd")
 targeting = 5
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Buff"])
 executions = Array[ExtResource("2_4pyf1")]([SubResource("Resource_juwh8")])
 animation = ExtResource("4_ugwdy")
 ability_tag = &"Fixture.Ability.UltSacrifice"

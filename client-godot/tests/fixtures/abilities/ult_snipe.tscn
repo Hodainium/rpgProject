@@ -15,7 +15,7 @@ multiplier_x100 = 15000
 
 [node name="UltSnipe" type="Node" unique_id=1741432415]
 script = ExtResource("1_exblo")
-asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage"])
 executions = Array[ExtResource("2_r0vi2")]([SubResource("Resource_5y3x6")])
 animation = ExtResource("4_jg2wr")
 ability_tag = &"Fixture.Ability.UltSnipe"

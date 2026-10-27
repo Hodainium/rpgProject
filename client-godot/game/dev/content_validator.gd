@@ -101,12 +101,12 @@ func _check_unit(unit: UnitDefinition) -> void:
 	if unit.abilities.is_empty():
 		_warning("incomplete", path + "::abilities", "%s has no abilities yet" % unit.id)
 	for index in unit.abilities.size():
-		_check_skill_scene(unit.abilities[index], "%s::abilities[%d]" % [path, index], unit.id)
+		_check_skill_scene(unit.abilities[index], "%s::abilities[%d]" % [path, index], unit.id, unit is CharacterDefinition)
 	if unit is CharacterDefinition and unit.level_effect != null and not _stacks(unit.level_effect):
 		_error("level_not_stacking", path + "::level_effect", "%s's level effect refreshes instead of stacking; it would count once" % unit.id)
 	if unit is CharacterDefinition:
 		for index in unit.learnable_skills.size():
-			_check_skill_scene(unit.learnable_skills[index], "%s::learnable_skills[%d]" % [path, index], unit.id)
+			_check_skill_scene(unit.learnable_skills[index], "%s::learnable_skills[%d]" % [path, index], unit.id, true)
 	if unit is EnemyDefinition:
 		for index in unit.variants.size():
 			if unit.variants[index] == null:
@@ -247,7 +247,8 @@ func _check_animation_set(animation_set: UnitAnimationSet, where: String) -> voi
 					break
 
 
-func _check_skill_scene(scene: PackedScene, path: String, owner: StringName) -> void:
+## `party`: a party member can use it (spec auto-battle: then it needs an Ability.Role.* tag).
+func _check_skill_scene(scene: PackedScene, path: String, owner: StringName, party: bool = false) -> void:
 	if scene == null:
 		_error("dangling_ref", path, "%s has an empty ability entry" % owner)
 	elif SkillTags.tag_of(scene) == &"":
@@ -259,6 +260,7 @@ func _check_skill_scene(scene: PackedScene, path: String, owner: StringName) -> 
 			_warning("trigger_unregistered", path, "%s triggers on %s, which the battle never sends" % [scene.resource_path, trigger])
 		_check_ult(scene, path)
 		_check_rows(scene, path)
+		_check_roles(scene, path, party)
 
 
 ## Spec ult-interrupts: an ult (asset tag Ability.Type.Ultimate) is cast out of turn, so it can't be a triggered
@@ -278,6 +280,49 @@ func _check_ult(scene: PackedScene, path: String) -> void:
 		if query == null or not (query.ignore_tags.has(Battle.CONTROLLED_TAG) or query.ignore_exact_tags.has(Battle.CONTROLLED_TAG)):
 			_warning("ult_ignores_control", path, "%s doesn't require lacking %s: it fires while frozen or stunned (a breakout ult?)"
 				% [scene.resource_path, Battle.CONTROLLED_TAG])
+	ability.free()
+
+
+## Spec auto-battle: roles say what an ability does, for AutoPolicy. A party action ability or ult needs one
+## (role_missing); a tagged ability's roles must be known ones and fit the targeting: Revive exactly on dead-ally targeting, Damage /
+## Debuff / Dispel on enemy moves (Damage with a damage row), Heal / Buff / Cleanse / RestoreMP on ally moves (role_mismatch).
+## Triggered passives need none. Checked once per scene, with `party` from any use.
+func _check_roles(scene: PackedScene, path: String, party: bool) -> void:
+	var checked := _visited.has("roles|" + scene.resource_path)
+	var party_checked := _visited.has("roles_party|" + scene.resource_path)
+	if checked and (party_checked or not party):
+		return
+	_visited["roles|" + scene.resource_path] = true
+	if party:
+		_visited["roles_party|" + scene.resource_path] = true
+	var ability := scene.instantiate() as BattleAbility
+	if ability == null:
+		return
+	var roles: Array = ability.asset_tags.filter(func(tag) -> bool: return String(tag).begins_with(AutoPolicy.ROLE_PREFIX))
+	if party and roles.is_empty() and not ability.is_triggered():
+		_error("role_missing", path, "%s has no %s* tag: Auto can't tell what it does (game/tools/build_role_pass.tscn proposes one)"
+			% [ability.ability_tag, AutoPolicy.ROLE_PREFIX])
+	if checked or roles.is_empty():
+		ability.free()
+		return
+	var problems := PackedStringArray()
+	for role in roles:
+		if not AutoPolicy.ROLES.has(role):
+			problems.append("%s is not a role (%s)" % [role, ", ".join(AutoPolicy.ROLES)])
+		elif role in [AutoPolicy.ROLE_DAMAGE, AutoPolicy.ROLE_DEBUFF, AutoPolicy.ROLE_DISPEL] and not ability.targets_enemies():
+			problems.append("%s on a move that doesn't target enemies" % role)
+		elif role in [AutoPolicy.ROLE_HEAL, AutoPolicy.ROLE_BUFF, AutoPolicy.ROLE_CLEANSE, AutoPolicy.ROLE_RESTORE_MP] and ability.targets_enemies():
+			problems.append("%s on a move that targets enemies" % role)
+	if ability.targets_dead() and not roles.has(AutoPolicy.ROLE_REVIVE):
+		problems.append("targets dead allies but has no %s" % AutoPolicy.ROLE_REVIVE)
+	elif roles.has(AutoPolicy.ROLE_REVIVE) and not ability.targets_dead():
+		problems.append("%s on a move that doesn't target dead allies" % AutoPolicy.ROLE_REVIVE)
+	if roles.has(AutoPolicy.ROLE_DAMAGE) and not ability.executions.any(func(row) -> bool:
+			return row != null and (row.damage_mode != ExecutionRow.DamageMode.USE_EFFECT
+				or row.effect != null and not row.effect.executions.is_empty())):
+		problems.append("%s but no row deals damage" % AutoPolicy.ROLE_DAMAGE)
+	for problem in problems:
+		_error("role_mismatch", path, "%s: %s" % [ability.ability_tag, problem])
 	ability.free()
 
 
@@ -613,7 +658,7 @@ func _check_equipment(piece: EquipmentDefinition) -> void:
 	if piece.description == "":
 		_warning("no_description", path + "::description", "%s has no description" % piece.id)
 	_check_weight(piece, path)
-	_check_ability_set(piece.grants, path + "::grants")
+	_check_ability_set(piece.grants, path + "::grants", true)
 
 
 func _check_item(item: ItemDefinition) -> void:
@@ -625,20 +670,22 @@ func _check_item(item: ItemDefinition) -> void:
 			_error("bad_item", path + "::use_ability", "%s is USABLE but has no use_ability" % item.id)
 		elif SkillTags.tag_of(item.use_ability) == &"":
 			_error("bad_item", path + "::use_ability", "%s's use_ability is not a BattleAbility scene" % item.id)
+		else:
+			_check_roles(item.use_ability, path + "::use_ability", true)
 		if item.use_mode == ItemDefinition.UseMode.COOLDOWN and item.cooldown_battles <= 0:
 			_error("bad_item", path + "::cooldown_battles", "%s has a COOLDOWN use mode with %d battles" % [item.id, item.cooldown_battles])
-	_check_ability_set(item.grants, path + "::grants")
+	_check_ability_set(item.grants, path + "::grants", true)
 	for hook in ["on_pickup", "on_floor_start", "on_room_cleared"]:
 		var outcomes: Array = item.get(hook)
 		for index in outcomes.size():
 			_check_outcome(outcomes[index], "%s::%s[%d]" % [path, hook, index], null)
 
 
-func _check_ability_set(ability_set: AbilitySet, path: String) -> void:
+func _check_ability_set(ability_set: AbilitySet, path: String, party: bool = false) -> void:
 	if ability_set == null:
 		return
 	for index in ability_set.abilities.size():
-		_check_skill_scene(ability_set.abilities[index], "%s.abilities[%d]" % [path, index], &"an ability set")
+		_check_skill_scene(ability_set.abilities[index], "%s.abilities[%d]" % [path, index], &"an ability set", party)
 	for index in ability_set.effects.size():
 		if ability_set.effects[index] == null:
 			_error("dangling_ref", "%s.effects[%d]" % [path, index], "an empty effect entry")

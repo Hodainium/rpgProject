@@ -17,6 +17,7 @@ toughness_x100 = 3000
 [node name="FireWave" type="Node" unique_id=1218037450]
 script = ExtResource("1_dt221")
 targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
 executions = Array[ExtResource("2_hcf48")]([SubResource("Resource_v7cek")])
 animation = ExtResource("4_gkmlr")
 ability_tag = &"Fixture.Ability.FireWave"

@@ -13,6 +13,7 @@ effect = ExtResource("3_mt8by")
 [node name="Guard" type="Node" unique_id=590956163]
 script = ExtResource("1_xehhj")
 targeting = 5
+asset_tags = Array[StringName]([&"Ability.Role.Buff"])
 executions = Array[ExtResource("2_q5a61")]([SubResource("Resource_76gf5")])
 animation = ExtResource("4_fw0mn")
 ability_tag = &"Fixture.Ability.Guard"

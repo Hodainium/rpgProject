@@ -1,0 +1,1 @@
+{"schemaVersion":1,"battleId":"auto-seed-4","verdict":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"TurnMismatch","turn":5,"detail":"log entry says turn 7, P1 acts on turn 5"},"outcome":"Ongoing","turns":5,"finalStateHash":"9d9545e81367df289eb2f2e318b90f373a0afe2aa1c6f44bde4c23c237f23841","engineVersion":"4.7.2.stable.mono.official.ed1daf0bf"}

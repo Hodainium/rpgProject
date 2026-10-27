@@ -101,6 +101,7 @@ asset tag (spec content-pass), so role tags there would send new events. Under `
 | `Ability.Role.Revive` | Brings a dead ally back | targeting `SINGLE_DEAD_ALLY` or `ALL_DEAD_ALLIES`, and every such ability has it |
 | `Ability.Role.Buff` | Applies a `Status.Buff.*` (incl. Ward, Taunt) | targets allies or self |
 | `Ability.Role.Cleanse` | Removes ally debuffs | targets allies or self |
+| `Ability.Role.RestoreMP` | Restores MP (Auto never picks it on its own) | targets allies or self |
 
 An ability may carry several roles (a damaging debuff is `Damage` + `Debuff`). `role_missing` (error): a party action
 ability, party ult or usable item's `use_ability` with no `Ability.Role.*` tag. Enemy abilities need none (brains
