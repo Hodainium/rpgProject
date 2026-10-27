@@ -16,7 +16,7 @@ toughness_x100 = 4000
 
 [node name="FaultLine" type="Node" unique_id=1559829897]
 script = ExtResource("1_fvxuc")
-asset_tags = Array[StringName]([&"Ability.Role.Damage"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Basic"])
 executions = Array[ExtResource("2_cwlhb")]([SubResource("Resource_psmao")])
 animation = ExtResource("4_vd8fl")
 ability_tag = &"Ability.Faultline"

@@ -1,0 +1,61 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/party_strip.gd" id="1_strip"]
+[ext_resource type="Script" path="res://game/ui/ui_list.gd" id="2_list"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/member_row.tscn" id="3_row"]
+
+[node name="PartyStrip" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 226)
+size_flags_horizontal = 3
+script = ExtResource("1_strip")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 6
+
+[node name="Box" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Header" type="HBoxContainer" parent="Margin/Box"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Pad" type="Control" parent="Margin/Box/Header"]
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
+
+[node name="Name" type="Label" parent="Margin/Box/Header"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_type_variation = &"Caption"
+text = "NAME"
+
+[node name="Hp" type="Label" parent="Margin/Box/Header"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Caption"
+text = "HP"
+
+[node name="Mp" type="Label" parent="Margin/Box/Header"]
+custom_minimum_size = Vector2(104, 0)
+layout_mode = 2
+theme_type_variation = &"Caption"
+text = "MP"
+
+[node name="Ult" type="Label" parent="Margin/Box/Header"]
+custom_minimum_size = Vector2(176, 0)
+layout_mode = 2
+theme_type_variation = &"Caption"
+text = "ULT"
+
+[node name="Rows" type="VBoxContainer" parent="Margin/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+script = ExtResource("2_list")
+entry_scene = ExtResource("3_row")

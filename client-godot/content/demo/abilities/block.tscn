@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ability"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_row"]
+[ext_resource type="Resource" path="res://content/demo/effects/blocking.tres" id="3_blocking"]
+[ext_resource type="Animation" path="res://content/demo/animations/block.tres" id="4_animation"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_query"]
+
+[sub_resource type="Resource" id="Resource_battles_only"]
+script = ExtResource("5_query")
+ignore_tags = Array[StringName]([&"State.Infield"])
+
+[sub_resource type="Resource" id="Resource_guard"]
+script = ExtResource("2_row")
+id = &"guard"
+effect = ExtResource("3_blocking")
+
+[node name="Block" type="Node"]
+script = ExtResource("1_ability")
+targeting = 5
+asset_tags = Array[StringName]([&"Ability.Role.Guard"])
+executions = Array[ExtResource("2_row")]([SubResource("Resource_guard")])
+animation = ExtResource("4_animation")
+description = "Guard until your next turn: you take half damage."
+ability_tag = &"Ability.Block"
+activation_query = SubResource("Resource_battles_only")

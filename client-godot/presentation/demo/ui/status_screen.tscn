@@ -1,0 +1,64 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/menu_frame.tscn" id="1_frame"]
+[ext_resource type="Script" path="res://presentation/demo/ui/status_screen.gd" id="2_status"]
+[ext_resource type="Script" path="res://game/ui/ui_list.gd" id="3_list"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/list_entry.tscn" id="4_entry"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/member_row.tscn" id="5_row"]
+
+[node name="StatusScreen" instance=ExtResource("1_frame")]
+script = ExtResource("2_status")
+
+[node name="Top" type="HBoxContainer" parent="Content/Stack"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="TabWindow" type="PanelContainer" parent="Content/Stack/Top"]
+custom_minimum_size = Vector2(240, 0)
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="Tabs" type="VBoxContainer" parent="Content/Stack/Top/TabWindow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+script = ExtResource("3_list")
+entry_scene = ExtResource("4_entry")
+
+[node name="DetailWindow" type="PanelContainer" parent="Content/Stack/Top"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Box" type="VBoxContainer" parent="Content/Stack/Top/DetailWindow"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Head" type="HBoxContainer" parent="Content/Stack/Top/DetailWindow/Box"]
+layout_mode = 2
+
+[node name="MemberName" type="Label" parent="Content/Stack/Top/DetailWindow/Box/Head"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Title"
+
+[node name="TabTitle" type="Label" parent="Content/Stack/Top/DetailWindow/Box/Head"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Caption"
+
+[node name="Body" type="VBoxContainer" parent="Content/Stack/Top/DetailWindow/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PartyWindow" type="PanelContainer" parent="Content/Stack"]
+layout_mode = 2
+
+[node name="Rows" type="VBoxContainer" parent="Content/Stack/PartyWindow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+script = ExtResource("3_list")
+entry_scene = ExtResource("5_row")

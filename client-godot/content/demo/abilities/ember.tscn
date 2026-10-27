@@ -14,7 +14,7 @@ tags = Array[StringName]([&"Damage.Type.Fire"])
 
 [node name="Ember" type="Node" unique_id=2045062384]
 script = ExtResource("1_3ovr2")
-asset_tags = Array[StringName]([&"Ability.Role.Damage"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Basic"])
 executions = Array[ExtResource("2_jblx0")]([SubResource("Resource_kkwdb")])
 animation = ExtResource("4_i6hvc")
 ability_tag = &"Ability.Ember"

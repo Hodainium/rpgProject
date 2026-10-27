@@ -1,0 +1,132 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/member_row.gd" id="1_row"]
+
+[node name="MemberRow" type="Button"]
+custom_minimum_size = Vector2(0, 44)
+size_flags_horizontal = 3
+mouse_filter = 2
+focus_mode = 0
+theme_type_variation = &"MemberRow"
+disabled = true
+script = ExtResource("1_row")
+
+[node name="Columns" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_right = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Pointer" type="Label" parent="Columns"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(22, 0)
+layout_mode = 2
+theme_type_variation = &"Gold"
+text = "▶"
+vertical_alignment = 1
+
+[node name="NameBox" type="VBoxContainer" parent="Columns"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="NameLine" type="HBoxContainer" parent="Columns/NameBox"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Name" type="Label" parent="Columns/NameBox/NameLine"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"RowName"
+
+[node name="Level" type="Label" parent="Columns/NameBox/NameLine"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Caption"
+
+[node name="Chips" type="HBoxContainer" parent="Columns/NameBox"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Hp" type="VBoxContainer" parent="Columns"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="HpText" type="Label" parent="Columns/Hp"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HpBar" type="ProgressBar" parent="Columns/Hp"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"HpBar"
+step = 1.0
+show_percentage = false
+
+[node name="Mp" type="VBoxContainer" parent="Columns"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(104, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="MpText" type="Label" parent="Columns/Mp"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="MpBar" type="ProgressBar" parent="Columns/Mp"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 5)
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"MpBar"
+step = 1.0
+show_percentage = false
+
+[node name="UltBox" type="HBoxContainer" parent="Columns"]
+custom_minimum_size = Vector2(176, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="UltBar" type="ProgressBar" parent="Columns/UltBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"UltBar"
+step = 1.0
+show_percentage = false
+
+[node name="UltText" type="Label" parent="Columns/UltBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+horizontal_alignment = 2
+
+[node name="Ult" type="Button" parent="Columns"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(92, 32)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"UltButton"
+text = "ULT"

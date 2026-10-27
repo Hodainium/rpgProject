@@ -13,12 +13,13 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="10_xwxqm"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_kxksa"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_ch5xb"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
 
 [resource]
 script = ExtResource("12_ch5xb")
 id = &"demo.character.bard"
 attribute_set = ExtResource("11_kxksa")
-abilities = Array[PackedScene]([ExtResource("1_tpfkk"), ExtResource("2_75h4w"), ExtResource("3_4p8fd"), ExtResource("4_v3fao"), ExtResource("5_fq47u"), ExtResource("6_q1r8r"), ExtResource("7_4k0bs"), ExtResource("8_3m1w6"), ExtResource("9_8dbjv"), ExtResource("10_xwxqm")])
+abilities = Array[PackedScene]([ExtResource("1_tpfkk"), ExtResource("2_75h4w"), ExtResource("3_4p8fd"), ExtResource("4_v3fao"), ExtResource("5_fq47u"), ExtResource("6_q1r8r"), ExtResource("7_4k0bs"), ExtResource("8_3m1w6"), ExtResource("9_8dbjv"), ExtResource("10_xwxqm"), ExtResource("99_block")])
 display_name = "Bard"
 display_color = Color(1, 0.4117647, 0.7058824, 1)
 tags = Array[StringName]([&"Character.Bard"])

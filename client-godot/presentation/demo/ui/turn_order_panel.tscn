@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/turn_order_panel.gd" id="1_panel"]
+[ext_resource type="Script" path="res://game/ui/ui_list.gd" id="2_list"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/turn_card.tscn" id="3_card"]
+
+[node name="TurnOrderPanel" type="VBoxContainer"]
+custom_minimum_size = Vector2(220, 0)
+mouse_filter = 2
+theme_override_constants/separation = 5
+script = ExtResource("1_panel")
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 2
+theme_type_variation = &"Caption"
+text = "TURN ORDER"
+horizontal_alignment = 2
+
+[node name="Cards" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 5
+script = ExtResource("2_list")
+entry_scene = ExtResource("3_card")

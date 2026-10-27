@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/toast.gd" id="1_toast"]
+
+[node name="Toast" type="PanelContainer"]
+custom_minimum_size = Vector2(560, 0)
+mouse_filter = 2
+theme_type_variation = &"Toast"
+script = ExtResource("1_toast")
+
+[node name="Lines" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="Kicker" type="Label" parent="Lines"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gold"
+horizontal_alignment = 1
+
+[node name="Title" type="Label" parent="Lines"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HeaderLarge"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Lines"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_type_variation = &"Muted"
+horizontal_alignment = 1
+autowrap_mode = 3

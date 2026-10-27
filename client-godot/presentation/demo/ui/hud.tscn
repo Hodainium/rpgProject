@@ -76,3 +76,68 @@ grow_vertical = 0
 mouse_filter = 2
 script = ExtResource("2_point")
 slot = &"UI.Slot.Hud.Bottom"
+
+[node name="BottomLeft" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -36.0
+offset_right = -392.0
+offset_bottom = -36.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("2_point")
+slot = &"UI.Slot.Hud.Bottom.Left"
+
+[node name="BottomRight" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -376.0
+offset_top = -36.0
+offset_right = -16.0
+offset_bottom = -36.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("2_point")
+slot = &"UI.Slot.Hud.Bottom.Right"
+
+[node name="Top" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 16.0
+offset_bottom = 16.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("2_point")
+slot = &"UI.Slot.Hud.Top"
+
+[node name="Feed" type="VBoxContainer" parent="."]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 16.0
+offset_bottom = 16.0
+mouse_filter = 2
+script = ExtResource("2_point")
+slot = &"UI.Slot.Hud.Feed"
+
+[node name="Toast" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 24.0
+offset_bottom = 24.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("2_point")
+slot = &"UI.Slot.Hud.Toast"

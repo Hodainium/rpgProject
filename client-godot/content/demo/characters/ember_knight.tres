@@ -12,12 +12,13 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="9_51f11"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="10_rva7f"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="11_wglm5"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
 
 [resource]
 script = ExtResource("11_wglm5")
 id = &"demo.character.ember_knight"
 attribute_set = ExtResource("10_rva7f")
-abilities = Array[PackedScene]([ExtResource("1_bg6cx"), ExtResource("2_m0w4g"), ExtResource("3_32yo1"), ExtResource("4_8b8q5"), ExtResource("5_3o3ac"), ExtResource("6_7kcjo"), ExtResource("7_yr5lm"), ExtResource("8_ois3o"), ExtResource("9_51f11")])
+abilities = Array[PackedScene]([ExtResource("1_bg6cx"), ExtResource("2_m0w4g"), ExtResource("3_32yo1"), ExtResource("4_8b8q5"), ExtResource("5_3o3ac"), ExtResource("6_7kcjo"), ExtResource("7_yr5lm"), ExtResource("8_ois3o"), ExtResource("9_51f11"), ExtResource("99_block")])
 display_name = "Ember Knight"
 display_color = Color(1, 0.3882353, 0.2784314, 1)
 tags = Array[StringName]([&"Character.EmberKnight"])

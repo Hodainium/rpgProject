@@ -14,12 +14,13 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="11_jixo4"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="12_wmt23"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="13_ab228"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
 
 [resource]
 script = ExtResource("13_ab228")
 id = &"demo.character.shatterweaver"
 attribute_set = ExtResource("12_wmt23")
-abilities = Array[PackedScene]([ExtResource("1_f6e6d"), ExtResource("2_fe3i4"), ExtResource("3_3lahc"), ExtResource("4_b55tj"), ExtResource("5_7neym"), ExtResource("6_bfs10"), ExtResource("7_5mf0x"), ExtResource("8_gl12k"), ExtResource("9_gkiwo"), ExtResource("10_k0y32"), ExtResource("11_jixo4")])
+abilities = Array[PackedScene]([ExtResource("1_f6e6d"), ExtResource("2_fe3i4"), ExtResource("3_3lahc"), ExtResource("4_b55tj"), ExtResource("5_7neym"), ExtResource("6_bfs10"), ExtResource("7_5mf0x"), ExtResource("8_gl12k"), ExtResource("9_gkiwo"), ExtResource("10_k0y32"), ExtResource("11_jixo4"), ExtResource("99_block")])
 display_name = "Shatterweaver"
 display_color = Color(0.9411765, 0.5019608, 0.5019608, 1)
 tags = Array[StringName]([&"Character.Shatterweaver"])

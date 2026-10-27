@@ -13,12 +13,13 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="10_5m4we"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_s4ls4"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_jn2kp"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
 
 [resource]
 script = ExtResource("12_jn2kp")
 id = &"demo.character.plaguewright"
 attribute_set = ExtResource("11_s4ls4")
-abilities = Array[PackedScene]([ExtResource("1_wr4yf"), ExtResource("2_54xvd"), ExtResource("3_d3fmv"), ExtResource("4_00smm"), ExtResource("5_xdb2a"), ExtResource("6_wcvw5"), ExtResource("7_srlb3"), ExtResource("8_q2aip"), ExtResource("9_u0575"), ExtResource("10_5m4we")])
+abilities = Array[PackedScene]([ExtResource("1_wr4yf"), ExtResource("2_54xvd"), ExtResource("3_d3fmv"), ExtResource("4_00smm"), ExtResource("5_xdb2a"), ExtResource("6_wcvw5"), ExtResource("7_srlb3"), ExtResource("8_q2aip"), ExtResource("9_u0575"), ExtResource("10_5m4we"), ExtResource("99_block")])
 display_name = "Plaguewright"
 display_color = Color(0.6039216, 0.8039216, 0.19607843, 1)
 tags = Array[StringName]([&"Character.Plaguewright"])

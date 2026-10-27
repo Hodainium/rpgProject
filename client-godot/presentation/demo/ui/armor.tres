@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="GearSet" format=3]
+
+[ext_resource type="Script" path="res://game/ui/gear_set.gd" id="1_set"]
+[ext_resource type="Script" path="res://game/ui/gear_column.gd" id="2_column"]
+
+[sub_resource type="Resource" id="head"]
+script = ExtResource("2_column")
+title = "HEAD"
+slot = &"Equipment.Slot.Head"
+
+[sub_resource type="Resource" id="body"]
+script = ExtResource("2_column")
+title = "BODY"
+slot = &"Equipment.Slot.Body"
+
+[sub_resource type="Resource" id="arms"]
+script = ExtResource("2_column")
+title = "ARMS"
+slot = &"Equipment.Slot.Arms"
+
+[sub_resource type="Resource" id="legs"]
+script = ExtResource("2_column")
+title = "LEGS"
+slot = &"Equipment.Slot.Legs"
+
+[sub_resource type="Resource" id="accessory"]
+script = ExtResource("2_column")
+title = "ACCESSORY"
+slot = &"Equipment.Slot.Accessory"
+
+[resource]
+script = ExtResource("1_set")
+title = "ARMOR"
+columns = Array[ExtResource("2_column")]([SubResource("head"), SubResource("body"), SubResource("arms"), SubResource("legs"), SubResource("accessory")])

@@ -1,0 +1,53 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/menu_frame.tscn" id="1_frame"]
+[ext_resource type="Script" path="res://presentation/demo/ui/big_map.gd" id="2_map"]
+[ext_resource type="Script" path="res://game/ui/ui_list.gd" id="3_list"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/map_cell.tscn" id="4_cell"]
+
+[node name="BigMap" instance=ExtResource("1_frame")]
+script = ExtResource("2_map")
+
+[node name="MapWindow" type="PanelContainer" parent="Content/Stack"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Box" type="VBoxContainer" parent="Content/Stack/MapWindow"]
+layout_mode = 2
+
+[node name="Viewport" type="Control" parent="Content/Stack/MapWindow/Box"]
+unique_name_in_owner = true
+clip_contents = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 1
+
+[node name="Grid" type="GridContainer" parent="Content/Stack/MapWindow/Box/Viewport"]
+unique_name_in_owner = true
+layout_mode = 0
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 9
+script = ExtResource("3_list")
+entry_scene = ExtResource("4_cell")
+
+[node name="Controls" type="HBoxContainer" parent="Content/Stack/MapWindow/Box"]
+layout_mode = 2
+alignment = 2
+
+[node name="Tip" type="Label" parent="Content/Stack/MapWindow/Box/Controls"]
+layout_mode = 2
+theme_type_variation = &"Caption"
+text = "Drag or scroll to look around · click a room to travel"
+
+[node name="Help" type="Button" parent="Content/Stack/MapWindow/Box/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Toggle"
+text = "HELP"
+
+[node name="Recenter" type="Button" parent="Content/Stack/MapWindow/Box/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Toggle"
+text = "RECENTER"

@@ -13,12 +13,13 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="10_tdsui"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_m78rq"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_8xh45"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
 
 [resource]
 script = ExtResource("12_8xh45")
 id = &"demo.character.bulwark"
 attribute_set = ExtResource("11_m78rq")
-abilities = Array[PackedScene]([ExtResource("1_lkssy"), ExtResource("2_kpqss"), ExtResource("3_10f0t"), ExtResource("4_g1y82"), ExtResource("5_buwk1"), ExtResource("6_5d0pu"), ExtResource("7_a3lw0"), ExtResource("8_yiltl"), ExtResource("9_1gw1t"), ExtResource("10_tdsui")])
+abilities = Array[PackedScene]([ExtResource("1_lkssy"), ExtResource("2_kpqss"), ExtResource("3_10f0t"), ExtResource("4_g1y82"), ExtResource("5_buwk1"), ExtResource("6_5d0pu"), ExtResource("7_a3lw0"), ExtResource("8_yiltl"), ExtResource("9_1gw1t"), ExtResource("10_tdsui"), ExtResource("99_block")])
 display_name = "Bulwark"
 display_color = Color(0.7411765, 0.7176471, 0.41960785, 1)
 tags = Array[StringName]([&"Character.Bulwark"])

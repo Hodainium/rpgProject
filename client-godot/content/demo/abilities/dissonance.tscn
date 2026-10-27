@@ -22,7 +22,7 @@ chance_x100 = 6000
 
 [node name="Dissonance" type="Node" unique_id=1017875192]
 script = ExtResource("1_433gu")
-asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff"])
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Type.Basic"])
 executions = Array[ExtResource("2_pduhy")]([SubResource("Resource_v2d4f"), SubResource("Resource_cwcql")])
 animation = ExtResource("5_goj6m")
 ability_tag = &"Ability.Dissonance"

@@ -1,0 +1,57 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/menu_frame.gd" id="1_frame"]
+[ext_resource type="Script" path="res://game/ui/ui_back_button.gd" id="2_back"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/description_window.tscn" id="3_description"]
+
+[node name="MenuFrame" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_frame")
+
+[node name="Back" type="Button" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 92.0
+offset_bottom = 48.0
+theme_type_variation = &"Toggle"
+text = "BACK"
+script = ExtResource("2_back")
+
+[node name="Top" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 16.0
+offset_bottom = 108.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="Description" parent="Top" instance=ExtResource("3_description")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Content" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 124.0
+offset_right = -40.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Stack" type="VBoxContainer" parent="Content"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12

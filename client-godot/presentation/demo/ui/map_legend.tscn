@@ -1,0 +1,60 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/map_legend.gd" id="1_legend"]
+[ext_resource type="Script" path="res://game/ui/ui_back_button.gd" id="2_back"]
+
+[node name="MapLegend" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_legend")
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Window" type="PanelContainer" parent="Center"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+
+[node name="Box" type="VBoxContainer" parent="Center/Window"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Head" type="HBoxContainer" parent="Center/Window/Box"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Center/Window/Box/Head"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Title"
+text = "Map legend"
+
+[node name="Close" type="Button" parent="Center/Window/Box/Head"]
+layout_mode = 2
+theme_type_variation = &"Toggle"
+text = "CLOSE"
+script = ExtResource("2_back")
+
+[node name="Rows" type="GridContainer" parent="Center/Window/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 10
+columns = 2
+
+[node name="Tiles" type="Label" parent="Center/Window/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(480, 0)
+layout_mode = 2
+theme_type_variation = &"Caption"
+autowrap_mode = 3

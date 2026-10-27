@@ -1,0 +1,88 @@
+[gd_resource type="Resource" script_class="UIToastSet" format=3]
+
+[ext_resource type="Script" path="res://game/ui/ui_toast_set.gd" id="1_set"]
+[ext_resource type="Script" path="res://game/ui/ui_toast_rule.gd" id="2_rule"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/feed_line.tscn" id="3_line"]
+
+[sub_resource type="Resource" id="rule_used"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.AbilityUsed"
+ignore_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+title = "{instigator} used {abilityName}"
+seconds = 3.0
+
+[sub_resource type="Resource" id="rule_ult"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.Interrupt"
+title = "{instigator} unleashed {abilityName}!"
+seconds = 3.0
+variation = &"FeedUlt"
+
+[sub_resource type="Resource" id="rule_critical"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.Damage"
+require_tags = Array[StringName]([&"Hit.Critical"])
+title = "Critical hit!"
+seconds = 3.0
+variation = &"FeedCritical"
+
+[sub_resource type="Resource" id="rule_damage"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.Damage"
+title = "{instigator} did {amount} damage to {target}"
+seconds = 3.0
+
+[sub_resource type="Resource" id="rule_broken"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.Broken"
+title = "{target} is broken!"
+seconds = 3.0
+variation = &"FeedBroken"
+
+[sub_resource type="Resource" id="rule_downed"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.Downed"
+title = "{target} is knocked down!"
+seconds = 3.0
+variation = &"FeedDown"
+
+[sub_resource type="Resource" id="rule_died"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.UnitDied"
+title = "{target} is down!"
+seconds = 3.0
+variation = &"FeedDown"
+
+[sub_resource type="Resource" id="rule_one_more"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.OneMore"
+title = "ONE MORE! {instigator} acts again"
+seconds = 3.0
+variation = &"FeedCritical"
+
+[sub_resource type="Resource" id="rule_phase"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.Phase"
+title = "{instigator} enters phase {count}!"
+seconds = 3.0
+variation = &"FeedDown"
+
+[sub_resource type="Resource" id="rule_resisted"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.Resisted"
+title = "{target} resisted {status}"
+seconds = 3.0
+
+[sub_resource type="Resource" id="rule_skipped"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.TurnSkipped"
+title = "{instigator} can't act and loses the turn"
+seconds = 3.0
+
+[resource]
+script = ExtResource("1_set")
+rules = Array[ExtResource("2_rule")]([SubResource("rule_used"), SubResource("rule_ult"), SubResource("rule_critical"), SubResource("rule_damage"), SubResource("rule_broken"), SubResource("rule_downed"), SubResource("rule_died"), SubResource("rule_one_more"), SubResource("rule_phase"), SubResource("rule_resisted"), SubResource("rule_skipped")])
+stack = 1
+max_visible = 4
+entry_scene = ExtResource("3_line")
+clear_on = Array[StringName]([&"Message.Battle.Started"])

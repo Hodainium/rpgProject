@@ -13,12 +13,13 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="10_61i68"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_x5wjs"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_0rhvb"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
 
 [resource]
 script = ExtResource("12_0rhvb")
 id = &"demo.character.ranger"
 attribute_set = ExtResource("11_x5wjs")
-abilities = Array[PackedScene]([ExtResource("1_dr1t7"), ExtResource("2_0eq47"), ExtResource("3_p23b7"), ExtResource("4_ibmui"), ExtResource("5_2f7b6"), ExtResource("6_jcgs8"), ExtResource("7_pwlar"), ExtResource("8_d5wog"), ExtResource("9_62iy8"), ExtResource("10_61i68")])
+abilities = Array[PackedScene]([ExtResource("1_dr1t7"), ExtResource("2_0eq47"), ExtResource("3_p23b7"), ExtResource("4_ibmui"), ExtResource("5_2f7b6"), ExtResource("6_jcgs8"), ExtResource("7_pwlar"), ExtResource("8_d5wog"), ExtResource("9_62iy8"), ExtResource("10_61i68"), ExtResource("99_block")])
 display_name = "Ranger"
 display_color = Color(0.13333334, 0.54509807, 0.13333334, 1)
 tags = Array[StringName]([&"Character.Ranger"])

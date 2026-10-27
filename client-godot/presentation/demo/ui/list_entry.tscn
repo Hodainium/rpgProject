@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/list_entry.gd" id="1_entry"]
+
+[node name="ListEntry" type="Button"]
+custom_minimum_size = Vector2(0, 32)
+size_flags_horizontal = 3
+theme_type_variation = &"ListEntry"
+script = ExtResource("1_entry")
+
+[node name="Row" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_right = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Name" type="Label" parent="Row"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.2
+vertical_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="Detail" type="Label" parent="Row"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Caption"
+horizontal_alignment = 2
+vertical_alignment = 1
+clip_text = true
+text_overrun_behavior = 3

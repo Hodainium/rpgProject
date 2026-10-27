@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="UIToastSet" format=3]
+
+[ext_resource type="Script" path="res://game/ui/ui_toast_set.gd" id="1_set"]
+[ext_resource type="Script" path="res://game/ui/ui_toast_rule.gd" id="2_rule"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/toast.tscn" id="3_toast"]
+
+[sub_resource type="Resource" id="rule_item"]
+script = ExtResource("2_rule")
+channel = &"Message.Run.ItemTaken"
+kicker = "{rarity} · {instigator}"
+title = "{target}"
+subtitle = "{description}"
+seconds = 2.6
+
+[sub_resource type="Resource" id="rule_floor"]
+script = ExtResource("2_rule")
+channel = &"Message.Run.FloorEntered"
+title = "Floor {count} · {chapterName}"
+seconds = 2.2
+priority = 10
+hold_action = &"show_floor_info"
+
+[sub_resource type="Resource" id="rule_level"]
+script = ExtResource("2_rule")
+channel = &"Message.Run.LevelUp"
+kicker = "LEVEL UP"
+title = "{target}"
+subtitle = "Level {count}"
+seconds = 2.0
+
+[resource]
+script = ExtResource("1_set")
+rules = Array[ExtResource("2_rule")]([SubResource("rule_item"), SubResource("rule_floor"), SubResource("rule_level")])
+max_visible = 1
+max_queued = 5
+entry_scene = ExtResource("3_toast")

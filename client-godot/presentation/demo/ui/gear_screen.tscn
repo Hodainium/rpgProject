@@ -1,0 +1,131 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/menu_frame.tscn" id="1_frame"]
+[ext_resource type="Script" path="res://presentation/demo/ui/gear_screen.gd" id="2_gear"]
+[ext_resource type="Script" path="res://game/ui/ui_list.gd" id="3_list"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/list_entry.tscn" id="4_entry"]
+[ext_resource type="Resource" path="res://presentation/demo/ui/equipment.tres" id="5_set"]
+
+[node name="GearScreen" instance=ExtResource("1_frame")]
+script = ExtResource("2_gear")
+gear_set = ExtResource("5_set")
+
+[node name="ListWindow" type="PanelContainer" parent="Content/Stack"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Box" type="VBoxContainer" parent="Content/Stack/ListWindow"]
+layout_mode = 2
+
+[node name="ListTitle" type="Label" parent="Content/Stack/ListWindow/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Caption"
+
+[node name="Scroll" type="ScrollContainer" parent="Content/Stack/ListWindow/Box"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Pool" type="GridContainer" parent="Content/Stack/ListWindow/Box/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 4
+columns = 3
+script = ExtResource("3_list")
+entry_scene = ExtResource("4_entry")
+
+[node name="Empty" type="Label" parent="Content/Stack/ListWindow/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Hover or click a slot below to see what fits it."
+
+[node name="PartyWindow" type="PanelContainer" parent="Content/Stack"]
+layout_mode = 2
+
+[node name="Box" type="VBoxContainer" parent="Content/Stack/PartyWindow"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="HBoxContainer" parent="Content/Stack/PartyWindow/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Rows" type="VBoxContainer" parent="Content/Stack/PartyWindow/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Dim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 124.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.45)
+
+[node name="MenuCenter" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 124.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Menu" type="PanelContainer" parent="MenuCenter"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+
+[node name="Box" type="VBoxContainer" parent="MenuCenter/Menu"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Where" type="Label" parent="MenuCenter/Menu/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Caption"
+
+[node name="PieceName" type="Label" parent="MenuCenter/Menu/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Title"
+
+[node name="Effect" type="Label" parent="MenuCenter/Menu/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="MenuCenter/Menu/Box"]
+layout_mode = 2
+
+[node name="Equip" type="Button" parent="MenuCenter/Menu/Box/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"ToggleOn"
+text = "EQUIP"
+
+[node name="TakeOff" type="Button" parent="MenuCenter/Menu/Box/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Toggle"
+text = "TAKE OFF"
+
+[node name="Cancel" type="Button" parent="MenuCenter/Menu/Box/Buttons"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Toggle"
+text = "CANCEL"

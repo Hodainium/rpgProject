@@ -13,12 +13,13 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="10_a785i"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="11_v28ry"]
 [ext_resource type="Script" path="res://game/defs/character_definition.gd" id="12_jtjwe"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
 
 [resource]
 script = ExtResource("12_jtjwe")
 id = &"demo.character.cryomancer"
 attribute_set = ExtResource("11_v28ry")
-abilities = Array[PackedScene]([ExtResource("1_xyo8l"), ExtResource("2_x6h0j"), ExtResource("3_j4p6b"), ExtResource("4_4df2u"), ExtResource("5_tw87l"), ExtResource("6_0lbfh"), ExtResource("7_cmxln"), ExtResource("8_cl0tj"), ExtResource("9_hi4yg"), ExtResource("10_a785i")])
+abilities = Array[PackedScene]([ExtResource("1_xyo8l"), ExtResource("2_x6h0j"), ExtResource("3_j4p6b"), ExtResource("4_4df2u"), ExtResource("5_tw87l"), ExtResource("6_0lbfh"), ExtResource("7_cmxln"), ExtResource("8_cl0tj"), ExtResource("9_hi4yg"), ExtResource("10_a785i"), ExtResource("99_block")])
 display_name = "Cryomancer"
 display_color = Color(0, 0.7490196, 1, 1)
 tags = Array[StringName]([&"Character.Cryomancer"])

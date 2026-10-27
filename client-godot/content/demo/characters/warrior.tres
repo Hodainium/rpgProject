@@ -18,6 +18,7 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="15_break_physical"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="16_break_fire"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="17_break_ice"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="99_block"]
 
 [sub_resource type="Resource" id="Resource_xidmk"]
 script = ExtResource("7_pl6q8")
@@ -30,7 +31,7 @@ script = ExtResource("9_t641j")
 learnable_skills = Array[PackedScene]([ExtResource("8_r4oa6")])
 id = &"demo.character.warrior"
 attribute_set = ExtResource("2_4hcp5")
-abilities = Array[PackedScene]([ExtResource("10_ult"), ExtResource("1_abaht"), ExtResource("11_charge"), ExtResource("12_charge_hit"), ExtResource("13_execute"), ExtResource("14_provoke"), ExtResource("15_break_physical"), ExtResource("16_break_fire"), ExtResource("17_break_ice")])
+abilities = Array[PackedScene]([ExtResource("10_ult"), ExtResource("1_abaht"), ExtResource("11_charge"), ExtResource("12_charge_hit"), ExtResource("13_execute"), ExtResource("14_provoke"), ExtResource("15_break_physical"), ExtResource("16_break_fire"), ExtResource("17_break_ice"), ExtResource("99_block")])
 display_name = "Warrior"
 display_color = Color(0.27450982, 0.50980395, 0.7058824, 1)
 tags = Array[StringName]([&"Character.Warrior"])
