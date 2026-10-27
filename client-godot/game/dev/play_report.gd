@@ -389,6 +389,7 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 		"coinsSpent": {}, "refused": {}, "bySize": {}, "byCharacter": {}, "byParty": {}, "violations": [], "errors": [],
 		"runs": []}
 	var boss_hp := {}
+	var boss_sp := {}  # spec skill-points 5: the party's SP% entering each boss, beside its HP%
 	var turns := {}
 	var coins: Array[int] = []
 	for record in runs:
@@ -428,6 +429,10 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 				var values: Array[int] = []
 				boss_hp[key] = values
 			boss_hp[key].append(int(entry["hpPercent"]))
+			if not boss_sp.has(key):
+				var sp_values: Array[int] = []
+				boss_sp[key] = sp_values
+			boss_sp[key].append(int(entry.get("mpPercent", 0)))
 		for battle in record["battles"]:
 			if not turns.has(battle["encounter"]):
 				var values: Array[int] = []
@@ -446,6 +451,10 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 	report["winPercentX100"] = report["won"] * 10000 / count if count > 0 else 0
 	for key in boss_hp:
 		report["bossEntryHpPercent"][key] = spread(boss_hp[key])
+	var boss_sp_spread := {}
+	for key in boss_sp:
+		boss_sp_spread[key] = spread(boss_sp[key])
+	report["bossEntrySpPercent"] = SeedReport._sorted(boss_sp_spread)
 	for key in turns:
 		report["turnsPerBattle"][key] = spread(turns[key])
 	report["coinsSpent"] = spread(coins)
@@ -666,6 +675,10 @@ static func text(report: Dictionary) -> String:
 		var spread_entry: Dictionary = report["bossEntryHpPercent"][key]
 		lines.append("  boss entry HP %%, %s: min %d  median %d  max %d" % [key, spread_entry["min"], spread_entry["median"],
 			spread_entry["max"]])
+	for key in report.get("bossEntrySpPercent", {}):
+		var sp_entry: Dictionary = report["bossEntrySpPercent"][key]
+		lines.append("  boss entry SP %%, %s: min %d  median %d  max %d" % [key, sp_entry["min"], sp_entry["median"],
+			sp_entry["max"]])
 	for key in report["turnsPerBattle"]:
 		var spread_entry: Dictionary = report["turnsPerBattle"][key]
 		lines.append("  turns, %s: median %d  max %d" % [key, spread_entry["median"], spread_entry["max"]])

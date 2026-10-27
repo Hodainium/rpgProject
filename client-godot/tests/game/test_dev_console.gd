@@ -586,9 +586,9 @@ func test_status_command() -> void:
 	var enemy := battle.unit_by_id(&"E1")
 	for i in 2:
 		enemy.asc.apply_gameplay_effect(load(FIXTURES + "effects/st_poison.tres"), enemy.asc, 1)
-	eq((await _ok(session, "status E1"))["text"], "E1: Poison×2 3", "status shows stacks and turns left")
+	eq((await _ok(session, "status E1"))["text"], "E1: Lv 1 · Poison×2 3", "status shows the level, stacks and turns left (spec skill-points: and SP for party units)")
 	check(not (await _run(session, "status E9"))["ok"], "an unknown unit is refused")
-	check((await _ok(session, "status"))["text"].contains("P1: -"), "status alone lists every unit")
+	check((await _ok(session, "status"))["text"].contains("P1: Lv 1"), "status alone lists every unit")
 
 
 ## Spec content-pass 3.8 (dev-tools remaining work): `kill` sent while an enemy acts is queued and applied at the next

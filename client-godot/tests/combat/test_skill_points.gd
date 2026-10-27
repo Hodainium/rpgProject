@@ -372,3 +372,105 @@ func test_overtime_party_effect() -> void:
 	var total := func(battle: Battle) -> int:
 		return battle.unit_by_id(&"P1").stat("hp") + battle.unit_by_id(&"P2").stat("hp")
 	check(total.call(hurt) < total.call(plain) or hurt.outcome != plain.outcome, "the party lost HP to the overtime effect")
+
+
+## Spec skill-points 4.1: a One More's extra action that is a basic gains SP like any other basic.
+func test_one_more_basic_gains_sp() -> void:
+	var battle := new_battle(sp_snapshot("13", [1, 3], 1000))
+	battle.extra_action = true
+	check(await _act(battle, &"P1", &"Fixture.Ability.ChantJab"), "the extra action is a basic")
+	eq(battle.unit_by_id(&"P1").stat("mp"), 2700, "and gains 17 SP")
+
+
+## Spec skill-points 4.1: only Event.Ability.Used.Basic restores SP; follow-ups (fired from the trigger queue, which
+## sends no Used event) and ults gain nothing.
+func test_follow_ups_and_ults_gain_no_sp() -> void:
+	var battle := new_battle(sp_snapshot("13", [1, 3], 1000))
+	var chanter := battle.unit_by_id(&"P1")
+	chanter.asc.send_gameplay_event(&"Event.Ability.Used.FollowUp", {"source": chanter, "target": chanter})
+	chanter.asc.send_gameplay_event(&"Event.Ability.Used.Ultimate", {"source": chanter, "target": chanter})
+	await battle._drain_triggers()
+	eq(chanter.stat("mp"), 1000, "a follow-up or ult event restores nothing")
+	chanter._grant_ability(load("res://tests/fixtures/abilities/ult_nova.tscn"), &"")
+	chanter.asc.initialize_attribute_overrides({"energy": 10000.0})
+	var ult := chanter.ability_by_tag(&"Fixture.Ability.UltNova")
+	check(ult != null and await battle._activate(chanter, ult, null), "an ult is cast")
+	await battle._drain_triggers()
+	eq(chanter.stat("mp"), 1000, "and gains no SP")
+
+
+## Spec skill-points 4.1: in field mode an SP cost is scaled by sp_cost too (the cantor's Hymn, 25 SP, at 79%).
+func test_field_cost_is_scaled() -> void:
+	var snap := sp_snapshot("13", [1], 4000)
+	snap["party"][0]["unitDefId"] = "fixture.character.cantor"
+	var field := Battle.new()
+	host.add_child(field)
+	_runs.append(field)
+	eq(field.setup_field(snap, fixtures()), "", "a field battle")
+	var cantor := field.unit_by_id(&"P1")
+	var thrift := GameplayEffect.new()
+	thrift.policy = GameplayEffect.DurationPolicy.INFINITE
+	var modifier := CombatModifier.new()
+	modifier.attribute_name = "sp_cost"
+	modifier.operation = GameplayEffectModifier.Operation.PERCENT_ADD
+	modifier.value_x100 = -2100
+	thrift.modifiers.append(modifier)
+	cantor.asc.apply_gameplay_effect(thrift, cantor.asc, 1)
+	eq(await field.perform(&"P1", &"Fixture.Ability.Hymn", &"P1"), [], "Hymn on the map")
+	eq(cantor.stat("mp"), 4000 - 1900, "25 × 79% = 19 SP")
+
+
+## Spec skill-points D18: a level jump announces each level skill it reaches, once each.
+func test_level_jump_announces_each_skill() -> void:
+	var chanter: CharacterDefinition = fixtures().characters[&"fixture.character.chanter"]
+	var extra := LevelSkill.new()
+	extra.level = 4
+	extra.ability = load("res://tests/fixtures/abilities/secret_slam.tscn")
+	chanter.level_skills.append(extra)
+	var run := start_run(host, "5", [CHANTER])
+	_runs.append(run)
+	var leveled: RunStructure = run.structure.duplicate()
+	var curve: Array[int] = [50, 120, 400]
+	leveled.xp_to_level = curve
+	run.structure = leveled
+	var heard := []
+	_handles.append(GameplayMessages.listen(GameplayMessageRouter.RUN_SKILL_LEARNED,
+		func(_on: StringName, message): heard.append(message.data.get("skillTag"))))
+	run.gain_levels(3, null)
+	chanter.level_skills.erase(extra)
+	eq(heard, ["Fixture.Ability.ChantBurstTwo", "Fixture.Ability.SecretSlam"], "levels 3 and 4, one message each")
+
+
+## Spec skill-points D2 (fallback): RunStructure.sp_start_min raises a low carried SP at battle start; off, it carries.
+func test_sp_start_min() -> void:
+	var run := start_run(host, "5", [CHANTER])
+	_runs.append(run)
+	run.state.party[0]["mp"] = 0
+	eq(run._with_sp_floor(run.party_capture(false))[0]["mp"], 0, "off: SP carries as it is")
+	var floored: RunStructure = run.structure.duplicate()
+	floored.sp_start_min_x100 = 5000
+	run.structure = floored
+	eq(run._with_sp_floor(run.party_capture(false))[0]["mp"], 3000, "50% of 60 max SP")
+	run.state.party[0]["mp"] = 4500
+	eq(run._with_sp_floor(run.party_capture(false))[0]["mp"], 4500, "more than the floor: unchanged")
+
+
+## Spec skill-points D13 (b): mirror_limit copies only the first N pieces and counts no more for the per-item effect.
+func test_mirror_limit() -> void:
+	var mirror: EnemyDefinition = fixtures().units[&"fixture.enemy.mirror"]
+	mirror.mirror_limit = 2
+	var battle := new_battle(preload("res://tests/combat/test_mirror.gd").mirror_snapshot())
+	mirror.mirror_limit = 0
+	var stacks := 0
+	for active_effect in battle.unit_by_id(&"E1").asc._active_effects:
+		if active_effect.get_effect_def().resource_path.ends_with("per_item_boost.tres"):
+			stacks += 1
+	eq(stacks, 2, "6 pieces held, 2 counted")
+
+
+## Spec skill-points: the console's status shows a party unit's SP, gain and cost, and nothing for enemies.
+func test_status_sp_text() -> void:
+	var battle := new_battle(sp_snapshot("13", [3], 1000))
+	var status_command := preload("res://game/dev/commands/status.gd")
+	eq(status_command.sp_text(battle.unit_by_id(&"P1")), " · SP 10/68 (+19 a basic, gain 114%, cost 100%)", "the chanter")
+	eq(status_command.sp_text(battle.unit_by_id(&"E1")), "", "enemies have no SP")

@@ -53,7 +53,7 @@ static func state_text(run: RunController) -> String:
 			"  SANDBOX" if data["sandbox"] else ""]])
 	for member in data["party"]:
 		var stats: Dictionary = member["stats"]
-		lines.append("  P%d %s %s  hp %s/%s  mp %s/%s  ult %s/%s  items [%s]  use [%s]  gear [%s]" % [member["slot"],
+		lines.append("  P%d %s %s  hp %s/%s  sp %s/%s  ult %s/%s  items [%s]  use [%s]  gear [%s]" % [member["slot"],
 			member["character"], "" if member["alive"] else "DEAD", _typed(stats, "hp"), _typed(stats, "max_hp"),
 			_typed(stats, "mp"), _typed(stats, "max_mp"), _typed(stats, "energy"), _typed(stats, "max_energy"),
 			", ".join(member["items"]), ", ".join(member["useSlots"]), ", ".join(member["equipment"])])

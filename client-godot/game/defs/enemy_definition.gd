@@ -15,6 +15,9 @@ extends UnitDefinition
 ## (its set's tags or its effects' granted tags; "Drain" skips Drain.Physical). The piece still counts for
 ## per_item_effect. Empty: every piece is copied, as before.
 @export_custom(PROPERTY_HINT_NONE, "gas::tag") var mirror_skip_tags: Array[StringName] = []
+## Spec skill-points D13 (b): copy only the first this-many pieces the party holds (party slot order; items, then armor
+## by slot, then use slots), and count no more for per_item_effect. 0 = every piece, as before.
+@export var mirror_limit: int = 0
 ## Spec playable-demo 3.8 H10: applied once per item and armor piece the party holds, after floor scaling (run battles
 ## only). It must stack (FREE stacking policy).
 @export var per_item_effect: GameplayEffect

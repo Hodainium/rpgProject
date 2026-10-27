@@ -448,7 +448,7 @@ func battle_snapshot() -> Dictionary:
 		"seed": str(RunSeeds.derive(state.run_seed, "floor/%d/combat/%d%s" % [state.floor_index, pending_battle["cell"],
 			pending_battle["label"]])),
 		"encounterId": String(pending_battle["encounter"]),
-		"party": party_capture(false),
+		"party": _with_sp_floor(party_capture(false)),
 		"enemies": pending_battle["enemies"],
 	}
 	if scaling != null:
@@ -636,6 +636,23 @@ func _record_battle(battle: Battle) -> void:
 		for unit in battle.units():
 			statuses[String(unit.unit_id)] = unit.statuses()
 		battle_log.append({"event": "end", "statuses": statuses}))
+
+
+## Spec skill-points D2: with RunStructure.sp_start_min set, a carried SP below that share of max SP starts the battle
+## at it (whole SP; max SP from the members' current stats). Off: the captures as they are.
+@warning_ignore("integer_division")
+func _with_sp_floor(captures: Array) -> Array:
+	if structure == null or structure.sp_start_min_x100 <= 0:
+		return captures
+	var stats := party_stats()
+	for capture in captures:
+		if capture.get("mp") == null:
+			continue  # null = full already
+		var most := int(stats.get(capture["slot"], {}).get(BattleUnit.MAX_MP, 0))
+		var floor_value := Fixed.pct(most, structure.sp_start_min_x100) / 100 * 100
+		if int(capture["mp"]) < floor_value:
+			capture["mp"] = floor_value
+	return captures
 
 
 ## The party's run state as BattleSnapshot party members (spec 3.5). `full` leaves HP/MP null (= full).
@@ -1052,11 +1069,12 @@ func party_stats() -> Dictionary:
 	return stats
 
 
-## A unit's current and maximum hp/mp/energy (×100), for screens.
+## A unit's current and maximum hp/mp/energy (×100), for screens; spec skill-points: also its SP per basic, SP gain
+## and SP cost multipliers and its level where its AttributeSet has them (dev_run's JSON carries them).
 static func unit_stats(unit: BattleUnit) -> Dictionary:
 	var stats := {}
 	for attribute_name in [BattleUnit.HP, BattleUnit.MAX_HP, BattleUnit.MP, BattleUnit.MAX_MP, BattleUnit.ENERGY,
-			BattleUnit.MAX_ENERGY]:
+			BattleUnit.MAX_ENERGY, "sp_basic", "sp_gain", "sp_cost", BattleUnit.LEVEL]:
 		if unit.asc.has_attribute(attribute_name):
 			stats[attribute_name] = unit.stat(attribute_name)
 	return stats

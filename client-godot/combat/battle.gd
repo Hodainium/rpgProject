@@ -324,12 +324,16 @@ func _add_enemies_v2(snapshot: Dictionary, encounter: EncounterDefinition, conte
 		return entry["definition"] is EnemyDefinition and entry["definition"].mirror_party_items)
 	# Spec skill-points D14: the pieces a mirror boss of this encounter never copies.
 	var skip: Array[StringName] = []
+	var limit := 0  # spec skill-points D13 (b): the smallest mirror_limit set in the encounter (0 = none)
 	for entry in entries:
 		if entry["definition"] is EnemyDefinition and entry["definition"].mirror_party_items:
 			for tag in entry["definition"].mirror_skip_tags:
 				if not skip.has(tag):
 					skip.append(tag)
-	var mirror := _mirror_of_party(snapshot, content, skip)
+			var own: int = entry["definition"].mirror_limit
+			if own > 0 and (limit == 0 or own < limit):
+				limit = own
+	var mirror := _mirror_of_party(snapshot, content, skip, limit)
 	if runner_error != "":
 		return runner_error
 	for entry in entries:
@@ -368,7 +372,7 @@ func _add_enemies_v2(snapshot: Dictionary, encounter: EncounterDefinition, conte
 ## Spec playable-demo 3.8 (H9, H10): the party's held items and armor from the snapshot, in party slot order, then
 ## each member's items, armor (by slot tag) and use slots. {"holder": grants of holder items, armor and use slots,
 ## "party": grants of party-wide items, "count": pieces held}. Use abilities are never copied.
-func _mirror_of_party(snapshot: Dictionary, content: ContentIndex, skip: Array[StringName] = []) -> Dictionary:
+func _mirror_of_party(snapshot: Dictionary, content: ContentIndex, skip: Array[StringName] = [], limit: int = 0) -> Dictionary:
 	var result := {"holder": [], "party": [], "count": 0}
 	var by_slot: Array = snapshot.get("party", []).duplicate()
 	by_slot.sort_custom(func(a, b) -> bool: return int(a.get("slot", 0)) < int(b.get("slot", 0)))
@@ -378,6 +382,8 @@ func _mirror_of_party(snapshot: Dictionary, content: ContentIndex, skip: Array[S
 			if item == null:
 				_fail("unknown item '%s'" % item_id)
 				return result
+			if limit > 0 and result["count"] >= limit:
+				continue
 			result["count"] += 1
 			if item.grants != null and not _carries(item.grants, skip):
 				result["party" if item.applies_to == ItemDefinition.AppliesTo.PARTY else "holder"].append({"set": item.grants})
@@ -390,6 +396,8 @@ func _mirror_of_party(snapshot: Dictionary, content: ContentIndex, skip: Array[S
 			gear.append(piece)
 		gear.sort_custom(func(a, b) -> bool: return String(a.slot) < String(b.slot))
 		for piece in gear:
+			if limit > 0 and result["count"] >= limit:
+				continue
 			result["count"] += 1
 			if piece.grants != null and not _carries(piece.grants, skip):
 				result["holder"].append({"set": piece.grants})
@@ -398,6 +406,8 @@ func _mirror_of_party(snapshot: Dictionary, content: ContentIndex, skip: Array[S
 			if usable == null:
 				_fail("unknown item '%s'" % use_slot.get("itemId"))
 				return result
+			if limit > 0 and result["count"] >= limit:
+				continue
 			result["count"] += 1
 			if usable.grants != null and not _carries(usable.grants, skip):
 				result["holder"].append({"set": usable.grants})

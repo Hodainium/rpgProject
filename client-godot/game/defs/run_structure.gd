@@ -42,6 +42,14 @@ extends Resource
 @export_group("Keys and chests")
 ## Spec keys-and-gear 2.1-2.3 (Isaac-style). Keys the party starts with; floors before this number (1-based count:
 ## 1 = the first floor) have no locked rooms.
+## Spec skill-points D2 (the fallback): every battle starts with at least this share of max SP (typed %, 0 = off: SP
+## carries over as it is). Applied to the battle snapshot, so a replay needs no rule of its own.
+@export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var sp_start_min: float:
+	get:
+		return Fixed.to_display(sp_start_min_x100)
+	set(typed):
+		sp_start_min_x100 = Fixed.from_typed(typed)
+@export_storage var sp_start_min_x100: int = 0
 @export var starting_keys: int = 0
 @export var unlocked_floors: int = 0
 ## Typed percentages (20 = 20%), rolled when a room is cleared after a battle (never the boss room). A key is golden
