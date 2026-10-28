@@ -29,6 +29,8 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   below it and snapped up when it was freed. Each toast had two lines (title, then subtitle) and was 65–95 px tall.
   Wanted: oldest on top, one line each, thinner. **Four is a soft cap (user, 2026-10-27):** more may show; being over
   it only makes the oldest toasts expire faster (2–3×), never removes them at once.
+- **B5. Battle feed text hugs the left edge** (reported 2026-10-27). `feed_line.gd`'s slide-in tweened the label to
+  x 0, over the line's 12 px content margin, so the text sat at the left edge with twice the space on the right.
 
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved.
@@ -77,6 +79,12 @@ to `2` gives the list a third. It is one inspector value.
 | `toast.gd` | `leave_fast()`: the fade at `pushed_fade_speed` (3×) speed; the slide-in ends where the layout put the line (it used to end at y 0, top-aligning the text). |
 | `ui_theme.tres` | `toast` window `padding` `10` → `4`; `ToastTitle` font size `28` → `22`. A toast is about 44 px tall. |
 
+### Fix for B5
+| File | Change |
+|---|---|
+| `feed_line.gd` | The slide-in starts on the tween's first step (the line laid out) and ends at the label's laid-out x, not 0 (as `toast.gd` in B4). |
+| `feed_line.tscn` | `Text.horizontal_alignment` left → centre. |
+
 ## 5. Observability
 N/A: no server metrics.
 
@@ -99,6 +107,8 @@ N/A: no server metrics.
   expire early at 0.70, 0.95 and 1.20 s; 8 in one frame leave at 0.38, 0.62, 0.88 and 1.13 s, down to 4; each fast
   fade takes about 0.1 s and the glide up about 0.1 s, before the next fade starts. `test_run_toasts_cover_keys_and_chests` now expects the key and
   chest toasts together.
+- **B5:** `test_battle_hud::test_feed_line_centred`: after the slide-in, a feed line's text has equal space left and
+  right (more than 4 px each).
 - **Unchanged:** `test_demo_ui_policy`, the existing explore HUD and gear tests, and `validate_content.tscn`
   (`UIPolicyCheck`) still pass.
 - **Visual check:** the window run from section 1 again, with new screenshots of Use Item (Potion hovered), Use Ability,
