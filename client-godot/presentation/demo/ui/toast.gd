@@ -11,6 +11,8 @@ static var _rarity_regex: RegEx
 @export var slide_seconds: float = 0.3
 @export var slide_distance: float = 40.0
 @export var fade_seconds: float = 0.3
+## Spec ui-fixes B4: a toast pushed out by a newer one (more than the set's max_visible) fades this many times faster.
+@export var pushed_fade_speed: float = 3.0
 
 
 func set_item(toast: Dictionary, _context: UIContext) -> void:
@@ -21,14 +23,30 @@ func set_item(toast: Dictionary, _context: UIContext) -> void:
 	if StringName(toast.get("variation", &"")) != &"":
 		%Kicker.theme_type_variation = StringName(toast["variation"])
 	modulate.a = 0.0
+	# On the tween's first step (next frame, once the window is laid out); the tween dies with the toast.
+	create_tween().set_ignore_time_scale(true).tween_callback(_slide_in)
+
+
+## Slides the line down into the place the window's layout gave it.
+func _slide_in() -> void:
+	var place: float = %Lines.position.y
 	var tween := create_tween().set_ignore_time_scale(true).set_parallel(true)
 	tween.tween_property(self, "modulate:a", 1.0, slide_seconds)
-	tween.tween_property(%Lines, "position:y", 0.0, slide_seconds).from(-slide_distance).set_ease(Tween.EASE_OUT)
+	tween.tween_property(%Lines, "position:y", place, slide_seconds).from(place - slide_distance).set_ease(
+		Tween.EASE_OUT)
 
 
 func leave() -> void:
+	_fade(fade_seconds)
+
+
+func leave_fast() -> void:
+	_fade(fade_seconds / maxf(pushed_fade_speed, 1.0))
+
+
+func _fade(seconds: float) -> void:
 	var tween := create_tween().set_ignore_time_scale(true)
-	tween.tween_property(self, "modulate:a", 0.0, fade_seconds)
+	tween.tween_property(self, "modulate:a", 0.0, seconds)
 	tween.tween_callback(queue_free)
 
 

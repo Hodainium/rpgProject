@@ -58,6 +58,8 @@ seconds = 2.6
 [resource]
 script = ExtResource("1_set")
 rules = Array[ExtResource("2_rule")]([SubResource("rule_item"), SubResource("rule_floor"), SubResource("rule_level"), SubResource("rule_skill"), SubResource("rule_key"), SubResource("rule_chest_found"), SubResource("rule_chest_opened")])
-max_visible = 1
+stack = 1
+max_visible = 4
+overflow_seconds = 0.25
 max_queued = 5
 entry_scene = ExtResource("3_toast")

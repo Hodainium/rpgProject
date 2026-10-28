@@ -8,22 +8,24 @@ mouse_filter = 2
 theme_type_variation = &"Toast"
 script = ExtResource("1_toast")
 
-[node name="Lines" type="VBoxContainer" parent="."]
+[node name="Lines" type="HBoxContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 12
 alignment = 1
 
 [node name="Kicker" type="Label" parent="Lines"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 4
 theme_type_variation = &"Gold"
 horizontal_alignment = 1
 
 [node name="Title" type="RichTextLabel" parent="Lines"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 4
 mouse_filter = 2
 theme_type_variation = &"ToastTitle"
 bbcode_enabled = true
@@ -34,8 +36,7 @@ horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="Lines"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(520, 0)
 layout_mode = 2
+size_flags_vertical = 4
 theme_type_variation = &"Muted"
 horizontal_alignment = 1
-autowrap_mode = 3

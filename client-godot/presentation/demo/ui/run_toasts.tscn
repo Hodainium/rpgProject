@@ -12,11 +12,10 @@ script = ExtResource("1_host")
 toast_set = ExtResource("2_set")
 container = NodePath("Toasts")
 
-[node name="Toasts" type="VBoxContainer" parent="."]
+[node name="Toasts" type="Control" parent="."]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
 grow_horizontal = 2
 mouse_filter = 2
-theme_override_constants/separation = 8

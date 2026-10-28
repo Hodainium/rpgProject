@@ -5,6 +5,10 @@
 extends UIToastHost
 
 @export var map_slot: StringName = &"UI.Slot.Hud.Right"
+## Spec ui-fixes B4: the toasts stack oldest on top. When one leaves, the ones below glide up into its place (px a
+## second) instead of snapping; a new toast starts at its place.
+@export var separation: float = 6.0
+@export var glide_speed: float = 600.0
 
 ## [run, floor index] the floor toast was last shown for.
 var _floor_shown: Array = []
@@ -25,6 +29,27 @@ func on_activated() -> void:
 	receive(GameplayMessageRouter.RUN_FLOOR_ENTERED, VerbMessage.make(&"Verb.Enter", &"", run.state.chapter_id,
 		run.state.floor_index + 1, [], {"chapterName": chapter.display_name if chapter != null else ""}))
 	_note_floor()
+
+
+func _process(delta: float) -> void:
+	super(delta)
+	_lay_out(delta)
+
+
+## Spec ui-fixes B4: stacks the toasts top-down, centred; each moves toward its place at glide_speed.
+func _lay_out(delta: float) -> void:
+	var y := 0.0
+	for toast: Control in %Toasts.get_children():
+		if toast.is_queued_for_deletion():
+			continue
+		toast.size = toast.get_combined_minimum_size()
+		toast.position.x = (%Toasts.size.x - toast.size.x) / 2.0
+		if not toast.has_meta("placed"):
+			toast.set_meta("placed", true)
+			toast.position.y = y
+		else:
+			toast.position.y = move_toward(toast.position.y, y, glide_speed * delta)
+		y += toast.size.y + separation
 
 
 func _note_floor() -> void:

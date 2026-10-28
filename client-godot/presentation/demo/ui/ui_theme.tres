@@ -10,7 +10,7 @@ padding = 2
 
 [sub_resource type="StyleBox" id="toast"]
 script = ExtResource("window_style")
-padding = 10
+padding = 4
 
 [sub_resource type="StyleBoxFlat" id="feed_line"]
 content_margin_left = 12.0
@@ -373,7 +373,7 @@ RichTextLabel/constants/shadow_offset_x = 1
 RichTextLabel/constants/shadow_offset_y = 1
 ToastTitle/base_type = &"RichTextLabel"
 ToastTitle/fonts/normal_font = ExtResource("font_bold")
-ToastTitle/font_sizes/normal_font_size = 28
+ToastTitle/font_sizes/normal_font_size = 22
 Button/colors/font_color = Color(1, 1, 1, 1)
 Button/colors/font_hover_color = Color(1, 1, 1, 1)
 Button/colors/font_focus_color = Color(1, 1, 1, 1)
