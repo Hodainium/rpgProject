@@ -14,6 +14,10 @@ static var _rarity_regex: RegEx
 ## Spec ui-fixes B4: a toast pushed out by a newer one (more than the set's max_visible) fades this many times faster.
 @export var pushed_fade_speed: float = 3.0
 
+## Spec ui-fixes B6: how far above its place the whole banner is while it slides in (−slide_distance → 0); the host's
+## layout adds it, so the window and its text come down together.
+var drop: float = 0.0
+
 
 func set_item(toast: Dictionary, _context: UIContext) -> void:
 	_fill(%Kicker, toast.get("kicker", ""))
@@ -23,17 +27,10 @@ func set_item(toast: Dictionary, _context: UIContext) -> void:
 	if StringName(toast.get("variation", &"")) != &"":
 		%Kicker.theme_type_variation = StringName(toast["variation"])
 	modulate.a = 0.0
-	# On the tween's first step (next frame, once the window is laid out); the tween dies with the toast.
-	create_tween().set_ignore_time_scale(true).tween_callback(_slide_in)
-
-
-## Slides the line down into the place the window's layout gave it.
-func _slide_in() -> void:
-	var place: float = %Lines.position.y
+	drop = -slide_distance
 	var tween := create_tween().set_ignore_time_scale(true).set_parallel(true)
 	tween.tween_property(self, "modulate:a", 1.0, slide_seconds)
-	tween.tween_property(%Lines, "position:y", place, slide_seconds).from(place - slide_distance).set_ease(
-		Tween.EASE_OUT)
+	tween.tween_property(self, "drop", 0.0, slide_seconds).set_ease(Tween.EASE_OUT)
 
 
 func leave() -> void:

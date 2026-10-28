@@ -36,7 +36,8 @@ func _process(delta: float) -> void:
 	_lay_out(delta)
 
 
-## Spec ui-fixes B4: stacks the toasts top-down, centred; each moves toward its place at glide_speed.
+## Spec ui-fixes B4: stacks the toasts top-down, centred; each moves toward its place at glide_speed (a new one starts
+## at its place), plus its own slide-in offset (B6).
 func _lay_out(delta: float) -> void:
 	var y := 0.0
 	for toast: Control in %Toasts.get_children():
@@ -44,11 +45,11 @@ func _lay_out(delta: float) -> void:
 			continue
 		toast.size = toast.get_combined_minimum_size()
 		toast.position.x = (%Toasts.size.x - toast.size.x) / 2.0
-		if not toast.has_meta("placed"):
-			toast.set_meta("placed", true)
-			toast.position.y = y
-		else:
-			toast.position.y = move_toward(toast.position.y, y, glide_speed * delta)
+		var place: float = toast.get_meta("place", y)
+		place = move_toward(place, y, glide_speed * delta)
+		toast.set_meta("place", place)
+		var drop = toast.get("drop")  # spec ui-fixes B6: the banner's own slide-in
+		toast.position.y = place + (float(drop) if drop != null else 0.0)
 		y += toast.size.y + separation
 
 
