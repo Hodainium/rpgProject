@@ -120,6 +120,26 @@ func test_toast_stack_cap() -> void:
 	eq(th.toasts().size(), 0, "each fades after its seconds")
 
 
+## Spec ui-fixes B4: overflow_seconds makes max_visible a soft cap: all show, then the ones over it expire early, the
+## oldest first, one every overflow_seconds (chained), and only those leave through leave_fast().
+func test_toast_stack_soft_cap() -> void:
+	var th := _host([_rule(&"Message.Test.Feed", "line {count}", {"seconds": 3.0})], UIToastSet.Stack.STACK, 4)
+	th.toast_set.overflow_seconds = 0.25
+	for i in 8:
+		_verb(&"Message.Test.Feed", &"Verb.Damage", {}, i)
+	eq(th.toasts().size(), 8, "over the soft cap all show at first")
+	th.advance(0.26)
+	eq(_titles(th)[0], "line 1", "the oldest expired first, after overflow_seconds")
+	th.advance(0.25)
+	eq(th.toasts().size(), 6, "then the next one, overflow_seconds later")
+	th.advance(0.5)
+	eq(_titles(th), ["line 4", "line 5", "line 6", "line 7"], "down to the cap, newest kept")
+	th.advance(0.5)
+	eq(th.toasts().size(), 4, "the rest keep their own seconds")
+	th.advance(2.0)
+	eq(th.toasts().size(), 0, "and then leave")
+
+
 func test_toast_queue_cap() -> void:
 	var low := _rule(&"Message.Test.Low", "low {count}", {"seconds": 2.0})
 	var high := _rule(&"Message.Test.High", "high", {"seconds": 2.0, "priority": 5})

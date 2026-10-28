@@ -255,11 +255,57 @@ func test_run_toasts_cover_keys_and_chests() -> void:
 	game.run._clear_room(normal, true)
 	await _frames(2)
 	var titles: Array = host_panel.toasts().map(func(toast: Dictionary) -> String: return str(toast.get("title", "")))
-	eq(titles, ["You found a key!"], "the key toast shows first (one at a time)")
-	eq(host_panel.queued(), 1, "the chest toast waits behind it")
-	host_panel.advance(5.0)
-	titles = host_panel.toasts().map(func(toast: Dictionary) -> String: return str(toast.get("title", "")))
-	eq(titles, ["You found a Crate!"], "then the chest toast")
+	eq(titles, ["You found a key!", "You found a Crate!"], "the key and chest toasts show together, oldest first")
+
+
+## Spec ui-fixes B4: the run toasts stack four, oldest on top, one line each. Four is a soft cap: a fifth shows too, and
+## the oldest then expires early (overflow_seconds) and fades three times faster; the toasts below glide up into its
+## place (never below it, never snapping).
+func test_run_toasts_stack_four() -> void:
+	var game := await _game()
+	var host_panel: UIToastHost = _find(game, "RunToasts")
+	host_panel.advance(5.0)  # the floor toast from the run start expires
+	var box: Control = host_panel.get_node("%Toasts")
+	var waited := Time.get_ticks_msec()
+	while box.get_child_count() > 0 and Time.get_ticks_msec() - waited < 2000:  # its fade is real time
+		await _frames(1)
+	for level in [2, 3, 4, 5]:
+		host_panel.receive(GameplayMessageRouter.RUN_LEVEL_UP, VerbMessage.make(&"Verb.Gain", &"", &"Knight", level))
+	await _frames(3)
+	var nodes: Array = box.get_children().filter(func(node) -> bool: return not node.is_queued_for_deletion())
+	eq(nodes.size(), 4, "four toasts at once")
+	var line_height: float = nodes[0].size.y
+	check(line_height < 50.0, "one thin line each (%d px)" % line_height)
+	for index in range(1, nodes.size()):
+		check(nodes[index].position.y >= nodes[index - 1].position.y + line_height,
+			"toast %d sits below toast %d" % [index, index - 1])
+	var oldest: Control = nodes[0]
+	waited = Time.get_ticks_msec()
+	while nodes.any(func(node) -> bool: return node.modulate.a < 1.0) and Time.get_ticks_msec() - waited < 2000:
+		await _frames(1)  # their slide-in (real time) ends
+	var started := Time.get_ticks_msec()
+	host_panel.receive(GameplayMessageRouter.RUN_LEVEL_UP, VerbMessage.make(&"Verb.Gain", &"", &"Knight", 6))
+	eq(host_panel.toasts().size(), 5, "a fifth shows too (a soft cap)")
+	var early: float = host_panel.toast_set.overflow_seconds * 1000.0
+	var fading_at := -1
+	while is_instance_valid(oldest) and Time.get_ticks_msec() - started < 2000:
+		if fading_at < 0 and oldest.modulate.a < 1.0:
+			fading_at = Time.get_ticks_msec() - started
+		await _frames(1)
+	var gone_ms := Time.get_ticks_msec() - started
+	check(fading_at >= early - 20, "the oldest stays until overflow_seconds (fades at %d ms)" % fading_at)
+	check(not is_instance_valid(oldest) and gone_ms - fading_at < 200,
+		"then fades fast (%d ms; a normal fade is 300)" % (gone_ms - fading_at))
+	eq(host_panel.toasts().size(), 4, "back to four")
+	var second: Control = nodes[1]
+	var top := second.position.y
+	await _frames(1)
+	check(second.position.y < top and second.position.y > 0.0,
+		"the next toast glides up (y %.1f, was %.1f), it does not snap" % [second.position.y, top])
+	waited = Time.get_ticks_msec()
+	while second.position.y > 0.0 and Time.get_ticks_msec() - waited < 2000:
+		await _frames(1)
+	eq(second.position.y, 0.0, "and reaches the top")
 
 
 func test_use_and_status_screens() -> void:

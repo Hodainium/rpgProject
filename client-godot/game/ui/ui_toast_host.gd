@@ -3,7 +3,8 @@
 ##
 ## A toast is a Dictionary {kicker, title, subtitle, variation, seconds, priority, sound, pinned}. QUEUE sets show
 ## them one after another, STACK sets pile them up (the oldest leaves past max_visible). Each lasts its seconds of real
-## time. A rule with a hold_action also shows, pinned, while that action is held, from the latest message on its
+## time. An entry leaves through its leave() (a fade) when it has one, or leave_fast() when a newer toast pushed it
+## out of a full STACK (or expired early past a soft cap, see UIToastSet.overflow_seconds). A rule with a hold_action also shows, pinned, while that action is held, from the latest message on its
 ## channel (Tab keeps the floor toast up); while it is pinned, new QUEUE toasts wait.
 ##
 ## Presentation only: it listens, never changes the run or a battle.
@@ -102,7 +103,7 @@ func update() -> void:
 	var now := _now()
 	for live in _live.duplicate():
 		if live["until"] >= 0.0 and live["until"] <= now:
-			_remove(live)
+			_remove(live, live.get("pushed", false))
 	_update_hold()
 	_show_waiting()
 
@@ -115,8 +116,19 @@ func _on_message(_channel: StringName, message: GameplayMessage, rule: UIToastRu
 	if toast_set.stack == UIToastSet.Stack.STACK:
 		_show(toast)
 		var unpinned := _live.filter(func(live) -> bool: return live["until"] >= 0.0)
-		while unpinned.size() > maxi(toast_set.max_visible, 1):
-			_remove(unpinned.pop_front())
+		var over := unpinned.size() - maxi(toast_set.max_visible, 1)
+		if toast_set.overflow_seconds <= 0.0:
+			for index in maxi(over, 0):
+				_remove(unpinned[index], true)
+			return
+		# Soft cap: the toasts over it expire early, the oldest first, one every overflow_seconds (chained, so a burst
+		# keeps the same pace).
+		var at := _now()
+		for index in maxi(over, 0):
+			var live: Dictionary = unpinned[index]
+			live["pushed"] = true
+			live["until"] = minf(live["until"], at + toast_set.overflow_seconds)
+			at = live["until"]
 		return
 	_queue.append(toast)
 	while _queue.size() > maxi(toast_set.max_queued, 0):
@@ -179,15 +191,18 @@ func _is_held(action: StringName) -> bool:
 	return InputMap.has_action(action) and Input.is_action_pressed(action)
 
 
-func _remove(live: Dictionary) -> void:
+## `pushed`: a newer toast pushed it out of a full STACK (its entry may leave faster: leave_fast()).
+func _remove(live: Dictionary, pushed: bool = false) -> void:
 	_live.erase(live)
-	_drop(live["node"])
+	_drop(live["node"], pushed)
 
 
-func _drop(node: Node) -> void:
+func _drop(node: Node, pushed: bool = false) -> void:
 	if not is_instance_valid(node):
 		return
-	if node.has_method("leave"):
+	if pushed and node.has_method("leave_fast"):
+		node.leave_fast()
+	elif node.has_method("leave"):
 		node.leave()
 	else:
 		node.queue_free()
