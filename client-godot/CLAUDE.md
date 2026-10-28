@@ -62,7 +62,7 @@ from C#.**
   on the GDScript side) through one adapter, never chatty `Call()`/`Get()` glue. Glue loses compile-time checking,
   converts every value through `Variant`, mixes `await` and `Task` badly, and invites determinism bugs (locale
   `ToString`, `Dictionary` order, float math) that show up as false 2002 rejections.
-  `rpgDemo.csproj` (`Godot.NET.Sdk/4.7.2`, `net10.0`) references `src/Rpg.Client`; no C# scripts yet. The local
+  `rpgDemo.csproj` (`Godot.NET.Sdk/4.7.2`, `net10.0`) references `src/Rpg.Client`; its one C# script is `net/ServerBridge.cs` (spec `server-authority` 3.7), loaded only in server mode, so local mode and the tests never need the assembly. The local
   `Directory.Build.props`/`Directory.Packages.props` deliberately shield it from the repo-root build settings.
 
 ## 2. GodotGAS conventions (verified against addon source)

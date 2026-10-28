@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using Npgsql;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
 using Testcontainers.Redis;
@@ -32,6 +33,23 @@ public sealed class StackFixture : IAsyncLifetime
         await Postgres.DisposeAsync();
         await Redis.DisposeAsync();
         await RabbitMq.DisposeAsync();
+    }
+
+    /// <summary>
+    /// A new empty database in the shared Postgres container, so every run test migrates and writes on its own
+    /// schema. Returns its connection string.
+    /// </summary>
+    public async Task<string> NewDatabaseAsync()
+    {
+        var name = "t_" + Guid.NewGuid().ToString("N");
+        await using (var admin = new NpgsqlConnection(PostgresConnectionString))
+        {
+            await admin.OpenAsync();
+            await using var create = new NpgsqlCommand($"CREATE DATABASE {name}", admin);
+            await create.ExecuteNonQueryAsync();
+        }
+
+        return new NpgsqlConnectionStringBuilder(PostgresConnectionString) { Database = name }.ConnectionString;
     }
 
     /// <summary>Addresses where nothing listens, for "dependency unreachable" tests.</summary>

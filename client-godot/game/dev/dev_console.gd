@@ -98,6 +98,8 @@ func execute(line: String) -> Dictionary:
 	if game != null:
 		attach(game)
 	var ctx := DevContext.new(self, game)
+	if command.cheat and ctx.run != null and ctx.run.state != null and ctx.run.state.seeds().server_mode():
+		return {"ok": false, "text": "cheats are off while connected to the server"}  # spec server-authority 0
 	var text: Variant = await command.run(ctx, tokens.slice(1))
 	return {"ok": not ctx.failed, "text": str(text) if text != null else ""}
 

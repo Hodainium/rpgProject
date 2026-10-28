@@ -37,6 +37,9 @@ const CONTENT_ROOTS: Array[String] = ["res://content/", "res://tests/fixtures/"]
 var content_root: String = CONTENT_ROOTS[0]
 var content: ContentIndex
 var run: RunController
+## Spec server-authority 3.7: the link to the server (server mode), or null (local mode: no server url in the Settings,
+## or headless). use_server() sets it.
+var server: ServerLink
 var mode: String = "menu"
 ## The current battle's recorder (the party's input), for the dev console's battle commands.
 var recorder: ActionRecorder
@@ -97,7 +100,18 @@ func _ready() -> void:
 		_error_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
 		push_warning("GameMain: " + problem)
 	load_content()
+	if DisplayServer.get_name() != "headless":
+		use_server(ServerLink.from_settings())  # headless runs (tests, tools, the verifier) stay local
 	set_mode("menu")
+
+
+## Spec server-authority: plays in server mode through `link`, or in local mode when null.
+func use_server(link: ServerLink) -> void:
+	if server != null and server != link:
+		server.queue_free()
+	server = link
+	if server != null and server.get_parent() == null:
+		add_child(server)
 
 
 ## Spec ui-framework 2.1: the UI policy's layout under `canvas`. "" or why it failed (the game still runs headless and
@@ -149,12 +163,38 @@ func load_content() -> void:
 
 ## Starts a run with the chosen characters (ids) and a seed typed as a decimal string. "" or the error.
 ## `run_id` picks the RunStructure (spec playable-demo 2.2); empty = the only or the default one.
+## In server mode the seed is ignored: the server opens the run and issues every floor seed; "" returns at once and the
+## run starts when the server answers ("Connecting…" meanwhile; a refusal shows as a Notification).
 func start_run(character_ids: Array, seed_text: String, run_id: StringName = &"") -> String:
+	if server != null:
+		_start_server_run(character_ids, run_id)
+		return ""
 	_new_run()
 	var error := run.start_run(content, character_ids, seed_text, run_id)
 	if error != "":
 		set_mode("end")
 	return error
+
+
+## Spec server-authority 2.1: POST /runs, then the run plays floor 0 from the issued seed; later floors ask the link.
+func _start_server_run(character_ids: Array, run_id: StringName) -> void:
+	var picked := RunController.pick_run(content, run_id)
+	if picked["error"] != "":
+		show_message(picked["error"])
+		return
+	var structure_id := String(picked["run"].id)
+	show_message("Connecting…")
+	var result := await server.start_run(RulesetVersion.current(), structure_id, character_ids)
+	if not result["ok"]:
+		show_message("Server: " + ServerLink.describe(result["error"]))
+		return
+	var server_run_id := str(result["data"]["runId"])
+	_new_run()
+	server.link(run, server_run_id)
+	var error := run.start_server_run(content, character_ids, server_run_id, str(result["data"]["floorSeed"]).to_int(),
+		StringName(structure_id))
+	if error != "":
+		set_mode("end")
 
 
 ## Plays one room or hand-made floor (spec dev-tools 2.2). "" or the error.

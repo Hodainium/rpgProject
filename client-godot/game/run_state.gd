@@ -16,6 +16,9 @@ const LOST: String = "Lost"
 
 var run_id: String = ""
 var run_seed: int = 0
+## Spec server-authority 3.5: server mode only, floor index → the floor seed the server issued (empty in local mode).
+## The run's streams come from seeds(), never from run_seed directly.
+var floor_seeds: Dictionary = {}
 var run_structure_id: StringName = &""
 var party: Array[Dictionary] = []
 var coins: int = 0
@@ -56,6 +59,11 @@ var chests: Array[Dictionary] = []
 var chest_serial: int = 0
 ## Dev commands so far; the k-th one draws from the stream "dev/<k>".
 var dev_commands: int = 0
+
+
+## The run's seed source: local (the run seed) or server (the issued floor seeds).
+func seeds() -> SeedSource:
+	return SeedSource.new(run_seed, floor_seeds)
 
 
 func member(slot: int) -> Dictionary:
@@ -130,6 +138,9 @@ func canonical_lines() -> PackedStringArray:
 		"counters=%d|%d" % [field_actions_on_floor, gifts_on_floor],
 		"seen=%s" % ",".join(seen_items),
 	])
+	if not floor_seeds.is_empty():
+		# Spec server-authority 3.5: server mode only, so local runs hash exactly as before.
+		lines.insert(2, "floor_seed=%d" % int(floor_seeds.get(floor_index, 0)))
 	for entry in party:
 		var slots := PackedStringArray()
 		for use_slot in entry["use_slots"]:

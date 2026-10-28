@@ -17,13 +17,17 @@ var content: ContentIndex
 var run_structure: RunStructure
 var run_seed: int
 var depth: int
+## Spec server-authority 3.5: where the streams come from; local(run_seed) unless a seed source is given.
+var seeds: SeedSource
 
 
-func _init(content_index: ContentIndex, structure: RunStructure, seed_value: int, floor_depth: int) -> void:
+func _init(content_index: ContentIndex, structure: RunStructure, seed_value: int, floor_depth: int,
+		seed_source: SeedSource = null) -> void:
 	content = content_index
 	run_structure = structure
 	run_seed = seed_value
 	depth = floor_depth
+	seeds = seed_source if seed_source != null else SeedSource.local(seed_value)
 
 
 ## Steps 1-7 for a chapter.
@@ -32,7 +36,7 @@ func generate(chapter: ChapterDefinition, any_chapter: bool, pools: Dictionary) 
 	var rules := chapter.floor_gen_rules
 	if rules == null:
 		return _error("chapter %s has no floor_gen_rules" % chapter.id)
-	var layout_rng := RunSeeds.rng(run_seed, "floor/%d/layout" % depth)
+	var layout_rng := seeds.floor_rng(depth, "layout")
 	var map := FloorMap.new(rules.grid_size)
 	var target := mini(rules.max_rooms, rules.base_rooms + rules.rooms_per_depth * depth
 		+ layout_rng.randi_range(0, maxi(rules.random_extra_rooms, 0)))
@@ -86,7 +90,7 @@ func generate(chapter: ChapterDefinition, any_chapter: bool, pools: Dictionary) 
 	map.cells[map.start]["role"] = FloorMap.ROLE_START
 
 	# Step 5: rooms that fit each cell's doors.
-	var rooms_rng := RunSeeds.rng(run_seed, "floor/%d/rooms" % depth)
+	var rooms_rng := seeds.floor_rng(depth, "rooms")
 	for index in map.sorted_indices():
 		var data: Dictionary = map.cells[index]
 		data["doors"] = map.door_mask(index)
@@ -192,7 +196,7 @@ static func layout_map(layout: FloorLayout) -> Dictionary:
 
 ## Steps 6 (content) and 7 (pickups).
 func _resolve(map: FloorMap, chapter: ChapterDefinition, pools: Dictionary, overrides: Dictionary = {}) -> Dictionary:
-	var content_rng := RunSeeds.rng(run_seed, "floor/%d/content" % depth)
+	var content_rng := seeds.floor_rng(depth, "content")
 	for index in map.sorted_indices():
 		var data: Dictionary = map.cells[index]
 		var room: RoomDefinition = content.rooms[data["room"]]
@@ -203,7 +207,7 @@ func _resolve(map: FloorMap, chapter: ChapterDefinition, pools: Dictionary, over
 		data["content"] = resolved
 	for index in map.sorted_indices():
 		var data: Dictionary = map.cells[index]
-		var loot_rng := RunSeeds.rng(run_seed, "floor/%d/loot/%d" % [depth, index])
+		var loot_rng := seeds.floor_rng(depth, "loot/%d" % index)
 		var room: RoomDefinition = content.rooms[data["room"]]
 		for number in room.placements.size():
 			var placement: RoomPlacement = room.placements[number]
@@ -273,7 +277,7 @@ func rotated_boss(chapter: ChapterDefinition) -> EncounterDefinition:
 		func(encounter: EncounterDefinition) -> bool: return encounter.weight_x100 > 0)
 	if candidates.is_empty():
 		return null
-	var shuffle := RunSeeds.rng(run_seed, "chapter/%s/bosses" % chapter.id)
+	var shuffle := seeds.run_rng("chapter/%s/bosses" % chapter.id)
 	for index in range(candidates.size() - 1, 0, -1):
 		var other := shuffle.randi_range(0, index)
 		var held: Variant = candidates[index]

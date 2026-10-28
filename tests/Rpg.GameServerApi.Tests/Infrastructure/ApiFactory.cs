@@ -8,22 +8,47 @@ using Rpg.Contracts.Serialization;
 
 namespace Rpg.GameServerApi.Tests.Infrastructure;
 
-/// <summary>Hosts the real server in-process with the dependency addresses a test chooses.</summary>
-public sealed class ApiFactory(string postgres, string redis, string rabbitMq) : WebApplicationFactory<Program>
+/// <summary>
+/// Hosts the real server in-process with the dependency addresses a test chooses. The environment defaults to
+/// "Testing" (skips appsettings.Development.json and user secrets, so only these settings apply); run tests use
+/// "Development", where the X-Dev-Player header works, with every setting they rely on given here.
+/// </summary>
+public sealed class ApiFactory(string postgres, string redis, string rabbitMq, string environment = "Testing",
+    IReadOnlyDictionary<string, string?>? settings = null) : WebApplicationFactory<Program>
 {
+    public const string TestSeedSecret = "test-floor-seed-secret-0123456789abcdef";
+    public const string TestRuleset = "4.7.2.stable.mono+0123456789abcdef";
+
     public static ApiFactory AllUp(StackFixture stack) =>
         new(stack.PostgresConnectionString, stack.RedisConnectionString, stack.RabbitMqUri);
 
+    /// <summary>The whole stack, a database of its own, Development, accepting only <see cref="TestRuleset"/>.</summary>
+    public static async Task<ApiFactory> RunsAsync(StackFixture stack, string? redis = null,
+        string environment = "Development", IReadOnlyDictionary<string, string?>? settings = null) =>
+        new(await stack.NewDatabaseAsync(), redis ?? stack.RedisConnectionString, stack.RabbitMqUri, environment,
+            settings);
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // "Testing" skips appsettings.Development.json and user secrets, so only these addresses apply.
-        builder.UseEnvironment("Testing");
-        builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(new Dictionary<string, string?>
+        builder.UseEnvironment(environment);
+        builder.ConfigureAppConfiguration(config =>
         {
-            ["ConnectionStrings:Postgres"] = postgres,
-            ["ConnectionStrings:Redis"] = redis,
-            ["RabbitMq:Uri"] = rabbitMq,
-        }));
+            var values = new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:Postgres"] = postgres,
+                ["ConnectionStrings:Redis"] = redis,
+                ["RabbitMq:Uri"] = rabbitMq,
+                ["Seeds:Secret"] = TestSeedSecret,
+                ["Ruleset:AcceptAny"] = "false",
+                ["Ruleset:Accepted:0"] = TestRuleset,
+            };
+            foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
+            {
+                values[key] = value;
+            }
+
+            config.AddInMemoryCollection(values);
+        });
     }
 }
 

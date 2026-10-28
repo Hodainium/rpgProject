@@ -18,6 +18,15 @@ esac
 out="$root/build/$dir"
 rm -rf "$out"; mkdir -p "$out"
 log="$out/../export-$level.log"
+# Spec server-authority 3.5: the ruleset version is computed from source here and stamped into the pack (a pack can't
+# recompute it); the stamp is removed afterwards, whatever happens.
+stamp="$root/client-godot/game/ruleset_stamp.tres"
+trap 'rm -f "$stamp"' EXIT
+"$root/tools/watch.sh" --name "ruleset-$level" --timeout 300 --log "$out/../ruleset-$level.log" -- \
+	"$godot" --headless --path "$root/client-godot" --quit-after 100000 res://game/tools/print_ruleset_version.tscn -- --stamp
+code=$?
+if (( code != 0 )) || [[ ! -f $stamp ]]; then echo "export.sh: ruleset stamp failed (exit $code)"; exit 1; fi
+echo "export.sh: ruleset $(grep -m1 -oE '[0-9]+\.[0-9]+\.[0-9]+\.[a-z0-9.]+\+[0-9a-f]{16}' "$out/../ruleset-$level.log")"
 "$root/tools/watch.sh" --name "export-$level" --timeout 900 --log "$log" -- \
 	"$godot" --headless --path "$root/client-godot" "$mode" "$preset" "../build/$dir/rpgDemo.exe"
 code=$?

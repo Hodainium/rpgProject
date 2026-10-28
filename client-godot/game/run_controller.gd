@@ -22,6 +22,9 @@ signal run_ended(status: String)
 signal stopped(error: String)
 ## The console's `reveal` (spec dev-tools 3.2): the map view should show every room.
 signal map_revealed
+## Spec server-authority 2.1 (server mode): the run needs the seed of floor `floor_index` from the server. Emitted once
+## per floor, at next_floor; whoever links the run to the server answers with provide_floor_seed().
+signal floor_seed_needed(floor_index: int)
 
 var content: ContentIndex
 var structure: RunStructure
@@ -54,6 +57,10 @@ var _chest_gifts := PackedStringArray()
 var _chest_toasts: Array = []
 ## Spec event-items: RANDOM recipients drawn in the current action (the k in "floor/<n>/recipient/<cell>/<k>").
 var _recipient_draws: int = 0
+## Spec server-authority 2.1 (server mode): the floor enter_floor() waits on until its seed arrives
+## ({"floor": int, "choice": StringName}, else empty), and the floors whose seed was asked for.
+var _waiting_floor: Dictionary = {}
+var _requested_floors: Array[int] = []
 
 ## Spec keys-and-gear 3.2: run modifier tags on held items and worn equipment.
 const KEYS_DOUBLE_TAG: StringName = &"Run.Keys.Double"
@@ -69,6 +76,51 @@ func start_run(content_index: ContentIndex, character_ids: Array, seed_text: Str
 	var error := _begin_run(content_index, character_ids, seed_text, run_id)
 	if error != "":
 		return error
+	return _open_run()
+
+
+## Spec server-authority 2.1 (server mode): starts the run the server opened as `server_run_id`, with floor 0's issued
+## seed. Every stream then comes from issued floor seeds (SeedSource); each later floor waits for its own.
+func start_server_run(content_index: ContentIndex, character_ids: Array, server_run_id: String, floor_seed: int,
+		run_id: StringName = &"") -> String:
+	var error := _begin_run(content_index, character_ids, "0", run_id)
+	if error != "":
+		return error
+	state.run_id = server_run_id
+	state.floor_seeds[0] = floor_seed
+	allow_dev = false  # battles take no dev decisions while connected
+	run_log[0].erase("seed")
+	run_log[0]["runId"] = server_run_id
+	run_log[0]["floorSeed"] = str(floor_seed)
+	_requested_floors.assign([0])
+	return _open_run()
+
+
+## Server mode: the issued seed of floor `floor_index` arrived. Ignored when it is already known; resumes a floor
+## waiting for it.
+func provide_floor_seed(floor_index: int, floor_seed: int) -> String:
+	if state == null or state.floor_seeds.is_empty() or state.floor_seeds.has(floor_index):
+		return ""
+	state.floor_seeds[floor_index] = floor_seed
+	if _waiting_floor.get("floor", -1) != floor_index:
+		return ""
+	var waiting := _waiting_floor
+	_waiting_floor = {}
+	return enter_floor(floor_index, waiting["choice"])
+
+
+## The floor waiting for its seed from the server (server mode), or -1.
+func waiting_for_floor() -> int:
+	return int(_waiting_floor.get("floor", -1))
+
+
+## Spec server-authority 3.7: the server refused something the run can't go on without (not a loss). The run stops
+## like on a runner error: stopped(error) and a Notification.
+func stop_on_server_error(error: String) -> void:
+	_stop("server: " + error)
+
+
+func _open_run() -> String:
 	run_started.emit()
 	_send(GameplayMessageRouter.RUN_STARTED, &"Verb.Start", &"", structure.id)
 	return enter_floor(0)
@@ -228,14 +280,21 @@ func _new_member(slot: int, character: CharacterDefinition) -> Dictionary:
 
 ## `choice`: the chapter picked at the stairs for a CHOICE slot (spec playable-demo 3.8).
 func enter_floor(floor_index: int, choice: StringName = &"") -> String:
+	if not state.seeds().has_floor(floor_index):
+		# Spec server-authority 2.1: the floor can't be built before its seed arrives (provide_floor_seed).
+		_waiting_floor = {"floor": floor_index, "choice": choice}
+		_request_floor_seed(floor_index)
+		_notify("Connecting…")
+		return ""
 	var slot: FloorSlot = structure.floors[floor_index]
-	var picked := slot.pick_chapter(state.run_seed, floor_index, chapter() if state.chapter_id != &"" else null, choice)
+	var picked := slot.pick_chapter(state.run_seed, floor_index, chapter() if state.chapter_id != &"" else null, choice,
+		state.seeds())
 	if picked["error"] != "":
 		return _stop("%s: %s" % [structure.id, picked["error"]])
 	var chapter: ChapterDefinition = picked["chapter"]
 	_reset_floor(floor_index, chapter)
 	var pools := _pools()
-	var generator := FloorGenerator.new(content, structure, state.run_seed, floor_index)
+	var generator := FloorGenerator.new(content, structure, state.run_seed, floor_index, state.seeds())
 	var result: Dictionary
 	if slot.layout != null:
 		result = generator.from_layout(slot.layout, chapter, pools)
@@ -292,6 +351,8 @@ func next_floor(chapter_id: StringName = &"") -> String:
 				return String(chapter.id)))
 		entry["chapter"] = String(chapter_id)  # only on a choice, so older logs are unchanged
 	run_log.append(entry)
+	if state.seeds().server_mode():
+		_request_floor_seed(state.floor_index + 1)  # spec server-authority 2.1: asked now, the rest stop hides the wait
 	# Spec playable-demo 3.11 (D29): the rest stop opens first; the next floor starts when it ends.
 	if structure.rest_event != null:
 		state.event = {"cell": -1, "event": structure.rest_event.id, "page": 0, "rest_to": state.floor_index + 1,
@@ -459,7 +520,7 @@ func battle_snapshot() -> Dictionary:
 	var snapshot := {
 		"schemaVersion": 2,
 		"battleId": "%s/f%d/c%d%s" % [state.run_id, state.floor_index, pending_battle["cell"], pending_battle["label"]],
-		"seed": str(RunSeeds.derive(state.run_seed, "floor/%d/combat/%d%s" % [state.floor_index, pending_battle["cell"],
+		"seed": str(state.seeds().floor_derive(state.floor_index, "combat/%d%s" % [pending_battle["cell"],
 			pending_battle["label"]])),
 		"encounterId": String(pending_battle["encounter"]),
 		"party": _with_sp_floor(party_capture(false)),
@@ -597,7 +658,7 @@ func _announce_skills(member: Dictionary, character: UnitDefinition, shown: Stri
 ## Castlevania-style drops: one roll per beaten enemy that has a drop_item, on the stream floor/<n>/item_drop/<cell>
 ## (its own stream, so the coin roll never moves).
 func _roll_drops(enemies: Array, cell: int) -> void:
-	var stream := RunSeeds.rng(state.run_seed, "floor/%d/item_drop/%d" % [state.floor_index, cell])
+	var stream := state.seeds().floor_rng(state.floor_index, "item_drop/%d" % cell)
 	for enemy in enemies:
 		var definition := content.units.get(StringName(str(enemy.get("unitDefId", "")))) as EnemyDefinition
 		if definition == null or definition.drop_item == null or definition.drop_chance_x100 <= 0:
@@ -750,7 +811,7 @@ func _drop_coins(index: int, data: Dictionary) -> void:
 	var scaling: ScalingRules = chapter().scaling
 	var amount := 0
 	if scaling != null:
-		var drop_rng := RunSeeds.rng(state.run_seed, "floor/%d/drop/%d" % [state.floor_index, index])
+		var drop_rng := state.seeds().floor_rng(state.floor_index, "drop/%d" % index)
 		if RunSeeds.roll(drop_rng, scaling.coin_drop_chance_x100):
 			amount = drop_rng.randi_range(mini(scaling.coin_drop_min, scaling.coin_drop_max), scaling.coin_drop_max)
 	for enemy in data["content"]["enemies"]:
@@ -769,7 +830,7 @@ func _drop_keys_and_chests(index: int) -> void:
 	if structure == null:
 		return
 	if structure.key_drop_chance_x100 > 0:
-		var key_rng := RunSeeds.rng(state.run_seed, "floor/%d/key/%d" % [state.floor_index, index])
+		var key_rng := state.seeds().floor_rng(state.floor_index, "key/%d" % index)
 		if RunSeeds.roll(key_rng, structure.key_drop_chance_x100):
 			if RunSeeds.roll(key_rng, structure.golden_key_chance_x100):
 				give_golden_key()
@@ -778,7 +839,7 @@ func _drop_keys_and_chests(index: int) -> void:
 				add_keys(amount)
 				_send_key_found(amount, false)
 	if structure.chest_drop_chance_x100 > 0 and not structure.chest_drops.is_empty():
-		var chest_rng := RunSeeds.rng(state.run_seed, "floor/%d/chest/%d" % [state.floor_index, index])
+		var chest_rng := state.seeds().floor_rng(state.floor_index, "chest/%d" % index)
 		if RunSeeds.roll(chest_rng, structure.chest_drop_chance_x100):
 			var drop: ChestDrop = RunSeeds.pick_weighted(chest_rng, structure.chest_drops)
 			if drop != null and drop.chest != null:
@@ -867,7 +928,7 @@ func open_chest(index: int) -> String:
 	var outer_rng := _chest_rng
 	var outer_gifts := _chest_gifts
 	var outer_toasts := _chest_toasts
-	_chest_rng = RunSeeds.rng(state.run_seed, "chest/%d" % held["serial"])
+	_chest_rng = state.seeds().run_rng("chest/%d" % held["serial"])
 	_chest_gifts = PackedStringArray()
 	_chest_toasts = []
 	_recipient_draws = 0
@@ -999,8 +1060,8 @@ func _after_choice(after: Dictionary) -> String:
 		"encounter":
 			var encounter: EncounterDefinition = content.encounters[StringName(after["encounter"])]
 			var room: RoomDefinition = content.rooms[state.map.cells[cell]["room"]]
-			var event_rng := RunSeeds.rng(state.run_seed, "floor/%d/event/%d" % [state.floor_index, cell])
-			var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index)
+			var event_rng := state.seeds().floor_rng(state.floor_index, "event/%d" % cell)
+			var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
 			state.event = {}
 			pending_battle = {"cell": cell, "encounter": encounter.id,
 				"enemies": generator.resolve_enemies(encounter, room, false, chapter().scaling, event_rng),
@@ -1435,7 +1496,7 @@ func use_field(slot: int, ability_tag: StringName, target_slot: int = 0) -> Arra
 		return ["NotNow", "finish the battle first"]
 	if _gift_block() != "":
 		return ["NotNow", _gift_block()]
-	var seed_value := RunSeeds.derive(state.run_seed, "floor/%d/field/%d" % [state.floor_index, state.field_actions_on_floor])
+	var seed_value := state.seeds().floor_derive(state.floor_index, "field/%d" % state.field_actions_on_floor)
 	var battle := _field_battle(seed_value)
 	if battle == null:
 		return ["RunnerError", runner_error]
@@ -1565,9 +1626,9 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 	if item == null:
 		var gift_rng := _chest_rng
 		if gift_rng == null:  # spec keys-and-gear 2.3: a chest's gifts draw from the chest's own stream
-			gift_rng = RunSeeds.rng(state.run_seed, "floor/%d/gift/%d" % [state.floor_index, state.gifts_on_floor])
+			gift_rng = state.seeds().floor_rng(state.floor_index, "gift/%d" % state.gifts_on_floor)
 			state.gifts_on_floor += 1
-		var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index)
+		var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
 		item = generator.pick_item(null, query, gift_rng, _pools())
 		if item == null:
 			return
@@ -1589,7 +1650,7 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 		return
 	elif not holders.is_empty() and recipient == GiveItem.Recipient.RANDOM:
 		var cell := int(state.event.get("cell", state.current_cell))
-		var rng := RunSeeds.rng(state.run_seed, "floor/%d/recipient/%d/%d" % [state.floor_index, cell, _recipient_draws])
+		var rng := state.seeds().floor_rng(state.floor_index, "recipient/%d/%d" % [cell, _recipient_draws])
 		_recipient_draws += 1
 		slot = holders[rng.randi_range(0, holders.size() - 1)]
 	elif not holders.is_empty():
@@ -1670,7 +1731,7 @@ func give_equipment(piece: EquipmentDefinition) -> void:
 func give_equipment_from(query: GameplayTagQuery, prefer_open_slot: bool) -> void:
 	var gift_rng := _chest_rng
 	if gift_rng == null:
-		gift_rng = RunSeeds.rng(state.run_seed, "floor/%d/gift/%d" % [state.floor_index, state.gifts_on_floor])
+		gift_rng = state.seeds().floor_rng(state.floor_index, "gift/%d" % state.gifts_on_floor)
 		state.gifts_on_floor += 1
 	var open_slots: Array[StringName] = []
 	if prefer_open_slot:
@@ -1678,7 +1739,7 @@ func give_equipment_from(query: GameplayTagQuery, prefer_open_slot: bool) -> voi
 			for member in state.party:
 				if member["alive"] and not member["equipment"].has(slot_tag) and not open_slots.has(slot_tag):
 					open_slots.append(slot_tag)
-	var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index)
+	var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
 	var piece := generator.pick_equipment(query, gift_rng, _pools(), open_slots)
 	if piece != null:
 		give_equipment(piece)
@@ -1871,7 +1932,7 @@ func dev_spawn(encounter: EncounterDefinition) -> String:
 	var stream := dev_log("spawn", [encounter.id])
 	if content.encounters.get(encounter.id) != encounter:
 		content = content.overlay([encounter])
-	var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index)
+	var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
 	pending_battle = {"cell": state.current_cell, "encounter": encounter.id,
 		"enemies": generator.resolve_enemies(encounter, current_room(), false, chapter().scaling, stream),
 		"label": "/dev%d" % (state.dev_commands - 1)}
@@ -1889,7 +1950,7 @@ func dev_spawn_item(item: Resource, pool_tag: StringName, price: int) -> String:
 	if item == null:
 		var query := GameplayTagQuery.new()
 		query.require_all_tags.assign([pool_tag])
-		var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index)
+		var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
 		item = generator.pick_pickup(null, null, query, stream, _pools())
 		if item == null:
 			return "no item in the pool %s" % pool_tag
@@ -2015,7 +2076,13 @@ func _pools() -> Dictionary:
 
 
 func _active() -> bool:
-	return state != null and state.status == RunState.ACTIVE and runner_error == ""
+	return state != null and state.status == RunState.ACTIVE and runner_error == "" and _waiting_floor.is_empty()
+
+
+func _request_floor_seed(floor_index: int) -> void:
+	if not _requested_floors.has(floor_index):
+		_requested_floors.append(floor_index)
+		floor_seed_needed.emit(floor_index)
 
 
 func _end(status: String) -> void:

@@ -35,3 +35,6 @@ client-godot/android/
 **/*.log
 .DS_Store
 Thumbs.db
+
+# Ruleset version stamped by tools/export.sh for the pack (spec server-authority 3.5)
+client-godot/game/ruleset_stamp.tres
