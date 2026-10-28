@@ -1,9 +1,10 @@
 # Spec: dev-tools (slice 1c)
 
-Status: ✅ Done (synced with the implementation 2026-10-20) · Roadmap: slice 1c · Date: 2026-10-20
+Status: ✅ Done (synced with the implementation 2026-10-20; the end-to-end harness synced 2026-10-27) · Roadmap: slice
+1c · Date: 2026-10-20
 Design intent: `specs/design/game-design.md` section 6 (tool list). Builds on `specs/game-skeleton.md` (content types,
-generator, run layer). Server boundary: `specs/server-authority.md` section 0 (dev tools are **client-only** and
-disabled when connected).
+generator, run layer). Server boundary: `specs/server-authority.md` section 0 (dev tools are **client-only**; cheats are
+refused on server runs, while play commands play a server run the way the screens do).
 
 ## 1. Purpose & enterprise mapping
 Make content iteration fast, **only for mechanics that already exist**: build a room and play it in seconds, jump to
@@ -59,7 +60,7 @@ drive every tool through the script runner (2.6), and **any future tool or edito
 | `project.godot` | ✅ changed | Autoload `Dev` (console host; it registers the `dev_console` input action at start), plugin `rpg_dev` enabled |
 | `content/` | ✏️ written **by Godot when you save**, and by the dock when you click Create (a new file only; never overwrites) | Claude never uses the dock or the grid to write your folders; tests write only to `user://` |
 | `presentation/demo/` | ✏️ two small edits, approved (section 3.9) | Menu (Random fills a seed code), map view (`reveal`) |
-| `Rpg.Contracts`, server, Postgres, Redis, RabbitMQ, Redpanda | ❌ | N/A: dev tools are client-only (`server-authority` section 0). Nothing they do is ever sent or rewarded. |
+| `Rpg.Contracts`, server, Postgres, Redis, RabbitMQ, Redpanda | ❌ | N/A: dev tools are client-only (`server-authority` section 0). No cheat is ever sent or rewarded: cheats are refused on server runs. Play commands on a server run reach the server only as play does (through `ServerLink`); the end-to-end harness (E1–E8) drives the server that way |
 
 **Enterprise mapping:** this is the *developer-experience and data-quality* layer that a production data platform
 puts in front of its pipelines. The validator is a **schema and referential-integrity check run in CI** (like
@@ -72,8 +73,9 @@ a dev environment. Seed codes are human-friendly identifiers with a **check digi
 and ISINs), so a typo is refused instead of silently loading the wrong scenario.
 
 ## 2. Sequence flow
-No client → server traffic. The dock and the room grid run in the Godot editor; everything else runs in the game.
-In server mode (slice 2 onward) cheat commands are refused and Play always uses local mode.
+No client → server traffic of their own. The dock and the room grid run in the Godot editor; everything else runs in
+the game. In server mode (slice 2 onward) a cheat command is refused while the current run is a server run (the
+console checks `run.state.seeds().server_mode()`), and Play (sandbox) always uses local mode.
 
 ### 2.1 Console
 ```
@@ -244,8 +246,9 @@ func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply (may 
   runner and tests).
 - **Output:** scrollback in the console and `print()` to stdout (so headless runs and tests see it).
 - **`Dev` autoload** (`game/dev/dev.gd`): hosts the console (UI built in code; it registers the `dev_console`
-  action, backtick by physical key, if the project has none); `cheats_allowed()` is `OS.is_debug_build()` (slice 2
-  adds `and not ServerLink.connected`). It is **inert** when `DisplayServer.get_name() == "headless"` or in a release
+  action, backtick by physical key, if the project has none); `cheats_allowed()` is `OS.is_debug_build()`; on top of it,
+  `DevConsole.execute` refuses a cheat while the current run is a server run (slice 2: there is no global "connected"
+  flag; a local run or a sandbox played while linked still allows cheats). It is **inert** when `DisplayServer.get_name() == "headless"` or in a release
   build: no input handling, no UI, so the headless verifier never runs dev code (`Dev.is_inert_for(display,
   debug_build)` is the rule, testable without an export). Exported builds (spec `playable-demo` 3.12): the player
   build is a release export without the commands; the `dev` and `full` exports are debug builds with them. Battles' auto play lives in
@@ -259,7 +262,11 @@ func run(ctx: DevContext, args: PackedStringArray) -> String   # the reply (may 
 | Command | Cheat | Does |
 |---|---|---|
 | `help [command]` | | Lists commands, or one command's usage |
-| `new <id,id,...> [seed]` | | Starts a run (play command, like the menu); a seed code may be typed with its space |
+| `new <id,id,...> [seed]` | | Starts a run (play command, like the menu); a seed code may be typed with its space. In server mode the seed is ignored and the reply is "starting on the server" (the run starts when the server answers; follow with `wait run`) |
+| `server [<url> [player] \| off \| ruleset \| check]` | | Spec server-authority 3.7: shows the mode and the run's floor seeds; `<url> [player]` links (saved in the Settings), `off` goes back to local mode, `ruleset` prints the ruleset version, `check` (E3) asks the server whether it agrees with the run |
+| `wait run \| floor <n> \| stopped \| notice <text> [seconds]` | | E3: waits for something the server drives (default 30 s) |
+| `expect <field\|server.key> <value>` | | E3: fails unless that field of the run's report equals the value |
+| `e2e server-stop \| server-start \| redis-flush [seconds]` | | E3: a fault step for `tools/e2e.sh` (needs `dev_run --control`) |
 | `state [json]` | | Prints floor, cell, coins, party (HP/MP/ult charge and maxima read through GAS), items, use slots, equipment, open event or battle |
 | `map` | | Prints the floor as text: index, cell, role, room id, content, pickups, visited/cleared, ENTER where you can go |
 | `enter <cell>` | | `enter_room` (play command) |
@@ -661,8 +668,8 @@ independent work uses the machine's cores.
 Builders, imports and golden updates stay sequential (they write shared files). Claude runs every headless Godot and
 `dotnet test` command through these tools.
 
-## End-to-end harness (added 2026-10-27, spec only: not built)
-Status: 📝 Spec, awaiting review. Builds on `server-authority` Part A (slice 2, built 2026-10-27).
+## End-to-end harness (added 2026-10-27)
+Status: ✅ Built 2026-10-27 (`2d30598`), synced. Builds on `server-authority` Part A (slice 2, built 2026-10-27).
 
 ### E1. Purpose & enterprise mapping
 The unit and system suites prove each side alone: the .NET tests run the real server on Testcontainers, and the Godot
@@ -701,11 +708,12 @@ tools/e2e.sh [scenario ...] [--keep] [-j N]            (default: every client-go
   once: dotnet build src/Rpg.GameServerApi (watched); ruleset version = print_ruleset_version.tscn (watched)
   per scenario (parallel, each with its own port, database, Redis index, control folder, output folder):
     CREATE DATABASE e2e_<stamp>_<scenario>; FLUSHDB on Redis index i
-    start the server (watched), env: ASPNETCORE_ENVIRONMENT=Development, ASPNETCORE_URLS=http://127.0.0.1:<port>,
+    start the server (dotnet <dll>, not watched: see below), env: ASPNETCORE_ENVIRONMENT=Development,
+        ASPNETCORE_URLS=http://127.0.0.1:<port>,
         ConnectionStrings__Postgres (the e2e database), ConnectionStrings__Redis (…,defaultDatabase=<i>),
         RabbitMq__Uri, Seeds__Secret=<test secret>, Ruleset__AcceptAny=false, Ruleset__Accepted__0=<live version>
         (plus the scenario's own "#! env KEY=VALUE" lines, e.g. a wrong ruleset)
-    poll /health/ready until 200 (30 s, else fail with the server log)
+    poll /health/ready until 200 (about 60 tries, else fail with the server log)
     dev_run.tscn -- --script <scenario>.txt --out state.json --content-root res://tests/fixtures/
                     --server http://127.0.0.1:<port> --player e2e-<scenario> --control <folder>     (watched)
       each line → DevConsole.execute; a fault step (`e2e <action>`) writes <folder>/request and waits for
@@ -715,9 +723,14 @@ tools/e2e.sh [scenario ...] [--keep] [-j N]            (default: every client-go
             <scenario>.sql: every line is a query that must return t (psql against the e2e database)
             <scenario>.metrics: every line is a regex that must match the final /metrics scrape
     stop the server; DROP DATABASE (unless --keep); FLUSHDB
-  → build/e2e/<stamp>/<scenario>/ {server.log, godot.log, state.json, metrics.txt, sql.txt}
+  → build/e2e/<stamp>/<scenario>/ {server.log, godot.log, state.json, metrics.txt, sql.txt, control.log}
   → one line per scenario "ok|FAIL <scenario> (<seconds>s)", exit 0 all ok, 1 any failure, 124 a stall
 ```
+**The server is not run through `tools/watch.sh`:** the watcher kills anything quiet for 180 s, and a server is
+legitimately quiet. The harness owns its lifetime instead: its pid lives in a file (`server.pid`), so the control loop
+(a subshell) can stop and restart it; the scenario stops it at the end, and a trap stops it on Ctrl+C. The Godot run is
+watched, which bounds every scenario. A failed setup (database or Redis) still falls through to the cleanup. Every
+`docker compose exec` reads stdin from `/dev/null`, so a `.sql` file read line by line isn't swallowed.
 Inside the game, a server-mode run started from a script goes through the real path: `new` → `GameMain.start_run` →
 `ServerLink.start_run` (POST /runs) → `RunController.start_server_run`; the stairs → `floor_seed_needed` →
 `ServerLink` (POST /floors/{n}, retried while the server is down) → `provide_floor_seed`.
@@ -739,24 +752,31 @@ side (dev tools only; none of it ships in the player build):
 | `DevReport.state_of` → `"server"` | `game/dev/dev_report.gd` | Server mode only: `{"runId", "floorSeeds": {"0": "…"}, "waitingForFloor"}`; local reports are unchanged (goldens) |
 | Scenario files | `client-godot/tests/e2e/<name>.txt` (+ optional `.sql`, `.metrics`) | A `dev_run` script; lines `#! env KEY=VALUE` are server settings for this scenario (read by the harness, skipped by `dev_run` as comments) |
 
-**First scenarios (Part A):**
-1. `stairs`: `new` on the fixtures' two-floor run → `wait run` → `server check` → `autorun` (to the stairs) →
-   `wait floor 1` → `server check` → `expect floor 1`. SQL: one player `e2e-stairs`, one Active run on floor 1, two
-   `run_floors` rows. Metrics: `rpg_run_starts_total{…result="created"…} 1`, `rpg_floor_seeds_total{…issued…} 1`.
-2. `offline_stairs`: as `stairs`, but `e2e server-stop` before `autorun`, then `expect server.waitingForFloor 1`,
-   `e2e server-start`, `wait floor 1 90`, `server check`. Proves the client keeps the run while the server is gone
-   and syncs at the stairs once it is back (ServerLink backoff, `Connecting…`).
-3. `redis_flush`: `stairs` up to `wait floor 1`, then `e2e redis-flush`, `server check`. Metrics:
-   `rpg_cache_reads_total{…source="postgres"…}` present after the flush. **Scenario 4** end to end.
+**First scenarios (Part A).** Every scenario crosses the stairs with `autorun policy=smart`: the default `auto` policy
+lost on floor 0 in one run, and the smart policy cleared floor 0 on all 100 seeds measured (fixtures, two-floor run,
+knight and medic; the losses are on floor 1), which matters because server seeds are random.
+1. `stairs`: `new` on the fixtures' two-floor run → `wait run` → `expect server.waitingForFloor -1` → `server check`
+   → `autorun policy=smart` (to the stairs) → `wait floor 1` → `server check` → `expect floor 1`, `expect status
+   Active`. SQL: one player `e2e-stairs`, one Active run on floor 1, two `run_floors` rows. Metrics:
+   `rpg_run_starts_total{…result="created"…} 1`, `rpg_floor_seeds_total{…issued…} 1` and `{…repeated…} 2` (each
+   `server check` asks for the current floor again).
+2. `offline_stairs`: `e2e server-stop` before `autorun policy=smart`, then `wait notice Connecting` (right after
+   `autorun`: `wait notice` looks from the previous command's start on), `expect server.waitingForFloor 1`, `expect
+   floor 0`, `e2e server-start`, `wait floor 1 90`, `server check`, `expect floor 1`. Proves the client keeps the run
+   while the server is gone and syncs at the stairs once it is back (ServerLink backoff, `Connecting…`).
+3. `redis_flush`: `stairs` up to `wait floor 1`, then `server check` **twice** (the first fills the cache after the
+   stairs deleted it, the second is a real Redis hit), `e2e redis-flush`, `server check`. Metrics: both
+   `rpg_cache_reads_total{…source="redis"…}` and `{…source="postgres"…}`. **Scenario 4** end to end.
 4. `ruleset_refused`: `#! env Ruleset__Accepted__0=0.0.0.none+0000000000000000`; `new` → `wait notice 1001` →
-   `expect status ""` (no run). SQL: no runs.
+   `expect run ""` (with no run the report is `{"run": null}`). SQL: no runs. Metrics:
+   `rpg_run_starts_total{…result="rejected"…} 1`.
 
 ### E4. Failure modes
 | Case | Behaviour | Test |
 |---|---|---|
-| Infra not running | Exit 1 at once, naming the missing service and the compose command | `test_e2e.sh --check` (E6) |
-| Server never ready | The scenario fails after 30 s with the last 40 server log lines | manual (break a setting) |
-| A command fails or times out (`wait`, `expect`, `server check`) | `dev_run` exits 2 naming the line; the scenario fails; logs kept | `test_wait_command`, `test_expect_command` |
+| Infra not running | Exit 1 at once, naming the missing service and the compose command | manual (`test_e2e_check` covers only parsing and the tools) |
+| Server never ready | The scenario fails after about 60 readiness tries with the last 40 server log lines | manual (break a setting) |
+| A command fails or times out (`wait`, `expect`, `server check`) | `dev_run` exits 2 naming the line; the scenario fails; logs kept | `test_new_and_wait_in_server_mode`, `test_expect_command`, `test_server_check_command`; a wrong `.sql` line checked by hand (fails, names the line, keeps the logs) |
 | Godot or the server stalls | `tools/watch.sh` kills the tree, exit 124, the scenario fails | existing watch tests |
 | A fault action never acknowledged | `e2e` fails after its timeout; the harness logs an unknown action and acknowledges with an error | `test_e2e_command` |
 | Harness interrupted (Ctrl+C) | A trap stops every server it started and drops its databases (unless `--keep`) | manual |
@@ -773,20 +793,24 @@ No new instruments. The harness scrapes `/metrics` once per scenario (saved as `
 scenario's `.metrics` regexes against it, so each scenario also proves the counters it should move do move.
 
 ### E6. Test plan
-- **Godot (fixtures, fake bridge, no network)**: `test_wait_command` (each condition; timeout fails with the state),
-  `test_expect_command`, `test_e2e_command` (a request file appears, a written `done` completes it, no `--control`
+- **Godot (fixtures, fake bridge, no network)**: `test_new_and_wait_in_server_mode` (`new`'s server-mode reply; each
+  condition; a timeout fails with the state), `test_wait_notice_sees_a_refusal` (a 1001 refusal arrives as a notice,
+  no run starts), `test_expect_command`, `test_e2e_command` (a request file appears, a written `done` completes it, no `--control`
   fails), `test_server_check_command` (agreement passes; a different floor or seed fails), `test_run_player_stops_waiting`
   (autorun stops at the stairs of a server run and reports the floor), `test_dev_run_server_flag_keeps_settings`
   (`ServerLink.create` writes nothing), `test_dev_report_server_block` (present in server mode only; local
   `DevReport` goldens unchanged), `test_e2e_scenarios_lint` (every `tests/e2e/*.txt` names only known commands and
-  well-formed `#! env` lines; every `.sql` line is a single statement).
+  well-formed `#! env` lines; every `.sql` line is a single statement). Test shards run one file's tests in parallel
+  processes that share `user://`, so `test_e2e_command` uses a control folder per process.
 - **Harness self-check**: `tools/e2e.sh --check` (no Docker needed for the parse part) lists the scenarios, validates
   their files and checks that the tools exist; `test_build_bats`-style test `test_e2e_check` runs it.
 - **Not in the regular suites**: the full harness needs Docker and starts servers, so `tools/godot_tests.sh` and
   `tools/dotnet_test.sh` never run it. It runs on demand and before a server slice counts as done.
 - **Done when:** `tools/e2e.sh` passes all four scenarios locally, in parallel (`-j 4`), twice in a row, leaving no
   `e2e_*` database, no server process and no change to `user://game_main.cfg`; `stairs` with a deliberately wrong
-  `.sql` line fails and keeps its logs.
+  `.sql` line fails and keeps its logs. **Met 2026-10-27:** three parallel passes of all four scenarios (about 7 s
+  each), no `e2e_*` database left, no server running, `game_main.cfg` byte-identical; a copy of `stairs` with a wrong
+  `.sql` line failed naming it, kept its logs and exited 1.
 
 ### E7. Files
 ```
@@ -795,12 +819,13 @@ client-godot/tests/e2e/                       stairs, offline_stairs, redis_flus
 client-godot/game/tools/dev_run.gd            --server, --player, --control
 client-godot/game/server_link.gd              ServerLink.create(url, player)
 client-godot/game/dev/commands/               wait.gd, expect.gd, e2e.gd (new); server.gd (check); new.gd (server mode)
+client-godot/game/dev/dev_console.gd          control_dir; every Notification recorded for `wait notice`
 client-godot/game/dev/run_player.gd           stops while the run waits for a floor seed
 client-godot/game/dev/dev_report.gd           "server" block in server mode
 client-godot/tests/game/test_e2e_tools.gd     the tests in E6
 ```
 
-### E8. Decisions to review
+### E8. Decisions (2026-10-27, approved with the build)
 1. **A harness script, not a mock server.** The real server is cheap to run; a mock would duplicate the contract and
    drift. The fake bridge already covers the client without a network.
 2. **Throwaway state per scenario** (database, Redis index, port), never the dev database or Redis index 0, and no
@@ -814,6 +839,9 @@ client-godot/tests/game/test_e2e_tools.gd     the tests in E6
 6. **Fixtures content** (`res://tests/fixtures/`, the two-floor run): stable and quick; the user's tuning can't fail it.
 
 ## Remaining work
+- **Seed field in server mode** (3.1 note, "Later"): the title menu (your `presentation/`) still shows the seed field
+  while linked; `GameMain.start_run` ignores the seed in server mode. Hiding it is a `presentation/` change, yours to
+  approve.
 - `kill` queued during an enemy turn: tested since `content-pass` (`test_kill_queued_during_enemy_turn`, driven by
   the battle's signals).
 - **Manual checklist** (no headless test possible):
