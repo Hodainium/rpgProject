@@ -1,6 +1,7 @@
 # Spec: dev-tools (slice 1c)
 
-Status: ✅ Done (synced with the implementation 2026-10-20; the end-to-end harness synced 2026-10-27) · Roadmap: slice
+Status: ✅ Done (synced with the implementation 2026-10-20; the end-to-end harness synced 2026-10-27, its Part B
+additions (E9) 2026-10-27) · Roadmap: slice
 1c · Date: 2026-10-20
 Design intent: `specs/design/game-design.md` section 6 (tool list). Builds on `specs/game-skeleton.md` (content types,
 generator, run layer). Server boundary: `specs/server-authority.md` section 0 (dev tools are **client-only**; cheats are
@@ -838,13 +839,34 @@ client-godot/tests/game/test_e2e_tools.gd     the tests in E6
    offline.
 6. **Fixtures content** (`res://tests/fixtures/`, the two-floor run): stable and quick; the user's tuning can't fail it.
 
+### E9. Part B additions (slice 2b `run-authority`, built 2026-10-27)
+The harness and the console grew with `server-authority` Part B:
+- **Identity:** `--player <name>` is now the dev-token name (the server issues a bearer token for it); the harness
+  gives each scenario's server a test `Auth__SigningKey` next to the test seed secret. Development also brings
+  `Auth:DevTokens` and `Run:AutoApproveWins` from `appsettings.Development.json`, so a won scenario run is Won.
+- **Console:** `server resume` (an app restart: drops the run and continues the server's current run from the local
+  save, else from the server's log; it waits for a pending floor seed, then fails unless the state hash is the one
+  before, naming the first differing canonical line), `server forget` (deletes the local save), `server conflict`
+  (resends the last acknowledged action with another state hash, so the server answers 1103 and the rebuild runs end
+  to end); `server` shows the upload queue; `server check` first waits for the queue to drain and also compares the
+  server's `lastSeq` with the client's log; `wait ended [s]` holds until the end screen (a win only after the
+  server's verdict) with the whole log uploaded. The dev report's `server` block adds `queued`, `lastAckedSeq` and
+  `resumes` for a linked run.
+- **Scenarios** (fixtures, `client-godot/tests/e2e/`): `full_run` (a whole run to its end: every action in order,
+  snapshots at the checkpoints, battle sessions, the end action, `rpg_players_online` 1 with
+  `#! env Monitors__Interval=00:00:01`), `resume` (from the save, then from the server's log, then played to the
+  end), `conflict` (a 1103 rebuilds the run; the notice "The run continues from the server's log"); `stairs` and
+  `offline_stairs` gained Part B SQL (seqs 1…n with no gap, `last_seq` = the log, snapshots on the checkpoint types,
+  one battle session per battle action) and `offline_stairs` the upload-lag metric.
+- **Tests:** `test_wait_ended`, `test_server_save_commands` (forget, conflict, resume) in `test_e2e_tools.gd`; test
+  links save under `user://test_*`, never `user://saves/`.
+- **Done (2026-10-27):** all seven scenarios pass with `-j 4`, twice in a row; no `e2e_*` database or server left,
+  `game_main.cfg` byte-identical.
+
 ## Remaining work
-- **Seeds on screen in server mode → slice 2b's menu work** (decided 2026-10-27): while linked, the title menu still
-  shows the seed field (`GameMain.start_run` ignores it), the run-end screen prints "seed 0" (a server run has floor
-  seeds, no run seed) and its "Play again" starts a fresh server run. Harmless while server mode is reachable only
-  through the console's `server`. In 2b, with the connect/sign-in UI: show the field disabled ("Seed: issued by the
-  server") and the server's run id on the run-end screen instead of "seed 0" (`presentation/demo/ui/`, yours to
-  approve then).
+- **Seeds on screen in server mode:** done 2026-10-27 at the user's request (`presentation/demo/ui/`): the title
+  menu's seed field and Random button are disabled in server mode ("Seed: issued by the server"), and the run-end
+  screen shows the server's run id instead of "seed 0" and hides "Play again" for a server run.
 - `kill` queued during an enemy turn: tested since `content-pass` (`test_kill_queued_during_enemy_turn`, driven by
   the battle's signals).
 - **Manual checklist** (no headless test possible):

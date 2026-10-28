@@ -23,7 +23,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1f4. `event-items` | 🔨 Implemented, awaiting playtest (who gets an item from an event or a chest: `GiveItem.recipient` FIRST/RANDOM/CHOOSE, chests always CHOOSE, the logged `give_to` and the Give to panel; item toasts for every gift) | 2026-10-27 |
 | 1f5. `playtest-fixes` | 🔨 Ongoing, stays open (small UI and game adjustments from playtesting, one numbered entry each; was `ui-fixes`: menu frame, battle HUD panels, run toasts, feed lines, party strip) | 2026-10-27 |
 | 2. `run-checkout` | ✅ Done (spec synced; `server-authority` Part A: runs and HMAC floor seeds from the server, the Redis run cache with Postgres fallback (scenario 4), the ruleset version stamped at export, the client's seed source with local mode byte-identical; checked end to end by `tools/e2e.sh`) | 2026-10-27 |
-| 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
+| 2b. `run-authority` | ✅ Done (spec synced; `server-authority` Part B: bearer dev tokens, the action log uploaded in ordered idempotent batches with checkpoint snapshots and battle sessions, the stairs and win gates, local saves and resume from the save or the server's log, presence and the Lua rate limiter; seven `tools/e2e.sh` scenarios; remaining: a manual windowed playthrough of the demo against the dev server) | 2026-10-27 |
 | 3. `battle-verify` | ⬜ Not started | |
 | 4. `settlement-outbox` | ⬜ Not started | |
 | 4a. `run-verify` | ⬜ Not started | |
@@ -145,6 +145,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   rewards, armor always to the inventory, rarity tiers with pool weights; then the full ten-floor Descent (six
   chapters: Cellar, Crypt, Ember Forge, Hollow with no item rooms, Silent Cathedral, the Vault with a final boss that
   mirrors the party's items), before the screens. At the user's request.
+- 2026-10-27: 2b `run-authority` done and synced (`f254fad`): Part B as specified, plus the decisions made while
+  building (spec `server-authority` decision 17). At the user's request, the seed field and run-end line in server
+  mode (the dev-tools remaining-work item).
 
 
 ## Design tuning: any time, not just in breaks

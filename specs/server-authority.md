@@ -1,6 +1,7 @@
 # Spec: server-authority (slices 2 and 2b)
 
-Status: Part A ✅ built 2026-10-27 (`2b363c3`), synced 2026-10-27 · Part B 📝 spec, decisions confirmed · Roadmap:
+Status: Part A ✅ built 2026-10-27 (`2b363c3`), synced 2026-10-27 · Part B ✅ built 2026-10-27 (`f254fad`), synced
+2026-10-27 · Roadmap:
 system-design pass after 1b → Part A = slice 2 `run-checkout`, Part B = slice 2b `run-authority` (built in that order)
 · Date: 2026-10-19, revised 2026-10-20, synced 2026-10-27 (keys-and-gear, playable-demo 3.8/3.11, gameplay-messages,
 export presets; then Part A's implementation)
@@ -94,7 +95,10 @@ RunController.provide_floor_seed(1, seed)        the client generates floor 1 an
 ```
 **The rest stop (spec playable-demo 3.11):** `next_floor` opens the run's rest event first. The next floor starts
 when the rest event ends. The client asks for the seed at `next_floor`, so the rest stop hides the latency.
-`AfterSeq` is the `next_floor` action's own seq. Choices made at the rest stop are logged with the floor being left.
+`AfterSeq` (built): the client first empties its upload queue, then sends its last acknowledged seq, which is the
+`next_floor` action's own seq, or a rest-stop choice made after it (choices at the rest stop are logged with the floor
+being left). The server requires it to equal `last_seq` for the next floor (a missing one is 1106 too); asking for the
+current floor again needs none. On a 1106 the client drains the queue again and asks again.
 `GET /api/v1/runs/{runId}` and `GET /api/v1/runs/current` read `run:summary:{runId}` from Redis, then Postgres on a
 miss (and re-cache).
 
@@ -118,9 +122,20 @@ any in-floor action (enter_room, choose, give_to, take, buy, open_chest, field, 
 **Batches:** the client sends everything queued, up to 50 actions per request, in seq order, one request at a time.
 A player coming back online after a floor uploads it in a few requests, not 60 round trips. A batch is all-or-nothing;
 a retried batch is a no-op for the seqs already stored.
+**Shape checks (400, built):** 1–50 actions with consecutive seqs from 1 on; a known `Type` (`RunActionTypes`) and a
+non-negative floor; a `stateHash` (at most 128 characters); a snapshot, when present, a JSON object with
+`schemaVersion` 1; an `end` only as the last action of its batch; a battle on `battle` actions and on no others; a
+battle id under the run (`{runId}/…`, at most 256 characters) equal to its conditions' `battleId`, with a
+non-negative int64 seed. A battle id already stored at another seq is a different body: 409 `1103`. A batch made only
+of seqs already stored with the same body is acknowledged even after the run ended (a lost answer to the death's
+upload), so 1101 means a *new* action on a run that isn't Active. A queued `end` (Lost) ends the run (`ended_at` set).
+**State hashes (built):** every entry one player action logs carries the hash after that action; the only action that
+logs two is a death in battle (the `battle` and its `end`).
 
 **Checkpoints:** the client attaches a `RunSnapshot` (3.5, the full run state *after* the action) to: `start_run`
-(seq 1), every action that leaves a battle pending, every `battle`, and every `next_floor`. Those cut the log into
+(seq 1), every action that leaves a battle pending, every `battle`, and every `next_floor`. The server can tell only
+`start_run`, `battle` and `next_floor` apart, so it requires a snapshot on those three (400 otherwise); the
+battle-pending ones are the client's (`test_checkpoints_attached`). Those cut the log into
 **steps**: segments of out-of-battle actions, and single battles. Each step starts from a claimed snapshot, so
 slice 4a can verify all of a floor's steps in parallel and then check the links (each step's start hash = the
 previous step's verified end hash). Part B only stores them.
@@ -128,15 +143,20 @@ previous step's verified end hash). Part B only stores them.
 **Battles:** a `battle` action carries the conditions it was played under (the v2 `BattleSnapshot`, seed included,
 which the client derived from the floor seed), the action log, the outcome and the final hash. The server writes a
 `battle_sessions` row in the same transaction. Slice 3 verifies the battle against those conditions; slice 4a checks
-the conditions are what the run state at that point produces.
+the conditions are what the run state at that point produces. `run_actions.action` stores the action without its
+battle, which lives in `battle_sessions`; the resume tail puts them back together.
 
 ### 2.3 Ending a run (Part B)
 ```
 death: the defeat screen shows at once; `end {Lost}` is queued like any action → status Lost
 win:   RunController reaches the end → "Verifying run…" (blocking)
        ServerLink waits for the queue to drain, then POST /api/v1/runs/{runId}/end {seq, Won, runHash, snapshot}
-                                                 seq must be last_seq + 1 (else 409 1106 {lastSeq})
+                                                 seq > last_seq + 1 → 409 1106 {lastSeq}
+                                                 seq ≤ last_seq: the same end again → its status; else 1103 (Active)
+                                                   or 1101 (ended)
+                                                 the end is stored as an `end` action (runHash as its stateHash)
                                                  status → Verifying; 202 {status Verifying}
+                                                   (Run:AutoApproveWins: Won, ended_at set, 200; Lost: 200)
        client polls GET /api/v1/runs/{runId} every 2 s (SignalR replaces polling in slice 7)
          Won      → victory screen (rewards settle in slice 4/4a, in the same step)
          Rejected → rollback to the last valid checkpoint (4a); never a victory
@@ -146,16 +166,24 @@ win:   RunController reaches the end → "Verifying run…" (blocking)
 
 ### 2.4 Saves and resume (Part B)
 ```
-local save: user://saves/run.json, rewritten after every action: {runId, floorSeeds, snapshot (after the latest
-            action), unsent queue, lastAckedSeq}. A convenience copy; the server's accepted log always wins.
+local save: user://saves/<player>/run.json, rewritten after every action, ack and issued floor seed: {schemaVersion
+            1, runId, player, floorSeeds, snapshot (after the latest action), unsent queue, lastAckedSeq, end (a won
+            run's RunEndRequest while it waits)}. A convenience copy; the server's accepted log always wins.
 app start, signed in → GET /api/v1/runs/current → none: menu · Active: resume
-  with a matching save (same runId, save's seq ≥ server lastSeq): load the snapshot, keep playing, upload the queue.
+  with a matching save (same runId, save's seq ≥ server lastSeq): load the snapshot and the save's floor seeds (so a
+    run saved at the stairs opens the next floor at once, even offline), keep playing, upload the queue (a pending
+    end is sent again).
     If the upload hits 409 1103 (the server accepted different actions: another device, an old save restored),
     the save is discarded and the client resumes without it.
   without a save (or a discarded one): GET /api/v1/runs/{runId}/resume
             ◀── {floorSeeds, the latest checkpoint snapshot ≤ lastSeq, the accepted actions after it}
             the client loads the snapshot and replays the tail locally (same code as play; deterministic),
             then continues. Anything never uploaded from the lost device is gone.
+            Built: the tail is replayed on a RunController of its own (no screens, no queue; RunWire.apply), each
+            action checked against its stateHash, and the result loaded into the game's run. Before any checkpoint
+            is stored the answer has checkpointSeq 0 and a JSON null snapshot, which the client can't resume from.
+  a 1103 while playing: the save is deleted, the run is rebuilt the same way (after a battle in progress ends) and
+            the player sees "The run continues from the server's log".
 offline at app start with a save: play continues from the save; everything syncs later.
 ```
 The server never needs game rules to restore a run: the run is a seed set plus an ordered log, and the client
@@ -187,6 +215,8 @@ public sealed record RunActionBatch(IReadOnlyList<RunActionRequest> Actions);
 
 /// One run_log entry. StateHash = RunState.run_hash() after the action. Snapshot: the RunSnapshot JSON after the
 /// action, required on checkpoint actions (2.2). PlayedAt: the client's clock, for analytics and upload lag only.
+/// Built: Snapshot and every optional RunAction field are left out of the JSON when null (JsonIgnore WhenWritingNull,
+/// as BattleSnapshot does); RunActionTypes lists the 15 types (`All`) and the 3 the server checks (`Checkpoints`).
 public sealed record RunActionRequest(int Seq, RunAction Action, string StateHash, DateTimeOffset PlayedAt,
     JsonElement? Snapshot = null);
 
@@ -223,7 +253,7 @@ public sealed record RunEndRequest(int Seq, RunEndStatus Status, string RunHash,
 public enum RunEndStatus { Won, Lost }
 public sealed record RunEndResponse(string RunId, RunStatus Status);
 
-/// GET /api/v1/runs/{runId}/resume.
+/// GET /api/v1/runs/{runId}/resume. Snapshot is JSON null (CheckpointSeq 0) before any checkpoint is stored.
 public sealed record RunResumeResponse(string RunId, RunStatus Status, IReadOnlyList<FloorSeedResponse> FloorSeeds,
     int CheckpointSeq, JsonElement Snapshot, IReadOnlyList<RunActionRequest> Tail);
 
@@ -252,15 +282,14 @@ public static class ApiErrors
     public const int RulesetMismatch = 1001;          // 409: the client's ruleset_version isn't accepted
     public const int RunNotActive = 1101;             // 409
     public const int SequenceGap = 1102;              // 409, extension `expectedSeq`
-    public const int SequenceConflict = 1103;         // 409: same seq, different body
+    public const int SequenceConflict = 1103;         // 409: same seq, different body; built: extension `lastSeq`
     public const int FloorNotReachable = 1105;        // 409: not the current floor or the next one
     public const int UploadIncomplete = 1106;         // 409, extension `lastSeq`: stairs or end before the log is in
     public const int PreviousFloorUnverified = 1107;  // 409 + Retry-After (slice 4a)
     public const int RateLimited = 1201;              // 429 + Retry-After
 }
 
-/// Part A's development identity header (built 2026-10-27; Part B removes it).
-public static class ApiHeaders { public const string DevPlayer = "X-Dev-Player"; }
+/// Part A's development identity header (built 2026-10-27; removed with Part B: ApiHeaders is gone).
 ```
 **Snapshots are opaque to the server.** `RunSnapshot` (3.5) is owned by GDScript and changes with the game; the
 server stores it as `jsonb`, checks only that it's a JSON object with `schemaVersion` 1, and hands it back on resume
@@ -287,7 +316,7 @@ async and server-verified), `battle`, `next_floor`, `end` (Lost only; Won uses t
 | `GET /api/v1/runs/{runId}` | A | as above | 200 | 400, 401, 404 (also for another player's run), 503 |
 | `POST /api/v1/auth/dev-token` | B | none; **only when `Auth:DevTokens` is enabled** | 200 | 400, 404 when disabled |
 | `POST /api/v1/runs/{runId}/actions` | B | Bearer | 200 | 400, 401, 404, 409 1101/1102/1103, 429 |
-| `POST /api/v1/runs/{runId}/end` | B | Bearer | 202 Won (Verifying) / 200 Lost | 400, 401, 404, 409 1101/1102/1106 |
+| `POST /api/v1/runs/{runId}/end` | B | Bearer | 202 while Verifying / 200 Lost, or Won with `Run:AutoApproveWins` | 400, 401, 404, 409 1101/1103/1106 |
 | `GET /api/v1/runs/{runId}/resume` | B | Bearer | 200 | 401, 404, 409 1101 |
 | `GET /api/v1/runs/{runId}/battles/{seq}` | B | Bearer | 200 | 401, 404 |
 | `POST /api/v1/presence` | B | Bearer | 204 | 400, 401 |
@@ -298,7 +327,14 @@ SHA-256 over `"rpg-dev-player|" + name`, as a version-8 uuid), so the same name 
 `players` row (display name = the name) is created on the first run start. A missing header is 401, a bad name 400;
 outside Development the header is ignored and every run endpoint is 401. A run id in the path that isn't a uuid is a
 routing 404. The floor request's body is optional in Part A (`AfterSeq` is read from Part B on). Postgres unreachable
-is 503 ProblemDetails on any endpoint. Part B replaces the header with the token's `sub` everywhere and removes it. Idempotency: run start is not idempotent (a
+is 503 ProblemDetails on any endpoint. Part B replaces the header with the token's `sub` everywhere and removes it.
+**Built (Part B):** HS256 tokens signed with `Auth:SigningKey` (at least 32 characters, required at startup like
+`Seeds:Secret`: user-secrets in development, `Auth__SigningKey` elsewhere), issuer `rpg-game-server-api`, audience
+`rpg-game`, `sub` = the player id (the same name-derived uuid as Part A), `name` = the player name, lifetime
+`Auth:TokenLifetime` (12 h). `POST /auth/dev-token` takes a name (400 for a bad one) and answers 404 unless the
+environment is Development *and* `Auth:DevTokens` is on. The players row is still created at run start, from the
+token's `name`. A request without a valid token gets 401 from the JWT bearer handler. A run id in the path that
+isn't a uuid is a routing 404. Idempotency: run start is not idempotent (a
 second start abandons the first, by design); floor seeds are idempotent by `(runId, floor)`; actions by
 `(runId, seq)` with body comparison. No `Idempotency-Key` header is needed on these; slice 3's `/battle/verify`-style
 job submission and slices 5 and 5b (cards, market) keep it.
@@ -344,7 +380,8 @@ CREATE TABLE battle_sessions (
   UNIQUE (run_id, run_seq), FOREIGN KEY (run_id, run_seq) REFERENCES run_actions);
 ```
 Battle ids are the client's deterministic ids (`{runId}/f{floor}/c{cell}{label}`), so a re-uploaded battle maps to
-the same row. The seed column is parsed from the conditions for indexing and the verifier.
+the same row. The seed column is parsed from the conditions for indexing and the verifier. Built as
+`Migrations/0002_run_actions.sql`.
 
 ### 3.5 Client: seed source, run snapshot, ruleset version
 - **Seed source (Part A).** Every per-floor stream already uses the label `floor/{N}/…` under the run seed. A small
@@ -367,11 +404,16 @@ the same row. The seed column is parsed from the conditions for indexing and the
   battle and event directive: everything needed to continue a run, as a JSON dictionary with `schemaVersion: 1`.
   That includes the armor inventory (`RunState.armor`), keys, the golden key, held chests and the chest serial,
   opened rooms, XP and levels, pending gifts with the event's `after` step (event-items), and a pending rest stop
-  (`rest_to`).
+  (`rest_to`). Built as `game/run_snapshot.gd` (`RunController.snapshot()` / `load_snapshot()`): also the floor map, the
+  pending battle, a floor waiting for its seed and the floors already asked for, the summary tallies, and a compact run
+  log (`type`, `outcome`, `kind`, `status`, `party` per entry), so `run_summary()`, the run-end screen and the next
+  seq continue. Seeds travel as decimal strings; restoring puts back the ints and StringNames JSON loses.
   Requirements: (1) round trip: `from_snapshot(to_snapshot(s)).run_hash() == s.run_hash()`; (2) **resume
   equivalence**: a scripted run stopped at any checkpoint, saved, loaded and finished reaches the same final run hash
   as the uninterrupted run. That second property is what makes local saves, resume without a save, and 4a's parallel
-  step verification correct; it's a golden test. No RNG positions are needed: every stream is derived fresh from a
+  step verification correct. Built as `test_resume_equivalence`: every checkpoint of the scripted run and the keyed run,
+  through JSON, then the rest of the log replayed (`RunWire.apply`) and checked hash by hash against the uninterrupted
+  run (no golden file: the uninterrupted run is the reference). No RNG positions are needed: every stream is derived fresh from a
   seed and a label.
 - **Ruleset version (Part A).** `<godot version>+<first 16 hex of SHA-256>` over the sorted paths and **source**
   bytes of `res://combat/`, `res://game/`, `res://content/`, `res://godot_gas/` and the GodotGAS addon, minus the
@@ -393,20 +435,22 @@ the same row. The seed column is parsed from the conditions for indexing and the
 | Key | Part | Value | TTL | Semantics |
 |---|---|---|---|---|
 | `run:summary:{runId}` | A | `{playerId, summary}`: the `RunSummaryResponse` and its owner (decided 2026-10-27), so another player gets a 404 straight from Redis | 30 min | Cache-aside for `GET /runs/{id}` and `/runs/current` (via `run:current:{playerId}` → runId, same rules; a cached current id is used only while that run is still Active or Verifying, and "no current run" is never cached). Every write commits to Postgres first, then **deletes** the keys (never sets them from the write path, so a slow writer can't leave a stale copy); reads re-fill them. Any Redis error (incl. not connected yet) → counted, then Postgres. **Scenario 4.** |
-| `battle:session:{runId}:{seq}` | B | `BattleSessionResponse` JSON | 30 min | Same cache-aside rules; the verifier (slice 3) reads it first. |
-| `presence:online`, `presence:battle` | B | sorted sets, member playerId, score = last seen (unix s) | none (trimmed) | `ZADD` on every authenticated request and heartbeat; the heartbeat also adds/removes `presence:battle`. Gauges: `ZCOUNT` over the last 5 min (online) / 2 min (in battle); a 30 s job trims with `ZREMRANGEBYSCORE`. |
-| `ratelimit:{playerId}:{bucket}` | B | hash {tokens, updatedAt} | 10 min idle | Token bucket in one Lua script (atomic refill + take). Buckets: `actions` (requests, not actions per batch), `runs` (run starts), `floors`. Limits in `RateLimit:*`. Over the limit → 429 `1201` + `Retry-After`. |
+| `battle:session:{runId}:{seq}` | B | `{playerId, session}`: the `BattleSessionResponse` and the run's owner (built, like `run:summary`), so another player's 404 comes from Redis | 30 min | Same cache-aside rules; filled by reads only (a session doesn't change before slice 3's verdict); the verifier (slice 3) reads it first. |
+| `presence:online`, `presence:battle` | B | sorted sets, member playerId, score = last seen (unix s) | none (trimmed) | `ZADD` on every authenticated request (fire-and-forget, never adds latency) and heartbeat; the heartbeat also adds/removes `presence:battle`. Gauges: `ZCOUNT` over the last 5 min (online) / 2 min (in battle); a job every `Monitors:Interval` (30 s; it also drives `rpg_runs_in_progress`) trims with `ZREMRANGEBYSCORE` and counts. |
+| `ratelimit:{playerId}:{bucket}` | B | hash {tokens, updatedAt} | 10 min idle | Token bucket in one Lua script (atomic refill + take, on Redis's clock). Buckets: `actions` (upload requests, not actions per batch), `runs` (run starts), `floors` (the stairs), each on its own endpoint only. Limits `RateLimit:Buckets:<bucket>:Capacity` / `RefillPerSecond`; defaults actions 60 at 10/s, runs 5 at 0.1/s, floors 20 at 1/s. Over the limit → 429 `1201` + `Retry-After` (whole seconds, at least 1). |
 **Redis down:** reads fall back to Postgres; presence gauges stop updating (marked stale, not zero); the rate limiter
 **fails open** (requests pass, `rpg_cache_errors_total{operation="ratelimit"}` counts it). Correctness never depends
 on Redis: ordering and idempotency come from the run row lock and primary keys.
 
 ### 3.7 Godot side
-- **`client-godot/net/ServerBridge.cs`** (C#, the one adapter): wraps `Rpg.Client`. `Configure(baseUrl, devPlayer,
-  timeoutSeconds)`, then methods that take and return whole records as JSON strings (A: `StartRun(requestJson)`,
+- **`client-godot/net/ServerBridge.cs`** (C#, the one adapter): wraps `Rpg.Client`. `Configure(baseUrl,
+  timeoutSeconds)` and `SetToken(accessToken)` (built; Part A's `devPlayer` argument is gone), then methods that take and return whole records as JSON strings (A: `StartRun(requestJson)`,
   `GetFloorSeed(runId, floor, requestJson)`, `GetRun(runId)`, `GetCurrentRun()`; B adds `SendActions`, `EndRun`,
   `Resume`, `GetBattle`, `Heartbeat`, `GetDevToken`), each returning a request id at once and completing through one
   signal, `Completed(requestId, ok, json)` (C# keeps PascalCase names), on the main thread. ok: the response record
-  (`null` for a 204); not ok: `{status (0 = no answer), errorCode, title, detail, retryAfterSeconds}`. No game logic,
+  (`null` for a 204); not ok: `{status (0 = no answer), errorCode, title, detail, retryAfterSeconds, expectedSeq,
+  lastSeq}` (`Rpg.Client`'s `ApiProblem` reads the two extensions). A disposed bridge (the game quitting with a
+  request in flight) emits nothing. No game logic,
   no retries. Loaded only in server mode, so local mode and the tests never need the assembly.
 - **`game/server_link.gd`** (GDScript): `await`-able wrappers resolving to `{ok, data, error}`. Server mode is
   `GameMain.server != null` (no `connected` flag): `ServerLink.from_settings()` links when the Settings section
@@ -422,7 +466,18 @@ on Redis: ordering and idempotency come from the run row lock and primary keys.
   `Retry-After` on 429; a 409 `1103` discards the save and triggers resume without it; any other 409 stops the run
   through `RunController.stopped(error)`, like a runner error, not a loss), the heartbeat (every 30 s and on Menu/Map/Battle changes),
   and `user://saves/run.json`.
-- **`game/seed_source.gd`** (A) and **`game/run_snapshot.gd`** (B) as in 3.5.
+  **Built (Part B):** `ServerLink.player` (the dev name; a token is fetched before the first call and once more after
+  a 401) and `saves_dir` (the save is `user://saves/<player>/run.json`); `link(run, runId)` also turns on the run's
+  `journal` and `verify_wins` and connects the queue, the win and the heartbeat; `queued()`, `last_acked_seq()`,
+  `drained()`; `resume_into(run, content, summary)` (from the save, else from the server's log; links the run);
+  `dev_conflict()` (the console's `server conflict`). The heartbeat goes every 30 s, on link, on battle start and
+  finish and at run end; its activity is read from the run (Battle while a battle waits or plays, Map while the run
+  is Active, else Menu). `GameMain.resume_server_run()` continues the server's current run at app start in server
+  mode (and for the console's `server resume`).
+- **`game/seed_source.gd`** (A) and **`game/run_snapshot.gd`** (B) as in 3.5; **`game/run_wire.gd`** (B, built):
+  `RunWire.request()` turns a log entry into a `RunActionRequest` (the analytics fields and the room's offers read
+  from the run right after the action), `RunWire.apply()` plays a wire action through the same `RunController`
+  methods as play (a logged battle through the verifier's `ReplayController`): the resume tail.
 - **`RunController`** stays synchronous (A, built): `start_server_run(content, characters, runId, floorSeed,
   structure)` opens the run the server started (`allow_dev = false`; the start log entry carries `runId` and
   `floorSeed` instead of `seed`). `next_floor` emits `floor_seed_needed(n)` once per floor (the rest stop hides the
@@ -432,8 +487,17 @@ on Redis: ordering and idempotency come from the run row lock and primary keys.
   goes to the queue (B), with the snapshot on checkpoint actions and the battle conditions on `battle` entries (the
   conditions travel only in the queued message, not in `run_log`, so the local golden doesn't change). A won run
   emits a new `run_verifying` signal and only emits `run_ended("won")` after the server says Won.
+  Built: two flags, off in local mode (where nothing below runs): `journal` makes every public action
+  (`enter_room`, `choose`, `take`, `give_to`, `open_chest`, `equip`, `unequip`, `swap_gear`, `move_item`,
+  `use_field`, `fight`, `next_floor`, the run start) commit what it logged after it returns (`actions_committed(requests)`);
+  `verify_wins` holds a won run (`run_verifying(endRequest)`, "Verifying run…") until `confirm_end("Won")`.
+  `announce_resumed()` sends the signals a loaded run needs (its floor, room, a waiting battle, event page or pickups;
+  a floor waiting for a seed already known is entered).
 - **Presentation:** no change is required (the message line already shows `Message.Notification`, which carries
   "Connecting…" and "Verifying run…"). A dedicated verifying screen or a "Server: on/off" menu line only if you ask; those are your folders.
+  Made at the user's request (2026-10-27, in `presentation/demo/ui/`): in server mode the title menu's seed field and
+  Random button are disabled with "Seed: issued by the server" (`server_seed_text`), and the run-end screen shows
+  `run <first 8 of the run id>` instead of "seed 0" and hides "Play again".
 
 ## 4. Failure modes
 | Case | Behaviour | Test |
@@ -447,13 +511,13 @@ on Redis: ordering and idempotency come from the run row lock and primary keys.
 | Unaccepted ruleset version | 409 `1001` | `StartRun_UnknownRuleset_Rejected`; end to end: `tools/e2e.sh` `ruleset_refused` |
 | Two migrating instances | Advisory lock: one migrates, the other waits | `Migrations_ConcurrentStart_RunOnce`, `Migrations_CreateSchema_ThenAreANoOp` |
 | Development conveniences outside Development | `X-Dev-Player` ignored (401/400), `/auth/dev-token` 404, `Ruleset:AcceptAny` and `Run:AutoApproveWins` have no effect even if set in configuration | `DevConveniences_OffOutsideDevelopment` |
-| (A) No or bad `X-Dev-Player` | 401 / 400 on every run endpoint | `Endpoints_WithoutPlayer_Return401`, `DevPlayer_IdIsStablePerName` |
+| (A, replaced in B) No or bad `X-Dev-Player` | Header removed; the player id derivation is kept for dev tokens | `DevPlayer_IdIsStablePerName` (now `DevTokenIssuer.IdOf`), `DevToken_IdIsStablePerName_AndBadNamesAre400` |
 | (A) Malformed or incomplete run start | 400 | `StartRun_InvalidBody_Returns400` |
 | (A) Stairs on an ended run | 409 `1101` | `FloorSeed_EndedRun_Rejected` |
 | (A) The next floor | Issued, becomes current, the seed is the HMAC's | `FloorSeed_NextFloor_IssuedAndBecomesCurrent` |
 | (A, Godot) Stairs before the seed arrives | The run waits (every action refused), asks once, enters the floor when the seed comes; the same seed builds the same floor whenever it arrives | `test_stairs_wait_for_the_floor_seed` |
 | (A, Godot) No answer or a 5xx at the stairs | Retried with backoff until the seed arrives; a 4xx stops the run (not a loss) | `test_server_link_starts_and_retries_the_stairs`, `test_server_refusal_stops_the_run`; end to end with the server stopped and restarted: `tools/e2e.sh` `offline_stairs` |
-| (B) No or bad token | 401 on every player-state endpoint | `Endpoints_RequireAuth` |
+| (B) No or bad token | 401 on every player-state endpoint (none, malformed, signed with another key) | `Endpoints_RequireAuth`; client: a 401 fetches a new token once, `test_token_refreshed_on_401` |
 | (A, built) Another player's run | 404 (no existence leak), also from a cached copy | `Runs_OtherPlayer_NotFound` |
 | (B) Batch retried | Seqs already stored with the same body are skipped; same ack; no new rows | `Actions_BatchRetry_IsIdempotent` |
 | (B) Same seq, different body (old save, second device, tampering) | 409 `1103`; nothing in the batch is stored | `Actions_SameSeqDifferentBody_Conflicts` |
@@ -463,13 +527,19 @@ on Redis: ordering and idempotency come from the run row lock and primary keys.
 | (B) Stairs before the floor's log is uploaded | 409 `1106` with `lastSeq`; the client drains the queue and retries | `FloorSeed_UploadIncomplete_Rejected` |
 | (B) Win before the log is uploaded | 409 `1106` | `EndRun_UploadIncomplete_Rejected` |
 | (B) Win, verifier not built yet | `Verifying`; with `Run:AutoApproveWins` → `Won` | `EndRun_Won_VerifyingThenAutoApproved` |
-| (A, built) New run while one is active or verifying | The old run becomes `Abandoned` (a verifying run can't be abandoned: 409 `1101`) | `StartRun_AbandonsPrevious`; **untested:** the Verifying case (Part A can't produce a Verifying run; test it in 2b) |
+| (B) Death | 200 `Lost` by the end endpoint, or the queued `end` action; a retried death batch is acknowledged; later actions 1101 | `EndRun_Lost_ByEndpointOrQueuedAction` |
+| (B) Resume | Latest checkpoint ≤ `lastSeq` and exactly the actions after it (battles put back); none before a checkpoint; 1101 for an ended run, 404 for another player's | `Resume_ReturnsLatestCheckpointAndTail`, `Resume_TailCarriesItsBattles` |
+| (A, built) New run while one is active or verifying | The old run becomes `Abandoned` (a verifying run can't be abandoned: 409 `1101`) | `StartRun_AbandonsPrevious`, `StartRun_WhileVerifying_Rejected` |
 | (B) Battle action | One `battle_sessions` row in the same transaction; re-upload maps to the same row | `Actions_Battle_CreatesSession` |
 | (B) Rate limit exceeded | 429 `1201` + `Retry-After`; Redis down → fails open, counted | `RateLimit_Exceeded_Returns429`, `RateLimit_RedisDown_FailsOpen` |
-| (Godot) Offline for a whole floor | Play continues; the queue and save grow; at the stairs "Connecting…" until online, then the queue drains and the seed arrives | `test_offline_floor_then_sync` |
+| (Godot) Offline for a whole floor | Play continues; the queue and save grow; at the stairs "Connecting…" until online, then the queue drains and the seed arrives | `test_offline_floor_then_sync`; end to end: `tools/e2e.sh` `offline_stairs` |
+| (Godot) A refusal other than 1103 on upload | The run stops (not a loss); the action stays queued | `test_refusal_stops_the_run` |
 | (Godot) Network error mid-batch | Retried in order with backoff; the map keeps working | `test_action_queue_retries_in_order` |
-| (Godot) 409 `1103` on upload | The save is discarded; resume without a save | `test_conflict_discards_save` |
-| (Godot) Resume without a save | Snapshot + tail replay reaches the server's `stateHash` at `lastSeq` | `test_resume_from_server_log` |
+| (Godot) 409 `1103` on upload | The save is discarded; resume without a save | `test_conflict_discards_save`; end to end: `conflict` |
+| (Godot) Resume without a save | Snapshot + tail replay reaches the server's `stateHash` at `lastSeq` | `test_resume_from_server_log`; end to end: `resume` |
+| (Godot) Resume with the save | The save's state and floor seeds; the saved queue uploads; another run's save is not used | `test_resume_from_save`; end to end: `resume` |
+| (Godot) A won run | No victory before the server says Won (end after the drained queue, then polling) | `test_win_waits_for_verdict`; end to end: `full_run` |
+| **Untested (B)** | Redis down for presence (gauges keep their last value) and for the battle-session read (falls back to Postgres); `/auth/dev-token` with `Auth:DevTokens` off inside Development; a bad presence activity (400); the `actions` and `floors` rate-limit buckets (only `runs` is tested) | — |
 
 Root `CLAUDE.md` acceptance scenarios: **4** is covered here (Part A). **1**, **2** reuse this spec's key pattern in
 slices 3–4. **5** (tamper → 2002) is slice 3 for battles and 4a for runs; this spec makes it meaningful by fixing
@@ -488,10 +558,10 @@ Prometheus via the existing `RpgMetrics` meter:
 | `rpg_run_action_upload_lag_seconds` (B) | histogram | (received − played: how long players played offline before syncing) |
 | `rpg_run_action_duration_seconds` (B) | histogram | |
 | `rpg_battles_submitted_total` (B) | counter | |
-| `rpg_run_ends_total` (B) | counter | `status` = won \| lost \| auto_approved |
+| `rpg_run_ends_total` (B) | counter | `status` = won \| lost \| auto_approved (built: `won` when the win is submitted, `auto_approved` on top of it, `lost` by either path) |
 | `rpg_rate_limited_total` (B) | counter | `bucket` |
 | `rpg_dev_tokens_issued_total` (B) | counter | |
-| `rpg_runs_in_progress` | gauge | (status Active; recomputed every 30 s from Postgres; not exported until the first count. Its presence is tested; its value comes with `Gauges_PresenceAndRuns` in 2b) |
+| `rpg_runs_in_progress` | gauge | (status Active; recomputed every `Monitors:Interval`, 30 s, from Postgres; not exported until the first count; value tested by `Gauges_PresenceAndRuns`) |
 | `rpg_players_online` (B) | gauge | (`ZCOUNT presence:online`, last 5 min) |
 | `rpg_players_in_battle` (B) | gauge | (`ZCOUNT presence:battle`, last 2 min; a client hint, not a verified fact) |
 `type` and `bucket` are small fixed sets. Never item, character, room or encounter ids as labels. Traces: ASP.NET
@@ -509,8 +579,11 @@ plus: migrations create the schema on an empty database and are a no-op the seco
 checkpoint ≤ `lastSeq` and exactly the actions after it; `Gauges_PresenceAndRuns` (two players heartbeating, one idle
 for 6 minutes → `rpg_players_online` 2).
 **Client tests:** `Rpg.Client` calls against `WebApplicationFactory` (status codes → `GameServerApiException` with
-`errorCode`, `Retry-After` exposed). Part A: every run test goes through `Rpg.Client` (`ErrorCode` checked);
-**untested:** `RetryAfter`, since no Part A endpoint sends it (test it in 2b with the 429 rate limiter). Also built:
+`errorCode`, `Retry-After` exposed). Every run test goes through `Rpg.Client` (`ErrorCode` checked); `RetryAfter` with
+the 429 rate limiter (`RateLimit_Exceeded_Returns429`), `ExpectedSeq`/`LastSeq` with 1102/1103/1106.
+Built in B (`RunAuthorityTests`, `RunAuthorityContractTests`): every Part B server row of section 4, plus
+`Actions_UploadInOrder_StoredWithCheckpointSnapshots`, `Metrics_CountActionsBattlesEndsAndUploadLag`,
+`DevToken_IdIsStablePerName_AndBadNamesAre400`; golden JSON for every Part B record. Also built:
 `Metrics_CountRunStartsAndFloorSeeds`, `Traces_IncludeRedisAndNpgsqlSpans`, `Scripts_AreEmbedded_InNameOrder`.
 **Godot system tests (fixtures only, a fake bridge; no network):** A: `test_local_mode_unchanged` (every golden
 still matches); `test_server_seed_source` (floor content follows the issued floor seed, not the run seed; two runs
@@ -524,7 +597,10 @@ against the real server: `tools/e2e.sh` (spec dev-tools E1–E7). B: `test_snaps
 hash); `test_checkpoints_attached` (snapshots exactly on `start_run`, battle-pending actions, `battle`,
 `next_floor`); `test_actions_sent_in_order` (batches, seq 1…n); `test_offline_floor_then_sync`;
 `test_action_queue_retries_in_order`; `test_conflict_discards_save`; `test_resume_from_server_log`;
-`test_win_waits_for_verdict` (no `run_ended("won")` before the fake server says Won).
+`test_win_waits_for_verdict` (no `run_ended("won")` before the fake server says Won). Built in
+`tests/game/test_run_authority.gd`, with `test_refusal_stops_the_run`, `test_resume_from_save` and
+`test_token_refreshed_on_401`; the real client against the real server: `tools/e2e.sh` scenarios `full_run`,
+`resume`, `conflict` (spec dev-tools E9) and the Part B checks added to `stairs` and `offline_stairs`.
 **Part A done (2026-10-27):** both suites pass; every floor seed of a run comes from the server, a floor crossed with
 the server stopped syncs at the stairs once it is back, and flushing Redis mid-run changes nothing for the player
 (`tools/e2e.sh`); the player export carries the stamped ruleset version. **Done when (B):** `dotnet build` /
@@ -533,6 +609,12 @@ plays a run where every floor seed comes from the server, every action lands in 
 snapshots at checkpoints and battles in `battle_sessions`; a floor played with the network cut syncs at the stairs;
 deleting the local save mid-run and restarting resumes at the same state hash; flushing Redis mid-run changes nothing
 for the player; `/metrics` shows runs in progress, players online and in battle, and upload lag.
+**Part B done (2026-10-27):** both suites pass (138 .NET, 499 Godot, every golden unchanged); `tools/e2e.sh -j 4`
+passes all seven scenarios twice in a row (every action in `run_actions` in order with snapshots at checkpoints,
+battles in `battle_sessions`, a floor crossed offline, resume from the save and from the server's log at the same
+state hash, a 1103 rebuilding the run, Redis flushed mid-run, players online in `/metrics`), on the fixtures run.
+**Remaining:** the same with the demo content in a windowed game against the dev server (a manual playthrough of The
+Descent); `rpg_players_in_battle` is checked by the server test only, not end to end.
 
 ## 7. What later slices pick up
 - **Slice 3 `battle-verify`:** a submitted battle (conditions + log) becomes a verify job on RabbitMQ; verdict cache
@@ -567,7 +649,12 @@ src/Rpg.Contracts/Runs/, Battle/, Presence/, Auth/   action, end, resume, battle
 src/Rpg.GameServerApi/           Auth/ (JWT bearer, dev issuer), Runs/ (actions, end, resume), Battle/ (session read + cache),
                                  Presence/, RateLimiting/ (Lua token bucket), Migrations/0002_*.sql
 Directory.Packages.props         Microsoft.AspNetCore.Authentication.JwtBearer (pinned)
-client-godot/game/               run_snapshot.gd, server_link.gd (queue, save, resume, heartbeat), run_controller.gd, run_state.gd
+client-godot/game/               run_snapshot.gd, run_wire.gd, server_link.gd (queue, save, resume, heartbeat), run_controller.gd,
+                                 game_main.gd, dev/commands/server.gd, wait.gd, dev/dev_report.gd (run_state.gd unchanged)
+client-godot/net/ServerBridge.cs token and the Part B calls
+src/Rpg.Client/                  the Part B calls, AccessToken, ApiProblem.ExpectedSeq/LastSeq
+tests/                           contract goldens, RunAuthorityTests, test_run_authority.gd; tools/e2e.sh + scenarios
+presentation/demo/ui/            (user's folder, at the user's request) title_menu.gd, run_end.gd
 infra/.env.example               a note: server secrets (Seeds:Secret, the JWT key) go to user-secrets in development
 ```
 
@@ -606,3 +693,7 @@ All confirmed 2026-10-20 (1, 6 and 10 were decided in the design discussion).
 15. **`rpg_cache_errors_total` also counts `set`** (2026-10-27): a Redis that accepts reads but not writes stays visible.
 16. **Redis spans now, through a prerelease package** (2026-10-27): `OpenTelemetry.Instrumentation.StackExchangeRedis`
     `1.20.0-beta.1`, pinned like the Prometheus exporter, rather than waiting for slice 6.
+17. **Part B as built** (2026-10-27, approved in the sync): the end endpoint answers 1103 for a used seq with another
+    body and 200 once the status is final; the stairs take the client's last acknowledged seq (rest-stop choices may
+    follow `next_floor`); the server checks snapshots only where it can tell (`start_run`, `battle`, `next_floor`);
+    one action's entries share its after-hash; the save lives per player and carries the issued floor seeds.
