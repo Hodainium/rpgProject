@@ -308,6 +308,32 @@ func test_run_toasts_stack_four() -> void:
 	eq(second.position.y, 0.0, "and reaches the top")
 
 
+## Spec ui-fixes B6: holding Tab slides the whole floor banner down into place: the window comes down, and its text
+## stays put inside it.
+func test_floor_toast_slides_as_one() -> void:
+	var game := await _game()
+	var host_panel: UIToastHost = _find(game, "RunToasts")
+	host_panel.advance(5.0)  # the floor toast from the run start expires
+	var box: Control = host_panel.get_node("%Toasts")
+	var waited := Time.get_ticks_msec()
+	while box.get_child_count() > 0 and Time.get_ticks_msec() - waited < 2000:  # its fade is real time
+		await _frames(1)
+	host_panel.hold(&"show_floor_info", true)
+	await _frames(2)
+	eq(box.get_child_count(), 1, "Tab shows the floor toast")
+	if box.get_child_count() != 1:
+		return
+	var banner: Control = box.get_child(0)
+	var text_y: float = banner.get_node("%Lines").position.y
+	check(banner.position.y < 0.0, "the banner starts above its place (y %.1f)" % banner.position.y)
+	waited = Time.get_ticks_msec()
+	while banner.position.y < 0.0 and Time.get_ticks_msec() - waited < 2000:
+		await _frames(1)
+	eq(banner.position.y, 0.0, "and comes down into it")
+	eq(banner.get_node("%Lines").position.y, text_y, "its text moved with it, not inside it")
+	host_panel.hold(&"show_floor_info", false)
+
+
 func test_use_and_status_screens() -> void:
 	var game := await _game()
 	var use = game.ui.push(&"UI.Layer.GameMenu", load("res://presentation/demo/ui/use_screen.tscn"), {"mode": "ability"})

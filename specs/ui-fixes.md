@@ -31,6 +31,8 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   it only makes the oldest toasts expire faster (2–3×), never removes them at once.
 - **B5. Battle feed text hugs the left edge** (reported 2026-10-27). `feed_line.gd`'s slide-in tweened the label to
   x 0, over the line's 12 px content margin, so the text sat at the left edge with twice the space on the right.
+- **B6. The Tab floor banner appears in place while only its text slides down** (reported 2026-10-27). `toast.gd`
+  slid `%Lines` inside the window; the window itself was placed at once by the stack layout.
 
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved.
@@ -85,6 +87,12 @@ to `2` gives the list a third. It is one inspector value.
 | `feed_line.gd` | The slide-in starts on the tween's first step (the line laid out) and ends at the label's laid-out x, not 0 (as `toast.gd` in B4). |
 | `feed_line.tscn` | `Text.horizontal_alignment` left → centre. |
 
+### Fix for B6 (every run toast, not only the floor one)
+| File | Change |
+|---|---|
+| `toast.gd` | A `drop` offset tweened from −`slide_distance` (40) to 0 over `slide_seconds` replaces the `%Lines` slide. |
+| `run_toasts.gd` | The layout keeps each toast's glided place in a meta and sets `position.y` = place + `drop`, so the window and its text come down together. |
+
 ## 5. Observability
 N/A: no server metrics.
 
@@ -109,6 +117,9 @@ N/A: no server metrics.
   chest toasts together.
 - **B5:** `test_battle_hud::test_feed_line_centred`: after the slide-in, a feed line's text has equal space left and
   right (more than 4 px each).
+- **B6:** `test_explore_hud::test_floor_toast_slides_as_one`: holding Tab, the floor banner starts above its place and
+  comes down to it while its text keeps the same y inside it. Filmed: the banner goes −36.8 → 0 over 0.3 s with alpha
+  0 → 1, its text at y 8 throughout.
 - **Unchanged:** `test_demo_ui_policy`, the existing explore HUD and gear tests, and `validate_content.tscn`
   (`UIPolicyCheck`) still pass.
 - **Visual check:** the window run from section 1 again, with new screenshots of Use Item (Potion hovered), Use Ability,
