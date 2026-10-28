@@ -839,9 +839,12 @@ client-godot/tests/game/test_e2e_tools.gd     the tests in E6
 6. **Fixtures content** (`res://tests/fixtures/`, the two-floor run): stable and quick; the user's tuning can't fail it.
 
 ## Remaining work
-- **Seed field in server mode** (3.1 note, "Later"): the title menu (your `presentation/`) still shows the seed field
-  while linked; `GameMain.start_run` ignores the seed in server mode. Hiding it is a `presentation/` change, yours to
-  approve.
+- **Seeds on screen in server mode → slice 2b's menu work** (decided 2026-10-27): while linked, the title menu still
+  shows the seed field (`GameMain.start_run` ignores it), the run-end screen prints "seed 0" (a server run has floor
+  seeds, no run seed) and its "Play again" starts a fresh server run. Harmless while server mode is reachable only
+  through the console's `server`. In 2b, with the connect/sign-in UI: show the field disabled ("Seed: issued by the
+  server") and the server's run id on the run-end screen instead of "seed 0" (`presentation/demo/ui/`, yours to
+  approve then).
 - `kill` queued during an enemy turn: tested since `content-pass` (`test_kill_queued_during_enemy_turn`, driven by
   the battle's signals).
 - **Manual checklist** (no headless test possible):
