@@ -1,7 +1,8 @@
 # Spec: server-authority (slices 2 and 2b)
 
 Status: 📝 Spec revised for the floor model, decisions confirmed · Roadmap: system-design pass after 1b → Part A = slice 2
-`run-checkout`, Part B = slice 2b `run-authority` (built in that order) · Date: 2026-10-19, revised 2026-10-20
+`run-checkout`, Part B = slice 2b `run-authority` (built in that order) · Date: 2026-10-19, revised 2026-10-20,
+synced 2026-10-27 (keys-and-gear, playable-demo 3.8/3.11, gameplay-messages, export presets)
 Design intent: `specs/roadmap.md` "Run authority model" (the client action policy and the Redis plan live there);
 `specs/design/game-design.md` sections 5 (seeds and the server) and 10 (player analytics and live monitoring); root
 `CLAUDE.md` "Battle workflow decisions" and "Game and run decisions".
@@ -16,7 +17,7 @@ start and resume, the stairs, a won run's ending, and account actions (cards, cu
 | Bucket | Meaning | What's in it |
 |---|---|---|
 | **Server-authoritative** | The server decides. The client asks and uses the answer; it can't change it. | Player identity (B); the run id; **every floor seed** (HMAC, issued at the stairs: A); which floor the run may be on (A); the **order** of a run's actions and what has been accepted (sequence numbers, B); run status (active, verifying, won, lost, abandoned; B); the **ruleset version** a run started under (A); later: verdicts (3, 4a), rewards and currency (4, 5), cards, packs and market trades (5, 5b) |
-| **Server-verified** | The client runs it locally (offline-first, instant); the server stores it and later re-runs it in headless Godot. A mismatch is a `Rejected` verdict with `errorCode` 2002, never an HTTP error. | Every in-floor action: entering rooms, event choices, pickups, purchases, field use, equipping armor, battles (start conditions, turns, result), taking the stairs (floor generation); the claimed state **snapshots** at checkpoints; the run's end. Floor maps, item pools, shop stock, coin drops, HP/MP/ult charge and run inventory are all derived from the floor seeds and the logged actions |
+| **Server-verified** | The client runs it locally (offline-first, instant); the server stores it and later re-runs it in headless Godot. A mismatch is a `Rejected` verdict with `errorCode` 2002, never an HTTP error. | Every in-floor action: entering rooms (and spending a key on a lock), event choices, giving items, pickups, purchases, opening chests, field use, equipping and swapping armor, moving items, battles (start conditions, turns, result), taking the stairs (floor generation); the claimed state **snapshots** at checkpoints; the run's end. Floor maps, item pools, shop stock, coin drops, HP/MP/ult charge and run inventory are all derived from the floor seeds and the logged actions |
 | **Client-only** | Never trusted. | Animations, sounds, cues, camera, screen layout, Auto/Skip, menus, the map view, the content-root switch, dev tools and the console (disabled when connected), the **local save** (a cache of the server's log plus the not-yet-sent tail), the presence heartbeat (a hint for live monitoring, never used for decisions) |
 
 **Why verified and not computed by the server:** the game rules (floor generation, pools, shops, events, combat)
@@ -86,12 +87,16 @@ stairs → ServerLink.floor_seed(runId, floor 1, afterSeq) ─▶ POST /api/v1/r
   ◀── 200 {floor 1, floorSeed}                   (hidden behind the floor transition; "Connecting…" while offline)
 RunController.next_floor()                       the client generates floor 1 and plays it offline
 ```
+**The rest stop (spec playable-demo 3.11):** `next_floor` opens the run's rest event first. The next floor starts
+when the rest event ends. The client asks for the seed at `next_floor`, so the rest stop hides the latency.
+`AfterSeq` is the `next_floor` action's own seq. Choices made at the rest stop are logged with the floor being left.
 `GET /api/v1/runs/{runId}` and `GET /api/v1/runs/current` read `run:summary:{runId}` from Redis, then Postgres on a
 miss (and re-cache).
 
 ### 2.2 The action log (Part B)
 ```
-any in-floor action (enter_room, choose, give_to, take, buy, field, battle, next_floor):
+any in-floor action (enter_room, choose, give_to, take, buy, open_chest, field, equip, unequip, swap_gear,
+                     move_item, battle, next_floor):
   RunController applies it locally, appends to run_log and the local save, queues it
   ServerLink, whenever online: POST /api/v1/runs/{runId}/actions {actions: [seq a … seq b]}   (Bearer)
                                                  one transaction: SELECT runs … FOR UPDATE
@@ -182,12 +187,18 @@ public sealed record RunActionRequest(int Seq, RunAction Action, string StateHas
 
 public sealed record RunAction(string Type, int Floor, int? Cell = null, int? Page = null, int? Choice = null,
     int? Placement = null, int? Slot = null, string? Ability = null, int? Target = null,
-    string? ItemId = null,                        // take / buy / field: the item involved (take / buy: or the armor piece)
-    ItemKind? Kind = null,                        // take / buy: Equipment for armor (goes to the armor inventory)
-    string? CharacterId = null,                   // take / buy: who received it (never for armor); field: who acted
-    string? EquipmentId = null,                   // equip: the piece taken from the armor inventory
+    string? ItemId = null,                        // take / buy / field / give_to / move_item: the item involved (take / buy: or the armor piece)
+    ItemKind? Kind = null,                        // take / buy: Equipment for armor (armor inventory), Keys for keys
+    string? CharacterId = null,                   // take / buy: who received it (never for armor or keys); field: who acted
+    string? EquipmentId = null,                   // equip / swap_gear: the piece put on
     string? EquipmentSlot = null,                 // unequip: the slot tag emptied (Equipment.Slot.<X>)
+    int? FromSlot = null, int? ToSlot = null,     // swap_gear: the member who wore it (FromSlot); move_item: giver Slot → ToSlot
+    string? SwapItemId = null,                    // move_item: the item sent back the other way, if any
+    string? ChestId = null, int? Serial = null,   // open_chest: the chest and its serial (spec keys-and-gear)
+    string? Unlock = null,                        // enter_room: "key" or "golden" when a lock opened
+    string? Chapter = null,                       // next_floor: the chapter picked on a CHOICE slot (playable-demo 3.8)
     int? Price = null,                            // buy: coins paid
+    string? PriceItemId = null,                   // buy: the curse item paid with, if any (RoomPlacement.price_item)
     int? CoinsAfter = null,                       // every action: the run's coins afterwards
     IReadOnlyList<ItemOffer>? Offers = null,      // enter_room: every pickup on offer in that room
     BattleSubmission? Battle = null);             // battle: what was played
@@ -198,7 +209,7 @@ public sealed record BattleSubmission(string BattleId, BattleSnapshot Conditions
 public sealed record ItemOffer(int Placement, string ItemId, int Price, OfferSource Source,
     ItemKind Kind = ItemKind.Item);
 public enum OfferSource { Treasure, Shop, BossReward, Other }
-public enum ItemKind { Item, Equipment }          // spec item-pass: pedestals and shelves also offer armor
+public enum ItemKind { Item, Equipment, Keys }    // item-pass: pedestals and shelves offer armor; keys-and-gear: shops sell keys
 
 public sealed record RunActionAck(int LastSeq);
 
@@ -254,8 +265,10 @@ stored as sent, checked by replay, flagged unverified until then. `run_actions.a
 `Type` values: `start_run` (seq 1, client-sent, carries the first snapshot), `enter_room`, `choose`, `take`, `buy`,
 `field`, `equip`, `unequip` (armor, spec item-pass: map only, `Slot` = the party member; async and server-verified
 like `field`), `give_to` (spec event-items: who gets an item from an event or a chest; `Item`, `Slot`; refused
-unless that item is the next one waiting), `battle`, `next_floor`, `end` (Lost only; Won uses the end endpoint). All new records get golden JSON
-tests.
+unless that item is the next one waiting), `open_chest`, `swap_gear`, `move_item` (spec keys-and-gear: map only,
+async and server-verified), `battle`, `next_floor`, `end` (Lost only; Won uses the end endpoint). The local log's
+`dev` (console cheats) and `sandbox` entries are local mode only and never sent: server mode has no dev tools. A
+`field` entry's `resultHash` is not sent; `StateHash` covers it. All new records get golden JSON tests.
 
 ### 3.2 Endpoints
 | Endpoint | Part | Auth | Success | Errors |
@@ -320,19 +333,32 @@ the same row. The seed column is parsed from the conditions for indexing and the
   `SeedSource` replaces direct `RunSeeds.rng(state.run_seed, "floor/%d/x" % n)` calls with
   `seeds.floor_rng(n, "x")` (and `floor_derive` for battle and field seeds). Local mode:
   `RunSeeds.rng(run_seed, "floor/%d/x" % n)`, exactly today's labels, so every golden stays byte-identical. Server
-  mode: `RunSeeds.rng(floor_seed[n], "x")`. `FloorGenerator` takes the seed source instead of `run_seed`.
-  `RunState.canonical_lines()` adds `floor_seed=<current floor's seed>` in server mode only; local mode is unchanged.
+  mode: `RunSeeds.rng(floor_seed[n], "x")`. `FloorGenerator` and `FloorSlot.pick` take the seed source instead of
+  `run_seed`. `RunState.canonical_lines()` adds `floor_seed=<current floor's seed>` in server mode only; local mode is
+  unchanged.
+  **Run-wide streams.** Two streams aren't per floor: `chapter/<id>/bosses` (boss rotation, playable-demo 3.8) and
+  `chest/<serial>` (a chest gives the same contents on any floor, keys-and-gear). They go through
+  `seeds.run_rng(label)`: local mode uses `RunSeeds.rng(run_seed, label)` (today's labels), server mode uses
+  `RunSeeds.rng(floor_seed[0], "run/" + label)`. A modded client therefore knows every chapter's boss order and
+  every chest's contents from run start. That falls under the accepted cheat (section 0).
 - **RunSnapshot v1 (Part B).** `RunState.to_snapshot()` / `RunState.from_snapshot()` plus the controller's pending
-  battle and event directive: everything needed to continue a run (including the armor inventory, `RunState.armor`),
-  as a JSON dictionary with `schemaVersion: 1`.
+  battle and event directive: everything needed to continue a run, as a JSON dictionary with `schemaVersion: 1`.
+  That includes the armor inventory (`RunState.armor`), keys, the golden key, held chests and the chest serial,
+  opened rooms, XP and levels, pending gifts with the event's `after` step (event-items), and a pending rest stop
+  (`rest_to`).
   Requirements: (1) round trip: `from_snapshot(to_snapshot(s)).run_hash() == s.run_hash()`; (2) **resume
   equivalence**: a scripted run stopped at any checkpoint, saved, loaded and finished reaches the same final run hash
   as the uninterrupted run. That second property is what makes local saves, resume without a save, and 4a's parallel
   step verification correct; it's a golden test. No RNG positions are needed: every stream is derived fresh from a
   seed and a label.
-- **Ruleset version (Part A).** `<godot version>+<first 16 hex of SHA-256>` over the sorted paths and bytes of
-  `res://combat/`, `res://game/`, `res://content/`, `res://godot_gas/` and the GodotGAS addon, computed in GDScript
-  (`game/ruleset_version.gd`; `game/tools/print_ruleset_version.tscn` prints it for deployment). The server accepts
+- **Ruleset version (Part A).** `<godot version>+<first 16 hex of SHA-256>` over the sorted paths and **source**
+  bytes of `res://combat/`, `res://game/`, `res://content/`, `res://godot_gas/` and the GodotGAS addon, minus the
+  dev-only and tool paths the player preset excludes (`export_presets.cfg`). Those paths never affect rules. An
+  exported pack can't recompute it: scripts ship as binary tokens, text resources ship converted to binary, and
+  presets exclude different files. So it is **computed at export time**: `tools/export.sh` writes it into the pack,
+  and `game/ruleset_version.gd` reads it there. The editor and headless runs from the project compute it live with the
+  same rules, and `game/tools/print_ruleset_version.tscn` prints it for deployment. Every preset of one source tree,
+  and the verifier, get the same version. The server accepts
   `Ruleset:Accepted`; `Ruleset:AcceptAny = true` (Development only) accepts and records anything. Every run stores
   the version it started under (groundwork for **scenario 6**).
 
@@ -356,16 +382,17 @@ on Redis: ordering and idempotency come from the run row lock and primary keys.
   `ServerLink.connected` decides server vs local mode. B: the action queue (persisted in the local save; batches of
   up to 50; one request in flight; exponential backoff with jitter on network errors and 5xx; honours
   `Retry-After` on 429; a 409 `1103` discards the save and triggers resume without it; any other 409 stops the run
-  with the error shown, like a runner error, not a loss), the heartbeat (every 30 s and on Menu/Map/Battle changes),
+  through `RunController.stopped(error)`, like a runner error, not a loss), the heartbeat (every 30 s and on Menu/Map/Battle changes),
   and `user://saves/run.json`.
 - **`game/seed_source.gd`** (A) and **`game/run_snapshot.gd`** (B) as in 3.5.
-- **`RunController`**: takes a seed source; in server mode `start_run` and `next_floor` await the seed (the
-  presentation shows "Connecting…" through the existing `message` signal while offline); every `run_log` append also
+- **`RunController`**: takes a seed source; in server mode `start_run` and `next_floor` await the seed (while
+  offline it broadcasts "Connecting…" as a `Message.Notification` on the `GameplayMessages` bus, spec
+  gameplay-messages; `next_floor` waits behind the rest stop, 2.1); every `run_log` append also
   goes to the queue (B), with the snapshot on checkpoint actions and the battle conditions on `battle` entries (the
   conditions travel only in the queued message, not in `run_log`, so the local golden doesn't change). A won run
   emits a new `run_verifying` signal and only emits `run_ended("won")` after the server says Won.
-- **Presentation:** no change is required (the existing `message` signal carries "Connecting…" and "Verifying
-  run…"). A dedicated verifying screen or a "Server: on/off" menu line only if you ask; those are your folders.
+- **Presentation:** no change is required (the message line already shows `Message.Notification`, which carries
+  "Connecting…" and "Verifying run…"). A dedicated verifying screen or a "Server: on/off" menu line only if you ask; those are your folders.
 
 ## 4. Failure modes
 | Case | Behaviour | Test |
@@ -436,7 +463,8 @@ for 6 minutes → `rpg_players_online` 2).
 `errorCode`, `Retry-After` exposed).
 **Godot system tests (fixtures only, a fake bridge; no network):** A: `test_local_mode_unchanged` (every golden
 still matches); `test_server_seed_source` (floor content follows the issued floor seed, not the run seed; two runs
-with the same floor seeds generate the same floor); `test_ruleset_version_stable`. B: `test_snapshot_round_trip`;
+with the same floor seeds generate the same floor; boss rotation and chest contents follow floor 0's seed);
+`test_ruleset_version_stable` (and the version written by `export.sh` equals the live one, for every preset). B: `test_snapshot_round_trip`;
 `test_resume_equivalence` (golden: stop at every checkpoint of the scripted run, save, load, finish → same final
 hash); `test_checkpoints_attached` (snapshots exactly on `start_run`, battle-pending actions, `battle`,
 `next_floor`); `test_actions_sent_in_order` (batches, seq 1…n); `test_offline_floor_then_sync`;
@@ -469,7 +497,8 @@ src/Rpg.GameServerApi/           Runs/ (endpoints, run store, floor seeds, summa
 src/Rpg.Client/                  GameServerClient.cs (run calls)
 client-godot/net/                ServerBridge.cs        (first C# script; rpgDemo.csproj already references Rpg.Client)
 client-godot/game/               seed_source.gd, server_link.gd, ruleset_version.gd, tools/print_ruleset_version.tscn,
-                                 run_controller.gd, floor_generator.gd, run_state.gd (seed source)
+                                 run_controller.gd, floor_generator.gd, defs/floor_slot.gd, run_state.gd (seed source)
+tools/export.sh                  writes the ruleset version into the pack
 tests/                           contract goldens, server tests, Godot tests (fake bridge)
 Part B
 src/Rpg.Contracts/Runs/, Battle/, Presence/, Auth/   action, end, resume, battle session, presence, auth records
@@ -504,3 +533,7 @@ All confirmed 2026-10-20 (1, 6 and 10 were decided in the design discussion).
    all four set in configuration and checks none of them takes effect.
 10. **Accepted cheats:** perfect play on a known floor, and retrying a battle by restoring a save before it uploads.
     Detected statistically later (4b), not prevented.
+11. **Run-wide streams from floor 0's seed** (2026-10-27): boss rotation and chest contents use
+    `SeedSource.run_rng`, which is derived from floor 0's seed in server mode. Their early visibility is accepted.
+12. **Ruleset version computed at export time** (2026-10-27): it covers source files and leaves out dev and tool
+    paths, so every preset and the verifier share one version.
