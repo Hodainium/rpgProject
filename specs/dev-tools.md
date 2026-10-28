@@ -661,6 +661,158 @@ independent work uses the machine's cores.
 Builders, imports and golden updates stay sequential (they write shared files). Claude runs every headless Godot and
 `dotnet test` command through these tools.
 
+## End-to-end harness (added 2026-10-27, spec only: not built)
+Status: 📝 Spec, awaiting review. Builds on `server-authority` Part A (slice 2, built 2026-10-27).
+
+### E1. Purpose & enterprise mapping
+The unit and system suites prove each side alone: the .NET tests run the real server on Testcontainers, and the Godot
+tests run the client against a fake bridge. Nothing committed proves that **the real client and the real server work
+together**. On 2026-10-27 this was checked once by hand: a throwaway command, a server started and stopped by hand,
+and a "smoke" player left in the dev database. The harness makes that check one watched command, `tools/e2e.sh`, that
+anyone (Claude included) can rerun and that later slices extend with their own scenarios.
+
+**What it runs, per scenario:** the real `Rpg.GameServerApi` (its own process and port, Development environment, its
+own fresh Postgres database and Redis database index, a test seed secret, the **real ruleset gate** with only the
+project's live ruleset version accepted), and the real game headless (`dev_run.tscn` with `GameMain`, the C#
+`ServerBridge`, `ServerLink`), driven by a committed script of console commands. Afterwards it checks what the client
+reports (`expect`), what the server says (`server check`), what Postgres holds (a `.sql` file) and what `/metrics`
+shows (a `.metrics` file).
+
+**Enterprise mapping:** a *staging smoke and chaos suite*: deploy the real services on throwaway state, drive them
+through the real client, inject faults (a service stopped, a cache flushed) and assert the system's own records
+afterwards. The fault steps are what make offline-first claims testable: "the client keeps playing and syncs when the
+server comes back" can't be shown by a unit test.
+
+| Component | Used | How |
+|---|---|---|
+| `Rpg.GameServerApi` | ✅ | Started per scenario (`dotnet <dll>`, a free port), stopped and restarted by fault steps |
+| PostgreSQL | ✅ | A database `e2e_<stamp>_<scenario>` per scenario, created and dropped by the harness (`--keep` keeps it) |
+| Redis | ✅ | A database index per scenario (1–15, never 0), flushed before the scenario and by the `redis-flush` fault |
+| RabbitMQ | ✅ (readiness only) | The server needs it to report ready; no queues until slice 3 |
+| Redpanda, outbox | ❌ | N/A until slice 4 |
+| `Rpg.Contracts`, `Rpg.Client` | ✅ (unchanged) | Through `ServerBridge` |
+| `client-godot` | ✅ | `dev_run.tscn` headless; new console commands and runner flags (E3) |
+
+### E2. Sequence flow
+```
+tools/e2e.sh [scenario ...] [--keep] [-j N]            (default: every client-godot/tests/e2e/*.txt, in parallel)
+  once: infra up? (pg_isready, redis-cli ping, rabbitmq ping in the compose containers) → else exit 1 "run
+        cd infra && docker compose up -d"; credentials from infra/.env
+  once: dotnet build src/Rpg.GameServerApi (watched); ruleset version = print_ruleset_version.tscn (watched)
+  per scenario (parallel, each with its own port, database, Redis index, control folder, output folder):
+    CREATE DATABASE e2e_<stamp>_<scenario>; FLUSHDB on Redis index i
+    start the server (watched), env: ASPNETCORE_ENVIRONMENT=Development, ASPNETCORE_URLS=http://127.0.0.1:<port>,
+        ConnectionStrings__Postgres (the e2e database), ConnectionStrings__Redis (…,defaultDatabase=<i>),
+        RabbitMq__Uri, Seeds__Secret=<test secret>, Ruleset__AcceptAny=false, Ruleset__Accepted__0=<live version>
+        (plus the scenario's own "#! env KEY=VALUE" lines, e.g. a wrong ruleset)
+    poll /health/ready until 200 (30 s, else fail with the server log)
+    dev_run.tscn -- --script <scenario>.txt --out state.json --content-root res://tests/fixtures/
+                    --server http://127.0.0.1:<port> --player e2e-<scenario> --control <folder>     (watched)
+      each line → DevConsole.execute; a fault step (`e2e <action>`) writes <folder>/request and waits for
+      <folder>/done, which the harness's control loop writes after acting:
+        server-stop | server-start | redis-flush
+    checks: dev_run exit 0 (every command ok, incl. expect / wait / server check)
+            <scenario>.sql: every line is a query that must return t (psql against the e2e database)
+            <scenario>.metrics: every line is a regex that must match the final /metrics scrape
+    stop the server; DROP DATABASE (unless --keep); FLUSHDB
+  → build/e2e/<stamp>/<scenario>/ {server.log, godot.log, state.json, metrics.txt, sql.txt}
+  → one line per scenario "ok|FAIL <scenario> (<seconds>s)", exit 0 all ok, 1 any failure, 124 a stall
+```
+Inside the game, a server-mode run started from a script goes through the real path: `new` → `GameMain.start_run` →
+`ServerLink.start_run` (POST /runs) → `RunController.start_server_run`; the stairs → `floor_seed_needed` →
+`ServerLink` (POST /floors/{n}, retried while the server is down) → `provide_floor_seed`.
+
+### E3. Data contracts
+No new C# records, endpoints, tables, queues, topics or Redis keys: the harness drives what exists. New on the client
+side (dev tools only; none of it ships in the player build):
+
+| Piece | Where | Contract |
+|---|---|---|
+| `dev_run.tscn -- --server <url> [--player <name>]` | `game/tools/dev_run.gd` | Links `GameMain` to the server through `ServerLink.create(url, player)` (a new constructor `from_settings` also uses), **without writing the Settings**, so e2e never changes `user://game_main.cfg` |
+| `dev_run.tscn -- --control <folder>` | `game/tools/dev_run.gd` | The folder for `e2e` requests (below) |
+| `wait <condition> [seconds]` | `game/dev/commands/wait.gd` (play command, not a cheat) | Waits frame by frame (beating the Watchdog) until the condition holds, default 30 s, else fails with the run's state. Conditions: `run` (a run is active and not waiting for a seed; after `new` in server mode), `floor <n>` (floor index n entered), `stopped` (the run stopped on a runner or server error), `notice <text>` (a `Message.Notification` containing text arrived since the previous command) |
+| `expect <field> <value>` | `game/dev/commands/expect.gd` | Compares a top-level field of `DevReport.state_of` (e.g. `floor`, `status`, `runnerError`) or `server.<key>` (below) with the value as text; fails with both values otherwise |
+| `server check` | `game/dev/commands/server.gd` | GET /runs/{id}: status Active and `currentFloor` equal to the client's floor; POST /floors/{current} (a free retry): the same seed as the client's. Fails on any difference. Read-only for the run |
+| `e2e <action> [seconds]` | `game/dev/commands/e2e.gd` | Fault step: writes `<control>/request` with the action, waits for `<control>/done` (default 60 s), deletes both. Fails when no `--control` was given. Actions: `server-stop`, `server-start`, `redis-flush` |
+| `new` in server mode | `game/dev/commands/new.gd` | Replies "starting on the server" (the run starts when the server answers; follow with `wait run`) instead of reading a run that doesn't exist yet |
+| `RunPlayer.play` (and `autorun`) | `game/dev/run_player.gd` | Stops when the run waits for a floor seed and says "waiting for floor n's seed" (not a failure), so `autorun` then `wait floor n` crosses the stairs on random server seeds |
+| `DevReport.state_of` → `"server"` | `game/dev/dev_report.gd` | Server mode only: `{"runId", "floorSeeds": {"0": "…"}, "waitingForFloor"}`; local reports are unchanged (goldens) |
+| Scenario files | `client-godot/tests/e2e/<name>.txt` (+ optional `.sql`, `.metrics`) | A `dev_run` script; lines `#! env KEY=VALUE` are server settings for this scenario (read by the harness, skipped by `dev_run` as comments) |
+
+**First scenarios (Part A):**
+1. `stairs`: `new` on the fixtures' two-floor run → `wait run` → `server check` → `autorun` (to the stairs) →
+   `wait floor 1` → `server check` → `expect floor 1`. SQL: one player `e2e-stairs`, one Active run on floor 1, two
+   `run_floors` rows. Metrics: `rpg_run_starts_total{…result="created"…} 1`, `rpg_floor_seeds_total{…issued…} 1`.
+2. `offline_stairs`: as `stairs`, but `e2e server-stop` before `autorun`, then `expect server.waitingForFloor 1`,
+   `e2e server-start`, `wait floor 1 90`, `server check`. Proves the client keeps the run while the server is gone
+   and syncs at the stairs once it is back (ServerLink backoff, `Connecting…`).
+3. `redis_flush`: `stairs` up to `wait floor 1`, then `e2e redis-flush`, `server check`. Metrics:
+   `rpg_cache_reads_total{…source="postgres"…}` present after the flush. **Scenario 4** end to end.
+4. `ruleset_refused`: `#! env Ruleset__Accepted__0=0.0.0.none+0000000000000000`; `new` → `wait notice 1001` →
+   `expect status ""` (no run). SQL: no runs.
+
+### E4. Failure modes
+| Case | Behaviour | Test |
+|---|---|---|
+| Infra not running | Exit 1 at once, naming the missing service and the compose command | `test_e2e.sh --check` (E6) |
+| Server never ready | The scenario fails after 30 s with the last 40 server log lines | manual (break a setting) |
+| A command fails or times out (`wait`, `expect`, `server check`) | `dev_run` exits 2 naming the line; the scenario fails; logs kept | `test_wait_command`, `test_expect_command` |
+| Godot or the server stalls | `tools/watch.sh` kills the tree, exit 124, the scenario fails | existing watch tests |
+| A fault action never acknowledged | `e2e` fails after its timeout; the harness logs an unknown action and acknowledges with an error | `test_e2e_command` |
+| Harness interrupted (Ctrl+C) | A trap stops every server it started and drops its databases (unless `--keep`) | manual |
+| Parallel scenarios | Separate ports, databases, Redis indexes, control and output folders; at most 15 at once (Redis indexes 1–15) | `-j 4` run in "Done when" |
+| Dev data and settings | Never touched: no database 0 / `rpg_db`, no Redis index 0, `--server` writes no Settings | `test_dev_run_server_flag_keeps_settings` |
+
+Acceptance scenarios (root `CLAUDE.md`): **4** (Redis flushed) gets its end-to-end proof in `redis_flush`. Later
+slices add theirs as scenarios: **5** (tamper → a 2002 verdict) and **1**, **2** (duplicate and redelivered
+settlement) in slices 3–4, **3** (Redpanda down) with the `redpanda-stop`/`-start` actions in slice 4, **7** (load)
+stays Locust's (slice 8).
+
+### E5. Observability
+No new instruments. The harness scrapes `/metrics` once per scenario (saved as `metrics.txt`) and checks the
+scenario's `.metrics` regexes against it, so each scenario also proves the counters it should move do move.
+
+### E6. Test plan
+- **Godot (fixtures, fake bridge, no network)**: `test_wait_command` (each condition; timeout fails with the state),
+  `test_expect_command`, `test_e2e_command` (a request file appears, a written `done` completes it, no `--control`
+  fails), `test_server_check_command` (agreement passes; a different floor or seed fails), `test_run_player_stops_waiting`
+  (autorun stops at the stairs of a server run and reports the floor), `test_dev_run_server_flag_keeps_settings`
+  (`ServerLink.create` writes nothing), `test_dev_report_server_block` (present in server mode only; local
+  `DevReport` goldens unchanged), `test_e2e_scenarios_lint` (every `tests/e2e/*.txt` names only known commands and
+  well-formed `#! env` lines; every `.sql` line is a single statement).
+- **Harness self-check**: `tools/e2e.sh --check` (no Docker needed for the parse part) lists the scenarios, validates
+  their files and checks that the tools exist; `test_build_bats`-style test `test_e2e_check` runs it.
+- **Not in the regular suites**: the full harness needs Docker and starts servers, so `tools/godot_tests.sh` and
+  `tools/dotnet_test.sh` never run it. It runs on demand and before a server slice counts as done.
+- **Done when:** `tools/e2e.sh` passes all four scenarios locally, in parallel (`-j 4`), twice in a row, leaving no
+  `e2e_*` database, no server process and no change to `user://game_main.cfg`; `stairs` with a deliberately wrong
+  `.sql` line fails and keeps its logs.
+
+### E7. Files
+```
+tools/e2e.sh                                  the harness (bash, watched; Git Bash on Windows)
+client-godot/tests/e2e/                       stairs, offline_stairs, redis_flush, ruleset_refused (.txt/.sql/.metrics)
+client-godot/game/tools/dev_run.gd            --server, --player, --control
+client-godot/game/server_link.gd              ServerLink.create(url, player)
+client-godot/game/dev/commands/               wait.gd, expect.gd, e2e.gd (new); server.gd (check); new.gd (server mode)
+client-godot/game/dev/run_player.gd           stops while the run waits for a floor seed
+client-godot/game/dev/dev_report.gd           "server" block in server mode
+client-godot/tests/game/test_e2e_tools.gd     the tests in E6
+```
+
+### E8. Decisions to review
+1. **A harness script, not a mock server.** The real server is cheap to run; a mock would duplicate the contract and
+   drift. The fake bridge already covers the client without a network.
+2. **Throwaway state per scenario** (database, Redis index, port), never the dev database or Redis index 0, and no
+   Settings writes: e2e runs can't disturb your play data, and scenarios run in parallel.
+3. **Faults through a file-based control channel** (`e2e <action>` ↔ the harness loop), so one script can stop and
+   restart the server or flush Redis mid-run. Small and dev-only; extended per slice (Redpanda, workers).
+4. **The real ruleset gate**: the harness accepts only the live version, so a ruleset mismatch between the client and
+   what the server was told is caught too.
+5. **On demand, not in the regular suites**: it needs Docker and real processes; the regular suites stay fast and
+   offline.
+6. **Fixtures content** (`res://tests/fixtures/`, the two-floor run): stable and quick; the user's tuning can't fail it.
+
 ## Remaining work
 - `kill` queued during an enemy turn: tested since `content-pass` (`test_kill_queued_during_enemy_turn`, driven by
   the battle's signals).
