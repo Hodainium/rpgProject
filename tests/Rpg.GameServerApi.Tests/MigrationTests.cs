@@ -20,7 +20,8 @@ public class MigrationTests(StackFixture stack)
         await new MigrationRunner(dataSource, NullLogger<MigrationRunner>.Instance).EnsureMigratedAsync(Ct);
 
         Assert.Equal(MigrationRunner.Scripts.Select(s => s.Name), await AppliedAsync(dataSource));
-        Assert.Equal(["players", "run_floors", "runs", "schema_migrations"], await TablesAsync(dataSource));
+        Assert.Equal(["battle_sessions", "players", "run_actions", "run_floors", "runs", "schema_migrations"],
+            await TablesAsync(dataSource));
     }
 
     [Fact]

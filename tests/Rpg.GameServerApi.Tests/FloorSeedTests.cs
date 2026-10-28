@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using Rpg.GameServerApi.Players;
+using Rpg.GameServerApi.Auth;
 using Rpg.GameServerApi.Runs;
 using Rpg.GameServerApi.Tests.Infrastructure;
 
@@ -43,8 +43,8 @@ public class FloorSeedTests
     [Fact]
     public void DevPlayer_IdIsStablePerName()
     {
-        Assert.Equal(DevPlayer.IdOf("alice"), DevPlayer.IdOf("alice"));
-        Assert.NotEqual(DevPlayer.IdOf("alice"), DevPlayer.IdOf("bob"));
-        Assert.Equal(8, DevPlayer.IdOf("alice").Version);
+        Assert.Equal(DevTokenIssuer.IdOf("alice"), DevTokenIssuer.IdOf("alice"));
+        Assert.NotEqual(DevTokenIssuer.IdOf("alice"), DevTokenIssuer.IdOf("bob"));
+        Assert.Equal(8, DevTokenIssuer.IdOf("alice").Version);
     }
 }

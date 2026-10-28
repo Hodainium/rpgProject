@@ -1,0 +1,12 @@
+# Spec server-authority 2.4 (dev-tools E9): the server accepted another body for an action this client already sent
+# (another device, an old save restored). The upload gets 409 1103, the local save is discarded and the run continues
+# from the server's log.
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+server conflict
+wait notice continues
+expect server.resumes 1
+server check
+expect floor 1

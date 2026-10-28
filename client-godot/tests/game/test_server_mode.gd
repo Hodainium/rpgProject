@@ -9,6 +9,8 @@ const RUN_ID: String = "019a2b3c-4d5e-7f60-8a7b-8c9d0e1f2a3b"
 
 
 ## Stands in for the C# ServerBridge: same methods, same Completed signal, answers from a queue (the last one repeats).
+## Methods without answers (or at an answer "default"): a dev token, uploads acknowledged up to their last seq, the
+## heartbeat's 204, an end answered Won. `offline`: every call gets no answer (status 0).
 class FakeBridge:
 	extends RefCounted
 	signal Completed(request_id: int, ok: bool, json: String)
@@ -16,7 +18,30 @@ class FakeBridge:
 	var calls: Array = []
 	## Method name → Array of [ok, body Dictionary].
 	var answers: Dictionary = {}
+	var token: String = ""
+	var offline: bool = false
 	var _next: int = 0
+
+	func SetToken(access_token: String) -> void:
+		token = access_token
+
+	func GetDevToken(json: String) -> int:
+		return _answer("GetDevToken", [json])
+
+	func SendActions(run_id: String, json: String) -> int:
+		return _answer("SendActions", [run_id, json])
+
+	func EndRun(run_id: String, json: String) -> int:
+		return _answer("EndRun", [run_id, json])
+
+	func Resume(run_id: String) -> int:
+		return _answer("Resume", [run_id])
+
+	func GetBattle(run_id: String, seq: int) -> int:
+		return _answer("GetBattle", [run_id, seq])
+
+	func Heartbeat(json: String) -> int:
+		return _answer("Heartbeat", [json])
 
 	func StartRun(json: String) -> int:
 		return _answer("StartRun", [json])
@@ -36,10 +61,33 @@ class FakeBridge:
 	func _answer(method: String, args: Array) -> int:
 		_next += 1
 		calls.append([method] + args)
-		var queue: Array = answers[method]
-		var answer: Array = queue.pop_front() if queue.size() > 1 else queue[0]
+		var answer: Variant = "default"
+		if answers.has(method):
+			var queue: Array = answers[method]
+			answer = queue.pop_front() if queue.size() > 1 else queue[0]
+		if answer is String:
+			answer = _default(method, args)
+		if offline:
+			answer = [false, {"status": 0, "errorCode": null, "title": "HttpRequestException", "detail": "offline"}]
 		Completed.emit.call_deferred(_next, answer[0], JSON.stringify(answer[1]))
 		return _next
+
+	static func _default(method: String, args: Array) -> Array:
+		match method:
+			"GetDevToken":
+				return [true, {"accessToken": "fake-token", "expiresAt": "2026-10-28T00:00:00+00:00", "playerId": "p"}]
+			"SendActions":
+				var batch: Dictionary = JSON.parse_string(args[1])
+				return [true, {"lastSeq": int(batch["actions"][-1]["seq"])}]
+			"Heartbeat":
+				return [true, null]
+			"EndRun":
+				return [true, {"runId": args[0], "status": "Won"}]
+		return [false, {"status": 0, "errorCode": null, "title": "no answer for %s" % method, "detail": ""}]
+
+	## The calls to `method`, in order.
+	func of(method: String) -> Array:
+		return calls.filter(func(call: Array) -> bool: return call[0] == method)
 
 
 var _nodes: Array[Node] = []
@@ -77,6 +125,7 @@ func _link(bridge: FakeBridge) -> ServerLink:
 	var link := ServerLink.new(bridge)
 	link.retry_base_seconds = 0.01
 	link.retry_max_seconds = 0.02
+	link.saves_dir = "user://test_server_mode/saves_%d_%d" % [OS.get_process_id(), Time.get_ticks_usec()]
 	host.add_child(link)
 	_nodes.append(link)
 	return link
@@ -182,7 +231,7 @@ func test_server_link_starts_and_retries_the_stairs() -> void:
 	var link := _link(bridge)
 	var started: Dictionary = await link.start_run("4.7.2.stable.mono+0123456789abcdef", "fixture.run.two_floors", PARTY)
 	check(started["ok"], "the run starts on the server")
-	var sent: Dictionary = JSON.parse_string(bridge.calls[0][1])
+	var sent: Dictionary = JSON.parse_string(bridge.of("StartRun")[0][1])
 	eq(sent.keys(), ["rulesetVersion", "runStructureId", "characterIds"], "RunStartRequest in the record's field order")
 	eq(sent["characterIds"], PARTY, "with the party")
 	var run := _server_run(str(started["data"]["floorSeed"]).to_int(), str(started["data"]["runId"]))
@@ -191,7 +240,7 @@ func test_server_link_starts_and_retries_the_stairs() -> void:
 	eq(run.next_floor(), "", "the stairs")
 	check(await _until(func() -> bool: return run.state.floor_index == 1), "the floor starts once the seed is in")
 	eq(bridge.count("GetFloorSeed"), 3, "no answer and a 503 were retried")
-	eq(bridge.calls[1].slice(1, 3), [RUN_ID, 1], "for this run's floor 1")
+	eq(bridge.of("GetFloorSeed")[0].slice(1, 3), [RUN_ID, 1], "for this run's floor 1")
 	eq(int(run.state.floor_seeds[1]), 777, "with the issued seed")
 	eq(run.runner_error, "", "and the run goes on")
 

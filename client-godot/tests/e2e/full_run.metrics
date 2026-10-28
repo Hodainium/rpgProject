@@ -1,0 +1,6 @@
+rpg_run_actions_total\{[^}]*result="accepted"[^}]*type="start_run"[^}]*\} 1( |$)
+rpg_battles_submitted_total(\{[^}]*\})? [2-9]
+rpg_run_ends_total\{[^}]*status="(won|lost)"[^}]*\} 1( |$)
+rpg_run_action_batch_size_count(\{[^}]*\})? [1-9]
+rpg_players_online(\{[^}]*\})? 1( |$)
+rpg_dev_tokens_issued_total(\{[^}]*\})? [1-9]

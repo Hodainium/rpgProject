@@ -1,14 +1,21 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Rpg.Contracts.Api.V1;
 using Rpg.Contracts.Serialization;
+using Rpg.GameServerApi.Auth;
+using Rpg.GameServerApi.Battle;
 using Rpg.GameServerApi.Health;
 using Rpg.GameServerApi.Infrastructure;
 using Rpg.GameServerApi.Migrations;
 using Rpg.GameServerApi.Observability;
+using Rpg.GameServerApi.Presence;
+using Rpg.GameServerApi.RateLimiting;
 using Rpg.GameServerApi.Runs;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -42,7 +49,35 @@ builder.Services.AddSingleton<FloorSeeds>();
 builder.Services.AddSingleton<RulesetPolicy>();
 builder.Services.AddSingleton<RunStore>();
 builder.Services.AddSingleton<RunSummaryCache>();
+builder.Services.AddOptions<MonitorOptions>().BindConfiguration(MonitorOptions.Section);
 builder.Services.AddHostedService<RunsInProgressMonitor>();
+
+// Part B: bearer tokens, the action log, battle sessions, presence and rate limits.
+builder.Services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.Section)
+    .Validate(o => o.SigningKey.Length >= 32, "Auth:SigningKey must be at least 32 characters (user-secrets in development).")
+    .ValidateOnStart();
+builder.Services.AddSingleton<DevTokenIssuer>();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<AuthOptions>>((jwt, auth) =>
+    {
+        jwt.MapInboundClaims = false;  // keep "sub" and "name" as issued
+        jwt.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = AuthOptions.Issuer,
+            ValidAudience = AuthOptions.Audience,
+            IssuerSigningKey = auth.Value.Key(),
+            ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+            ClockSkew = TimeSpan.FromSeconds(30),
+        };
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddOptions<RunOptions>().BindConfiguration(RunOptions.Section);
+builder.Services.AddSingleton<BattleSessionCache>();
+builder.Services.AddSingleton<PresenceTracker>();
+builder.Services.AddHostedService<PresenceMonitor>();
+builder.Services.AddOptions<RateLimitOptions>().BindConfiguration(RateLimitOptions.Section);
+builder.Services.AddSingleton<RateLimiter>();
 
 // Readiness policy (spec project-skeleton, section 4): Postgres and RabbitMQ are required, Redis only degrades.
 string[] ready = [HealthEndpoints.ReadyTag];
@@ -91,13 +126,18 @@ app.Services.GetRequiredService<RpgMetrics>();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UsePresence();
 
 app.MapHealthEndpoints();
 app.MapPrometheusScrapingEndpoint().DisableHttpMetrics();
 
 app.MapGet("/api/v1/info", (BuildInfo build, TimeProvider clock) =>
     new ServerInfoResponse(BuildInfo.ServiceName, build.Version, clock.GetUtcNow()));
+app.MapAuthEndpoints();
 app.MapRunEndpoints();
+app.MapPresenceEndpoints();
 
 app.Run();
 

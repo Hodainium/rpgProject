@@ -4,7 +4,8 @@
 #   tools/e2e.sh [scenario ...] [--keep] [-j N]      (default: every client-godot/tests/e2e/*.txt, N = 4)
 #   tools/e2e.sh --check                             (no Docker: lists and validates the scenarios, finds the tools)
 # Per scenario: a fresh Postgres database e2e_<stamp>_<scenario>, Redis index 1-15, a server on its own port
-# (Development, a test seed secret, only the live ruleset version accepted, plus the scenario's "#! env K=V" lines),
+# (Development, so dev tokens and Run:AutoApproveWins; test seed and token secrets; only the live ruleset version
+# accepted; plus the scenario's "#! env K=V" lines),
 # then dev_run.tscn --server --player e2e-<scenario> --control <folder>, then the scenario's .sql (every line returns t)
 # and .metrics (every line is a regex the final /metrics scrape matches). Fault steps (`e2e <action>` in a script)
 # reach the control loop here: server-stop, server-start, redis-flush.
@@ -16,6 +17,7 @@ godot=${GODOT:-/h/Godot/Godot_v4.7.2-stable_mono_win64_console.exe}
 scenarios_dir="$root/client-godot/tests/e2e"
 compose=(docker compose -f "$root/infra/docker-compose.yml")
 seed_secret="e2e-floor-seed-secret-0123456789abcdef"
+signing_key="e2e-jwt-signing-key-0123456789abcdef"
 jobs=4; keep=0; check=0; picked=()
 while [[ $# -gt 0 ]]; do
 	case $1 in
@@ -114,7 +116,8 @@ run_scenario() {  # <name> <index 1-15>
 		"ConnectionStrings__Postgres=Host=127.0.0.1;Port=5432;Database=$db;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD"
 		"ConnectionStrings__Redis=127.0.0.1:6379,abortConnect=false,defaultDatabase=$index"
 		"RabbitMq__Uri=amqp://$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS@127.0.0.1:5672/"
-		"Seeds__Secret=$seed_secret" Ruleset__AcceptAny=false "Ruleset__Accepted__0=$ruleset")
+		"Seeds__Secret=$seed_secret" "Auth__SigningKey=$signing_key" Ruleset__AcceptAny=false
+		"Ruleset__Accepted__0=$ruleset")
 	local line
 	while IFS= read -r line || [[ -n $line ]]; do
 		line=${line%$'\r'}

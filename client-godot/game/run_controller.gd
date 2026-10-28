@@ -25,6 +25,12 @@ signal map_revealed
 ## Spec server-authority 2.1 (server mode): the run needs the seed of floor `floor_index` from the server. Emitted once
 ## per floor, at next_floor; whoever links the run to the server answers with provide_floor_seed().
 signal floor_seed_needed(floor_index: int)
+## Spec server-authority 2.2 (journal on): the RunActionRequests (wire dictionaries, seq order) one player action
+## logged, built after the action so each carries the state hash after it and, on checkpoints, the RunSnapshot.
+signal actions_committed(requests: Array)
+## Spec server-authority 2.3 (verify_wins on): the run was won; `end_request` is the RunEndRequest
+## {seq, status: "Won", runHash, snapshot}. run_ended("Won") follows only through confirm_end().
+signal run_verifying(end_request: Dictionary)
 
 var content: ContentIndex
 var structure: RunStructure
@@ -61,6 +67,15 @@ var _recipient_draws: int = 0
 ## ({"floor": int, "choice": StringName}, else empty), and the floors whose seed was asked for.
 var _waiting_floor: Dictionary = {}
 var _requested_floors: Array[int] = []
+## Spec server-authority Part B (server mode, set by ServerLink.link): `journal` builds a RunActionRequest for every
+## logged entry (actions_committed); `verify_wins` holds a won run at "Verifying run…" until confirm_end(). Both off in
+## local mode, where nothing below runs and every log, hash and golden is unchanged.
+var journal: bool = false
+var verify_wins: bool = false
+## run_log entries already committed (the next one is seq _committed + 1), and each battle's conditions by battle id
+## (they travel in the queued action only, never in run_log).
+var _committed: int = 0
+var _battle_conditions: Dictionary = {}
 
 ## Spec keys-and-gear 3.2: run modifier tags on held items and worn equipment.
 const KEYS_DOUBLE_TAG: StringName = &"Run.Keys.Double"
@@ -76,7 +91,7 @@ func start_run(content_index: ContentIndex, character_ids: Array, seed_text: Str
 	var error := _begin_run(content_index, character_ids, seed_text, run_id)
 	if error != "":
 		return error
-	return _open_run()
+	return _commit_after(_open_run())
 
 
 ## Spec server-authority 2.1 (server mode): starts the run the server opened as `server_run_id`, with floor 0's issued
@@ -93,7 +108,7 @@ func start_server_run(content_index: ContentIndex, character_ids: Array, server_
 	run_log[0]["runId"] = server_run_id
 	run_log[0]["floorSeed"] = str(floor_seed)
 	_requested_floors.assign([0])
-	return _open_run()
+	return _commit_after(_open_run())
 
 
 ## Server mode: the issued seed of floor `floor_index` arrived. Ignored when it is already known; resumes a floor
@@ -338,6 +353,10 @@ func _install_floor(map: FloorMap, pools: Dictionary, clear_start: bool) -> void
 ## After the boss: the next floor, or the run is won after the last one (that happens in _clear_room).
 ## `chapter_id`: the route picked at the stairs when the next floor is a CHOICE (next_floor_choices()).
 func next_floor(chapter_id: StringName = &"") -> String:
+	return _commit_after(_do_next_floor(chapter_id))
+
+
+func _do_next_floor(chapter_id: StringName = &"") -> String:
 	if _gift_block() != "":
 		return _gift_block()
 	if not _active() or not state.boss_cleared or state.floor_index + 1 >= structure.floors.size() or state.sandbox \
@@ -466,6 +485,10 @@ func room_locked(index: int) -> bool:
 
 
 func enter_room(index: int) -> String:
+	return _commit_after(_do_enter_room(index))
+
+
+func _do_enter_room(index: int) -> String:
 	if _gift_block() != "":
 		return _gift_block()
 	if not can_enter(index):
@@ -535,9 +558,15 @@ func battle_snapshot() -> Dictionary:
 ## Plays the pending battle with a controller (the player's ActionRecorder, or a scripted one in tests) and applies
 ## the result. The controller must expose `entries` (the recorded ActionLog entries).
 func fight(controller: Object, gate: PresentationGate = null) -> String:
+	return _commit_after(await _do_fight(controller, gate))
+
+
+func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 	if pending_battle.is_empty():
 		return "no battle is waiting"
 	var snapshot := battle_snapshot()
+	if journal:
+		_battle_conditions[snapshot["battleId"]] = snapshot
 	var battle := Battle.new()
 	battle.name = "RunBattle"
 	add_child(battle)
@@ -914,6 +943,10 @@ func _chest_problem(index: int) -> String:
 ## Opens the chest at `index` (0-based) on the map: pays its key, picks a reward from the chest's own stream "chest/<serial>"
 ## (twice with Run.Chest.Double) and runs its outcomes. Logged. Returns "" or why not (nothing changes then).
 func open_chest(index: int) -> String:
+	return _commit_after(_do_open_chest(index))
+
+
+func _do_open_chest(index: int) -> String:
 	var problem := _chest_problem(index)
 	if problem != "":
 		return problem
@@ -1023,6 +1056,10 @@ func choice_enabled(choice_index: int) -> bool:
 
 ## Picks a choice: its outcomes run in order. Ends the event unless an outcome went to a page or started a battle.
 func choose(choice_index: int) -> String:
+	return _commit_after(_do_choose(choice_index))
+
+
+func _do_choose(choice_index: int) -> String:
 	if _gift_block() != "":
 		return _gift_block()
 	if not _active() or not choice_enabled(choice_index):
@@ -1082,6 +1119,10 @@ func _after_choice(after: Dictionary) -> String:
 
 ## Takes a pedestal item or buys a shop item in the current room for the member in `slot`.
 func take(placement: int, slot: int) -> String:
+	return _commit_after(_do_take(placement, slot))
+
+
+func _do_take(placement: int, slot: int) -> String:
 	if not _active() or not pending_battle.is_empty():
 		return "not now"
 	if _gift_block() != "":
@@ -1248,6 +1289,10 @@ func equipment_slots() -> Array[StringName]:
 ## Equips a piece from the armor inventory on the member in `slot` (alive or dead; gear applies when revived). The
 ## piece already in that equipment slot goes back to the inventory. Map only; logged.
 func equip(slot: int, piece_id: StringName) -> String:
+	return _commit_after(_do_equip(slot, piece_id))
+
+
+func _do_equip(slot: int, piece_id: StringName) -> String:
 	if not _active() or not pending_battle.is_empty():
 		return "not now"
 	if _gift_block() != "":
@@ -1268,6 +1313,10 @@ func equip(slot: int, piece_id: StringName) -> String:
 
 ## Takes the piece off the member's equipment slot `slot_tag` and puts it back in the armor inventory. Map only; logged.
 func unequip(slot: int, slot_tag: StringName) -> String:
+	return _commit_after(_do_unequip(slot, slot_tag))
+
+
+func _do_unequip(slot: int, slot_tag: StringName) -> String:
 	if not _active() or not pending_battle.is_empty():
 		return "not now"
 	if _gift_block() != "":
@@ -1287,6 +1336,10 @@ func unequip(slot: int, slot_tag: StringName) -> String:
 ## Spec keys-and-gear 2.4: puts the piece another member wears on the member in `slot`; whatever this member wore in
 ## that equipment slot goes to the other member (nothing passes through the bag). One logged action, checked first.
 func swap_gear(slot: int, piece_id: StringName) -> String:
+	return _commit_after(_do_swap_gear(slot, piece_id))
+
+
+func _do_swap_gear(slot: int, piece_id: StringName) -> String:
 	if not _active() or not pending_battle.is_empty():
 		return "not now"
 	if _gift_block() != "":
@@ -1323,6 +1376,10 @@ func swap_gear(slot: int, piece_id: StringName) -> String:
 ## free use slot, or (with `swap_item`, an item the receiver holds) in exchange, each taking the other's place. The
 ## cooldown travels with the item. Checked first (both capacities must still fit), then one logged action.
 func move_item(from_slot: int, item_id: StringName, to_slot: int, swap_item: StringName = &"") -> String:
+	return _commit_after(_do_move_item(from_slot, item_id, to_slot, swap_item))
+
+
+func _do_move_item(from_slot: int, item_id: StringName, to_slot: int, swap_item: StringName = &"") -> String:
 	if not _active() or not pending_battle.is_empty():
 		return "not now"
 	if _gift_block() != "":
@@ -1492,6 +1549,10 @@ func member_kit(slot: int) -> Array[Dictionary]:
 
 ## Uses a spell or a held item's ability on the map. Returns [] on success, else [reason, detail].
 func use_field(slot: int, ability_tag: StringName, target_slot: int = 0) -> Array:
+	return _commit_after(await _do_use_field(slot, ability_tag, target_slot))
+
+
+func _do_use_field(slot: int, ability_tag: StringName, target_slot: int = 0) -> Array:
 	if not _active() or not pending_battle.is_empty():
 		return ["NotNow", "finish the battle first"]
 	if _gift_block() != "":
@@ -1663,6 +1724,10 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 
 ## Spec event-items: the player gives the first pending gift to the member in `slot`. Logged. Returns "" or why not.
 func give_to(slot: int) -> String:
+	return _commit_after(_do_give_to(slot))
+
+
+func _do_give_to(slot: int) -> String:
 	if not _active() or state.pending_gifts.is_empty():
 		return "nothing to give"
 	var item: ItemDefinition = content.items.get(state.pending_gifts[0])
@@ -2090,9 +2155,92 @@ func _end(status: String) -> void:
 		return
 	state.status = status
 	run_log.append({"type": "end", "status": status})
+	if status == RunState.WON and verify_wins:
+		_notify("Verifying run…")  # spec server-authority 2.3: run_verifying goes out with the commit
+		return
+	_announce_end(status)
+
+
+## Spec server-authority 3.5: the RunSnapshot of the run as it is now (between actions).
+func snapshot() -> Dictionary:
+	return RunSnapshot.capture(self)
+
+
+## Spec server-authority 2.4: continues the run from `saved` (a RunSnapshot). Emits nothing; announce_resumed() tells
+## the screens once whoever loads it is ready. "" or the error.
+func load_snapshot(content_index: ContentIndex, saved: Dictionary) -> String:
+	var error := RunSnapshot.restore(self, content_index, saved)
+	if error != "":
+		return _stop("resume: " + error)
+	return ""
+
+
+## After load_snapshot: the signals a run that just got here would have sent (the floor, the room and what waits in
+## it: a battle, an event page, pickups). A floor waiting for a seed that is already known is entered now.
+func announce_resumed() -> void:
+	run_started.emit()
+	if not _waiting_floor.is_empty():
+		var waiting := _waiting_floor
+		if state.floor_seeds.has(int(waiting["floor"])):
+			_waiting_floor = {}
+			enter_floor(int(waiting["floor"]), waiting["choice"])
+		else:
+			_notify("Connecting…")
+		return
+	floor_entered.emit(state.floor_index)
+	party_changed.emit()
+	if state.map == null or state.current_cell < 0:
+		return
+	room_entered.emit(state.current_cell)
+	if not pending_battle.is_empty():
+		battle_requested.emit(battle_snapshot())
+	elif not state.event.is_empty():
+		event_page_shown.emit(state.event["event"], int(state.event["page"]))
+	elif not state.map.cells[state.current_cell]["pickups"].is_empty():
+		pickups_shown.emit(state.current_cell)
+
+
+## Spec server-authority 2.3: the server's verdict on a won run that waited at "Verifying run…" (verify_wins).
+func confirm_end(status: String) -> void:
+	if state != null and state.status == status:
+		_announce_end(status)
+
+
+func _announce_end(status: String) -> void:
 	run_ended.emit(status)
 	_send(GameplayMessageRouter.RUN_ENDED, &"Verb.Win" if status == RunState.WON else &"Verb.Lose", &"", structure.id,
 		0, [], {"status": status})
+
+
+## Spec server-authority 2.2: hands what the last player action logged to the journal (actions_committed), then
+## returns `result` unchanged. Nothing happens unless `journal` is on.
+func _commit_after(result: Variant) -> Variant:
+	if not journal or state == null or _committed >= run_log.size():
+		return result
+	var requests: Array = []
+	var end_request := {}
+	var hash := state.run_hash()
+	var snapshot: Dictionary = {}
+	for index in range(_committed, run_log.size()):
+		var entry: Dictionary = run_log[index]
+		var seq := index + 1
+		var checkpoint: bool = RunWire.CHECKPOINTS.has(str(entry["type"])) \
+			or (index == run_log.size() - 1 and not pending_battle.is_empty())
+		if checkpoint or (entry["type"] == "end" and entry["status"] == RunState.WON):
+			if snapshot.is_empty():
+				snapshot = RunSnapshot.capture(self)
+		if entry["type"] == "end" and entry["status"] == RunState.WON:
+			end_request = {"seq": seq, "status": RunState.WON, "runHash": hash, "snapshot": snapshot}
+			continue
+		requests.append(RunWire.request(self, entry, seq, hash, snapshot if checkpoint else {},
+			_battle_conditions.get(entry.get("battleId", ""), {})))
+	_committed = run_log.size()
+	_battle_conditions.clear()
+	if not requests.is_empty():
+		actions_committed.emit(requests)
+	if not end_request.is_empty():
+		run_verifying.emit(end_request)
+	return result
 
 
 func _stop(error: String) -> String:

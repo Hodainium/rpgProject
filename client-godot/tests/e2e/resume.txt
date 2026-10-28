@@ -1,0 +1,16 @@
+# Spec server-authority 2.4 (dev-tools E9): the app restarts mid-run. First the local save continues it, then, with
+# the save deleted, the server's log does (the latest checkpoint plus the replayed tail): both times at the same state
+# hash (`server resume` fails otherwise), and the run plays on.
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+server resume
+expect server.resumes 1
+server forget
+server resume
+expect server.resumes 2
+server check
+expect floor 1
+autorun policy=smart
+wait ended 60

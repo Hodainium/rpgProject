@@ -37,6 +37,12 @@ static func state_of(run: RunController) -> Dictionary:
 		for floor_index in state.floor_seeds:
 			floor_seeds[str(floor_index)] = str(state.floor_seeds[floor_index])
 		data["server"] = {"runId": state.run_id, "floorSeeds": floor_seeds, "waitingForFloor": run.waiting_for_floor()}
+		var game: Node = run.get_tree().get_first_node_in_group("game_main") if run.is_inside_tree() else null
+		if game != null and game.server != null and run.journal:
+			# Spec dev-tools E9 (Part B): the upload queue of the linked run.
+			data["server"]["queued"] = game.server.queued().size()
+			data["server"]["lastAckedSeq"] = game.server.last_acked_seq()
+			data["server"]["resumes"] = game.server.resumes
 	return data
 
 

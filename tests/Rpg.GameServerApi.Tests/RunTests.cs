@@ -6,7 +6,9 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using Rpg.Client;
 using Rpg.Contracts.Api.V1;
+using Rpg.Contracts.Auth;
 using Rpg.Contracts.Runs;
+using Rpg.GameServerApi.Auth;
 using Rpg.GameServerApi.Runs;
 using Rpg.GameServerApi.Tests.Infrastructure;
 using StackExchange.Redis;
@@ -15,8 +17,8 @@ namespace Rpg.GameServerApi.Tests;
 
 /// <summary>
 /// Spec server-authority Part A, section 4 (failure modes) and 6 (server and client tests): runs, floor seeds, the
-/// run read model and its Redis cache (scenario 4), through the real Rpg.Client against the real server.
-/// Every test gets a database of its own.
+/// run read model and its Redis cache (scenario 4), through the real Rpg.Client against the real server with dev
+/// tokens. Every test gets a database of its own. No actions are uploaded here, so the stairs go after seq 0.
 /// </summary>
 [Collection(StackCollection.Name)]
 public class RunTests(StackFixture stack)
@@ -24,13 +26,16 @@ public class RunTests(StackFixture stack)
     private static readonly RunStartRequest Start =
         new(ApiFactory.TestRuleset, "descent", ["warrior", "cleric", "ranger"]);
 
+    /// <summary>The stairs with nothing uploaded: Part B's gate wants the last stored seq, 0.</summary>
+    private static readonly FloorSeedRequest Stairs = new(0);
+
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     [Fact]
     public async Task StartRun_CreatesActiveRun_WithFloorZeroSeedFromHmac()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
 
         var started = await client.StartRunAsync(Start, Ct);
         var summary = await client.GetRunAsync(started.RunId, Ct);
@@ -48,7 +53,7 @@ public class RunTests(StackFixture stack)
     public async Task StartRun_AbandonsPrevious()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
 
         var first = await client.StartRunAsync(Start, Ct);
         var firstBefore = await client.GetRunAsync(first.RunId, Ct);  // cached, so the start must delete it
@@ -67,7 +72,7 @@ public class RunTests(StackFixture stack)
     public async Task StartRun_UnknownRuleset_Rejected()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
 
         var ex = await Assert.ThrowsAsync<GameServerApiException>(() =>
             client.StartRunAsync(Start with { RulesetVersion = "4.7.2.stable.mono+ffffffffffffffff" }, Ct));
@@ -81,12 +86,12 @@ public class RunTests(StackFixture stack)
     public async Task StartRun_InvalidBody_Returns400()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
 
         var noParty = await Assert.ThrowsAsync<GameServerApiException>(() =>
             client.StartRunAsync(Start with { CharacterIds = [] }, Ct));
         var http = factory.CreateClient();
-        http.DefaultRequestHeaders.Add(ApiHeaders.DevPlayer, "alice");
+        http.DefaultRequestHeaders.Authorization = new("Bearer", client.AccessToken);
         var malformed = await http.PostAsync("/api/v1/runs",
             new StringContent("{not json", System.Text.Encoding.UTF8, "application/json"), Ct);
 
@@ -98,11 +103,11 @@ public class RunTests(StackFixture stack)
     public async Task FloorSeed_NextFloor_IssuedAndBecomesCurrent()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
         var run = await client.StartRunAsync(Start, Ct);
 
-        var floor1 = await client.GetFloorSeedAsync(run.RunId, 1, ct: Ct);
-        var floor2 = await client.GetFloorSeedAsync(run.RunId, 2, ct: Ct);
+        var floor1 = await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
+        var floor2 = await client.GetFloorSeedAsync(run.RunId, 2, Stairs, Ct);
 
         Assert.Equal(Seeds(factory).Derive(Guid.Parse(run.RunId), 1).ToString(), floor1.FloorSeed);
         Assert.NotEqual(floor1.FloorSeed, floor2.FloorSeed);
@@ -113,11 +118,11 @@ public class RunTests(StackFixture stack)
     public async Task FloorSeed_Retry_ReturnsSameSeed()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
         var run = await client.StartRunAsync(Start, Ct);
 
-        var first = await client.GetFloorSeedAsync(run.RunId, 1, ct: Ct);
-        var retry = await client.GetFloorSeedAsync(run.RunId, 1, ct: Ct);
+        var first = await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
+        var retry = await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
 
         Assert.Equal(first, retry);
         Assert.Equal(1, (await client.GetRunAsync(run.RunId, Ct)).CurrentFloor);
@@ -128,12 +133,12 @@ public class RunTests(StackFixture stack)
     public async Task FloorSeed_NotNextFloor_Rejected()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
         var run = await client.StartRunAsync(Start, Ct);
 
-        var skip = await Assert.ThrowsAsync<GameServerApiException>(() => client.GetFloorSeedAsync(run.RunId, 2, ct: Ct));
-        await client.GetFloorSeedAsync(run.RunId, 1, ct: Ct);
-        var back = await Assert.ThrowsAsync<GameServerApiException>(() => client.GetFloorSeedAsync(run.RunId, 0, ct: Ct));
+        var skip = await Assert.ThrowsAsync<GameServerApiException>(() => client.GetFloorSeedAsync(run.RunId, 2, Stairs, Ct));
+        await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
+        var back = await Assert.ThrowsAsync<GameServerApiException>(() => client.GetFloorSeedAsync(run.RunId, 0, Stairs, Ct));
 
         Assert.Equal(ApiErrors.FloorNotReachable, skip.ErrorCode);
         Assert.Equal(ApiErrors.FloorNotReachable, back.ErrorCode);
@@ -145,12 +150,12 @@ public class RunTests(StackFixture stack)
     public async Task FloorSeed_EndedRun_Rejected()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
         var abandoned = await client.StartRunAsync(Start, Ct);
         await client.StartRunAsync(Start, Ct);
 
         var ex = await Assert.ThrowsAsync<GameServerApiException>(() =>
-            client.GetFloorSeedAsync(abandoned.RunId, 1, ct: Ct));
+            client.GetFloorSeedAsync(abandoned.RunId, 1, Stairs, Ct));
 
         Assert.Equal(ApiErrors.RunNotActive, ex.ErrorCode);
     }
@@ -159,13 +164,13 @@ public class RunTests(StackFixture stack)
     public async Task Runs_OtherPlayer_NotFound()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var alice = Client(factory, "alice");
-        var bob = Client(factory, "bob");
+        var alice = await ClientAsync(factory, "alice");
+        var bob = await ClientAsync(factory, "bob");
         var run = await alice.StartRunAsync(Start, Ct);
         await alice.GetRunAsync(run.RunId, Ct);  // cached: the cached copy must not leak either
 
         var read = await Assert.ThrowsAsync<GameServerApiException>(() => bob.GetRunAsync(run.RunId, Ct));
-        var stairs = await Assert.ThrowsAsync<GameServerApiException>(() => bob.GetFloorSeedAsync(run.RunId, 1, ct: Ct));
+        var stairs = await Assert.ThrowsAsync<GameServerApiException>(() => bob.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct));
         var missing = await Assert.ThrowsAsync<GameServerApiException>(() =>
             bob.GetRunAsync(Guid.NewGuid().ToString(), Ct));
 
@@ -176,28 +181,71 @@ public class RunTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task Endpoints_WithoutPlayer_Return401()
+    public async Task Endpoints_RequireAuth()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var anonymous = new GameServerClient(factory.CreateClient());
+        var alice = await ClientAsync(factory, "alice");
+        var run = await alice.StartRunAsync(Start, Ct);
+        var forged = new DevTokenIssuer(Microsoft.Extensions.Options.Options.Create(new AuthOptions
+        {
+            SigningKey = "another-signing-key-that-is-long-enough",
+        }), TimeProvider.System).Issue("alice").AccessToken;
 
-        var ex = await Assert.ThrowsAsync<GameServerApiException>(() => anonymous.GetCurrentRunAsync(Ct));
+        foreach (var token in new string?[] { null, "not-a-token", forged })
+        {
+            var client = new GameServerClient(factory.CreateClient(), token);
+            Func<Task>[] calls =
+            [
+                () => client.StartRunAsync(Start, Ct),
+                () => client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct),
+                () => client.GetRunAsync(run.RunId, Ct),
+                () => client.GetCurrentRunAsync(Ct),
+                () => client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(1)), Ct),
+                () => client.EndRunAsync(run.RunId, RunLog.End(1, RunEndStatus.Lost), Ct),
+                () => client.ResumeAsync(run.RunId, Ct),
+                () => client.GetBattleAsync(run.RunId, 1, Ct),
+                () => client.HeartbeatAsync(new Rpg.Contracts.Presence.PresenceRequest(
+                    Rpg.Contracts.Presence.PresenceActivity.Map), Ct),
+            ];
+            foreach (var call in calls)
+            {
+                var ex = await Assert.ThrowsAsync<GameServerApiException>(call);
+                Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
+            }
+        }
 
-        Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
+        Assert.Equal(0, (await alice.GetRunAsync(run.RunId, Ct)).LastSeq);
+    }
+
+    [Fact]
+    public async Task DevToken_IdIsStablePerName_AndBadNamesAre400()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack);
+        var client = new GameServerClient(factory.CreateClient());
+
+        var first = await client.GetDevTokenAsync(new DevTokenRequest("alice"), Ct);
+        var again = await client.GetDevTokenAsync(new DevTokenRequest("alice"), Ct);
+        var bad = await Assert.ThrowsAsync<GameServerApiException>(() =>
+            client.GetDevTokenAsync(new DevTokenRequest("no spaces"), Ct));
+
+        Assert.Equal(first.PlayerId, again.PlayerId);
+        Assert.Equal(DevTokenIssuer.IdOf("alice").ToString("D"), first.PlayerId);
+        Assert.True(first.ExpiresAt > DateTimeOffset.UtcNow);
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
     }
 
     [Fact]
     public async Task Cache_WriteDeletesKey_NextReadIsFresh()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
         var run = await client.StartRunAsync(Start, Ct);
         var redis = await RedisAsync();
         var key = RunSummaryCache.SummaryKey(Guid.Parse(run.RunId));
 
         await client.GetRunAsync(run.RunId, Ct);
         var filled = await redis.GetDatabase().KeyExistsAsync(key);
-        await client.GetFloorSeedAsync(run.RunId, 1, ct: Ct);
+        await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
         var afterWrite = await redis.GetDatabase().KeyExistsAsync(key);
         var fresh = await client.GetRunAsync(run.RunId, Ct);
 
@@ -213,9 +261,9 @@ public class RunTests(StackFixture stack)
     public async Task RedisFlushed_ReadFallsBackToPostgres()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
         var run = await client.StartRunAsync(Start, Ct);
-        await client.GetFloorSeedAsync(run.RunId, 1, ct: Ct);
+        await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
         var before = await client.GetRunAsync(run.RunId, Ct);
         var current = await client.GetCurrentRunAsync(Ct);
         var redis = await RedisAsync();
@@ -231,11 +279,11 @@ public class RunTests(StackFixture stack)
     public async Task RedisDown_WritesStillSucceed()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, redis: StackFixture.Unreachable.Redis);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
 
         var first = await client.StartRunAsync(Start, Ct);
         var second = await client.StartRunAsync(Start, Ct);
-        var floor = await client.GetFloorSeedAsync(second.RunId, 1, ct: Ct);
+        var floor = await client.GetFloorSeedAsync(second.RunId, 1, Stairs, Ct);
 
         Assert.Equal(RunStatus.Abandoned, (await client.GetRunAsync(first.RunId, Ct)).Status);
         Assert.Equal(1, (await client.GetCurrentRunAsync(Ct))?.CurrentFloor);
@@ -250,7 +298,7 @@ public class RunTests(StackFixture stack)
         await using var factory = new ApiFactory(StackFixture.Unreachable.Postgres, stack.RedisConnectionString,
             stack.RabbitMqUri, "Development");
         var http = factory.CreateClient();
-        http.DefaultRequestHeaders.Add(ApiHeaders.DevPlayer, "alice");
+        http.DefaultRequestHeaders.Authorization = new("Bearer", Token(factory, "alice"));
 
         using var response = await http.PostAsJsonAsync("/api/v1/runs", Start, Ct);
 
@@ -262,42 +310,48 @@ public class RunTests(StackFixture stack)
     public async Task DevConveniences_OffOutsideDevelopment()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, environment: "Production",
-            settings: new Dictionary<string, string?> { ["Ruleset:AcceptAny"] = "true" });
-        var client = Client(factory, "alice");
-        var runId = Guid.NewGuid().ToString();
+            settings: new Dictionary<string, string?>
+            {
+                ["Ruleset:AcceptAny"] = "true",
+                ["Auth:DevTokens"] = "true",
+                ["Run:AutoApproveWins"] = "true",
+            });
 
-        Task[] calls =
-        [
-            client.StartRunAsync(Start with { RulesetVersion = "anything" }, Ct),
-            client.GetFloorSeedAsync(runId, 1, ct: Ct),
-            client.GetRunAsync(runId, Ct),
-            client.GetCurrentRunAsync(Ct),
-        ];
+        // No dev tokens outside Development, whatever Auth:DevTokens says.
+        var noToken = await Assert.ThrowsAsync<GameServerApiException>(() =>
+            new GameServerClient(factory.CreateClient()).GetDevTokenAsync(new DevTokenRequest("alice"), Ct));
+        Assert.Equal(HttpStatusCode.NotFound, noToken.StatusCode);
 
-        foreach (var call in calls)
-        {
-            var ex = await Assert.ThrowsAsync<GameServerApiException>(() => call);
-            Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
-        }
+        // A properly signed token still works: bearer auth itself isn't a development convenience.
+        var client = new GameServerClient(factory.CreateClient(), Token(factory, "alice"));
 
         // AcceptAny is set, but outside Development only the Accepted list counts.
+        var refused = await Assert.ThrowsAsync<GameServerApiException>(() =>
+            client.StartRunAsync(Start with { RulesetVersion = "anything" }, Ct));
+        Assert.Equal(ApiErrors.RulesetMismatch, refused.ErrorCode);
         var ruleset = factory.Services.GetRequiredService<RulesetPolicy>();
         Assert.False(ruleset.Accepts("anything"));
         Assert.True(ruleset.Accepts(ApiFactory.TestRuleset));
+
+        // AutoApproveWins is set, but a won run still waits for its verdict.
+        var run = await client.StartRunAsync(Start, Ct);
+        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(1)), Ct);
+        var end = await client.EndRunAsync(run.RunId, RunLog.End(2, RunEndStatus.Won), Ct);
+        Assert.Equal(RunStatus.Verifying, end.Status);
     }
 
     [Fact]
     public async Task Metrics_CountRunStartsAndFloorSeeds()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
         var run = await client.StartRunAsync(Start, Ct);
         await client.StartRunAsync(Start, Ct);
-        await client.GetFloorSeedAsync(run.RunId, 1, ct: Ct).ContinueWith(_ => { }, Ct);  // ended: not counted
+        await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct).ContinueWith(_ => { }, Ct);  // ended: not counted
         var live = await client.StartRunAsync(Start, Ct);
-        await client.GetFloorSeedAsync(live.RunId, 1, ct: Ct);
-        await client.GetFloorSeedAsync(live.RunId, 1, ct: Ct);
-        await client.GetFloorSeedAsync(live.RunId, 3, ct: Ct).ContinueWith(_ => { }, Ct);
+        await client.GetFloorSeedAsync(live.RunId, 1, Stairs, Ct);
+        await client.GetFloorSeedAsync(live.RunId, 1, Stairs, Ct);
+        await client.GetFloorSeedAsync(live.RunId, 3, Stairs, Ct).ContinueWith(_ => { }, Ct);
 
         var metrics = await PollMetricsAsync(factory, text => text.Contains("rpg_runs_in_progress"));
 
@@ -310,7 +364,7 @@ public class RunTests(StackFixture stack)
 
     /// <summary>The value of the series <paramref name="name"/> carrying <paramref name="label"/> (other labels, such as
     /// the exporter's scope labels, may sit beside it), or null.</summary>
-    private static string? Sample(string metrics, string name, string label) =>
+    internal static string? Sample(string metrics, string name, string label) =>
         metrics.Split('\n')
             .Where(line => line.StartsWith(name + "{", StringComparison.Ordinal) && line.Contains(label))
             .Select(line => line[(line.LastIndexOf('}') + 1)..].Trim().Split(' ')[0])
@@ -328,7 +382,7 @@ public class RunTests(StackFixture stack)
         };
         ActivitySource.AddActivityListener(listener);
         await using var factory = await ApiFactory.RunsAsync(stack);
-        var client = Client(factory, "alice");
+        var client = await ClientAsync(factory, "alice");
         var run = await client.StartRunAsync(Start, Ct);
 
         // Redis commands are drained from the profiling session on an interval: keep reading until a span shows.
@@ -343,13 +397,22 @@ public class RunTests(StackFixture stack)
         Assert.Contains("Npgsql", sources.Keys);
     }
 
-    private static GameServerClient Client(ApiFactory factory, string player) =>
-        new(factory.CreateClient(), player);
+    /// <summary>A client holding a dev token for <paramref name="player"/>, fetched through the real endpoint.</summary>
+    internal static async Task<GameServerClient> ClientAsync(ApiFactory factory, string player)
+    {
+        var client = new GameServerClient(factory.CreateClient());
+        client.AccessToken = (await client.GetDevTokenAsync(new DevTokenRequest(player), Ct)).AccessToken;
+        return client;
+    }
+
+    /// <summary>A token signed by the server's own issuer (works in any environment).</summary>
+    internal static string Token(ApiFactory factory, string player) =>
+        factory.Services.GetRequiredService<DevTokenIssuer>().Issue(player).AccessToken;
 
     private static FloorSeeds Seeds(ApiFactory factory) =>
         new(factory.Services.GetRequiredService<IOptions<SeedOptions>>());
 
-    private static async Task<long> ScalarAsync(ApiFactory factory, string sql)
+    internal static async Task<long> ScalarAsync(ApiFactory factory, string sql)
     {
         await using var command = factory.Services.GetRequiredService<NpgsqlDataSource>().CreateCommand(sql);
         return (long)(await command.ExecuteScalarAsync(Ct))!;
@@ -359,7 +422,7 @@ public class RunTests(StackFixture stack)
         await ConnectionMultiplexer.ConnectAsync(stack.RedisConnectionString + ",allowAdmin=true");
 
     /// <summary>Gauges appear after their first observation, counters after the first scrape; poll briefly.</summary>
-    private static async Task<string> PollMetricsAsync(ApiFactory factory, Func<string, bool> ready)
+    internal static async Task<string> PollMetricsAsync(ApiFactory factory, Func<string, bool> ready)
     {
         var http = factory.CreateClient();
         var deadline = Stopwatch.StartNew();

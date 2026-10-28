@@ -1,14 +1,17 @@
 using System.Diagnostics;
 using Rpg.Contracts.Api.V1;
 using Rpg.Contracts.Runs;
+using Rpg.GameServerApi.Auth;
 using Rpg.GameServerApi.Observability;
-using Rpg.GameServerApi.Players;
+using Rpg.GameServerApi.RateLimiting;
 
 namespace Rpg.GameServerApi.Runs;
 
 /// <summary>
-/// Part A run endpoints (spec server-authority 2.1, 3.2): start a run, the stairs, the current run, one run.
-/// The server never runs game rules here: it issues seeds, orders and stores, and serves the read model.
+/// Run endpoints (spec server-authority 2.1–2.4, 3.2): start a run, the stairs, the current run, one run (Part A);
+/// the action log, the end, resume and battle sessions (Part B, <see cref="RunActionEndpoints"/>). Every one needs a
+/// bearer token; the caller is the token's <c>sub</c>. The server never runs game rules here: it issues seeds, orders
+/// and stores, and serves the read model.
 /// </summary>
 public static class RunEndpoints
 {
@@ -17,22 +20,18 @@ public static class RunEndpoints
 
     public static void MapRunEndpoints(this WebApplication app)
     {
-        var runs = app.MapGroup("/api/v1/runs");
-        runs.MapPost("", StartRunAsync);
-        runs.MapPost("/{runId:guid}/floors/{floor:int}", FloorSeedAsync);
+        var runs = app.MapGroup("/api/v1/runs").RequireAuthorization();
+        runs.MapPost("", StartRunAsync).RateLimited(RateLimitOptions.Runs);
+        runs.MapPost("/{runId:guid}/floors/{floor:int}", FloorSeedAsync).RateLimited(RateLimitOptions.Floors);
         runs.MapGet("/current", GetCurrentAsync);
         runs.MapGet("/{runId:guid}", GetRunAsync);
+        runs.MapRunActionEndpoints();
     }
 
     private static async Task<IResult> StartRunAsync(HttpContext context, RunStartRequest? request, RunStore store,
         RunSummaryCache cache, RulesetPolicy ruleset, RpgMetrics metrics, TimeProvider clock, CancellationToken ct)
     {
-        var (player, error) = DevPlayer.Resolve(context);
-        if (player is null)
-        {
-            return error!;
-        }
-
+        var player = context.User.Player();
         if (Invalid(request) is { } problem)
         {
             return BadRequest(problem);
@@ -67,20 +66,15 @@ public static class RunEndpoints
         return Results.Created($"/api/v1/runs/{response.RunId}", response);
     }
 
-    /// <summary>The body is optional in Part A (AfterSeq is read from Part B on).</summary>
+    /// <summary>The next floor needs <c>AfterSeq</c> = the run's last stored seq (Part B gate, 409 1106 otherwise).</summary>
     private static async Task<IResult> FloorSeedAsync(HttpContext context, Guid runId, int floor,
         FloorSeedRequest? request, RunStore store, RunSummaryCache cache, RpgMetrics metrics, TimeProvider clock,
         CancellationToken ct)
     {
-        var (player, error) = DevPlayer.Resolve(context);
-        if (player is null)
-        {
-            return error!;
-        }
-
+        var player = context.User.Player();
         Activity.Current?.SetTag("rpg.run_id", runId.ToString("D"));
         Activity.Current?.SetTag("rpg.floor", floor);
-        var result = await store.IssueFloorAsync(player.Id, runId, floor, clock.GetUtcNow(), ct);
+        var result = await store.IssueFloorAsync(player.Id, runId, floor, request?.AfterSeq, clock.GetUtcNow(), ct);
         switch (result.Outcome)
         {
             case FloorOutcome.NotFound:
@@ -91,6 +85,9 @@ public static class RunEndpoints
                 metrics.FloorSeed("not_reachable");
                 return Conflict(ApiErrors.FloorNotReachable, "Floor not reachable",
                     $"Floor {floor} is neither the run's current floor nor the next one.");
+            case FloorOutcome.UploadIncomplete:
+                metrics.FloorSeed("upload_incomplete");
+                return UploadIncomplete(result.LastSeq, $"Upload the floor's actions first (the server has up to seq {result.LastSeq}).");
             case FloorOutcome.Issued:
                 await cache.InvalidateAsync(RunSummaryCache.SummaryKey(runId));
                 metrics.FloorSeed("issued");
@@ -106,12 +103,7 @@ public static class RunEndpoints
     private static async Task<IResult> GetCurrentAsync(HttpContext context, RunStore store, RunSummaryCache cache,
         RpgMetrics metrics, CancellationToken ct)
     {
-        var (player, error) = DevPlayer.Resolve(context);
-        if (player is null)
-        {
-            return error!;
-        }
-
+        var player = context.User.Player();
         if (await cache.GetCurrentAsync(player.Id) is { } cachedId
             && await ReadAsync(cachedId, store, cache, metrics, ct) is { } cached
             && cached.PlayerId == player.Id
@@ -134,19 +126,14 @@ public static class RunEndpoints
     private static async Task<IResult> GetRunAsync(HttpContext context, Guid runId, RunStore store,
         RunSummaryCache cache, RpgMetrics metrics, CancellationToken ct)
     {
-        var (player, error) = DevPlayer.Resolve(context);
-        if (player is null)
-        {
-            return error!;
-        }
-
+        var player = context.User.Player();
         var run = await ReadAsync(runId, store, cache, metrics, ct);
         // Another player's run answers exactly like a missing one: no existence leak.
         return run is not null && run.PlayerId == player.Id ? Results.Ok(run.Summary) : NotFound(runId);
     }
 
     /// <summary>Cache-aside read: Redis, then Postgres (re-filling Redis). Counted by where the answer came from.</summary>
-    private static async Task<StoredRun?> ReadAsync(Guid runId, RunStore store, RunSummaryCache cache,
+    internal static async Task<StoredRun?> ReadAsync(Guid runId, RunStore store, RunSummaryCache cache,
         RpgMetrics metrics, CancellationToken ct)
     {
         if (await cache.GetSummaryAsync(runId) is { } cached)
@@ -191,13 +178,21 @@ public static class RunEndpoints
         return null;
     }
 
-    private static IResult BadRequest(string detail) =>
+    internal static IResult UploadIncomplete(int lastSeq, string detail) =>
+        Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Upload incomplete", detail: detail,
+            extensions: new Dictionary<string, object?> { ["errorCode"] = ApiErrors.UploadIncomplete, ["lastSeq"] = lastSeq });
+
+    internal static IResult BadRequest(string detail) =>
         Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Bad request", detail: detail);
 
-    private static IResult NotFound(Guid runId) =>
+    internal static IResult NotFound(Guid runId) =>
         Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Run not found", detail: $"No run {runId:D}.");
 
-    private static IResult Conflict(int errorCode, string title, string detail) =>
+    internal static IResult Conflict(int errorCode, string title, string detail,
+        IDictionary<string, object?>? extensions = null) =>
         Results.Problem(statusCode: StatusCodes.Status409Conflict, title: title, detail: detail,
-            extensions: new Dictionary<string, object?> { ["errorCode"] = errorCode });
+            extensions: new Dictionary<string, object?>(extensions ?? new Dictionary<string, object?>())
+            {
+                ["errorCode"] = errorCode,
+            });
 }

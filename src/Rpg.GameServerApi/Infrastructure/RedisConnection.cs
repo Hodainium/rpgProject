@@ -16,6 +16,13 @@ public sealed class RedisConnection(IConfiguration configuration) : IHostedServi
     public IConnectionMultiplexer? Multiplexer =>
         _connecting is { IsCompletedSuccessfully: true } task ? task.Result : null;
 
+    /// <summary>The database, or <see cref="NotConnectedException"/> while the first connect hasn't returned.</summary>
+    public IDatabase Database() => (Multiplexer ?? throw new NotConnectedException()).GetDatabase();
+
+    /// <summary>Errors that mean "Redis is unavailable": callers count them and fall back, never fail.</summary>
+    public static bool IsError(Exception ex) =>
+        ex is RedisException or NotConnectedException or TimeoutException or ObjectDisposedException;
+
     /// <summary>
     /// Runs <paramref name="action"/> once the initial connect call has returned (at once if it already has); never if
     /// it fails. For things that attach to the multiplexer, such as the Redis trace instrumentation.
@@ -53,3 +60,6 @@ public sealed class RedisConnection(IConfiguration configuration) : IHostedServi
         }
     }
 }
+
+/// <summary>The multiplexer's first connect hasn't returned yet.</summary>
+public sealed class NotConnectedException() : Exception("Redis has not connected yet.");

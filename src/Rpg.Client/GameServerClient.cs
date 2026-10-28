@@ -1,6 +1,10 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Rpg.Contracts.Api.V1;
+using Rpg.Contracts.Auth;
+using Rpg.Contracts.Battle;
+using Rpg.Contracts.Presence;
 using Rpg.Contracts.Runs;
 using Rpg.Contracts.Serialization;
 
@@ -9,11 +13,20 @@ namespace Rpg.Client;
 /// <summary>
 /// Typed client for Rpg.GameServerApi. The caller owns the <see cref="HttpClient"/> and sets its
 /// <see cref="HttpClient.BaseAddress"/> (with a trailing slash); routes here are relative.
-/// <paramref name="devPlayer"/>: Part A's development identity, sent as <see cref="ApiHeaders.DevPlayer"/> on every
-/// request (spec server-authority 3.2); Part B replaces it with a bearer token.
+/// <paramref name="accessToken"/>: the bearer token sent on every request (spec server-authority 3.2), also settable
+/// later through <see cref="AccessToken"/> (e.g. after <see cref="GetDevTokenAsync"/>).
 /// </summary>
-public sealed class GameServerClient(HttpClient http, string? devPlayer = null)
+public sealed class GameServerClient(HttpClient http, string? accessToken = null)
 {
+    /// <summary>Sent as <c>Authorization: Bearer …</c> when set.</summary>
+    public string? AccessToken { get; set; } = accessToken;
+
+    /// <summary>POST /api/v1/auth/dev-token (Development only): a token for a player name. Does not set
+    /// <see cref="AccessToken"/>.</summary>
+    public Task<DevTokenResponse> GetDevTokenAsync(DevTokenRequest request, CancellationToken ct = default) =>
+        RequiredAsync<DevTokenResponse>(HttpMethod.Post, "api/v1/auth/dev-token",
+            JsonContent.Create(request, options: RpgJson.Options), ct);
+
     public Task<ServerInfoResponse> GetInfoAsync(CancellationToken ct = default) =>
         RequiredAsync<ServerInfoResponse>(HttpMethod.Get, "api/v1/info", null, ct);
 
@@ -35,6 +48,30 @@ public sealed class GameServerClient(HttpClient http, string? devPlayer = null)
     public Task<RunSummaryResponse?> GetCurrentRunAsync(CancellationToken ct = default) =>
         SendAsync<RunSummaryResponse>(HttpMethod.Get, "api/v1/runs/current", null, ct, allowNoContent: true);
 
+    /// <summary>POST /api/v1/runs/{runId}/actions: uploads 1–50 consecutive actions; a retried batch is a no-op.</summary>
+    public Task<RunActionAck> SendActionsAsync(string runId, RunActionBatch batch, CancellationToken ct = default) =>
+        RequiredAsync<RunActionAck>(HttpMethod.Post, $"api/v1/runs/{Uri.EscapeDataString(runId)}/actions",
+            JsonContent.Create(batch, options: RpgJson.Options), ct);
+
+    /// <summary>POST /api/v1/runs/{runId}/end: 202 Verifying for a win, 200 once the status is final.</summary>
+    public Task<RunEndResponse> EndRunAsync(string runId, RunEndRequest request, CancellationToken ct = default) =>
+        RequiredAsync<RunEndResponse>(HttpMethod.Post, $"api/v1/runs/{Uri.EscapeDataString(runId)}/end",
+            JsonContent.Create(request, options: RpgJson.Options), ct);
+
+    /// <summary>GET /api/v1/runs/{runId}/resume: floor seeds, the latest checkpoint and the actions after it.</summary>
+    public Task<RunResumeResponse> ResumeAsync(string runId, CancellationToken ct = default) =>
+        RequiredAsync<RunResumeResponse>(HttpMethod.Get, $"api/v1/runs/{Uri.EscapeDataString(runId)}/resume", null, ct);
+
+    /// <summary>GET /api/v1/runs/{runId}/battles/{seq}: the battle uploaded with that action.</summary>
+    public Task<BattleSessionResponse> GetBattleAsync(string runId, int seq, CancellationToken ct = default) =>
+        RequiredAsync<BattleSessionResponse>(HttpMethod.Get,
+            $"api/v1/runs/{Uri.EscapeDataString(runId)}/battles/{seq}", null, ct);
+
+    /// <summary>POST /api/v1/presence: the heartbeat (204).</summary>
+    public Task HeartbeatAsync(PresenceRequest request, CancellationToken ct = default) =>
+        SendAsync<object>(HttpMethod.Post, "api/v1/presence", JsonContent.Create(request, options: RpgJson.Options), ct,
+            allowNoContent: true);
+
     private async Task<T> RequiredAsync<T>(HttpMethod method, string route, HttpContent? content, CancellationToken ct)
         where T : class =>
         (await SendAsync<T>(method, route, content, ct).ConfigureAwait(false))!;  // null only with allowNoContent
@@ -43,9 +80,9 @@ public sealed class GameServerClient(HttpClient http, string? devPlayer = null)
         bool allowNoContent = false) where T : class
     {
         using var request = new HttpRequestMessage(method, route) { Content = content };
-        if (devPlayer is not null)
+        if (AccessToken is { Length: > 0 } token)
         {
-            request.Headers.Add(ApiHeaders.DevPlayer, devPlayer);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
         using var response = await http.SendAsync(request, ct).ConfigureAwait(false);

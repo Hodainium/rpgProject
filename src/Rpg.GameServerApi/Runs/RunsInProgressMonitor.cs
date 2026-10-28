@@ -1,16 +1,16 @@
+using Microsoft.Extensions.Options;
 using Rpg.GameServerApi.Observability;
+using Rpg.GameServerApi.Presence;
 
 namespace Rpg.GameServerApi.Runs;
 
-/// <summary>Recomputes rpg_runs_in_progress from Postgres every 30 s (spec server-authority 5).</summary>
-public sealed class RunsInProgressMonitor(RunStore store, RpgMetrics metrics, ILogger<RunsInProgressMonitor> logger)
-    : BackgroundService
+/// <summary>Recomputes rpg_runs_in_progress from Postgres every <c>Monitors:Interval</c> (30 s; spec server-authority 5).</summary>
+public sealed class RunsInProgressMonitor(RunStore store, RpgMetrics metrics, IOptions<MonitorOptions> options,
+    ILogger<RunsInProgressMonitor> logger) : BackgroundService
 {
-    public static readonly TimeSpan Interval = TimeSpan.FromSeconds(30);
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(Interval);
+        using var timer = new PeriodicTimer(options.Value.Interval);
         do
         {
             try

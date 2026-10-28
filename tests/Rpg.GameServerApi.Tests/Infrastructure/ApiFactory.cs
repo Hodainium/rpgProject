@@ -11,13 +11,15 @@ namespace Rpg.GameServerApi.Tests.Infrastructure;
 /// <summary>
 /// Hosts the real server in-process with the dependency addresses a test chooses. The environment defaults to
 /// "Testing" (skips appsettings.Development.json and user secrets, so only these settings apply); run tests use
-/// "Development", where the X-Dev-Player header works, with every setting they rely on given here.
+/// "Development", where dev tokens are issued, with every setting they rely on given here (rate limits far above
+/// what a test does, unless the test sets its own).
 /// </summary>
 public sealed class ApiFactory(string postgres, string redis, string rabbitMq, string environment = "Testing",
     IReadOnlyDictionary<string, string?>? settings = null) : WebApplicationFactory<Program>
 {
     public const string TestSeedSecret = "test-floor-seed-secret-0123456789abcdef";
     public const string TestRuleset = "4.7.2.stable.mono+0123456789abcdef";
+    public const string TestSigningKey = "test-jwt-signing-key-0123456789abcdef";
 
     public static ApiFactory AllUp(StackFixture stack) =>
         new(stack.PostgresConnectionString, stack.RedisConnectionString, stack.RabbitMqUri);
@@ -41,7 +43,16 @@ public sealed class ApiFactory(string postgres, string redis, string rabbitMq, s
                 ["Seeds:Secret"] = TestSeedSecret,
                 ["Ruleset:AcceptAny"] = "false",
                 ["Ruleset:Accepted:0"] = TestRuleset,
+                ["Auth:SigningKey"] = TestSigningKey,
+                ["Auth:DevTokens"] = "true",
+                ["Run:AutoApproveWins"] = "false",
             };
+            foreach (var bucket in new[] { "actions", "runs", "floors" })
+            {
+                values[$"RateLimit:Buckets:{bucket}:Capacity"] = "100000";
+                values[$"RateLimit:Buckets:{bucket}:RefillPerSecond"] = "100000";
+            }
+
             foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
             {
                 values[key] = value;

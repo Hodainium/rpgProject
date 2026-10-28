@@ -7,14 +7,14 @@ const DEFAULT_SECONDS: float = 30.0
 
 func _init() -> void:
 	name = "wait"
-	usage = "wait run | floor <n> | stopped | notice <text> [seconds]"
-	help = "Waits (default 30 s) until a run is playable, floor n is entered, the run stopped, or a notice arrived."
+	usage = "wait run | floor <n> | stopped | ended | notice <text> [seconds]"
+	help = "Waits (default 30 s) until a run is playable, floor n is entered, the run stopped, the run ended (a win only once the server says Won), or a notice arrived."
 	cheat = false
 	arg_kinds.assign(["text", "text", "int"])
 
 
 func run(ctx: DevContext, args: PackedStringArray) -> String:
-	if args.is_empty() or not ["run", "floor", "stopped", "notice"].has(args[0]):
+	if args.is_empty() or not ["run", "floor", "stopped", "ended", "notice"].has(args[0]):
 		return ctx.fail("usage: " + usage)
 	var kind := args[0]
 	var rest := args.slice(1)
@@ -53,6 +53,12 @@ static func _holds(ctx: DevContext, kind: String, target: String) -> bool:
 			return live and run.state.floor_index == int(target) and run.waiting_for_floor() < 0
 		"stopped":
 			return live and run.runner_error != ""
+		"ended":
+			# Spec server-authority 2.3: the end screen, which a won server run reaches only after the verdict; a
+			# linked run also has its whole log uploaded (a death's end action included).
+			var uploaded: bool = game.server == null or not run.journal \
+				or (game.server.queued().is_empty() and not game.server.uploading())
+			return live and run.state.status != RunState.ACTIVE and game.mode == "end" and uploaded
 		"notice":
 			return ctx.console.recent_notices().any(func(text: String) -> bool: return text.contains(target))
 	return false

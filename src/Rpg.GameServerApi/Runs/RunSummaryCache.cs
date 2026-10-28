@@ -47,7 +47,7 @@ public sealed class RunSummaryCache(RedisConnection redis, RpgMetrics metrics, I
         {
             await Database().KeyDeleteAsync(keys.Select(key => (RedisKey)key).ToArray());
         }
-        catch (Exception ex) when (IsRedisError(ex))
+        catch (Exception ex) when (RedisConnection.IsError(ex))
         {
             metrics.CacheError("delete");
             logger.LogWarning("Redis delete of {Keys} failed: {Message}", string.Join(", ", keys), ex.Message);
@@ -60,7 +60,7 @@ public sealed class RunSummaryCache(RedisConnection redis, RpgMetrics metrics, I
         {
             return await Database().StringGetAsync(key);
         }
-        catch (Exception ex) when (IsRedisError(ex))
+        catch (Exception ex) when (RedisConnection.IsError(ex))
         {
             metrics.CacheError("get");
             logger.LogDebug("Redis get of {Key} failed: {Message}", key, ex.Message);
@@ -74,19 +74,12 @@ public sealed class RunSummaryCache(RedisConnection redis, RpgMetrics metrics, I
         {
             await Database().StringSetAsync(key, value, Ttl);
         }
-        catch (Exception ex) when (IsRedisError(ex))
+        catch (Exception ex) when (RedisConnection.IsError(ex))
         {
             metrics.CacheError("set");
             logger.LogDebug("Redis set of {Key} failed: {Message}", key, ex.Message);
         }
     }
 
-    private IDatabase Database() =>
-        (redis.Multiplexer ?? throw new NotConnectedException()).GetDatabase();
-
-    private static bool IsRedisError(Exception ex) =>
-        ex is RedisException or NotConnectedException or TimeoutException or ObjectDisposedException;
-
-    /// <summary>The multiplexer's first connect hasn't returned yet.</summary>
-    private sealed class NotConnectedException() : Exception("Redis has not connected yet.");
+    private IDatabase Database() => redis.Database();
 }

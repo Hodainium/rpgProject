@@ -19,8 +19,9 @@ public sealed class GameServerApiException(HttpStatusCode statusCode, ApiProblem
 }
 
 /// <summary>
-/// Client-side view of an RFC 9457 problem details body (ASP.NET Core's ProblemDetails) plus the <c>errorCode</c>
-/// extension. Kept here rather than in Rpg.Contracts because the server uses the framework type, not a DTO.
+/// Client-side view of an RFC 9457 problem details body (ASP.NET Core's ProblemDetails) plus the <c>errorCode</c>,
+/// <c>expectedSeq</c> (1102) and <c>lastSeq</c> (1103, 1106) extensions. Kept here rather than in Rpg.Contracts because
+/// the server uses the framework type, not a DTO.
 /// </summary>
 public sealed record ApiProblem(string? Type, string? Title, int? Status, string? Detail, string? Instance,
-    int? ErrorCode = null);
+    int? ErrorCode = null, int? ExpectedSeq = null, int? LastSeq = null);

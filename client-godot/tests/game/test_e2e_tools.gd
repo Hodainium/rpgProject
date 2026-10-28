@@ -41,6 +41,7 @@ func _session(bridge: Object = null) -> Array:
 	if bridge != null:
 		var link := ServerLink.new(bridge)
 		link.retry_base_seconds = 0.01
+		link.saves_dir = "user://test_e2e_tools/saves_%d_%d" % [OS.get_process_id(), Time.get_ticks_usec()]
 		game.use_server(link)
 	var console := DevConsole.new(host.get_tree())
 	console.keep_history = false
@@ -132,13 +133,15 @@ func test_server_check_command() -> void:
 	var session := _session(bridge)
 	await _run(session, "new %s run=fixture.run.two_floors" % PARTY)
 	await _run(session, "wait run 5")
+	bridge.answers["GetRun"][0][1]["lastSeq"] = 1  # spec Part B: the start_run is the log so far
 	var agrees := await _run(session, "server check")
 	check(agrees["ok"] and agrees["text"].contains("server agrees"), "the server agrees: " + agrees["text"])
 	bridge.answers["GetFloorSeed"] = [[true, {"runId": RUN_ID, "floor": 0, "floorSeed": "999"}]]
 	bridge.answers["GetRun"][0][1]["currentFloor"] = 2
+	bridge.answers["GetRun"][0][1]["lastSeq"] = 5
 	var differs := await _run(session, "server check")
-	check(not differs["ok"] and differs["text"].contains("server floor 2") and differs["text"].contains("seed"),
-		"every difference is named: " + differs["text"])
+	check(not differs["ok"] and differs["text"].contains("server floor 2") and differs["text"].contains("seed")
+		and differs["text"].contains("lastSeq 5"), "every difference is named: " + differs["text"])
 	check(not (await _run(_session(), "server check"))["ok"], "local mode has nothing to check")
 	await host.get_tree().process_frame  # don't end inside the link's signal: after_each frees it
 
@@ -211,3 +214,45 @@ func test_e2e_check() -> void:
 	var output := []
 	var code := OS.execute(bash, [script, "--check"], output, true)
 	eq(code, 0, "tools/e2e.sh --check: %s" % "".join(output).strip_edges())
+
+
+## Spec dev-tools E9: `wait ended` holds until the end screen (a death here; a win only after the verdict).
+func test_wait_ended() -> void:
+	var session := _session()
+	await _run(session, "new %s 7 run=fixture.run.two_floors" % PARTY)
+	check(not (await _run(session, "wait ended 0.1"))["ok"], "a run in progress has not ended")
+	session[0].run._end(RunState.LOST)
+	var ended := await _run(session, "wait ended 1")
+	check(ended["ok"], "the run ended: " + ended["text"])
+
+
+## Spec dev-tools E9: `server forget`, `server conflict` (a 1103 rebuilds the run from the server's log) and
+## `server resume` (from the local save; nothing to resume fails).
+func test_server_save_commands() -> void:
+	var bridge: RefCounted = _bridge()
+	var session := _session(bridge)
+	await _run(session, "new %s run=fixture.run.two_floors" % PARTY)
+	await _run(session, "wait run 5")
+	var link: ServerLink = session[0].server
+	await link.drained()
+	check(FileAccess.file_exists(link.save_path()), "a linked run keeps a local save")
+	var forgot := await _run(session, "server forget")
+	check(forgot["ok"] and not FileAccess.file_exists(link.save_path()), "server forget deletes it")
+	var start: Dictionary = JSON.parse_string(bridge.of("SendActions")[0][2])["actions"][0]
+	bridge.answers["SendActions"] = [ServerTests._error(409, 1103, "Sequence conflict"), "default"]
+	bridge.answers["Resume"] = [[true, {"runId": RUN_ID, "status": "Active",
+		"floorSeeds": [{"runId": RUN_ID, "floor": 0, "floorSeed": "5150"}], "checkpointSeq": 1,
+		"snapshot": start["snapshot"], "tail": []}]]
+	var conflict := await _run(session, "server conflict")
+	check(conflict["ok"], "server conflict resends an acknowledged action: " + conflict["text"])
+	var rebuilt := await _run(session, "wait notice continues 5")
+	check(rebuilt["ok"], "the 1103 rebuilds the run from the server's log: " + rebuilt["text"])
+	eq(link.resumes, 1, "one rebuild")
+	eq(session[0].run.state.run_hash(), str(start["stateHash"]), "at the server's state")
+	bridge.answers["GetCurrentRun"] = [[true, {"runId": RUN_ID, "status": "Active", "currentFloor": 0, "lastSeq": 1,
+		"rulesetVersion": "x", "startedAt": "2026-10-27T12:00:00+00:00", "endedAt": null}]]
+	var resumed := await _run(session, "server resume")
+	check(resumed["ok"] and resumed["text"].contains("from the save"), "server resume: " + resumed["text"])
+	bridge.answers["GetCurrentRun"] = [[true, null]]
+	check(not (await _run(session, "server resume"))["ok"], "nothing to resume fails")
+	await host.get_tree().process_frame  # don't end inside the link's signal: after_each frees it

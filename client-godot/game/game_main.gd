@@ -103,6 +103,8 @@ func _ready() -> void:
 	if DisplayServer.get_name() != "headless":
 		use_server(ServerLink.from_settings())  # headless runs (tests, tools, the verifier) stay local
 	set_mode("menu")
+	if server != null:
+		resume_server_run()  # spec server-authority 2.4: an Active run on the server continues
 
 
 ## Spec server-authority: plays in server mode through `link`, or in local mode when null.
@@ -195,6 +197,26 @@ func _start_server_run(character_ids: Array, run_id: StringName) -> void:
 		StringName(structure_id))
 	if error != "":
 		set_mode("end")
+
+
+## Spec server-authority 2.4: continues the player's current server run, if there is one: from the local save when
+## it is this run's and up to date, else rebuilt from the server's log. "" (resumed, or nothing to resume) or the
+## error (also shown as a Notification).
+func resume_server_run() -> String:
+	if server == null:
+		return "not in server mode"
+	var current := await server.get_current_run()
+	if not current["ok"]:
+		show_message("Server: " + ServerLink.describe(current["error"]))
+		return ServerLink.describe(current["error"])
+	if current["data"] == null:
+		return ""
+	_new_run()
+	var error := await server.resume_into(run, content, current["data"])
+	if error != "":
+		show_message("Server: " + error)
+		set_mode("menu")
+	return error
 
 
 ## Plays one room or hand-made floor (spec dev-tools 2.2). "" or the error.

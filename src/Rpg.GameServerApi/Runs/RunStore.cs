@@ -1,7 +1,7 @@
 using Npgsql;
 using Rpg.Contracts.Runs;
+using Rpg.GameServerApi.Auth;
 using Rpg.GameServerApi.Migrations;
-using Rpg.GameServerApi.Players;
 
 namespace Rpg.GameServerApi.Runs;
 
@@ -13,15 +13,16 @@ public enum StartOutcome { Created, AbandonedPrevious, PreviousVerifying }
 public sealed record StartResult(StartOutcome Outcome, Guid RunId, long FloorSeed, DateTimeOffset StartedAt,
     Guid? AbandonedRunId);
 
-public enum FloorOutcome { Issued, Repeated, NotFound, NotActive, NotReachable }
+public enum FloorOutcome { Issued, Repeated, NotFound, NotActive, NotReachable, UploadIncomplete }
 
-public sealed record FloorResult(FloorOutcome Outcome, long FloorSeed = 0);
+/// <param name="LastSeq">For <see cref="FloorOutcome.UploadIncomplete"/>: the last stored seq.</param>
+public sealed record FloorResult(FloorOutcome Outcome, long FloorSeed = 0, int LastSeq = 0);
 
 /// <summary>
 /// Postgres access for runs (spec server-authority 2.1, 3.4). Every write is one transaction that locks what it
 /// changes (the player row for a run start, the run row for the stairs), so ordering never depends on Redis.
 /// </summary>
-public sealed class RunStore(NpgsqlDataSource dataSource, MigrationRunner migrations, FloorSeeds seeds)
+public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunner migrations, FloorSeeds seeds)
 {
     private const string SummaryColumns =
         "run_id, player_id, status, current_floor, last_seq, ruleset_version, started_at, ended_at";
@@ -86,11 +87,13 @@ public sealed class RunStore(NpgsqlDataSource dataSource, MigrationRunner migrat
     }
 
     /// <summary>
-    /// The stairs (2.1): the current floor again returns its stored seed; the next floor is issued and becomes current;
-    /// anything else is not reachable. Another player's run is <see cref="FloorOutcome.NotFound"/>.
+    /// The stairs (2.1): the current floor again returns its stored seed; the next floor is issued and becomes current
+    /// once the floor's log is in (Part B: <paramref name="afterSeq"/> must be the last stored seq, else
+    /// <see cref="FloorOutcome.UploadIncomplete"/>); anything else is not reachable. Another player's run is
+    /// <see cref="FloorOutcome.NotFound"/>.
     /// </summary>
-    public async Task<FloorResult> IssueFloorAsync(Guid playerId, Guid runId, int floor, DateTimeOffset now,
-        CancellationToken ct)
+    public async Task<FloorResult> IssueFloorAsync(Guid playerId, Guid runId, int floor, int? afterSeq,
+        DateTimeOffset now, CancellationToken ct)
     {
         await migrations.EnsureMigratedAsync(ct);
         await using var connection = await dataSource.OpenConnectionAsync(ct);
@@ -98,8 +101,9 @@ public sealed class RunStore(NpgsqlDataSource dataSource, MigrationRunner migrat
 
         string status;
         int currentFloor;
+        int lastSeq;
         await using (var select = Command(connection, transaction,
-                         "SELECT status, current_floor FROM runs WHERE run_id = $1 AND player_id = $2 FOR UPDATE",
+                         "SELECT status, current_floor, last_seq FROM runs WHERE run_id = $1 AND player_id = $2 FOR UPDATE",
                          runId, playerId))
         await using (var reader = await select.ExecuteReaderAsync(ct))
         {
@@ -110,6 +114,7 @@ public sealed class RunStore(NpgsqlDataSource dataSource, MigrationRunner migrat
 
             status = reader.GetString(0);
             currentFloor = reader.GetInt32(1);
+            lastSeq = reader.GetInt32(2);
         }
 
         if (status != nameof(RunStatus.Active))
@@ -127,6 +132,11 @@ public sealed class RunStore(NpgsqlDataSource dataSource, MigrationRunner migrat
         if (floor != currentFloor + 1)
         {
             return new FloorResult(FloorOutcome.NotReachable);
+        }
+
+        if (afterSeq != lastSeq)
+        {
+            return new FloorResult(FloorOutcome.UploadIncomplete, LastSeq: lastSeq);
         }
 
         var floorSeed = seeds.Derive(runId, floor);
@@ -188,7 +198,7 @@ public sealed class RunStore(NpgsqlDataSource dataSource, MigrationRunner migrat
         var command = new NpgsqlCommand(sql, connection, transaction);
         foreach (var value in values)
         {
-            command.Parameters.Add(new NpgsqlParameter { Value = value });
+            command.Parameters.Add(value as NpgsqlParameter ?? new NpgsqlParameter { Value = value });
         }
 
         return command;
