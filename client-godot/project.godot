@@ -12,9 +12,9 @@ config_version=5
 
 config/name="rpgDemo"
 run/main_scene="res://game/game_main.tscn"
-run/main_scene.dev_build="res://game/dev/build_entry.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://icon.svg"
+run/main_scene.dev_build="res://game/dev/build_entry.tscn"
 
 [autoload]
 
