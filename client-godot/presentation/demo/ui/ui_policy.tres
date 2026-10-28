@@ -24,6 +24,7 @@
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/turn_order_panel.tscn" id="35_turn_order"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/party_strip.tscn" id="36_party_strip"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/explore_menu.tscn" id="37_explore_menu"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/gift_panel.tscn" id="38_gift"]
 
 [sub_resource type="Resource" id="when_menu"]
 script = ExtResource("4_query")
@@ -66,6 +67,16 @@ ignore_tags = Array[StringName]([&"UI.State.Run.Battle", &"UI.State.Run.Menu"])
 script = ExtResource("4_query")
 require_all_tags = Array[StringName]([&"UI.State.Run.Map"])
 ignore_tags = Array[StringName]([&"UI.State.Run.Menu"])
+
+[sub_resource type="Resource" id="when_gift"]
+script = ExtResource("4_query")
+require_all_tags = Array[StringName]([&"UI.State.Run.Gift"])
+
+[sub_resource type="Resource" id="screen_gift"]
+script = ExtResource("2_rule")
+scene = ExtResource("38_gift")
+layer = &"UI.Layer.Modal"
+active_when = SubResource("when_gift")
 
 [sub_resource type="Resource" id="screen_title"]
 script = ExtResource("2_rule")
@@ -176,7 +187,7 @@ active_when = SubResource("when_explore")
 script = ExtResource("1_policy")
 layout = ExtResource("5_layout")
 theme = ExtResource("6_theme")
-screens = Array[ExtResource("2_rule")]([SubResource("screen_title"), SubResource("screen_hud"), SubResource("screen_end")])
+screens = Array[ExtResource("2_rule")]([SubResource("screen_title"), SubResource("screen_hud"), SubResource("screen_end"), SubResource("screen_gift")])
 extensions = Array[ExtResource("3_ext")]([SubResource("panel_map"), SubResource("panel_stairs"), SubResource("panel_pickup"), SubResource("panel_event"), SubResource("panel_message"), SubResource("panel_run_toasts"), SubResource("panel_battle_feed"), SubResource("panel_battle_party"), SubResource("panel_command"), SubResource("panel_top"), SubResource("panel_turn_order"), SubResource("panel_party_strip"), SubResource("panel_explore_menu")])
 back_screens = Array[ExtResource("2_rule")]([SubResource("back_run_menu")])
 confirm_scene = ExtResource("14_confirm")

@@ -31,6 +31,7 @@ choices = Array[ExtResource("2_ip8tk")]([SubResource("Resource_qgkun"), SubResou
 [sub_resource type="Resource" id="Resource_cdthb"]
 script = ExtResource("7_obar1")
 item = ExtResource("6_d2lib")
+recipient = 2
 
 [sub_resource type="Resource" id="Resource_nii5r"]
 script = ExtResource("2_ip8tk")
@@ -40,6 +41,7 @@ outcomes = Array[ExtResource("4_55p7y")]([SubResource("Resource_cdthb")])
 [sub_resource type="Resource" id="Resource_m5tjx"]
 script = ExtResource("7_obar1")
 item = ExtResource("8_3olb8")
+recipient = 2
 
 [sub_resource type="Resource" id="Resource_f1tks"]
 script = ExtResource("2_ip8tk")

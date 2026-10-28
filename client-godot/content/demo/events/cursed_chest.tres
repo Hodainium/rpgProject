@@ -17,6 +17,7 @@ require_all_tags = Array[StringName]([&"Pool.Treasure"])
 [sub_resource type="Resource" id="Resource_0sown"]
 script = ExtResource("6_65fyf")
 item_query = SubResource("Resource_bg305")
+recipient = 1
 
 [sub_resource type="Resource" id="Resource_2srn8"]
 script = ExtResource("8_j5tyf")
