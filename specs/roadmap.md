@@ -22,7 +22,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1f3. `skill-points` | ✅ Done (spec synced; smart 4-member 31.8% on the 600 balance seeds, sound parties 38.9%, about 3 basics per ability, 0 turn limits; MP is Skill Points: SP from basic attacks per class, +7% a level, costs at 2.5× through the cost pass, SP items; level skills with ranks and passives, enemy levels and secret skills; turn limit 500 as a loss; soft enrage on bosses; the death map, pair and boss analysis, `BattleLog`) | |
 | 1f4. `event-items` | 🔨 Implemented, awaiting playtest (who gets an item from an event or a chest: `GiveItem.recipient` FIRST/RANDOM/CHOOSE, chests always CHOOSE, the logged `give_to` and the Give to panel; item toasts for every gift) | 2026-10-27 |
 | 1f5. `playtest-fixes` | 🔨 Ongoing, stays open (small UI and game adjustments from playtesting, one numbered entry each; was `ui-fixes`: menu frame, battle HUD panels, run toasts, feed lines, party strip) | 2026-10-27 |
-| 2. `run-checkout` | 📝 Spec written (`server-authority` Part A, floor model) | 2026-10-20 |
+| 2. `run-checkout` | ✅ Done (spec synced; `server-authority` Part A: runs and HMAC floor seeds from the server, the Redis run cache with Postgres fallback (scenario 4), the ruleset version stamped at export, the client's seed source with local mode byte-identical; checked end to end by `tools/e2e.sh`) | 2026-10-27 |
 | 2b. `run-authority` | 📝 Spec written (`server-authority` Part B, floor model) | 2026-10-20 |
 | 3. `battle-verify` | ⬜ Not started | |
 | 4. `settlement-outbox` | ⬜ Not started | |
