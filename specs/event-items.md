@@ -131,5 +131,5 @@ demo events or chests give items, which is expected.
   walk on in the same step.
 - Window run screenshots: the Librarian's Give to panel, and a Gilded chest's toast followed by "Cleric got Last
   Rites!" (`H:\claudeOutShots\2026-10-27 ui-fixes\gift_*.png`).
-- Found on the way, fixed under `ui-fixes` B7: the party strip's run-signal handler took one argument, but
+- Found on the way, fixed under `playtest-fixes` B7: the party strip's run-signal handler took one argument, but
   `event_page_shown` sends two, so every event room entered from the map logged an engine error.

@@ -1,9 +1,23 @@
-# Spec: ui-fixes (bug fixes on the ff7-ui menu screens)
+# Spec: playtest-fixes (the living log of small UI and game adjustments from playtesting)
 
-Status: 🔨 In progress (an ongoing bug-fix spec: later UI fixes are added here) · Date: 2026-10-27
-Fixes bugs in `specs/ff7-ui.md` 2.9 (Use Item and Use Ability) and 2.12 (the shared `menu_frame` and
-`description_window`). There are no new features and no new screens. Every file it touches is in `presentation/demo/ui/`,
-the user's folder, so each edit is made with a minimal `Edit` and with the user's OK.
+Status: 🔨 Ongoing (stays open; every small playtest fix is added here) · Started: 2026-10-27
+Renamed from `ui-fixes` on 2026-10-27: code comments and commits that cite "ui-fixes Bn" refer to this file.
+
+**What goes here:** any small change found while playtesting, UI or game: a layout bug, a toast, a panel, a value
+tweak in content. Each entry is numbered (B1, B2, …) with the date, what was seen, the cause, the change as
+`old → new` per file, and the test or screenshot that proves it. Value tweaks in `content/` are the user's (asked first,
+`old → new`); one that may move the balance gate gets a smart 4-member report before it is committed.
+
+**What gets its own spec instead:** a change to the run rules, the run's action log or hash, a server contract, or a new
+system (e.g. `event-items`, which added the logged `give_to`). If a "small" fix turns out to be one of these, say so
+before building it.
+
+**Workflow:** reproduce (a window run: `dev_run --window --shots`, `ui press`, `shot`; or the live playtest window),
+propose `old → new` for the user's files, fix, test, add the entry here, then commit as a `design:` + `fix:` pair when
+asked.
+
+The first entries (B1–B3) fixed `specs/ff7-ui.md` 2.9 (Use Item and Use Ability) and 2.12 (the shared `menu_frame` and
+`description_window`); later ones cover the battle HUD, the run toasts and the battle feed.
 
 ## 1. Purpose & enterprise mapping
 Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-member party, `give` items,
