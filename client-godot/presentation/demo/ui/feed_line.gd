@@ -11,9 +11,17 @@ func set_item(toast: Dictionary, _context: UIContext) -> void:
 	%Text.text = toast.get("title", "")
 	%Text.theme_type_variation = StringName(toast.get("variation", &""))
 	modulate.a = 0.0
+	# On the tween's first step (next frame, once the line is laid out); the tween dies with the line.
+	create_tween().set_ignore_time_scale(true).tween_callback(_slide_in)
+
+
+## Slides the text in from the left to the place the line's layout gave it (spec ui-fixes B5).
+func _slide_in() -> void:
+	var place: float = %Text.position.x
 	var tween := create_tween().set_ignore_time_scale(true).set_parallel(true)
 	tween.tween_property(self, "modulate:a", 1.0, slide_seconds)
-	tween.tween_property(%Text, "position:x", 0.0, slide_seconds).from(-slide_distance).set_ease(Tween.EASE_OUT)
+	tween.tween_property(%Text, "position:x", place, slide_seconds).from(place - slide_distance).set_ease(
+		Tween.EASE_OUT)
 
 
 func leave() -> void:
