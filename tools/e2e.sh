@@ -1,0 +1,229 @@
+#!/usr/bin/env bash
+# End-to-end harness (spec dev-tools E1-E7): the real Rpg.GameServerApi and the real game, headless, on throwaway
+# state, driven by committed scenario scripts.
+#   tools/e2e.sh [scenario ...] [--keep] [-j N]      (default: every client-godot/tests/e2e/*.txt, N = 4)
+#   tools/e2e.sh --check                             (no Docker: lists and validates the scenarios, finds the tools)
+# Per scenario: a fresh Postgres database e2e_<stamp>_<scenario>, Redis index 1-15, a server on its own port
+# (Development, a test seed secret, only the live ruleset version accepted, plus the scenario's "#! env K=V" lines),
+# then dev_run.tscn --server --player e2e-<scenario> --control <folder>, then the scenario's .sql (every line returns t)
+# and .metrics (every line is a regex the final /metrics scrape matches). Fault steps (`e2e <action>` in a script)
+# reach the control loop here: server-stop, server-start, redis-flush.
+# Output in build/e2e/<stamp>/<scenario>/; one "ok|FAIL <scenario>" line each. Exit 0 all ok, 1 any failure (incl.
+# infra down), 124 a stalled Godot. Never touches the dev database, Redis index 0 or user://game_main.cfg.
+set -uo pipefail
+root=$(cd "$(dirname "$0")/.." && pwd)
+godot=${GODOT:-/h/Godot/Godot_v4.7.2-stable_mono_win64_console.exe}
+scenarios_dir="$root/client-godot/tests/e2e"
+compose=(docker compose -f "$root/infra/docker-compose.yml")
+seed_secret="e2e-floor-seed-secret-0123456789abcdef"
+jobs=4; keep=0; check=0; picked=()
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--keep) keep=1; shift ;;
+		--check) check=1; shift ;;
+		-j) jobs=$2; shift 2 ;;
+		-*) echo "e2e.sh: unknown option $1" >&2; exit 2 ;;
+		*) picked+=("$1"); shift ;;
+	esac
+done
+(( jobs >= 1 && jobs <= 15 )) || { echo "e2e.sh: -j takes 1 to 15 (Redis indexes 1-15)" >&2; exit 2; }
+if (( ${#picked[@]} == 0 )); then
+	for file in "$scenarios_dir"/*.txt; do picked+=("$(basename "$file" .txt)"); done
+fi
+
+# --- Validation (also --check) ---------------------------------------------------------------------------------------
+problems=0
+validate() {  # <scenario>
+	local name=$1 file="$scenarios_dir/$1.txt" line
+	[[ -f $file ]] || { echo "e2e.sh: no scenario $file"; problems=$((problems + 1)); return; }
+	[[ $name =~ ^[a-z0-9_]+$ ]] || { echo "e2e.sh: $name: scenario names are lower case, digits and _"; problems=$((problems + 1)); }
+	while IFS= read -r line || [[ -n $line ]]; do
+		line=${line%$'\r'}
+		if [[ $line == "#! "* && ! $line =~ ^#!\ env\ [A-Za-z_][A-Za-z0-9_]*=.*$ ]]; then
+			echo "e2e.sh: $name: bad directive '$line' (only '#! env KEY=VALUE')"; problems=$((problems + 1))
+		fi
+	done < "$file"
+	if [[ -f $scenarios_dir/$name.sql ]]; then
+		while IFS= read -r line || [[ -n $line ]]; do
+			line=${line%$'\r'}
+			[[ -z $line ]] && continue
+			[[ $line == *";"* ]] && { echo "e2e.sh: $name.sql: one statement per line, no ';': $line"; problems=$((problems + 1)); }
+			[[ ${line,,} == select* ]] || { echo "e2e.sh: $name.sql: only select queries: $line"; problems=$((problems + 1)); }
+		done < "$scenarios_dir/$name.sql"
+	fi
+}
+for name in "${picked[@]}"; do validate "$name"; done
+for tool in "$godot" dotnet docker curl; do
+	command -v "$tool" > /dev/null 2>&1 || [[ -x $tool ]] || { echo "e2e.sh: $tool not found"; problems=$((problems + 1)); }
+done
+if (( check )); then
+	echo "e2e.sh: scenarios: ${picked[*]}"
+	(( problems == 0 )) && echo "e2e.sh: check ok" || echo "e2e.sh: check found $problems problem(s)"
+	exit $(( problems == 0 ? 0 : 1 ))
+fi
+(( problems == 0 )) || exit 1
+
+# --- Infra and shared builds -----------------------------------------------------------------------------------------
+[[ -f $root/infra/.env ]] || { echo "e2e.sh: infra/.env missing (copy infra/.env.example)"; exit 1; }
+set -a; source <(tr -d '\r' < "$root/infra/.env"); set +a
+for service in postgres redis rabbitmq; do
+	case $service in
+		postgres) probe=(pg_isready -U "$POSTGRES_USER") ;;
+		redis) probe=(redis-cli ping) ;;
+		rabbitmq) probe=(rabbitmq-diagnostics -q ping) ;;
+	esac
+	"${compose[@]}" exec -T "$service" "${probe[@]}" > /dev/null 2>&1 \
+		|| { echo "e2e.sh: $service is not running: cd infra && docker compose up -d"; exit 1; }
+done
+# stdin from /dev/null: `docker compose exec` reads stdin and would swallow the rest of a file being read in a loop.
+psql() { "${compose[@]}" exec -T postgres psql -U "$POSTGRES_USER" -v ON_ERROR_STOP=1 -tA "$@" < /dev/null; }
+redis() { "${compose[@]}" exec -T redis redis-cli "$@" < /dev/null; }
+stamp=$(date +%Y%m%d_%H%M%S)
+out="$root/build/e2e/$stamp"
+mkdir -p "$out"
+echo "e2e.sh: building the server and the Godot C# assembly"
+"$root/tools/watch.sh" --name e2e-build --timeout 600 --log "$out/build.log" -- \
+	dotnet build "$root/src/Rpg.GameServerApi/Rpg.GameServerApi.csproj" -v q \
+	&& "$root/tools/watch.sh" --name e2e-build-godot --timeout 600 --log "$out/build-godot.log" -- \
+		dotnet build "$root/client-godot/rpgDemo.csproj" -v q \
+	|| { echo "e2e.sh: build failed, see $out/build*.log"; exit 1; }
+server_dir="$root/src/Rpg.GameServerApi/bin/Debug/net10.0"
+"$root/tools/watch.sh" --name e2e-ruleset --timeout 300 --log "$out/ruleset.log" -- \
+	"$godot" --headless --path "$root/client-godot" --quit-after 100000 res://game/tools/print_ruleset_version.tscn
+ruleset=$(grep -m1 -oE '[0-9]+\.[0-9]+\.[0-9]+\.[a-z0-9.]+\+[0-9a-f]{16}' "$out/ruleset.log")
+[[ -n $ruleset ]] || { echo "e2e.sh: no ruleset version, see $out/ruleset.log"; exit 1; }
+echo "e2e.sh: ruleset $ruleset"
+
+# --- Processes -------------------------------------------------------------------------------------------------------
+kill_tree() {  # <bash pid>: the whole Windows process tree when there is one
+	local winpid
+	winpid=$(cat "/proc/$1/winpid" 2>/dev/null || true)
+	if [[ -n $winpid ]] && command -v taskkill > /dev/null 2>&1; then
+		taskkill //F //T //PID "$winpid" > /dev/null 2>&1 || true
+	fi
+	kill "$1" 2>/dev/null || true
+	wait "$1" 2>/dev/null || true
+}
+
+# --- One scenario ----------------------------------------------------------------------------------------------------
+run_scenario() {  # <name> <index 1-15>
+	local name=$1 index=$2 dir="$out/$1" port=$((5100 + $2)) db="e2e_${stamp}_$1" started=$SECONDS
+	local control="$dir/control" result="$dir/result" pid_file="$dir/server.pid" loop_pid="" code=0
+	mkdir -p "$control"
+	local -a env=(ASPNETCORE_ENVIRONMENT=Development "ASPNETCORE_URLS=http://127.0.0.1:$port"
+		"ConnectionStrings__Postgres=Host=127.0.0.1;Port=5432;Database=$db;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD"
+		"ConnectionStrings__Redis=127.0.0.1:6379,abortConnect=false,defaultDatabase=$index"
+		"RabbitMq__Uri=amqp://$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS@127.0.0.1:5672/"
+		"Seeds__Secret=$seed_secret" Ruleset__AcceptAny=false "Ruleset__Accepted__0=$ruleset")
+	local line
+	while IFS= read -r line || [[ -n $line ]]; do
+		line=${line%$'\r'}
+		[[ $line == "#! env "* ]] && env+=("${line#\#! env }")
+	done < "$scenarios_dir/$name.txt"
+
+	start_server() {
+		(cd "$server_dir" && exec env "${env[@]}" dotnet Rpg.GameServerApi.dll >> "$dir/server.log" 2>&1) &
+		echo $! > "$pid_file"  # a file: the control loop (a subshell) stops and starts the server too
+		local tries
+		for tries in $(seq 1 60); do
+			curl -sf -m 2 "http://127.0.0.1:$port/health/ready" > /dev/null 2>&1 && return 0
+			sleep 0.5
+		done
+		return 1
+	}
+	stop_server() { [[ -s $pid_file ]] && kill_tree "$(cat "$pid_file")"; : > "$pid_file"; }
+	control_loop() {
+		local action answer
+		while true; do
+			if [[ -f $control/request ]]; then
+				action=$(tr -d '\r\n' < "$control/request"); rm -f "$control/request"
+				answer=ok
+				case $action in
+					server-stop) stop_server ;;
+					server-start) start_server || answer="server not ready" ;;
+					redis-flush) redis -n "$index" FLUSHDB > /dev/null || answer="flush failed" ;;
+					*) answer="unknown action $action" ;;
+				esac
+				echo "[e2e] $action: $answer" >> "$dir/control.log"
+				printf '%s' "$answer" > "$control/done"
+			fi
+			sleep 0.2
+		done
+	}
+
+	{
+		# A failed setup still falls through to the cleanup below (the database may exist already).
+		if ! psql -c "CREATE DATABASE $db" > /dev/null || ! redis -n "$index" FLUSHDB > /dev/null; then
+			echo "setup failed (database or Redis)" > "$result"
+		elif ! start_server; then
+			echo "server never ready: $(tail -40 "$dir/server.log" | tr '\n' ' ')" > "$result"
+		else
+			control_loop & loop_pid=$!
+			"$root/tools/watch.sh" --name "e2e-$name" --timeout 600 --log "$dir/godot.log" -- \
+				"$godot" --headless --path "$root/client-godot" --quit-after 2000000000 res://game/tools/dev_run.tscn -- \
+				--script "$scenarios_dir/$name.txt" --out "$dir/state.json" --content-root res://tests/fixtures/ \
+				--server "http://127.0.0.1:$port" --player "e2e-$name" --control "$control"
+			code=$?
+			local failures=()
+			(( code == 0 )) || failures+=("dev_run exit $code: $(grep -A3 'failed' "$dir/godot.log" | tail -4 | tr '\n' ' ')")
+			if [[ -f $scenarios_dir/$name.sql ]]; then
+				while IFS= read -r line || [[ -n $line ]]; do
+					line=${line%$'\r'}; [[ -z $line ]] && continue
+					local value
+					value=$(psql -d "$db" -c "$line" 2>&1 | tr -d '\r')
+					echo "$value | $line" >> "$dir/sql.txt"
+					[[ $value == t ]] || failures+=("sql: $line → $value")
+				done < "$scenarios_dir/$name.sql"
+			fi
+			if [[ -f $scenarios_dir/$name.metrics ]]; then
+				[[ -s $pid_file ]] || start_server > /dev/null
+				curl -s -m 5 "http://127.0.0.1:$port/metrics" > "$dir/metrics.txt" 2>&1
+				while IFS= read -r line || [[ -n $line ]]; do
+					line=${line%$'\r'}; [[ -z $line ]] && continue
+					grep -qE "$line" "$dir/metrics.txt" || failures+=("metrics: no match for $line")
+				done < "$scenarios_dir/$name.metrics"
+			fi
+			if (( ${#failures[@]} == 0 )); then echo ok > "$result"
+			else printf '%s\n' "${failures[@]}" > "$result"; [[ $code == 124 ]] && echo 124 > "$dir/stalled"; fi
+		fi
+		[[ -n $loop_pid ]] && kill "$loop_pid" 2>/dev/null
+		stop_server
+		if (( ! keep )); then psql -c "DROP DATABASE IF EXISTS $db WITH (FORCE)" > /dev/null 2>&1; fi
+		redis -n "$index" FLUSHDB > /dev/null 2>&1
+		echo "$((SECONDS - started))" > "$dir/seconds"
+	}
+}
+
+# --- Run, in parallel ------------------------------------------------------------------------------------------------
+pids=()
+cleanup() {
+	for pid in "${pids[@]}"; do kill_tree "$pid"; done
+	if (( ! keep )); then
+		for name in "${picked[@]}"; do psql -c "DROP DATABASE IF EXISTS e2e_${stamp}_$name WITH (FORCE)" > /dev/null 2>&1; done
+	fi
+}
+trap 'echo "e2e.sh: interrupted"; cleanup; exit 130' INT TERM
+index=0
+for name in "${picked[@]}"; do
+	while (( $(jobs -rp | wc -l) >= jobs )); do sleep 0.5; done
+	index=$(( index % 15 + 1 ))
+	run_scenario "$name" "$index" &
+	pids+=($!)
+done
+wait
+failed=0; stalled=0
+for name in "${picked[@]}"; do
+	result=$(cat "$out/$name/result" 2>/dev/null || echo "no result")
+	seconds=$(cat "$out/$name/seconds" 2>/dev/null || echo "?")
+	if [[ $result == ok ]]; then
+		echo "ok   $name (${seconds}s)"
+	else
+		failed=$((failed + 1)); [[ -f $out/$name/stalled ]] && stalled=1
+		echo "FAIL $name (${seconds}s), logs in $out/$name"
+		sed 's/^/       /' <<< "$result"
+	fi
+done
+echo "e2e.sh: $(( ${#picked[@]} - failed )) passed, $failed failed (build/e2e/$stamp)"
+(( failed == 0 )) && exit 0
+(( stalled )) && exit 124
+exit 1

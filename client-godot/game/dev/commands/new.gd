@@ -25,4 +25,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		rest = rest.slice(0, rest.size() - 1)
 	var seed_text := " ".join(rest) if not rest.is_empty() else "1"  # a code may be typed with its space
 	var error := ctx.game.start_run(party, seed_text, run_id)
-	return ctx.fail(error) if error != "" else "run started, seed %s" % RunSeeds.display(RunSeeds.parse(seed_text))
+	if error != "":
+		return ctx.fail(error)
+	if ctx.game.server != null:
+		return "starting on the server (the seed is the server's; follow with `wait run`)"  # spec dev-tools E3
+	return "run started, seed %s" % RunSeeds.display(RunSeeds.parse(seed_text))

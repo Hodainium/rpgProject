@@ -26,6 +26,9 @@ static func play(run: RunController, max_steps: int = 400, battle: Callable = Ca
 	for step in max_steps:
 		if run.state.status != RunState.ACTIVE or run.runner_error != "":
 			return ""
+		if run.waiting_for_floor() >= 0:
+			# Spec dev-tools E3: a server run waits at the stairs for its seed; `wait floor <n>` takes it from here.
+			return "waiting for floor %d's seed" % run.waiting_for_floor()
 		if not run.pending_battle.is_empty():
 			if battle.is_valid():
 				await battle.call(run)

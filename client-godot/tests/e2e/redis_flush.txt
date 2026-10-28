@@ -1,0 +1,13 @@
+# Spec dev-tools E3, scenario 3 (root CLAUDE.md acceptance scenario 4): Redis is flushed mid-run; reads fall back to
+# Postgres and the run goes on unchanged.
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+server check
+autorun policy=smart
+wait floor 1
+server check
+# A second check reads the run from Redis (the first one filled it): a real cache hit before the flush.
+server check
+e2e redis-flush
+server check
+expect floor 1

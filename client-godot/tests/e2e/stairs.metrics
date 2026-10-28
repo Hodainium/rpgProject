@@ -1,0 +1,3 @@
+rpg_run_starts_total\{[^}]*result="created"[^}]*\} 1( |$)
+rpg_floor_seeds_total\{[^}]*result="issued"[^}]*\} 1( |$)
+rpg_floor_seeds_total\{[^}]*result="repeated"[^}]*\} 2( |$)

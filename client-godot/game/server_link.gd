@@ -37,12 +37,18 @@ static func from_settings() -> ServerLink:
 	var url := str(GameMain.load_setting(SETTINGS_SECTION, "url", ""))
 	if url == "":
 		return null
+	return create(url, str(GameMain.load_setting(SETTINGS_SECTION, "player", "")))
+
+
+## A link to `url` as the dev player `player` through the C# bridge, or null when the bridge isn't built. Writes no
+## Settings (spec dev-tools E3: the e2e harness links this way).
+static func create(url: String, player: String) -> ServerLink:
 	var script: Script = load(BRIDGE_SCRIPT)
 	if script == null or not script.can_instantiate():
 		push_error("ServerLink: %s is not built (dotnet build); playing in local mode" % BRIDGE_SCRIPT)
 		return null
 	var bridge_node: Object = script.new()
-	bridge_node.Configure(url, str(GameMain.load_setting(SETTINGS_SECTION, "player", "")), TIMEOUT_SECONDS)
+	bridge_node.Configure(url, player, TIMEOUT_SECONDS)
 	return ServerLink.new(bridge_node)
 
 

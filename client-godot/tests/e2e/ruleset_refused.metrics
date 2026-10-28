@@ -1,0 +1,1 @@
+rpg_run_starts_total\{[^}]*result="rejected"[^}]*\} 1( |$)

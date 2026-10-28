@@ -1,0 +1,14 @@
+# Spec dev-tools E3, scenario 2: the server goes away before the stairs. The client keeps the run, waits at the
+# stairs ("Connecting…", ServerLink retrying with backoff) and crosses as soon as the server is back.
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+server check
+e2e server-stop
+autorun policy=smart
+wait notice Connecting
+expect server.waitingForFloor 1
+expect floor 0
+e2e server-start
+wait floor 1 90
+server check
+expect floor 1

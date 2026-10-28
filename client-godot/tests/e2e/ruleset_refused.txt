@@ -1,0 +1,6 @@
+# Spec dev-tools E3, scenario 4: the server accepts another ruleset version, so the run is refused with 1001 and
+# never starts.
+#! env Ruleset__Accepted__0=0.0.0.none+0000000000000000
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait notice 1001
+expect run ""

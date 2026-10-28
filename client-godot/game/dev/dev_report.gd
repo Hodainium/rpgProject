@@ -31,6 +31,12 @@ static func state_of(run: RunController) -> Dictionary:
 		data["goldenKey"] = state.golden_key
 		data["chests"] = run.chests().map(func(chest: Dictionary) -> Dictionary: return {"number": chest["index"] + 1,
 			"chest": String(chest["chest"]), "needsKey": chest["needs_key"], "canOpen": chest["can_open"]})
+	if state.seeds().server_mode():
+		# Spec dev-tools E3: server mode only, so local reports are unchanged.
+		var floor_seeds := {}
+		for floor_index in state.floor_seeds:
+			floor_seeds[str(floor_index)] = str(state.floor_seeds[floor_index])
+		data["server"] = {"runId": state.run_id, "floorSeeds": floor_seeds, "waitingForFloor": run.waiting_for_floor()}
 	return data
 
 

@@ -6,6 +6,8 @@
 ##   godot --headless --path client-godot --quit-after 100000 res://game/tools/dev_run.tscn -- --script run.txt
 ##     [--out state.json] [--content-root res://content/] [--commands <folder of throwaway commands>] [--manual]
 ##     [--window --shots <folder>]   (--window: run without --headless so `shot <name>` can capture the screen)
+##     [--server <url> [--player <name>]] [--control <folder>]   (spec dev-tools E3: server mode without touching the
+##     Settings, and the folder for `e2e` fault requests; tools/e2e.sh passes both)
 extends Node
 
 const GAME := preload("res://game/game_main.tscn")
@@ -39,6 +41,15 @@ func _ready() -> void:
 	console.load_commands()
 	console.attach(game)
 	console.auto_battle = not args.has("--manual")
+	console.control_dir = _arg(args, "--control", "")
+	var server_url := _arg(args, "--server", "")
+	if server_url != "":
+		var link := ServerLink.create(server_url, _arg(args, "--player", "dev"))
+		if link == null:
+			print("dev_run: can't link to %s (is the C# assembly built?)" % server_url)
+			get_tree().quit(1)
+			return
+		game.use_server(link)
 	if _arg(args, "--shots", "") != "":
 		console.shots_dir = _arg(args, "--shots", "")
 	for warning in console.warnings:

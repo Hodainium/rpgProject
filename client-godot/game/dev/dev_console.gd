@@ -38,6 +38,14 @@ var message_channel: StringName = &""
 ## "[msg] <channel> <describe()>" lines, oldest first (the script runner writes them to its JSON as "messages").
 var message_log: Array[String] = []
 var _message_handle: GameplayMessageHandle
+## Spec dev-tools E3: the folder `e2e` writes fault requests to (the script runner's --control); "" when none.
+var control_dir: String = ""
+## Spec dev-tools E3: every Message.Notification text seen while commands run, and where the previous and the
+## current command started in it (`wait notice` looks from the previous command's start on).
+var notices: Array[String] = []
+var notice_from_previous: int = 0
+var _notice_from_current: int = 0
+var _notice_handle: GameplayMessageHandle
 var tree: SceneTree
 var _attached: Array[GameMain] = []
 
@@ -97,6 +105,10 @@ func execute(line: String) -> Dictionary:
 	var game := find_game()
 	if game != null:
 		attach(game)
+	if _notice_handle == null:
+		_notice_handle = GameplayMessages.listen(GameplayMessageRouter.NOTIFICATION, _on_notice)
+	notice_from_previous = _notice_from_current
+	_notice_from_current = notices.size()
 	var ctx := DevContext.new(self, game)
 	if command.cheat and ctx.run != null and ctx.run.state != null and ctx.run.state.seeds().server_mode():
 		return {"ok": false, "text": "cheats are off while connected to the server"}  # spec server-authority 0
@@ -237,6 +249,16 @@ func _on_message(channel: StringName, message: GameplayMessage) -> void:
 		message_log = message_log.slice(message_log.size() - MESSAGE_LOG_SIZE)
 	print(line)
 	message_logged.emit(line)
+
+
+func _on_notice(_channel: StringName, message: GameplayMessage) -> void:
+	if message is NotificationMessage:
+		notices.append(message.text)
+
+
+## Notices since the previous command started (spec dev-tools E3, `wait notice`).
+func recent_notices() -> Array[String]:
+	return notices.slice(notice_from_previous)
 
 
 func find_game() -> GameMain:

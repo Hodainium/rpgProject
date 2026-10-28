@@ -1,0 +1,11 @@
+# Spec dev-tools E3, scenario 1: a server run crosses the stairs; the client and the server agree before and after.
+# Run by tools/e2e.sh (a real server on throwaway state); fixtures content, so tuning can't break it.
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+expect server.waitingForFloor -1
+server check
+autorun policy=smart
+wait floor 1
+server check
+expect floor 1
+expect status Active

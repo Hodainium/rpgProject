@@ -1,0 +1,2 @@
+rpg_cache_reads_total\{[^}]*source="redis"
+rpg_cache_reads_total\{[^}]*source="postgres"

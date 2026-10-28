@@ -50,8 +50,6 @@ func after_each() -> void:
 		if is_instance_valid(node):
 			node.free()
 	_nodes.clear()
-	if FileAccess.file_exists(RulesetVersion.STAMP_PATH):
-		DirAccess.remove_absolute(RulesetVersion.STAMP_PATH)
 	super()
 
 
@@ -247,3 +245,4 @@ func test_ruleset_version_stable() -> void:
 	eq(ResourceSaver.save(stamp, RulesetVersion.STAMP_PATH), OK, "the stamp is written")
 	eq(RulesetVersion.stamped(), version, "and read back")
 	eq(RulesetVersion.compute(), version, "the stamp is not hashed")
+	DirAccess.remove_absolute(RulesetVersion.STAMP_PATH)  # here, not in after_each: shards run tests in parallel
