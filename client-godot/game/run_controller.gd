@@ -50,6 +50,10 @@ var _directive_encounter: EncounterDefinition
 ## Spec keys-and-gear 2.3: while a chest opens, its stream (gifts by query draw from it) and what came out.
 var _chest_rng: RandomNumberGenerator
 var _chest_gifts := PackedStringArray()
+## Spec event-items D2: [slot, item] given while a chest opens; their toasts follow the chest's own.
+var _chest_toasts: Array = []
+## Spec event-items: RANDOM recipients drawn in the current action (the k in "floor/<n>/recipient/<cell>/<k>").
+var _recipient_draws: int = 0
 
 ## Spec keys-and-gear 3.2: run modifier tags on held items and worn equipment.
 const KEYS_DOUBLE_TAG: StringName = &"Run.Keys.Double"
@@ -275,6 +279,8 @@ func _install_floor(map: FloorMap, pools: Dictionary, clear_start: bool) -> void
 ## After the boss: the next floor, or the run is won after the last one (that happens in _clear_room).
 ## `chapter_id`: the route picked at the stairs when the next floor is a CHOICE (next_floor_choices()).
 func next_floor(chapter_id: StringName = &"") -> String:
+	if _gift_block() != "":
+		return _gift_block()
 	if not _active() or not state.boss_cleared or state.floor_index + 1 >= structure.floors.size() or state.sandbox \
 			or not state.event.is_empty():
 		return "the next floor is not open"
@@ -319,7 +325,8 @@ func is_last_floor() -> bool:
 func run_summary() -> Dictionary:
 	if state == null:
 		return {}
-	var counts := {"battle_won": 0, "battle_lost": 0, "take": 0, "armor": 0, "choose": 0, "field": 0, "next_floor": 0}
+	var counts := {"battle_won": 0, "battle_lost": 0, "take": 0, "armor": 0, "choose": 0, "field": 0, "next_floor": 0,
+		"give_to": 0}
 	for entry in run_log:
 		match str(entry["type"]):
 			"battle":
@@ -327,7 +334,7 @@ func run_summary() -> Dictionary:
 			"take", "buy":
 				if entry.get("kind", "") != FloorGenerator.KEYS_KIND:
 					counts["armor" if entry.get("kind", "") == FloorGenerator.EQUIPMENT_KIND else "take"] += 1
-			"choose", "field", "next_floor":
+			"choose", "field", "next_floor", "give_to":
 				counts[entry["type"]] += 1
 	var room := current_room() if state.map != null and state.current_cell >= 0 else null
 	var summary := {
@@ -341,6 +348,8 @@ func run_summary() -> Dictionary:
 		"endedIn": {"floor": state.floor_index + 1, "room": String(room.id) if room != null else "",
 			"encounter": _tally.get("lastEncounter", "") if state.status == RunState.LOST else ""},
 	}
+	if counts["give_to"] > 0:
+		summary["giftsGiven"] = counts["give_to"]  # spec event-items: only when the player picked, so older summaries match
 	if structure != null and structure.uses_keys():
 		# Spec keys-and-gear 5: only on runs with keys, so older summaries are unchanged.
 		summary["keys"] = state.keys
@@ -360,7 +369,7 @@ func run_summary() -> Dictionary:
 
 ## Isaac rules: any room next to a visited one; revisiting is allowed; nothing while a battle or event is open.
 func can_enter(index: int) -> bool:
-	if not _active() or not pending_battle.is_empty() or not state.event.is_empty():
+	if not _active() or not pending_battle.is_empty() or not state.event.is_empty() or _gift_block() != "":
 		return false
 	if not state.map.cells.has(index) or index == state.current_cell:
 		return false
@@ -396,6 +405,8 @@ func room_locked(index: int) -> bool:
 
 
 func enter_room(index: int) -> String:
+	if _gift_block() != "":
+		return _gift_block()
 	if not can_enter(index):
 		return "can't enter that room now"
 	var entry := {"type": "enter_room", "floor": state.floor_index, "cell": index}
@@ -827,6 +838,8 @@ func chests() -> Array[Dictionary]:
 func _chest_problem(index: int) -> String:
 	if not _active() or not pending_battle.is_empty() or not state.event.is_empty():
 		return "not now"
+	if _gift_block() != "":
+		return _gift_block()
 	if index < 0 or index >= state.chests.size():
 		return "no chest %d" % (index + 1)
 	var chest: ChestDefinition = content.chests.get(state.chests[index]["chest"])
@@ -853,8 +866,11 @@ func open_chest(index: int) -> String:
 	_tally["chestsOpened"] = int(_tally.get("chestsOpened", 0)) + 1
 	var outer_rng := _chest_rng
 	var outer_gifts := _chest_gifts
+	var outer_toasts := _chest_toasts
 	_chest_rng = RunSeeds.rng(state.run_seed, "chest/%d" % held["serial"])
 	_chest_gifts = PackedStringArray()
+	_chest_toasts = []
+	_recipient_draws = 0
 	for roll in 2 if _has_modifier(CHEST_DOUBLE_TAG) else 1:
 		var reward: ChestReward = RunSeeds.pick_weighted(_chest_rng, chest.rewards)
 		if reward == null:
@@ -865,11 +881,15 @@ func open_chest(index: int) -> String:
 				if outcome != null and _active():
 					outcome.apply(self)
 	var gifts := _chest_gifts
+	var toasts := _chest_toasts
 	_chest_rng = outer_rng
 	_chest_gifts = outer_gifts
+	_chest_toasts = outer_toasts
 	_directive = ""  # event directives mean nothing in a chest
 	_send(GameplayMessageRouter.RUN_CHEST_OPENED, &"Verb.Use", &"", chest.id, 0, [],
 		{"targetName": chest.display_name, "description": ", ".join(gifts) if not gifts.is_empty() else "Empty!"})
+	for given in toasts:  # spec event-items D2: each given item's toast after the chest's
+		_send_taken("gift", given[0], given[1], {"price": 0})
 	party_changed.emit()
 	return runner_error
 
@@ -942,6 +962,8 @@ func choice_enabled(choice_index: int) -> bool:
 
 ## Picks a choice: its outcomes run in order. Ends the event unless an outcome went to a page or started a battle.
 func choose(choice_index: int) -> String:
+	if _gift_block() != "":
+		return _gift_block()
 	if not _active() or not choice_enabled(choice_index):
 		return "that choice isn't available"
 	var cell: int = state.event["cell"]
@@ -950,6 +972,7 @@ func choose(choice_index: int) -> String:
 	_send(GameplayMessageRouter.RUN_CHOICE, &"Verb.Choose", &"", StringName(str(state.event["event"])), choice_index,
 		[], {"page": state.event["page"]})
 	_directive = ""
+	_recipient_draws = 0
 	for outcome in current_page().choices[choice_index].outcomes:
 		if outcome != null:
 			outcome.apply(self)
@@ -957,17 +980,30 @@ func choose(choice_index: int) -> String:
 			return runner_error
 	if state.event.has("rest_to") and _directive == "encounter":
 		_directive = ""  # a rest stop has no room to fight in (validator: rest_event_encounter)
-	match _directive:
+	var after := {"kind": _directive if _directive != "" else "end", "page": _directive_page,
+		"encounter": _directive_encounter.id if _directive == "encounter" else &""}
+	if not state.pending_gifts.is_empty():
+		state.event["after"] = after  # spec event-items: it happens once every gift has its holder (give_to)
+		return ""
+	return _after_choice(after)
+
+
+## What an event choice does once its outcomes ran (and, spec event-items, its gifts have holders): go to a page,
+## start an encounter, or end the event. "" or the error.
+func _after_choice(after: Dictionary) -> String:
+	var cell: int = state.event["cell"]
+	match str(after["kind"]):
 		"page":
-			state.event["page"] = _directive_page
-			event_page_shown.emit(state.event["event"], _directive_page)
+			state.event["page"] = int(after["page"])
+			event_page_shown.emit(state.event["event"], int(after["page"]))
 		"encounter":
+			var encounter: EncounterDefinition = content.encounters[StringName(after["encounter"])]
 			var room: RoomDefinition = content.rooms[state.map.cells[cell]["room"]]
 			var event_rng := RunSeeds.rng(state.run_seed, "floor/%d/event/%d" % [state.floor_index, cell])
 			var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index)
 			state.event = {}
-			pending_battle = {"cell": cell, "encounter": _directive_encounter.id,
-				"enemies": generator.resolve_enemies(_directive_encounter, room, false, chapter().scaling, event_rng),
+			pending_battle = {"cell": cell, "encounter": encounter.id,
+				"enemies": generator.resolve_enemies(encounter, room, false, chapter().scaling, event_rng),
 				"label": "/event"}
 			state.map.cells[cell]["content"]["enemies"] = pending_battle["enemies"]
 			battle_requested.emit(battle_snapshot())
@@ -987,6 +1023,8 @@ func choose(choice_index: int) -> String:
 func take(placement: int, slot: int) -> String:
 	if not _active() or not pending_battle.is_empty():
 		return "not now"
+	if _gift_block() != "":
+		return _gift_block()
 	var data: Dictionary = state.map.cells[state.current_cell]
 	if not data["cleared"]:
 		return "clear the room first"
@@ -1151,6 +1189,8 @@ func equipment_slots() -> Array[StringName]:
 func equip(slot: int, piece_id: StringName) -> String:
 	if not _active() or not pending_battle.is_empty():
 		return "not now"
+	if _gift_block() != "":
+		return _gift_block()
 	var member := state.member(slot)
 	if member.is_empty():
 		return "no member in slot %d" % slot
@@ -1169,6 +1209,8 @@ func equip(slot: int, piece_id: StringName) -> String:
 func unequip(slot: int, slot_tag: StringName) -> String:
 	if not _active() or not pending_battle.is_empty():
 		return "not now"
+	if _gift_block() != "":
+		return _gift_block()
 	var member := state.member(slot)
 	if member.is_empty():
 		return "no member in slot %d" % slot
@@ -1186,6 +1228,8 @@ func unequip(slot: int, slot_tag: StringName) -> String:
 func swap_gear(slot: int, piece_id: StringName) -> String:
 	if not _active() or not pending_battle.is_empty():
 		return "not now"
+	if _gift_block() != "":
+		return _gift_block()
 	var member := state.member(slot)
 	if member.is_empty():
 		return "no member in slot %d" % slot
@@ -1220,6 +1264,8 @@ func swap_gear(slot: int, piece_id: StringName) -> String:
 func move_item(from_slot: int, item_id: StringName, to_slot: int, swap_item: StringName = &"") -> String:
 	if not _active() or not pending_battle.is_empty():
 		return "not now"
+	if _gift_block() != "":
+		return _gift_block()
 	var giver := state.member(from_slot)
 	var receiver := state.member(to_slot)
 	if giver.is_empty() or receiver.is_empty():
@@ -1387,6 +1433,8 @@ func member_kit(slot: int) -> Array[Dictionary]:
 func use_field(slot: int, ability_tag: StringName, target_slot: int = 0) -> Array:
 	if not _active() or not pending_battle.is_empty():
 		return ["NotNow", "finish the battle first"]
+	if _gift_block() != "":
+		return ["NotNow", _gift_block()]
 	var seed_value := RunSeeds.derive(state.run_seed, "floor/%d/field/%d" % [state.floor_index, state.field_actions_on_floor])
 	var battle := _field_battle(seed_value)
 	if battle == null:
@@ -1510,8 +1558,10 @@ func apply_member_effect(effect: GameplayEffect, slots: Array, include_dead: boo
 		_end(RunState.LOST)
 
 
-## Gives `item` (or one picked from `query`) to `character`, or to the first living member who can hold it.
-func give_item(item: ItemDefinition, query: GameplayTagQuery, character: CharacterDefinition) -> void:
+## Gives `item` (or one picked from `query`) to `character`, or else to the member `recipient` names (spec event-items:
+## FIRST, RANDOM, or CHOOSE, which waits for give_to; in a chest every item is CHOOSE). A given item toasts.
+func give_item(item: ItemDefinition, query: GameplayTagQuery, character: CharacterDefinition,
+		recipient: int = GiveItem.Recipient.FIRST) -> void:
 	if item == null:
 		var gift_rng := _chest_rng
 		if gift_rng == null:  # spec keys-and-gear 2.3: a chest's gifts draw from the chest's own stream
@@ -1521,20 +1571,78 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 		item = generator.pick_item(null, query, gift_rng, _pools())
 		if item == null:
 			return
+	if _chest_rng != null:
+		recipient = GiveItem.Recipient.CHOOSE  # spec event-items D5: a chest always lets the player pick
+		character = null
+	var holders: Array[int] = []
+	for member in state.party:
+		if can_hold(member["slot"], item) == "":
+			holders.append(member["slot"])
 	var slot := 0
 	if character != null:
 		slot = state.member_slot(character.id)
-	else:
-		for member in state.party:
-			if can_hold(member["slot"], item) == "":
-				slot = member["slot"]
-				break
+	elif holders.size() > 1 and recipient == GiveItem.Recipient.CHOOSE:
+		state.pending_gifts.append(item.id)  # spec event-items: the player picks with give_to
+		if _chest_rng != null:
+			_chest_gifts.append(item.display_name)
+		party_changed.emit()
+		return
+	elif not holders.is_empty() and recipient == GiveItem.Recipient.RANDOM:
+		var cell := int(state.event.get("cell", state.current_cell))
+		var rng := RunSeeds.rng(state.run_seed, "floor/%d/recipient/%d/%d" % [state.floor_index, cell, _recipient_draws])
+		_recipient_draws += 1
+		slot = holders[rng.randi_range(0, holders.size() - 1)]
+	elif not holders.is_empty():
+		slot = holders[0]  # FIRST, or CHOOSE with one possible holder (D4)
 	if slot == 0 or can_hold(slot, item) != "":
 		_warn("nobody can hold %s; it is lost" % item.id)
 		return
+	_give_to(slot, item)
+
+
+## Spec event-items: the player gives the first pending gift to the member in `slot`. Logged. Returns "" or why not.
+func give_to(slot: int) -> String:
+	if not _active() or state.pending_gifts.is_empty():
+		return "nothing to give"
+	var item: ItemDefinition = content.items.get(state.pending_gifts[0])
+	if item == null:
+		return _stop("unknown pending item '%s'" % state.pending_gifts[0])
+	var problem := can_hold(slot, item)
+	if problem != "":
+		return problem
+	state.pending_gifts.remove_at(0)
+	run_log.append({"type": "give_to", "floor": state.floor_index,
+		"cell": int(state.event.get("cell", state.current_cell)), "item": String(item.id), "slot": slot})
+	_give_to(slot, item)
+	if state.pending_gifts.is_empty() and state.event.has("after"):
+		var after: Dictionary = state.event["after"]
+		state.event.erase("after")
+		return _after_choice(after)
+	return ""
+
+
+## The first pending gift (spec event-items), or null.
+func pending_gift() -> ItemDefinition:
+	return content.items.get(state.pending_gifts[0]) if state != null and not state.pending_gifts.is_empty() else null
+
+
+## Why a run action must wait (spec event-items): a gift is waiting for its holder. "" when nothing waits.
+func _gift_block() -> String:
+	if state == null or state.pending_gifts.is_empty():
+		return ""
+	var item: ItemDefinition = content.items.get(state.pending_gifts[0])
+	return "choose who gets %s first" % (item.display_name if item != null else String(state.pending_gifts[0]))
+
+
+## Gives `item` to the member in `slot` and toasts it (Message.Run.ItemTaken); in a chest the toast waits for the
+## chest's own one (spec event-items D2).
+func _give_to(slot: int, item: ItemDefinition) -> void:
 	_receive_item(slot, item)
 	if _chest_rng != null:
 		_chest_gifts.append(item.display_name)
+		_chest_toasts.append([slot, item])
+	else:
+		_send_taken("gift", slot, item, {"price": 0})
 
 
 func remove_item(item: ItemDefinition) -> void:
@@ -1948,7 +2056,7 @@ func _notify(text: String, tags: Array = []) -> void:
 	GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION, NotificationMessage.make(text, tags))
 
 
-## Message.Run.ItemTaken for a pickup or purchase (`kind` "take" or "buy") by the member in `slot`.
+## Message.Run.ItemTaken for a pickup, a purchase or a gift (`kind` "take", "buy" or "gift") by the member in `slot`.
 func _send_taken(kind: String, slot: int, item: Resource, pickup: Dictionary) -> void:
 	var data := {"targetName": item.display_name}
 	# Spec ff7-ui 2.2: what a pickup toast shows (who got it, its rarity and what it does).
@@ -1962,6 +2070,8 @@ func _send_taken(kind: String, slot: int, item: Resource, pickup: Dictionary) ->
 			data["rarity"] = String(tag).trim_prefix("Item.Rarity.")
 	if pickup.has("priceItem"):
 		data["priceItem"] = String(pickup["priceItem"])
+	if kind == "gift":
+		data["source"] = "gift"  # spec event-items: from an event, a reward or a chest
 	_send(GameplayMessageRouter.RUN_ITEM_TAKEN, &"Verb.Buy" if kind == "buy" else &"Verb.Take",
 		StringName("slot:%d" % slot), item.id, int(pickup["price"]), item.tags, data)
 

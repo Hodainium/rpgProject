@@ -9,6 +9,7 @@
 ## Spec keys-and-gear 3.5: on the map it also opens every chest it can (a Gilded one only with a key to spare after the
 ## floor's locked rooms), wears found gear in empty slots (first living member by slot), and opens locked rooms it can
 ## afford, item rooms before shops, before it would enter the boss room. Runs without keys play exactly as before.
+## Spec event-items: an item waiting for its holder goes to the first living member who can hold it.
 ## `chaos` (the chaos policy): {"rng", "illegal_x100", "violations": Array, "refused": Dictionary}: at that share of map
 ## steps it first tries a run action that must be refused (RUN_CASES) and checks that nothing changed.
 ## Returns "" (the run ended or stopped on a runner error), "stuck" (nothing left to do) or "step cap".
@@ -16,7 +17,7 @@ class_name RunPlayer
 extends RefCounted
 
 const RUN_CASES: Array[String] = ["chest_no_key", "chest_index", "locked_no_key", "swap_not_worn", "swap_self",
-	"move_not_held", "move_full"]
+	"move_not_held", "move_full", "give_nothing"]
 const TREASURE_TAG: StringName = &"Room.Type.Treasure"
 
 
@@ -31,6 +32,16 @@ static func play(run: RunController, max_steps: int = 400, battle: Callable = Ca
 			else:
 				await run.fight(ScriptedController.new())
 			continue
+		if not run.state.pending_gifts.is_empty():
+			var gift := run.pending_gift()
+			var holder := 0
+			for member in run.state.party:
+				if gift != null and run.can_hold(member["slot"], gift) == "":
+					holder = member["slot"]
+					break
+			if holder == 0 or run.give_to(holder) != "":
+				return "stuck"
+			continue
 		if not run.state.event.is_empty():
 			var page := run.current_page()
 			var picked := -1
@@ -44,6 +55,8 @@ static func play(run: RunController, max_steps: int = 400, battle: Callable = Ca
 			continue
 		_take_pickups(run)
 		_open_chests(run)
+		if not run.state.pending_gifts.is_empty():
+			continue  # spec event-items: a chest's item waits for its holder first
 		_wear_gear(run)
 		if not chaos.is_empty():
 			try_illegal(run, chaos)
@@ -199,6 +212,9 @@ static func _illegal_action(run: RunController, case: String) -> Callable:
 					if giver["slot"] != receiver["slot"] and not giver["use_slots"].is_empty() \
 							and receiver["use_slots"].size() >= run.use_capacity(receiver["slot"]):
 						return run.move_item.bind(giver["slot"], giver["use_slots"][0]["item"], receiver["slot"])
+		"give_nothing":  # spec event-items: give_to with no gift waiting
+			if state.pending_gifts.is_empty():
+				return run.give_to.bind(state.party[0]["slot"])
 	return Callable()
 
 

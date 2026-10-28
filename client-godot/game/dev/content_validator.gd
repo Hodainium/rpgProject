@@ -871,11 +871,16 @@ func _check_event(event: EventDefinition) -> void:
 				_error("dangling_ref", "%s.choices[%d]" % [where, choice_index], "an empty choice entry")
 				continue
 			for index in choice.outcomes.size():
-				_check_outcome(choice.outcomes[index], "%s.choices[%d].outcomes[%d]" % [where, choice_index, index], event)
+				_check_outcome(choice.outcomes[index], "%s.choices[%d].outcomes[%d]" % [where, choice_index, index], event,
+					true)
 	_check_weight(event, path)
 
 
-func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition) -> void:
+## `can_choose`: the outcome runs in an event choice or a chest, where the player can pick an item's holder.
+func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition, can_choose: bool = false) -> void:
+	if outcome is GiveItem and outcome.recipient == GiveItem.Recipient.CHOOSE and not can_choose:
+		# Spec event-items D3: no screen can ask who gets it in an encounter reward or an item hook.
+		_error("give_choose_outside_event", where, "GiveItem recipient CHOOSE only works in an event choice or a chest")
 	if outcome == null:
 		_error("dangling_ref", where, "an empty outcome entry")
 	elif outcome is GiveItem and outcome.item == null and outcome.item_query == null:
@@ -950,7 +955,7 @@ func _check_chest(chest: ChestDefinition) -> void:
 			_error("bad_chest", where, "%s's reward %d has no outcomes or bad rolls (%d-%d)" % [chest.id, index,
 				reward.rolls_min, reward.rolls_max])
 		for outcome_index in reward.outcomes.size():
-			_check_outcome(reward.outcomes[outcome_index], "%s::outcomes[%d]" % [where, outcome_index], null)
+			_check_outcome(reward.outcomes[outcome_index], "%s::outcomes[%d]" % [where, outcome_index], null, true)
 
 
 func _check_run(structure: RunStructure, generate_seeds: int) -> void:

@@ -249,8 +249,33 @@ func test_demo_events() -> void:
 	eq(run.choose(0), "", "look at the books")
 	eq(run.state.event.get("page"), 1, "the books page")
 	eq(run.choose(1), "", "take the Hourglass")
+	eq(_held(run), held_before, "spec event-items D1: the player picks who gets it first")
+	eq(run.pending_gift().id, &"demo.item.hourglass", "the Hourglass waits for its holder")
+	var reader: int = run.state.party[-1]["slot"]
+	eq(run.give_to(reader), "", "give it to the last member")
 	eq(_held(run), held_before + 1, "one book is taken")
+	eq(run.state.holder_of(&"demo.item.hourglass"), reader, "by the member picked")
 	run.free()
+
+
+## Spec event-items D1: who gets the item in the demo's item events (Librarian and Shady merchant: the player picks;
+## Cursed chest: a random member).
+func test_demo_event_recipients() -> void:
+	var content := _demo()
+	if content == null:
+		print("    skipped: %s not built" % DESCENT)
+		return
+	var expected := {&"demo.event.librarian": GiveItem.Recipient.CHOOSE, &"demo.event.merchant": GiveItem.Recipient.CHOOSE,
+		&"demo.event.cursed_chest": GiveItem.Recipient.RANDOM}
+	for id in expected:
+		var gifts := 0
+		for page in content.events[id].pages:
+			for choice in page.choices:
+				for outcome in choice.outcomes:
+					if outcome is GiveItem:
+						gifts += 1
+						eq(outcome.recipient, expected[id], "%s gives with recipient %d" % [id, expected[id]])
+		check(gifts > 0, "%s gives an item" % id)
 
 
 ## Spec playable-demo 3.11 (D29, D30): the healing events, the Old Tutor and the Waystation rest stop do what their

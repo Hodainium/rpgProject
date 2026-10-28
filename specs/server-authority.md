@@ -91,7 +91,7 @@ miss (and re-cache).
 
 ### 2.2 The action log (Part B)
 ```
-any in-floor action (enter_room, choose, take, buy, field, battle, next_floor):
+any in-floor action (enter_room, choose, give_to, take, buy, field, battle, next_floor):
   RunController applies it locally, appends to run_log and the local save, queues it
   ServerLink, whenever online: POST /api/v1/runs/{runId}/actions {actions: [seq a … seq b]}   (Bearer)
                                                  one transaction: SELECT runs … FOR UPDATE
@@ -253,7 +253,8 @@ stored as sent, checked by replay, flagged unverified until then. `run_actions.a
 
 `Type` values: `start_run` (seq 1, client-sent, carries the first snapshot), `enter_room`, `choose`, `take`, `buy`,
 `field`, `equip`, `unequip` (armor, spec item-pass: map only, `Slot` = the party member; async and server-verified
-like `field`), `battle`, `next_floor`, `end` (Lost only; Won uses the end endpoint). All new records get golden JSON
+like `field`), `give_to` (spec event-items: who gets an item from an event or a chest; `Item`, `Slot`; refused
+unless that item is the next one waiting), `battle`, `next_floor`, `end` (Lost only; Won uses the end endpoint). All new records get golden JSON
 tests.
 
 ### 3.2 Endpoints

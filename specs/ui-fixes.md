@@ -33,6 +33,10 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   x 0, over the line's 12 px content margin, so the text sat at the left edge with twice the space on the right.
 - **B6. The Tab floor banner appears in place while only its text slides down** (reported 2026-10-27). `toast.gd`
   slid `%Lines` inside the window; the window itself was placed at once by the stack layout.
+- **B7. Entering an event room logs an engine error** (found 2026-10-27 while building `event-items`). `party_strip.gd`
+  binds one handler with one optional argument to six run signals; `event_page_shown` sends two, and it fires while
+  the strip is still up (the room is entered from the map). Fix: the handler takes a second optional argument.
+  Test: `test_explore_hud::test_party_strip_takes_event_pages` (any engine error fails it).
 
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved.

@@ -12,6 +12,8 @@ const REST: StringName = &"UI.State.Run.Event.Rest"
 const PICKUP: StringName = &"UI.State.Run.Pickup"
 const STAIRS: StringName = &"UI.State.Run.Stairs"
 const CHOICE: StringName = &"UI.State.Run.Stairs.Choice"
+## Spec event-items: an item waits for the player to pick its holder (give_to); with the event's or the map's tags.
+const GIFT: StringName = &"UI.State.Run.Gift"
 const END: StringName = &"UI.State.End"
 const WON: StringName = &"UI.State.End.Won"
 const LOST: StringName = &"UI.State.End.Lost"
@@ -22,7 +24,7 @@ const SANDBOX: StringName = &"UI.State.Sandbox"
 const MENU_OPEN: StringName = &"UI.State.Run.Menu"
 ## Every tag this file can give (for the tag checkpoint).
 const ALL: Array[StringName] = [MENU, RUN, MAP, BATTLE, EVENT, REST, PICKUP, STAIRS, CHOICE, END, WON, LOST, STOPPED,
-	SANDBOX, MENU_OPEN]
+	SANDBOX, MENU_OPEN, GIFT]
 
 
 ## The tags for GameMain's mode ("menu", "run", "end") and `run`, sorted.
@@ -51,6 +53,8 @@ static func compute(mode: String, run: RunController) -> Array[StringName]:
 
 
 static func _run_tags(run: RunController, state: RunState, tags: Array[StringName]) -> void:
+	if not state.pending_gifts.is_empty():
+		tags.append(GIFT)
 	if not run.pending_battle.is_empty():
 		tags.append(BATTLE)
 		return

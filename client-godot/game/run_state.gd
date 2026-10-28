@@ -32,8 +32,12 @@ var boss_cleared: bool = false
 ## Counters for the order-dependent streams (field actions, item gifts) on the current floor.
 var field_actions_on_floor: int = 0
 var gifts_on_floor: int = 0
-## The open event: {"cell": int, "event": StringName, "page": int}, or empty.
+## The open event: {"cell": int, "event": StringName, "page": int}, or empty. Spec event-items: while a choice waits for
+## give_to it also holds "after" ({"kind": "page" | "encounter" | "end", "page", "encounter"}).
 var event: Dictionary = {}
+## Spec event-items: items waiting for the player to pick their holder (give_to), in order. Not hashed: the hash is
+## taken between actions, and a given item is hashed in its holder's line.
+var pending_gifts: Array[StringName] = []
 var status: String = ACTIVE
 ## Dev tools (spec dev-tools 3.4): a cheat or a sandbox happened in this run. Hashed only when true, so it can never pass
 ## as a clean run, and clean runs hash exactly as before.

@@ -334,6 +334,46 @@ func test_floor_toast_slides_as_one() -> void:
 	host_panel.hold(&"show_floor_info", false)
 
 
+## Spec event-items: the Give to panel (a Modal screen while UI.State.Run.Gift) for a chest's item: it names the item,
+## lists the party, a press gives it (logged give_to) and the panel goes away.
+func test_gift_panel() -> void:
+	var game := await _game()
+	var run := game.run
+	var gift := GiveItem.new()
+	gift.item = run.content.items[&"fixture.item.whetstone"]
+	var reward := ChestReward.new()
+	reward.outcomes.assign([gift])
+	var chest := ChestDefinition.new()
+	chest.id = &"fixture.chest.gift_test"
+	chest.display_name = "Gift test"
+	chest.rewards.assign([reward])
+	run.content = run.content.overlay([chest])
+	run.give_chest(chest)
+	eq(run.open_chest(0), "", "open the chest")
+	await _frames(3)
+	var panel := _find(game, "GiftPanel")
+	check(panel != null, "the Give to panel shows")
+	if panel == null:
+		return
+	eq(panel.get_node("%Name").text, gift.item.display_name, "it names the item")
+	var buttons: Array = panel.get_node("%Members").get_children()
+	eq(buttons.size(), run.state.party.size(), "one button per party member")
+	buttons[1].pressed.emit()
+	await _frames(3)
+	eq(run.run_log[-1]["type"], "give_to", "a press is a logged give_to")
+	eq(run.state.holder_of(gift.item.id), run.state.party[1]["slot"], "to the member pressed")
+	check(_find(game, "GiftPanel") == null, "and the panel goes away")
+
+
+## Spec ui-fixes B7: an event page shown while the party strip is up (entering an event room from the map) redraws the
+## strip with no error (event_page_shown has two arguments; any engine error fails this test).
+func test_party_strip_takes_event_pages() -> void:
+	var game := await _game()
+	check(_find(game, "PartyStrip") != null, "the party strip is up on the map")
+	game.run.event_page_shown.emit(&"fixture.event.any", 0)
+	await _frames(2)
+
+
 func test_use_and_status_screens() -> void:
 	var game := await _game()
 	var use = game.ui.push(&"UI.Layer.GameMenu", load("res://presentation/demo/ui/use_screen.tscn"), {"mode": "ability"})
