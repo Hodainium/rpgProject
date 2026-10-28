@@ -17,7 +17,8 @@ func bind(_context: UIContext) -> void:
 func refresh() -> void:
 	var run := ctx.run
 	var replayable := run != null and run.state != null and not run.state.sandbox and not run.run_log.is_empty()
-	%PlayAgain.visible = replayable
+	var server_run := run != null and run.state != null and run.state.seeds().server_mode()
+	%PlayAgain.visible = replayable and not server_run  # a server run's seeds can't be played again
 	%NewRun.visible = replayable
 	if run == null or run.state == null:
 		%Text.text = no_start_text + "\n" + (run.runner_error if run != null else "")
@@ -26,7 +27,8 @@ func refresh() -> void:
 	var headline := stopped_format % run.runner_error if run.runner_error != "" else \
 		won_headline if run.state.status == RunState.WON else lost_headline
 	var lines := PackedStringArray([headline, ""])
-	lines.append("%s  ·  seed %s" % [run.structure.display_name if run.structure != null else summary["run"], summary["seed"]])
+	lines.append("%s  ·  %s" % [run.structure.display_name if run.structure != null else summary["run"],
+		"run %s" % run.state.run_id.left(8) if server_run else "seed %s" % summary["seed"]])
 	lines.append("Party: " + ", ".join(run.state.party.map(func(member) -> String:
 		var character: UnitDefinition = run.content.units.get(member["character"])
 		return "%s Lv %d%s" % [character.display_name if character != null else String(member["character"]),

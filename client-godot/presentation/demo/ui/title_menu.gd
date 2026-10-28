@@ -7,6 +7,8 @@ extends UIScreen
 ## Picked on first launch, before a party was saved.
 @export var first_party: PackedStringArray = ["demo.character.warrior", "demo.character.cleric"]
 @export var party_format: String = "Party (%d/%d):"
+## Shown in the seed field in server mode (spec server-authority: the server issues every floor seed).
+@export var server_seed_text: String = "Seed: issued by the server"
 
 
 func bind(context: UIContext) -> void:
@@ -51,6 +53,16 @@ func _fill(content: ContentIndex) -> void:
 	_update_party()
 
 
+## Server mode: the seed field is disabled and says who picks the seed; local mode: typed or random as before.
+func refresh() -> void:
+	var linked: bool = ctx.main.server != null
+	%Seed.editable = not linked
+	%Random.disabled = linked
+	%Seed.placeholder_text = server_seed_text if linked else ""
+	if linked:
+		%Seed.text = ""
+
+
 func _cards() -> Array:
 	return %Classes.get_children().filter(func(card) -> bool: return not card.is_queued_for_deletion())
 
@@ -66,7 +78,7 @@ func _update_party() -> void:
 func _start() -> void:
 	var ids: Array = _cards().filter(func(card) -> bool: return card.is_picked()).map(
 		func(card) -> String: return card.character_id)
-	if %Seed.text.strip_edges() == "":
+	if %Seed.text.strip_edges() == "" and ctx.main.server == null:
 		%Seed.text = RunSeeds.random_code()
 	var run_id: String = %RunPicker.get_item_metadata(%RunPicker.selected) if %RunPicker.selected >= 0 else ""
 	GameMain.save_setting("menu", "party", ids)
