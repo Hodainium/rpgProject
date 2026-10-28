@@ -6,6 +6,22 @@
 class_name DemoMenuFrame
 extends UIScreen
 
+## Space between the description window and the content below it (spec ui-fixes B1).
+@export var content_gap: float = 16.0
+
+@onready var _content_top: float = %Content.offset_top
+
+
+func _ready() -> void:
+	%Description.resized.connect(_keep_content_below)
+	%Description.item_rect_changed.connect(_keep_content_below)
+
+
+## Spec ui-fixes B1: a description taller than its slot pushes the content down instead of being covered.
+func _keep_content_below() -> void:
+	var bottom: float = %Description.get_global_rect().end.y - get_global_rect().position.y
+	%Content.offset_top = maxf(_content_top, bottom + content_gap)
+
 
 ## Shows `info` in the description window (see description_window.gd).
 func describe(info: Dictionary) -> void:

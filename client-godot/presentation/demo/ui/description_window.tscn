@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://presentation/demo/ui/description_window.gd" id="1_window"]
 
 [node name="DescriptionWindow" type="PanelContainer"]
-custom_minimum_size = Vector2(800, 92)
+custom_minimum_size = Vector2(800, 113)
 mouse_filter = 2
 theme_type_variation = &"Hint"
 script = ExtResource("1_window")
