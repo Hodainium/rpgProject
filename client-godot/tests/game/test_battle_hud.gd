@@ -76,6 +76,30 @@ func test_battle_hud_policy() -> void:
 	check(game.find_child("TurnOrderPanel", true, false) == null, "and the turn order is gone")
 
 
+## Spec ui-fixes B3: a clicked room starts its battle before the deferred UI state adds the panels. A panel made after
+## battle_started takes the running battle (RunController.current_battle) and draws it.
+func test_panels_made_after_battle_started() -> void:
+	var made := _game()
+	var game: GameMain = made[0]
+	check(await _battle(game, made[1], "fixture.encounter.ult_trial"), "a battle waits for the player")
+	check(game.run.current_battle != null, "the run exposes the battle being fought")
+	var late: Array[Node] = []
+	for path in ["res://presentation/demo/ui/battle_party_panel.tscn", "res://presentation/demo/ui/turn_order_panel.tscn"]:
+		var panel: UIScreen = load(path).instantiate()
+		host.add_child(panel)
+		late.append(panel)
+		panel._ui_bind(game.ui.context)
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	eq(late[0].get_node("%Rows").get_child_count(), 2, "a late party window still has one row per member")
+	check(late[1].get_node("%Cards").get_child_count() >= 7, "a late turn order still shows the turns")
+	for panel in late:
+		panel.free()
+	game.auto_battle = true
+	await _until(func() -> bool: return game.run.pending_battle.is_empty())
+	check(game.run.current_battle == null, "and none once the battle is over")
+
+
 func test_command_panel_pages() -> void:
 	var made := _game()
 	var game: GameMain = made[0]

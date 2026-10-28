@@ -23,6 +23,10 @@ func bind(context: UIContext) -> void:
 	# A panel made after battle_prepared fired for this battle takes the battle's recorder and gate now.
 	if context.main.recorder != null and context.main.gate != null:
 		_on_battle_prepared(context.main.recorder, context.main.gate)
+	# Spec ui-fixes B3: and one made after battle_started (a clicked room starts the battle before the deferred UI
+	# state adds the panels) takes the running battle.
+	if context.run != null and context.run.current_battle != null:
+		_on_battle_started(context.run.current_battle)
 
 
 ## Override: a new battle and its recorder are ready (connect to recorder signals here).

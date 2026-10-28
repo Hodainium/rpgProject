@@ -34,6 +34,9 @@ var runner_error: String = ""
 var allow_dev: bool = true
 ## The battle waiting for fight(): {"cell", "encounter", "enemies", "label"}.
 var pending_battle: Dictionary = {}
+## The battle fight() is playing, from battle_started until battle_finished (null otherwise): a view made after
+## battle_started reads it here (spec ui-fixes B3).
+var current_battle: Battle
 ## The last battle's events (see _record_battle), for the dev report.
 var battle_log: Array[Dictionary] = []
 ## The item whose run hook is running (null otherwise); an empty RemoveItem in a hook removes it.
@@ -471,9 +474,11 @@ func fight(controller: Object, gate: PresentationGate = null) -> String:
 	if error != "":
 		battle.queue_free()
 		return _stop("battle %s: %s" % [snapshot["battleId"], error])
+	current_battle = battle
 	battle_started.emit(battle)
 	_record_battle(battle)
 	await battle.run(controller)
+	current_battle = null
 	if battle.runner_error != "":
 		var message_text := battle.runner_error
 		battle.queue_free()
