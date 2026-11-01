@@ -1,0 +1,14 @@
+# Spec battle-verify 6, acceptance scenario 5 end to end: a battle whose stored log was altered after the upload (the first
+# one's claimed final hash, as a cheating client would send it) is rejected by the real replay with the 2002 verdict,
+# while the untouched battles are verified. The worker only starts after the tampering, so the jobs wait in the queue.
+#! env Monitors__Interval=00:00:01
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+e2e tamper-battle
+e2e worker-start 120
+wait verdict all 240
+server verdict

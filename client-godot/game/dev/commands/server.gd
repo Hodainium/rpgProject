@@ -4,8 +4,8 @@ extends DevCommand
 
 func _init() -> void:
 	name = "server"
-	usage = "server [<url> [player] | off | ruleset | check | resume | forget | conflict]"
-	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
+	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | resume | forget | conflict]"
+	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
 	cheat = false
 
 
@@ -14,6 +14,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		return RulesetVersion.current()
 	if args.size() > 0 and args[0] == "check":
 		return await _check(ctx)
+	if args.size() > 0 and args[0] == "verdict":
+		return await _verdict(ctx, args)
 	if args.size() > 0 and args[0] in ["resume", "forget", "conflict"]:
 		return await _part_b(ctx, args[0])
 	if ctx.game == null:
@@ -99,6 +101,28 @@ static func _floor_open(ctx: DevContext, run: RunController) -> bool:
 		Watchdog.beat("server resume: floor seed")
 		await ctx.console.tree.process_frame
 	return run.waiting_for_floor() < 0
+
+
+## Spec battle-verify 2.2: what the verifier decided about each battle of the run (the log drains first, so every
+## battle is on the server). Read-only; a pending or rejected battle is reported, not an error.
+func _verdict(ctx: DevContext, args: PackedStringArray) -> String:
+	if ctx.game == null or ctx.game.server == null:
+		return ctx.fail("not in server mode")
+	var run := ctx.run
+	if run == null or run.state == null or not run.state.seeds().server_mode():
+		return ctx.fail("no server run")
+	if args.size() > 1 and not args[1].is_valid_int():
+		return ctx.fail("verdict takes a seq number")
+	var link: ServerLink = ctx.game.server
+	await link.drained()
+	var entries := await link.battle_verdicts(run, int(args[1]) if args.size() > 1 else -1)
+	if entries.is_empty():
+		return ctx.fail("no battle%s in this run" % (" at seq " + args[1] if args.size() > 1 else ""))
+	var lines := PackedStringArray()
+	for entry in entries:
+		lines.append(ServerLink.describe_verdict(entry))
+	var unreadable := entries.any(func(entry: Dictionary) -> bool: return entry["error"] != "")
+	return ctx.fail("\n".join(lines)) if unreadable else "\n".join(lines)
 
 
 ## Spec dev-tools E3: the server agrees with the run: GET /runs/{id} is Active on the client's floor, and asking for

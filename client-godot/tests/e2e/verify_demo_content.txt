@@ -1,0 +1,13 @@
+# Spec battle-verify 6: the real game content, not the fixtures. A run on res://content/ (the demo's one-floor run, a Warrior
+# and a Cleric) plays headless, every battle goes through the API (stored as Postgres jsonb, keys reordered), and the verifier
+# worker replays it on the same content folders: each must reach the client's own final hash. Where the key-order golden
+# test covers the fixtures, this covers the content the player actually plays.
+#! worker
+#! content real
+#! env Monitors__Interval=00:00:01
+new demo.character.warrior,demo.character.cleric run=demo.run.one_floor
+wait run
+autorun policy=smart
+wait ended 120
+wait verdict all 300
+server verdict

@@ -5,10 +5,15 @@
 #   tools/e2e.sh --check                             (no Docker: lists and validates the scenarios, finds the tools)
 # Per scenario: a fresh Postgres database e2e_<stamp>_<scenario>, Redis index 1-15, a server on its own port
 # (Development, so dev tokens and Run:AutoApproveWins; test seed and token secrets; only the live ruleset version
-# accepted; plus the scenario's "#! env K=V" lines),
-# then dev_run.tscn --server --player e2e-<scenario> --control <folder>, then the scenario's .sql (every line returns t)
-# and .metrics (every line is a regex the final /metrics scrape matches). Fault steps (`e2e <action>` in a script)
-# reach the control loop here: server-stop, server-start, redis-flush.
+# accepted; plus the scenario's "#! env K=V" lines) and a RabbitMQ vhost of its own (so parallel scenarios never
+# consume each other's verify jobs),
+# then dev_run.tscn --server --player e2e-<scenario> --control <folder>, then the scenario's .sql (every line returns t),
+# .metrics (every line is a regex the final server /metrics scrape matches) and .worker-metrics (the same for the verifier
+# worker's /metrics). Fault steps (`e2e <action>` in a script) reach the control loop here: server-stop, server-start,
+# redis-flush, worker-start, worker-stop (a kill), tamper-battle (spec battle-verify 6). A "#! worker" line starts the
+# verifier worker (the real headless Godot per job, on the fixtures content) with the server; without it a scenario
+# starts the worker itself with `e2e worker-start`. A "#! content real" line runs the game and the worker on the real
+# res://content/ instead of the fixtures (the worker may load the content folders at any time).
 # Output in build/e2e/<stamp>/<scenario>/; one "ok|FAIL <scenario>" line each. Exit 0 all ok, 1 any failure (incl.
 # infra down), 124 a stalled Godot. Never touches the dev database, Redis index 0 or user://game_main.cfg.
 set -uo pipefail
@@ -41,8 +46,8 @@ validate() {  # <scenario>
 	[[ $name =~ ^[a-z0-9_]+$ ]] || { echo "e2e.sh: $name: scenario names are lower case, digits and _"; problems=$((problems + 1)); }
 	while IFS= read -r line || [[ -n $line ]]; do
 		line=${line%$'\r'}
-		if [[ $line == "#! "* && ! $line =~ ^#!\ env\ [A-Za-z_][A-Za-z0-9_]*=.*$ ]]; then
-			echo "e2e.sh: $name: bad directive '$line' (only '#! env KEY=VALUE')"; problems=$((problems + 1))
+		if [[ $line == "#! "* && ! $line =~ ^#!\ env\ [A-Za-z_][A-Za-z0-9_]*=.*$ && $line != "#! worker" && $line != "#! content real" ]]; then
+			echo "e2e.sh: $name: bad directive '$line' (only '#! env KEY=VALUE', '#! worker' and '#! content real')"; problems=$((problems + 1))
 		fi
 	done < "$file"
 	if [[ -f $scenarios_dir/$name.sql ]]; then
@@ -52,6 +57,9 @@ validate() {  # <scenario>
 			[[ $line == *";"* ]] && { echo "e2e.sh: $name.sql: one statement per line, no ';': $line"; problems=$((problems + 1)); }
 			[[ ${line,,} == select* ]] || { echo "e2e.sh: $name.sql: only select queries: $line"; problems=$((problems + 1)); }
 		done < "$scenarios_dir/$name.sql"
+	fi
+	if [[ -f $scenarios_dir/$name.worker-metrics ]] && ! grep -qE '^#! worker$|e2e worker-start' "$file"; then
+		echo "e2e.sh: $name: has .worker-metrics but never starts the worker"; problems=$((problems + 1))
 	fi
 }
 for name in "${picked[@]}"; do validate "$name"; done
@@ -83,13 +91,16 @@ redis() { "${compose[@]}" exec -T redis redis-cli "$@" < /dev/null; }
 stamp=$(date +%Y%m%d_%H%M%S)
 out="$root/build/e2e/$stamp"
 mkdir -p "$out"
-echo "e2e.sh: building the server and the Godot C# assembly"
+echo "e2e.sh: building the server, the verifier worker and the Godot C# assembly"
 "$root/tools/watch.sh" --name e2e-build --timeout 600 --log "$out/build.log" -- \
 	dotnet build "$root/src/Rpg.GameServerApi/Rpg.GameServerApi.csproj" -v q \
+	&& "$root/tools/watch.sh" --name e2e-build-worker --timeout 600 --log "$out/build-worker.log" -- \
+		dotnet build "$root/src/Rpg.VerifierWorker/Rpg.VerifierWorker.csproj" -v q \
 	&& "$root/tools/watch.sh" --name e2e-build-godot --timeout 600 --log "$out/build-godot.log" -- \
 		dotnet build "$root/client-godot/rpgDemo.csproj" -v q \
 	|| { echo "e2e.sh: build failed, see $out/build*.log"; exit 1; }
 server_dir="$root/src/Rpg.GameServerApi/bin/Debug/net10.0"
+worker_dir="$root/src/Rpg.VerifierWorker/bin/Debug/net10.0"
 "$root/tools/watch.sh" --name e2e-ruleset --timeout 300 --log "$out/ruleset.log" -- \
 	"$godot" --headless --path "$root/client-godot" --quit-after 100000 res://game/tools/print_ruleset_version.tscn
 ruleset=$(grep -m1 -oE '[0-9]+\.[0-9]+\.[0-9]+\.[a-z0-9.]+\+[0-9a-f]{16}' "$out/ruleset.log")
@@ -97,6 +108,9 @@ ruleset=$(grep -m1 -oE '[0-9]+\.[0-9]+\.[0-9]+\.[a-z0-9.]+\+[0-9a-f]{16}' "$out/
 echo "e2e.sh: ruleset $ruleset"
 
 # --- Processes -------------------------------------------------------------------------------------------------------
+win() { cygpath -m "$1" 2> /dev/null || echo "$1"; }  # env values are not path-converted by Git Bash
+rabbit() { "${compose[@]}" exec -T rabbitmq rabbitmqctl "$@" < /dev/null; }
+
 kill_tree() {  # <bash pid>: the whole Windows process tree when there is one
 	local winpid
 	winpid=$(cat "/proc/$1/winpid" 2>/dev/null || true)
@@ -111,18 +125,40 @@ kill_tree() {  # <bash pid>: the whole Windows process tree when there is one
 run_scenario() {  # <name> <index 1-15>
 	local name=$1 index=$2 dir="$out/$1" port=$((5100 + $2)) db="e2e_${stamp}_$1" started=$SECONDS
 	local control="$dir/control" result="$dir/result" pid_file="$dir/server.pid" loop_pid="" code=0
+	local wport=$((5200 + $2)) worker_pid_file="$dir/worker.pid" vhost="e2e_${stamp}_$1" want_worker=0
+	local content_root="res://tests/fixtures/"
 	mkdir -p "$control"
 	local -a env=(ASPNETCORE_ENVIRONMENT=Development "ASPNETCORE_URLS=http://127.0.0.1:$port"
 		"ConnectionStrings__Postgres=Host=127.0.0.1;Port=5432;Database=$db;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD"
 		"ConnectionStrings__Redis=127.0.0.1:6379,abortConnect=false,defaultDatabase=$index"
-		"RabbitMq__Uri=amqp://$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS@127.0.0.1:5672/"
+		"RabbitMq__Uri=amqp://$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS@127.0.0.1:5672/$vhost"
 		"Seeds__Secret=$seed_secret" "Auth__SigningKey=$signing_key" Ruleset__AcceptAny=false
 		"Ruleset__Accepted__0=$ruleset")
 	local line
 	while IFS= read -r line || [[ -n $line ]]; do
 		line=${line%$'\r'}
 		[[ $line == "#! env "* ]] && env+=("${line#\#! env }")
+		[[ $line == "#! worker" ]] && want_worker=1
+		[[ $line == "#! content real" ]] && content_root=""
 	done < "$scenarios_dir/$name.txt"
+	# The verifier worker (spec battle-verify): the same databases and broker, the fixtures content like the game, the
+	# ruleset version the server accepts, and the real headless Godot for every job.
+	local -a worker_env=("ConnectionStrings__Postgres=Host=127.0.0.1;Port=5432;Database=$db;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD"
+		"ConnectionStrings__Redis=127.0.0.1:6379,abortConnect=false,defaultDatabase=$index"
+		"RabbitMq__Uri=amqp://$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS@127.0.0.1:5672/$vhost"
+		"Urls=http://127.0.0.1:$wport" "Verifier__GodotPath=$(win "$godot")" "Verifier__ProjectPath=$(win "$root/client-godot")"
+		"Verifier__ContentRoot=$content_root" "Verifier__RulesetVersion=$ruleset" Verifier__Concurrency=2)
+	start_worker() {
+		(cd "$worker_dir" && exec env "${worker_env[@]}" dotnet Rpg.VerifierWorker.dll >> "$dir/worker.log" 2>&1) &
+		echo $! > "$worker_pid_file"
+		local tries
+		for tries in $(seq 1 120); do
+			curl -sf -m 2 "http://127.0.0.1:$wport/health/ready" > /dev/null 2>&1 && return 0
+			sleep 0.5
+		done
+		return 1
+	}
+	stop_worker() { [[ -s $worker_pid_file ]] && kill_tree "$(cat "$worker_pid_file")"; : > "$worker_pid_file"; }
 
 	start_server() {
 		(cd "$server_dir" && exec env "${env[@]}" dotnet Rpg.GameServerApi.dll >> "$dir/server.log" 2>&1) &
@@ -145,6 +181,18 @@ run_scenario() {  # <name> <index 1-15>
 					server-stop) stop_server ;;
 					server-start) start_server || answer="server not ready" ;;
 					redis-flush) redis -n "$index" FLUSHDB > /dev/null || answer="flush failed" ;;
+					worker-start) start_worker || answer="worker not ready" ;;
+					worker-stop)  # a kill, but only once a job is in flight (unacked), so the scenario proves a redelivery
+						local tries=0 unacked=0
+						while (( tries < 120 )); do
+							unacked=$(rabbit list_queues -p "$vhost" name messages_unacknowledged -q 2> /dev/null | tr -d '\r' | awk '$1 == "verify.battle" {print $2}')
+							(( ${unacked:-0} >= 1 )) && break
+							tries=$((tries + 1)); sleep 0.25
+						done
+						if (( ${unacked:-0} >= 1 )); then stop_worker; else answer="no job was in flight to interrupt"; fi ;;
+					tamper-battle)  # the first battle's claimed final hash is replaced, as a cheating client would
+						[[ $(psql -d "$db" -c "UPDATE battle_sessions SET action_log = jsonb_set(action_log, '{claimedFinalHash}', to_jsonb(repeat('0', 64))) WHERE run_seq = (SELECT min(run_seq) FROM battle_sessions) RETURNING 1" 2>&1 | head -1 | tr -d '\r') == 1 ]] \
+							|| answer="no battle to tamper with" ;;
 					*) answer="unknown action $action" ;;
 				esac
 				echo "[e2e] $action: $answer" >> "$dir/control.log"
@@ -156,15 +204,18 @@ run_scenario() {  # <name> <index 1-15>
 
 	{
 		# A failed setup still falls through to the cleanup below (the database may exist already).
-		if ! psql -c "CREATE DATABASE $db" > /dev/null || ! redis -n "$index" FLUSHDB > /dev/null; then
-			echo "setup failed (database or Redis)" > "$result"
+		if ! psql -c "CREATE DATABASE $db" > /dev/null || ! redis -n "$index" FLUSHDB > /dev/null \
+			|| ! rabbit add_vhost "$vhost" > /dev/null || ! rabbit set_permissions -p "$vhost" "$RABBITMQ_DEFAULT_USER" ".*" ".*" ".*" > /dev/null; then
+			echo "setup failed (database, Redis or RabbitMQ vhost)" > "$result"
 		elif ! start_server; then
 			echo "server never ready: $(tail -40 "$dir/server.log" | tr '\n' ' ')" > "$result"
+		elif (( want_worker )) && ! start_worker; then
+			echo "worker never ready: $(tail -40 "$dir/worker.log" | tr '\n' ' ')" > "$result"
 		else
 			control_loop & loop_pid=$!
 			"$root/tools/watch.sh" --name "e2e-$name" --timeout 600 --log "$dir/godot.log" -- \
 				"$godot" --headless --path "$root/client-godot" --quit-after 2000000000 res://game/tools/dev_run.tscn -- \
-				--script "$scenarios_dir/$name.txt" --out "$dir/state.json" --content-root res://tests/fixtures/ \
+				--script "$scenarios_dir/$name.txt" --out "$dir/state.json" ${content_root:+--content-root "$content_root"} \
 				--server "http://127.0.0.1:$port" --player "e2e-$name" --control "$control"
 			code=$?
 			local failures=()
@@ -186,13 +237,22 @@ run_scenario() {  # <name> <index 1-15>
 					grep -qE "$line" "$dir/metrics.txt" || failures+=("metrics: no match for $line")
 				done < "$scenarios_dir/$name.metrics"
 			fi
+			if [[ -f $scenarios_dir/$name.worker-metrics ]]; then
+				curl -s -m 5 "http://127.0.0.1:$wport/metrics" > "$dir/worker-metrics.txt" 2>&1
+				while IFS= read -r line || [[ -n $line ]]; do
+					line=${line%$'\r'}; [[ -z $line ]] && continue
+					grep -qE "$line" "$dir/worker-metrics.txt" || failures+=("worker metrics: no match for $line")
+				done < "$scenarios_dir/$name.worker-metrics"
+			fi
 			if (( ${#failures[@]} == 0 )); then echo ok > "$result"
 			else printf '%s\n' "${failures[@]}" > "$result"; [[ $code == 124 ]] && echo 124 > "$dir/stalled"; fi
 		fi
 		[[ -n $loop_pid ]] && kill "$loop_pid" 2>/dev/null
+		stop_worker
 		stop_server
 		if (( ! keep )); then psql -c "DROP DATABASE IF EXISTS $db WITH (FORCE)" > /dev/null 2>&1; fi
 		redis -n "$index" FLUSHDB > /dev/null 2>&1
+		rabbit delete_vhost "$vhost" > /dev/null 2>&1
 		echo "$((SECONDS - started))" > "$dir/seconds"
 	}
 }

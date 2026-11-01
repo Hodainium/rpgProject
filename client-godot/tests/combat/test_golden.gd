@@ -110,6 +110,73 @@ func test_golden_trace_explains_a_change() -> void:
 	check(BattleTrace.describe(found).contains("first divergence at point"), "printable")
 
 
+## Spec battle-verify (the jsonb hazard): the server stores a battle's conditions and log as Postgres jsonb, which hands the
+## verifier's Godot the same data with every object's keys in another order (by length, then alphabetically); the client
+## simulated it in its own order. A replay must not depend on the order of an object's keys, so every golden replays here
+## with all keys reversed, and with the keys in jsonb's order, and must reproduce its committed result byte for byte.
+func test_golden_replays_with_reversed_keys() -> void:
+	_replay_reordered("reversed")
+
+
+func test_golden_replays_with_jsonb_key_order() -> void:
+	_replay_reordered("jsonb")
+
+
+func _replay_reordered(mode: String) -> void:
+	var changed := 0
+	var replayed_count := 0
+	for name in ResourceLoader.list_directory(GOLDEN):
+		if not name.ends_with(".json") or name.ends_with(".result.json") or name.ends_with(".trace.json"):
+			continue
+		var original: Variant = JSON.parse_string(FileAccess.get_file_as_string(GOLDEN + name))
+		if not original is Dictionary:
+			continue
+		var reordered: String = WireJson.stringify(_reordered(original, mode))
+		if reordered != WireJson.stringify(original):
+			changed += 1
+		var request_path := "user://golden-%s-%d-%s" % [mode, OS.get_process_id(), name]
+		var out_path := ProjectSettings.globalize_path("user://golden-%s-%d-result.json" % [mode, OS.get_process_id()])
+		var file := FileAccess.open(request_path, FileAccess.WRITE)
+		file.store_string(reordered)
+		file.close()
+		DirAccess.remove_absolute(out_path)
+		var args := PackedStringArray(["--headless"]) + scene_args(REPLAY_SCENE, [
+			"--in", ProjectSettings.globalize_path(request_path), "--out", out_path, "--content-root", FIXTURES])
+		OS.execute(OS.get_executable_path(), args)
+		var expected := FileAccess.get_file_as_string(GOLDEN + name.trim_suffix(".json") + ".result.json")
+		eq(_without_engine(FileAccess.get_file_as_string(out_path)), _without_engine(expected),
+			"%s with %s key order matches its golden result" % [name.trim_suffix(".json"), mode])
+		DirAccess.remove_absolute(request_path)
+		DirAccess.remove_absolute(out_path)
+		replayed_count += 1
+	check(replayed_count >= 18, "every golden was replayed (%d)" % replayed_count)
+	check(changed >= replayed_count / 2, "the reordering really changed the requests (%d of %d)" % [changed, replayed_count])
+
+
+## `value` with the keys of every object (at every depth) in another order; arrays keep theirs, as JSON does.
+## "reversed": the opposite of the original. "jsonb": Postgres jsonb's order, shorter keys first, then bytewise.
+static func _reordered(value: Variant, mode: String) -> Variant:
+	if value is Array:
+		var items: Array = []
+		for item in value:
+			items.append(_reordered(item, mode))
+		return items
+	if value is Dictionary:
+		var keys: Array = value.keys()
+		if mode == "reversed":
+			keys.reverse()
+		else:
+			keys.sort_custom(func(a: Variant, b: Variant) -> bool:
+				var left := str(a)
+				var right := str(b)
+				return left.length() < right.length() or (left.length() == right.length() and left < right))
+		var result := {}
+		for key in keys:
+			result[key] = _reordered(value[key], mode)
+		return result
+	return value
+
+
 ## Runs trace_main (with lines) in a new Godot process and returns the trace text.
 func _trace_fresh_process(request_path: String) -> String:
 	var out_path := ProjectSettings.globalize_path("user://golden-trace.json")

@@ -285,6 +285,8 @@ func test_ruleset_version_stable() -> void:
 		"the player preset's exclusions are not")
 	check(not Array(files).any(func(path: String) -> bool: return path.get_extension() in ["uid", "import"]),
 		"nor Godot's side files")
+	check(not Array(files).any(func(path: String) -> bool: return path.contains("/.")),
+		"nor dot-files and dot-folders (.gitkeep is listed on Windows but hidden on Linux: the version must not depend on it)")
 	var sorted := files.duplicate()
 	sorted.sort()
 	eq(files, sorted, "in path order")

@@ -24,7 +24,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 1f5. `playtest-fixes` | 🔨 Ongoing, stays open (small UI and game adjustments from playtesting, one numbered entry each; was `ui-fixes`: menu frame, battle HUD panels, run toasts, feed lines, party strip) | 2026-10-27 |
 | 2. `run-checkout` | ✅ Done (spec synced; `server-authority` Part A: runs and HMAC floor seeds from the server, the Redis run cache with Postgres fallback (scenario 4), the ruleset version stamped at export, the client's seed source with local mode byte-identical; checked end to end by `tools/e2e.sh`) | 2026-10-27 |
 | 2b. `run-authority` | ✅ Done (spec synced; `server-authority` Part B: bearer dev tokens, the action log uploaded in ordered idempotent batches with checkpoint snapshots and battle sessions, the stairs and win gates, local saves and resume from the save or the server's log, presence and the Lua rate limiter; seven `tools/e2e.sh` scenarios; remaining: a manual windowed playthrough of the demo against the dev server) | 2026-10-27 |
-| 3. `battle-verify` | 📝 Spec written (`specs/battle-verify.md`, awaiting review) | 2026-11-01 |
+| 3. `battle-verify` | 🔨 Implemented, awaiting your review (server half: contracts, migration 0003, jobs on RabbitMQ, the reconciler, the verifier worker with retry tiers and DLQ, the verdict endpoint, caches, metrics, Grafana panels; Godot half: `server verdict`, `wait verdict`, the e2e worker/tamper steps and four `verify_*` scenarios, the Linux image check (18 goldens identical on Linux and Windows); open items in `specs/battle-verify.md` once synced) | 2026-11-01 |
 | 4. `settlement-outbox` | ⬜ Not started | |
 | 4a. `run-verify` | ⬜ Not started | |
 | 4b. `game-analytics` | ⬜ Not started | |

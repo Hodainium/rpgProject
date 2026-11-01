@@ -185,7 +185,7 @@ func test_e2e_scenarios_lint() -> void:
 	var console := DevConsole.new(host.get_tree())
 	console.keep_history = false
 	console.load_commands(false)
-	var env_line := RegEx.create_from_string("^#! env [A-Za-z_][A-Za-z0-9_]*=.*$")
+	var env_line := RegEx.create_from_string("^#! (env [A-Za-z_][A-Za-z0-9_]*=.*|worker|content real)$")
 	var names := Array(DirAccess.get_files_at(SCENARIOS)).filter(func(file: String) -> bool: return file.ends_with(".txt"))
 	check(names.size() >= 4, "the scenarios are there: %s" % [names])
 	for file in names:
@@ -214,6 +214,92 @@ func test_e2e_check() -> void:
 	var output := []
 	var code := OS.execute(bash, [script, "--check"], output, true)
 	eq(code, 0, "tools/e2e.sh --check: %s" % "".join(output).strip_edges())
+
+
+const VERIFIED: Dictionary = {"status": "Verified", "errorCode": null, "error": null, "mismatch": null, "outcome": "Victory",
+	"turns": 12, "finalStateHash": "abc", "verifierRulesetVersion": "x", "engineVersion": "y", "verifiedAt": "2026-11-01T12:00:00+00:00"}
+const REJECTED: Dictionary = {"status": "Rejected", "errorCode": 2002, "error": "ReplayMismatch",
+	"mismatch": {"reason": "FinalHashMismatch", "turn": 3, "detail": "d"}, "outcome": "Victory", "turns": 3,
+	"finalStateHash": "abc", "verifierRulesetVersion": "x", "engineVersion": "y", "verifiedAt": "2026-11-01T12:00:00+00:00"}
+
+
+static func _battle_answer(status: String, verdict: Variant) -> Array:
+	return [true, {"battleId": "b1", "runId": RUN_ID, "runSeq": 2, "status": status, "verdict": verdict}]
+
+
+## A server run with one battle in its log (seq 2 after the start_run), as the journal numbers it.
+func _session_with_a_battle(bridge: RefCounted) -> Array:
+	var session := _session(bridge)
+	await _run(session, "new %s run=fixture.run.two_floors" % PARTY)
+	await _run(session, "wait run 5")
+	session[0].run.run_log.append({"type": "battle", "battleId": "b1"})
+	return session
+
+
+## Spec battle-verify 2.2: `server verdict [seq]` reports what the verifier decided; a pending or rejected battle is
+## information, an unreadable one fails.
+func test_server_verdict_command() -> void:
+	var bridge := _bridge()
+	var session := _session(bridge)
+	await _run(session, "new %s run=fixture.run.two_floors" % PARTY)
+	await _run(session, "wait run 5")
+	var none := await _run(session, "server verdict")
+	check(not none["ok"] and none["text"].contains("no battle"), "a run without battles has no verdicts: " + none["text"])
+	session[0].run.run_log.append({"type": "battle", "battleId": "b1"})
+	bridge.answers["GetBattle"] = [_battle_answer("Submitted", null)]
+	var pending := await _run(session, "server verdict")
+	check(pending["ok"] and pending["text"].contains("seq 2 (b1): Submitted"), "pending: " + pending["text"])
+	bridge.answers["GetBattle"] = [_battle_answer("Verified", VERIFIED)]
+	var verified := await _run(session, "server verdict 2")
+	check(verified["ok"] and verified["text"].contains("Verified (12 turns, outcome Victory)"), "verified: " + verified["text"])
+	bridge.answers["GetBattle"] = [_battle_answer("Rejected", REJECTED)]
+	var rejected := await _run(session, "server verdict")
+	check(rejected["ok"] and rejected["text"].contains("Rejected 2002 ReplayMismatch FinalHashMismatch at turn 3"),
+		"a rejection is reported with its reason, not an error: " + rejected["text"])
+	check(not (await _run(session, "server verdict x"))["ok"], "the seq is a number")
+	var wrong := await _run(session, "server verdict 1")
+	check(not wrong["ok"] and wrong["text"].contains("no battle at seq 1"), "seq 1 is not a battle: " + wrong["text"])
+	bridge.answers["GetBattle"] = [ServerTests._error(404, null, "Battle not found")]
+	var unreadable := await _run(session, "server verdict")
+	check(not unreadable["ok"] and unreadable["text"].contains("unreadable"), "an unreadable battle fails: " + unreadable["text"])
+	check(not (await _run(_session(), "server verdict"))["ok"], "local mode has no verdicts")
+	await host.get_tree().process_frame  # don't end inside the link's signal: after_each frees it
+
+
+## Spec battle-verify 2.2: `wait verdict` polls until the verifier has decided (Verified or Rejected).
+func test_wait_verdict() -> void:
+	var bridge := _bridge()
+	var session := await _session_with_a_battle(bridge)
+	bridge.answers["GetBattle"] = [_battle_answer("Submitted", null), _battle_answer("Rejected", REJECTED)]
+	var decided := await _run(session, "wait verdict all 10")
+	check(decided["ok"] and decided["text"].contains("Rejected 2002"), "it waited for the worker: " + decided["text"])
+	check(bridge.count("GetBattle") >= 2, "and polled")
+	bridge.answers["GetBattle"] = [_battle_answer("Submitted", null)]
+	var never := await _run(session, "wait verdict 2 0.3")
+	check(not never["ok"] and never["text"].contains("waited") and never["text"].contains("Submitted"),
+		"a battle that stays Submitted fails with its state: " + never["text"])
+	check(not (await _run(session, "wait verdict"))["ok"], "usage")
+	check(not (await _run(session, "wait verdict nope"))["ok"], "all or a seq")
+	check(not (await _run(session, "wait verdict 1 0.2"))["ok"], "seq 1 is not a battle")
+	check(not (await _run(_session(), "wait verdict all 0.2"))["ok"], "local mode has nothing to wait for")
+	await host.get_tree().process_frame
+
+
+## Spec battle-verify 6: the harness's worker and tamper steps are known actions, answered like the others.
+func test_e2e_worker_actions() -> void:
+	var session := _session()
+	session[1].control_dir = CONTROL
+	var seen := []
+	var answer := func() -> void:
+		seen.append(FileAccess.get_file_as_string(CONTROL.path_join("request")))
+		var file := FileAccess.open(CONTROL.path_join("done"), FileAccess.WRITE)
+		file.store_string("ok")
+		file.close()
+	for action in ["worker-start", "worker-stop", "tamper-battle"]:
+		host.get_tree().create_timer(0.3).timeout.connect(answer)
+		var done := await _run(session, "e2e %s 5" % action)
+		check(done["ok"], "%s: %s" % [action, done["text"]])
+	eq(seen, ["worker-start", "worker-stop", "tamper-battle"], "each asked for its own action")
 
 
 ## Spec dev-tools E9: `wait ended` holds until the end screen (a death here; a win only after the verdict).

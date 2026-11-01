@@ -1,0 +1,3 @@
+rpg_verify_jobs_total\{[^}]*result="rejected"[^}]*\} 1( |$)
+rpg_battle_rejections_total\{[^}]*reason="FinalHashMismatch"[^}]*\} 1( |$)
+rpg_verify_jobs_total\{[^}]*result="verified"[^}]*\} [1-9]

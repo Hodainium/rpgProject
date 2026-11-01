@@ -92,7 +92,12 @@ static func _collect(directory: String, into: PackedStringArray) -> void:
 	var dir := DirAccess.open(directory)
 	if dir == null:
 		return
+	# Names starting with "." (.gitkeep, .gitignore, a stray dot-folder) are skipped on every platform: Godot lists them on
+	# Windows but treats them as hidden on Linux, which gave the Linux verifier another version than the Windows build
+	# for the same tree (found by tools/verifier_image_check.sh). They never affect rules.
 	for file in dir.get_files():
-		into.append(directory.path_join(file))
+		if not file.begins_with("."):
+			into.append(directory.path_join(file))
 	for sub in dir.get_directories():
-		_collect(directory.path_join(sub), into)
+		if not sub.begins_with("."):
+			_collect(directory.path_join(sub), into)

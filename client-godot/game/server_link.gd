@@ -189,6 +189,43 @@ func get_battle(run_id: String, seq: int) -> Dictionary:
 	return await _request("GetBattle", [run_id, seq])
 
 
+## Spec battle-verify 2.2: the verifier's verdict on the battles of `run` (all of them, or the one at wire seq
+## `only_seq`). A run_log entry is one wire action, so a battle's seq is its index + 1. Each entry:
+## {"seq", "battleId", "status" ("Submitted", "Verified", "Rejected" or "" when the read failed), "verdict" (the
+## BattleVerdict as a Dictionary, {} while Submitted), "error" (why the read failed, else "")}.
+func battle_verdicts(run: RunController, only_seq: int = -1) -> Array[Dictionary]:
+	var found: Array[Dictionary] = []
+	for index in run.run_log.size():
+		var entry: Dictionary = run.run_log[index]
+		if str(entry.get("type", "")) != "battle" or (only_seq >= 0 and index + 1 != only_seq):
+			continue
+		var answer: Dictionary = await get_battle(run.state.run_id, index + 1)
+		if answer["ok"]:
+			var verdict: Variant = answer["data"].get("verdict")
+			found.append({"seq": index + 1, "battleId": str(entry.get("battleId", "")),
+				"status": str(answer["data"]["status"]), "verdict": verdict if verdict is Dictionary else {}, "error": ""})
+		else:
+			found.append({"seq": index + 1, "battleId": str(entry.get("battleId", "")), "status": "", "verdict": {},
+				"error": describe(answer["error"])})
+	return found
+
+
+## One line for a battle_verdicts entry, e.g. "seq 4 (run/f0/c5): Rejected 2002 ReplayMismatch FinalHashMismatch at turn 3".
+static func describe_verdict(entry: Dictionary) -> String:
+	var head := "seq %d (%s): " % [entry["seq"], entry["battleId"]]
+	if entry["error"] != "":
+		return head + "unreadable: " + str(entry["error"])
+	var verdict: Dictionary = entry["verdict"]
+	if verdict.is_empty():
+		return head + str(entry["status"])
+	if str(verdict.get("status", "")) == "Rejected":
+		var mismatch: Dictionary = verdict["mismatch"] if verdict.get("mismatch") is Dictionary else {}
+		return head + "Rejected %d %s %s at turn %d" % [int(verdict.get("errorCode", 0)), verdict.get("error", ""),
+			mismatch.get("reason", "?"), int(mismatch.get("turn", 0))]
+	return head + "%s (%d turns, outcome %s)" % [verdict.get("status", entry["status"]), int(verdict.get("turns", 0)),
+		verdict.get("outcome", "?")]
+
+
 ## Links `run` (the server's run `run_id`) to the server: floor seeds at the stairs, every logged action queued and
 ## uploaded, a won run held until the server says Won, the local save, the heartbeat.
 func link(run: RunController, run_id: String) -> void:

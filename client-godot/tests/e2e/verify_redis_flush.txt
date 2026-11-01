@@ -1,0 +1,15 @@
+# Spec battle-verify 6, acceptance scenario 4 on the verdict path end to end: Redis is flushed in the middle of a run with the
+# verifier working. Locks and caches vanish; the verdicts come from Postgres and every battle is still verified once.
+#! worker
+#! env Monitors__Interval=00:00:01
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+e2e redis-flush
+server verdict
+autorun policy=smart
+wait ended 60
+e2e redis-flush
+wait verdict all 240
+server verdict

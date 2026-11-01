@@ -7,32 +7,36 @@ const DEFAULT_SECONDS: float = 30.0
 
 func _init() -> void:
 	name = "wait"
-	usage = "wait run | floor <n> | stopped | ended | notice <text> [seconds]"
-	help = "Waits (default 30 s) until a run is playable, floor n is entered, the run stopped, the run ended (a win only once the server says Won), or a notice arrived."
+	usage = "wait run | floor <n> | stopped | ended | verdict all|<seq> | notice <text> [seconds]"
+	help = "Waits (default 30 s) until a run is playable, floor n is entered, the run stopped, the run ended (a win only once the server says Won), the verifier decided the battles (verdict all, or one battle's seq: Verified or Rejected, polled from the server), or a notice arrived."
 	cheat = false
 	arg_kinds.assign(["text", "text", "int"])
 
 
 func run(ctx: DevContext, args: PackedStringArray) -> String:
-	if args.is_empty() or not ["run", "floor", "stopped", "ended", "notice"].has(args[0]):
+	if args.is_empty() or not ["run", "floor", "stopped", "ended", "verdict", "notice"].has(args[0]):
 		return ctx.fail("usage: " + usage)
 	var kind := args[0]
 	var rest := args.slice(1)
 	var target := ""
-	if kind == "floor" or kind == "notice":
+	if kind == "floor" or kind == "notice" or kind == "verdict":
 		if rest.is_empty():
 			return ctx.fail("usage: " + usage)
 		target = rest[0]
 		rest = rest.slice(1)
 		if kind == "floor" and not target.is_valid_int():
 			return ctx.fail("floor takes a number")
+		if kind == "verdict" and target != "all" and not (target.is_valid_int() and int(target) >= 1):
+			return ctx.fail("verdict takes all or a battle's seq")
 	var seconds := DEFAULT_SECONDS
 	if not rest.is_empty():
 		if not rest[0].is_valid_float():
 			return ctx.fail("usage: " + usage)
 		seconds = float(rest[0])
-	var check := func() -> bool: return _holds(ctx, kind, target)
 	var deadline := Time.get_ticks_msec() + int(seconds * 1000.0)
+	if kind == "verdict":
+		return await _verdicts(ctx, target, deadline, seconds)
+	var check := func() -> bool: return _holds(ctx, kind, target)
 	while not check.call():
 		if Time.get_ticks_msec() > deadline:
 			return ctx.fail("waited %s s for %s: %s" % [seconds, " ".join(args.slice(0, 2 if target != "" else 1)),
@@ -40,6 +44,45 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		Watchdog.beat("wait " + kind)
 		await ctx.console.tree.process_frame
 	return "%s: %s" % [" ".join(args.slice(0, 2 if target != "" else 1)), _state(ctx)]
+
+
+## Spec battle-verify 2.2: polls the server until every wanted battle has a verdict (Verified or Rejected). The
+## player's log drains first; a verdict is what the verifier worker writes, so this waits on the worker too.
+func _verdicts(ctx: DevContext, target: String, deadline: int, seconds: float) -> String:
+	var run: RunController = ctx.game.run if ctx.game != null else null
+	if ctx.game == null or ctx.game.server == null or run == null or run.state == null or not run.state.seeds().server_mode():
+		return ctx.fail("wait verdict needs a server run")
+	var link: ServerLink = ctx.game.server
+	# The wait covers the upload too: a log that never drains (the server is down) fails here, not in the Watchdog.
+	while not link.queued().is_empty() or link.uploading():
+		if Time.get_ticks_msec() > deadline:
+			return ctx.fail("waited %s s for the upload queue to drain (%d action(s) waiting)" % [seconds, link.queued().size()])
+		Watchdog.beat("wait verdict: upload")
+		await ctx.console.tree.create_timer(0.1).timeout
+	var only := int(target) if target != "all" else -1
+	var entries: Array[Dictionary] = await link.battle_verdicts(run, only)
+	while true:
+		if entries.is_empty():
+			return ctx.fail("no battle%s in this run" % (" at seq " + target if only >= 0 else ""))
+		if entries.all(func(entry: Dictionary) -> bool: return entry["status"] in ["Verified", "Rejected"]):
+			break
+		if Time.get_ticks_msec() > deadline:
+			var states := PackedStringArray()
+			for entry in entries:
+				states.append(ServerLink.describe_verdict(entry))
+			return ctx.fail("waited %s s for the verdicts: %s" % [seconds, "; ".join(states)])
+		Watchdog.beat("wait verdict")
+		await ctx.console.tree.create_timer(0.5).timeout
+		# Only the battles still pending are asked again; a decided one never changes.
+		for index in entries.size():
+			if not (entries[index]["status"] in ["Verified", "Rejected"]):
+				var again := await link.battle_verdicts(run, int(entries[index]["seq"]))
+				if not again.is_empty():
+					entries[index] = again[0]
+	var lines := PackedStringArray()
+	for entry in entries:
+		lines.append(ServerLink.describe_verdict(entry))
+	return "verdicts: " + "; ".join(lines)
 
 
 static func _holds(ctx: DevContext, kind: String, target: String) -> bool:

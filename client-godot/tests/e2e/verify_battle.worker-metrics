@@ -1,0 +1,4 @@
+rpg_verify_jobs_total\{[^}]*result="verified"[^}]*\} [2-9]
+rpg_verify_replay_duration_seconds_count\{[^}]*result="verified"[^}]*\} [2-9]
+rpg_verify_latency_seconds_count(\{[^}]*\})? [2-9]
+rpg_verify_lock_total\{[^}]*result="acquired"[^}]*\} [2-9]
