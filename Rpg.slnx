@@ -8,9 +8,12 @@
     <Project Path="src/Rpg.Client/Rpg.Client.csproj" />
     <Project Path="src/Rpg.Contracts/Rpg.Contracts.csproj" />
     <Project Path="src/Rpg.GameServerApi/Rpg.GameServerApi.csproj" />
+    <Project Path="src/Rpg.Verification/Rpg.Verification.csproj" />
+    <Project Path="src/Rpg.VerifierWorker/Rpg.VerifierWorker.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Rpg.Contracts.Tests/Rpg.Contracts.Tests.csproj" />
     <Project Path="tests/Rpg.GameServerApi.Tests/Rpg.GameServerApi.Tests.csproj" />
+    <Project Path="tests/Rpg.VerifierWorker.Tests/Rpg.VerifierWorker.Tests.csproj" />
   </Folder>
 </Solution>

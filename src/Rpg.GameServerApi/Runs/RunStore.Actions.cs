@@ -5,6 +5,7 @@ using NpgsqlTypes;
 using Rpg.Contracts.Battle;
 using Rpg.Contracts.Runs;
 using Rpg.Contracts.Serialization;
+using Rpg.Verification;
 
 namespace Rpg.GameServerApi.Runs;
 
@@ -13,10 +14,13 @@ public enum AppendOutcome { Stored, NotFound, NotActive, Gap, Conflict }
 /// <param name="LastSeq">The run's last stored seq afterwards (unchanged when nothing was stored).</param>
 /// <param name="ExpectedSeq"><see cref="AppendOutcome.Gap"/>: the seq the server needs next.</param>
 /// <param name="Counted">(type, result) per action looked at, for <c>rpg_run_actions_total</c>.</param>
-/// <param name="Battles">Battle sessions written.</param>
+/// <param name="Jobs">One verify job per battle session written (spec battle-verify 2.1).</param>
 /// <param name="Ended">An <c>end</c> action was stored: the run is Lost.</param>
 public sealed record AppendResult(AppendOutcome Outcome, int LastSeq, IReadOnlyList<(string Type, string Result)> Counted,
-    int ExpectedSeq = 0, int Battles = 0, bool Ended = false);
+    int ExpectedSeq = 0, IReadOnlyList<VerifyBattleJob>? Jobs = null, bool Ended = false)
+{
+    public IReadOnlyList<VerifyBattleJob> NewJobs => Jobs ?? [];
+}
 
 public enum EndOutcome { Ended, Repeated, NotFound, NotActive, UploadIncomplete, Conflict }
 
@@ -25,9 +29,6 @@ public sealed record EndResult(EndOutcome Outcome, RunStatus Status = RunStatus.
 public enum ResumeOutcome { Found, NotFound, NotActive }
 
 public sealed record ResumeResult(ResumeOutcome Outcome, RunResumeResponse? Response = null);
-
-/// <summary>A battle session as stored, with the run's owner (for the 404 rule and the cache).</summary>
-public sealed record StoredBattle(Guid PlayerId, BattleSessionResponse Session);
 
 /// <summary>
 /// Part B: the run's action log (spec server-authority 2.2–2.4, 3.4). Every write locks the run row first, so two
@@ -60,7 +61,7 @@ public sealed partial class RunStore
         var counted = new List<(string Type, string Result)>();
         var lastSeq = run.LastSeq;
         var status = run.Status;
-        var battles = 0;
+        var jobs = new List<VerifyBattleJob>();
         foreach (var action in actions)
         {
             var type = action.Action.Type;
@@ -107,7 +108,7 @@ public sealed partial class RunStore
                     return new AppendResult(AppendOutcome.Conflict, run.LastSeq, [.. counted, (type, "conflict")]);
                 }
 
-                battles++;
+                jobs.Add(new VerifyBattleJob(battle.BattleId, runId, action.Seq, run.Ruleset, now));
             }
 
             counted.Add((type, "accepted"));
@@ -127,7 +128,7 @@ public sealed partial class RunStore
             await transaction.CommitAsync(ct);
         }
 
-        return new AppendResult(AppendOutcome.Stored, lastSeq, counted, Battles: battles, Ended: ended);
+        return new AppendResult(AppendOutcome.Stored, lastSeq, counted, Jobs: jobs, Ended: ended);
     }
 
     /// <summary>
@@ -276,7 +277,8 @@ public sealed partial class RunStore
         await migrations.EnsureMigratedAsync(ct);
         await using var command = dataSource.CreateCommand(
             """
-            SELECT r.player_id, b.battle_id, b.conditions, b.action_log, b.ruleset_version, b.status, b.submitted_at
+            SELECT r.player_id, b.battle_id, b.conditions, b.action_log, b.ruleset_version, b.status, b.submitted_at,
+              b.verdict
             FROM battle_sessions b JOIN runs r ON r.run_id = b.run_id
             WHERE b.run_id = $1 AND b.run_seq = $2
             """);
@@ -293,7 +295,8 @@ public sealed partial class RunStore
             JsonSerializer.Deserialize<BattleSnapshot>(reader.GetString(2), RpgJson.Options)!,
             JsonSerializer.Deserialize<ActionLog>(reader.GetString(3), RpgJson.Options)!,
             reader.GetString(4), Enum.Parse<BattleSessionStatus>(reader.GetString(5)),
-            reader.GetFieldValue<DateTimeOffset>(6)));
+            reader.GetFieldValue<DateTimeOffset>(6),
+            reader.IsDBNull(7) ? null : JsonSerializer.Deserialize<BattleVerdict>(reader.GetString(7), RpgJson.Options)));
     }
 
     private sealed record LockedRun(string Status, int LastSeq, int CurrentFloor, string Ruleset);

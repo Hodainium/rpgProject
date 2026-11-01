@@ -28,6 +28,10 @@ public sealed class RpgMetrics
     private long _runsInProgress = -1;
     private long _playersOnline = -1;
     private long _playersInBattle = -1;
+    private readonly Counter<long> _verifyJobsPublished;
+    private long _battlesUnverified = -1;
+    private double _oldestUnverifiedAge;
+    private readonly ConcurrentDictionary<string, long> _verifyQueueDepth = new();
 
     public RpgMetrics(IMeterFactory meterFactory, BuildInfo build)
     {
@@ -88,6 +92,24 @@ public sealed class RpgMetrics
                 ? [new Measurement<long>(count)]
                 : Array.Empty<Measurement<long>>(),
             description: "Players whose heartbeat said Battle in the last 2 minutes (a client hint).");
+
+        // Slice 3 (spec battle-verify 5).
+        _verifyJobsPublished = meter.CreateCounter<long>("rpg.verify_jobs_published",
+            description: "Verify jobs published by source and result.");
+        meter.CreateObservableGauge("rpg.battles_unverified",
+            () => Interlocked.Read(ref _battlesUnverified) is var count and >= 0
+                ? [new Measurement<long>(count)]
+                : Array.Empty<Measurement<long>>(),
+            description: "Battle sessions still Submitted and not dead-lettered, recomputed from Postgres.");
+        meter.CreateObservableGauge("rpg.battle_oldest_unverified_age", () =>
+                Interlocked.Read(ref _battlesUnverified) >= 0
+                    ? [new Measurement<double>(Volatile.Read(ref _oldestUnverifiedAge))]
+                    : Array.Empty<Measurement<double>>(),
+            unit: "s", description: "Age of the oldest unverified battle session (0 when none).");
+        meter.CreateObservableGauge("rpg.verify_queue_depth",
+            () => _verifyQueueDepth.Select(kv => new Measurement<long>(kv.Value,
+                new KeyValuePair<string, object?>("queue", kv.Key))),
+            description: "Messages waiting in verify.battle, the retry queues (summed) and the DLQ.");
     }
 
     /// <summary>result: created | abandoned_previous | rejected.</summary>
@@ -125,6 +147,20 @@ public sealed class RpgMetrics
     public void RateLimited(string bucket) => _rateLimited.Add(1, new KeyValuePair<string, object?>("bucket", bucket));
 
     public void DevTokenIssued() => _devTokens.Add(1);
+
+    /// <summary>source: upload | sweeper; result: ok | failed.</summary>
+    public void VerifyJobPublished(string source, string result) => _verifyJobsPublished.Add(1,
+        new KeyValuePair<string, object?>("source", source), new KeyValuePair<string, object?>("result", result));
+
+    /// <summary>Set by <c>BattleVerifyMonitor</c>; nothing is exported until the first count arrives.</summary>
+    public void SetBattlesUnverified(long count, double oldestAgeSeconds)
+    {
+        Volatile.Write(ref _oldestUnverifiedAge, Math.Max(0, oldestAgeSeconds));
+        Interlocked.Exchange(ref _battlesUnverified, count);
+    }
+
+    /// <summary>queue: verify.battle | retry | dlq.</summary>
+    public void SetVerifyQueueDepth(string queue, long depth) => _verifyQueueDepth[queue] = depth;
 
     /// <summary>Set by <c>PresenceMonitor</c>; kept (stale, not zero) while Redis is down.</summary>
     public void SetPresence(long online, long inBattle)

@@ -7,3 +7,8 @@ scrape_configs:
   - job_name: 'rpg-game-server-api'
     static_configs:
       - targets: ['host.docker.internal:5000']
+
+  # The verifier worker (spec battle-verify 5): on the host during dev, port from src/Rpg.VerifierWorker/appsettings.json.
+  - job_name: 'rpg-verifier-worker'
+    static_configs:
+      - targets: ['host.docker.internal:5100']

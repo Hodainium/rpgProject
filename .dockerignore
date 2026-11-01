@@ -1,0 +1,11 @@
+.git
+**/bin
+**/obj
+build
+TestResults
+tests
+load-test
+web-dashboard
+specs
+client-godot/.godot
+client-godot/.mono

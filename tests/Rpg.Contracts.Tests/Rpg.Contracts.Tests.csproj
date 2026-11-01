@@ -11,6 +11,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Rpg.Contracts\Rpg.Contracts.csproj" />
+    <!-- Only for the retry policy test (Rpg.Verification holds the policy, Rpg.Contracts the names). -->
+    <ProjectReference Include="..\..\src\Rpg.Verification\Rpg.Verification.csproj" />
     <!-- Only for the Rpg.Client purity guard. -->
     <ProjectReference Include="..\..\src\Rpg.Client\Rpg.Client.csproj" />
   </ItemGroup>

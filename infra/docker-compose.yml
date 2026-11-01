@@ -98,6 +98,34 @@ services:
       timeout: 3s
       retries: 10
 
+  # Spec battle-verify 3.7: the verifier worker (headless Godot per job). Not started by default.
+  #   docker compose --profile workers up -d --build verifier
+  verifier:
+    profiles: ["workers"]
+    stop_grace_period: 100s  # a running replay (up to 60 s) finishes before the container is killed
+    build:
+      context: ..
+      dockerfile: infra/verifier/Dockerfile
+    environment:
+      ConnectionStrings__Postgres: Host=postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Redis: redis:6379,abortConnect=false
+      RabbitMq__Uri: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672/
+      Urls: http://0.0.0.0:5100
+    ports:
+      - "127.0.0.1:5100:5100"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:5100/health/ready || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+
 volumes:
   pgdata:
   grafanadata:

@@ -6,7 +6,7 @@ namespace Rpg.GameServerApi.Infrastructure;
 /// <summary>
 /// Owns the one long-lived RabbitMQ connection. Retries the initial connect in the background so startup never
 /// blocks; after that, the client's automatic recovery reconnects when the broker comes back.
-/// No exchanges or queues are declared here (slice 3 adds them).
+/// Exchanges and queues are declared by VerifyJobPublisher (spec battle-verify 3.3).
 /// </summary>
 public sealed class RabbitMqConnection(IConfiguration configuration, ILogger<RabbitMqConnection> logger)
     : BackgroundService
@@ -16,6 +16,9 @@ public sealed class RabbitMqConnection(IConfiguration configuration, ILogger<Rab
     private IConnection? _connection;
 
     public bool IsOpen => Volatile.Read(ref _connection)?.IsOpen ?? false;
+
+    /// <summary>The open connection, or null while it isn't connected (spec battle-verify: the publisher and monitor).</summary>
+    public IConnection? OpenConnection => Volatile.Read(ref _connection) is { IsOpen: true } connection ? connection : null;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

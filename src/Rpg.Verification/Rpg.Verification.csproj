@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Spec battle-verify 3.7: what the API (publisher, sweeper) and the verifier worker share: the RabbitMQ topology and
+       message handling for verify jobs, and the cached battle shape. No game logic; Rpg.Contracts holds the wire records. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Rpg.Contracts\Rpg.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RabbitMQ.Client" />
+  </ItemGroup>
+</Project>

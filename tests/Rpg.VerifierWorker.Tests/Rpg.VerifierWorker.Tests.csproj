@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="Testcontainers.RabbitMq" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The worker is a web-SDK project (metrics and health endpoints): its types need the shared framework. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\..\src\Rpg.VerifierWorker\Rpg.VerifierWorker.csproj" />
+    <!-- Only for MigrationRunner: the worker never migrates, the API does. -->
+    <ProjectReference Include="..\..\src\Rpg.GameServerApi\Rpg.GameServerApi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <None Include="stubs\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

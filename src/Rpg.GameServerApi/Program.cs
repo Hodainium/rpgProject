@@ -74,6 +74,13 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 builder.Services.AddOptions<RunOptions>().BindConfiguration(RunOptions.Section);
 builder.Services.AddSingleton<BattleSessionCache>();
+// Slice 3 (spec battle-verify): verify jobs on RabbitMQ, the reconciler and the queue/backlog gauges.
+builder.Services.AddOptions<VerifierOptions>().BindConfiguration(VerifierOptions.Section);
+builder.Services.AddSingleton<VerifyJobPublisher>();
+builder.Services.AddSingleton<BattleVerifyDispatcher>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<BattleVerifyDispatcher>());
+builder.Services.AddSingleton<BattleVerifyMonitor>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<BattleVerifyMonitor>());
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddHostedService<PresenceMonitor>();
 builder.Services.AddOptions<RateLimitOptions>().BindConfiguration(RateLimitOptions.Section);

@@ -1,0 +1,56 @@
+{
+  "uid": "rpg-verification",
+  "title": "Battle verification",
+  "tags": ["rpg", "verification"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "Verify jobs by result (per second)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum by (result) (rate(rpg_verify_jobs_total[1m]))", "legendFormat": "{{result}}" }]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Submitted to verdict latency (p50 / p95)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.5, sum by (le) (rate(rpg_verify_latency_seconds_bucket[2m])))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(rpg_verify_latency_seconds_bucket[2m])))", "legendFormat": "p95" }
+      ]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Queue depth",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{ "expr": "rpg_verify_queue_depth", "legendFormat": "{{queue}}" }]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Dead-lettered (DLQ size)",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
+      "targets": [{ "expr": "rpg_verify_queue_depth{queue=\"dlq\"}" }]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Oldest unverified battle (queue age)",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "expr": "rpg_battle_oldest_unverified_age_seconds", "legendFormat": "oldest" },
+        { "expr": "rpg_battles_unverified", "legendFormat": "unverified count" }
+      ]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Rejections by mismatch reason (per minute)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [{ "expr": "sum by (reason) (increase(rpg_battle_rejections_total[1m]))", "legendFormat": "{{reason}}" }]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Godot replay time (p95, by result)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, result) (rate(rpg_verify_replay_duration_seconds_bucket[2m])))", "legendFormat": "{{result}}" }]
+    }
+  ]
+}
