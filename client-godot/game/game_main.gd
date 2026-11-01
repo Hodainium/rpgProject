@@ -35,6 +35,9 @@ const CONTENT_ROOTS: Array[String] = ["res://content/", "res://tests/fixtures/"]
 @export var wait_resume_text: String = "Resuming your run…"
 ## Spec playtest-fixes B11: the message line once the server answers again after a server problem was shown.
 @export var reconnected_text: String = "Connected to the server as %s"
+## Spec main-menu M4: the mode line of the main menu and Settings.
+@export var local_mode_text: String = "Local mode (offline)"
+@export var server_mode_format: String = "Server mode: %s as %s"
 ## The 3D room (a Node3D with setup(main)); not UI.
 @export var room_view: PackedScene
 @export var unit_view: PackedScene
@@ -75,8 +78,12 @@ var _error_label: Label
 ## Spec playtest-fixes B11: a server problem stays on the message line until something replaces it; once the link
 ## answers again (the same link, or a new one from the console's `server <url>`), the line says so.
 var _server_problem_shown: bool = false
-## Spec playtest-fixes B12: the resume at app start got no answer (or a 5xx); it is tried again when the server answers.
-var _resume_pending: bool = false
+## Spec main-menu M5 (D2): local-mode runs are saved after every action. Off headless (tests turn it on with their own
+## `local_save_path`).
+var local_saves: bool = DisplayServer.get_name() != "headless"
+var local_save_path: String = LocalSave.DEFAULT_PATH
+## While a save loads: a run that stops then keeps its file (the menu offers "Delete save").
+var _loading_save: bool = false
 
 
 func _ready() -> void:
@@ -114,9 +121,7 @@ func _ready() -> void:
 	load_content()
 	if DisplayServer.get_name() != "headless":
 		use_server(ServerLink.from_settings())  # headless runs (tests, tools, the verifier) stay local
-	set_mode("menu")
-	if server != null:
-		resume_server_run()  # spec server-authority 2.4: an Active run on the server continues
+	set_mode("menu")  # spec main-menu D1: nothing resumes on its own; the main menu's Continue does
 
 
 ## Spec server-authority: plays in server mode through `link`, or in local mode when null.
@@ -124,8 +129,6 @@ func use_server(link: ServerLink) -> void:
 	if server != null and server != link:
 		server.queue_free()
 	var changed := server != link
-	if link == null:
-		_resume_pending = false
 	server = link
 	if server != null and server.get_parent() == null:
 		add_child(server)
@@ -134,6 +137,29 @@ func use_server(link: ServerLink) -> void:
 	if changed:
 		server_changed.emit(server)
 
+
+
+## Spec main-menu M7: links the server `url` as `player_name` and remembers both (only once linked). "" or why not.
+func connect_server(url: String, player_name: String = "dev") -> String:
+	url = url.strip_edges()
+	if url == "":
+		return "Enter the server url"
+	player_name = player_name.strip_edges()
+	if player_name == "":
+		player_name = "dev"
+	var link := ServerLink.create(url, player_name)
+	if link == null:
+		return "can't link (is the C# assembly built? nothing was saved)"
+	save_setting(ServerLink.SETTINGS_SECTION, "url", url)
+	save_setting(ServerLink.SETTINGS_SECTION, "player", player_name)
+	use_server(link)
+	return ""
+
+
+## Spec main-menu M7: back to local mode (new runs only; the url is forgotten).
+func disconnect_server() -> void:
+	save_setting(ServerLink.SETTINGS_SECTION, "url", "")
+	use_server(null)
 
 
 func _on_server_connection(link: ServerLink) -> void:
@@ -145,10 +171,6 @@ func _on_server_connection(link: ServerLink) -> void:
 	if _server_problem_shown:
 		_server_problem_shown = false
 		show_message(reconnected_text % link.player)
-	# Spec playtest-fixes B12: still on the title with no run playing, so the run the server holds can continue now.
-	if _resume_pending and mode == "menu" and (run == null or run.state == null or run.state.status != RunState.ACTIVE):
-		_resume_pending = false
-		resume_server_run()
 
 
 ## Spec ui-framework 2.1: the UI policy's layout under `canvas`. "" or why it failed (the game still runs headless and
@@ -204,7 +226,6 @@ func load_content() -> void:
 ## run starts when the server answers ("Connecting…" meanwhile; a refusal shows as a Notification).
 func start_run(character_ids: Array, seed_text: String, run_id: StringName = &"") -> String:
 	if server != null:
-		_resume_pending = false  # the player chose a new run instead
 		_start_server_run(character_ids, run_id)
 		return ""
 	_new_run()
@@ -254,7 +275,6 @@ func resume_server_run() -> String:
 
 func _resume_server_run(link: ServerLink) -> String:
 	var current := await link.get_current_run()
-	_resume_pending = not current["ok"] and ServerLink.retryable(current["error"])
 	if not current["ok"]:
 		_server_problem_shown = true
 		show_message("Server: " + ServerLink.describe(current["error"]))
@@ -303,10 +323,13 @@ func _new_run() -> void:
 	run.name = "Run"
 	add_child(run)
 	run.stopped.connect(_on_run_stopped)
+	run.action_committed.connect(save_local_run)
 	run.battle_requested.connect(_on_battle_requested)
 	run.battle_started.connect(_on_battle_started)
 	run.battle_finished.connect(func(_outcome): battle_messages = null)
-	run.run_ended.connect(func(_status): set_mode("end"))
+	run.run_ended.connect(func(_status):
+		delete_local_save()
+		set_mode("end"))
 	var windowed := DisplayServer.get_name() != "headless"
 	auto_ults = load_setting("settings", "auto_ults", true)
 	auto_battle = windowed and load_setting("settings", "auto_battle", false)
@@ -346,6 +369,147 @@ static func save_setting(section: String, key: String, value: Variant) -> void:
 	settings.save(SETTINGS_PATH)
 
 
+# --- Local saves and Continue (spec main-menu) --------------------------------------------------------------------
+
+## Whether the run in memory is a local-mode run that gets a save (not a sandbox, not a server run, not ended).
+func _saves_this_run() -> bool:
+	return local_saves and run != null and run.state != null and not run.journal and not run.state.sandbox \
+		and not run.state.seeds().server_mode() and run.state.status == RunState.ACTIVE and run.runner_error == ""
+
+
+## Rewrites the local save from the run in memory (after every player action, and on Save and quit).
+func save_local_run() -> void:
+	if _saves_this_run():
+		LocalSave.write(local_save_path, run, content)
+
+
+func delete_local_save() -> void:
+	if local_saves and not _loading_save:
+		LocalSave.delete(local_save_path)
+
+
+## Spec main-menu M4: "Local mode (offline)" or "Server mode: <url> as <player>".
+func mode_line() -> String:
+	return local_mode_text if server == null else server_mode_format % [server.url, server.player]
+
+
+static func _no_continue(reason: String) -> Dictionary:
+	return {"enabled": false, "reason": reason, "tag": "", "subtitle": "", "older": false}
+
+
+## What the main menu's Continue shows (spec main-menu M3, M11): {"enabled", "reason", "tag", "subtitle", "older"}.
+## reason: "" (enabled), "none", "unreadable", "unreachable", "verifying". tag: "Local" or "Synced". Server mode asks
+## GET /runs/current (so this awaits); local mode reads the save file.
+func can_continue() -> Dictionary:
+	if server == null:
+		var read := LocalSave.read(local_save_path)
+		if read["state"] != "ok":
+			return _no_continue("none" if read["state"] == "none" else "unreadable")
+		var saved: Dictionary = read["data"]
+		var summary: Dictionary = saved["summary"]
+		return {"enabled": true, "reason": "", "tag": "Local", "older": saved.get("rulesetVersion", "") != RulesetVersion.current(),
+			"subtitle": "%s · floor %d · %s · %s" % [summary.get("runName", "?"), int(summary.get("floor", 1)),
+				", ".join(PackedStringArray(summary.get("party", []))), ago(str(saved.get("savedAt", "")))]}
+	var link := server
+	var current := await link.get_current_run()
+	if link != server:
+		return _no_continue("unreachable")
+	if not current["ok"]:
+		# No answer: the server-mode save can still be played offline (it syncs once the server answers).
+		var offline := _offline_continue(link)
+		return offline if not offline.is_empty() and ServerLink.retryable(current["error"]) else _no_continue("unreachable")
+	if current["data"] == null:
+		return _no_continue("none")
+	var data: Dictionary = current["data"]
+	var status := str(data.get("status", ""))
+	if status != "Active":
+		return _no_continue("verifying" if status == "Verifying" else "none")
+	var text := "floor %d · started %s" % [int(data.get("currentFloor", 0)) + 1, ago(str(data.get("startedAt", "")))]
+	var local := link.load_save()
+	if not local.is_empty() and str(local.get("runId", "")) == str(data.get("runId", "")):
+		text = _server_save_text(local) + " · started " + ago(str(data.get("startedAt", "")))
+	return {"enabled": true, "reason": "", "tag": "Synced", "subtitle": text, "older": false}
+
+
+## The Continue info for the player's server-mode save when the server can't be reached, or {} when there is no
+## continuable save (none, ended, or another schema).
+func _offline_continue(link: ServerLink) -> Dictionary:
+	var saved := link.load_save()
+	if saved.is_empty() or str(saved.get("snapshot", {}).get("run", {}).get("status", "")) != RunState.ACTIVE:
+		return {}
+	return {"enabled": true, "reason": "", "tag": "Offline", "older": false,
+		"subtitle": "%s · not synced" % _server_save_text(saved)}
+
+
+## "The Descent · floor 3 · Warrior, Cleric" from a ServerLink save.
+func _server_save_text(saved: Dictionary) -> String:
+	var in_save: Dictionary = saved.get("snapshot", {}).get("run", {})
+	var names := PackedStringArray()
+	for member in in_save.get("party", []):
+		var character = content.characters.get(StringName(member["character"])) if content != null else null
+		names.append(character.display_name if character != null and character.display_name != "" else str(member["character"]))
+	var structure = content.runs.get(StringName(in_save.get("structure", ""))) if content != null else null
+	return "%s · floor %d · %s" % [structure.display_name if structure != null and structure.display_name != ""
+		else str(in_save.get("structure", "?")), int(in_save.get("floor", 0)) + 1, ", ".join(names)]
+
+
+## "12 min ago" for an ISO UTC time ("" when unknown).
+static func ago(iso: String) -> String:
+	if iso == "":
+		return ""
+	var then := Time.get_unix_time_from_datetime_string(iso.left(19))
+	var seconds := maxi(int(Time.get_unix_time_from_system() - then), 0)
+	if seconds < 60:
+		return "just now"
+	if seconds < 3600:
+		return "%d min ago" % (seconds / 60)
+	if seconds < 86400:
+		return "%d h ago" % (seconds / 3600)
+	return "%d d ago" % (seconds / 86400)
+
+
+## Spec main-menu (offline Continue): plays the server-mode save without asking the server. Its actions upload when the
+## server answers; a save the server has moved past is refused then (rebuilt from the server, or the run stops).
+func continue_server_offline() -> String:
+	if server == null:
+		return "not in server mode"
+	_new_run()
+	var error := server.resume_offline(run, content)
+	if error != "":
+		show_message("Server: " + error)
+		set_mode("menu")
+	return error
+
+
+## Continues the local save in a new RunController (like a resume from a server save). "" or the error; on an error
+## the save stays and the mode goes back to "menu".
+func continue_local_run() -> String:
+	var read := LocalSave.read(local_save_path)
+	if read["state"] != "ok":
+		return "The saved run couldn't be read" if read["state"] == "bad" else "No saved run"
+	_loading_save = true
+	_new_run()
+	var error := run.load_snapshot(content, read["data"]["snapshot"])
+	_loading_save = false
+	if error != "":
+		set_mode("menu")
+		return error
+	run.announce_resumed()
+	return ""
+
+
+## Spec main-menu M9: leaves the run for the main menu with the run saved (local mode: the file is written now).
+func save_and_quit() -> void:
+	save_local_run()
+	back_to_menu()
+
+
+## Spec main-menu M9 (local mode): the run is dropped with its save.
+func abandon_local_run() -> void:
+	delete_local_save()
+	back_to_menu()
+
+
 func back_to_menu() -> void:
 	if run != null and run.state != null and run.state.sandbox:
 		sandbox_closed.emit()
@@ -376,6 +540,7 @@ func refuse(text: String, instigator: StringName = &"", data: Dictionary = {}) -
 
 ## A runner error stopped the run (its text went out as a Notification): show the end screen.
 func _on_run_stopped(_error: String) -> void:
+	delete_local_save()
 	if mode == "run":
 		set_mode("end")
 

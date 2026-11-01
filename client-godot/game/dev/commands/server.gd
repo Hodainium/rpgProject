@@ -35,17 +35,14 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 					link.queued().size(), link.last_acked_seq(), ", uploading" if link.uploading() else "", link.resumes])
 		return "\n".join(lines)
 	if args[0] == "off":
-		GameMain.save_setting(ServerLink.SETTINGS_SECTION, "url", "")
-		ctx.game.use_server(null)
+		ctx.game.disconnect_server()
 		return "local mode (new runs only; the current run keeps its seeds)"
-	# Saved only once the link exists: a saved url is linked again at every windowed start.
-	var link := ServerLink.create(args[0], args[1] if args.size() > 1 else "dev")
-	if link == null:
-		return ctx.fail("can't link (is the C# assembly built? nothing was saved)")
-	GameMain.save_setting(ServerLink.SETTINGS_SECTION, "url", args[0])
-	GameMain.save_setting(ServerLink.SETTINGS_SECTION, "player", args[1] if args.size() > 1 else "dev")
-	ctx.game.use_server(link)
-	return "server mode: %s as %s (new runs only)" % [args[0], args[1] if args.size() > 1 else "dev"]
+	# Saved only once the link exists: a saved url is linked again at every windowed start (spec main-menu M7).
+	var player_name: String = args[1] if args.size() > 1 else "dev"
+	var error: String = ctx.game.connect_server(args[0], player_name)
+	if error != "":
+		return ctx.fail(error)
+	return "server mode: %s as %s (new runs only)" % [args[0], player_name]
 
 
 ## Spec dev-tools E9 (Part B): resume (the state hash before and after must match), forget, conflict.

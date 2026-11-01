@@ -45,6 +45,8 @@ var retry_max_seconds: float = 30.0
 var bridge: Object
 ## The dev player name the token is asked for (spec 3.2), and where its local save lives.
 var player: String = "dev"
+## The server url this link was made for (the main menu and Settings show it).
+var url: String = ""
 var saves_dir: String = "user://saves"
 var heartbeat_seconds: float = 30.0
 ## Spec playtest-fixes B12: the heartbeat's period while the server isn't answering, so its return is seen soon.
@@ -112,6 +114,7 @@ static func create(url: String, player_name: String) -> ServerLink:
 	bridge_node.Configure(url, TIMEOUT_SECONDS)
 	var link := ServerLink.new(bridge_node)
 	link.player = player_name if player_name != "" else "dev"
+	link.url = url
 	return link
 
 
@@ -389,21 +392,37 @@ func resume_into(run: RunController, content_index: ContentIndex, summary: Dicti
 	var saved := load_save()
 	link(run, run_id)
 	if not saved.is_empty() and str(saved["runId"]) == run_id and save_seq(saved) >= int(summary["lastSeq"]):
-		var error := run.load_snapshot(content_index, saved["snapshot"])
-		if error != "":
-			return error
-		var floor_seeds: Dictionary = saved.get("floorSeeds", {})
-		for floor_index in floor_seeds:  # seeds issued after the snapshot (at the stairs)
-			run.state.floor_seeds[str(floor_index).to_int()] = str(floor_seeds[floor_index]).to_int()
-		_queue.assign(saved.get("queue", []))
-		_last_acked = int(saved.get("lastAckedSeq", 0))
-		_end_request = saved.get("end", {})
-		_snapshot = saved["snapshot"]
-		_resumed(run, "save")
-		return ""
+		return _load_save_into(run, content_index, saved)
 	if str(summary["status"]) != "Active":
 		return "run %s is %s on the server" % [run_id, summary["status"]]
 	return await _resume_from_server(run, content_index)
+
+
+func _load_save_into(run: RunController, content_index: ContentIndex, saved: Dictionary) -> String:
+	var error := run.load_snapshot(content_index, saved["snapshot"])
+	if error != "":
+		return error
+	var floor_seeds: Dictionary = saved.get("floorSeeds", {})
+	for floor_index in floor_seeds:  # seeds issued after the snapshot (at the stairs)
+		run.state.floor_seeds[str(floor_index).to_int()] = str(floor_seeds[floor_index]).to_int()
+	_queue.assign(saved.get("queue", []))
+	_last_acked = int(saved.get("lastAckedSeq", 0))
+	_end_request = saved.get("end", {})
+	_snapshot = saved["snapshot"]
+	_resumed(run, "save")
+	return ""
+
+
+## Spec main-menu (offline Continue): continues the local save without asking the server first, like Steam Cloud
+## playing offline. Its queued actions upload when the server answers; if the server's log has moved on (another
+## window played on, the save is out of date) the upload is refused and the run is rebuilt from the server (a 1103)
+## or stopped. "" or the error.
+func resume_offline(run: RunController, content_index: ContentIndex) -> String:
+	var saved := load_save()
+	if saved.is_empty():
+		return "no saved run"
+	link(run, str(saved["runId"]))
+	return _load_save_into(run, content_index, saved)
 
 
 ## Rebuilds the run from GET /resume: the latest checkpoint snapshot, then the accepted actions after it replayed on a

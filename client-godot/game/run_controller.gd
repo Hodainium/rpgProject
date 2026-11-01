@@ -28,6 +28,8 @@ signal floor_seed_needed(floor_index: int)
 ## Spec server-authority 2.2 (journal on): the RunActionRequests (wire dictionaries, seq order) one player action
 ## logged, built after the action so each carries the state hash after it and, on checkpoints, the RunSnapshot.
 signal actions_committed(requests: Array)
+## Spec main-menu M5: a player action finished (every mode, journal or not): GameMain rewrites the local save.
+signal action_committed
 ## Spec server-authority 2.3 (verify_wins on): the run was won; `end_request` is the RunEndRequest
 ## {seq, status: "Won", runHash, snapshot}. run_ended("Won") follows only through confirm_end().
 signal run_verifying(end_request: Dictionary)
@@ -2215,6 +2217,8 @@ func _announce_end(status: String) -> void:
 ## Spec server-authority 2.2: hands what the last player action logged to the journal (actions_committed), then
 ## returns `result` unchanged. Nothing happens unless `journal` is on.
 func _commit_after(result: Variant) -> Variant:
+	if state != null:
+		action_committed.emit()
 	if not journal or state == null or _committed >= run_log.size():
 		return result
 	var requests: Array = []

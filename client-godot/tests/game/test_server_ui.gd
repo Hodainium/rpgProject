@@ -101,29 +101,20 @@ func test_server_error_cleared_when_connected() -> void:
 	await host.get_tree().process_frame  # leave the bridge's Completed emission before after_each frees the game
 
 
-## Spec playtest-fixes B12: the resume at app start got no answer; once the server answers, it is tried again (on the
-## title only), and the heartbeat is quicker while the server is away.
-func test_resume_retried_when_connected() -> void:
+## Spec playtest-fixes B12, as replaced by main-menu M6: nothing resumes on its own when the server answers again (the
+## main menu re-asks and Continue waits for a click); the heartbeat is quicker while the server is away.
+func test_heartbeat_quicker_while_offline() -> void:
 	var game := _game()
 	var bridge := FakeBridge.new()
 	bridge.offline = true
 	bridge.answers = {"GetCurrentRun": [[true, null]]}
 	var link := _link(bridge, "tester")
 	game.use_server(link)
-	await game.resume_server_run()
-	eq(bridge.count("GetCurrentRun"), 0, "the resume at app start got no answer (the sign-in failed first)")
 	await link.heartbeat()
 	eq(link.get_node("Heartbeat").wait_time, link.offline_heartbeat_seconds, "the heartbeat is quicker while offline")
 	bridge.offline = false
 	await link.heartbeat()
 	for frame in 30:
 		await host.get_tree().process_frame
-	eq(bridge.count("GetCurrentRun"), 1, "the resume is tried again once the server answers")
 	eq(link.get_node("Heartbeat").wait_time, link.heartbeat_seconds, "and the heartbeat slows down again")
-	bridge.offline = true
-	await link.heartbeat()
-	bridge.offline = false
-	await link.heartbeat()
-	for frame in 30:
-		await host.get_tree().process_frame
-	eq(bridge.count("GetCurrentRun"), 1, "only once: the server had no run to resume")
+	check(game.run == null and bridge.count("Resume") == 0, "nothing resumed on its own (the menu only asks)")
