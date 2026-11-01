@@ -58,7 +58,8 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   Reproduced by `test_battle_hud::test_feed_line_centred_from_any_step` (`left 0.0, right 24.0` before the fix).
 - **B9. A connecting pop-up while the game waits on the server** (asked 2026-11-01). A reusable spinner and a
   pop-up show whenever the player can't go on until the server answers: a server run starting or resuming, a floor
-  seed at the stairs, a won run's verification, a run rebuilt after a 1103 conflict. Background work (the action
+  seed at the stairs (the wait begins when the rest stop ends and the floor really has no seed, `RunController.floor_waiting`,
+  not when the seed is first requested behind the rest stop; fixed 2026-11-01), a won run's verification, a run rebuilt after a 1103 conflict. Background work (the action
   queue's uploads, the heartbeat) never shows it. It appears only after the wait has lasted 0.3 s, so a quick answer
   never flashes it, and it blocks clicks while shown.
 - **B10. Server status in the bottom left corner** (asked 2026-11-01; a debug aid for now). In server mode, a bright
