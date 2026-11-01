@@ -51,9 +51,34 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   binds one handler with one optional argument to six run signals; `event_page_shown` sends two, and it fires while
   the strip is still up (the room is entered from the map). Fix: the handler takes a second optional argument.
   Test: `test_explore_hud::test_party_strip_takes_event_pages` (any engine error fails it).
+- **B8. Some battle feed lines still hug the left edge** (reported 2026-11-01: "only sometimes"; B5 fixed most of them).
+  B5's slide read the label's laid-out x on the slide tween's first step. Most lines are pushed from a tween step,
+  and that worked. A line pushed from a **timer** (the battle's presentation pauses) had its new tween stepped in that
+  same frame, before the container's deferred sort, so the slide read x 0 and ended there: 0 px left, 24 px right.
+  Reproduced by `test_battle_hud::test_feed_line_centred_from_any_step` (`left 0.0, right 24.0` before the fix).
+- **B9. A connecting pop-up while the game waits on the server** (asked 2026-11-01). A reusable spinner and a
+  pop-up show whenever the player can't go on until the server answers: a server run starting or resuming, a floor
+  seed at the stairs, a won run's verification, a run rebuilt after a 1103 conflict. Background work (the action
+  queue's uploads, the heartbeat) never shows it. It appears only after the wait has lasted 0.3 s, so a quick answer
+  never flashes it, and it blocks clicks while shown.
+- **B10. Server status in the bottom left corner** (asked 2026-11-01; a debug aid for now). In server mode, a bright
+  green line "Connected: <player> (<player id>)" sits just above the footer's message line. It turns yellow
+  ("Offline: <player> (no answer from the server)") while the server isn't answering, and is hidden in local mode.
+- **B11. "Connected" in green, but the message line still says "Server: no connection: HttpRequestException"**
+  (reported 2026-11-01, in the user's first try of B10). Server mode was set while the server was off, so the resume at
+  app start (or Start run) failed and put that line in the footer. The footer keeps its last message until another one
+  replaces it, and nothing did once the server came up (or the console's `server <url>` linked again). Fix: after
+  `GameMain` shows a server problem, or a link stops answering, the next answer shows "Connected to the server as
+  <player>". Test: `test_server_ui::test_server_error_cleared_when_connected`.
+- **B12. The resume at app start is retried when the server comes back** (asked 2026-11-01). With the server off at app
+  start, the run the server holds only continued after a restart or the console's `server resume`. Now a start-up
+  resume that got no answer (or a 5xx) is tried again at the server's first answer, if the player is still on the
+  title with no run playing; starting a new run, or local mode, drops the retry. While the server isn't answering, the
+  heartbeat runs every 5 s (`offline_heartbeat_seconds`) instead of 30, so its return is seen soon.
 
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
-involved.
+involved. B9 and B10 only show the state of the client's existing calls (no new request, field or header); they are the
+player-facing side of the offline-first retries in `server-authority` 2.1–2.4.
 
 ## 2. Sequence flow
 N/A: no client↔server traffic. Within the client nothing changes except layout: screens still call `describe()`, and
@@ -111,6 +136,23 @@ to `2` gives the list a third. It is one inspector value.
 | `toast.gd` | A `drop` offset tweened from −`slide_distance` (40) to 0 over `slide_seconds` replaces the `%Lines` slide. |
 | `run_toasts.gd` | The layout keeps each toast's glided place in a meta and sets `position.y` = place + `drop`, so the window and its text come down together. |
 
+### Fix for B8
+| File | Change |
+|---|---|
+| `feed_line.gd` | The slide is an offset (`_slide`, tweened −`slide_distance` → 0 with `tween_method`) added to the label's x on the line's `sort_children` signal, after every layout pass; each step calls `queue_sort()`. The slide no longer reads a laid-out x once, so it can't end at a place read before layout. |
+
+### Fix for B9 and B10
+| File | Change |
+|---|---|
+| `game/ui/ui_spinner.gd` (system, new) | `UISpinner`: a spinning arc drawn in code (`color`, `track_color`, `thickness`, `arc_degrees`, `speed` turns/s, real time), reusable in any screen that waits. |
+| `game/server_link.gd` (system) | B12: the heartbeat timer's period is `offline_heartbeat_seconds` (5) while requests get no answer, `heartbeat_seconds` (30) again after one. `begin_wait(key, text)` / `end_wait(key)` / `waiting_text()` (the newest wait shows) and `waiting_changed(text)`. Keys with a `/` belong to the linked run and end when another run is linked, so an abandoned run's retries never keep the pop-up up. Waits: `floor/<run>/<n>` around `_fetch_floor`, `end/<run>` around the win's drain, end and poll, `rebuild/<run>` around a conflict's rebuild. Texts `wait_floor_text`, `wait_end_text`, `wait_rebuild_text`. `connected()` (signed in and the last request got an answer, any HTTP status), `player_id` (from `DevTokenResponse.playerId`), `connection_changed`. |
+| `game/game_main.gd` (system) | B12: `_resume_pending` (the start-up resume's `GET /runs/current` failed and is retryable); at the current link's next answer, on the title with no active run, `resume_server_run()` again (once); cleared by `start_run` in server mode and by local mode. B11: `_server_problem_shown` (set by a failed start or resume, or a link that stops answering); the current link's next answer shows `reconnected_text` "Connected to the server as %s" (`@export`) on the message line. `server_changed(link)` from `use_server`; waits `start` around `POST /runs` and `resume` around the resume at app start (`wait_start_text`, `wait_resume_text`, `@export`). |
+| `godot_gas/tag_registry.tres` | New tag `UI.Slot.Overlay` (`sync_tags` regenerated `gameplay_tags.gd`). |
+| `layout.tscn` | New last child `Overlay` (`MarginContainer`, full rect, mouse ignored, `UIExtensionPoint` slot `UI.Slot.Overlay`): above every layer stack and the footer. |
+| `ui_policy.tres` | Two always-on extensions in `UI.Slot.Overlay`: `server_status.tscn` (order 0) and `connecting_popup.tscn` (order 1, on top). |
+| `connecting_popup.tscn` / `.gd` (new) | `Popup` (hidden): a 50% black dim that stops clicks, and a centred theme window (360 px min) with a 36 px `UISpinner` and the wait's text. It follows `GameMain.server_changed` and `ServerLink.waiting_changed`, and shows after `show_after_seconds` (0.3, real time). |
+| `server_status.tscn` / `.gd` (new) | A 16 px label with a black outline, bottom left (x 8, y −54 to −32, above the footer). `connected_format` "Connected: %s (%s)" in `connected_color` (0.25, 1, 0.35); before the first answer `waiting_format`, after a lost answer `offline_format`, both in `offline_color` (1, 0.8, 0.25). Hidden with no link. |
+
 ## 5. Observability
 N/A: no server metrics.
 
@@ -138,6 +180,22 @@ N/A: no server metrics.
 - **B6:** `test_explore_hud::test_floor_toast_slides_as_one`: holding Tab, the floor banner starts above its place and
   comes down to it while its text keeps the same y inside it. Filmed: the banner goes −36.8 → 0 over 0.3 s with alpha
   0 → 1, its text at y 8 throughout.
+- **B8:** `test_battle_hud::test_feed_line_centred_from_any_step` pushes lines from a tween step, a timer and a process
+  step; each one's text has equal space left and right after the slide-in.
+- **B9:** `test_server_mode::test_server_link_waits` (newest wait shows, run waits end on a new link, each change
+  once) and `test_stairs_wait_shows_while_offline` (the stairs wait while the seed has no answer, then stop).
+  `test_server_ui::test_connecting_popup` (demo policy, fake bridge): hidden in local mode, not shown at once, shown
+  after 0.45 s with the wait's text, a spinner, and clicks stopped; gone when the wait ends.
+- **B10:** `test_server_mode::test_server_link_connection` (connected after an answer, with the player id; not
+  connected with no answer; again after one) and `test_server_ui::test_server_status_line` ("Connected: tester (p)" in
+  the green, bottom left; "Offline: …" with no answer; hidden again in local mode).
+- **B11:** `test_server_ui::test_server_error_cleared_when_connected`: a failed resume puts "Server: no connection…"
+  on the message line, and a new link's first answer replaces it with "Connected to the server as tester".
+- **B12:** `test_server_ui::test_resume_retried_when_connected`: offline at start (no resume reaches the server, the
+  heartbeat at 5 s), then the server answers: the resume is tried once (`GET /runs/current`), the heartbeat is back at
+  30 s, and a later drop and return doesn't retry again (the server had no run).
+- **B9, B10 visual check:** a window run with a throwaway command linking the fake bridge; screenshots in
+  `H:\claudeOutShots\2026-11-01 server-overlay\` (title with the green line; the pop-up over the title menu).
 - **Unchanged:** `test_demo_ui_policy`, the existing explore HUD and gear tests, and `validate_content.tscn`
   (`UIPolicyCheck`) still pass.
 - **Visual check:** the window run from section 1 again, with new screenshots of Use Item (Potion hovered), Use Ability,
