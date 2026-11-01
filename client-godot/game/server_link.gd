@@ -600,8 +600,17 @@ func _backoff(error: Dictionary, delay: float) -> void:
 
 func _fetch_floor(run: RunController, run_id: String, floor_index: int) -> void:
 	var wait := StringName("floor/%s/%d" % [run_id, floor_index])
-	begin_wait(wait, wait_floor_text)
+	# The player waits only once the run stands at the missing seed (after the rest stop), not while it is being
+	# fetched in the background behind the rest stop.
+	var on_waiting := func(waiting_floor: int) -> void:
+		if waiting_floor == floor_index:
+			begin_wait(wait, wait_floor_text)
+	run.floor_waiting.connect(on_waiting)
+	if run.waiting_for_floor() == floor_index:
+		begin_wait(wait, wait_floor_text)
 	var result := await floor_seed_until_issued(run_id, floor_index)
+	if is_instance_valid(run) and run.floor_waiting.is_connected(on_waiting):
+		run.floor_waiting.disconnect(on_waiting)
 	end_wait(wait)
 	if not is_instance_valid(run) or run.state == null or run.state.run_id != run_id:
 		return  # the run was left meanwhile

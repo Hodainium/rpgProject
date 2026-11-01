@@ -25,6 +25,9 @@ signal map_revealed
 ## Spec server-authority 2.1 (server mode): the run needs the seed of floor `floor_index` from the server. Emitted once
 ## per floor, at next_floor; whoever links the run to the server answers with provide_floor_seed().
 signal floor_seed_needed(floor_index: int)
+## The run now stands waiting for floor `floor_index`'s seed (the rest stop is over, or there is none): the connecting
+## pop-up shows from here, not while the seed is only being asked for in the background.
+signal floor_waiting(floor_index: int)
 ## Spec server-authority 2.2 (journal on): the RunActionRequests (wire dictionaries, seq order) one player action
 ## logged, built after the action so each carries the state hash after it and, on checkpoints, the RunSnapshot.
 signal actions_committed(requests: Array)
@@ -302,6 +305,7 @@ func enter_floor(floor_index: int, choice: StringName = &"") -> String:
 		_waiting_floor = {"floor": floor_index, "choice": choice}
 		_request_floor_seed(floor_index)
 		_notify("Connecting…")
+		floor_waiting.emit(floor_index)
 		return ""
 	var slot: FloorSlot = structure.floors[floor_index]
 	var picked := slot.pick_chapter(state.run_seed, floor_index, chapter() if state.chapter_id != &"" else null, choice,

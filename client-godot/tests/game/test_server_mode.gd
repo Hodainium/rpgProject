@@ -332,6 +332,26 @@ func test_stairs_wait_shows_while_offline() -> void:
 	eq(link.waiting_text(), "", "and nothing waits any more")
 
 
+## The connecting wait starts when the run stands at the missing seed (the rest stop is over), not while the seed is
+## only being fetched in the background behind the rest stop.
+func test_connecting_wait_starts_after_the_rest_stop() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers = {"GetFloorSeed": [_error(0, null, "HttpRequestException")]}
+	var link := _link(bridge)
+	var run := _server_run(5150)
+	var structure: RunStructure = run.structure.duplicate()
+	structure.rest_event = fixtures().events.values()[0]
+	run.structure = structure
+	link.link(run, RUN_ID)
+	run.state.boss_cleared = true
+	run.next_floor()
+	check(run.state.event.has("rest_to"), "the rest stop opens at once")
+	eq(link.waiting_text(), "", "and nothing waits yet")
+	run.state.event = {}  # the rest stop ends
+	run.enter_floor(1)
+	eq(link.waiting_text(), link.wait_floor_text, "the wait starts when the run stands at the missing seed")
+
+
 ## Spec playtest-fixes B10: connected once signed in and answered; not when the server stops answering.
 func test_server_link_connection() -> void:
 	var bridge := FakeBridge.new()
