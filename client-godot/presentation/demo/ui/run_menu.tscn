@@ -47,6 +47,11 @@ script = ExtResource("3_push")
 screen = ExtResource("4_settings")
 layer = &"UI.Layer.GameMenu"
 
+[node name="SaveQuit" type="Button" parent="Panel/Margin/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save and quit"
+
 [node name="Abandon" type="Button" parent="Panel/Margin/Box"]
 unique_name_in_owner = true
 layout_mode = 2

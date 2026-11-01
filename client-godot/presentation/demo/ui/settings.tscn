@@ -59,6 +59,65 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Auto casts ultimates"
 
+[node name="ServerTitle" type="Label" parent="Panel/Margin/Box"]
+layout_mode = 2
+theme_type_variation = &"Title"
+text = "Server"
+
+[node name="ModeLine" type="Label" parent="Panel/Margin/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="UrlRow" type="HBoxContainer" parent="Panel/Margin/Box"]
+layout_mode = 2
+
+[node name="UrlLabel" type="Label" parent="Panel/Margin/Box/UrlRow"]
+layout_mode = 2
+text = "Url"
+
+[node name="Url" type="LineEdit" parent="Panel/Margin/Box/UrlRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "http://localhost:5000"
+
+[node name="PlayerRow" type="HBoxContainer" parent="Panel/Margin/Box"]
+layout_mode = 2
+
+[node name="PlayerLabel" type="Label" parent="Panel/Margin/Box/PlayerRow"]
+layout_mode = 2
+text = "Player"
+
+[node name="Player" type="LineEdit" parent="Panel/Margin/Box/PlayerRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "dev"
+
+[node name="ServerButtons" type="HBoxContainer" parent="Panel/Margin/Box"]
+layout_mode = 2
+
+[node name="Connect" type="Button" parent="Panel/Margin/Box/ServerButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Connect"
+
+[node name="Disconnect" type="Button" parent="Panel/Margin/Box/ServerButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Disconnect"
+
+[node name="ServerNote" type="Label" parent="Panel/Margin/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_type_variation = &"Warning"
+autowrap_mode = 3
+
 [node name="Back" type="Button" parent="Panel/Margin/Box"]
 layout_mode = 2
 text = "Back"

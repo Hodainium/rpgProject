@@ -9,6 +9,8 @@ extends UIScreen
 @export var party_format: String = "Party (%d/%d):"
 ## Shown in the seed field in server mode (spec server-authority: the server issues every floor seed).
 @export var server_seed_text: String = "Seed: issued by the server"
+## Spec main-menu M2: asked when a run can be continued and a new one is started.
+@export var abandon_question: String = "Start a new run? Your current run will be abandoned."
 
 
 func bind(context: UIContext) -> void:
@@ -23,6 +25,7 @@ func bind(context: UIContext) -> void:
 		if not entry.picked_changed.is_connected(_update_party):
 			entry.picked_changed.connect(_update_party))
 	context.main.content_changed.connect(_fill)
+	context.main.server_changed.connect(_on_server_changed)  # spec main-menu M8
 	_fill(context.main.content)
 
 
@@ -53,6 +56,10 @@ func _fill(content: ContentIndex) -> void:
 	_update_party()
 
 
+func _on_server_changed(_link: ServerLink) -> void:
+	refresh()
+
+
 ## Server mode: the seed field is disabled and says who picks the seed; local mode: typed or random as before.
 func refresh() -> void:
 	var linked: bool = ctx.main.server != null
@@ -76,6 +83,11 @@ func _update_party() -> void:
 
 
 func _start() -> void:
+	var continuable: Dictionary = await ctx.main.can_continue()
+	if not is_instance_valid(self):
+		return
+	if continuable["enabled"] and not await ctx.ui.confirm(abandon_question, "Start new run", "Cancel"):
+		return
 	var ids: Array = _cards().filter(func(card) -> bool: return card.is_picked()).map(
 		func(card) -> String: return card.character_id)
 	if %Seed.text.strip_edges() == "" and ctx.main.server == null:
