@@ -211,6 +211,12 @@ func test_ui_rules() -> void:
 	eq(manager.top(GAME_MENU), null, "which cleared the run menu")
 	eq(manager.top(GAME), null, "and the HUD is gone")
 	check(manager.context.has_state(UIState.WON), "End.Won")
+	# The title and end screens share the Menu layer: the end screen's removal must not take the new title screen
+	# with it (removals run before pushes; a gray screen after a run's Menu button otherwise).
+	game.back_to_menu()
+	manager.apply_now()
+	eq(manager.top(MENU).name, &"Title", "Menu again after the end: the title screen is back")
+	eq(_names(manager.layout.get_node("Menu").get_children()), ["Title"], "alone on its layer")
 
 
 ## Rules apply once per frame on the latest state, however many run signals fire.

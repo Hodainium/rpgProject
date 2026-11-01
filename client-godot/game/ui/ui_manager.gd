@@ -237,24 +237,26 @@ func apply_now() -> void:
 		tags.sort_custom(func(a, b) -> bool: return String(a) < String(b))
 	var changed := tags != context.state
 	context.state = tags
+	# Removals first, then pushes: remove() also drops every screen above the one removed, so a screen pushed earlier in
+	# the same pass onto the same layer (the title menu over the run-end screen) would vanish with it.
 	for rule in policy.screens:
 		if rule == null:
 			continue
-		var wanted := TagMatch.matches(rule.active_when, tags)
 		var screen: UIScreen = _rule_screens.get(rule)
-		if screen != null and not is_instance_valid(screen):
+		if screen != null and (not is_instance_valid(screen) or screen.get_parent() == null):
 			_rule_screens.erase(rule)
-			screen = null
-		if wanted and screen == null:
-			if rule.clears_layer != &"":
-				clear(rule.clears_layer)
-			screen = push(rule.layer, rule.scene)
-			if screen != null:
-				screen.owned_by_rule = true
-				_rule_screens[rule] = screen
-		elif not wanted and screen != null:
+		elif screen != null and not TagMatch.matches(rule.active_when, tags):
 			_rule_screens.erase(rule)
 			remove(screen)
+	for rule in policy.screens:
+		if rule == null or _rule_screens.has(rule) or not TagMatch.matches(rule.active_when, tags):
+			continue
+		if rule.clears_layer != &"":
+			clear(rule.clears_layer)
+		var pushed := push(rule.layer, rule.scene)
+		if pushed != null:
+			pushed.owned_by_rule = true
+			_rule_screens[rule] = pushed
 	_apply_extensions()
 	if changed:
 		context.state_changed.emit(tags)

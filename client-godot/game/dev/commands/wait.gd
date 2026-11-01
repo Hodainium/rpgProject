@@ -56,9 +56,10 @@ static func _holds(ctx: DevContext, kind: String, target: String) -> bool:
 		"ended":
 			# Spec server-authority 2.3: the end screen, which a won server run reaches only after the verdict; a
 			# linked run also has its whole log uploaded (a death's end action included).
-			var uploaded: bool = game.server == null or not run.journal \
+			if not live or run.state.status == RunState.ACTIVE or game.mode != "end":
+				return false
+			return game.server == null or not run.journal \
 				or (game.server.queued().is_empty() and not game.server.uploading())
-			return live and run.state.status != RunState.ACTIVE and game.mode == "end" and uploaded
 		"notice":
 			return ctx.console.recent_notices().any(func(text: String) -> bool: return text.contains(target))
 	return false
