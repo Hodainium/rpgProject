@@ -30,6 +30,9 @@ const BATCH_SIZE: int = 50
 const SEQUENCE_GAP: int = 1102
 const SEQUENCE_CONFLICT: int = 1103
 const UPLOAD_INCOMPLETE: int = 1106
+const RUN_NOT_ACTIVE: int = 1101
+## Shown when the server has already ended the run this client is playing (it died, was won or abandoned elsewhere).
+const ENDED_ELSEWHERE: String = "This run has already ended on the server (another game window or device played on)"
 
 ## Backoff for a floor seed while offline: doubles from base up to max, ±25% jitter; a Retry-After wins.
 var retry_base_seconds: float = 1.0
@@ -245,7 +248,7 @@ func _pump() -> void:
 		if int(_code(error)) == SEQUENCE_CONFLICT:
 			await _rebuild_after_conflict(run)
 		else:
-			run.stop_on_server_error(describe(error))
+			_refused(run, error)
 		queue_changed.emit()
 		return
 	_uploading = false
@@ -288,7 +291,7 @@ func _finish_win(run: RunController) -> void:
 			await get_tree().create_timer(retry_base_seconds).timeout
 			continue
 		if not retryable(result["error"]):
-			run.stop_on_server_error(describe(result["error"]))
+			_refused(run, result["error"])
 			return
 		await _backoff(result["error"], delay)
 		delay = minf(delay * 2.0, retry_max_seconds)
@@ -489,6 +492,19 @@ static func describe(error: Dictionary) -> String:
 		" (%d)" % int(code) if code != null else ""]
 
 
+## A refusal the run can't go on after: it stops (not a loss). A 1101 means the server already ended this run (two
+## windows or devices on one player): nothing here can still be accepted, so the save goes too and the player is told
+## plainly instead of seeing the raw error.
+func _refused(run: RunController, error: Dictionary) -> void:
+	if int(_code(error)) == RUN_NOT_ACTIVE:
+		if run == _run:
+			_queue.clear()
+			forget_save()
+		run.stop_on_server_error(ENDED_ELSEWHERE)
+	else:
+		run.stop_on_server_error(describe(error))
+
+
 static func _code(error: Dictionary) -> Variant:
 	return error.get("errorCode") if error.get("errorCode") != null else 0
 
@@ -509,7 +525,7 @@ func _fetch_floor(run: RunController, run_id: String, floor_index: int) -> void:
 		if run == _run:
 			save()  # the save knows the seed: resumed there, the floor opens even offline
 	else:
-		run.stop_on_server_error(describe(result["error"]))
+		_refused(run, result["error"])
 
 
 ## One call through the bridge with the player's token (fetched first; once more after a 401).

@@ -245,13 +245,31 @@ func test_action_queue_retries_in_order() -> void:
 
 func test_refusal_stops_the_run() -> void:
 	var bridge := _bridge()
-	bridge.answers["SendActions"] = [ServerMode._error(409, 1101, "Run not active")]
+	bridge.answers["SendActions"] = [ServerMode._error(400, null, "Bad request")]
 	var link := _link(bridge)
 	var run := _server_run(link)
-	check(await _until(func() -> bool: return run.runner_error != ""), "a 409 other than 1103 stops the run")
-	check(run.runner_error.contains("1101"), "naming the code: " + run.runner_error)
+	check(await _until(func() -> bool: return run.runner_error != ""), "a refusal (not 1101 or 1103) stops the run")
+	check(run.runner_error.contains("400 Bad request"), "naming it: " + run.runner_error)
 	eq(run.state.status, RunState.ACTIVE, "a stop, not a loss")
 	eq(link.queued().size(), 1, "the action stays queued")
+
+
+## Two windows on one player: the other one ended the run, so this one's uploads get 409 1101. The player is told
+## plainly, and the save of a run that can't continue is deleted.
+func test_run_ended_elsewhere() -> void:
+	var bridge := _bridge()
+	var link := _link(bridge)
+	var run := _server_run(link)
+	await link.drained()
+	check(FileAccess.file_exists(link.save_path()), "a save while the run goes on")
+	bridge.answers["SendActions"] = [ServerMode._error(409, 1101, "Run not active")]
+	await RunPlayer.play(run, 1)
+	check(await _until(func() -> bool: return run.runner_error != ""), "the refused upload stops the run")
+	check(run.runner_error.contains(ServerLink.ENDED_ELSEWHERE), "in plain words: " + run.runner_error)
+	check(not run.runner_error.contains("1101"), "not the raw code")
+	check(not FileAccess.file_exists(link.save_path()), "the save of the ended run is gone")
+	eq(link.queued().size(), 0, "and nothing waits to upload")
+	eq(run.state.status, RunState.ACTIVE, "a stop, not a loss")
 
 
 func test_conflict_discards_save() -> void:
