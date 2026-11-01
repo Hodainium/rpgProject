@@ -27,11 +27,21 @@ trap 'rm -f "$stamp"' EXIT
 code=$?
 if (( code != 0 )) || [[ ! -f $stamp ]]; then echo "export.sh: ruleset stamp failed (exit $code)"; exit 1; fi
 echo "export.sh: ruleset $(grep -m1 -oE '[0-9]+\.[0-9]+\.[0-9]+\.[a-z0-9.]+\+[0-9a-f]{16}' "$out/../ruleset-$level.log")"
+# Godot publishes the C# project with dotnet; without these the compiler and MSBuild servers it starts outlive it,
+# keep the log pipe open, and the watcher reports a stall although the export finished.
 "$root/tools/watch.sh" --name "export-$level" --timeout 900 --log "$log" -- \
+	env MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_USE_MSBUILD_SERVER=0 UseSharedCompilation=false \
 	"$godot" --headless --path "$root/client-godot" "$mode" "$preset" "../build/$dir/rpgDemo.exe"
 code=$?
 if (( code != 0 )); then echo "export.sh: export failed (exit $code), log $log"; exit "$code"; fi
 for file in rpgDemo.exe rpgDemo.pck; do
 	[[ -f $out/$file ]] || { echo "export.sh: $file missing, log $log"; exit 1; }
 done
+# The C# half (net/ServerBridge.cs, server mode) ships as a data_* folder of assemblies. Godot reports a failed .NET
+# build as an ERROR line yet still exits 0 with a GDScript-only pack, which crashes on the first server link.
+if grep -q "ERROR: Export .NET" "$log"; then
+	echo "export.sh: the .NET part of the export failed: $(grep -m1 -A1 'ERROR: Export .NET' "$log" | tr '\n' ' ')"
+	exit 1
+fi
+compgen -G "$out/data_*/*.dll" > /dev/null || { echo "export.sh: no data_*/ assemblies next to the exe, log $log"; exit 1; }
 echo "export.sh: $level -> build/$dir ($(du -h "$out/rpgDemo.pck" | cut -f1) pack), log $log"

@@ -82,6 +82,9 @@ static func from_settings() -> ServerLink:
 ## A link to `url` as the dev player `player` through the C# bridge, or null when the bridge isn't built. Writes no
 ## Settings (spec dev-tools E3: the e2e harness links this way).
 static func create(url: String, player_name: String) -> ServerLink:
+	if not bridge_available():
+		push_error("ServerLink: this build has no C# assemblies (data_* folder); playing in local mode")
+		return null
 	var script: Script = load(BRIDGE_SCRIPT)
 	if script == null or not script.can_instantiate():
 		push_error("ServerLink: %s is not built (dotnet build); playing in local mode" % BRIDGE_SCRIPT)
@@ -100,6 +103,18 @@ func _ready() -> void:
 	_heartbeat.timeout.connect(heartbeat)
 	add_child(_heartbeat)
 	_heartbeat.start()
+
+
+## Whether the C# bridge can be loaded. An exported pack carries its assemblies in a data_* folder next to the
+## executable; without it, loading a C# script crashes the engine (signal 11) instead of failing, so check first.
+## The editor and headless runs from the project build the assembly themselves.
+static func bridge_available() -> bool:
+	if not ClassDB.class_exists("CSharpScript"):
+		return false
+	if not OS.has_feature("template"):
+		return true
+	var folder := OS.get_executable_path().get_base_dir()
+	return Array(DirAccess.get_directories_at(folder)).any(func(name: String) -> bool: return name.begins_with("data_"))
 
 
 ## POST /api/v1/runs: data = RunStartResponse {runId, floor, floorSeed, startedAt}.

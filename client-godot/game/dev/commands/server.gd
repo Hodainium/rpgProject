@@ -38,11 +38,12 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		GameMain.save_setting(ServerLink.SETTINGS_SECTION, "url", "")
 		ctx.game.use_server(null)
 		return "local mode (new runs only; the current run keeps its seeds)"
+	# Saved only once the link exists: a saved url is linked again at every windowed start.
+	var link := ServerLink.create(args[0], args[1] if args.size() > 1 else "dev")
+	if link == null:
+		return ctx.fail("can't link (is the C# assembly built? nothing was saved)")
 	GameMain.save_setting(ServerLink.SETTINGS_SECTION, "url", args[0])
 	GameMain.save_setting(ServerLink.SETTINGS_SECTION, "player", args[1] if args.size() > 1 else "dev")
-	var link := ServerLink.from_settings()
-	if link == null:
-		return ctx.fail("can't link (is the C# assembly built?)")
 	ctx.game.use_server(link)
 	return "server mode: %s as %s (new runs only)" % [args[0], args[1] if args.size() > 1 else "dev"]
 
