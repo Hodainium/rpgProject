@@ -7,21 +7,30 @@ extends PanelContainer
 @export var fade_seconds: float = 0.5
 
 
+## How far left of its laid-out place the text is (−slide_distance → 0 while sliding in).
+var _slide: float = 0.0
+
+
 func set_item(toast: Dictionary, _context: UIContext) -> void:
 	%Text.text = toast.get("title", "")
 	%Text.theme_type_variation = StringName(toast.get("variation", &""))
 	modulate.a = 0.0
-	# On the tween's first step (next frame, once the line is laid out); the tween dies with the line.
-	create_tween().set_ignore_time_scale(true).tween_callback(_slide_in)
-
-
-## Slides the text in from the left to the place the line's layout gave it (spec ui-fixes B5).
-func _slide_in() -> void:
-	var place: float = %Text.position.x
+	# Spec playtest-fixes B8: the offset is added after every layout pass, so the slide never ends at a place read
+	# before the line was laid out (a line pushed from a timer used to end at x 0). The tween dies with the line.
+	sort_children.connect(_apply_slide)
 	var tween := create_tween().set_ignore_time_scale(true).set_parallel(true)
 	tween.tween_property(self, "modulate:a", 1.0, slide_seconds)
-	tween.tween_property(%Text, "position:x", place, slide_seconds).from(place - slide_distance).set_ease(
-		Tween.EASE_OUT)
+	tween.tween_method(_set_slide, -slide_distance, 0.0, slide_seconds).set_ease(Tween.EASE_OUT)
+
+
+## Slides the text in from the left to the place the line's layout gives it (spec ui-fixes B5).
+func _set_slide(offset: float) -> void:
+	_slide = offset
+	queue_sort()  # the layout puts the text back at its place, then _apply_slide moves it
+
+
+func _apply_slide() -> void:
+	%Text.position.x += _slide
 
 
 func leave() -> void:

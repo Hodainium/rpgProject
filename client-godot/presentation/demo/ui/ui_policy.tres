@@ -25,6 +25,8 @@
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/party_strip.tscn" id="36_party_strip"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/explore_menu.tscn" id="37_explore_menu"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/gift_panel.tscn" id="38_gift"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/connecting_popup.tscn" id="39_connecting"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/server_status.tscn" id="40_server_status"]
 
 [sub_resource type="Resource" id="when_menu"]
 script = ExtResource("4_query")
@@ -183,11 +185,22 @@ slot = &"UI.Slot.Hud.Bottom.Right"
 scene = ExtResource("37_explore_menu")
 active_when = SubResource("when_explore")
 
+[sub_resource type="Resource" id="panel_server_status"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Overlay"
+scene = ExtResource("40_server_status")
+
+[sub_resource type="Resource" id="panel_connecting"]
+script = ExtResource("3_ext")
+slot = &"UI.Slot.Overlay"
+scene = ExtResource("39_connecting")
+order = 1
+
 [resource]
 script = ExtResource("1_policy")
 layout = ExtResource("5_layout")
 theme = ExtResource("6_theme")
 screens = Array[ExtResource("2_rule")]([SubResource("screen_title"), SubResource("screen_hud"), SubResource("screen_end"), SubResource("screen_gift")])
-extensions = Array[ExtResource("3_ext")]([SubResource("panel_map"), SubResource("panel_stairs"), SubResource("panel_pickup"), SubResource("panel_event"), SubResource("panel_message"), SubResource("panel_run_toasts"), SubResource("panel_battle_feed"), SubResource("panel_battle_party"), SubResource("panel_command"), SubResource("panel_top"), SubResource("panel_turn_order"), SubResource("panel_party_strip"), SubResource("panel_explore_menu")])
+extensions = Array[ExtResource("3_ext")]([SubResource("panel_map"), SubResource("panel_stairs"), SubResource("panel_pickup"), SubResource("panel_event"), SubResource("panel_message"), SubResource("panel_run_toasts"), SubResource("panel_battle_feed"), SubResource("panel_battle_party"), SubResource("panel_command"), SubResource("panel_top"), SubResource("panel_turn_order"), SubResource("panel_party_strip"), SubResource("panel_explore_menu"), SubResource("panel_server_status"), SubResource("panel_connecting")])
 back_screens = Array[ExtResource("2_rule")]([SubResource("back_run_menu")])
 confirm_scene = ExtResource("14_confirm")
