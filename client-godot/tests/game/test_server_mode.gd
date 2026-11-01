@@ -295,3 +295,58 @@ func test_ruleset_version_stable() -> void:
 	eq(RulesetVersion.stamped(), version, "and read back")
 	eq(RulesetVersion.compute(), version, "the stamp is not hashed")
 	DirAccess.remove_absolute(RulesetVersion.STAMP_PATH)  # here, not in after_each: shards run tests in parallel
+
+
+## Spec playtest-fixes B9: what the player waits on. The newest wait shows; ending it shows the one before; a run's own
+## waits end when another run is linked.
+func test_server_link_waits() -> void:
+	var link := _link(FakeBridge.new())
+	var seen: Array[String] = []
+	link.waiting_changed.connect(func(text: String) -> void: seen.append(text))
+	eq(link.waiting_text(), "", "nothing to wait on at first")
+	link.begin_wait(&"start", "Starting")
+	link.begin_wait(&"floor/r/1", "Floor")
+	eq(link.waiting_text(), "Floor", "the newest wait shows")
+	link.end_wait(&"floor/r/1")
+	eq(link.waiting_text(), "Starting", "then the one before")
+	link.end_wait(&"floor/r/1")
+	link.begin_wait(&"end/r", "Verifying")
+	link.link(_server_run(5150), RUN_ID)
+	eq(link.waiting_text(), "Starting", "linking another run ends the old run's waits, not the game's")
+	link.end_wait(&"start")
+	eq(seen, ["Starting", "Floor", "Starting", "Verifying", "Starting", ""], "each change once")
+
+
+## Spec playtest-fixes B9: the stairs wait while the floor seed has no answer, and stop waiting once it is in.
+func test_stairs_wait_shows_while_offline() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers = {"GetFloorSeed": [_error(0, null, "HttpRequestException"), _error(0, null, "HttpRequestException"),
+		_floor_answer(1, 777)]}
+	var link := _link(bridge)
+	var run := _server_run(5150)
+	link.link(run, RUN_ID)
+	run.state.boss_cleared = true
+	run.next_floor()
+	eq(link.waiting_text(), link.wait_floor_text, "the stairs wait on the server")
+	check(await _until(func() -> bool: return run.state.floor_index == 1), "the floor starts once the seed is in")
+	eq(link.waiting_text(), "", "and nothing waits any more")
+
+
+## Spec playtest-fixes B10: connected once signed in and answered; not when the server stops answering.
+func test_server_link_connection() -> void:
+	var bridge := FakeBridge.new()
+	var link := _link(bridge)
+	var changes := [0]
+	link.connection_changed.connect(func() -> void: changes[0] += 1)
+	check(not link.connected(), "not connected before any request")
+	await link.heartbeat()
+	check(link.connected(), "connected after an answer")
+	eq(link.player_id, "p", "with the player id from the dev token")
+	bridge.offline = true
+	await link.heartbeat()
+	check(not link.connected(), "not connected when the server doesn't answer")
+	bridge.offline = false
+	await link.heartbeat()
+	check(link.connected(), "connected again")
+	check(changes[0] >= 3, "each change is announced (%d)" % changes[0])
+	await host.get_tree().process_frame  # leave the bridge's Completed emission before after_each frees the link

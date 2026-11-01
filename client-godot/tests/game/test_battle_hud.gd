@@ -122,6 +122,43 @@ func test_feed_line_centred() -> void:
 	check(left > 4.0 and absf(left - right) <= 1.0, "the text is centred (left %.1f, right %.1f)" % [left, right])
 
 
+## Spec playtest-fixes B8: a line pushed from a tween step, a timer or a process step is still centred. From a timer
+## (the battle's presentation pauses), the slide-in's first step ran in that frame, before the container laid the line
+## out, and slid the text to x 0.
+func test_feed_line_centred_from_any_step() -> void:
+	var made := _game()
+	var game: GameMain = made[0]
+	check(await _battle(game, made[1], "fixture.encounter.ult_trial"), "a battle waits for the player")
+	var feed: UIToastHost = game.find_child("BattleFeed", true, false)
+	for round in 3:
+		var push := func() -> void:
+			feed.receive(GameplayMessageRouter.BATTLE_ABILITY_USED, VerbMessage.make(&"Verb.Use", &"P1", &"E1", 0, [],
+				{"abilityName": "Strike %d" % round, "instigatorName": "Knight"}))
+		if round == 0:  # from a tween step (an animation's execute key)
+			var tween := feed.create_tween()
+			tween.tween_callback(push)
+			await tween.finished
+		elif round == 1:  # from a timer (the battle's presentation pauses)
+			var timer := host.get_tree().create_timer(0.01)
+			timer.timeout.connect(push)
+			await timer.timeout
+		else:  # from a node's process step
+			host.get_tree().process_frame.connect(push, CONNECT_ONE_SHOT)
+			await host.get_tree().process_frame
+	var waited := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - waited < 600:  # the slide-in is real time
+		await host.get_tree().process_frame
+	var lines: Array = feed.get_node("%Lines").get_children().filter(func(line: Node) -> bool:
+		return not line.is_queued_for_deletion() and line.get_node("%Text").text.contains("Strike"))
+	check(not lines.is_empty(), "the feed lines show")
+	for line: Control in lines:
+		var text: Control = line.get_node("%Text")
+		var left := text.position.x
+		var right := line.size.x - text.position.x - text.size.x
+		check(left > 4.0 and absf(left - right) <= 1.0, "'%s' is centred (left %.1f, right %.1f)" % [text.text, left,
+			right])
+
+
 func test_command_panel_pages() -> void:
 	var made := _game()
 	var game: GameMain = made[0]

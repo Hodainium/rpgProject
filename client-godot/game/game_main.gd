@@ -20,6 +20,8 @@ signal battle_prepared(recorder: ActionRecorder, gate: ViewGate)
 signal content_changed(content: ContentIndex)
 ## A sandbox run (spec dev-tools 2.2) was left through the run-end screen.
 signal sandbox_closed
+## Spec playtest-fixes B10: server mode switched on (a new link) or off (null).
+signal server_changed(link: ServerLink)
 
 const VIEW_DIR: String = "res://presentation/demo/"
 const UI_POLICY: String = "res://presentation/demo/ui/ui_policy.tres"
@@ -28,6 +30,11 @@ const CONTENT_ROOTS: Array[String] = ["res://content/", "res://tests/fixtures/"]
 
 ## Spec ui-framework: every screen and panel, as data. Empty: res://presentation/demo/ui/ui_policy.tres.
 @export var ui_policy: UIPolicy
+## Spec playtest-fixes B9: what the connecting pop-up says while a server run starts or resumes.
+@export var wait_start_text: String = "Starting the run…"
+@export var wait_resume_text: String = "Resuming your run…"
+## Spec playtest-fixes B11: the message line once the server answers again after a server problem was shown.
+@export var reconnected_text: String = "Connected to the server as %s"
 ## The 3D room (a Node3D with setup(main)); not UI.
 @export var room_view: PackedScene
 @export var unit_view: PackedScene
@@ -65,6 +72,11 @@ var auto_ults: bool = true:
 		_apply_auto()
 
 var _error_label: Label
+## Spec playtest-fixes B11: a server problem stays on the message line until something replaces it; once the link
+## answers again (the same link, or a new one from the console's `server <url>`), the line says so.
+var _server_problem_shown: bool = false
+## Spec playtest-fixes B12: the resume at app start got no answer (or a 5xx); it is tried again when the server answers.
+var _resume_pending: bool = false
 
 
 func _ready() -> void:
@@ -111,9 +123,32 @@ func _ready() -> void:
 func use_server(link: ServerLink) -> void:
 	if server != null and server != link:
 		server.queue_free()
+	var changed := server != link
+	if link == null:
+		_resume_pending = false
 	server = link
 	if server != null and server.get_parent() == null:
 		add_child(server)
+	if changed and server != null:
+		server.connection_changed.connect(_on_server_connection.bind(server))
+	if changed:
+		server_changed.emit(server)
+
+
+
+func _on_server_connection(link: ServerLink) -> void:
+	if link != server:
+		return
+	if not link.connected():
+		_server_problem_shown = true
+		return
+	if _server_problem_shown:
+		_server_problem_shown = false
+		show_message(reconnected_text % link.player)
+	# Spec playtest-fixes B12: still on the title with no run playing, so the run the server holds can continue now.
+	if _resume_pending and mode == "menu" and (run == null or run.state == null or run.state.status != RunState.ACTIVE):
+		_resume_pending = false
+		resume_server_run()
 
 
 ## Spec ui-framework 2.1: the UI policy's layout under `canvas`. "" or why it failed (the game still runs headless and
@@ -169,6 +204,7 @@ func load_content() -> void:
 ## run starts when the server answers ("Connecting…" meanwhile; a refusal shows as a Notification).
 func start_run(character_ids: Array, seed_text: String, run_id: StringName = &"") -> String:
 	if server != null:
+		_resume_pending = false  # the player chose a new run instead
 		_start_server_run(character_ids, run_id)
 		return ""
 	_new_run()
@@ -186,8 +222,12 @@ func _start_server_run(character_ids: Array, run_id: StringName) -> void:
 		return
 	var structure_id := String(picked["run"].id)
 	show_message("Connecting…")
-	var result := await server.start_run(RulesetVersion.current(), structure_id, character_ids)
+	var link := server
+	link.begin_wait(&"start", wait_start_text)
+	var result := await link.start_run(RulesetVersion.current(), structure_id, character_ids)
+	link.end_wait(&"start")
 	if not result["ok"]:
+		_server_problem_shown = true
 		show_message("Server: " + ServerLink.describe(result["error"]))
 		return
 	var server_run_id := str(result["data"]["runId"])
@@ -205,14 +245,24 @@ func _start_server_run(character_ids: Array, run_id: StringName) -> void:
 func resume_server_run() -> String:
 	if server == null:
 		return "not in server mode"
-	var current := await server.get_current_run()
+	var link := server
+	link.begin_wait(&"resume", wait_resume_text)
+	var error := await _resume_server_run(link)
+	link.end_wait(&"resume")
+	return error
+
+
+func _resume_server_run(link: ServerLink) -> String:
+	var current := await link.get_current_run()
+	_resume_pending = not current["ok"] and ServerLink.retryable(current["error"])
 	if not current["ok"]:
+		_server_problem_shown = true
 		show_message("Server: " + ServerLink.describe(current["error"]))
 		return ServerLink.describe(current["error"])
 	if current["data"] == null:
 		return ""
 	_new_run()
-	var error := await server.resume_into(run, content, current["data"])
+	var error := await link.resume_into(run, content, current["data"])
 	if error != "":
 		show_message("Server: " + error)
 		set_mode("menu")

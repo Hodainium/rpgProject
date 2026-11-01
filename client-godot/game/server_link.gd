@@ -22,6 +22,10 @@ signal _signed_in
 signal queue_changed
 ## Spec 2.4: the linked run was rebuilt (a resume, or a 1103 conflict); `source` is "save" or "server".
 signal resumed(source: String)
+## Spec playtest-fixes B9: the player now waits on the server (`text` says for what) or no longer does ("").
+signal waiting_changed(text: String)
+## Spec playtest-fixes B10: the server answered or stopped answering, or the player signed in (connected(), player_id).
+signal connection_changed
 
 const SETTINGS_SECTION: String = "server"
 const BRIDGE_SCRIPT: String = "res://net/ServerBridge.cs"
@@ -43,11 +47,23 @@ var bridge: Object
 var player: String = "dev"
 var saves_dir: String = "user://saves"
 var heartbeat_seconds: float = 30.0
+## Spec playtest-fixes B12: the heartbeat's period while the server isn't answering, so its return is seen soon.
+var offline_heartbeat_seconds: float = 5.0
+## Spec playtest-fixes B9: what the connecting pop-up says while the player waits.
+var wait_floor_text: String = "Connecting to the server…"
+var wait_end_text: String = "Verifying the run…"
+var wait_rebuild_text: String = "Restoring the run from the server…"
 var poll_seconds: float = 2.0
 ## Rebuilds and conflicts so far (the dev report's server block).
 var resumes: int = 0
+## The player id the server gave the dev token (spec 3.2), "" before signing in.
+var player_id: String = ""
 var _results: Dictionary = {}
 var _token: String = ""
+## Spec playtest-fixes B9: what the player waits on, by key, in the order the waits began (the newest one shows).
+var _waits: Dictionary = {}
+## Whether the last request got an answer (any HTTP status); null before the first one.
+var _answered: Variant = null
 var _signing_in: bool = false
 var _sign_in_error: Dictionary = {}
 
@@ -180,6 +196,7 @@ func link(run: RunController, run_id: String) -> void:
 	_last_sent = {}
 	_end_request = {}
 	_snapshot = {}
+	_end_run_waits()
 	run.journal = true
 	run.verify_wins = true
 	run.floor_seed_needed.connect(func(floor_index: int) -> void: _fetch_floor(run, run_id, floor_index))
@@ -279,6 +296,13 @@ func _on_verifying(run: RunController, end_request: Dictionary) -> void:
 
 ## Drains the queue, sends the end, then polls GET /runs/{id} every poll_seconds until Won (Rejected stops the run).
 func _finish_win(run: RunController) -> void:
+	var wait := StringName("end/" + _run_id)
+	begin_wait(wait, wait_end_text)
+	await _finish_win_waiting(run)
+	end_wait(wait)
+
+
+func _finish_win_waiting(run: RunController) -> void:
 	var delay := retry_base_seconds
 	var status := ""
 	while _run == run and _linked():
@@ -431,7 +455,10 @@ func _rebuild_after_conflict(run: RunController) -> void:
 	if run.current_battle != null:
 		await run.battle_finished
 	var content_index := run.content
+	var wait := StringName("rebuild/" + _run_id)
+	begin_wait(wait, wait_rebuild_text)
 	var error := await _resume_from_server(run, content_index)
+	end_wait(wait)
 	if error != "":
 		run.stop_on_server_error(error)
 	else:
@@ -462,6 +489,42 @@ func dev_conflict() -> String:
 	_queue.push_front(changed)
 	_pump()
 	return ""
+
+
+# --- Waiting (spec playtest-fixes B9) ----------------------------------------------------------------------------
+
+## The player can't go on until the server answers: `text` shows in the connecting pop-up until end_wait(key). A key
+## already waiting gets the new text. Keys with a "/" belong to the linked run (they end when another run is
+## linked). Background work (uploads, the heartbeat) never waits this way.
+func begin_wait(key: StringName, text: String) -> void:
+	_waits.erase(key)
+	_waits[key] = text
+	waiting_changed.emit(waiting_text())
+
+
+func end_wait(key: StringName) -> void:
+	if _waits.erase(key):
+		waiting_changed.emit(waiting_text())
+
+
+## A newly linked run: the waits of the run before it end (its retries may go on, but nobody waits on them).
+func _end_run_waits() -> void:
+	var before := _waits.size()
+	for key in _waits.keys():
+		if String(key).contains("/"):
+			_waits.erase(key)
+	if _waits.size() != before:
+		waiting_changed.emit(waiting_text())
+
+
+## The newest wait's text, or "" when the player waits on nothing.
+func waiting_text() -> String:
+	return "" if _waits.is_empty() else str(_waits.values()[-1])
+
+
+## Spec playtest-fixes B10: signed in and the last request got an answer.
+func connected() -> bool:
+	return _token != "" and _answered == true
 
 
 # --- Presence (spec 3.6) ------------------------------------------------------------------------------------------
@@ -517,7 +580,10 @@ func _backoff(error: Dictionary, delay: float) -> void:
 
 
 func _fetch_floor(run: RunController, run_id: String, floor_index: int) -> void:
+	var wait := StringName("floor/%s/%d" % [run_id, floor_index])
+	begin_wait(wait, wait_floor_text)
 	var result := await floor_seed_until_issued(run_id, floor_index)
+	end_wait(wait)
 	if not is_instance_valid(run) or run.state == null or run.state.run_id != run_id:
 		return  # the run was left meanwhile
 	if result["ok"]:
@@ -555,8 +621,10 @@ func _sign_in() -> Dictionary:
 	_signing_in = false
 	if result["ok"]:
 		_token = str(result["data"]["accessToken"])
+		player_id = str(result["data"].get("playerId", ""))
 		bridge.SetToken(_token)
 		_sign_in_error = {}
+		connection_changed.emit()
 	else:
 		_sign_in_error = result["error"]
 	_signed_in.emit()
@@ -573,6 +641,12 @@ func _await(request_id: int) -> Dictionary:
 
 func _on_completed(request_id: int, ok: bool, json: String) -> void:
 	var parsed: Variant = JSON.parse_string(json)
+	var answered := ok or (parsed is Dictionary and int(parsed.get("status", 0)) > 0)
+	if answered != _answered:
+		_answered = answered
+		if _heartbeat != null:
+			_heartbeat.wait_time = heartbeat_seconds if answered else offline_heartbeat_seconds
+		connection_changed.emit()
 	if ok:
 		_results[request_id] = {"ok": true, "data": parsed, "error": {}}
 	else:
