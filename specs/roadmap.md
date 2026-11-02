@@ -25,7 +25,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 2. `run-checkout` | ✅ Done (spec synced; `server-authority` Part A: runs and HMAC floor seeds from the server, the Redis run cache with Postgres fallback (scenario 4), the ruleset version stamped at export, the client's seed source with local mode byte-identical; checked end to end by `tools/e2e.sh`) | 2026-10-27 |
 | 2b. `run-authority` | ✅ Done (spec synced; `server-authority` Part B: bearer dev tokens, the action log uploaded in ordered idempotent batches with checkpoint snapshots and battle sessions, the stairs and win gates, local saves and resume from the save or the server's log, presence and the Lua rate limiter; seven `tools/e2e.sh` scenarios; remaining: a manual windowed playthrough of the demo against the dev server) | 2026-10-27 |
 | 3. `battle-verify` | ✅ Done (server half: contracts, migration 0003, jobs on RabbitMQ, the reconciler, the verifier worker with retry tiers and DLQ, the verdict endpoint, caches, metrics, Grafana panels; Godot half: `server verdict`, `wait verdict`, the e2e worker/tamper steps and five `verify_*` scenarios, the Linux image check (18 goldens identical on Linux and Windows); open items in `specs/battle-verify.md` section 8: a malformed replay request is retried and never rejected (fix planned in slice 4a); a killed worker's lock delay (removal planned in slice 4)) | 2026-11-02 |
-| 4. `settlement-outbox` | ⬜ Not started | |
+| 4. `settlement-outbox` | 📝 Spec reviewed, not started | |
 | 4a. `run-verify` | ⬜ Not started | |
 | 4b. `game-analytics` | ⬜ Not started | |
 | 5. `card-collection` | ⬜ Not started | |
@@ -427,6 +427,10 @@ and emits the floor verdict through the outbox. The `1107` stairs gate (at most 
 the latest *verified* checkpoint, verdicts pushed to the client, anti-cheat events, and the **floor read model** in
 Redis (written when a floor's entry step is verified). Floor N+1 can't be generated ahead of time: its item pools
 depend on what was seen and held on floor N.
+**Also in this slice (decided 2026-11-02): pending gems.** Slice 4 settles completion-mark gems on a verified battle
+while trusting its claimed conditions (`specs/settlement-outbox.md` 8, item 1). 4a adds `wallet_ledger.status`
+(`pending`/`released`/`voided`): slice 4's grants start `pending`, are released when the fan-in aggregator confirms the
+battle's conditions against the run state, and voided (with an event) if the floor is rejected or rolled back.
 **Also in this slice (decided 2026-11-02): reject malformed replay requests.** Today `ReplayRunner` exits 1 for a request
 it refuses (unknown content id, bad schema version, unknown field), the worker retries it five times, dead-letters it, and
 the session stays `Submitted` with no verdict (`specs/battle-verify.md` 8, item 1). Give the runner a distinct exit code
