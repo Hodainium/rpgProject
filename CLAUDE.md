@@ -134,6 +134,10 @@ Each must have a spec and an automated test before the workflow counts as done:
   `client-godot/content/`, `presentation/`, `godot_gas/`), `chore:` (tooling/infra).
 - The user's design folders are protected; see the ownership section in `client-godot/CLAUDE.md`. Never commit unless asked.
 - Slice cycle: `/spec` → `/implement` → commit `feat:` → user tuning → commit `design:` → `/sync-spec` → commit `spec:`.
+- **Branches and pull requests (from 2026-11-02):** never commit or push to `main` directly. Each slice or change gets a
+  branch from an up-to-date `main` (`spec/<slice>`, `feat/<slice>`, `design/<topic>`, `fix/<topic>`), pushed and merged
+  through a pull request whose body says what and why, with the test results. Commit prefixes are unchanged, they just
+  live on the branch. Still commit, push and open or merge a PR only when asked. Never force-push `main`.
 
 ## Build & test
 - `dotnet build` and `dotnet test` from the repo root must pass before touching Godot scenes (`tools/dotnet_test.sh`
