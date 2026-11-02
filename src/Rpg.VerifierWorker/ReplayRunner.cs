@@ -17,7 +17,10 @@ public enum ReplayRunStatus
     TimedOut,
 }
 
-public sealed record ReplayRun(ReplayRunStatus Status, ReplayResult? Result, string Detail);
+/// <summary>What one Godot process cost: its CPU time and its peak working set, sampled while it ran.</summary>
+public sealed record ReplayUsage(TimeSpan CpuTime, long PeakMemoryBytes);
+
+public sealed record ReplayRun(ReplayRunStatus Status, ReplayResult? Result, string Detail, ReplayUsage? Usage = null);
 
 /// <summary>Runs one replay. The real one starts headless Godot; tests use a fake (spec battle-verify 6).</summary>
 public interface IReplayRunner
@@ -59,20 +62,20 @@ public sealed partial class GodotReplayRunner(IOptions<VerifierOptions> options,
                 arguments.AddRange(["--content-root", settings.ContentRoot]);
             }
 
-            var (exitCode, status, detail, _) = await RunWithOutputAsync(arguments, settings.ProcessTimeout, ct);
+            var (exitCode, status, detail, _, usage) = await RunWithOutputAsync(arguments, settings.ProcessTimeout, ct);
             if (status != ReplayRunStatus.Completed)
             {
-                return new ReplayRun(status, null, detail);
+                return new ReplayRun(status, null, detail, usage);
             }
 
             if (exitCode is not (0 or 2))
             {
-                return new ReplayRun(ReplayRunStatus.RunnerError, null, $"godot exited with {exitCode}: {detail}");
+                return new ReplayRun(ReplayRunStatus.RunnerError, null, $"godot exited with {exitCode}: {detail}", usage);
             }
 
             if (!File.Exists(output))
             {
-                return new ReplayRun(ReplayRunStatus.RunnerError, null, $"godot exited with {exitCode} and wrote no result");
+                return new ReplayRun(ReplayRunStatus.RunnerError, null, $"godot exited with {exitCode} and wrote no result", usage);
             }
 
             ReplayResult? result;
@@ -82,14 +85,14 @@ public sealed partial class GodotReplayRunner(IOptions<VerifierOptions> options,
             }
             catch (JsonException ex)
             {
-                return new ReplayRun(ReplayRunStatus.RunnerError, null, $"unreadable result: {ex.Message}");
+                return new ReplayRun(ReplayRunStatus.RunnerError, null, $"unreadable result: {ex.Message}", usage);
             }
 
             var expected = exitCode == 0 ? ReplayVerdict.Verified : ReplayVerdict.Rejected;
             return result is null || result.Verdict != expected
                 ? new ReplayRun(ReplayRunStatus.RunnerError, null,
-                    $"exit code {exitCode} does not match the result's verdict {result?.Verdict}")
-                : new ReplayRun(ReplayRunStatus.Completed, result, "");
+                    $"exit code {exitCode} does not match the result's verdict {result?.Verdict}", usage)
+                : new ReplayRun(ReplayRunStatus.Completed, result, "", usage);
         }
         finally
         {
@@ -107,7 +110,7 @@ public sealed partial class GodotReplayRunner(IOptions<VerifierOptions> options,
     public async Task<string> RulesetVersionAsync(CancellationToken ct)
     {
         var settings = options.Value;
-        var (exitCode, status, detail, stdout) = await RunWithOutputAsync(
+        var (exitCode, status, detail, stdout, _) = await RunWithOutputAsync(
             ["--headless", "--path", settings.ProjectPath, "--quit-after", "3000", RulesetScene],
             TimeSpan.FromSeconds(120), ct);
         var line = stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -125,7 +128,7 @@ public sealed partial class GodotReplayRunner(IOptions<VerifierOptions> options,
     private static partial System.Text.RegularExpressions.Regex VersionLine();
 
     /// <summary>Starts godot, returns its exit code, its output (for messages) and its stdout alone; kills the tree at the timeout.</summary>
-    private async Task<(int ExitCode, ReplayRunStatus Status, string Detail, string Stdout)> RunWithOutputAsync(
+    private async Task<(int ExitCode, ReplayRunStatus Status, string Detail, string Stdout, ReplayUsage? Usage)> RunWithOutputAsync(
         IEnumerable<string> arguments, TimeSpan timeout, CancellationToken ct)
     {
         var info = new ProcessStartInfo(options.Value.GodotPath)
@@ -147,9 +150,11 @@ public sealed partial class GodotReplayRunner(IOptions<VerifierOptions> options,
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
-            return (-1, ReplayRunStatus.RunnerError, $"godot could not start: {ex.Message}", "");
+            return (-1, ReplayRunStatus.RunnerError, $"godot could not start: {ex.Message}", "", null);
         }
 
+        using var sampling = new CancellationTokenSource();
+        var sampler = SampleUsageAsync(process, sampling.Token);
         var output = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
         var errors = process.StandardError.ReadToEndAsync(CancellationToken.None);
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -161,20 +166,60 @@ public sealed partial class GodotReplayRunner(IOptions<VerifierOptions> options,
         catch (OperationCanceledException)
         {
             Kill(process);
+            sampling.Cancel();
+            var killedUsage = await sampler;
             if (ct.IsCancellationRequested)
             {
                 throw;
             }
 
             logger.LogWarning("godot passed the {Timeout} limit and was killed", timeout);
-            return (-1, ReplayRunStatus.TimedOut, $"killed after {timeout}", "");
+            return (-1, ReplayRunStatus.TimedOut, $"killed after {timeout}", "", killedUsage);
         }
 
         // The pipes close with the process; a grandchild keeping them open must not hold the job.
         await Task.WhenAny(Task.WhenAll(output, errors), Task.Delay(TimeSpan.FromSeconds(5), CancellationToken.None));
         var stdout = output.IsCompletedSuccessfully ? output.Result : "";
         var text = stdout + (errors.IsCompletedSuccessfully ? errors.Result : "");
-        return (process.ExitCode, ReplayRunStatus.Completed, text.Trim(), stdout);
+        sampling.Cancel();
+        return (process.ExitCode, ReplayRunStatus.Completed, text.Trim(), stdout, await sampler);
+    }
+
+    /// <summary>
+    /// Polls the godot process every 200 ms and keeps the highest CPU time and working set seen. The OS forgets a process's
+    /// numbers when it exits (Linux at once), so they are taken while it runs: a run can be under-counted by its last
+    /// 200 ms, never over-counted. Null when it ended before the first sample.
+    /// </summary>
+    private static async Task<ReplayUsage?> SampleUsageAsync(Process process, CancellationToken stop)
+    {
+        ReplayUsage? best = null;
+        while (!stop.IsCancellationRequested)
+        {
+            try
+            {
+                process.Refresh();
+                var cpu = process.TotalProcessorTime;
+                var memory = Math.Max(process.PeakWorkingSet64, process.WorkingSet64);
+                best = new ReplayUsage(
+                    best is null ? cpu : TimeSpan.FromTicks(Math.Max(best.CpuTime.Ticks, cpu.Ticks)),
+                    Math.Max(best?.PeakMemoryBytes ?? 0, memory));
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
+            {
+                return best;
+            }
+
+            try
+            {
+                await Task.Delay(200, stop);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+
+        return best;
     }
 
     private static void Kill(Process process)

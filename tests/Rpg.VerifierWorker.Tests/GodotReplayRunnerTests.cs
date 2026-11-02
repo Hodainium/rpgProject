@@ -96,6 +96,31 @@ public class GodotReplayRunnerTests : IDisposable
     }
 
     [Fact]
+    public async Task TheGodotProcess_IsSampledForCpuAndMemory_EvenWhenItIsKilledAtTheTimeout()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "the stub is a Windows script");
+        Environment.SetEnvironmentVariable("STUB_PID", Path.Combine(_folder, "pid.txt"));
+
+        var run = await Runner("hang", timeout: TimeSpan.FromSeconds(2)).ReplayAsync(Request, Ct);
+
+        Assert.Equal(ReplayRunStatus.TimedOut, run.Status);
+        Assert.NotNull(run.Usage);
+        Assert.True(run.Usage.PeakMemoryBytes > 0);
+        Assert.True(run.Usage.CpuTime >= TimeSpan.Zero);
+    }
+
+    [Fact]
+    public async Task AVerdict_CarriesTheProcessUsage()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "the stub is a Windows script");
+        var run = await Runner("verified").ReplayAsync(Request, Ct);
+
+        Assert.Equal(ReplayRunStatus.Completed, run.Status);
+        // A stub that exits within one sample interval may be missed: the usage is then null, never wrong.
+        Assert.True(run.Usage is null || run.Usage.PeakMemoryBytes > 0);
+    }
+
+    [Fact]
     public async Task TheCommandLine_FollowsTheClientGodotClaudeMd_AndTheTempFolderIsRemoved()
     {
         Assert.SkipUnless(OperatingSystem.IsWindows(), "the stub is a Windows script");

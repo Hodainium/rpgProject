@@ -313,6 +313,8 @@ bounded enums only; **never** battle, run, player, character, ability or encount
 | `rpg_verify_jobs_total` | counter | `result` = `verified`\|`rejected`\|`duplicate`\|`retry`\|`dead_lettered`\|`wrong_ruleset`\|`lock_busy` | worker |
 | `rpg_battle_rejections_total` | counter | `reason` = a `MismatchReason` (9 values) | worker |
 | `rpg_verify_replay_duration_seconds` | histogram | `result` = `verified`\|`rejected`\|`error` (Godot process time) | worker |
+| `rpg_verify_godot_cpu_time_seconds` | histogram | `result` (CPU time of one Godot process, polled every 200 ms while it runs, so a run can be under-counted by its last 200 ms) | worker |
+| `rpg_verify_godot_peak_memory_bytes` | histogram | `result` (peak working set of one Godot process) | worker |
 | `rpg_verify_latency_seconds` | histogram | none (submitted → verdict committed; buckets 1 s … 15 min) | worker |
 | `rpg_verify_lock_total` | counter | `result` = `acquired`\|`busy`\|`redis_error` | worker |
 | `rpg_verify_queue_depth` | gauge | `queue` = `verify.battle`\|`retry`\|`dlq` (passive declare, every `Monitors:Interval`) | API |

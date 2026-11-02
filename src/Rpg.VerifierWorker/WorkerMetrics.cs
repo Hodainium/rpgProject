@@ -17,6 +17,8 @@ public sealed class WorkerMetrics
     private readonly Counter<long> _cacheErrors;
     private readonly Histogram<double> _replayDuration;
     private readonly Histogram<double> _latency;
+    private readonly Histogram<double> _godotCpu;
+    private readonly Histogram<double> _godotMemory;
 
     public WorkerMetrics(IMeterFactory meterFactory)
     {
@@ -34,6 +36,28 @@ public sealed class WorkerMetrics
             {
                 HistogramBucketBoundaries = [1, 2, 5, 10, 30, 60, 120, 300, 900],
             });
+        _godotCpu = meter.CreateHistogram<double>("rpg.verify_godot_cpu_time", unit: "s",
+            description: "CPU time (user + system) of one Godot replay process.",
+            advice: new InstrumentAdvice<double> { HistogramBucketBoundaries = [0.5, 1, 2, 5, 10, 20, 40, 60] });
+        _godotMemory = meter.CreateHistogram<double>("rpg.verify_godot_peak_memory", unit: "By",
+            description: "Peak working set of one Godot replay process.",
+            advice: new InstrumentAdvice<double>
+            {
+                HistogramBucketBoundaries = [64e6, 128e6, 256e6, 384e6, 512e6, 768e6, 1024e6, 2048e6],
+            });
+    }
+
+    /// <summary>What one Godot replay cost, by result (verified | rejected | error), when it could be sampled.</summary>
+    public void GodotUsage(string result, ReplayUsage? usage)
+    {
+        if (usage is null)
+        {
+            return;
+        }
+
+        var tag = new KeyValuePair<string, object?>("result", result);
+        _godotCpu.Record(usage.CpuTime.TotalSeconds, tag);
+        _godotMemory.Record(usage.PeakMemoryBytes, tag);
     }
 
     /// <summary>result: verified | rejected | duplicate | retry | dead_lettered | wrong_ruleset | lock_busy.</summary>
