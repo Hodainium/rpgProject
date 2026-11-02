@@ -9,7 +9,7 @@ builder.Services.AddVerifierWorker();
 // The host waits for the running jobs: the consumer's grace period (Verifier:ShutdownGrace) plus a margin.
 builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(90));
 builder.Services.AddOpenTelemetry()
-    .ConfigureResource(r => r.AddService("rpg-verifier-worker"))
+    .ConfigureResource(r => r.AddService("rpg-verifier-worker", serviceInstanceId: Environment.MachineName))
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
         .AddMeter("System.Runtime")

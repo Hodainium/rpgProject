@@ -130,12 +130,15 @@ public sealed class VerifyProcessor(VerdictStore store, VerifierRedis redis, IRe
         var took = Stopwatch.GetElapsedTime(started);
         if (run.Status == ReplayRunStatus.Completed && run.Result is { } result && result.BattleId == job.BattleId)
         {
-            metrics.ReplayDuration(result.Verdict == ReplayVerdict.Verified ? "verified" : "rejected", took);
+            var outcome = result.Verdict == ReplayVerdict.Verified ? "verified" : "rejected";
+            metrics.ReplayDuration(outcome, took);
+            metrics.GodotUsage(outcome, run.Usage);
             activity?.SetTag("rpg.verdict", result.Verdict.ToString());
             return await CommitAsync(job, row, result, ct);
         }
 
         metrics.ReplayDuration("error", took);
+        metrics.GodotUsage("error", run.Usage);
         var detail = run.Result is null ? run.Detail : $"the result is for battle {run.Result.BattleId}";
         logger.LogWarning("Replay of {BattleId} failed: {Status} {Detail}", job.BattleId, run.Status, detail);
         var attempts = await store.RecordAttemptAsync(job.BattleId, ct);
