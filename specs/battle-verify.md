@@ -413,7 +413,9 @@ steps (4a), analytics events (4b), Grafana beyond the verification panels (6), l
 
 ## 8. Open items
 
-1. **A malformed replay request is retried, never rejected. Decision pending.** If the replay runner refuses the request
+1. **A malformed replay request is retried, never rejected. Decided 2026-11-02: fixed in slice 4a (`run-verify`), together
+   with what a rejection means for the run; it changes the combat-replay-core contract once, not twice. Not a reward
+   risk meanwhile: only `Verified` settles.** If the replay runner refuses the request
    itself (an unknown content id, a bad schema version, an unknown field in an action) it exits 1, which is a runner
    error: the worker retries it five times and dead-letters it, and the session stays `Submitted`, so a tampered request
    of that shape never gets a 2002 verdict (acceptance scenario 5 is met for tampering that the replay can simulate). The
