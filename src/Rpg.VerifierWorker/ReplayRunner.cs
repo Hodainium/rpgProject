@@ -186,25 +186,25 @@ public sealed partial class GodotReplayRunner(IOptions<VerifierOptions> options,
     }
 
     /// <summary>
-    /// Polls the godot process every 200 ms and keeps the highest CPU time and working set seen. The OS forgets a process's
-    /// numbers when it exits (Linux at once), so they are taken while it runs: a run can be under-counted by its last
-    /// 200 ms, never over-counted. Null when it ended before the first sample.
+    /// Polls the godot process tree every 200 ms and keeps the highest CPU time and the highest total working set seen (the
+    /// tree, because on Windows the console executable is a wrapper around the engine, see <see cref="ProcessTree"/>). The OS
+    /// forgets a process's numbers when it exits (Linux at once), so they are taken while it runs: a run can be under-counted
+    /// by its last 200 ms, never over-counted. Null when it ended before the first sample.
     /// </summary>
     private static async Task<ReplayUsage?> SampleUsageAsync(Process process, CancellationToken stop)
     {
         ReplayUsage? best = null;
+        var id = process.Id;
         while (!stop.IsCancellationRequested)
         {
-            try
+            var (cpu, memory) = ProcessTree.Total(id);
+            if (memory > 0)
             {
-                process.Refresh();
-                var cpu = process.TotalProcessorTime;
-                var memory = Math.Max(process.PeakWorkingSet64, process.WorkingSet64);
                 best = new ReplayUsage(
                     best is null ? cpu : TimeSpan.FromTicks(Math.Max(best.CpuTime.Ticks, cpu.Ticks)),
                     Math.Max(best?.PeakMemoryBytes ?? 0, memory));
             }
-            catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
+            else if (best is not null)
             {
                 return best;
             }
