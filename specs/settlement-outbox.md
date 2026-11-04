@@ -1,7 +1,7 @@
 # Spec: settlement-outbox (slice 4)
 
-Status: 📝 Reviewed 2026-11-02 (open items 1–3 decided), ready to implement. Builds on `specs/battle-verify.md` (the verdict on `battle_sessions`) and
-`specs/server-authority.md` (runs, the action log). Roadmap entry: "4. `settlement-outbox`". Nothing here is built yet.
+Status: ✅ Implemented and synced 2026-11-03 (commit `f3ec811`); reviewed 2026-11-02 (open items 1–3 decided). Builds on `specs/battle-verify.md` (the verdict on `battle_sessions`) and
+`specs/server-authority.md` (runs, the action log). Roadmap entry: "4. `settlement-outbox`". What is still open is in section 9. The gem amount is replaced by per-boss rules in `specs/economy-rewards.md` (slice 4c, next).
 
 ## 1. Purpose & enterprise mapping
 
@@ -55,8 +55,10 @@ Godot client ── POST /api/v1/runs/{id}/actions (a `battle` action)          
 
 Outbox relay (every Outbox:PollInterval, 250 ms; also woken by Postgres LISTEN/NOTIFY is a later optimisation):
   1. lease:  UPDATE outbox SET leased_until = now() + @lease, attempts = attempts + 1
-             WHERE id IN (SELECT id FROM outbox WHERE published_at IS NULL AND (leased_until IS NULL OR leased_until < now())
-                          AND dead_lettered_at IS NULL ORDER BY id LIMIT @batch FOR UPDATE SKIP LOCKED)
+             WHERE id IN (SELECT c.id FROM outbox c WHERE c.published_at IS NULL AND c.dead_lettered_at IS NULL
+                          AND (c.leased_until IS NULL OR c.leased_until < now())
+                          AND NOT EXISTS (an earlier unpublished, not dead-lettered row with the same destination and key)
+                          ORDER BY c.seq LIMIT @batch FOR UPDATE SKIP LOCKED)
              RETURNING *                                          (short statement; no lock held while publishing)
   2. publish each leased row to its destination with confirm (RabbitMQ publisher confirm, or Kafka idempotent
      producer ack with acks=all), headers: event id, type, traceparent, x-attempt
@@ -65,9 +67,10 @@ Outbox relay (every Outbox:PollInterval, 250 ms; also woken by Postgres LISTEN/N
      failure:  leave unpublished; leased_until = now() + backoff(attempts) (1 s … 60 s); rpg_outbox_publish_total{result=failed}
 ```
 
-Per-key order: rows for one `key` (battleId for jobs, playerId for events) are published in `id` order by a **single
-relay instance per destination partition of the key space** — see 3.4: the relay only leases a row when no
-earlier unpublished row has the same key (`NOT EXISTS`), so a retry never overtakes an older event for the same player.
+Per-key order: rows for one `key` (battleId for jobs, playerId for events) are published in `seq` order: the relay only
+leases a row when no earlier unpublished, not dead-lettered row has the same `(destination, key)` (`NOT EXISTS`, see 3.4),
+so a retry never overtakes an older event for the same player, and any number of relay instances can run. Only the
+earliest row of a key is leased per pass.
 
 ### 2.2 Verdict + settlement in one transaction (the worker)
 
@@ -81,12 +84,15 @@ Verifier worker, a replay finished with exit 0 (Verified) or 2 (Rejected):
         WHERE battle_id = @id AND status = 'Submitted'                                 (as in slice 3)
         rowcount 0 → ROLLBACK, ack as duplicate. Nothing below runs.                  ← the first idempotency gate
     5b. INSERT outbox  BattleVerified | BattleRejected   (destination 'redpanda', key = playerId)
-    5c. if Verified and the verdict's facts say a boss was beaten by a victory (3.1):
-          for each party character in the conditions:
+    5c. if Settlement:Enabled and the gem amount > 0 and the verdict is Verified, the outcome is Victory and the facts name
+        at least one boss beaten (3.1):
+          for each distinct boss in facts.bossIds, for each distinct character in facts.partyCharacterIds:
             INSERT completion_marks (player_id, character_id, boss_id, battle_id) ON CONFLICT DO NOTHING
               rowcount 1 (a first mark) →
                 INSERT wallet_ledger (player_id, currency 'gems', delta, reason 'completion_mark',
-                                      idempotency_key = 'mark:{battleId}:{characterId}')   UNIQUE ← the second gate
+                                      idempotency_key = 'mark:{battleId}:{characterId}:{bossId}')   UNIQUE ← the second gate
+                (the boss id is in the key because a battle can hold more than one boss: without it the second boss's
+                 ledger row of the same character would collide and be skipped silently)
                 UPDATE wallets SET gems = gems + @delta, version = version + 1 WHERE player_id = @p
                 INSERT outbox  RewardGranted  (destination 'redpanda', key = playerId)
   COMMIT
@@ -133,7 +139,7 @@ namespace Rpg.Contracts.Battle;
 /// <summary>What the replay learned from content that C# must not know: computed by the Godot runner, not the worker.</summary>
 public sealed record BattleFacts(
     string EncounterId,
-    IReadOnlyList<string> BossIds,          // enemies of the encounter tagged Enemy.Boss; empty for an ordinary battle
+    IReadOnlyList<string> BossIds,          // Enemy.Boss enemies of the encounter BEATEN; empty unless the party won (a defeat never reads as a boss kill)
     IReadOnlyList<string> PartyCharacterIds);
 
 namespace Rpg.Contracts.Events;
@@ -156,16 +162,18 @@ public static class EventTypes
     public const string RewardGranted  = "RewardGranted";
 }
 
+public static class EventTopics { public const string Battle = "rpg.battle.events"; public const string Economy = "rpg.economy.events"; }
+
 public sealed record BattleVerifiedPayload(string BattleId, int RunSeq, BattleOutcome Outcome, int Turns,
-    string FinalStateHash, string EncounterId);
-public sealed record BattleRejectedPayload(string BattleId, int RunSeq, int ErrorCode /*2002*/, MismatchReason Reason);
+    string FinalStateHash, string? EncounterId);
+public sealed record BattleRejectedPayload(string BattleId, int RunSeq, int ErrorCode /*2002*/, MismatchReason? Reason);
 public sealed record RewardGrantedPayload(string Source /*"completion_mark"*/, string BattleId, string CharacterId,
     string BossId, string Currency /*"gems"*/, int Amount, int BalanceAfter);
 
 namespace Rpg.Contracts.Economy;
 
 public sealed record WalletResponse(int Gems, long Version, IReadOnlyList<LedgerEntryDto> Recent);
-public sealed record LedgerEntryDto(string Currency, int Delta, string Reason, string RefBattleId, DateTimeOffset At);
+public sealed record LedgerEntryDto(string Currency, int Delta, string Reason, string? RefBattleId, DateTimeOffset At);
 ```
 
 `VerifyBattleJob` is unchanged. **The Godot runner learns to emit `Facts`** (additive field of the `ReplayResult`, schema
@@ -194,6 +202,7 @@ CREATE TABLE outbox (
   dead_lettered_at timestamptz,
   dead_letter_reason text);
 CREATE INDEX outbox_unpublished ON outbox (seq) WHERE published_at IS NULL AND dead_lettered_at IS NULL;
+CREATE INDEX outbox_key ON outbox (destination, key, seq) WHERE published_at IS NULL AND dead_lettered_at IS NULL;
 
 CREATE TABLE wallets (
   player_id uuid PRIMARY KEY REFERENCES players,
@@ -208,7 +217,7 @@ CREATE TABLE wallet_ledger (
   delta int NOT NULL CHECK (delta <> 0),
   reason text NOT NULL,
   ref_battle_id text,
-  idempotency_key text NOT NULL UNIQUE,      -- 'mark:{battleId}:{characterId}': the exactly-once key
+  idempotency_key text NOT NULL UNIQUE,      -- 'mark:{battleId}:{characterId}:{bossId}': the exactly-once key
   created_at timestamptz NOT NULL DEFAULT now());
 CREATE INDEX wallet_ledger_player ON wallet_ledger (player_id, id DESC);
 
@@ -219,6 +228,16 @@ CREATE TABLE completion_marks (
   battle_id text NOT NULL REFERENCES battle_sessions,
   granted_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (player_id, character_id, boss_id));     -- a character's first win over a boss pays once, ever
+
+-- the sweeper retires: a session still waiting for a verdict gets its job as an outbox row, unless the old publisher put a
+-- job on the queue lately (enqueued within RepublishAfter, 10 minutes): that one is still queued or being replayed.
+INSERT INTO outbox (id, destination, topic, key, type, payload)
+SELECT gen_random_uuid(), 'rabbit', 'battle', battle_id, 'VerifyBattleJob',
+       jsonb_build_object('battleId', battle_id, 'runId', run_id, 'runSeq', run_seq,
+                          'rulesetVersion', ruleset_version, 'submittedAt', to_jsonb(submitted_at))
+FROM battle_sessions
+WHERE status = 'Submitted' AND dead_lettered_at IS NULL
+  AND (enqueued_at IS NULL OR enqueued_at < now() - interval '10 minutes');
 
 -- the sweeper's columns go: enqueued_at has no reader any more
 ALTER TABLE battle_sessions DROP COLUMN enqueued_at;
@@ -250,6 +269,10 @@ key (acceptable: keys are per player). `Outbox:BatchSize` (50), `Outbox:Lease` (
 A permanent error dead-letters a row at once; after `Outbox:MaxAttempts` (20 for Redpanda, 0 = unlimited for rabbit) a transiently failing row is dead-lettered with a reason and an alert
 metric; a human requeues with `UPDATE outbox SET dead_lettered_at = NULL, attempts = 0`.
 
+Also built: a destination's pass ends after **3 consecutive transient failures** (a breaker, so one broken destination or
+key cannot hold the others up); the Kafka producer is rebuilt after a fatal error; a failure to write `published_at` after
+a successful publish is only logged (never counted as a failed publish: the row is simply published again, at-least-once).
+
 ### 3.5 Redis
 
 | Key | Value | TTL | Semantics |
@@ -269,32 +292,34 @@ No new `ApiErrors`. Settlement is invisible to the upload path.
 
 ### 3.7 Configuration
 
-API: `Outbox:PollInterval` (250 ms), `BatchSize` (50), `Lease` (30 s), `MaxAttempts` (20), `Enabled` (tests can pause the
-relay), `Kafka:BootstrapServers` (`localhost:19092`). `Settlement:GemsPerBossMark` (default 10; an economy number, not a
-combat number, so it is a plain whole number and **not** ×100). Worker: `Settlement:Enabled` (default true). Removed:
+API: `Outbox:PollInterval` (250 ms), `BatchSize` (50), `Lease` (30 s), `MaxAttempts` (20), `BackoffBase` (1 s), `BackoffCap` (60 s),
+`KafkaMessageTimeout` (10 s), `Enabled` (tests can pause the relay), `Kafka:BootstrapServers` (`localhost:19092`). Worker:
+`Settlement:Enabled` (default true) and `Settlement:GemsPerBossMark` (default 10; an economy number, not a combat number, so
+a plain whole number and **not** ×100), both on the **worker** because only the worker grants. `specs/economy-rewards.md`
+replaces `GemsPerBossMark` with per-boss rules. Removed:
 `Verifier:SweepInterval/SweepGrace/RepublishAfter/SweepBatch`, `Verifier:UseLock`, `Verifier:LockTtl`.
 
 ## 4. Failure modes
 
 | # | Failure | Behaviour | Test |
 |---|---|---|---|
-| F1 | The same job twice (redelivery, duplicate publish) | 5a updates zero rows; one verdict, one settlement, one event. **Scenario 1** | `SameJobTwice_OneVerdict_OneSettlement` |
+| F1 | The same job twice (redelivery, duplicate publish) | 5a updates zero rows; one verdict, one settlement, one event. **Scenario 1** | `SameJobTwice_OneSettlement` |
 | F2 | Worker killed after the commit, before the ack | Redelivery finds `status ≠ Submitted` and acks; the ledger has one row per mark. **Scenario 2** | `CrashAfterTheCommit_RedeliveryGrantsNothingTwice`, `ADeliveryTheFirstWorkerNeverAcked_IsRedeliveredAndFoundDone` (real broker) |
 | F3 | Worker killed before the commit | Nothing changed (one transaction), job redelivered, settlement happens once | `CrashBeforeTheCommit_LeavesNoVerdictNoLedgerNoOutbox` |
 | F4 | Two workers, same battle, same moment | The guarded update lets one transaction win; the loser rolls back with zero side effects | `ConcurrentWorkers_OneSettlement` |
-| F5 | The 5a guard is bypassed (a bug, a manual SQL) | `completion_marks` PK and `wallet_ledger.idempotency_key` UNIQUE refuse the second grant | `LedgerKey_AndMarkKey_RefuseADoubleGrant_EvenWithoutTheStatusGuard` |
-| F6 | A Rejected verdict | Outbox `BattleRejected` only; no mark, no ledger, no wallet change | `Rejected_SettlesNothing_PublishesBattleRejected` |
-| F7 | A verified battle with no boss or a defeat | `BattleVerified` event, no settlement | `VerifiedWithoutABossVictory_GrantsNothing` |
+| F5 | The 5a guard is bypassed (a bug, a manual SQL) | `completion_marks` PK and `wallet_ledger.idempotency_key` UNIQUE refuse the second grant | `TheLedgerKey_AndTheMarkKey_RefuseADoubleGrant_EvenWithoutTheStatusGuard` |
+| F6 | A Rejected verdict | Outbox `BattleRejected` only; no mark, no ledger, no wallet change | `ARejection_SettlesNothing_AndPublishesBattleRejected` |
+| F7 | A verified battle with no boss or a defeat | `BattleVerified` event, no settlement | `AVerifiedBattleWithoutABossVictory_GrantsNothing` |
 | F8 | A character already holds the mark for that boss | `ON CONFLICT DO NOTHING`: no gems, no `RewardGranted` | `SecondWinOverTheSameBoss_PaysNothing` |
 | F9 | **Redpanda down** | Rows stay unpublished with backoff; gauges grow; on recovery all drain in per-key order, none lost, none reordered for a player. **Scenario 3** | `RedpandaDown_RowsDrainInOrderWhenItReturns` (Testcontainers, stop/start), e2e `outbox_redpanda_down` |
-| F10 | RabbitMQ down at upload | The upload succeeds (the row is committed); the relay publishes the job when the broker returns; no sweeper needed | `Upload_BrokerDown_StillStores_AndTheRelayPublishesLater` |
+| F10 | RabbitMQ down at upload | The upload succeeds (the row is committed); the relay publishes the job when the broker returns; no sweeper needed | `Upload_BrokerDown_StillStores_AndTheRowWaitsInTheOutbox` (the relay publishing it later is the relay tests above) |
 | F11 | The API crashes between publish-ack and `published_at` | The row is published again: duplicate job (F1 handles it) or duplicate event (consumers dedupe on `EventId`) | `RelayCrashAfterPublish_PublishesAgain_WithTheSameEventId` |
 | F12 | Two relay instances | `FOR UPDATE SKIP LOCKED` plus the lease: never the same row at once; the per-key rule keeps order | `TwoRelays_NeverPublishTheSameRowAtOnce_AndKeepKeyOrder` |
 | F13 | Poison row | A permanent error (cannot serialise, unknown topic) is dead-lettered on the first attempt; a transient one retries to `MaxAttempts` first (8.3). Counted; rows of other keys flow throughout | `APoisonRow_IsDeadLettered_AndOtherKeysKeepFlowing` |
 | F14 | Postgres down at verdict time | Nothing decided; retry tier 30 s without an attempt (as slice 3) | slice 3's `PostgresDown_PostponesWithoutCountingAnAttempt`, still green |
-| F15 | Redis flushed or down | Settlement unaffected (Postgres only); the wallet is read from Postgres. **Scenario 4** | `GetWallet_RedisFlushed_IsServedFromPostgres`, `RedisDown_StillSettles` |
+| F15 | Redis flushed or down | Settlement unaffected (Postgres only); the wallet is read from Postgres. **Scenario 4** | `GetWallet_RedisFlushed_IsServedFromPostgres`, `RedisDown_StillSettles_AndCountsTheErrors` |
 | F16 | Cache write or `DEL wallet` fails after the commit | Best effort; the 60 s TTL bounds staleness; never changes the decision | `AFailureAfterTheCommit_NeverChangesTheDecision` (extended) |
-| F17 | Tampered log | Slice 3 behaviour plus F6: **Scenario 5** | slice 3's tests, e2e `verify_tampered` extended to assert an empty ledger |
+| F17 | Tampered log | Slice 3 behaviour plus F6: **Scenario 5** | slice 3's tests, e2e `verify_tampered` extended to assert no ledger row and no mark for the rejected battle (the run's other battles may legitimately pay) |
 | F18 | Lost upload job (old sweeper case) | Cannot happen: the job row commits with the upload | `UploadAndOutboxRow_AreOneTransaction` (a forced failure rolls both back) |
 
 **Idempotency summary:** the unit of exactly-once is the **Postgres transaction** guarded by
@@ -315,12 +340,11 @@ Names follow the `rpg_*` convention. Labels are bounded enums only; **never** ba
 | `rpg_settlements_total` | counter | `result` = `granted`\|`no_reward`\|`already_marked`\|`rejected` | worker |
 | `rpg_gems_granted_total` | counter | `reason` = `completion_mark` | worker |
 | `rpg_wallet_reads_total` | counter | `source` = `redis`\|`postgres` | API |
-| `rpg_cache_reads_total` / `rpg_cache_errors_total` | counters | existing; new `entity` value `wallet` | API |
 
 Removed with the sweeper and the lock: `rpg_verify_jobs_published_total` (replaced by `rpg_outbox_published_total{type=VerifyBattleJob}`),
 `rpg_verify_lock_total`, and the `lock_busy` value of `rpg_verify_jobs_total`. The "Battle verification" Grafana
-dashboard is updated, and an **"Outbox & settlement"** row is added (lag, pending, publish results, settlements, gems
-granted). Traces: the upload span's `traceparent` is stored on the outbox row, continues through the relay's publish span
+dashboard is updated with panels 12–15 (outbox lag, pending and dead-lettered, publishes, settlements and gems
+granted). **Traces (not built yet, section 9):** the upload span's `traceparent` is stored on the outbox row, continues through the relay's publish span
 and the worker's `verify.battle` span, and the settlement transaction span; the event row stores the worker's
 `traceparent`, so an event links back to the replay that caused it. Logs carry `eventId`, `battleId`, `runId` as fields.
 
@@ -344,7 +368,8 @@ and the worker's `verify.battle` span, and the settlement transaction span; the 
 - Every row F1–F8 and F14–F16, including the real-broker redelivery after an unacked commit (**scenario 2**).
 - Property-style test: N random interleavings of duplicate and concurrent jobs always end with
   `wallets.gems = SUM(ledger.delta) = marks × GemsPerBossMark` and exactly one outbox row per fact.
-- The lock is gone: no Redis call on the happy path; a worker with Redis down is unaffected.
+- The lock is gone: Redis never decides anything (the worker's verdict-cache writes and the wallet `DEL` are best effort); a
+  worker with Redis down is unaffected.
 
 **Real Godot, golden vectors.**
 - Godot suite: the replay runner emits `Facts` for the committed boss and non-boss goldens (encounter id, boss ids,
@@ -357,6 +382,11 @@ and the worker's `verify.battle` span, and the settlement transaction span; the 
   exactly one settlement, and the job no longer waits two minutes: runtime drops to ~15 s); existing `verify_*` scenarios
   still pass with the relay carrying the jobs.
 - `tools/verifier_image_check.sh` (on demand): the Linux image emits the same `Facts` for the goldens.
+
+**Also built (not in the first plan):** facts for a lost boss battle and for two bosses of one encounter (`test_battle_facts`),
+the console `server wallet` and `wait gems` tests, the monitor and backfill tests, the real Kafka sink tests, and in the
+e2e harness `redpanda-check` (reads both topics back with `rpk` and finds every published event id) and a restart-time
+assertion in `outbox_redpanda_down` (every Redpanda row published after the broker returned).
 
 **Done when:** `dotnet build` and `dotnet test` pass, `tools/godot_tests.sh` passes, the e2e scenarios (old and new) and the
 image check pass, and acceptance scenarios 2, 3, 1, 4 and 5 each have their named test.
@@ -371,6 +401,8 @@ image check pass, and acceptance scenarios 2, 3, 1, 4 and 5 each have their name
 3. **Settlement inside the worker's verdict transaction** (not a second queue and consumer), so the verdict and the money
    cannot disagree. The roadmap's "settlement + outbox row in one transaction, then ack" is exactly this.
 4. **What a battle pays is decided in Godot** (`BattleFacts`), never in C#; C# only multiplies by a configured gem amount.
+   *Superseded for the amount (2026-11-03):* per-boss rules in a server-owned table (`specs/economy-rewards.md`); Godot still
+   reports facts only.
 5. **Only completion marks for boss victories** settle in this slice: a character's first verified boss win pays once,
    ever. Run-win marks, item/card rewards and spending come with 4a, 5 and 5b.
 6. **Gems only**, one wallet row and an append-only ledger: enough to prove exactly-once effects without inventing a
@@ -406,6 +438,22 @@ for the demo); Debezium CDC; DB-level append-only enforcement of the ledger.
    it out of order, so consumers dedupe on `EventId` and order by `OccurredAt`, not arrival (4b's rule). Test:
    `APermanentlyBadRow_IsDeadLetteredAtOnce_AndTheKeysNextRowFlows`, next to F13.
 4. **Migration drops `enqueued_at`** (the sweeper's lease). A deployment with in-flight sessions needs the upload outbox
-   row backfilled for `Submitted` sessions that were never enqueued; the migration does that backfill in SQL.
+   row backfilled for `Submitted` sessions that were never enqueued; the migration does that backfill in SQL (skipping sessions enqueued within the last 10 minutes, the old republish window, so a job already on the queue is not doubled).
 5. **Gem amount is flat** (`GemsPerBossMark`); a per-boss table is design work (`design:` territory) and not needed to prove
-   the mechanism.
+   the mechanism. *Superseded 2026-11-03 by `specs/economy-rewards.md` (slice 4c).*
+
+## 9. Remaining work after the sync (2026-11-03)
+
+Not built, kept in this spec on purpose:
+1. **Trace continuity through the outbox (section 5). Moved to slice 4c (`specs/economy-rewards.md` 3.8, decided 2026-11-03).** Nothing writes `outbox.traceparent` yet: the upload and the worker
+   insert rows without it, so the relay's publish span has no parent and the Kafka `traceparent` header is empty. To do:
+   store the current activity's `traceparent` when a row is inserted (`OutboxMessage`), keep the relay's read of it.
+2. **Pending gems and run-level verification** (8.1) belong to slice 4a.
+3. **`LISTEN/NOTIFY` relay wake-up** (7.2): a later optimisation.
+4. **Outbox retention:** published and dead-lettered rows are never purged.
+5. **Known review items, accepted for now:** a reader can refill the wallet cache with a stale balance for up to 60 s after a
+   grant; Redpanda events go out at about one per player per pass (per-key order); the 30 s lease is shorter than a worst-case
+   slow batch (a duplicate publish, deduped on `EventId`); a dead-lettered RabbitMQ row leaves its session `Submitted`; the
+   relay polls every 250 ms when idle; a permanent SQL error inside a grant rolls the verdict back with it (deliberate: the
+   verdict and the money are one transaction).
+6. **Per-boss rewards and the economy boundary:** slice 4c, `specs/economy-rewards.md`.

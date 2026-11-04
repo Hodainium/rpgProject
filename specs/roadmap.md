@@ -25,7 +25,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 2. `run-checkout` | ✅ Done (spec synced; `server-authority` Part A: runs and HMAC floor seeds from the server, the Redis run cache with Postgres fallback (scenario 4), the ruleset version stamped at export, the client's seed source with local mode byte-identical; checked end to end by `tools/e2e.sh`) | 2026-10-27 |
 | 2b. `run-authority` | ✅ Done (spec synced; `server-authority` Part B: bearer dev tokens, the action log uploaded in ordered idempotent batches with checkpoint snapshots and battle sessions, the stairs and win gates, local saves and resume from the save or the server's log, presence and the Lua rate limiter; seven `tools/e2e.sh` scenarios; remaining: a manual windowed playthrough of the demo against the dev server) | 2026-10-27 |
 | 3. `battle-verify` | ✅ Done (server half: contracts, migration 0003, jobs on RabbitMQ, the reconciler, the verifier worker with retry tiers and DLQ, the verdict endpoint, caches, metrics, Grafana panels; Godot half: `server verdict`, `wait verdict`, the e2e worker/tamper steps and five `verify_*` scenarios, the Linux image check (18 goldens identical on Linux and Windows); open items in `specs/battle-verify.md` section 8: a malformed replay request is retried and never rejected (fix planned in slice 4a); a killed worker's lock delay (removal planned in slice 4)) | 2026-11-02 |
-| 4. `settlement-outbox` | 📝 Spec reviewed, not started | |
+| 4. `settlement-outbox` | ✅ Done (spec synced; one outbox for RabbitMQ jobs and Redpanda events with a relay, exactly-once boss settlement in the verdict transaction behind three gates, the wallet and `GET /wallet`, `BattleFacts` from the Godot replay, `lock:battle` and the sweeper removed; 257 .NET, 539 Godot, 14 e2e scenarios; open: trace continuity through the outbox, retention, pending gems in 4a) | 2026-11-03 |
+| 4c. `economy-rewards` | ⏭️ Next, spec written (`specs/economy-rewards.md`): per-boss reward rules in a server-owned table, the economy boundary (Godot run inventory vs account economy), admin endpoint and console command, and trace continuity through the outbox | |
 | 4a. `run-verify` | ⬜ Not started | |
 | 4b. `game-analytics` | ⬜ Not started | |
 | 5. `card-collection` | ⬜ Not started | |
@@ -148,6 +149,15 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-10-27: 2b `run-authority` done and synced (`f254fad`): Part B as specified, plus the decisions made while
   building (spec `server-authority` decision 17). At the user's request, the seed field and run-end line in server
   mode (the dev-tools remaining-work item).
+- 2026-11-03: 4 `settlement-outbox` done and synced (`f3ec811`). Built differently from the spec: the settlement config sits on
+  the worker, the ledger key includes the boss id (a battle can hold two bosses), the migration backfills only sessions
+  not enqueued in the last 10 minutes, the relay has a failure breaker; trace continuity through the outbox is not built
+  yet (spec section 9). At the user's request.
+- 2026-11-03: Added slice 4c `economy-rewards` as the immediate next slice, before 4a, at the user's request: gem rewards
+  become per-boss rows in a versioned, server-owned table (not content, not configuration), so retuning never changes the
+  ruleset version; and the economy boundary is recorded: the run's inventory stays in Godot, the account economy
+  (currencies, the ledger and, from slice 5, card ownership) lives in Postgres in one module, with Godot reporting facts
+  and never value. Replaces slice 4's flat `Settlement:GemsPerBossMark`.
 
 
 ## Design tuning: any time, not just in breaks
@@ -415,6 +425,13 @@ Redis: **verdict cache** for result polling (written after the commit) and **wor
 Reward settlement + outbox row in one Postgres transaction, then ack; unique constraint makes redelivery a no-op.
 **Also in this slice (decided 2026-11-01): remove the `lock:battle:{id}` dedup lock that slice 3 added, or cut its TTL heavily.** A killed worker's lock outlives it for up to `LockTtl` (120 s), so its job waits about 2 minutes for a replacement worker (`specs/battle-verify.md` 8, item 2); correctness never depends on the lock, so it can go.
 Outbox relay → Redpanda. **Scenario 2** (killed before ack), **scenario 3** (Redpanda down).
+
+### 4c. `economy-rewards`
+**Purpose:** per-boss gem rewards from a server-owned, versioned `reward_rules` table, an admin endpoint and a console
+command to set them, the ledger recording the rule version, and the account-economy boundary that slice 5's cards plug
+into. Also carries the open item from slice 4: every outbox row stores the `traceparent` of its writer, so one trace follows a
+battle from the upload through the relay and the worker to the event. Spec: `specs/economy-rewards.md`. Built before 4a;
+needs slice 4 committed first.
 
 ### 4a. `run-verify`
 **Purpose:** verify whole floors in parallel and keep the client within one floor of the server
