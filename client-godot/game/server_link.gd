@@ -189,6 +189,11 @@ func get_battle(run_id: String, seq: int) -> Dictionary:
 	return await _request("GetBattle", [run_id, seq])
 
 
+## GET /api/v1/wallet (spec settlement-outbox): data = WalletResponse {gems, version, recent}.
+func get_wallet() -> Dictionary:
+	return await _request("GetWallet", [])
+
+
 ## Spec battle-verify 2.2: the verifier's verdict on the battles of `run` (all of them, or the one at wire seq
 ## `only_seq`). A run_log entry is one wire action, so a battle's seq is its index + 1. Each entry:
 ## {"seq", "battleId", "status" ("Submitted", "Verified", "Rejected" or "" when the read failed), "verdict" (the
@@ -208,6 +213,14 @@ func battle_verdicts(run: RunController, only_seq: int = -1) -> Array[Dictionary
 			found.append({"seq": index + 1, "battleId": str(entry.get("battleId", "")), "status": "", "verdict": {},
 				"error": describe(answer["error"])})
 	return found
+
+
+static func describe_wallet(wallet: Dictionary) -> String:
+	var lines := PackedStringArray(["gems %d (version %d)" % [int(wallet.get("gems", 0)), int(wallet.get("version", 0))]])
+	for entry in wallet.get("recent", []):
+		lines.append("  %+d %s %s%s" % [int(entry.get("delta", 0)), entry.get("currency", "?"), entry.get("reason", "?"),
+			" (battle %s)" % entry["refBattleId"] if entry.get("refBattleId") != null else ""])
+	return "\n".join(lines)
 
 
 ## One line for a battle_verdicts entry, e.g. "seq 4 (run/f0/c5): Rejected 2002 ReplayMismatch FinalHashMismatch at turn 3".

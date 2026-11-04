@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using Rpg.Contracts.Api.V1;
 using Rpg.Contracts.Auth;
 using Rpg.Contracts.Battle;
+using Rpg.Contracts.Economy;
 using Rpg.Contracts.Presence;
 using Rpg.Contracts.Runs;
 using Rpg.Contracts.Serialization;
@@ -66,6 +67,10 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
     public Task<BattleSessionResponse> GetBattleAsync(string runId, int seq, CancellationToken ct = default) =>
         RequiredAsync<BattleSessionResponse>(HttpMethod.Get,
             $"api/v1/runs/{Uri.EscapeDataString(runId)}/battles/{seq}", null, ct);
+
+    /// <summary>GET /api/v1/wallet (spec settlement-outbox 2.4): the player's gems and recent ledger rows.</summary>
+    public Task<WalletResponse> GetWalletAsync(CancellationToken ct = default) =>
+        RequiredAsync<WalletResponse>(HttpMethod.Get, "api/v1/wallet", null, ct);
 
     /// <summary>POST /api/v1/presence: the heartbeat (204).</summary>
     public Task HeartbeatAsync(PresenceRequest request, CancellationToken ct = default) =>

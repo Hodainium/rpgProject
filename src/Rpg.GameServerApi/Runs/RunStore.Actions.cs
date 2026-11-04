@@ -14,13 +14,11 @@ public enum AppendOutcome { Stored, NotFound, NotActive, Gap, Conflict }
 /// <param name="LastSeq">The run's last stored seq afterwards (unchanged when nothing was stored).</param>
 /// <param name="ExpectedSeq"><see cref="AppendOutcome.Gap"/>: the seq the server needs next.</param>
 /// <param name="Counted">(type, result) per action looked at, for <c>rpg_run_actions_total</c>.</param>
-/// <param name="Jobs">One verify job per battle session written (spec battle-verify 2.1).</param>
+/// <param name="Battles">Battle sessions written; each also wrote its verify job to the outbox in the same transaction
+/// (spec settlement-outbox 2.1).</param>
 /// <param name="Ended">An <c>end</c> action was stored: the run is Lost.</param>
 public sealed record AppendResult(AppendOutcome Outcome, int LastSeq, IReadOnlyList<(string Type, string Result)> Counted,
-    int ExpectedSeq = 0, IReadOnlyList<VerifyBattleJob>? Jobs = null, bool Ended = false)
-{
-    public IReadOnlyList<VerifyBattleJob> NewJobs => Jobs ?? [];
-}
+    int ExpectedSeq = 0, int Battles = 0, bool Ended = false);
 
 public enum EndOutcome { Ended, Repeated, NotFound, NotActive, UploadIncomplete, Conflict }
 
@@ -61,7 +59,7 @@ public sealed partial class RunStore
         var counted = new List<(string Type, string Result)>();
         var lastSeq = run.LastSeq;
         var status = run.Status;
-        var jobs = new List<VerifyBattleJob>();
+        var battles = 0;
         foreach (var action in actions)
         {
             var type = action.Action.Type;
@@ -108,7 +106,11 @@ public sealed partial class RunStore
                     return new AppendResult(AppendOutcome.Conflict, run.LastSeq, [.. counted, (type, "conflict")]);
                 }
 
-                jobs.Add(new VerifyBattleJob(battle.BattleId, runId, action.Seq, run.Ruleset, now));
+                var job = new VerifyBattleJob(battle.BattleId, runId, action.Seq, run.Ruleset, now);
+                await OutboxWriter.InsertAsync(connection, transaction,
+                    new OutboxMessage(Guid.NewGuid(), OutboxDestination.Rabbit, VerifyTopology.RoutingKey, battle.BattleId,
+                        nameof(VerifyBattleJob), JsonSerializer.Serialize(job, RpgJson.Options)), ct);
+                battles++;
             }
 
             counted.Add((type, "accepted"));
@@ -128,7 +130,7 @@ public sealed partial class RunStore
             await transaction.CommitAsync(ct);
         }
 
-        return new AppendResult(AppendOutcome.Stored, lastSeq, counted, Jobs: jobs, Ended: ended);
+        return new AppendResult(AppendOutcome.Stored, lastSeq, counted, Battles: battles, Ended: ended);
     }
 
     /// <summary>

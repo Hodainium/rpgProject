@@ -10,7 +10,11 @@
 # then dev_run.tscn --server --player e2e-<scenario> --control <folder>, then the scenario's .sql (every line returns t),
 # .metrics (every line is a regex the final server /metrics scrape matches) and .worker-metrics (the same for the verifier
 # worker's /metrics). Fault steps (`e2e <action>` in a script) reach the control loop here: server-stop, server-start,
-# redis-flush, worker-start, worker-stop (a kill), tamper-battle (spec battle-verify 6). A "#! worker" line starts the
+# redis-flush, worker-start, worker-stop (a kill), tamper-battle (spec battle-verify 6), redpanda-stop and
+# redpanda-start (spec settlement-outbox 6: the shared Redpanda container is stopped, and started again once the outbox of
+# the scenario has drained; run such a scenario alone, other scenarios share the broker), redpanda-check (every outbox row
+# of the scenario marked published is on the topics: the topics are read from the start for 6 s each and the event ids
+# looked up). A "#! worker" line starts the
 # verifier worker (the real headless Godot per job, on the fixtures content) with the server; without it a scenario
 # starts the worker itself with `e2e worker-start`. A "#! content real" line runs the game and the worker on the real
 # res://content/ instead of the fixtures (the worker may load the content folders at any time).
@@ -63,6 +67,9 @@ validate() {  # <scenario>
 	fi
 }
 for name in "${picked[@]}"; do validate "$name"; done
+if (( ! check )) && [[ " ${picked[*]} " == *" outbox_redpanda_down "* ]] && (( ${#picked[@]} > 1 )); then
+	echo "e2e.sh: outbox_redpanda_down stops the shared Redpanda: run it alone"; problems=$((problems + 1))
+fi
 for tool in "$godot" dotnet docker curl; do
 	command -v "$tool" > /dev/null 2>&1 || [[ -x $tool ]] || { echo "e2e.sh: $tool not found"; problems=$((problems + 1)); }
 done
@@ -147,7 +154,8 @@ run_scenario() {  # <name> <index 1-15>
 		"ConnectionStrings__Redis=127.0.0.1:6379,abortConnect=false,defaultDatabase=$index"
 		"RabbitMq__Uri=amqp://$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS@127.0.0.1:5672/$vhost"
 		"Urls=http://127.0.0.1:$wport" "Verifier__GodotPath=$(win "$godot")" "Verifier__ProjectPath=$(win "$root/client-godot")"
-		"Verifier__ContentRoot=$content_root" "Verifier__RulesetVersion=$ruleset" Verifier__Concurrency=2)
+		"Verifier__ContentRoot=$content_root" "Verifier__RulesetVersion=$ruleset" Verifier__Concurrency=2
+		Settlement__Enabled=true Settlement__GemsPerBossMark=10)
 	start_worker() {
 		(cd "$worker_dir" && exec env "${worker_env[@]}" dotnet Rpg.VerifierWorker.dll >> "$dir/worker.log" 2>&1) &
 		echo $! > "$worker_pid_file"
@@ -190,6 +198,37 @@ run_scenario() {  # <name> <index 1-15>
 							tries=$((tries + 1)); sleep 0.25
 						done
 						if (( ${unacked:-0} >= 1 )); then stop_worker; else answer="no job was in flight to interrupt"; fi ;;
+					redpanda-stop) : > "$dir/redpanda-stopped"; "${compose[@]}" stop redpanda > /dev/null 2>&1 || answer="redpanda did not stop" ;;
+					redpanda-start)  # up again, then wait until this scenario's outbox has drained into it
+						# the moment before the broker returns, kept in the scenario's database for its .sql to compare with
+						psql -d "$db" -c "CREATE TABLE IF NOT EXISTS e2e_marks (name text PRIMARY KEY, at timestamptz NOT NULL); INSERT INTO e2e_marks VALUES ('redpanda-start', clock_timestamp()) ON CONFLICT (name) DO UPDATE SET at = excluded.at" > /dev/null 2>&1 || answer="could not record the restart time"
+						"${compose[@]}" start redpanda > /dev/null 2>&1 || answer="redpanda did not start"
+						if [[ $answer == ok ]]; then
+							local drained=0 tries=0 left
+							while (( tries < 240 )); do
+								left=$(psql -d "$db" -c "SELECT count(*) FROM outbox WHERE destination = 'redpanda' AND published_at IS NULL" 2>/dev/null | tr -d '')
+								[[ $left == 0 ]] && { drained=1; break; }
+								tries=$((tries + 1)); sleep 0.5
+							done
+							(( drained )) || answer="the outbox did not drain (${left:-?} redpanda rows left)"
+						fi ;;
+					redpanda-check)  # read the topics back: every published event of this scenario's outbox must be on them
+						local want=0 tries=0 left ids dump missing=0 id
+						while (( tries < 60 )); do  # the relay may still be sending the last rows
+							left=$(psql -d "$db" -c "SELECT count(*) FROM outbox WHERE destination = 'redpanda' AND published_at IS NULL" 2>/dev/null | tr -d '')
+							[[ $left == 0 ]] && break
+							tries=$((tries + 1)); sleep 0.5
+						done
+						ids=$(psql -d "$db" -c "SELECT id FROM outbox WHERE destination = 'redpanda' AND published_at IS NOT NULL" 2>/dev/null | tr -d '')
+						dump=$(for topic in rpg.battle.events rpg.economy.events; do
+							"${compose[@]}" exec -T redpanda timeout 6 rpk topic consume "$topic" -o start -f '%v
+' < /dev/null 2>/dev/null
+						done)
+						for id in $ids; do want=$((want + 1)); grep -q "$id" <<< "$dump" || missing=$((missing + 1)); done
+						if [[ $left != 0 ]]; then answer="${left:-?} redpanda rows were still unpublished"
+						elif (( want == 0 )); then answer="no published events to read back"
+						elif (( missing > 0 )); then answer="$missing of $want published events are not on the topics"
+						fi ;;
 					tamper-battle)  # the first battle's claimed final hash is replaced, as a cheating client would
 						[[ $(psql -d "$db" -c "UPDATE battle_sessions SET action_log = jsonb_set(action_log, '{claimedFinalHash}', to_jsonb(repeat('0', 64))) WHERE run_seq = (SELECT min(run_seq) FROM battle_sessions) RETURNING 1" 2>&1 | head -1 | tr -d '\r') == 1 ]] \
 							|| answer="no battle to tamper with" ;;
@@ -250,6 +289,7 @@ run_scenario() {  # <name> <index 1-15>
 		[[ -n $loop_pid ]] && kill "$loop_pid" 2>/dev/null
 		stop_worker
 		stop_server
+		[[ -f $dir/redpanda-stopped ]] && "${compose[@]}" start redpanda > /dev/null 2>&1  # never leave the shared broker down
 		if (( ! keep )); then psql -c "DROP DATABASE IF EXISTS $db WITH (FORCE)" > /dev/null 2>&1; fi
 		redis -n "$index" FLUSHDB > /dev/null 2>&1
 		rabbit delete_vhost "$vhost" > /dev/null 2>&1

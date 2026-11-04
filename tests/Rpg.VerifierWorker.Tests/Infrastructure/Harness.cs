@@ -56,9 +56,10 @@ public sealed class FakeReplayRunner : IReplayRunner
         return document.RootElement.GetProperty("snapshot").GetProperty("battleId").GetString()!;
     }
 
-    public static ReplayRun Verified(string battleId) => new(ReplayRunStatus.Completed,
-        new ReplayResult(1, battleId, ReplayVerdict.Verified, null, null, null, BattleOutcome.Victory, 12,
-            new string('c', 64), "fake-engine"), "");
+    public static ReplayRun Verified(string battleId, BattleFacts? facts = null, BattleOutcome outcome = BattleOutcome.Victory) =>
+        new(ReplayRunStatus.Completed,
+            new ReplayResult(1, battleId, ReplayVerdict.Verified, null, null, null, outcome, 12,
+                new string('c', 64), "fake-engine", facts), "");
 
     public static ReplayRun Rejected(string battleId, MismatchReason reason = MismatchReason.FinalHashMismatch) => new(
         ReplayRunStatus.Completed,
@@ -139,22 +140,24 @@ public sealed class WorkerHarness : IAsyncDisposable
     }
 
     /// <summary>One run owned by a new player, with a Submitted battle at seq 2.</summary>
-    public async Task<SeededBattle> SeedAsync(string? ruleset = null, string status = "Submitted")
+    public async Task<SeededBattle> SeedAsync(string? ruleset = null, string status = "Submitted", Guid? player = null,
+        string runStatus = "Active")
     {
         ruleset ??= FakeReplayRunner.Version;
         var runId = Guid.NewGuid();
-        var playerId = Guid.NewGuid();
+        var playerId = player ?? Guid.NewGuid();
         var battleId = $"{runId:D}/f0/c5";
         var conditions = new BattleSnapshot(2, battleId, "1234567890123", "fixture.encounter.duel",
             [new PartyMemberSnapshot(1, "fixture.character.duelist", 1, Hp: 50000)], ScalingId: "fixture.scaling", Depth: 0);
         var log = new ActionLog(2, [new ActionEntry(1, "P1", "Ability.Attack", "E1")], BattleOutcome.Victory,
             new string('a', 64));
-        await ExecuteAsync("INSERT INTO players (player_id, display_name, created_at) VALUES ($1, 'p', now())", playerId);
+        await ExecuteAsync(
+            "INSERT INTO players (player_id, display_name, created_at) VALUES ($1, 'p', now()) ON CONFLICT DO NOTHING", playerId);
         await ExecuteAsync(
             """
             INSERT INTO runs (run_id, player_id, ruleset_version, run_structure_id, character_ids, status, current_floor,
-              last_seq, started_at) VALUES ($1, $2, $3, 'descent', ARRAY['warrior'], 'Active', 0, 2, now())
-            """, runId, playerId, ruleset);
+              last_seq, started_at) VALUES ($1, $2, $3, 'descent', ARRAY['warrior'], $4, 0, 2, now())
+            """, runId, playerId, ruleset, runStatus);
         await ExecuteAsync(
             """
             INSERT INTO run_actions (run_id, seq, floor, type, action, state_hash, played_at, received_at)
@@ -186,6 +189,34 @@ public sealed class WorkerHarness : IAsyncDisposable
         await using var command = Command(sql, values);
         var result = await command.ExecuteScalarAsync();
         return result is null or DBNull ? default : (T)result;
+    }
+
+    /// <summary>The outbox row types for a destination, in the order the relay would send them.</summary>
+    public async Task<List<string>> OutboxTypesAsync(string destination)
+    {
+        await using var command = Command("SELECT type FROM outbox WHERE destination = $1 ORDER BY seq", [destination]);
+        await using var reader = await command.ExecuteReaderAsync();
+        var types = new List<string>();
+        while (await reader.ReadAsync())
+        {
+            types.Add(reader.GetString(0));
+        }
+
+        return types;
+    }
+
+    /// <summary>The JSON payloads of one outbox row type, in order.</summary>
+    public async Task<List<string>> OutboxPayloadsAsync(string type)
+    {
+        await using var command = Command("SELECT payload::text FROM outbox WHERE type = $1 ORDER BY seq", [type]);
+        await using var reader = await command.ExecuteReaderAsync();
+        var payloads = new List<string>();
+        while (await reader.ReadAsync())
+        {
+            payloads.Add(reader.GetString(0));
+        }
+
+        return payloads;
     }
 
     public async Task ExecuteAsync(string sql, params object[] values)

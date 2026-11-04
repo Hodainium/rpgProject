@@ -6,6 +6,7 @@ using Rpg.Contracts.Battle;
 using Rpg.Contracts.Runs;
 using Rpg.Contracts.Serialization;
 using Rpg.GameServerApi.Battle;
+using Rpg.GameServerApi.Outbox;
 using Rpg.GameServerApi.Runs;
 using Rpg.GameServerApi.Tests.Infrastructure;
 using Rpg.Verification;
@@ -15,8 +16,8 @@ using static Rpg.GameServerApi.Tests.RunTests;
 namespace Rpg.GameServerApi.Tests;
 
 /// <summary>
-/// Spec battle-verify, the API half (sections 2.1, 2.2, 2.4, 3.2, 3.4, 5): a battle upload becomes one verify job, the
-/// reconciler republishes a lost one, the endpoint serves the verdict (a rejection is a 200), and the caches never
+/// Spec battle-verify, the API half (sections 2.1, 2.2, 2.4, 3.2, 3.4, 5): a battle upload writes one outbox row that becomes one verify job, the
+/// outbox relay publishes it, the endpoint serves the verdict (a rejection is a 200), and the caches never
 /// hold a stale Submitted copy. The worker half is in Rpg.VerifierWorker.Tests.
 /// </summary>
 [Collection(StackCollection.Name)]
@@ -27,9 +28,7 @@ public class BattleVerifyTests(StackFixture stack)
 
     private static readonly Dictionary<string, string?> QuietBackground = new()
     {
-        ["Verifier:SweepInterval"] = "01:00:00",
         ["Monitors:Interval"] = "01:00:00",
-        ["Verifier:SweepGrace"] = "00:00:00",  // tests sweep what they just uploaded; the grace has a test of its own
     };
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -55,7 +54,7 @@ public class BattleVerifyTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task Upload_Battle_PublishesOneJob_AndMarksItEnqueued()
+    public async Task Upload_Battle_WritesOneOutboxRow_AndTheRelayPublishesOneJob()
     {
         await using var probe = await RabbitProbe.OpenAsync(stack.RabbitMqUri);
         await probe.PurgeAsync();
@@ -65,7 +64,7 @@ public class BattleVerifyTests(StackFixture stack)
         await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2)), Ct);
         var jobs = await probe.TakeAsync();
         await WaitAsync(async () => await ScalarAsync(factory,
-            $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}' AND enqueued_at IS NOT NULL") == 1);
+            $"SELECT count(*) FROM outbox WHERE key = '{run.RunId}/f0/c5' AND published_at IS NOT NULL") == 1);
 
         var (job, attempt) = Assert.Single(jobs);
         Assert.Equal($"{run.RunId}/f0/c5", job.BattleId);
@@ -74,7 +73,7 @@ public class BattleVerifyTests(StackFixture stack)
         Assert.Equal(ApiFactory.TestRuleset, job.RulesetVersion);
         Assert.Equal(0, attempt);
         Assert.Equal(1L, await ScalarAsync(factory,
-            $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}' AND enqueued_at IS NOT NULL"));
+            $"SELECT count(*) FROM outbox WHERE destination = 'rabbit' AND type = 'VerifyBattleJob' AND key = '{run.RunId}/f0/c5'"));
     }
 
     [Fact]
@@ -88,15 +87,16 @@ public class BattleVerifyTests(StackFixture stack)
 
         await client.SendActionsAsync(run.RunId, batch, Ct);
         await client.SendActionsAsync(run.RunId, batch, Ct);
-        await Task.Delay(500, Ct);  // a second job would be published right after the second response
+        await Task.Delay(800, Ct);  // a second job would be relayed within a poll or two
         var jobs = await probe.TakeAsync();
 
-        Assert.Single(jobs);  // F1: one session, one job
+        Assert.Single(jobs);  // F1: one session, one outbox row, one job
         Assert.Equal(1L, await ScalarAsync(factory, $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}'"));
+        Assert.Equal(1L, await ScalarAsync(factory, $"SELECT count(*) FROM outbox WHERE key LIKE '{run.RunId}/%'"));
     }
 
     [Fact]
-    public async Task Upload_BrokerDown_StillStores_AndTheSweeperFailsQuietly()
+    public async Task Upload_BrokerDown_StillStores_AndTheRowWaitsInTheOutbox()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(QuietBackground)
         {
@@ -105,234 +105,47 @@ public class BattleVerifyTests(StackFixture stack)
         var (client, run) = await StartedAsync(factory);
 
         var ack = await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2)), Ct);
-        var sweep = await factory.Services.GetRequiredService<BattleVerifyDispatcher>().SweepOnceAsync(Ct);
+        await factory.Services.GetRequiredService<OutboxRelay>().RunOnceAsync(Ct);
 
-        Assert.Equal(2, ack.LastSeq);  // F11: the upload never depends on the broker
-        Assert.Equal((0, 1), sweep);
+        Assert.Equal(2, ack.LastSeq);  // F10: the upload never depends on the broker
         Assert.Equal(1L, await ScalarAsync(factory,
-            $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}' AND enqueued_at IS NULL"));
+            $"SELECT count(*) FROM outbox WHERE key = '{run.RunId}/f0/c5' AND published_at IS NULL AND dead_lettered_at IS NULL"));
     }
 
     [Fact]
-    public async Task Sweeper_PublishesAJobWhoseFastPathWasLost()
-    {
-        await using var probe = await RabbitProbe.OpenAsync(stack.RabbitMqUri);
-        await probe.PurgeAsync();
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
-        var (client, run) = await StartedAsync(factory);
-        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2)), Ct);
-        await WaitAsync(async () => await probe.DepthAsync(VerifyTopology.Queue) == 1);  // the fast path has published
-        await probe.PurgeAsync();  // the fast path's job is gone, as if the publish had been lost
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET enqueued_at = NULL WHERE run_id = '{run.RunId}'");
-
-        var sweep = await factory.Services.GetRequiredService<BattleVerifyDispatcher>().SweepOnceAsync(Ct);
-        var again = await factory.Services.GetRequiredService<BattleVerifyDispatcher>().SweepOnceAsync(Ct);
-        var jobs = await probe.TakeAsync();
-
-        Assert.Equal((1, 0), sweep);
-        Assert.Equal((0, 0), again);  // enqueued_at is fresh now
-        Assert.Equal($"{run.RunId}/f0/c5", Assert.Single(jobs).Job.BattleId);
-    }
-
-    [Fact]
-    public async Task Sweeper_RepublishesAfterTheWindow_AndSkipsVerifiedAndDeadLettered()
-    {
-        await using var probe = await RabbitProbe.OpenAsync(stack.RabbitMqUri);
-        await probe.PurgeAsync();
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
-        var (client, run) = await StartedAsync(factory);
-        await client.SendActionsAsync(run.RunId,
-            RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2, cell: 1), RunLog.Battle(run.RunId, 3, cell: 2),
-                RunLog.Battle(run.RunId, 4, cell: 3), RunLog.Battle(run.RunId, 5, cell: 4)), Ct);
-        await WaitAsync(async () => await probe.DepthAsync(VerifyTopology.Queue) == 4);
-        await probe.PurgeAsync();
-        var old = "now() - interval '30 minutes'";
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET enqueued_at = {old} WHERE run_id = '{run.RunId}'");
-        await ExecuteAsync(factory,  // c2: dead-lettered; c3: verified; c4: enqueued a moment ago
-            $"UPDATE battle_sessions SET dead_lettered_at = now(), dead_letter_reason = 'attempts' WHERE battle_id = '{run.RunId}/f0/c2'");
-        await SetVerdictAsync(factory, $"{run.RunId}/f0/c3", Verdict(ReplayVerdict.Verified));
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET enqueued_at = now() WHERE battle_id = '{run.RunId}/f0/c4'");
-
-        var sweep = await factory.Services.GetRequiredService<BattleVerifyDispatcher>().SweepOnceAsync(Ct);
-        var jobs = await probe.TakeAsync();
-
-        Assert.Equal((1, 0), sweep);
-        Assert.Equal($"{run.RunId}/f0/c1", Assert.Single(jobs).Job.BattleId);
-    }
-
-    [Fact]
-    public async Task Sweeper_DuringABacklog_NeverDoublesAJobThatIsStillQueued_ButRecoversALostOneOnceTheQueuesAreEmpty()
-    {
-        await using var probe = await RabbitProbe.OpenAsync(stack.RabbitMqUri);
-        await probe.PurgeAsync();
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
-        var (client, run) = await StartedAsync(factory);
-        await client.SendActionsAsync(run.RunId,
-            RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2, cell: 1), RunLog.Battle(run.RunId, 3, cell: 2)), Ct);
-        await WaitAsync(async () => await probe.DepthAsync(VerifyTopology.Queue) == 2);  // two jobs wait for a worker
-        // The backlog is older than RepublishAfter: the jobs are still in the queue, not lost.
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET enqueued_at = now() - interval '30 minutes' WHERE run_id = '{run.RunId}'");
-        var sweeper = factory.Services.GetRequiredService<BattleVerifyDispatcher>();
-
-        var during = await sweeper.SweepOnceAsync(Ct);
-        var depthAfter = await probe.DepthAsync(VerifyTopology.Queue);
-        await probe.PurgeAsync();  // now the messages really are gone
-        var afterLoss = await sweeper.SweepOnceAsync(Ct);
-
-        Assert.Equal((0, 0), during);
-        Assert.Equal(2u, depthAfter);  // no duplicate was published
-        Assert.Equal((2, 0), afterLoss);
-        Assert.Equal(2u, await probe.DepthAsync(VerifyTopology.Queue));
-    }
-
-    [Fact]
-    public async Task Sweeper_AJobWithAFreshLease_IsLeftAloneEvenWhenTheQueuesAreEmpty()
-    {
-        await using var probe = await RabbitProbe.OpenAsync(stack.RabbitMqUri);
-        await probe.PurgeAsync();
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
-        var (client, run) = await StartedAsync(factory);
-        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2)), Ct);
-        await WaitAsync(async () => await probe.DepthAsync(VerifyTopology.Queue) == 1);
-        await probe.PurgeAsync();  // a worker took the job: the queue is empty, the job is being replayed
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET enqueued_at = now() WHERE run_id = '{run.RunId}'");  // its renewed lease
-
-        var sweep = await factory.Services.GetRequiredService<BattleVerifyDispatcher>().SweepOnceAsync(Ct);
-
-        Assert.Equal((0, 0), sweep);
-    }
-
-    [Fact]
-    public async Task Sweeper_WhenTheBrokerCannotBeAsked_RepublishesNothingStale()
-    {
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(QuietBackground)
-        {
-            ["RabbitMq:Uri"] = "amqp://guest:guest@127.0.0.1:1/",
-        });
-        var (client, run) = await StartedAsync(factory);
-        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2)), Ct);
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET enqueued_at = now() - interval '30 minutes' WHERE run_id = '{run.RunId}'");
-
-        var sweep = await factory.Services.GetRequiredService<BattleVerifyDispatcher>().SweepOnceAsync(Ct);
-
-        Assert.Equal((0, 0), sweep);  // unknown backlog counts as waiting: the stale branch stays off
-    }
-
-    [Fact]
-    public async Task Sweeper_LeavesAYoungSessionToTheUploadsOwnPublish()
+    public async Task Relay_PublishesRowsWrittenWhileItWasPaused()
     {
         await using var probe = await RabbitProbe.OpenAsync(stack.RabbitMqUri);
         await probe.PurgeAsync();
         await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(QuietBackground)
         {
-            ["Verifier:SweepGrace"] = "00:00:30",
+            ["Outbox:Enabled"] = "false",
         });
         var (client, run) = await StartedAsync(factory);
-        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2)), Ct);
-        await WaitAsync(async () => await probe.DepthAsync(VerifyTopology.Queue) == 1);
-        await probe.PurgeAsync();
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET enqueued_at = NULL WHERE run_id = '{run.RunId}'");
-        var sweeper = factory.Services.GetRequiredService<BattleVerifyDispatcher>();
-
-        var young = await sweeper.SweepOnceAsync(Ct);  // its fast path may still be publishing
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET submitted_at = now() - interval '1 minute' WHERE run_id = '{run.RunId}'");
-        var older = await sweeper.SweepOnceAsync(Ct);
-
-        Assert.Equal((0, 0), young);
-        Assert.Equal((1, 0), older);
-    }
-
-    [Fact]
-    public async Task Sweeper_AFailedPublish_GivesTheLeaseBack()
-    {
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
-        var (client, run) = await StartedAsync(factory);
         await client.SendActionsAsync(run.RunId,
             RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2, cell: 1), RunLog.Battle(run.RunId, 3, cell: 2)), Ct);
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET enqueued_at = NULL WHERE run_id = '{run.RunId}'");
-        var store = factory.Services.GetRequiredService<RunStore>();
-        var attempts = 0;
+        Assert.Empty(await probe.TakeAsync(wait: TimeSpan.FromMilliseconds(500)));  // paused: nothing leaves
 
-        var sweep = await store.SweepUnenqueuedAsync((_, _) => Task.FromResult(++attempts == 1 ? true : false), 100,
-            TimeSpan.FromMinutes(10), true, TimeSpan.Zero, DateTimeOffset.UtcNow, Ct);
+        var relay = factory.Services.GetRequiredService<OutboxRelay>();
+        Assert.Equal(2, await relay.RunOnceAsync(Ct));
+        var jobs = await probe.TakeAsync();
 
-        Assert.Equal((1, 1), sweep);  // one published, the second failed
-        Assert.Equal(1L, await ScalarAsync(factory,
-            $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}' AND enqueued_at IS NULL"));
-        Assert.Equal(1L, await ScalarAsync(factory,
-            $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}' AND enqueued_at IS NOT NULL"));
+        Assert.Equal([$"{run.RunId}/f0/c1", $"{run.RunId}/f0/c2"], jobs.Select(j => j.Job.BattleId));  // in order
     }
 
     [Fact]
-    public async Task Sweeper_APublishThatThrows_GivesTheLeasesBack()
+    public async Task UploadAndOutboxRow_AreOneTransaction()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
         var (client, run) = await StartedAsync(factory);
-        await client.SendActionsAsync(run.RunId,
-            RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2, cell: 1), RunLog.Battle(run.RunId, 3, cell: 2)), Ct);
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET enqueued_at = NULL WHERE run_id = '{run.RunId}'");
-        var store = factory.Services.GetRequiredService<RunStore>();
+        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2, cell: 1)), Ct);
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => store.SweepUnenqueuedAsync(
-            (_, _) => throw new OperationCanceledException(), 100, TimeSpan.FromMinutes(10), true, TimeSpan.Zero,
-            DateTimeOffset.UtcNow, Ct));  // shutdown in the middle of a sweep
+        // seq 3 is a new battle (session + outbox row written), seq 4 reuses battle c1's id: the whole batch rolls back.
+        await Assert.ThrowsAsync<GameServerApiException>(() => client.SendActionsAsync(run.RunId,
+            RunLog.Batch(RunLog.Battle(run.RunId, 3, cell: 2), RunLog.Battle(run.RunId, 4, cell: 1)), Ct));
 
-        Assert.Equal(2L, await ScalarAsync(factory,
-            $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}' AND enqueued_at IS NULL"));
-    }
-
-    [Fact]
-    public async Task Sweeper_DoesNotHoldRowLocksWhilePublishing()
-    {
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
-        var (client, run) = await StartedAsync(factory);
-        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2)), Ct);
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET enqueued_at = NULL WHERE run_id = '{run.RunId}'");
-        var store = factory.Services.GetRequiredService<RunStore>();
-        var publishing = new TaskCompletionSource();
-        var release = new TaskCompletionSource();
-
-        var sweep = store.SweepUnenqueuedAsync(async (_, _) =>
-        {
-            publishing.SetResult();
-            await release.Task;  // a slow broker confirm
-            return true;
-        }, 100, TimeSpan.FromMinutes(10), true, TimeSpan.Zero, DateTimeOffset.UtcNow, Ct);
-        await publishing.Task;
-        // The verifier's commit must not wait for the sweep.
-        var commit = ExecuteAsync(factory,
-            $"UPDATE battle_sessions SET status = 'Verified', verdict = '{{}}'::jsonb WHERE run_id = '{run.RunId}'");
-
-        await commit.WaitAsync(TimeSpan.FromSeconds(5), Ct);
-        release.SetResult();
-        Assert.Equal((1, 0), await sweep);
-    }
-
-    [Fact]
-    public async Task Sweeper_TwoInstancesAtOnce_NeverPublishTheSameRowTwice()
-    {
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
-        var (client, run) = await StartedAsync(factory);
-        await client.SendActionsAsync(run.RunId,
-            RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2, cell: 1), RunLog.Battle(run.RunId, 3, cell: 2),
-                RunLog.Battle(run.RunId, 4, cell: 3)), Ct);
-        await ExecuteAsync(factory, $"UPDATE battle_sessions SET enqueued_at = NULL WHERE run_id = '{run.RunId}'");
-        var store = factory.Services.GetRequiredService<RunStore>();
-        var published = new System.Collections.Concurrent.ConcurrentBag<string>();
-        async Task<bool> Slow(VerifyBattleJob job, CancellationToken ct)
-        {
-            published.Add(job.BattleId);
-            await Task.Delay(300, ct);
-            return true;
-        }
-
-        var now = DateTimeOffset.UtcNow;
-        await Task.WhenAll(
-            store.SweepUnenqueuedAsync(Slow, 100, TimeSpan.FromMinutes(10), true, TimeSpan.Zero, now, Ct),
-            store.SweepUnenqueuedAsync(Slow, 100, TimeSpan.FromMinutes(10), true, TimeSpan.Zero, now, Ct));
-
-        Assert.Equal(3, published.Count);
-        Assert.Equal(3, published.Distinct().Count());  // F13: SKIP LOCKED
+        Assert.Equal(1L, await ScalarAsync(factory, $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}'"));
+        Assert.Equal(1L, await ScalarAsync(factory, $"SELECT count(*) FROM outbox WHERE key LIKE '{run.RunId}/%'"));  // F18
     }
 
     [Fact]
@@ -489,7 +302,7 @@ public class BattleVerifyTests(StackFixture stack)
         Assert.Contains("rpg_battle_oldest_unverified_age_seconds", metrics);
         Assert.Equal("2", Sample(metrics, "rpg_verify_queue_depth", "queue=\"verify.battle\""));
         Assert.Equal("0", Sample(metrics, "rpg_verify_queue_depth", "queue=\"dlq\""));
-        Assert.Equal("2", Sample(metrics, "rpg_verify_jobs_published_total", "source=\"upload\"", "result=\"ok\""));
+        Assert.Equal("2", Sample(metrics, "rpg_outbox_published_total", "destination=\"rabbit\"", "result=\"ok\""));
     }
 
     private static async Task WaitAsync(Func<Task<bool>> condition)

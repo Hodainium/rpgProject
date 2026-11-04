@@ -16,6 +16,7 @@ const SNAPSHOT_SCHEMA_VERSIONS: Array[int] = [1, 2]
 const EXIT_VERIFIED: int = 0
 const EXIT_RUNNER_ERROR: int = 1
 const EXIT_REJECTED: int = 2
+const BOSS_TAG: StringName = &"Enemy.Boss"
 const REPLAY_MISMATCH_CODE: int = 2002
 const REPLAY_MISMATCH_NAME: String = "ReplayMismatch"
 
@@ -62,7 +63,7 @@ func run_on(request: Dictionary, content: ContentIndex, host: Node) -> Dictionar
 
 	if battle.mismatch.is_empty():
 		_check_claims(battle, controller, action_log)
-	var result := _result(battle)
+	var result := _result(battle, snapshot)
 	if trace != null:
 		trace.verdict = result["verdict"]
 		trace.reason = result["mismatch"]["reason"] if result["mismatch"] != null else null
@@ -99,7 +100,7 @@ func _check_claims(battle: Battle, controller: ReplayController, action_log: Dic
 		battle.reject("FinalHashMismatch", "claimed %s, simulated %s" % [action_log["claimedFinalHash"], battle.final_hash])
 
 
-func _result(battle: Battle) -> Dictionary:
+func _result(battle: Battle, snapshot: Dictionary) -> Dictionary:
 	var rejected := not battle.mismatch.is_empty()
 	exit_code = EXIT_REJECTED if rejected else EXIT_VERIFIED
 	var mismatch: Variant = null
@@ -109,7 +110,7 @@ func _result(battle: Battle) -> Dictionary:
 			"turn": int(battle.mismatch["turn"]),
 			"detail": battle.mismatch["detail"],
 		}
-	return {
+	var result := {
 		"schemaVersion": RESULT_SCHEMA_VERSION,
 		"battleId": battle.battle_id,
 		"verdict": "Rejected" if rejected else "Verified",
@@ -121,6 +122,27 @@ func _result(battle: Battle) -> Dictionary:
 		"finalStateHash": battle.final_hash,
 		"engineVersion": engine_version(),
 	}
+	# Spec settlement-outbox 3.1: what the server may pay for, decided here and never in C#. Only a verified replay
+	# has facts, and they are not hashed.
+	if not rejected:
+		result["facts"] = _facts(battle, str(snapshot.get("encounterId", "")))
+	return result
+
+
+## The encounter id, the distinct Enemy.Boss definitions BEATEN (empty unless the party won, so a lost battle never reads
+## as a boss kill) and the party's character ids (spec settlement-outbox).
+func _facts(battle: Battle, encounter_id: String) -> Dictionary:
+	var bosses: Array = []
+	var party: Array = []
+	var won: bool = battle.outcome == "Victory"
+	for unit in battle.units():
+		var unit_id := str(unit.definition.id)
+		if unit.side == BattleUnit.Side.ENEMY:
+			if won and unit.definition.tags.has(BOSS_TAG) and not bosses.has(unit_id):
+				bosses.append(unit_id)
+		elif not party.has(unit_id):
+			party.append(unit_id)
+	return {"encounterId": encounter_id, "bossIds": bosses, "partyCharacterIds": party}
 
 
 ## The exact Godot build, as Godot prints it at startup: "4.7.2.stable.mono.official.ed1daf0bf". The client and the

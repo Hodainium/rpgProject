@@ -9,7 +9,7 @@ using static Rpg.VerifierWorker.Tests.Infrastructure.WorkerHarness;
 namespace Rpg.VerifierWorker.Tests;
 
 /// <summary>
-/// Spec battle-verify 2.1 and 4 (F1, F2, F3, F5, F6, F7, F8, F9, F10, F12, F14): one job from start to decision, with the
+/// Spec battle-verify 2.1 and 4 (F1, F2, F3, F5, F6, F7, F8, F9, F10, F12, F14), without the dedup lock that settlement-outbox removed: one job from start to decision, with the
 /// fake runner standing in for Godot, a real Postgres and a real Redis.
 /// </summary>
 [Collection(StackCollection.Name)]
@@ -46,28 +46,10 @@ public class VerifyProcessorTests(Stack stack)
         Assert.False(await redis.KeyExistsAsync(VerifyPolicy.SessionKey(battle.RunId, battle.Seq)));  // F14
         var ttl = await redis.KeyTimeToLiveAsync(VerifyPolicy.VerdictKey(battle.RunId, battle.Seq));
         Assert.InRange(ttl!.Value, TimeSpan.FromMinutes(29), TimeSpan.FromMinutes(30));
-        Assert.False(await redis.KeyExistsAsync(VerifyPolicy.LockKey(battle.BattleId)));  // released
+        Assert.Equal(1L, await worker.ScalarAsync<long>(
+            "SELECT count(*) FROM outbox WHERE type = 'BattleVerified' AND destination = 'redpanda' AND published_at IS NULL"));
         Assert.Equal(1, worker.Metrics.Count("rpg.verify_jobs", "result=verified"));
         Assert.Equal(1, worker.Metrics.Count("rpg.verify_latency.count"));
-    }
-
-    [Fact]
-    public async Task ATakenJob_RenewsItsLease_SoTheSweeperNeverSeesItAsLost()
-    {
-        await using var worker = await CreateAsync(stack);
-        var battle = await worker.SeedAsync();
-        await worker.ExecuteAsync("UPDATE battle_sessions SET enqueued_at = now() - interval '30 minutes' WHERE battle_id = $1", battle.BattleId);
-        DateTime? during = null;
-        worker.Runner.Handler = async (request, _) =>
-        {
-            during = await worker.ScalarAsync<DateTime?>("SELECT enqueued_at FROM battle_sessions WHERE battle_id = $1", battle.BattleId);
-            return FakeReplayRunner.Verified(FakeReplayRunner.BattleIdOf(request));
-        };
-
-        await worker.Processor.ProcessAsync(JobOf(battle), Ct);
-
-        Assert.NotNull(during);
-        Assert.True(DateTime.UtcNow - during!.Value < TimeSpan.FromMinutes(1), "the lease was renewed before the replay began");
     }
 
     [Fact]
@@ -128,9 +110,9 @@ public class VerifyProcessorTests(Stack stack)
     }
 
     [Fact]
-    public async Task ConcurrentWorkers_WithoutTheLock_StillOneVerdict()
+    public async Task ConcurrentWorkers_StillOneVerdict()
     {
-        await using var worker = await CreateAsync(stack, new() { ["Verifier:UseLock"] = "false" });
+        await using var worker = await CreateAsync(stack);
         var battle = await worker.SeedAsync();
         var gate = new TaskCompletionSource();
         var arrived = 0;
@@ -152,25 +134,6 @@ public class VerifyProcessorTests(Stack stack)
         Assert.Equal(["duplicate", "verified"], decisions.Select(d => d.Result).Order());
         Assert.All(decisions, d => Assert.Equal(JobAction.Ack, d.Action));
         Assert.Equal(1, await worker.ScalarAsync<int>("SELECT attempts FROM battle_sessions WHERE battle_id = $1", battle.BattleId));
-    }
-
-    [Fact]
-    public async Task LockHeldByAnotherWorker_RetriesSoonWithoutCountingAnAttempt()
-    {
-        await using var worker = await CreateAsync(stack);
-        var battle = await worker.SeedAsync();
-        var redis = await worker.RedisAsync();
-        await redis.StringSetAsync(VerifyPolicy.LockKey(battle.BattleId), "someone-else", TimeSpan.FromMinutes(1));
-
-        var decision = await worker.Processor.ProcessAsync(JobOf(battle), Ct);
-
-        Assert.Equal(JobAction.Retry, decision.Action);
-        Assert.Equal("lock_busy", decision.Result);
-        Assert.Equal(TimeSpan.FromSeconds(5), decision.Tier!.Delay);
-        Assert.Equal(0, worker.Runner.Calls);
-        Assert.Equal(0, await worker.ScalarAsync<int>("SELECT attempts FROM battle_sessions WHERE battle_id = $1", battle.BattleId));
-        Assert.Equal("someone-else", (await redis.StringGetAsync(VerifyPolicy.LockKey(battle.BattleId))).ToString());  // not ours to release
-        Assert.Equal(1, worker.Metrics.Count("rpg.verify_lock", "result=busy"));
     }
 
     [Fact]
@@ -335,7 +298,6 @@ public class VerifyProcessorTests(Stack stack)
 
         Assert.Equal("verified", decision.Result);  // F10
         Assert.Equal("Verified", await worker.ScalarAsync<string>("SELECT status FROM battle_sessions WHERE battle_id = $1", battle.BattleId));
-        Assert.Equal(1, worker.Metrics.Count("rpg.verify_lock", "result=redis_error"));
         Assert.Equal(1, worker.Metrics.Count("rpg.cache_errors", "operation=set"));
     }
 

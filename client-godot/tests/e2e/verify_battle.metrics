@@ -1,4 +1,4 @@
-rpg_verify_jobs_published_total\{[^}]*result="ok"[^}]*\} [2-9]
+rpg_outbox_published_total\{[^}]*destination="rabbit"[^}]*result="ok"[^}]*\} [2-9]
 rpg_battles_submitted_total(\{[^}]*\})? [2-9]
 rpg_battles_unverified(\{[^}]*\})? 0( |$)
 rpg_verify_queue_depth\{[^}]*queue="dlq"[^}]*\} 0( |$)

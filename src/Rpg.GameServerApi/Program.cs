@@ -10,10 +10,12 @@ using Rpg.Contracts.Api.V1;
 using Rpg.Contracts.Serialization;
 using Rpg.GameServerApi.Auth;
 using Rpg.GameServerApi.Battle;
+using Rpg.GameServerApi.Economy;
 using Rpg.GameServerApi.Health;
 using Rpg.GameServerApi.Infrastructure;
 using Rpg.GameServerApi.Migrations;
 using Rpg.GameServerApi.Observability;
+using Rpg.GameServerApi.Outbox;
 using Rpg.GameServerApi.Presence;
 using Rpg.GameServerApi.RateLimiting;
 using Rpg.GameServerApi.Runs;
@@ -74,13 +76,21 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 builder.Services.AddOptions<RunOptions>().BindConfiguration(RunOptions.Section);
 builder.Services.AddSingleton<BattleSessionCache>();
-// Slice 3 (spec battle-verify): verify jobs on RabbitMQ, the reconciler and the queue/backlog gauges.
-builder.Services.AddOptions<VerifierOptions>().BindConfiguration(VerifierOptions.Section);
-builder.Services.AddSingleton<VerifyJobPublisher>();
-builder.Services.AddSingleton<BattleVerifyDispatcher>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<BattleVerifyDispatcher>());
+// Slice 3 (spec battle-verify): the queue and backlog gauges. Slice 4 (spec settlement-outbox): the outbox relay carries
+// verify jobs to RabbitMQ and domain events to Redpanda; the wallet read model.
 builder.Services.AddSingleton<BattleVerifyMonitor>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<BattleVerifyMonitor>());
+builder.Services.AddOptions<OutboxOptions>().BindConfiguration(OutboxOptions.Section);
+builder.Services.AddOptions<KafkaOptions>().BindConfiguration(KafkaOptions.Section);
+builder.Services.AddSingleton<OutboxStore>();
+builder.Services.AddSingleton<IOutboxSink, RabbitOutboxSink>();
+builder.Services.AddSingleton<IOutboxSink, KafkaOutboxSink>();
+builder.Services.AddSingleton<OutboxRelay>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<OutboxRelay>());
+builder.Services.AddSingleton<OutboxMonitor>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<OutboxMonitor>());
+builder.Services.AddSingleton<WalletStore>();
+builder.Services.AddSingleton<WalletCache>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddHostedService<PresenceMonitor>();
 builder.Services.AddOptions<RateLimitOptions>().BindConfiguration(RateLimitOptions.Section);
@@ -114,6 +124,7 @@ builder.Services.AddOpenTelemetry()
             .AddAspNetCoreInstrumentation(o => o.Filter = ctx =>
                 !ctx.Request.Path.StartsWithSegments("/health") && !ctx.Request.Path.StartsWithSegments("/metrics"))
             .AddHttpClientInstrumentation()
+            .AddSource(OutboxRelay.Source.Name)
             .AddSource("Npgsql")  // Npgsql's built-in ActivitySource
             // Spec server-authority 5: Redis spans. The multiplexer connects in the background, so attach it then.
             .AddRedisInstrumentation()
@@ -144,6 +155,7 @@ app.MapGet("/api/v1/info", (BuildInfo build, TimeProvider clock) =>
     new ServerInfoResponse(BuildInfo.ServiceName, build.Version, clock.GetUtcNow()));
 app.MapAuthEndpoints();
 app.MapRunEndpoints();
+app.MapWalletEndpoints();
 app.MapPresenceEndpoints();
 
 app.Run();

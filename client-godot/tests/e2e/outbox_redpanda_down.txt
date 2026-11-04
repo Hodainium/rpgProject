@@ -1,0 +1,18 @@
+# Spec settlement-outbox 6, acceptance scenario 3 on the real stack: Redpanda is down while the worker settles a boss. The
+# verdict, the marks and the gems commit anyway (the outbox is in the same transaction), the events wait in the outbox,
+# and once Redpanda is back they all drain: nothing lost, nothing published twice as a row. Run it alone: the Redpanda
+# container is shared with the other scenarios.
+#! worker
+#! env Monitors__Interval=00:00:01
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+e2e redpanda-stop 120
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 20 120
+server wallet
+e2e redpanda-start 180
+e2e redpanda-check 90

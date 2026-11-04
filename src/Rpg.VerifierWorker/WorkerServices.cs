@@ -11,6 +11,7 @@ public static class WorkerServices
     public static IServiceCollection AddVerifierWorker(this IServiceCollection services)
     {
         services.AddOptions<VerifierOptions>().BindConfiguration(VerifierOptions.Section);
+        services.AddOptions<SettlementOptions>().BindConfiguration(SettlementOptions.Section);
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton(sp => NpgsqlDataSource.Create(
             sp.GetRequiredService<IConfiguration>().GetConnectionString("Postgres")

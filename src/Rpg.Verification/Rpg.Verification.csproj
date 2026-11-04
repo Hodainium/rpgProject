@@ -6,6 +6,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Npgsql" />
     <PackageReference Include="RabbitMQ.Client" />
   </ItemGroup>
 </Project>
