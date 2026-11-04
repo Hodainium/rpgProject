@@ -40,6 +40,9 @@ class FakeBridge:
 	func GetBattle(run_id: String, seq: int) -> int:
 		return _answer("GetBattle", [run_id, seq])
 
+	func GetWallet() -> int:
+		return _answer("GetWallet", [])
+
 	func Heartbeat(json: String) -> int:
 		return _answer("Heartbeat", [json])
 

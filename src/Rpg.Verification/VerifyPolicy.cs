@@ -13,5 +13,6 @@ public static class VerifyPolicy
 
     public static string VerdictKey(Guid runId, int seq) => $"battle:verdict:{runId:D}:{seq}";
 
-    public static string LockKey(string battleId) => $"lock:battle:{battleId}";
+    /// <summary>Spec settlement-outbox 3.5: the cached wallet; the worker deletes it after a settlement commits.</summary>
+    public static string WalletKey(Guid playerId) => $"wallet:{playerId:D}";
 }

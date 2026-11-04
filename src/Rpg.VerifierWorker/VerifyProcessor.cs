@@ -30,7 +30,7 @@ public sealed record JobDecision(JobAction Action, string Result, RetryTier? Tie
 /// consumer must do with the message, and the consumer acts only after this returns, so the ack always follows the commit.
 /// </summary>
 public sealed class VerifyProcessor(VerdictStore store, VerifierRedis redis, IReplayRunner runner, WorkerState state,
-    IOptions<VerifierOptions> options, WorkerMetrics metrics, TimeProvider clock, ILogger<VerifyProcessor> logger)
+    IOptions<VerifierOptions> options, IOptions<SettlementOptions> settlement, WorkerMetrics metrics, TimeProvider clock, ILogger<VerifyProcessor> logger)
 {
     public static readonly ActivitySource Source = new("Rpg.VerifierWorker");
 
@@ -73,44 +73,7 @@ public sealed class VerifyProcessor(VerdictStore store, VerifierRedis redis, IRe
             return Decide(new JobDecision(JobAction.DeadLetter, "wrong_ruleset", Reason: "ruleset"));
         }
 
-        await store.RenewLeaseAsync(job.BattleId, clock.GetUtcNow(), ct);
-        var token = Guid.NewGuid().ToString("N");
-        var locked = false;
-        if (settings.UseLock)
-        {
-            switch (await redis.TryLockAsync(job.BattleId, token, settings.LockTtl))
-            {
-                case LockResult.Busy:
-                    metrics.Lock("busy");
-                    return Decide(new JobDecision(JobAction.Retry, "lock_busy", VerifyTopology.RetryTiers[0]));
-                case LockResult.Acquired:
-                    metrics.Lock("acquired");
-                    locked = true;
-                    break;
-                default:
-                    metrics.Lock("redis_error");
-                    break;
-            }
-        }
-
-        try
-        {
-            // The first look was before the lock: a worker that waited out a busy lock may find the verdict already there,
-            // and would otherwise burn a Godot process to learn the same thing from the guarded update.
-            if (locked && await store.LoadAsync(job.BattleId, ct) is { Status: not nameof(BattleSessionStatus.Submitted) })
-            {
-                return Decide(new JobDecision(JobAction.Ack, "duplicate"));
-            }
-
-            return await ReplayAndCommitAsync(job, row, ct);
-        }
-        finally
-        {
-            if (locked)
-            {
-                await redis.ReleaseAsync(job.BattleId, token);
-            }
-        }
+        return await ReplayAndCommitAsync(job, row, ct);
     }
 
     private async Task<JobDecision> ReplayAndCommitAsync(VerifyBattleJob job, BattleRow row, CancellationToken ct)
@@ -155,8 +118,9 @@ public sealed class VerifyProcessor(VerdictStore store, VerifierRedis redis, IRe
     {
         var now = clock.GetUtcNow();
         var verdict = new BattleVerdict(result.Verdict, result.ErrorCode, result.Error, result.Mismatch, result.Outcome,
-            result.Turns, result.FinalStateHash, state.RulesetVersion, result.EngineVersion, now);
-        if (!await store.CommitVerdictAsync(job.BattleId, verdict, now, ct))
+            result.Turns, result.FinalStateHash, state.RulesetVersion, result.EngineVersion, now, result.Facts);
+        var commit = await store.CommitAsync(row, verdict, settlement.Value, now, ct);
+        if (!commit.Committed)
         {
             return Decide(new JobDecision(JobAction.Ack, "duplicate"));
         }
@@ -171,6 +135,22 @@ public sealed class VerifyProcessor(VerdictStore store, VerifierRedis redis, IRe
         try
         {
             metrics.Latency(now - row.SubmittedAt);
+            metrics.Settlement(commit.Result switch
+            {
+                SettlementResult.Granted => "granted",
+                SettlementResult.AlreadyMarked => "already_marked",
+                SettlementResult.Rejected => "rejected",
+                _ => "no_reward",
+            });
+            if (commit.Grants.Count > 0)
+            {
+                metrics.GemsGranted("completion_mark", commit.Grants.Sum(g => g.Gems));
+                if (!await redis.InvalidateWalletAsync(row.PlayerId))
+                {
+                    metrics.CacheError("delete");
+                }
+            }
+
             if (result.Verdict == ReplayVerdict.Rejected && result.Mismatch is { } mismatch)
             {
                 metrics.Rejection(mismatch.Reason);

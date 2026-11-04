@@ -4,8 +4,8 @@ extends DevCommand
 
 func _init() -> void:
 	name = "server"
-	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | resume | forget | conflict]"
-	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
+	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | resume | forget | conflict]"
+	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
 	cheat = false
 
 
@@ -16,6 +16,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		return await _check(ctx)
 	if args.size() > 0 and args[0] == "verdict":
 		return await _verdict(ctx, args)
+	if args.size() > 0 and args[0] == "wallet":
+		return await _wallet(ctx)
 	if args.size() > 0 and args[0] in ["resume", "forget", "conflict"]:
 		return await _part_b(ctx, args[0])
 	if ctx.game == null:
@@ -123,6 +125,16 @@ func _verdict(ctx: DevContext, args: PackedStringArray) -> String:
 		lines.append(ServerLink.describe_verdict(entry))
 	var unreadable := entries.any(func(entry: Dictionary) -> bool: return entry["error"] != "")
 	return ctx.fail("\n".join(lines)) if unreadable else "\n".join(lines)
+
+
+## Spec settlement-outbox: GET /wallet. Read-only; the gems are decided by the verifier worker, never by the client.
+func _wallet(ctx: DevContext) -> String:
+	if ctx.game == null or ctx.game.server == null:
+		return ctx.fail("not in server mode")
+	var answer: Dictionary = await ctx.game.server.get_wallet()
+	if not answer["ok"]:
+		return ctx.fail("GET wallet: " + ServerLink.describe(answer["error"]))
+	return ServerLink.describe_wallet(answer["data"])
 
 
 ## Spec dev-tools E3: the server agrees with the run: GET /runs/{id} is Active on the client's floor, and asking for

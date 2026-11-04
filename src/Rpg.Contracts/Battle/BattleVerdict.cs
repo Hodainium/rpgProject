@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Rpg.Contracts.Battle;
 
 /// <summary>
@@ -10,6 +12,7 @@ namespace Rpg.Contracts.Battle;
 /// <param name="Error">"ReplayMismatch" when Rejected, otherwise null.</param>
 /// <param name="Mismatch">The first mismatch the replay detected when Rejected, otherwise null.</param>
 /// <param name="Outcome">What the verifier's own simulation reached.</param>
+/// <param name="Facts">Spec settlement-outbox 3.1: copied from the replay result; omitted from the JSON when null.</param>
 public sealed record BattleVerdict(
     ReplayVerdict Status,
     int? ErrorCode,
@@ -20,4 +23,5 @@ public sealed record BattleVerdict(
     string FinalStateHash,
     string VerifierRulesetVersion,
     string EngineVersion,
-    DateTimeOffset VerifiedAt);
+    DateTimeOffset VerifiedAt,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] BattleFacts? Facts = null);

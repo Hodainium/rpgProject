@@ -266,6 +266,23 @@ func test_server_verdict_command() -> void:
 	await host.get_tree().process_frame  # don't end inside the link's signal: after_each frees it
 
 
+## Spec settlement-outbox: `server wallet` shows the gems and the ledger; `wait gems` polls until the worker paid.
+func test_server_wallet_and_wait_gems() -> void:
+	var bridge := _bridge()
+	var session := _session(bridge)
+	bridge.answers["GetWallet"] = [[true, {"gems": 20, "version": 2, "recent": [
+		{"currency": "gems", "delta": 10, "reason": "boss_mark", "refBattleId": "b1", "at": "2026-11-02T10:00:00+00:00"}]}]]
+	var shown := await _run(session, "server wallet")
+	check(shown["ok"] and shown["text"].contains("gems 20 (version 2)") and shown["text"].contains("+10 gems boss_mark (battle b1)"),
+		"the wallet is shown: " + shown["text"])
+	var paid := await _run(session, "wait gems 20 2")
+	check(paid["ok"], "enough gems: " + paid["text"])
+	var short := await _run(session, "wait gems 30 0.6")
+	check(not short["ok"] and short["text"].contains("waited") and short["text"].contains("20 gems"), "too few gems fail with the balance: " + short["text"])
+	check(not (await _run(session, "wait gems x"))["ok"], "gems takes a number")
+	await host.get_tree().process_frame
+
+
 ## Spec battle-verify 2.2: `wait verdict` polls until the verifier has decided (Verified or Rejected).
 func test_wait_verdict() -> void:
 	var bridge := _bridge()

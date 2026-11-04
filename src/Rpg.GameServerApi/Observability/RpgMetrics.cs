@@ -28,7 +28,10 @@ public sealed class RpgMetrics
     private long _runsInProgress = -1;
     private long _playersOnline = -1;
     private long _playersInBattle = -1;
-    private readonly Counter<long> _verifyJobsPublished;
+    private readonly Counter<long> _outboxPublished;
+    private readonly Histogram<double> _outboxPublishDuration;
+    private readonly Counter<long> _walletReads;
+    private readonly ConcurrentDictionary<string, (long Pending, double OldestAge, long Dead)> _outbox = new();
     private long _battlesUnverified = -1;
     private double _oldestUnverifiedAge;
     private readonly ConcurrentDictionary<string, long> _verifyQueueDepth = new();
@@ -94,8 +97,24 @@ public sealed class RpgMetrics
             description: "Players whose heartbeat said Battle in the last 2 minutes (a client hint).");
 
         // Slice 3 (spec battle-verify 5).
-        _verifyJobsPublished = meter.CreateCounter<long>("rpg.verify_jobs_published",
-            description: "Verify jobs published by source and result.");
+        _outboxPublished = meter.CreateCounter<long>("rpg.outbox_published",
+            description: "Outbox rows the relay tried to publish, by destination, type and result (spec settlement-outbox 5).");
+        _outboxPublishDuration = meter.CreateHistogram<double>("rpg.outbox_publish_duration", unit: "s",
+            description: "Time to publish one outbox row (to the confirm), by destination.",
+            advice: new InstrumentAdvice<double> { HistogramBucketBoundaries = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10] });
+        _walletReads = meter.CreateCounter<long>("rpg.wallet_reads", description: "Wallet reads by where the answer came from.");
+        meter.CreateObservableGauge("rpg.outbox_pending",
+            () => _outbox.Select(kv => new Measurement<long>(kv.Value.Pending,
+                new KeyValuePair<string, object?>("destination", kv.Key))),
+            description: "Outbox rows not yet published and not dead-lettered, recomputed from Postgres.");
+        meter.CreateObservableGauge("rpg.outbox_oldest_unpublished_age",
+            () => _outbox.Select(kv => new Measurement<double>(kv.Value.OldestAge,
+                new KeyValuePair<string, object?>("destination", kv.Key))),
+            unit: "s", description: "Age of the oldest unpublished outbox row: the outbox lag (0 when none).");
+        meter.CreateObservableGauge("rpg.outbox_dead_lettered",
+            () => _outbox.Select(kv => new Measurement<long>(kv.Value.Dead,
+                new KeyValuePair<string, object?>("destination", kv.Key))),
+            description: "Outbox rows dead-lettered and waiting for a human.");
         meter.CreateObservableGauge("rpg.battles_unverified",
             () => Interlocked.Read(ref _battlesUnverified) is var count and >= 0
                 ? [new Measurement<long>(count)]
@@ -148,9 +167,20 @@ public sealed class RpgMetrics
 
     public void DevTokenIssued() => _devTokens.Add(1);
 
-    /// <summary>source: upload | sweeper; result: ok | failed.</summary>
-    public void VerifyJobPublished(string source, string result) => _verifyJobsPublished.Add(1,
-        new KeyValuePair<string, object?>("source", source), new KeyValuePair<string, object?>("result", result));
+    /// <summary>destination: rabbit | redpanda; type: an outbox row type; result: ok | failed.</summary>
+    public void OutboxPublished(string destination, string type, string result) => _outboxPublished.Add(1,
+        new KeyValuePair<string, object?>("destination", destination), new KeyValuePair<string, object?>("type", type),
+        new KeyValuePair<string, object?>("result", result));
+
+    public void OutboxPublishDuration(string destination, TimeSpan duration) => _outboxPublishDuration.Record(
+        duration.TotalSeconds, new KeyValuePair<string, object?>("destination", destination));
+
+    /// <summary>Set by <c>OutboxMonitor</c>.</summary>
+    public void SetOutbox(string destination, long pending, double oldestAgeSeconds, long deadLettered) =>
+        _outbox[destination] = (pending, Math.Max(0, oldestAgeSeconds), deadLettered);
+
+    /// <summary>source: redis | postgres.</summary>
+    public void WalletRead(string source) => _walletReads.Add(1, new KeyValuePair<string, object?>("source", source));
 
     /// <summary>Set by <c>BattleVerifyMonitor</c>; nothing is exported until the first count arrives.</summary>
     public void SetBattlesUnverified(long count, double oldestAgeSeconds)

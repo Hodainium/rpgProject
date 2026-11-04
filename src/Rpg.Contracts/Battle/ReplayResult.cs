@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Rpg.Contracts.Battle;
 
 /// <summary>Output of the headless replay runner.</summary>
@@ -7,6 +9,8 @@ namespace Rpg.Contracts.Battle;
 /// <param name="Mismatch">The first mismatch the replay detected when Rejected, otherwise null.</param>
 /// <param name="Outcome">What the verifier's own simulation reached.</param>
 /// <param name="EngineVersion">Godot version string of the runner, e.g. "4.7.2.stable.mono.official".</param>
+/// <param name="Facts">Spec settlement-outbox 3.1: what the replay learned from content (encounter, bosses, party). Null
+/// from a runner that predates it; omitted from the JSON when null, so older goldens read and write unchanged.</param>
 public sealed record ReplayResult(
     int SchemaVersion,
     string BattleId,
@@ -17,7 +21,8 @@ public sealed record ReplayResult(
     BattleOutcome Outcome,
     int Turns,
     string FinalStateHash,
-    string EngineVersion);
+    string EngineVersion,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] BattleFacts? Facts = null);
 
 /// <param name="Turn">The simulated turn at which the replay detected the mismatch (not necessarily where the log
 /// diverged: a legal tamper can surface turns later; spec atomic-battles).</param>

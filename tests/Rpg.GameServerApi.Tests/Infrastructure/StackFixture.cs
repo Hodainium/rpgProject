@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using Npgsql;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
+using Testcontainers.Redpanda;
 using Testcontainers.Redis;
 
 namespace Rpg.GameServerApi.Tests.Infrastructure;
@@ -16,23 +17,27 @@ public sealed class StackFixture : IAsyncLifetime
     public const string PostgresImage = "postgres:16-alpine";
     public const string RedisImage = "redis:7-alpine";
     public const string RabbitMqImage = "rabbitmq:4.1-management-alpine";
+    public const string RedpandaImage = "docker.redpanda.com/redpandadata/redpanda:v24.1.1";
 
     public PostgreSqlContainer Postgres { get; } = new PostgreSqlBuilder(PostgresImage).Build();
     public RedisContainer Redis { get; } = new RedisBuilder(RedisImage).Build();
     public RabbitMqContainer RabbitMq { get; } = new RabbitMqBuilder(RabbitMqImage).Build();
+    public RedpandaContainer Redpanda { get; } = new RedpandaBuilder(RedpandaImage).Build();
 
     public string PostgresConnectionString => Postgres.GetConnectionString();
     public string RedisConnectionString => Redis.GetConnectionString() + ",abortConnect=false";
     public string RabbitMqUri => RabbitMq.GetConnectionString();
+    public string RedpandaBootstrap => Redpanda.GetBootstrapAddress();
 
     public async ValueTask InitializeAsync() =>
-        await Task.WhenAll(Postgres.StartAsync(), Redis.StartAsync(), RabbitMq.StartAsync());
+        await Task.WhenAll(Postgres.StartAsync(), Redis.StartAsync(), RabbitMq.StartAsync(), Redpanda.StartAsync());
 
     public async ValueTask DisposeAsync()
     {
         await Postgres.DisposeAsync();
         await Redis.DisposeAsync();
         await RabbitMq.DisposeAsync();
+        await Redpanda.DisposeAsync();
     }
 
     /// <summary>

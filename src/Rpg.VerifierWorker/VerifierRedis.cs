@@ -6,17 +6,12 @@ using StackExchange.Redis;
 
 namespace Rpg.VerifierWorker;
 
-public enum LockResult { Acquired, Busy, Unavailable }
-
 /// <summary>
-/// The worker's Redis use (spec battle-verify 3.4): the dedup lock and the verdict cache. Every operation fails open.
-/// Redis is an optimisation here; correctness is the guarded Postgres update.
+/// The worker's Redis use (spec battle-verify 3.4, settlement-outbox 3.5): the verdict cache and the wallet cache; the dedup lock is gone. Every operation fails open.
+/// Redis is an optimisation here; correctness is the guarded Postgres transaction.
 /// </summary>
 public sealed class VerifierRedis(IConfiguration configuration, ILogger<VerifierRedis> logger) : IAsyncDisposable
 {
-    private const string ReleaseScript =
-        "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
-
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(30);
 
     private readonly Lazy<Task<ConnectionMultiplexer>> _connection = new(() =>
@@ -26,7 +21,7 @@ public sealed class VerifierRedis(IConfiguration configuration, ILogger<Verifier
             ?? throw new InvalidOperationException("ConnectionStrings:Redis is not configured."));
         options.AbortOnConnectFail = false;
         options.ConnectTimeout = 2000;
-        // Fail open fast: with Redis down every job makes three calls, and the default 5 s each would stall the consumer.
+        // Fail open fast: with Redis down every job makes two calls, and the default 5 s each would stall the consumer.
         options.SyncTimeout = 1000;
         options.AsyncTimeout = 1000;
         options.ClientName = "rpg-verifier-worker";
@@ -35,33 +30,19 @@ public sealed class VerifierRedis(IConfiguration configuration, ILogger<Verifier
 
     private async Task<IDatabase> DatabaseAsync() => (await _connection.Value).GetDatabase();
 
-    public async Task<LockResult> TryLockAsync(string battleId, string token, TimeSpan ttl)
+    /// <summary>After a settlement: the cached wallet is stale. Returns false on a Redis error (the 60 s TTL bounds it).</summary>
+    public async Task<bool> InvalidateWalletAsync(Guid playerId)
     {
         try
         {
             var database = await DatabaseAsync();
-            return await database.StringSetAsync(VerifyPolicy.LockKey(battleId), token, ttl, When.NotExists)
-                ? LockResult.Acquired
-                : LockResult.Busy;
+            await database.KeyDeleteAsync(VerifyPolicy.WalletKey(playerId));
+            return true;
         }
         catch (Exception ex) when (IsRedisError(ex))
         {
-            logger.LogDebug("Redis lock unavailable: {Message}", ex.Message);
-            return LockResult.Unavailable;
-        }
-    }
-
-    /// <summary>Compare-and-delete: only the holder's token releases it.</summary>
-    public async Task ReleaseAsync(string battleId, string token)
-    {
-        try
-        {
-            var database = await DatabaseAsync();
-            await database.ScriptEvaluateAsync(ReleaseScript, [VerifyPolicy.LockKey(battleId)], [token]);
-        }
-        catch (Exception ex) when (IsRedisError(ex))
-        {
-            logger.LogDebug("Redis lock not released (it expires on its own): {Message}", ex.Message);
+            logger.LogDebug("Wallet cache not cleared: {Message}", ex.Message);
+            return false;
         }
     }
 

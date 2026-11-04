@@ -63,17 +63,18 @@ MSYS_NO_PATHCONV=1 "$root/tools/watch.sh" --name image-replay --idle 600 --timeo
 			timeout 120 godot --headless --path /srv/client-godot --quit-after 200000 \
 				res://combat/headless/replay_main.tscn -- --in "$f" --out "/tmp/$name.res.json" \
 				--content-root res://tests/fixtures/ > "/tmp/$name.log" 2>&1
-			echo "RESULT $name $? $(grep -o "\"finalStateHash\":\"[0-9a-f]*\"" "/tmp/$name.res.json" 2> /dev/null)"
+			echo "RESULT $name $? $(grep -o "\"finalStateHash\":\"[0-9a-f]*\"" "/tmp/$name.res.json" 2> /dev/null) $(grep -o "\"facts\":{[^}]*}" "/tmp/$name.res.json" 2> /dev/null)"
 		done'
 code=$?
 (( code == 124 )) && { echo "FAIL the replay stalled"; exit 124; }
 checked=0
-while read -r _ name exit_code hash_field; do
+while read -r _ name exit_code hash_field facts_field; do
 	[[ -n $name ]] || continue
 	checked=$((checked + 1))
 	expected_exit=0; [[ $name == *-tampered-* ]] && expected_exit=2
 	expected_hash=$(grep -o '"finalStateHash":"[0-9a-f]*"' "$goldens/$name.result.json" 2> /dev/null | head -1)
-	if [[ $exit_code == "$expected_exit" && -n $expected_hash && $hash_field == "$expected_hash" ]]; then
+	expected_facts=$(grep -o '"facts":{[^}]*}' "$goldens/$name.result.json" 2> /dev/null | head -1)  # spec settlement-outbox: same Facts on Linux
+	if [[ $exit_code == "$expected_exit" && -n $expected_hash && $hash_field == "$expected_hash" && $facts_field == "$expected_facts" ]]; then
 		echo "ok   $name (exit $exit_code, ${hash_field:17:12}...)"
 	else
 		echo "FAIL $name: exit $exit_code (expected $expected_exit), $hash_field (expected $expected_hash)"

@@ -79,6 +79,9 @@ public partial class ServerBridge : Node
     /// <summary>GET /api/v1/runs/{runId}/battles/{seq}; completes with a BattleSessionResponse.</summary>
     public long GetBattle(string runId, int seq) => Start(client => client.GetBattleAsync(runId, seq));
 
+    /// <summary>GET /api/v1/wallet; completes with a WalletResponse.</summary>
+    public long GetWallet() => Start(client => client.GetWalletAsync());
+
     /// <summary>POST /api/v1/presence with a PresenceRequest; completes with "null" (204).</summary>
     public long Heartbeat(string requestJson) =>
         Start<object?>(async client =>

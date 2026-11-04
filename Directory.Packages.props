@@ -8,6 +8,8 @@
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="StackExchange.Redis" Version="3.4.5" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
+    <!-- Spec settlement-outbox 3.4: the outbox relay's Redpanda producer (Kafka API). -->
+    <PackageVersion Include="Confluent.Kafka" Version="2.8.0" />
     <!-- Spec server-authority Part B: bearer tokens (the dev issuer signs HS256 with Auth:SigningKey). -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.0" />
@@ -24,5 +26,6 @@
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageVersion Include="Testcontainers.Redis" Version="4.16.0" />
     <PackageVersion Include="Testcontainers.RabbitMq" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.Redpanda" Version="4.16.0" />
   </ItemGroup>
 </Project>

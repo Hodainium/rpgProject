@@ -1,0 +1,2 @@
+rpg_outbox_published_total\{[^}]*destination="redpanda"[^}]*result="ok"[^}]*\} [1-9]
+rpg_wallet_reads_total(\{[^}]*\})? [1-9]

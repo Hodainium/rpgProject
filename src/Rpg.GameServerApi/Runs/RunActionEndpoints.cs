@@ -40,8 +40,7 @@ public static class RunActionEndpoints
     }
 
     private static async Task<IResult> SendActionsAsync(HttpContext context, Guid runId, RunActionBatch? batch,
-        RunStore store, RunSummaryCache cache, RpgMetrics metrics, VerifyJobPublisher publisher, TimeProvider clock,
-        ILogger<RunStore> logger, CancellationToken ct)
+        RunStore store, RunSummaryCache cache, RpgMetrics metrics, TimeProvider clock, CancellationToken ct)
     {
         var started = Stopwatch.GetTimestamp();
         var player = context.User.Player();
@@ -84,7 +83,7 @@ public static class RunActionEndpoints
             }
         }
 
-        foreach (var _ in result.NewJobs)
+        for (var i = 0; i < result.Battles; i++)
         {
             metrics.BattleSubmitted();
         }
@@ -99,38 +98,7 @@ public static class RunActionEndpoints
             await cache.InvalidateAsync(RunSummaryCache.SummaryKey(runId));
         }
 
-        if (result.NewJobs.Count > 0)
-        {
-            // After the ack: a slow broker never delays the player's upload queue (the sweeper covers a lost publish).
-            var jobs = result.NewJobs;
-            context.Response.OnCompleted(() => PublishJobsAsync(jobs, store, publisher, clock, logger));
-        }
-
         return Results.Ok(new RunActionAck(result.LastSeq));
-    }
-
-    /// <summary>
-    /// The fast path (battle-verify 2.1): after the commit, the cache invalidation and the response, best effort and
-    /// independent of the request (a client that disconnects does not cancel it). Whatever fails here, the sweeper
-    /// republishes later.
-    /// </summary>
-    private static async Task PublishJobsAsync(IReadOnlyList<VerifyBattleJob> jobs, RunStore store,
-        VerifyJobPublisher publisher, TimeProvider clock, ILogger logger)
-    {
-        foreach (var job in jobs)
-        {
-            try
-            {
-                if (await publisher.TryPublishAsync(job, "upload", CancellationToken.None))
-                {
-                    await store.MarkEnqueuedAsync(job.BattleId, clock.GetUtcNow(), CancellationToken.None);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning("Verify job for {BattleId} not recorded as enqueued ({Message})", job.BattleId, ex.Message);
-            }
-        }
     }
 
     private static async Task<IResult> EndRunAsync(HttpContext context, Guid runId, RunEndRequest? request,

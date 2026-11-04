@@ -36,12 +36,17 @@ public sealed class VerifierOptions
     /// <summary>Overrides the version read from the project (tests and e2e); empty = ask Godot once at startup.</summary>
     public string RulesetVersion { get; set; } = "";
 
-    /// <summary>Lock TTL; must exceed <see cref="ProcessTimeout"/>.</summary>
-    public TimeSpan LockTtl { get; set; } = TimeSpan.FromSeconds(120);
-
     /// <summary>How long a stopping worker lets running jobs finish before it gives the rest back to the broker.</summary>
     public TimeSpan ShutdownGrace { get; set; } = TimeSpan.FromSeconds(70);  // longer than ProcessTimeout
+}
 
-    /// <summary>Tests only: false skips the Redis lock entirely (to prove correctness never depends on it).</summary>
-    public bool UseLock { get; set; } = true;
+/// <summary>Configuration section <c>Settlement</c> (spec settlement-outbox 3.7).</summary>
+public sealed class SettlementOptions
+{
+    public const string Section = "Settlement";
+
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Gems one completion mark pays: an economy number, a plain whole number (not x100).</summary>
+    public int GemsPerBossMark { get; set; } = 10;
 }
