@@ -64,7 +64,7 @@ public class RunContractTests
             .Select(field => (int)field.GetRawConstantValue()!)
             .ToList();
 
-        Assert.Equal(8, codes.Count);
+        Assert.Equal(10, codes.Count);
         Assert.Equal(codes.Count, codes.Distinct().Count());
         Assert.DoesNotContain(ReplayErrors.ReplayMismatchCode, codes);
     }

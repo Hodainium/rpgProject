@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Godot;
 using Rpg.Client;
 using Rpg.Contracts.Auth;
+using Rpg.Contracts.Economy;
 using Rpg.Contracts.Presence;
 using Rpg.Contracts.Runs;
 using Rpg.Contracts.Serialization;
@@ -81,6 +82,15 @@ public partial class ServerBridge : Node
 
     /// <summary>GET /api/v1/wallet; completes with a WalletResponse.</summary>
     public long GetWallet() => Start(client => client.GetWalletAsync());
+
+#if DEBUG  // admin calls exist only in debug builds (dev, full, editor, tests); the player export is a release build
+    /// <summary>PUT /api/v1/admin/reward-rules with a RewardRuleRequest (economy-admin, spec economy-rewards); completes with a RewardRuleResponse.</summary>
+    public long PutRewardRule(string requestJson) =>
+        Start(client => client.PutRewardRuleAsync(Parse<RewardRuleRequest>(requestJson)));
+
+    /// <summary>GET /api/v1/admin/reward-rules (economy-admin); completes with a RewardRuleListResponse.</summary>
+    public long ListRewardRules() => Start(client => client.ListRewardRulesAsync());
+#endif
 
     /// <summary>POST /api/v1/presence with a PresenceRequest; completes with "null" (204).</summary>
     public long Heartbeat(string requestJson) =>

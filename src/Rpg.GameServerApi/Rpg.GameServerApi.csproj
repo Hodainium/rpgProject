@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Rpg.Contracts\Rpg.Contracts.csproj" />
+    <ProjectReference Include="..\Rpg.Economy\Rpg.Economy.csproj" />
     <ProjectReference Include="..\Rpg.Verification\Rpg.Verification.csproj" />
   </ItemGroup>
 

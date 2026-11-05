@@ -194,6 +194,12 @@ func get_wallet() -> Dictionary:
 	return await _request("GetWallet", [])
 
 
+## One bridge call with a signed-in token, for callers that name the method themselves. The dev console uses it for
+## calls the player build does not have (the admin reward rules, compiled only into debug builds).
+func request(method: String, args: Array) -> Dictionary:
+	return await _request(method, args)
+
+
 ## Spec battle-verify 2.2: the verifier's verdict on the battles of `run` (all of them, or the one at wire seq
 ## `only_seq`). A run_log entry is one wire action, so a battle's seq is its index + 1. Each entry:
 ## {"seq", "battleId", "status" ("Submitted", "Verified", "Rejected" or "" when the read failed), "verdict" (the

@@ -140,8 +140,16 @@ public sealed class VerifyProcessor(VerdictStore store, VerifierRedis redis, IRe
                 SettlementResult.Granted => "granted",
                 SettlementResult.AlreadyMarked => "already_marked",
                 SettlementResult.Rejected => "rejected",
+                SettlementResult.NoRule => "no_rule",
+                SettlementResult.BadId => "bad_id",
                 _ => "no_reward",
             });
+            if (commit.Settlement is { } settled)
+            {
+                metrics.RewardRuleLookups("found", settled.Found);
+                metrics.RewardRuleLookups("missing", settled.Missing);
+                metrics.RewardRuleLookups("retired", settled.Retired);
+            }
             if (commit.Grants.Count > 0)
             {
                 metrics.GemsGranted("completion_mark", commit.Grants.Sum(g => g.Gems));

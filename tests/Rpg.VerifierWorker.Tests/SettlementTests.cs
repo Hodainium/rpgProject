@@ -339,6 +339,196 @@ public class SettlementTests(Stack stack)
             "SELECT status FROM battle_sessions WHERE battle_id = $1", b.BattleId).Result));
     }
 
+    // ---- Spec economy-rewards: the amount is the rule in force, recorded on every ledger row ----
+
+    [Fact]
+    public async Task ARuleOf25_PaysEachPartyCharacter25_AndTheLedgerAndEventRecordTheVersion()
+    {
+        await using var worker = await CreateAsync(stack);
+        await worker.PutRuleAsync("boss.lich", 25, version: 2);
+        WinsAgainstABoss(worker, "warrior", "cleric");
+        var battle = await worker.SeedAsync();
+
+        await worker.Processor.ProcessAsync(JobOf(battle), Ct);
+
+        Assert.Equal(50, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", battle.PlayerId));
+        Assert.Equal(2L, await worker.ScalarAsync<long>(
+            "SELECT count(*) FROM wallet_ledger WHERE delta = 25 AND rule_version = 2 AND source_kind = 'boss' AND source_id = 'boss.lich'"));
+        var rewards = (await worker.OutboxPayloadsAsync("RewardGranted"))
+            .Select(json => JsonSerializer.Deserialize<DomainEvent<RewardGrantedPayload>>(json, RpgJson.Options)!).ToList();
+        Assert.All(rewards, r => Assert.Equal((25, 2), (r.Payload.Amount, r.Payload.RuleVersion)));
+        Assert.Equal(1, worker.Metrics.Count("rpg.reward_rule_lookups", "result=found"));
+        Assert.Equal(50, worker.Metrics.Count("rpg.gems_granted", "reason=completion_mark"));
+    }
+
+    [Fact]
+    public async Task TwoBossesWithDifferentRules_EachPaysItsOwnAmount()
+    {
+        await using var worker = await CreateAsync(stack);
+        await worker.PutRuleAsync("boss.a", 7, version: 2);
+        await worker.PutRuleAsync("boss.b", 30, version: 2);
+        worker.Runner.Handler = (request, _) => Task.FromResult(FakeReplayRunner.Verified(
+            FakeReplayRunner.BattleIdOf(request), new BattleFacts("enc", ["boss.a", "boss.b"], ["warrior"])));
+        var battle = await worker.SeedAsync();
+
+        await worker.Processor.ProcessAsync(JobOf(battle), Ct);
+
+        Assert.Equal(37, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", battle.PlayerId));
+        Assert.Equal(7, await worker.ScalarAsync<int>("SELECT delta FROM wallet_ledger WHERE source_id = 'boss.a'"));
+        Assert.Equal(30, await worker.ScalarAsync<int>("SELECT delta FROM wallet_ledger WHERE source_id = 'boss.b'"));
+    }
+
+    [Fact]
+    public async Task NoRule_GrantsNothing_WritesNoMark_AndALaterRulePaysTheNextWin()
+    {
+        await using var worker = await CreateAsync(stack);
+        worker.Runner.Handler = (request, _) => Task.FromResult(FakeReplayRunner.Verified(
+            FakeReplayRunner.BattleIdOf(request), new BattleFacts("enc", ["boss.new"], ["warrior"])));
+        var first = await worker.SeedAsync();
+        var second = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won");
+
+        var decision = await worker.Processor.ProcessAsync(JobOf(first), Ct);  // F1
+
+        Assert.Equal("verified", decision.Result);
+        Assert.Equal("Verified", await worker.ScalarAsync<string>("SELECT status FROM battle_sessions WHERE battle_id = $1", first.BattleId));
+        Assert.Equal(0L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));
+        Assert.Equal(0L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
+        Assert.Equal(1, worker.Metrics.Count("rpg.settlements", "result=no_rule"));
+        Assert.Equal(1, worker.Metrics.Count("rpg.reward_rule_lookups", "result=missing"));
+
+        await worker.PutRuleAsync("boss.new", 40, version: 1);
+        await worker.Processor.ProcessAsync(JobOf(second), Ct);
+
+        Assert.Equal(40, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", first.PlayerId));
+        Assert.Equal(1L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));
+    }
+
+    [Fact]
+    public async Task AMarkedBossAndAnUnruledBoss_ReportNoRule_NotAlreadyMarked()
+    {
+        await using var worker = await CreateAsync(stack);
+        var first = await worker.SeedAsync();
+        var second = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won");
+        worker.Runner.Handler = (request, _) => Task.FromResult(FakeReplayRunner.Verified(
+            FakeReplayRunner.BattleIdOf(request),
+            new BattleFacts("enc", FakeReplayRunner.BattleIdOf(request) == first.BattleId ? ["boss.lich"] : ["boss.lich", "boss.new"], ["warrior"])));
+        await worker.Processor.ProcessAsync(JobOf(first), Ct);
+
+        await worker.Processor.ProcessAsync(JobOf(second), Ct);
+
+        Assert.Equal(1, worker.Metrics.Count("rpg.settlements", "result=no_rule"));
+        Assert.Equal(0, worker.Metrics.Count("rpg.settlements", "result=already_marked"));
+    }
+
+    [Fact]
+    public async Task RetiredRule_PaysNothing()
+    {
+        await using var worker = await CreateAsync(stack);
+        await worker.PutRuleAsync("boss.lich", 0, version: 2);
+        WinsAgainstABoss(worker, "warrior");
+        var battle = await worker.SeedAsync();
+
+        await worker.Processor.ProcessAsync(JobOf(battle), Ct);  // F2
+
+        Assert.Equal(0L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));
+        Assert.Equal(0L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
+        Assert.Equal(1, worker.Metrics.Count("rpg.reward_rule_lookups", "result=retired"));
+        Assert.Equal(1, worker.Metrics.Count("rpg.settlements", "result=no_rule"));
+    }
+
+    [Fact]
+    public async Task ARuleWhoseEffectiveTimeIsInTheFuture_IsIgnored()
+    {
+        await using var worker = await CreateAsync(stack);
+        await worker.ExecuteAsync(
+            "INSERT INTO reward_rules (source_kind, source_id, currency, amount, version, effective_from, created_by) VALUES ('boss','boss.lich','gems',99,2, now() + interval '1 hour','t')");
+        WinsAgainstABoss(worker, "warrior");
+        var battle = await worker.SeedAsync();
+
+        await worker.Processor.ProcessAsync(JobOf(battle), Ct);
+
+        Assert.Equal(10, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", battle.PlayerId));
+        Assert.Equal(1, await worker.ScalarAsync<int>("SELECT rule_version FROM wallet_ledger"));
+    }
+
+    [Fact]
+    public async Task RuleChangedBetweenTwoBattles_EachLedgerRowRecordsItsVersion()
+    {
+        await using var worker = await CreateAsync(stack);
+        var first = await worker.SeedAsync();
+        var second = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won");
+        worker.Runner.Handler = (request, _) =>
+            Task.FromResult(FakeReplayRunner.Verified(FakeReplayRunner.BattleIdOf(request),
+                BossFacts(FakeReplayRunner.BattleIdOf(request) == first.BattleId ? "warrior" : "cleric")));
+
+        await worker.Processor.ProcessAsync(JobOf(first), Ct);
+        await worker.PutRuleAsync("boss.lich", 25, version: 2);  // F3
+        await worker.Processor.ProcessAsync(JobOf(second), Ct);
+
+        Assert.Equal(10, await worker.ScalarAsync<int>("SELECT delta FROM wallet_ledger WHERE ref_battle_id = $1", first.BattleId));
+        Assert.Equal(1, await worker.ScalarAsync<int>("SELECT rule_version FROM wallet_ledger WHERE ref_battle_id = $1", first.BattleId));
+        Assert.Equal(25, await worker.ScalarAsync<int>("SELECT delta FROM wallet_ledger WHERE ref_battle_id = $1", second.BattleId));
+        Assert.Equal(2, await worker.ScalarAsync<int>("SELECT rule_version FROM wallet_ledger WHERE ref_battle_id = $1", second.BattleId));
+        Assert.Equal(35, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", first.PlayerId));
+    }
+
+    [Theory]
+    [InlineData("warr:ior", "boss.lich")]
+    [InlineData("warrior", "boss lich")]
+    public async Task AnIdWithAColonOrASpace_IsNeverGranted_AndTheVerdictStillCommits(string character, string boss)
+    {
+        await using var worker = await CreateAsync(stack);
+        worker.Runner.Handler = (request, _) => Task.FromResult(FakeReplayRunner.Verified(
+            FakeReplayRunner.BattleIdOf(request), new BattleFacts("enc", [boss], [character])));
+        var battle = await worker.SeedAsync();
+
+        var decision = await worker.Processor.ProcessAsync(JobOf(battle), Ct);  // F10
+
+        Assert.Equal("verified", decision.Result);
+        Assert.Equal("Verified", await worker.ScalarAsync<string>("SELECT status FROM battle_sessions WHERE battle_id = $1", battle.BattleId));
+        Assert.Equal(0L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));
+        Assert.Equal(0L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
+        Assert.Equal(1, worker.Metrics.Count("rpg.settlements", "result=bad_id"));
+    }
+
+    [Fact]
+    public void TwoColonIds_NeverShareALedgerKey()
+    {
+        // a:b + c and a + b:c would both build "mark:<battle>:a:b:c"; the id check refuses either colon id, so only a clean
+        // pair can ever reach the ledger key.
+        Assert.False(Economy.RewardRules.IsKeySafeId("a:b"));
+        Assert.False(Economy.RewardRules.IsKeySafeId("b:c"));
+        Assert.False(Economy.RewardRules.IsKeySafeId(" "));
+        Assert.True(Economy.RewardRules.IsKeySafeId("boss.lich"));
+    }
+
+    [Fact]
+    public async Task TheEventRowsOfASettlement_CarryTheWorkersTraceParent()
+    {
+        using var listener = new System.Diagnostics.ActivityListener
+        {
+            ShouldListenTo = _ => true,
+            Sample = (ref System.Diagnostics.ActivityCreationOptions<System.Diagnostics.ActivityContext> _) =>
+                System.Diagnostics.ActivitySamplingResult.AllDataAndRecorded,
+        };
+        System.Diagnostics.ActivitySource.AddActivityListener(listener);
+        await using var worker = await CreateAsync(stack);
+        WinsAgainstABoss(worker, "warrior");
+        var battle = await worker.SeedAsync();
+        using var source = new System.Diagnostics.ActivitySource("test.job");
+        using var job = source.StartActivity("verify.battle")!;
+
+        await worker.Processor.ProcessAsync(JobOf(battle), Ct);
+
+        foreach (var type in new[] { "BattleVerified", "RewardGranted" })
+        {
+            var parent = await worker.ScalarAsync<string>("SELECT traceparent FROM outbox WHERE type = $1", type) ?? "";
+            Assert.True(System.Diagnostics.ActivityContext.TryParse(parent, null, out var context), parent);
+            Assert.Equal(job.TraceId, context.TraceId);  // the worker's trace, continued from the job
+            Assert.NotEqual(job.SpanId, context.SpanId);  // the replay span, a child of the job
+        }
+    }
+
     private static Task<WorkerHarness> CreateAsync(Stack stack, Dictionary<string, string?>? settings = null,
         string? postgres = null, string? redis = null) =>
         WorkerHarness.CreateAsync(stack, settings, postgres, redis);

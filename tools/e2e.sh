@@ -140,7 +140,15 @@ run_scenario() {  # <name> <index 1-15>
 		"ConnectionStrings__Redis=127.0.0.1:6379,abortConnect=false,defaultDatabase=$index"
 		"RabbitMq__Uri=amqp://$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS@127.0.0.1:5672/$vhost"
 		"Seeds__Secret=$seed_secret" "Auth__SigningKey=$signing_key" Ruleset__AcceptAny=false
-		"Ruleset__Accepted__0=$ruleset")
+		"Ruleset__Accepted__0=$ruleset" "Auth__DevAdmins__0=e2e-$name")
+	# Spec economy-rewards: what a boss pays is a server-owned rule. Every scenario starts with the fixtures' three bosses at
+	# 10 gems (the old flat amount); a scenario changes them through the admin path (the console's `server reward <boss> <amount>`).
+	local boss_n=0 boss
+	for boss in fixture.enemy.chief fixture.enemy.lich fixture.enemy.mirror; do
+		env+=("Economy__SeedRules__${boss_n}__SourceKind=boss" "Economy__SeedRules__${boss_n}__SourceId=$boss"
+			"Economy__SeedRules__${boss_n}__Currency=gems" "Economy__SeedRules__${boss_n}__Amount=10")
+		boss_n=$((boss_n + 1))
+	done
 	local line
 	while IFS= read -r line || [[ -n $line ]]; do
 		line=${line%$'\r'}
@@ -155,7 +163,7 @@ run_scenario() {  # <name> <index 1-15>
 		"RabbitMq__Uri=amqp://$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS@127.0.0.1:5672/$vhost"
 		"Urls=http://127.0.0.1:$wport" "Verifier__GodotPath=$(win "$godot")" "Verifier__ProjectPath=$(win "$root/client-godot")"
 		"Verifier__ContentRoot=$content_root" "Verifier__RulesetVersion=$ruleset" Verifier__Concurrency=2
-		Settlement__Enabled=true Settlement__GemsPerBossMark=10)
+		Settlement__Enabled=true)
 	start_worker() {
 		(cd "$worker_dir" && exec env "${worker_env[@]}" dotnet Rpg.VerifierWorker.dll >> "$dir/worker.log" 2>&1) &
 		echo $! > "$worker_pid_file"
@@ -167,6 +175,18 @@ run_scenario() {  # <name> <index 1-15>
 		return 1
 	}
 	stop_worker() { [[ -s $worker_pid_file ]] && kill_tree "$(cat "$worker_pid_file")"; : > "$worker_pid_file"; }
+
+	# The seeder is a background service that is not part of /health/ready: wait until the rules exist, so a scenario's first
+	# `server reward` is always version 2 (and never races the seeder).
+	wait_seed_rules() {
+		local tries n
+		for tries in $(seq 1 120); do
+			n=$(psql -d "$db" -c "SELECT count(*) FROM reward_rules" 2> /dev/null | tr -d '')
+			[[ $n == "$boss_n" ]] && return 0
+			sleep 0.5
+		done
+		return 1
+	}
 
 	start_server() {
 		(cd "$server_dir" && exec env "${env[@]}" dotnet Rpg.GameServerApi.dll >> "$dir/server.log" 2>&1) &
@@ -248,6 +268,8 @@ run_scenario() {  # <name> <index 1-15>
 			echo "setup failed (database, Redis or RabbitMQ vhost)" > "$result"
 		elif ! start_server; then
 			echo "server never ready: $(tail -40 "$dir/server.log" | tr '\n' ' ')" > "$result"
+		elif ! wait_seed_rules; then
+			echo "the seed reward rules never appeared (the server's RewardRuleSeeder runs in the background)" > "$result"
 		elif (( want_worker )) && ! start_worker; then
 			echo "worker never ready: $(tail -40 "$dir/worker.log" | tr '\n' ' ')" > "$result"
 		else

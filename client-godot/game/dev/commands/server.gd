@@ -4,8 +4,8 @@ extends DevCommand
 
 func _init() -> void:
 	name = "server"
-	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | resume | forget | conflict]"
-	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
+	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | reward [<boss> <amount>] | resume | forget | conflict]"
+	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's boss reward rules; reward <boss id> <amount>: set one (a new version; 0 retires it; needs the economy-admin role, which only a Development server gives, spec economy-rewards). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
 	cheat = false
 
 
@@ -18,6 +18,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		return await _verdict(ctx, args)
 	if args.size() > 0 and args[0] == "wallet":
 		return await _wallet(ctx)
+	if args.size() > 0 and args[0] == "reward":
+		return await _reward(ctx, args)
 	if args.size() > 0 and args[0] in ["resume", "forget", "conflict"]:
 		return await _part_b(ctx, args[0])
 	if ctx.game == null:
@@ -137,6 +139,26 @@ func _wallet(ctx: DevContext) -> String:
 	return ServerLink.describe_wallet(answer["data"])
 
 
+## Spec economy-rewards: lists the reward rules, or sets one. The amounts live on the server; this only drives its admin path.
+func _reward(ctx: DevContext, args: PackedStringArray) -> String:
+	if ctx.game == null or ctx.game.server == null:
+		return ctx.fail("not in server mode")
+	if args.size() == 1:
+		var listed: Dictionary = await ctx.game.server.request("ListRewardRules", [])
+		if not listed["ok"]:
+			return ctx.fail("GET reward-rules: " + ServerLink.describe(listed["error"]))
+		var rules: Array = listed["data"].get("rules", [])
+		if rules.is_empty():
+			return "no reward rules"
+		return "\n".join(PackedStringArray(rules.map(func(rule: Dictionary) -> String: return _describe_rule(rule))))
+	if args.size() != 3 or not args[2].is_valid_int() or int(args[2]) < 0:
+		return ctx.fail("usage: server reward [<boss id> <amount>]")
+	var answer: Dictionary = await ctx.game.server.request("PutRewardRule", [WireJson.stringify({"sourceKind": "boss", "sourceId": args[1], "currency": "gems", "amount": int(args[2])})])
+	if not answer["ok"]:
+		return ctx.fail("PUT reward-rules: " + ServerLink.describe(answer["error"]))
+	return _describe_rule(answer["data"])
+
+
 ## Spec dev-tools E3: the server agrees with the run: GET /runs/{id} is Active on the client's floor, and asking for
 ## the current floor again (a free retry) returns the client's seed. Read-only for the run.
 func _check(ctx: DevContext) -> String:
@@ -169,3 +191,9 @@ func _check(ctx: DevContext) -> String:
 		return ctx.fail("server disagrees: " + "; ".join(problems))
 	return "server agrees: run %s Active on floor %d, seed %s, %d action(s)" % [run_id, floor_index,
 		again["data"]["floorSeed"], int(summary["data"]["lastSeq"])]
+
+
+static func _describe_rule(rule: Dictionary) -> String:
+	return "%s %s: %d %s (version %d, by %s)%s" % [rule.get("sourceKind", "?"), rule.get("sourceId", "?"), int(rule.get("amount", 0)),
+		rule.get("currency", "?"), int(rule.get("version", 0)), rule.get("createdBy", "?"),
+		" [retired: pays nothing]" if int(rule.get("amount", 0)) == 0 else ""]

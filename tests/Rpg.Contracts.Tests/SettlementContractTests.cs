@@ -17,6 +17,8 @@ public class SettlementContractTests
     private static readonly DateTimeOffset At = new(2026, 10, 27, 12, 3, 9, TimeSpan.Zero);
     private static readonly BattleFacts Facts = new("encounter.lich", ["enemy.lich"], ["warrior", "cleric"]);
 
+    private static readonly RewardRuleResponse Rule = new("boss", "enemy.lich", "gems", 25, 3, At, "designer");
+
     public static TheoryData<string, object> Goldens() => new()
     {
         {
@@ -33,12 +35,16 @@ public class SettlementContractTests
         {
             "event-reward-granted.json",
             new DomainEvent<RewardGrantedPayload>(EventId, EventTypes.RewardGranted, 1, Player, Guid.Parse(RunId), At,
-                Ruleset, new RewardGrantedPayload("completion_mark", $"{RunId}/f4/c12", "warrior", "enemy.lich", "gems", 10, 30))
+                Ruleset, new RewardGrantedPayload("completion_mark", $"{RunId}/f4/c12", "warrior", "enemy.lich", "gems", 10, 30, 2))
         },
         { "battle-facts.json", Facts },
+        { "reward-rule-request.json", new RewardRuleRequest(RewardSourceKinds.Boss, "enemy.lich", "gems", 25) },
+        { "reward-rule-response.json", Rule },
+        { "reward-rule-list-response.json", new RewardRuleListResponse([Rule]) },
+        { "reward-rule-changed.json", new RewardRuleChangedPayload("boss", "enemy.lich", "gems", 25, 3, 10, "designer") },
         {
             "wallet-response.json",
-            new WalletResponse(30, 3, [new LedgerEntryDto("gems", 10, "completion_mark", $"{RunId}/f4/c12", At)])
+            new WalletResponse(30, 3, [new LedgerEntryDto("gems", 10, "completion_mark", $"{RunId}/f4/c12", At, 2)])
         },
         {
             "battle-verdict-verified-facts.json",
@@ -61,6 +67,15 @@ public class SettlementContractTests
         var parsed = JsonSerializer.Deserialize(text, record.GetType(), RpgJson.Options)!;
 
         Assert.Equal(text, JsonSerializer.Serialize(parsed, record.GetType(), RpgJson.Options));
+    }
+
+    [Fact]
+    public void ALedgerRowFromBeforeSlice4c_HasNoRuleVersion()
+    {
+        var parsed = JsonSerializer.Deserialize<LedgerEntryDto>(
+            """{"currency":"gems","delta":10,"reason":"completion_mark","at":"2026-10-27T12:03:09+00:00"}""", RpgJson.Options)!;
+
+        Assert.Null(parsed.RuleVersion);
     }
 
     [Fact]
@@ -88,8 +103,8 @@ public class SettlementContractTests
     [Fact]
     public void EventTypes_AndTopics_AreAFixedSet()
     {
-        Assert.Equal(["BattleVerified", "BattleRejected", "RewardGranted"],
-            new[] { EventTypes.BattleVerified, EventTypes.BattleRejected, EventTypes.RewardGranted });
+        Assert.Equal(["BattleVerified", "BattleRejected", "RewardGranted", "RewardRuleChanged"],
+            new[] { EventTypes.BattleVerified, EventTypes.BattleRejected, EventTypes.RewardGranted, EventTypes.RewardRuleChanged });
         Assert.Equal(["rpg.battle.events", "rpg.economy.events"], new[] { EventTopics.Battle, EventTopics.Economy });
     }
 

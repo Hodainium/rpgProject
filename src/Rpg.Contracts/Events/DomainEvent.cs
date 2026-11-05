@@ -25,6 +25,7 @@ public static class EventTypes
     public const string BattleVerified = "BattleVerified";
     public const string BattleRejected = "BattleRejected";
     public const string RewardGranted = "RewardGranted";
+    public const string RewardRuleChanged = "RewardRuleChanged";
 }
 
 /// <summary>Redpanda topic names (data only).</summary>
@@ -43,4 +44,8 @@ public sealed record BattleRejectedPayload(string BattleId, int RunSeq, int Erro
 /// <param name="Source">"completion_mark".</param>
 /// <param name="Currency">"gems".</param>
 public sealed record RewardGrantedPayload(string Source, string BattleId, string CharacterId, string BossId,
-    string Currency, int Amount, int BalanceAfter);
+    string Currency, int Amount, int BalanceAfter, int RuleVersion);
+
+/// <summary>Economy topic, key <c>rule:{sourceKind}:{sourceId}</c> (spec economy-rewards 3.1).</summary>
+public sealed record RewardRuleChangedPayload(string SourceKind, string SourceId, string Currency, int Amount, int Version,
+    int? PreviousAmount, string ChangedBy);

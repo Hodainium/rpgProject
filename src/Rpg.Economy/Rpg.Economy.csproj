@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Spec economy-rewards 1: the one module that reads and writes wallets, wallet_ledger, completion_marks and
+       reward_rules. A library today (the worker and the API call it); it can become a service without changing the
+       callers' contracts. No game logic: Godot reports facts, this decides what they are worth. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Rpg.Contracts\Rpg.Contracts.csproj" />
+    <ProjectReference Include="..\Rpg.Verification\Rpg.Verification.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+</Project>

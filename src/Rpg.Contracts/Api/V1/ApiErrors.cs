@@ -13,5 +13,7 @@ public static class ApiErrors
     public const int FloorNotReachable = 1105;        // 409: not the current floor or the next one
     public const int UploadIncomplete = 1106;         // 409, extension `lastSeq`: stairs or end before the log is in
     public const int PreviousFloorUnverified = 1107;  // 409 + Retry-After (slice 4a)
+    public const int RewardRuleInvalid = 1301;        // 400: unknown kind or currency, amount out of range, bad id
+    public const int AdminRequired = 1302;            // 403: the economy-admin role is missing
     public const int RateLimited = 1201;              // 429 + Retry-After
 }

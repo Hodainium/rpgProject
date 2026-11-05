@@ -15,7 +15,9 @@ public static class OutboxDestination
 /// <param name="Topic">RabbitMQ routing key or Redpanda topic.</param>
 /// <param name="Key">The ordering scope: battleId for jobs, playerId for events.</param>
 /// <param name="PayloadJson">The message body, as JSON text (the event envelope, or the job).</param>
-public sealed record OutboxMessage(Guid Id, string Destination, string Topic, string Key, string Type, string PayloadJson);
+/// <param name="TraceParent">W3C <c>traceparent</c> to store; null = the writing code's <c>Activity.Current</c> (spec economy-rewards 3.8).</param>
+public sealed record OutboxMessage(Guid Id, string Destination, string Topic, string Key, string Type, string PayloadJson,
+    string? TraceParent = null);
 
 /// <summary>
 /// Writes outbox rows inside the caller's transaction, so a row exists exactly when the change it announces committed
@@ -37,7 +39,7 @@ public static class OutboxWriter
         command.Parameters.Add(new NpgsqlParameter { Value = message.Key });
         command.Parameters.Add(new NpgsqlParameter { Value = message.Type });
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb, Value = message.PayloadJson });
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, Value = (object?)Activity.Current?.Id ?? DBNull.Value });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, Value = (object?)(message.TraceParent ?? Activity.Current?.Id) ?? DBNull.Value });
         await command.ExecuteNonQueryAsync(ct);
     }
 }

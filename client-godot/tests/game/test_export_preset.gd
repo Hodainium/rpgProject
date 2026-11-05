@@ -151,3 +151,26 @@ func _walk(directory: String, out: Array[String]) -> void:
 		_walk(directory + name + "/", out)
 	for name in DirAccess.get_files_at(directory):
 		out.append(directory + name)
+
+
+## Spec economy-rewards: the admin reward-rule calls are not in the player build. The C# bridge methods sit inside
+## `#if DEBUG` (the player export is a release build) and no shipped script names them; only the dev command does.
+func test_admin_calls_stay_out_of_the_player_build() -> void:
+	if skip_in_export():
+		return
+	var bridge := FileAccess.get_file_as_string("res://net/ServerBridge.cs")
+	var open_at := bridge.find("#if DEBUG")
+	var close_at := bridge.find("#endif", open_at)
+	check(open_at >= 0 and close_at > open_at, "the bridge has a debug-only section")
+	for method in ["PutRewardRule", "ListRewardRules"]:
+		var at := bridge.find("public long " + method)
+		check(at > open_at and at < close_at, "%s is compiled only in debug builds" % method)
+	var player: Dictionary = _presets()["Windows Desktop"]
+	var files: Array[String] = []
+	_walk("res://", files)
+	for path in files:
+		if not path.get_extension() in ["gd", "tscn", "tres"] or _excluded(player["excludes"], path) or path.begins_with("res://tests/"):
+			continue
+		var text := FileAccess.get_file_as_string(path)
+		check(not text.contains("PutRewardRule") and not text.contains("ListRewardRules"),
+			"%s ships in the player build and must not name the admin calls" % path)

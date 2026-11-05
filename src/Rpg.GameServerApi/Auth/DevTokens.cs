@@ -22,6 +22,12 @@ public sealed class AuthOptions
     /// <summary>Development only: <c>POST /api/v1/auth/dev-token</c> issues tokens. 404 everywhere else.</summary>
     public bool DevTokens { get; set; }
 
+    /// <summary>
+    /// Development only: player names whose dev token carries the <c>economy-admin</c> role (spec economy-rewards 3.6).
+    /// Ignored outside Development; real operator identity is not built.
+    /// </summary>
+    public string[] DevAdmins { get; set; } = [];
+
     public TimeSpan TokenLifetime { get; set; } = TimeSpan.FromHours(12);
 
     public SymmetricSecurityKey Key() => new(Encoding.UTF8.GetBytes(SigningKey));
@@ -35,10 +41,12 @@ public sealed record Player(Guid Id, string Name);
 /// (the first 16 bytes of SHA-256 over <c>"rpg-dev-player|" + name</c>, as a version-8 uuid) and a signed bearer
 /// token whose <c>sub</c> is that id and whose <c>name</c> is the name. Every player endpoint reads only the token.
 /// </summary>
-public sealed class DevTokenIssuer(IOptions<AuthOptions> options, TimeProvider clock)
+public sealed class DevTokenIssuer(IOptions<AuthOptions> options, TimeProvider clock, IHostEnvironment? environment = null)
 {
     public const int MaxNameLength = 64;
     public const string NameClaim = "name";
+    public const string RoleClaim = "role";
+    public const string EconomyAdminRole = "economy-admin";
 
     public static bool IsValidName(string? name) =>
         name is { Length: > 0 and <= MaxNameLength } && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
@@ -48,15 +56,21 @@ public sealed class DevTokenIssuer(IOptions<AuthOptions> options, TimeProvider c
         var id = IdOf(name);
         var now = clock.GetUtcNow();
         var expires = now + options.Value.TokenLifetime;
+        var claims = new Dictionary<string, object>
+        {
+            [JwtRegisteredClaimNames.Sub] = id.ToString("D"),
+            [NameClaim] = name,
+        };
+        if (environment?.IsDevelopment() == true && options.Value.DevAdmins.Contains(name))
+        {
+            claims[RoleClaim] = EconomyAdminRole;
+        }
+
         var token = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
             Issuer = AuthOptions.Issuer,
             Audience = AuthOptions.Audience,
-            Claims = new Dictionary<string, object>
-            {
-                [JwtRegisteredClaimNames.Sub] = id.ToString("D"),
-                [NameClaim] = name,
-            },
+            Claims = claims,
             IssuedAt = now.UtcDateTime,
             NotBefore = now.UtcDateTime,
             Expires = expires.UtcDateTime,
@@ -103,6 +117,10 @@ public static class AuthEndpoints
     public static Player Player(this ClaimsPrincipal user) =>
         new(Guid.Parse(user.FindFirstValue(JwtRegisteredClaimNames.Sub)!),
             user.FindFirstValue(DevTokenIssuer.NameClaim) ?? "");
+
+    /// <summary>True when the token carries the economy-admin role (only Development dev tokens can).</summary>
+    public static bool IsEconomyAdmin(this ClaimsPrincipal user) =>
+        user.FindAll(DevTokenIssuer.RoleClaim).Any(c => c.Value == DevTokenIssuer.EconomyAdminRole);
 
     /// <summary>The caller's player id, or null for an anonymous request.</summary>
     public static Guid? PlayerIdOrNull(this ClaimsPrincipal user) =>

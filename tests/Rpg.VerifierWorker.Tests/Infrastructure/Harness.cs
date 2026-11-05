@@ -111,6 +111,13 @@ public sealed class WorkerHarness : IAsyncDisposable
         await using (var data = NpgsqlDataSource.Create(database))
         {
             await new MigrationRunner(data, NullLogger<MigrationRunner>.Instance).EnsureMigratedAsync(CancellationToken.None);
+            // Spec economy-rewards: what a boss pays is a rule in the table. These tests' bosses pay 10 unless a test says otherwise.
+            await using var rules = data.CreateCommand(
+                """
+                INSERT INTO reward_rules (source_kind, source_id, currency, amount, version, created_by)
+                SELECT 'boss', id, 'gems', 10, 1, 'test' FROM unnest(ARRAY['boss.lich','boss.golem','boss.a','boss.b']) AS id
+                """);
+            await rules.ExecuteNonQueryAsync();
         }
 
         runner ??= new FakeReplayRunner();
@@ -180,6 +187,11 @@ public sealed class WorkerHarness : IAsyncDisposable
 
         return new SeededBattle(battleId, runId, playerId, 2, ruleset);
     }
+
+    /// <summary>A new version of a boss rule, as the API would write it.</summary>
+    public Task PutRuleAsync(string boss, int amount, int version) => ExecuteAsync(
+        "INSERT INTO reward_rules (source_kind, source_id, currency, amount, version, created_by) VALUES ('boss', $1, 'gems', $2, $3, 'test')",
+        boss, amount, version);
 
     public static VerifyBattleJob JobOf(SeededBattle battle) =>
         new(battle.BattleId, battle.RunId, battle.Seq, battle.Ruleset, DateTimeOffset.UtcNow);

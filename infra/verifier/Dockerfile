@@ -7,10 +7,12 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY global.json Directory.Build.props Directory.Packages.props Rpg.slnx ./
 COPY src/Rpg.Contracts/Rpg.Contracts.csproj src/Rpg.Contracts/
+COPY src/Rpg.Economy/Rpg.Economy.csproj src/Rpg.Economy/
 COPY src/Rpg.Verification/Rpg.Verification.csproj src/Rpg.Verification/
 COPY src/Rpg.VerifierWorker/Rpg.VerifierWorker.csproj src/Rpg.VerifierWorker/
 RUN dotnet restore src/Rpg.VerifierWorker/Rpg.VerifierWorker.csproj
 COPY src/Rpg.Contracts src/Rpg.Contracts
+COPY src/Rpg.Economy src/Rpg.Economy
 COPY src/Rpg.Verification src/Rpg.Verification
 COPY src/Rpg.VerifierWorker src/Rpg.VerifierWorker
 RUN dotnet publish src/Rpg.VerifierWorker/Rpg.VerifierWorker.csproj -c Release -o /app --no-restore
