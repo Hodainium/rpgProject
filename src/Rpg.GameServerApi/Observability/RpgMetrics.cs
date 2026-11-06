@@ -31,6 +31,7 @@ public sealed class RpgMetrics
     private readonly Counter<long> _outboxPublished;
     private readonly Histogram<double> _outboxPublishDuration;
     private readonly Counter<long> _walletReads;
+    private readonly Counter<long> _ruleChanges;
     private readonly ConcurrentDictionary<string, (long Pending, double OldestAge, long Dead)> _outbox = new();
     private long _battlesUnverified = -1;
     private double _oldestUnverifiedAge;
@@ -102,6 +103,7 @@ public sealed class RpgMetrics
         _outboxPublishDuration = meter.CreateHistogram<double>("rpg.outbox_publish_duration", unit: "s",
             description: "Time to publish one outbox row (to the confirm), by destination.",
             advice: new InstrumentAdvice<double> { HistogramBucketBoundaries = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10] });
+        _ruleChanges = meter.CreateCounter<long>("rpg.reward_rule_changes", description: "Reward-rule admin writes, by result.");
         _walletReads = meter.CreateCounter<long>("rpg.wallet_reads", description: "Wallet reads by where the answer came from.");
         meter.CreateObservableGauge("rpg.outbox_pending",
             () => _outbox.Select(kv => new Measurement<long>(kv.Value.Pending,
@@ -178,6 +180,9 @@ public sealed class RpgMetrics
     /// <summary>Set by <c>OutboxMonitor</c>.</summary>
     public void SetOutbox(string destination, long pending, double oldestAgeSeconds, long deadLettered) =>
         _outbox[destination] = (pending, Math.Max(0, oldestAgeSeconds), deadLettered);
+
+    /// <summary>result: ok | invalid | forbidden.</summary>
+    public void RewardRuleChange(string result) => _ruleChanges.Add(1, new KeyValuePair<string, object?>("result", result));
 
     /// <summary>source: redis | postgres.</summary>
     public void WalletRead(string source) => _walletReads.Add(1, new KeyValuePair<string, object?>("source", source));

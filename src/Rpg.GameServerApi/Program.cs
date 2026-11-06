@@ -21,6 +21,12 @@ using Rpg.GameServerApi.RateLimiting;
 using Rpg.GameServerApi.Runs;
 
 var builder = WebApplication.CreateBuilder(args);
+// Spec economy-rewards 8.1: Economy:SeedFile names a JSON file shaped like configuration (Economy:SeedRules), loaded last.
+if (builder.Configuration["Economy:SeedFile"] is { Length: > 0 } seedFile)
+{
+    builder.Configuration.AddJsonFile(Path.GetFullPath(seedFile, builder.Environment.ContentRootPath), optional: false);
+}
+
 var buildInfo = new BuildInfo();
 
 builder.Services.AddSingleton(buildInfo);
@@ -89,6 +95,8 @@ builder.Services.AddSingleton<OutboxRelay>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<OutboxRelay>());
 builder.Services.AddSingleton<OutboxMonitor>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<OutboxMonitor>());
+builder.Services.AddOptions<EconomyOptions>().BindConfiguration(EconomyOptions.Section);
+builder.Services.AddHostedService<RewardRuleSeeder>();
 builder.Services.AddSingleton<WalletStore>();
 builder.Services.AddSingleton<WalletCache>();
 builder.Services.AddSingleton<PresenceTracker>();
@@ -156,6 +164,7 @@ app.MapGet("/api/v1/info", (BuildInfo build, TimeProvider clock) =>
 app.MapAuthEndpoints();
 app.MapRunEndpoints();
 app.MapWalletEndpoints();
+app.MapRewardRuleEndpoints();
 app.MapPresenceEndpoints();
 
 app.Run();

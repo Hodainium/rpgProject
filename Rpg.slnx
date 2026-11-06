@@ -7,6 +7,7 @@
   <Folder Name="/src/">
     <Project Path="src/Rpg.Client/Rpg.Client.csproj" />
     <Project Path="src/Rpg.Contracts/Rpg.Contracts.csproj" />
+    <Project Path="src/Rpg.Economy/Rpg.Economy.csproj" />
     <Project Path="src/Rpg.GameServerApi/Rpg.GameServerApi.csproj" />
     <Project Path="src/Rpg.Verification/Rpg.Verification.csproj" />
     <Project Path="src/Rpg.VerifierWorker/Rpg.VerifierWorker.csproj" />

@@ -282,6 +282,52 @@ public class OutboxTests(StackFixture stack)
 
     // ---- helpers ----
 
+    // ---- Trace continuity (spec economy-rewards 3.8, F11) ----
+
+    [Fact]
+    public async Task ThePublishSpan_IsAChildOfTheSpanThatWroteTheRow()
+    {
+        var started = new ConcurrentQueue<System.Diagnostics.Activity>();
+        using var listener = new System.Diagnostics.ActivityListener
+        {
+            ShouldListenTo = source => source.Name == OutboxRelay.Source.Name,
+            Sample = (ref System.Diagnostics.ActivityCreationOptions<System.Diagnostics.ActivityContext> _) =>
+                System.Diagnostics.ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStarted = started.Enqueue,
+        };
+        System.Diagnostics.ActivitySource.AddActivityListener(listener);
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: Paused);
+        var sink = new FakeSink(OutboxDestination.Redpanda);
+        var traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+        await InsertAsync(factory, "a", "traced", traceParent: traceparent);
+
+        await Relay(factory, sink).RunOnceAsync(Ct);
+
+        var publish = Assert.Single(started, a => a.OperationName == "outbox.publish");
+        Assert.Equal(System.Diagnostics.ActivityTraceId.CreateFromString("0af7651916cd43dd8448eb211c80319c"), publish.TraceId);
+        Assert.Equal("b7ad6b7169203331", publish.ParentSpanId.ToString());
+        Assert.Equal(traceparent, Assert.Single(sink.Published).TraceParent);  // the sinks send this as the traceparent header
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not-a-traceparent")]
+    [InlineData("00-zzzz-yyyy-01")]
+    public async Task ARowWithNoOrAMalformedTraceParent_StillPublishes(string? traceparent)
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: Paused);
+        var sink = new FakeSink(OutboxDestination.Redpanda);
+        await InsertAsync(factory, "a", "plain", traceParent: traceparent ?? "", clearTrace: traceparent is null);
+
+        var published = await Relay(factory, sink).RunOnceAsync(Ct);
+
+        Assert.Equal(1, published);  // F11: no parent span, no failure, no retry
+        Assert.Equal(["plain"], sink.Published.Select(r => r.Type));
+        Assert.Equal(0L, await ScalarAsync(factory, "SELECT attempts::bigint FROM outbox") - 1);
+        Assert.Equal(1L, await ScalarAsync(factory, "SELECT count(*) FROM outbox WHERE published_at IS NOT NULL AND dead_lettered_at IS NULL"));
+    }
+
     private OutboxRelay Relay(ApiFactory factory, FakeSink redpanda, OutboxOptions? options = null, FakeSink? rabbit = null) =>
         new(factory.Services.GetRequiredService<OutboxStore>(), rabbit is null ? [redpanda] : [redpanda, rabbit],
             Options.Create(options ?? new OutboxOptions { BackoffBase = TimeSpan.Zero }),
@@ -298,7 +344,8 @@ public class OutboxTests(StackFixture stack)
 
     /// <summary>A row written the way the worker writes one; the payload is a stand-in the consumer can read back.</summary>
     private static async Task<Guid> InsertAsync(ApiFactory factory, string key, string type,
-        string destination = OutboxDestination.Redpanda, string? topic = null, string payload = "{}")
+        string destination = OutboxDestination.Redpanda, string? topic = null, string payload = "{}",
+        string? traceParent = null, bool clearTrace = false)
     {
         var id = Guid.NewGuid();
         await factory.Services.GetRequiredService<MigrationRunner>().EnsureMigratedAsync(Ct);
@@ -306,8 +353,13 @@ public class OutboxTests(StackFixture stack)
         await using var transaction = await connection.BeginTransactionAsync(Ct);
         await OutboxWriter.InsertAsync(connection, transaction, new OutboxMessage(id, destination,
             topic ?? (destination == OutboxDestination.Rabbit ? VerifyTopology.RoutingKey : EventTopics.Battle), key, type,
-            payload), Ct);
+            payload, traceParent), Ct);
         await transaction.CommitAsync(Ct);
+        if (clearTrace)
+        {
+            await ExecuteAsync(factory, $"UPDATE outbox SET traceparent = NULL WHERE id = '{id}'");
+        }
+
         return id;
     }
 

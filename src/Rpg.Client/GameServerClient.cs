@@ -72,6 +72,15 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
     public Task<WalletResponse> GetWalletAsync(CancellationToken ct = default) =>
         RequiredAsync<WalletResponse>(HttpMethod.Get, "api/v1/wallet", null, ct);
 
+    /// <summary>PUT /api/v1/admin/reward-rules (economy-admin, spec economy-rewards 3.6): a new version of one rule.</summary>
+    public Task<RewardRuleResponse> PutRewardRuleAsync(RewardRuleRequest request, CancellationToken ct = default) =>
+        RequiredAsync<RewardRuleResponse>(HttpMethod.Put, "api/v1/admin/reward-rules",
+            JsonContent.Create(request, options: RpgJson.Options), ct);
+
+    /// <summary>GET /api/v1/admin/reward-rules (economy-admin): the latest version per source.</summary>
+    public Task<RewardRuleListResponse> ListRewardRulesAsync(CancellationToken ct = default) =>
+        RequiredAsync<RewardRuleListResponse>(HttpMethod.Get, "api/v1/admin/reward-rules", null, ct);
+
     /// <summary>POST /api/v1/presence: the heartbeat (204).</summary>
     public Task HeartbeatAsync(PresenceRequest request, CancellationToken ct = default) =>
         SendAsync<object>(HttpMethod.Post, "api/v1/presence", JsonContent.Create(request, options: RpgJson.Options), ct,

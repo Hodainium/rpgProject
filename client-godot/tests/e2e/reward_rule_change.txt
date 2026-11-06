@@ -1,0 +1,26 @@
+# Spec economy-rewards 6: a rule changes between two wins. The knight and medic beat the fixtures' boss at the seeded 10 gems
+# (rule version 1); the rule is raised to 25 through the admin path (version 2); a second run with the knight and the rogue
+# pays only the rogue's first win (the knight is marked already), at 25. Each ledger row
+# records the version it was paid under, and the wallet is the sum of both.
+#! worker
+#! env Monitors__Interval=00:00:01
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 20 120
+server reward fixture.enemy.chief 25
+server reward fixture.enemy.lich 25
+server reward fixture.enemy.mirror 25
+new fixture.character.knight,fixture.character.rogue run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 45 120
+server reward

@@ -1,0 +1,13 @@
+# Spec economy-rewards 5: the signal that a boss was added to the game without a reward rule (F1). The first win over it
+# pays nothing and is never re-settled, so catch it early: set the rule (server reward <boss> <amount>) before players win.
+groups:
+  - name: economy
+    rules:
+      - alert: BossWithoutRewardRule
+        expr: increase(rpg_reward_rule_lookups_total{result="missing"}[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "A verified boss win found no reward rule"
+          description: "rpg_reward_rule_lookups_total{result=missing} rose in the last 10 minutes: a boss has no rule (or the seed file lacks it). Wins over it paid nothing. Add the rule, then list them with tools/check_reward_seed.sh."

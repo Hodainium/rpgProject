@@ -1,9 +1,13 @@
 # Spec settlement-outbox 6, acceptance scenarios 1 and 2 on the real stack: a run that beats the fixtures' boss. The worker
 # replays the battle, the Godot runner reports the boss and the party (BattleFacts), and the verdict transaction settles:
-# one completion mark per party character, ten gems each, ledger and wallet agree, and one RewardGranted event per mark
+# one completion mark per party character, 25 gems each (the rule), ledger and wallet agree, and one RewardGranted event per mark
 # reaches the outbox and Redpanda. The client reads the balance back through GET /wallet.
 #! worker
 #! env Monitors__Interval=00:00:01
+# Spec economy-rewards: the amount is the server's rule, set through the admin path (version 2 over the seeded 10).
+server reward fixture.enemy.chief 25
+server reward fixture.enemy.lich 25
+server reward fixture.enemy.mirror 25
 new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
 wait run
 autorun policy=smart
@@ -11,6 +15,6 @@ wait floor 1
 autorun policy=smart
 wait ended 60
 wait verdict all 240
-wait gems 20 120
+wait gems 50 120
 server wallet
 e2e redpanda-check 90

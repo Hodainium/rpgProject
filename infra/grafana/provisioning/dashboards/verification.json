@@ -102,6 +102,11 @@
         { "expr": "sum by (result) (rate(rpg_settlements_total[1m]))", "legendFormat": "{{result}}" },
         { "expr": "sum(rate(rpg_gems_granted_total[1m]))", "legendFormat": "gems/s" }
       ]
+    },
+    {
+      "id": 16, "type": "timeseries", "title": "Reward-rule lookups (per second, by result): a rising missing means a boss has no rule",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 56 },
+      "targets": [{ "expr": "sum by (result) (rate(rpg_reward_rule_lookups_total[5m]))", "legendFormat": "{{result}}" }]
     }
   ]
 }

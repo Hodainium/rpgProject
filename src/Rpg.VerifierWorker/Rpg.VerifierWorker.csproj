@@ -3,6 +3,7 @@
        Godot is the only combat implementation. Web SDK only for /metrics and the health endpoints. -->
   <ItemGroup>
     <ProjectReference Include="..\Rpg.Contracts\Rpg.Contracts.csproj" />
+    <ProjectReference Include="..\Rpg.Economy\Rpg.Economy.csproj" />
     <ProjectReference Include="..\Rpg.Verification\Rpg.Verification.csproj" />
   </ItemGroup>
 

@@ -43,6 +43,12 @@ class FakeBridge:
 	func GetWallet() -> int:
 		return _answer("GetWallet", [])
 
+	func PutRewardRule(json: String) -> int:
+		return _answer("PutRewardRule", [json])
+
+	func ListRewardRules() -> int:
+		return _answer("ListRewardRules", [])
+
 	func Heartbeat(json: String) -> int:
 		return _answer("Heartbeat", [json])
 

@@ -283,6 +283,32 @@ func test_server_wallet_and_wait_gems() -> void:
 	await host.get_tree().process_frame
 
 
+## Spec economy-rewards: `server reward` lists the rules, sets one, and reports a refusal instead of swallowing it.
+func test_server_reward_command() -> void:
+	var bridge := _bridge()
+	var session := _session(bridge)
+	var rule := {"sourceKind": "boss", "sourceId": "demo.enemy.lich", "currency": "gems", "amount": 25, "version": 3,
+		"effectiveFrom": "2026-11-03T10:00:00+00:00", "createdBy": "designer"}
+	bridge.answers["ListRewardRules"] = [[true, {"rules": [rule]}]]
+	var listed := await _run(session, "server reward")
+	check(listed["ok"] and listed["text"].contains("demo.enemy.lich: 25 gems (version 3, by designer)"), "the rules are listed: " + listed["text"])
+	bridge.answers["ListRewardRules"] = [[true, {"rules": []}]]
+	var none := await _run(session, "server reward")
+	check(none["ok"] and none["text"].contains("no reward rules"), "an empty table: " + none["text"])
+	bridge.answers["PutRewardRule"] = [[true, rule]]
+	var set := await _run(session, "server reward demo.enemy.lich 25")
+	check(set["ok"] and set["text"].contains("version 3"), "a rule is set and its version printed: " + set["text"])
+	var sent: Dictionary = JSON.parse_string(bridge.calls.filter(func(call: Array) -> bool: return call[0] == "PutRewardRule")[0][1])
+	check(sent.get("sourceKind") == "boss" and sent.get("sourceId") == "demo.enemy.lich" and sent.get("currency") == "gems" and int(sent.get("amount", -1)) == 25, "the PUT body: " + str(sent))
+	bridge.answers["PutRewardRule"] = [ServerTests._error(403, 1302, "Economy admin required")]
+	var refused := await _run(session, "server reward demo.enemy.lich 5")
+	check(not refused["ok"] and refused["text"].contains("403") and refused["text"].contains("1302"), "a refusal is reported: " + refused["text"])
+	check(not (await _run(session, "server reward demo.enemy.lich"))["ok"], "usage: an amount is needed")
+	check(not (await _run(session, "server reward demo.enemy.lich x"))["ok"], "usage: the amount is a number")
+	check(not (await _run(session, "server reward demo.enemy.lich -1"))["ok"], "usage: not negative")
+	await host.get_tree().process_frame
+
+
 ## Spec battle-verify 2.2: `wait verdict` polls until the verifier has decided (Verified or Rejected).
 func test_wait_verdict() -> void:
 	var bridge := _bridge()

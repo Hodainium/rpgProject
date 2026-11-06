@@ -40,13 +40,10 @@ public sealed class VerifierOptions
     public TimeSpan ShutdownGrace { get; set; } = TimeSpan.FromSeconds(70);  // longer than ProcessTimeout
 }
 
-/// <summary>Configuration section <c>Settlement</c> (spec settlement-outbox 3.7).</summary>
+/// <summary>Configuration section <c>Settlement</c> (spec settlement-outbox 3.7). What a boss pays is a server-owned rule (spec economy-rewards), not configuration.</summary>
 public sealed class SettlementOptions
 {
     public const string Section = "Settlement";
 
     public bool Enabled { get; set; } = true;
-
-    /// <summary>Gems one completion mark pays: an economy number, a plain whole number (not x100).</summary>
-    public int GemsPerBossMark { get; set; } = 10;
 }

@@ -4,6 +4,7 @@ using NpgsqlTypes;
 using Rpg.Contracts.Battle;
 using Rpg.Contracts.Events;
 using Rpg.Contracts.Serialization;
+using Rpg.Economy;
 using Rpg.Verification;
 
 namespace Rpg.VerifierWorker;
@@ -13,12 +14,12 @@ namespace Rpg.VerifierWorker;
 public sealed record BattleRow(string BattleId, Guid RunId, int RunSeq, Guid PlayerId, string Status, string Ruleset,
     string ConditionsJson, string ActionLogJson, DateTimeOffset SubmittedAt, int Attempts);
 
-public enum SettlementResult { None, Rejected, NoReward, AlreadyMarked, Granted }
+public enum SettlementResult { None, Rejected, NoReward, NoRule, BadId, AlreadyMarked, Granted }
 
 /// <param name="Committed">False: someone else already decided this battle, nothing changed.</param>
-public sealed record CommitResult(bool Committed, SettlementResult Result, IReadOnlyList<Grant> Grants);
-
-public sealed record Grant(string CharacterId, string BossId, int Gems, int BalanceAfter);
+/// <param name="Settlement">What the economy module did (null when no settlement ran).</param>
+public sealed record CommitResult(bool Committed, SettlementResult Result, IReadOnlyList<Grant> Grants,
+    SettlementSummary? Settlement = null);
 
 /// <summary>
 /// The worker's Postgres access (spec battle-verify 3.2, settlement-outbox 2.2). The verdict write is guarded by
@@ -26,7 +27,7 @@ public sealed record Grant(string CharacterId, string BossId, int Gems, int Bala
 /// </summary>
 public sealed class VerdictStore(NpgsqlDataSource dataSource)
 {
-    public const string RequiredMigration = "0004_settlement_outbox.sql";
+    public const string RequiredMigration = "0005_reward_rules.sql";
 
     /// <summary>Blocks until the API has applied the verdict migration (the worker never migrates).</summary>
     public async Task WaitForSchemaAsync(TimeSpan interval, CancellationToken ct)
@@ -116,87 +117,24 @@ public sealed class VerdictStore(NpgsqlDataSource dataSource)
                     verdict.Mismatch?.Reason), ct);
         }
 
-        var grants = new List<Grant>();
-        if (settlement.Enabled && settlement.GemsPerBossMark > 0 && verdict.Status == ReplayVerdict.Verified
+        IReadOnlyList<Grant> grants = [];
+        SettlementSummary? summary = null;
+        if (settlement.Enabled && verdict.Status == ReplayVerdict.Verified
             && verdict.Outcome == BattleOutcome.Victory && verdict.Facts is { BossIds.Count: > 0 } facts)
         {
-            var claimed = false;
-            foreach (var character in facts.PartyCharacterIds.Distinct())
-            {
-                foreach (var boss in facts.BossIds.Distinct())
-                {
-                    claimed = true;
-                    if (await GrantMarkAsync(connection, transaction, row, character, boss, settlement.GemsPerBossMark, now, ct)
-                        is { } grant)
-                    {
-                        grants.Add(grant);
-                    }
-                }
-            }
-
-            result = grants.Count > 0 ? SettlementResult.Granted : claimed ? SettlementResult.AlreadyMarked : result;
+            summary = await BossSettlement.SettleAsync(connection, transaction,
+                new SettlementContext(row.PlayerId, row.RunId, row.BattleId, row.Ruleset), facts, now, ct);
+            grants = summary.Grants;
+            // A boss with no rule outranks "already marked": the missing rule is what an operator must see.
+            result = grants.Count > 0 ? SettlementResult.Granted
+                : summary.Missing + summary.Retired > 0 ? SettlementResult.NoRule
+                : summary.Claimed > 0 ? SettlementResult.AlreadyMarked
+                : summary.BadIds > 0 ? SettlementResult.BadId
+                : result;
         }
 
         await transaction.CommitAsync(ct);
-        return new CommitResult(true, result, grants);
-    }
-
-    /// <summary>The first win of this character over this boss pays once, ever; null when the mark exists already.</summary>
-    private static async Task<Grant?> GrantMarkAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
-        BattleRow row, string character, string boss, int gems, DateTimeOffset now, CancellationToken ct)
-    {
-        await using (var mark = new NpgsqlCommand(
-            """
-            INSERT INTO completion_marks (player_id, character_id, boss_id, battle_id, granted_at)
-            VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING
-            """, connection, transaction))
-        {
-            mark.Parameters.Add(new NpgsqlParameter { Value = row.PlayerId });
-            mark.Parameters.Add(new NpgsqlParameter { Value = character });
-            mark.Parameters.Add(new NpgsqlParameter { Value = boss });
-            mark.Parameters.Add(new NpgsqlParameter { Value = row.BattleId });
-            mark.Parameters.Add(new NpgsqlParameter { Value = now.ToUniversalTime() });
-            if (await mark.ExecuteNonQueryAsync(ct) != 1)
-            {
-                return null;
-            }
-        }
-
-        await using (var ledger = new NpgsqlCommand(
-            """
-            INSERT INTO wallet_ledger (player_id, currency, delta, reason, ref_battle_id, idempotency_key, created_at)
-            VALUES ($1, 'gems', $2, 'completion_mark', $3, $4, $5) ON CONFLICT (idempotency_key) DO NOTHING
-            """, connection, transaction))
-        {
-            ledger.Parameters.Add(new NpgsqlParameter { Value = row.PlayerId });
-            ledger.Parameters.Add(new NpgsqlParameter { Value = gems });
-            ledger.Parameters.Add(new NpgsqlParameter { Value = row.BattleId });
-            ledger.Parameters.Add(new NpgsqlParameter { Value = $"mark:{row.BattleId}:{character}:{boss}" });
-            ledger.Parameters.Add(new NpgsqlParameter { Value = now.ToUniversalTime() });
-            if (await ledger.ExecuteNonQueryAsync(ct) != 1)
-            {
-                return null;  // the ledger already holds this grant: no money moves twice
-            }
-        }
-
-        int balance;
-        await using (var wallet = new NpgsqlCommand(
-            """
-            INSERT INTO wallets (player_id, gems, version, updated_at) VALUES ($1, $2, 1, $3)
-            ON CONFLICT (player_id) DO UPDATE
-              SET gems = wallets.gems + EXCLUDED.gems, version = wallets.version + 1, updated_at = EXCLUDED.updated_at
-            RETURNING gems
-            """, connection, transaction))
-        {
-            wallet.Parameters.Add(new NpgsqlParameter { Value = row.PlayerId });
-            wallet.Parameters.Add(new NpgsqlParameter { Value = gems });
-            wallet.Parameters.Add(new NpgsqlParameter { Value = now.ToUniversalTime() });
-            balance = (int)(await wallet.ExecuteScalarAsync(ct))!;
-        }
-
-        await WriteEventAsync(connection, transaction, row, EventTypes.RewardGranted, EventTopics.Economy, now,
-            new RewardGrantedPayload("completion_mark", row.BattleId, character, boss, "gems", gems, balance), ct);
-        return new Grant(character, boss, gems, balance);
+        return new CommitResult(true, result, grants, summary);
     }
 
     private static Task WriteEventAsync<TPayload>(NpgsqlConnection connection, NpgsqlTransaction transaction, BattleRow row,
