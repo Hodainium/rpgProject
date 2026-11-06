@@ -19,6 +19,10 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
 
 - `content/`, `presentation/` and `godot_gas/` have `ask` permission rules: every edit there prompts the user.
   Create files there only when a spec needs them or the user asks, and edit them with minimal `Edit`s.
+- **Standing permission for `content/` (user, 2026-11-06):** Claude may create and edit files in `content/` whenever the work
+  calls for it (a spec, or exercising a system feature with real content), not only when asked file by file. The `ask` rule
+  stays: every `Edit`/`Write` there still prompts, an existing file is still shown in chat as `old → new` first, and after the
+  work Claude lists every path created and every value it picked. `presentation/` and `godot_gas/` keep the stricter rule above.
 - **Design help on request:** when the user asks Claude to create abilities, effects, rooms, encounters or other content:
   - New files: fine. List every path created, and every value Claude picked (so the user knows what to playtest).
   - Existing files: **always ask first, in chat**, before changing anything, even when the request implies the change.

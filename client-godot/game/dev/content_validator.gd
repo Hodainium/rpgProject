@@ -53,6 +53,8 @@ static func validate(content_index: ContentIndex, options: Dictionary = {}) -> A
 		validator._check_layout(content_index.layouts[id])
 	for id in _sorted(content_index.chests):
 		validator._check_chest(content_index.chests[id])
+	for id in _sorted(content_index.challenges):
+		validator._check_challenge(content_index.challenges[id])
 	for id in _sorted(content_index.runs):
 		validator._check_run(content_index.runs[id], int(options.get("generate_seeds", 0)))
 	validator._check_default_run()
@@ -580,6 +582,27 @@ func _check_loadout_skills(loadout: Loadout, character: CharacterDefinition, pat
 		if tag != &"" and character.skill_scene(tag) == null:
 			_error("bad_skill", "%s::skills[%d]" % [path, index],
 				"%s's loadout gives %s, which is not in its abilities or learnable_skills" % [character.id, tag])
+
+
+## Spec economy-challenges: the id is what the server's reward ladder is keyed by (key-safe, not in the server's own
+## `boss/` namespace), the encounter exists, and the stars are real conditions.
+func _check_challenge(challenge: ChallengeDefinition) -> void:
+	var path := challenge.resource_path
+	var id := str(challenge.id)
+	if id.length() > 200 or id.contains(":") or id.contains(" ") or id.contains("\t") or id.contains("\n"):
+		_error("bad_challenge", path + "::id", "challenge id '%s' must be 1-200 characters with no ':' and no whitespace" % id)
+	if id.begins_with("boss/"):
+		_error("bad_challenge", path + "::id", "challenge id '%s' uses the reserved boss/ prefix (the server's own namespace)" % id)
+	if not content.encounters.has(challenge.encounter_id):
+		_error("dangling_ref", path + "::encounter_id", "challenge %s names unknown encounter '%s'" % [id, challenge.encounter_id])
+	if challenge.stars.is_empty():
+		_error("bad_challenge", path + "::stars", "challenge %s has no stars" % id)
+	for index in challenge.stars.size():
+		var star: ChallengeStar = challenge.stars[index]
+		if star == null:
+			_error("bad_challenge", "%s::stars[%d]" % [path, index], "star %d of %s is empty" % [index + 1, id])
+		elif star.kind == ChallengeStar.Kind.TURNS_AT_MOST and star.value < 1:
+			_error("bad_challenge", "%s::stars[%d]" % [path, index], "star %d of %s allows %d turns; it needs 1 or more" % [index + 1, id, star.value])
 
 
 func _check_encounter(encounter: EncounterDefinition) -> void:

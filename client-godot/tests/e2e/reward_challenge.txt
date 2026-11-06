@@ -1,0 +1,17 @@
+# Spec economy-challenges 6, with real content: the fixtures' challenge fixture.challenge.boss_trial (win; in at most 30
+# turns; nobody down) sits on the boss encounter. The real headless Godot replays each boss battle, reports the tier the
+# battle reached as a completion fact, and the worker pays the weekly ladder 10, 10, 15 for it, by difference, through the
+# real server, outbox and Postgres. The stars reached depend on how the battle went, so the SQL checks consistency.
+#! worker
+#! env Monitors__Interval=00:00:01
+server reward fixture.challenge.boss_trial 10,10,15 cycle=weekly
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 20 120
+server wallet
+e2e redpanda-check 90

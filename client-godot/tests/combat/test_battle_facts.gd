@@ -84,7 +84,7 @@ func test_bosses_are_listed_once_each() -> void:
 ## same JSON the C# `CompletionFact` golden pins. Nothing in the game defines a challenge yet, so a runner subclass stands in
 ## for the future challenge definition and overrides the `_completions` seam.
 class _TrialRunner extends ReplayRunner:
-	func _completions(_battle: Battle) -> Array:
+	func _completions(_battle: Battle, _encounter_id: String) -> Array:
 		return [ReplayRunner.completion_fact("event.spring.trial-3", 3)]
 
 

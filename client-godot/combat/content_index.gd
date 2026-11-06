@@ -23,6 +23,7 @@ var floor_rules: Dictionary = {} # StringName -> FloorGenRules
 var runs: Dictionary = {}        # StringName -> RunStructure
 var layouts: Dictionary = {}     # StringName -> FloorLayout
 var chests: Dictionary = {}      # StringName -> ChestDefinition (spec keys-and-gear)
+var challenges: Dictionary = {}  # StringName -> ChallengeDefinition (spec economy-challenges)
 var problems := PackedStringArray()
 
 
@@ -46,7 +47,7 @@ func overlay(resources: Array) -> ContentIndex:
 	var copy := ContentIndex.new("")
 	copy.root = root
 	for name in ["units", "characters", "encounters", "loadouts", "variants", "equipment", "items", "events", "rooms",
-			"chapters", "scaling", "floor_rules", "runs", "layouts", "chests"]:
+			"chapters", "scaling", "floor_rules", "runs", "layouts", "chests", "challenges"]:
 		copy.set(name, get(name).duplicate())
 	copy.problems = problems.duplicate()
 	for resource in resources:
@@ -98,7 +99,21 @@ func _table_for(resource: Resource) -> Array:
 		return [layouts, "layout"]
 	if resource is ChestDefinition:
 		return [chests, "chest"]
+	if resource is ChallengeDefinition:
+		return [challenges, "challenge"]
 	return []
+
+
+## The challenges played on `encounter_id`, in id order (spec economy-challenges).
+func challenges_for(encounter_id: String) -> Array[ChallengeDefinition]:
+	var found: Array[ChallengeDefinition] = []
+	var ids: Array = challenges.keys()
+	ids.sort()
+	for id in ids:
+		var challenge: ChallengeDefinition = challenges[id]
+		if str(challenge.encounter_id) == encounter_id:
+			found.append(challenge)
+	return found
 
 
 ## Resolves a LoadoutRef (spec game-skeleton 3.5): a loadout id, or "<ownerId>#<n>" for the loadout typed inline into

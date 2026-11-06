@@ -25,6 +25,8 @@ var exit_code: int = EXIT_RUNNER_ERROR
 var trace: BattleTrace = null
 ## Set on a runner error; the result is then {"runnerError": ...} instead of a ReplayResult.
 var runner_error: String = ""
+## The content the replay runs on, kept so `_completions` can read the challenges of the encounter.
+var _content: ContentIndex = null
 
 
 ## Runs the replay under `host` (a node inside the scene tree). Returns the ReplayResult JSON shape (field order
@@ -41,6 +43,7 @@ func run_on(request: Dictionary, content: ContentIndex, host: Node) -> Dictionar
 		return _error(problem)
 	var snapshot: Dictionary = request["snapshot"]
 	var action_log: Dictionary = request["actionLog"]
+	_content = content
 
 	var battle := Battle.new()
 	battle.name = "ReplayBattle"
@@ -145,17 +148,24 @@ func _facts(battle: Battle, encounter_id: String) -> Dictionary:
 	var facts := {"encounterId": encounter_id, "bossIds": bosses, "partyCharacterIds": party}
 	# Spec economy-challenges 3.1: challenges the battle completed, with the tier (stars) reached. Absent when there are
 	# none, so every fact and golden written before this stays byte-identical.
-	var completions: Array = _completions(battle) if won else []
+	var completions: Array = _completions(battle, encounter_id) if won else []
 	if not completions.is_empty():
 		facts["completions"] = completions
 	return facts
 
 
-## The challenges `battle` completed, as `completion_fact` entries. Nothing in the game defines a challenge yet, so this is
-## empty; the game-side challenge definition (a future design task) overrides it by reading the finished battle. Only
-## called for a won battle, and never hashed.
-func _completions(_battle: Battle) -> Array:
-	return []
+## The challenges `battle` completed, as `completion_fact` entries: each `ChallengeDefinition` of the encounter that the
+## finished battle reached a tier of (spec economy-challenges). Empty when the content defines none, so every fact written
+## before challenges stays byte-identical. Only called for a won battle, and never hashed.
+func _completions(battle: Battle, encounter_id: String) -> Array:
+	var completions: Array = []
+	if _content == null:
+		return completions
+	for challenge in _content.challenges_for(encounter_id):
+		var tier := challenge.tier_for(battle)
+		if tier > 0:
+			completions.append(completion_fact(str(challenge.id), tier))
+	return completions
 
 
 ## One completion on the wire: the server's `CompletionFact(ChallengeId, Tier)`. A tier is the number of stars reached

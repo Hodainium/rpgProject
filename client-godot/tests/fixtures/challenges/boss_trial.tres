@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ChallengeDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/challenge_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://combat/challenge_star.gd" id="2_star"]
+
+[sub_resource type="Resource" id="Resource_win"]
+script = ExtResource("2_star")
+
+[sub_resource type="Resource" id="Resource_fast"]
+script = ExtResource("2_star")
+kind = 1
+value = 30
+
+[sub_resource type="Resource" id="Resource_alive"]
+script = ExtResource("2_star")
+kind = 2
+
+[resource]
+script = ExtResource("1_def")
+id = &"fixture.challenge.boss_trial"
+display_name = "Boss trial"
+encounter_id = &"fixture.encounter.boss"
+stars = Array[ExtResource("2_star")]([SubResource("Resource_win"), SubResource("Resource_fast"), SubResource("Resource_alive")])
