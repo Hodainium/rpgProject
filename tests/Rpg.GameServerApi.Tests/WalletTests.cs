@@ -112,14 +112,14 @@ public class WalletTests(StackFixture stack)
         var battle = $"{run.RunId}/f0/c5";
         await GrantAsync(factory, player, battle, "warrior", 10);
         await ExecuteAsync(factory,
-            $"INSERT INTO completion_marks (player_id, character_id, boss_id, battle_id) VALUES ('{player}', 'warrior', 'boss', '{battle}')");
+            $"INSERT INTO completion_marks (player_id, character_id, challenge_id, battle_id) VALUES ('{player}', 'warrior', 'boss', '{battle}')");
 
         var negative = await Assert.ThrowsAsync<PostgresException>(() =>
             ExecuteAsync(factory, $"UPDATE wallets SET gems = -1 WHERE player_id = '{player}'"));
         var duplicateKey = await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync(factory,
             $"INSERT INTO wallet_ledger (player_id, currency, delta, reason, idempotency_key) VALUES ('{player}', 'gems', 5, 'x', 'mark:{battle}:warrior:boss')"));
         var secondMark = await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync(factory,
-            $"INSERT INTO completion_marks (player_id, character_id, boss_id, battle_id) VALUES ('{player}', 'warrior', 'boss', '{battle}')"));
+            $"INSERT INTO completion_marks (player_id, character_id, challenge_id, battle_id) VALUES ('{player}', 'warrior', 'boss', '{battle}')"));
         var badDestination = await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync(factory,
             "INSERT INTO outbox (id, destination, topic, key, type, payload) VALUES (gen_random_uuid(), 'carrier-pigeon', 't', 'k', 't', '{}')"));
         var zeroDelta = await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync(factory,

@@ -1,0 +1,46 @@
+# Spec economy-challenges 1.2 and 6: a cycle reset on the real stack. The knight and medic beat the fixtures' boss and are paid
+# at the seeded 10 gems; the same party again pays nothing (the mark is held); `server reward-reset ... player=me` opens a new
+# cycle key for this player only, so the next win pays again; a reset for everyone opens another, and the third win pays again.
+# Old marks and ledger rows stay. (Independent challenges and the clock offset have their own scenarios, reward_stars and reward_clock_offset: the
+# fixtures' battles report only bosses.)
+#! worker
+#! env Monitors__Interval=00:00:01
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 20 120
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+server reward-reset boss fixture.enemy.chief player=me support asked
+server reward-reset boss fixture.enemy.lich player=me support asked
+server reward-reset boss fixture.enemy.mirror player=me support asked
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 40 120
+server reward-reset boss fixture.enemy.chief run the event again
+server reward-reset boss fixture.enemy.lich run the event again
+server reward-reset boss fixture.enemy.mirror run the event again
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 60 120
+server wallet
+e2e redpanda-check 90

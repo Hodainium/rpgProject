@@ -46,4 +46,10 @@ public sealed class SettlementOptions
     public const string Section = "Settlement";
 
     public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Added to a battle's <c>submitted_at</c> for the cycle key and <c>ends_at</c> (spec economy-challenges 1.2), so a test can
+    /// land in next week or after an event's end. Honoured in Development only; anywhere else it is ignored with a warning.
+    /// </summary>
+    public TimeSpan CycleClockOffset { get; set; } = TimeSpan.Zero;
 }

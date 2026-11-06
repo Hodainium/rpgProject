@@ -1,0 +1,20 @@
+# Spec economy-challenges 6, with real content: the fixtures' challenge fixture.challenge.boss_trial has three independent
+# stars on the boss encounter (win; fast = in at most 30 turns; flawless = nobody down). The real headless Godot replays each
+# boss battle and reports one completion per star the battle earned, under "<challenge>.<star>"; each star has its own weekly
+# reward (10, 10, 15) and the worker pays it through the real server, outbox and Postgres. Which stars a battle earns depends
+# on how it went, so the SQL checks consistency; the win star is always earned by a won boss battle.
+#! worker
+#! env Monitors__Interval=00:00:01
+server reward fixture.challenge.boss_trial.win 10 cycle=weekly
+server reward fixture.challenge.boss_trial.fast 10 cycle=weekly
+server reward fixture.challenge.boss_trial.flawless 15 cycle=weekly
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 20 120
+server wallet
+e2e redpanda-check 90

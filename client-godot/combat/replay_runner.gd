@@ -25,6 +25,10 @@ var exit_code: int = EXIT_RUNNER_ERROR
 var trace: BattleTrace = null
 ## Set on a runner error; the result is then {"runnerError": ...} instead of a ReplayResult.
 var runner_error: String = ""
+## The content the replay runs on, kept so `_completions` can read the challenges of the encounter.
+var _content: ContentIndex = null
+## Counts the battle's gameplay events when the encounter has challenges (spec economy-challenges); it only observes.
+var _tally: ChallengeTally = null
 
 
 ## Runs the replay under `host` (a node inside the scene tree). Returns the ReplayResult JSON shape (field order
@@ -41,6 +45,7 @@ func run_on(request: Dictionary, content: ContentIndex, host: Node) -> Dictionar
 		return _error(problem)
 	var snapshot: Dictionary = request["snapshot"]
 	var action_log: Dictionary = request["actionLog"]
+	_content = content
 
 	var battle := Battle.new()
 	battle.name = "ReplayBattle"
@@ -50,6 +55,10 @@ func run_on(request: Dictionary, content: ContentIndex, host: Node) -> Dictionar
 		battle.queue_free()
 		return _error(setup_error)
 
+	_tally = null
+	if not content.challenges_for(str(snapshot.get("encounterId", ""))).is_empty():
+		_tally = ChallengeTally.new()
+		_tally.attach(battle)
 	var controller := ReplayController.new(action_log["actions"])
 	battle.trace = trace
 	var frames_before := Engine.get_process_frames()
@@ -142,7 +151,32 @@ func _facts(battle: Battle, encounter_id: String) -> Dictionary:
 				bosses.append(unit_id)
 		elif not party.has(unit_id):
 			party.append(unit_id)
-	return {"encounterId": encounter_id, "bossIds": bosses, "partyCharacterIds": party}
+	var facts := {"encounterId": encounter_id, "bossIds": bosses, "partyCharacterIds": party}
+	# Spec economy-challenges 3.1: challenges the battle completed, with the tier (stars) reached. Absent when there are
+	# none, so every fact and golden written before this stays byte-identical.
+	var completions: Array = _completions(battle, encounter_id) if won else []
+	if not completions.is_empty():
+		facts["completions"] = completions
+	return facts
+
+
+## The stars `battle` earned, one `completion_fact` per star under its own reward id "<challenge>.<star>" (spec
+## economy-challenges: stars are independent, each a challenge of its own on the server; there are no tiers). Empty when the content defines no
+## challenge for the encounter, so every fact written before challenges stays byte-identical. Only called for a won battle,
+## and never hashed.
+func _completions(battle: Battle, encounter_id: String) -> Array:
+	var completions: Array = []
+	if _content == null:
+		return completions
+	for challenge in _content.challenges_for(encounter_id):
+		for star in challenge.stars_reached(battle, _tally):
+			completions.append(completion_fact(challenge.reward_id(star)))
+	return completions
+
+
+## One completion on the wire: the server's `CompletionFact(ChallengeId)`. What it is worth is the server's rule.
+static func completion_fact(challenge_id: String) -> Dictionary:
+	return {"challengeId": challenge_id}
 
 
 ## The exact Godot build, as Godot prints it at startup: "4.7.2.stable.mono.official.ed1daf0bf". The client and the

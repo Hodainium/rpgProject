@@ -1,0 +1,38 @@
+[
+ {
+  "bossId": "demo.enemy.lich",
+  "challengeId": "boss/demo.enemy.lich"
+ },
+ {
+  "bossId": "a.b-c_d",
+  "challengeId": "boss/a.b-c_d"
+ },
+ {
+  "bossId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "challengeId": "boss/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+ },
+ {
+  "bossId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "challengeId": null
+ },
+ {
+  "bossId": "has:colon",
+  "challengeId": null
+ },
+ {
+  "bossId": "has space",
+  "challengeId": null
+ },
+ {
+  "bossId": "tab\there",
+  "challengeId": null
+ },
+ {
+  "bossId": "",
+  "challengeId": null
+ },
+ {
+  "bossId": null,
+  "challengeId": null
+ }
+]

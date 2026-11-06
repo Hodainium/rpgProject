@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="ChallengeDefinition" format=3]
+
+[ext_resource type="Script" path="res://combat/challenge_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://combat/challenge_star.gd" id="2_star"]
+[ext_resource type="Script" path="res://combat/challenge/challenge_turns_condition.gd" id="3_turns"]
+[ext_resource type="Script" path="res://combat/challenge/challenge_units_condition.gd" id="4_units"]
+[ext_resource type="Script" path="res://combat/challenge/challenge_condition.gd" id="5_cond"]
+
+[sub_resource type="Resource" id="Resource_win"]
+script = ExtResource("2_star")
+id = &"win"
+description = "Defeat the Lich"
+
+[sub_resource type="Resource" id="Resource_turns"]
+script = ExtResource("3_turns")
+turns = 25
+
+[sub_resource type="Resource" id="Resource_fast"]
+script = ExtResource("2_star")
+id = &"fast"
+description = "Defeat the Lich in 25 turns or fewer"
+conditions = Array[ExtResource("5_cond")]([SubResource("Resource_turns")])
+
+[sub_resource type="Resource" id="Resource_standing"]
+script = ExtResource("4_units")
+alive = 1
+
+[sub_resource type="Resource" id="Resource_alive"]
+script = ExtResource("2_star")
+id = &"flawless"
+description = "Defeat the Lich with nobody falling"
+conditions = Array[ExtResource("5_cond")]([SubResource("Resource_standing")])
+
+[resource]
+script = ExtResource("1_def")
+id = &"demo.challenge.lich_trial"
+display_name = "Lich trial"
+encounter_id = &"demo.encounter.lich"
+stars = Array[ExtResource("2_star")]([SubResource("Resource_win"), SubResource("Resource_fast"), SubResource("Resource_alive")])

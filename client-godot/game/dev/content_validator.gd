@@ -53,6 +53,8 @@ static func validate(content_index: ContentIndex, options: Dictionary = {}) -> A
 		validator._check_layout(content_index.layouts[id])
 	for id in _sorted(content_index.chests):
 		validator._check_chest(content_index.chests[id])
+	for id in _sorted(content_index.challenges):
+		validator._check_challenge(content_index.challenges[id])
 	for id in _sorted(content_index.runs):
 		validator._check_run(content_index.runs[id], int(options.get("generate_seeds", 0)))
 	validator._check_default_run()
@@ -580,6 +582,43 @@ func _check_loadout_skills(loadout: Loadout, character: CharacterDefinition, pat
 		if tag != &"" and character.skill_scene(tag) == null:
 			_error("bad_skill", "%s::skills[%d]" % [path, index],
 				"%s's loadout gives %s, which is not in its abilities or learnable_skills" % [character.id, tag])
+
+
+## Spec economy-challenges: the id is what the server's reward ladder is keyed by (key-safe, not in the server's own
+## `boss/` namespace), the encounter exists, and the stars are real conditions.
+func _check_challenge(challenge: ChallengeDefinition) -> void:
+	var path := challenge.resource_path
+	var id := str(challenge.id)
+	if id.length() > 200 or id.contains(":") or id.contains(" ") or id.contains("\t") or id.contains("\n"):
+		_error("bad_challenge", path + "::id", "challenge id '%s' must be 1-200 characters with no ':' and no whitespace" % id)
+	if id.begins_with("boss/"):
+		_error("bad_challenge", path + "::id", "challenge id '%s' uses the reserved boss/ prefix (the server's own namespace)" % id)
+	if not content.encounters.has(challenge.encounter_id):
+		_error("dangling_ref", path + "::encounter_id", "challenge %s names unknown encounter '%s'" % [id, challenge.encounter_id])
+	if challenge.stars.is_empty():
+		_error("bad_challenge", path + "::stars", "challenge %s has no stars" % id)
+	var star_ids := {}
+	for index in challenge.stars.size():
+		var star: ChallengeStar = challenge.stars[index]
+		var where := "%s::stars[%d]" % [path, index]
+		if star == null:
+			_error("bad_challenge", where, "star %d of %s is empty" % [index + 1, id])
+			continue
+		var star_id := str(star.id)
+		if star_id == "" or star_id.length() > 100 or star_id.contains(":") or star_id.contains("/") or star_id.contains(" ") or star_id.contains("\t"):
+			_error("bad_challenge", where + ".id", "star %d of %s needs an id of 1-100 characters with no ':', '/' or whitespace" % [index + 1, id])
+		elif star_ids.has(star_id):
+			_error("bad_challenge", where + ".id", "star %d of %s repeats the star id '%s'" % [index + 1, id, star_id])
+		star_ids[star_id] = true
+		if id.length() + 1 + star_id.length() > 200:
+			_error("bad_challenge", where + ".id", "the reward id of star %d of %s passes 200 characters" % [index + 1, id])
+		for slot in star.conditions.size():
+			var condition: ChallengeCondition = star.conditions[slot]
+			if condition == null:
+				_error("bad_challenge", "%s.conditions[%d]" % [where, slot], "star %d of %s has an empty condition" % [index + 1, id])
+				continue
+			for problem in condition.problems():
+				_error("bad_challenge", "%s.conditions[%d]" % [where, slot], "star %d of %s, %s: %s" % [index + 1, id, condition.describe(), problem])
 
 
 func _check_encounter(encounter: EncounterDefinition) -> void:

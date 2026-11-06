@@ -1,0 +1,19 @@
+# Spec economy-challenges 1.2 and 6: the Development-only clock offset on the real stack. The worker runs over the test stub of
+# Godot (every battle reports event.trial.win and event.short) with a clock 100 years ahead. The weekly challenge is paid
+# under a key a century from now, and the event that ended in 2030 is expired: nothing paid, no mark.
+#! worker-stub
+#! worker-env STUB_FACTS={"encounterId":"fixture.encounter.trial","bossIds":[],"partyCharacterIds":["fixture.character.knight","fixture.character.medic"],"completions":[{"challengeId":"event.trial.win"},{"challengeId":"event.short"}]}
+#! worker-env ASPNETCORE_ENVIRONMENT=Development
+#! worker-env Settlement__CycleClockOffset=36500.00:00:00
+#! env Monitors__Interval=00:00:01
+server reward event.trial.win 10 cycle=weekly
+server reward event.short 50 cycle=weekly ends=2030-01-01T00:00:00Z
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 20 120
+server wallet

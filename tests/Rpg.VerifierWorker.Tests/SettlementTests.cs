@@ -148,10 +148,10 @@ public class SettlementTests(Stack stack)
         await worker.ExecuteAsync("INSERT INTO wallets (player_id, gems, version) VALUES ($1, 10, 1)", battle.PlayerId);
         await worker.ExecuteAsync(
             "INSERT INTO wallet_ledger (player_id, currency, delta, reason, ref_battle_id, idempotency_key) VALUES ($1, 'gems', 10, 'completion_mark', 'x', $2)",
-            battle.PlayerId, $"mark:{battle.BattleId}:warrior:boss.lich");
+            battle.PlayerId, $"mark:{battle.BattleId}:warrior:boss/boss.lich");
         var earlier = await worker.SeedAsync(player: battle.PlayerId, runStatus: "Won");
         await worker.ExecuteAsync(
-            "INSERT INTO completion_marks (player_id, character_id, boss_id, battle_id) VALUES ($1, 'cleric', 'boss.lich', $2)",
+            "INSERT INTO completion_marks (player_id, character_id, challenge_id, battle_id) VALUES ($1, 'cleric', 'boss/boss.lich', $2)",
             battle.PlayerId, earlier.BattleId);
 
         await worker.Processor.ProcessAsync(JobOf(battle), Ct);
@@ -353,7 +353,7 @@ public class SettlementTests(Stack stack)
 
         Assert.Equal(50, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", battle.PlayerId));
         Assert.Equal(2L, await worker.ScalarAsync<long>(
-            "SELECT count(*) FROM wallet_ledger WHERE delta = 25 AND rule_version = 2 AND source_kind = 'boss' AND source_id = 'boss.lich'"));
+            "SELECT count(*) FROM wallet_ledger WHERE delta = 25 AND rule_version = 2 AND challenge_id = 'boss/boss.lich'"));
         var rewards = (await worker.OutboxPayloadsAsync("RewardGranted"))
             .Select(json => JsonSerializer.Deserialize<DomainEvent<RewardGrantedPayload>>(json, RpgJson.Options)!).ToList();
         Assert.All(rewards, r => Assert.Equal((25, 2), (r.Payload.Amount, r.Payload.RuleVersion)));
@@ -374,8 +374,8 @@ public class SettlementTests(Stack stack)
         await worker.Processor.ProcessAsync(JobOf(battle), Ct);
 
         Assert.Equal(37, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", battle.PlayerId));
-        Assert.Equal(7, await worker.ScalarAsync<int>("SELECT delta FROM wallet_ledger WHERE source_id = 'boss.a'"));
-        Assert.Equal(30, await worker.ScalarAsync<int>("SELECT delta FROM wallet_ledger WHERE source_id = 'boss.b'"));
+        Assert.Equal(7, await worker.ScalarAsync<int>("SELECT delta FROM wallet_ledger WHERE challenge_id = 'boss/boss.a'"));
+        Assert.Equal(30, await worker.ScalarAsync<int>("SELECT delta FROM wallet_ledger WHERE challenge_id = 'boss/boss.b'"));
     }
 
     [Fact]
@@ -441,7 +441,7 @@ public class SettlementTests(Stack stack)
     {
         await using var worker = await CreateAsync(stack);
         await worker.ExecuteAsync(
-            "INSERT INTO reward_rules (source_kind, source_id, currency, amount, version, effective_from, created_by) VALUES ('boss','boss.lich','gems',99,2, now() + interval '1 hour','t')");
+            "INSERT INTO reward_rules (challenge_id, currency, amount, version, effective_from, created_by) VALUES ('boss/boss.lich','gems',99,2, now() + interval '1 hour','t')");
         WinsAgainstABoss(worker, "warrior");
         var battle = await worker.SeedAsync();
 
@@ -496,10 +496,10 @@ public class SettlementTests(Stack stack)
     {
         // a:b + c and a + b:c would both build "mark:<battle>:a:b:c"; the id check refuses either colon id, so only a clean
         // pair can ever reach the ledger key.
-        Assert.False(Economy.RewardRules.IsKeySafeId("a:b"));
-        Assert.False(Economy.RewardRules.IsKeySafeId("b:c"));
-        Assert.False(Economy.RewardRules.IsKeySafeId(" "));
-        Assert.True(Economy.RewardRules.IsKeySafeId("boss.lich"));
+        Assert.False(Economy.ChallengeIds.IsKeySafe("a:b"));
+        Assert.False(Economy.ChallengeIds.IsKeySafe("b:c"));
+        Assert.False(Economy.ChallengeIds.IsKeySafe(" "));
+        Assert.True(Economy.ChallengeIds.IsKeySafe("boss/boss.lich"));
     }
 
     [Fact]

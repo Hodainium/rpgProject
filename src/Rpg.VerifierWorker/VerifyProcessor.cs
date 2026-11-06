@@ -142,6 +142,7 @@ public sealed class VerifyProcessor(VerdictStore store, VerifierRedis redis, IRe
                 SettlementResult.Rejected => "rejected",
                 SettlementResult.NoRule => "no_rule",
                 SettlementResult.BadId => "bad_id",
+                SettlementResult.IgnoredFact => "ignored_fact",
                 _ => "no_reward",
             });
             if (commit.Settlement is { } settled)
@@ -149,6 +150,9 @@ public sealed class VerifyProcessor(VerdictStore store, VerifierRedis redis, IRe
                 metrics.RewardRuleLookups("found", settled.Found);
                 metrics.RewardRuleLookups("missing", settled.Missing);
                 metrics.RewardRuleLookups("retired", settled.Retired);
+                metrics.RewardRuleLookups("expired", settled.Expired);
+                metrics.CompletionMarks("new", settled.MarksNew);
+                metrics.CompletionMarks("existing", settled.MarksExisting);
             }
             if (commit.Grants.Count > 0)
             {

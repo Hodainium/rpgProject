@@ -78,3 +78,47 @@ func test_bosses_are_listed_once_each() -> void:
 	eq(bosses, ["fixture.enemy.chief", "fixture.enemy.lich"], "each boss once")
 	battle.outcome = "Defeat"
 	eq(runner._facts(battle, "x")["bossIds"], [], "none after a defeat")
+
+
+## Spec economy-challenges 3.1: a replay that completes a challenge reports `completions` as {challengeId, tier} entries, the
+## same JSON the C# `CompletionFact` golden pins. Nothing in the game defines a challenge yet, so a runner subclass stands in
+## for the future challenge definition and overrides the `_completions` seam.
+class _TrialRunner extends ReplayRunner:
+	func _completions(_battle: Battle, _encounter_id: String) -> Array:
+		return [ReplayRunner.completion_fact("demo.challenge.lich_trial.fast"), ReplayRunner.completion_fact("demo.challenge.lich_trial.win")]
+
+
+func _won_boss_battle() -> Battle:
+	var snap: Dictionary = preload("res://tests/combat/test_bosses.gd").boss_snapshot("5")
+	var battle := Battle.new()
+	host.add_child(battle)
+	_battles.append(battle)
+	eq(battle.setup(snap, ContentIndex.new(FIXTURES)), "", "the court sets up")
+	battle.outcome = "Victory"
+	return battle
+
+
+func test_a_battle_with_no_challenge_reports_no_completions_key() -> void:
+	var request: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(GOLDEN + "boss-seed-5.json"))
+	var result := await replay(request)
+	check(not (result["facts"] as Dictionary).has("completions"), "no key at all, so every fact written before stays byte-identical")
+	eq((result["facts"] as Dictionary).keys(), ["encounterId", "bossIds", "partyCharacterIds"], "the slice 4 shape")
+
+
+func test_completions_use_the_wire_shape_the_server_reads() -> void:
+	if skip_in_export():
+		return
+	var facts: Dictionary = _TrialRunner.new()._facts(_won_boss_battle(), "fixture.encounter.lich_court")
+	var golden: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(
+		ProjectSettings.globalize_path("res://").path_join("../tests/Rpg.Contracts.Tests/golden/battle-facts-completions.json")))
+	eq(WireJson.stringify(facts["completions"]), WireJson.stringify(golden["completions"]),
+		"the C# golden for BattleFacts.Completions, byte for byte")
+	eq(facts.keys(), ["encounterId", "bossIds", "partyCharacterIds", "completions"], "added after the slice 4 keys")
+	eq((facts["completions"] as Array)[0].keys(), ["challengeId"], "a completion is just the challenge id: there are no tiers")
+
+
+func test_a_lost_battle_reports_no_completions() -> void:
+	var battle := _won_boss_battle()
+	battle.outcome = "Defeat"
+	var facts: Dictionary = _TrialRunner.new()._facts(battle, "x")
+	check(not facts.has("completions"), "a challenge is completed by winning")

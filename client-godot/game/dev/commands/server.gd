@@ -4,8 +4,8 @@ extends DevCommand
 
 func _init() -> void:
 	name = "server"
-	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | reward [<boss> <amount>] | resume | forget | conflict]"
-	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's boss reward rules; reward <boss id> <amount>: set one (a new version; 0 retires it; needs the economy-admin role, which only a Development server gives, spec economy-rewards). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
+	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | reward [...] | reward-reset ... | resume | forget | conflict]"
+	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
 	cheat = false
 
 
@@ -20,6 +20,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		return await _wallet(ctx)
 	if args.size() > 0 and args[0] == "reward":
 		return await _reward(ctx, args)
+	if args.size() > 0 and args[0] == "reward-reset":
+		return await _reward_reset(ctx, args)
 	if args.size() > 0 and args[0] in ["resume", "forget", "conflict"]:
 		return await _part_b(ctx, args[0])
 	if ctx.game == null:
@@ -139,7 +141,7 @@ func _wallet(ctx: DevContext) -> String:
 	return ServerLink.describe_wallet(answer["data"])
 
 
-## Spec economy-rewards: lists the reward rules, or sets one. The amounts live on the server; this only drives its admin path.
+## Spec economy-challenges: lists the reward ladders, or sets one. The amounts live on the server; this only drives its admin path.
 func _reward(ctx: DevContext, args: PackedStringArray) -> String:
 	if ctx.game == null or ctx.game.server == null:
 		return ctx.fail("not in server mode")
@@ -151,12 +153,66 @@ func _reward(ctx: DevContext, args: PackedStringArray) -> String:
 		if rules.is_empty():
 			return "no reward rules"
 		return "\n".join(PackedStringArray(rules.map(func(rule: Dictionary) -> String: return _describe_rule(rule))))
-	if args.size() != 3 or not args[2].is_valid_int() or int(args[2]) < 0:
-		return ctx.fail("usage: server reward [<boss id> <amount>]")
-	var answer: Dictionary = await ctx.game.server.request("PutRewardRule", [WireJson.stringify({"sourceKind": "boss", "sourceId": args[1], "currency": "gems", "amount": int(args[2])})])
+	var usage := "usage: server reward [boss] <id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]"
+	var rest := args.slice(1)
+	var is_boss := rest.size() > 0 and rest[0] == "boss"
+	if is_boss:
+		rest = rest.slice(1)
+	if rest.size() < 2:
+		return ctx.fail(usage)
+	var challenge := _challenge_id(rest[0], is_boss)
+	if not rest[1].is_valid_int() or int(rest[1]) < 0:
+		return ctx.fail(usage + " (the amount is a whole number; 0 retires)")
+	var body := {"challengeId": challenge, "currency": "gems", "amount": int(rest[1])}
+	for option in rest.slice(2):
+		if option.begins_with("cycle="):
+			body["cycle"] = option.trim_prefix("cycle=")
+		elif option.begins_with("ends="):
+			body["endsAt"] = option.trim_prefix("ends=")
+		else:
+			return ctx.fail(usage + " (unknown option %s)" % option)
+	var answer: Dictionary = await ctx.game.server.request("PutRewardRule", [WireJson.stringify(body)])
 	if not answer["ok"]:
 		return ctx.fail("PUT reward-rules: " + ServerLink.describe(answer["error"]))
 	return _describe_rule(answer["data"])
+
+
+## The challenge id of a boss is "boss/" + its id, the same rule the server uses (spec economy-challenges 1.1).
+static func _challenge_id(id: String, is_boss: bool) -> String:
+	return "boss/" + id if is_boss else id
+
+
+## Spec economy-challenges 2.2: `server reward-reset [boss] <id> [player=me|<player id>] [reason...]`.
+func _reward_reset(ctx: DevContext, args: PackedStringArray) -> String:
+	if ctx.game == null or ctx.game.server == null:
+		return ctx.fail("not in server mode")
+	var usage := "usage: server reward-reset [boss] <id> [player=me|<player id>] [reason...]"
+	var rest := args.slice(1)
+	var is_boss := rest.size() > 0 and rest[0] == "boss"
+	if is_boss:
+		rest = rest.slice(1)
+	if rest.is_empty():
+		return ctx.fail(usage)
+	var body := {"challengeId": _challenge_id(rest[0], is_boss)}
+	var reason := PackedStringArray()
+	for word in rest.slice(1):
+		if word.begins_with("player=") and not body.has("playerId") and reason.is_empty():
+			var who := word.trim_prefix("player=")
+			if who == "me":
+				who = ctx.game.server.player_id
+				if who.is_empty():
+					return ctx.fail("not signed in: no player id yet")
+			body["playerId"] = who
+		else:
+			reason.append(word)
+	if not reason.is_empty():
+		body["reason"] = " ".join(reason)
+	var answer: Dictionary = await ctx.game.server.request("ResetRewardCycle", [WireJson.stringify(body)])
+	if not answer["ok"]:
+		return ctx.fail("POST reward-cycles/reset: " + ServerLink.describe(answer["error"]))
+	var data: Dictionary = answer["data"]
+	return "reset %s for %s: generation %d (by %s)" % [data.get("challengeId", "?"),
+		"everyone" if not data.has("playerId") else str(data["playerId"]), int(data.get("generation", 0)), data.get("resetBy", "?")]
 
 
 ## Spec dev-tools E3: the server agrees with the run: GET /runs/{id} is Active on the client's floor, and asking for
@@ -194,6 +250,8 @@ func _check(ctx: DevContext) -> String:
 
 
 static func _describe_rule(rule: Dictionary) -> String:
-	return "%s %s: %d %s (version %d, by %s)%s" % [rule.get("sourceKind", "?"), rule.get("sourceId", "?"), int(rule.get("amount", 0)),
-		rule.get("currency", "?"), int(rule.get("version", 0)), rule.get("createdBy", "?"),
-		" [retired: pays nothing]" if int(rule.get("amount", 0)) == 0 else ""]
+	var amount := int(rule.get("amount", 0))
+	var ends := " ends %s" % rule["endsAt"] if rule.has("endsAt") else ""
+	return "%s: %d %s %s%s (version %d, generation %d, by %s)%s" % [rule.get("challengeId", "?"), amount,
+		rule.get("currency", "?"), rule.get("cycle", "?"), ends, int(rule.get("version", 0)), int(rule.get("generation", 0)),
+		rule.get("createdBy", "?"), " [retired: pays nothing]" if amount == 0 else ""]

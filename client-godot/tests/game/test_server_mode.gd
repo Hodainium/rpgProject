@@ -49,6 +49,9 @@ class FakeBridge:
 	func ListRewardRules() -> int:
 		return _answer("ListRewardRules", [])
 
+	func ResetRewardCycle(json: String) -> int:
+		return _answer("ResetRewardCycle", [json])
+
 	func Heartbeat(json: String) -> int:
 		return _answer("Heartbeat", [json])
 

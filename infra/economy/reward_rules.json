@@ -1,20 +1,23 @@
 {
-  "_comment": "PLACEHOLDER reward amounts by boss (spec economy-rewards 8.1), loaded through Economy:SeedRules. Seeds only fill sources that have no rule yet; retune here for a fresh database or live through PUT /api/v1/admin/reward-rules (console: server reward <boss> <amount>). A boss missing from this file pays nothing (F1). tools/check_reward_seed.sh lists the bosses in content/ that have no entry.",
+  "_comment": "PLACEHOLDER reward ladders by challenge (spec economy-challenges), loaded through Economy:SeedRules. A boss is the challenge boss/<id> with one tier. Seeds only fill challenges that have no rule yet; retune here for a fresh database or live through PUT /api/v1/admin/reward-rules (console: server reward boss <boss> <amounts>). A boss missing from this file pays nothing (F1). tools/check_reward_seed.sh lists the bosses in content/ that have no entry.",
   "Economy": {
     "SeedRules": [
-      { "sourceKind": "boss", "sourceId": "demo.enemy.rat_king", "currency": "gems", "amount": 10 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.golem", "currency": "gems", "amount": 10 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.bone_warden", "currency": "gems", "amount": 15 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.heart_left", "currency": "gems", "amount": 15 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.heart_right", "currency": "gems", "amount": 15 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.forgemaster", "currency": "gems", "amount": 20 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.brass_colossus", "currency": "gems", "amount": 20 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.lich", "currency": "gems", "amount": 25 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.hallowed_judge", "currency": "gems", "amount": 30 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.collector", "currency": "gems", "amount": 30 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.high_witch", "currency": "gems", "amount": 30 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.mother_heart", "currency": "gems", "amount": 40 },
-      { "sourceKind": "boss", "sourceId": "demo.enemy.nameless", "currency": "gems", "amount": 50 }
+      { "challengeId": "boss/demo.enemy.rat_king", "currency": "gems", "amount": 10 },
+      { "challengeId": "boss/demo.enemy.golem", "currency": "gems", "amount": 10 },
+      { "challengeId": "boss/demo.enemy.bone_warden", "currency": "gems", "amount": 15 },
+      { "challengeId": "boss/demo.enemy.heart_left", "currency": "gems", "amount": 15 },
+      { "challengeId": "boss/demo.enemy.heart_right", "currency": "gems", "amount": 15 },
+      { "challengeId": "boss/demo.enemy.forgemaster", "currency": "gems", "amount": 20 },
+      { "challengeId": "boss/demo.enemy.brass_colossus", "currency": "gems", "amount": 20 },
+      { "challengeId": "boss/demo.enemy.lich", "currency": "gems", "amount": 25 },
+      { "challengeId": "boss/demo.enemy.hallowed_judge", "currency": "gems", "amount": 30 },
+      { "challengeId": "boss/demo.enemy.collector", "currency": "gems", "amount": 30 },
+      { "challengeId": "boss/demo.enemy.high_witch", "currency": "gems", "amount": 30 },
+      { "challengeId": "boss/demo.enemy.mother_heart", "currency": "gems", "amount": 40 },
+      { "challengeId": "boss/demo.enemy.nameless", "currency": "gems", "amount": 50 },
+      { "challengeId": "demo.challenge.lich_trial.win", "currency": "gems", "amount": 5, "cycle": "weekly" },
+      { "challengeId": "demo.challenge.lich_trial.fast", "currency": "gems", "amount": 5, "cycle": "weekly" },
+      { "challengeId": "demo.challenge.lich_trial.flawless", "currency": "gems", "amount": 10, "cycle": "weekly" }
     ]
   }
 }

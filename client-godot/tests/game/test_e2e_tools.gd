@@ -185,7 +185,7 @@ func test_e2e_scenarios_lint() -> void:
 	var console := DevConsole.new(host.get_tree())
 	console.keep_history = false
 	console.load_commands(false)
-	var env_line := RegEx.create_from_string("^#! (env [A-Za-z_][A-Za-z0-9_]*=.*|worker|content real)$")
+	var env_line := RegEx.create_from_string("^#! ((worker-)?env [A-Za-z_][A-Za-z0-9_]*=.*|worker|worker-stub|content real)$")
 	var names := Array(DirAccess.get_files_at(SCENARIOS)).filter(func(file: String) -> bool: return file.ends_with(".txt"))
 	check(names.size() >= 4, "the scenarios are there: %s" % [names])
 	for file in names:
@@ -283,29 +283,59 @@ func test_server_wallet_and_wait_gems() -> void:
 	await host.get_tree().process_frame
 
 
-## Spec economy-rewards: `server reward` lists the rules, sets one, and reports a refusal instead of swallowing it.
+## Spec economy-challenges: `server reward` lists the ladders, sets one (a boss through boss/<id>), and reports a refusal instead of swallowing it.
 func test_server_reward_command() -> void:
 	var bridge := _bridge()
 	var session := _session(bridge)
-	var rule := {"sourceKind": "boss", "sourceId": "demo.enemy.lich", "currency": "gems", "amount": 25, "version": 3,
+	var rule := {"challengeId": "boss/demo.enemy.lich", "currency": "gems", "amount": 25, "cycle": "once", "generation": 2, "version": 3,
 		"effectiveFrom": "2026-11-03T10:00:00+00:00", "createdBy": "designer"}
 	bridge.answers["ListRewardRules"] = [[true, {"rules": [rule]}]]
 	var listed := await _run(session, "server reward")
-	check(listed["ok"] and listed["text"].contains("demo.enemy.lich: 25 gems (version 3, by designer)"), "the rules are listed: " + listed["text"])
+	check(listed["ok"] and listed["text"].contains("boss/demo.enemy.lich: 25 gems once (version 3, generation 2, by designer)"), "the ladders are listed: " + listed["text"])
 	bridge.answers["ListRewardRules"] = [[true, {"rules": []}]]
 	var none := await _run(session, "server reward")
 	check(none["ok"] and none["text"].contains("no reward rules"), "an empty table: " + none["text"])
 	bridge.answers["PutRewardRule"] = [[true, rule]]
-	var set := await _run(session, "server reward demo.enemy.lich 25")
+	var set := await _run(session, "server reward boss demo.enemy.lich 25")
 	check(set["ok"] and set["text"].contains("version 3"), "a rule is set and its version printed: " + set["text"])
-	var sent: Dictionary = JSON.parse_string(bridge.calls.filter(func(call: Array) -> bool: return call[0] == "PutRewardRule")[0][1])
-	check(sent.get("sourceKind") == "boss" and sent.get("sourceId") == "demo.enemy.lich" and sent.get("currency") == "gems" and int(sent.get("amount", -1)) == 25, "the PUT body: " + str(sent))
+	var puts := func() -> Array: return bridge.calls.filter(func(call: Array) -> bool: return call[0] == "PutRewardRule")
+	var sent: Dictionary = JSON.parse_string(puts.call()[0][1])
+	check(sent.get("challengeId") == "boss/demo.enemy.lich" and sent.get("currency") == "gems" and int(sent.get("amount", -1)) == 25 and not sent.has("cycle"), "the boss PUT body: " + str(sent))
+	await _run(session, "server reward demo.challenge.lich_trial.fast 10 cycle=weekly ends=2026-12-01T00:00:00Z")
+	var weekly: Dictionary = JSON.parse_string(puts.call()[1][1])
+	check(weekly.get("challengeId") == "demo.challenge.lich_trial.fast" and int(weekly.get("amount", -1)) == 10 and weekly.get("cycle") == "weekly" and weekly.get("endsAt") == "2026-12-01T00:00:00Z", "the weekly PUT body: " + str(weekly))
+	await _run(session, "server reward boss demo.enemy.lich 0")
+	check(int(JSON.parse_string(puts.call()[2][1]).get("amount", -1)) == 0, "an amount of 0 retires the challenge")
 	bridge.answers["PutRewardRule"] = [ServerTests._error(403, 1302, "Economy admin required")]
-	var refused := await _run(session, "server reward demo.enemy.lich 5")
+	var refused := await _run(session, "server reward boss demo.enemy.lich 5")
 	check(not refused["ok"] and refused["text"].contains("403") and refused["text"].contains("1302"), "a refusal is reported: " + refused["text"])
 	check(not (await _run(session, "server reward demo.enemy.lich"))["ok"], "usage: an amount is needed")
-	check(not (await _run(session, "server reward demo.enemy.lich x"))["ok"], "usage: the amount is a number")
-	check(not (await _run(session, "server reward demo.enemy.lich -1"))["ok"], "usage: not negative")
+	check(not (await _run(session, "server reward boss demo.enemy.lich x"))["ok"], "usage: the amount is a number")
+	check(not (await _run(session, "server reward boss demo.enemy.lich -1"))["ok"], "usage: not negative")
+	check(not (await _run(session, "server reward boss demo.enemy.lich 10,20"))["ok"], "usage: one amount, no list (there are no tiers)")
+	check(not (await _run(session, "server reward boss demo.enemy.lich 10 colour=red"))["ok"], "usage: unknown option")
+	await host.get_tree().process_frame
+
+
+## Spec economy-challenges 2.2: `server reward-reset` for everyone, for me, for a player id, and a boss.
+func test_server_reward_reset_command() -> void:
+	var bridge := _bridge()
+	var session := _session(bridge)
+	bridge.answers["ResetRewardCycle"] = [[true, {"challengeId": "event.spring.trial-3", "generation": 1, "resetAt": "2026-11-06T10:00:00+00:00", "resetBy": "designer"}]]
+	var everyone := await _run(session, "server reward-reset event.spring.trial-3")
+	check(everyone["ok"] and everyone["text"].contains("everyone") and everyone["text"].contains("generation 1"), "a reset for everyone: " + everyone["text"])
+	var resets := func() -> Array: return bridge.calls.filter(func(call: Array) -> bool: return call[0] == "ResetRewardCycle")
+	check(JSON.parse_string(resets.call()[0][1]) == {"challengeId": "event.spring.trial-3"}, "no player and no reason are sent: " + str(resets.call()[0][1]))
+	await _run(session, "server reward-reset boss demo.enemy.lich player=11111111-1111-1111-1111-111111111111 support asked")
+	var one: Dictionary = JSON.parse_string(resets.call()[1][1])
+	check(one.get("challengeId") == "boss/demo.enemy.lich" and one.get("playerId") == "11111111-1111-1111-1111-111111111111" and one.get("reason") == "support asked", "a boss, a player and a reason: " + str(one))
+	session[0].server.player_id = "22222222-2222-2222-2222-222222222222"
+	await _run(session, "server reward-reset event.spring.trial-3 player=me")
+	check(JSON.parse_string(resets.call()[2][1]).get("playerId") == "22222222-2222-2222-2222-222222222222", "player=me sends the signed-in player's id")
+	bridge.answers["ResetRewardCycle"] = [ServerTests._error(403, 1302, "Economy admin required")]
+	var refused := await _run(session, "server reward-reset event.spring.trial-3")
+	check(not refused["ok"] and refused["text"].contains("403"), "a refusal is reported: " + refused["text"])
+	check(not (await _run(session, "server reward-reset"))["ok"], "usage: an id is needed")
 	await host.get_tree().process_frame
 
 

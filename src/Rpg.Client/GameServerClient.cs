@@ -81,6 +81,11 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
     public Task<RewardRuleListResponse> ListRewardRulesAsync(CancellationToken ct = default) =>
         RequiredAsync<RewardRuleListResponse>(HttpMethod.Get, "api/v1/admin/reward-rules", null, ct);
 
+    /// <summary>POST /api/v1/admin/reward-cycles/reset (economy-admin, spec economy-challenges 3.6): the next clear pays the ladder again.</summary>
+    public Task<RewardCycleResetResponse> ResetRewardCycleAsync(RewardCycleResetRequest request, CancellationToken ct = default) =>
+        RequiredAsync<RewardCycleResetResponse>(HttpMethod.Post, "api/v1/admin/reward-cycles/reset",
+            JsonContent.Create(request, options: RpgJson.Options), ct);
+
     /// <summary>POST /api/v1/presence: the heartbeat (204).</summary>
     public Task HeartbeatAsync(PresenceRequest request, CancellationToken ct = default) =>
         SendAsync<object>(HttpMethod.Post, "api/v1/presence", JsonContent.Create(request, options: RpgJson.Options), ct,

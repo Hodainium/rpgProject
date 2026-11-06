@@ -1,0 +1,2 @@
+rpg_reward_rule_lookups_total\{[^}]*result="expired"[^}]*\} [1-9]
+rpg_settlements_total\{[^}]*result="granted"[^}]*\} [1-9]

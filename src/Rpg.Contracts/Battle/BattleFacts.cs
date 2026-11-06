@@ -8,4 +8,10 @@ namespace Rpg.Contracts.Battle;
 /// <param name="EncounterId">The encounter the battle was played against.</param>
 /// <param name="BossIds">The encounter's enemies tagged <c>Enemy.Boss</c>; empty for an ordinary battle.</param>
 /// <param name="PartyCharacterIds">The party's character ids, in slot order.</param>
-public sealed record BattleFacts(string EncounterId, IReadOnlyList<string> BossIds, IReadOnlyList<string> PartyCharacterIds);
+/// <param name="Completions">Challenges the battle completed (spec economy-challenges 3.1), each a challenge of its own on the
+/// server; a content star is one such challenge. Omitted from JSON when null. Bosses stay in <paramref name="BossIds"/>.</param>
+public sealed record BattleFacts(string EncounterId, IReadOnlyList<string> BossIds, IReadOnlyList<string> PartyCharacterIds,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<CompletionFact>? Completions = null);
+
+/// <summary>One challenge a battle completed. The server decides what it is worth.</summary>
+public sealed record CompletionFact(string ChallengeId);

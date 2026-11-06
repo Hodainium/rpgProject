@@ -14,7 +14,7 @@ namespace Rpg.VerifierWorker;
 public sealed record BattleRow(string BattleId, Guid RunId, int RunSeq, Guid PlayerId, string Status, string Ruleset,
     string ConditionsJson, string ActionLogJson, DateTimeOffset SubmittedAt, int Attempts);
 
-public enum SettlementResult { None, Rejected, NoReward, NoRule, BadId, AlreadyMarked, Granted }
+public enum SettlementResult { None, Rejected, NoReward, NoRule, BadId, IgnoredFact, AlreadyMarked, Granted }
 
 /// <param name="Committed">False: someone else already decided this battle, nothing changed.</param>
 /// <param name="Settlement">What the economy module did (null when no settlement ran).</param>
@@ -27,7 +27,7 @@ public sealed record CommitResult(bool Committed, SettlementResult Result, IRead
 /// </summary>
 public sealed class VerdictStore(NpgsqlDataSource dataSource)
 {
-    public const string RequiredMigration = "0005_reward_rules.sql";
+    public const string RequiredMigration = "0006_reward_challenges.sql";
 
     /// <summary>Blocks until the API has applied the verdict migration (the worker never migrates).</summary>
     public async Task WaitForSchemaAsync(TimeSpan interval, CancellationToken ct)
@@ -120,16 +120,19 @@ public sealed class VerdictStore(NpgsqlDataSource dataSource)
         IReadOnlyList<Grant> grants = [];
         SettlementSummary? summary = null;
         if (settlement.Enabled && verdict.Status == ReplayVerdict.Verified
-            && verdict.Outcome == BattleOutcome.Victory && verdict.Facts is { BossIds.Count: > 0 } facts)
+            && verdict.Outcome == BattleOutcome.Victory && verdict.Facts is { } facts
+            && (facts.BossIds.Count > 0 || facts.Completions is { Count: > 0 }))
         {
-            summary = await BossSettlement.SettleAsync(connection, transaction,
-                new SettlementContext(row.PlayerId, row.RunId, row.BattleId, row.Ruleset), facts, now, ct);
+            summary = await ChallengeSettlement.SettleAsync(connection, transaction,
+                new SettlementContext(row.PlayerId, row.RunId, row.BattleId, row.Ruleset,
+                    row.SubmittedAt + settlement.CycleClockOffset), facts, now, ct);
             grants = summary.Grants;
-            // A boss with no rule outranks "already marked": the missing rule is what an operator must see.
+            // A challenge with no rule outranks "already marked": the missing rule is what an operator must see.
             result = grants.Count > 0 ? SettlementResult.Granted
                 : summary.Missing + summary.Retired > 0 ? SettlementResult.NoRule
                 : summary.Claimed > 0 ? SettlementResult.AlreadyMarked
                 : summary.BadIds > 0 ? SettlementResult.BadId
+                : summary.IgnoredFacts > 0 ? SettlementResult.IgnoredFact
                 : result;
         }
 

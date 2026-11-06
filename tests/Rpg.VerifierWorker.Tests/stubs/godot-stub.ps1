@@ -22,7 +22,15 @@ function Rejected {
     '{"schemaVersion":1,"battleId":"' + $battleId + '","verdict":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"TurnMismatch","turn":1,"detail":"d"},"outcome":"Ongoing","turns":1,"finalStateHash":"abc","engineVersion":"stub"}'
 }
 
+# Spec economy-challenges (e2e): a Verified Victory whose facts come from STUB_FACTS (a BattleFacts JSON), so a scenario can
+# report completions that no game content emits yet.
+function VerifiedWithFacts {
+    $v = Verified
+    $v.Substring(0, $v.Length - 1) + ',"facts":' + $env:STUB_FACTS + '}'
+}
+
 switch ($mode) {
+    'verified-facts' { [System.IO.File]::WriteAllText($outPath, (VerifiedWithFacts)); exit 0 }
     'verified' { [System.IO.File]::WriteAllText($outPath, (Verified)); exit 0 }
     'rejected' { [System.IO.File]::WriteAllText($outPath, (Rejected)); exit 2 }
     'exit-mismatch' { [System.IO.File]::WriteAllText($outPath, (Verified)); exit 2 }
