@@ -142,7 +142,26 @@ func _facts(battle: Battle, encounter_id: String) -> Dictionary:
 				bosses.append(unit_id)
 		elif not party.has(unit_id):
 			party.append(unit_id)
-	return {"encounterId": encounter_id, "bossIds": bosses, "partyCharacterIds": party}
+	var facts := {"encounterId": encounter_id, "bossIds": bosses, "partyCharacterIds": party}
+	# Spec economy-challenges 3.1: challenges the battle completed, with the tier (stars) reached. Absent when there are
+	# none, so every fact and golden written before this stays byte-identical.
+	var completions: Array = _completions(battle) if won else []
+	if not completions.is_empty():
+		facts["completions"] = completions
+	return facts
+
+
+## The challenges `battle` completed, as `completion_fact` entries. Nothing in the game defines a challenge yet, so this is
+## empty; the game-side challenge definition (a future design task) overrides it by reading the finished battle. Only
+## called for a won battle, and never hashed.
+func _completions(_battle: Battle) -> Array:
+	return []
+
+
+## One completion on the wire: the server's `CompletionFact(ChallengeId, Tier)`. A tier is the number of stars reached
+## (1 or more); what each is worth is the server's rule.
+static func completion_fact(challenge_id: String, tier: int) -> Dictionary:
+	return {"challengeId": challenge_id, "tier": tier}
 
 
 ## The exact Godot build, as Godot prints it at startup: "4.7.2.stable.mono.official.ed1daf0bf". The client and the
