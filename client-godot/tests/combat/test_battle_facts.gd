@@ -85,7 +85,7 @@ func test_bosses_are_listed_once_each() -> void:
 ## for the future challenge definition and overrides the `_completions` seam.
 class _TrialRunner extends ReplayRunner:
 	func _completions(_battle: Battle, _encounter_id: String) -> Array:
-		return [ReplayRunner.completion_fact("event.spring.trial-3", 3)]
+		return [ReplayRunner.completion_fact("demo.challenge.lich_trial.fast"), ReplayRunner.completion_fact("demo.challenge.lich_trial.win")]
 
 
 func _won_boss_battle() -> Battle:
@@ -114,9 +114,7 @@ func test_completions_use_the_wire_shape_the_server_reads() -> void:
 	eq(WireJson.stringify(facts["completions"]), WireJson.stringify(golden["completions"]),
 		"the C# golden for BattleFacts.Completions, byte for byte")
 	eq(facts.keys(), ["encounterId", "bossIds", "partyCharacterIds", "completions"], "added after the slice 4 keys")
-	var tier: Variant = (facts["completions"] as Array)[0]["tier"]
-	check(typeof(tier) == TYPE_INT, "a tier is a whole number")
-	check(WireJson.stringify(facts).contains("\"tier\":3"), "and is written as an integer: " + WireJson.stringify(facts))
+	eq((facts["completions"] as Array)[0].keys(), ["challengeId"], "a completion is just the challenge id: there are no tiers")
 
 
 func test_a_lost_battle_reports_no_completions() -> void:

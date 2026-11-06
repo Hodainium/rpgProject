@@ -11,24 +11,22 @@ namespace Rpg.Economy;
 /// <summary>Why a <see cref="RewardRuleRequest"/> or a reset is refused (spec economy-challenges F15).</summary>
 public sealed record RuleProblem(string Detail);
 
-/// <summary>One version of a challenge's ladder. No tiers = retired.</summary>
-public sealed record RewardRule(string ChallengeId, string Currency, IReadOnlyList<int> Tiers, string Cycle, DateTimeOffset? EndsAt,
+/// <summary>One version of a challenge's reward. An amount of 0 means retired.</summary>
+public sealed record RewardRule(string ChallengeId, string Currency, int Amount, string Cycle, DateTimeOffset? EndsAt,
     int Version, DateTimeOffset EffectiveFrom, string CreatedBy, int Generation = 0)
 {
-    public bool Retired => Tiers.Count == 0;
+    public bool Retired => Amount == 0;
 
     public RewardRuleResponse ToResponse() =>
-        new(ChallengeId, Currency, Tiers, Cycle, EndsAt, Generation, Version, EffectiveFrom, CreatedBy);
+        new(ChallengeId, Currency, Amount, Cycle, EndsAt, Generation, Version, EffectiveFrom, CreatedBy);
 }
 
 /// <summary>
-/// The versioned ladder table (spec economy-challenges 2.1, 3.2). Append-only: a change is a new version holding every
-/// tier, written in one transaction, so a reader sees a whole ladder or the previous one.
+/// The versioned reward table (spec economy-challenges 2.1, 3.2). Append-only: a change is a new version.
 /// </summary>
 public static class RewardRules
 {
     public const int DefaultMaxAmount = 100_000;
-    public const int DefaultMaxTiers = 10;
 
     /// <summary>The currencies a rule can pay (the migration's CHECK list; slice 5 widens both).</summary>
     public static readonly string[] Currencies = ["gems"];
@@ -39,7 +37,7 @@ public static class RewardRules
     public static readonly Guid SeedPlayer = Guid.Empty;
 
     /// <summary>Null = the request is fine.</summary>
-    public static RuleProblem? Validate(RewardRuleRequest? request, int maxAmount, int maxTiers, DateTimeOffset now)
+    public static RuleProblem? Validate(RewardRuleRequest? request, int maxAmount, DateTimeOffset now)
     {
         if (request is null || !ChallengeIds.IsKeySafe(request.ChallengeId))
         {
@@ -56,14 +54,9 @@ public static class RewardRules
             return new RuleProblem("cycle must be one of: " + string.Join(", ", Cycles) + ".");
         }
 
-        if (request.Tiers is null || request.Tiers.Count > maxTiers)
+        if (request.Amount < 0 || request.Amount > maxAmount)
         {
-            return new RuleProblem($"tiers takes 0 (retire) to {maxTiers} amounts.");
-        }
-
-        if (request.Tiers.Any(amount => amount < 1 || amount > maxAmount))
-        {
-            return new RuleProblem($"every tier amount takes 1–{maxAmount}.");
+            return new RuleProblem($"amount takes 0 (retire) or 1–{maxAmount}.");
         }
 
         if (request.EndsAt is { } endsAt && endsAt <= now)
@@ -75,7 +68,7 @@ public static class RewardRules
     }
 
     /// <summary>
-    /// The latest ladder in force for a challenge, read inside the caller's transaction so a grant and the rule it used
+    /// The latest version in force for a challenge, read inside the caller's transaction so a grant and the rule it used
     /// can never disagree. A version whose <c>effective_from</c> is in the future is ignored. Time is the database's.
     /// </summary>
     public static async Task<RewardRule?> LookupAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
@@ -83,15 +76,13 @@ public static class RewardRules
     {
         await using var command = new NpgsqlCommand(
             """
-            SELECT challenge_id, currency, amount, tier, cycle, ends_at, version, effective_from, created_by FROM reward_rules
-            WHERE challenge_id = $1 AND version = (
-              SELECT max(version) FROM reward_rules
-              WHERE challenge_id = $1 AND effective_from <= clock_timestamp())  -- not now(): a rule committed after this transaction began is still in force
-            ORDER BY tier
+            SELECT challenge_id, currency, amount, cycle, ends_at, version, effective_from, created_by FROM reward_rules
+            WHERE challenge_id = $1 AND effective_from <= clock_timestamp()  -- not now(): a rule committed after this transaction began is still in force
+            ORDER BY version DESC LIMIT 1
             """, connection, transaction);
         command.Parameters.Add(new NpgsqlParameter { Value = challengeId });
         await using var reader = await command.ExecuteReaderAsync(ct);
-        return ReadLadders(await ReadRowsAsync(reader, ct)).FirstOrDefault();
+        return await reader.ReadAsync(ct) ? Read(reader) : null;
     }
 
     /// <summary>The generation of the resets for everyone (<paramref name="playerId"/> null) or for one player; 0 if none.</summary>
@@ -106,21 +97,22 @@ public static class RewardRules
         return (int)(await command.ExecuteScalarAsync(ct))!;
     }
 
-    /// <summary>The latest ladder in force per challenge, with its global generation, for the admin list.</summary>
+    /// <summary>The latest version in force per challenge, with its global generation, for the admin list.</summary>
     public static async Task<IReadOnlyList<RewardRule>> ListLatestAsync(NpgsqlDataSource dataSource, CancellationToken ct)
     {
-        List<RewardRule> ladders;
+        var rules = new List<RewardRule>();
         await using (var command = dataSource.CreateCommand(
             """
-            SELECT r.challenge_id, r.currency, r.amount, r.tier, r.cycle, r.ends_at, r.version, r.effective_from, r.created_by
-            FROM reward_rules r
-            WHERE r.version = (SELECT max(x.version) FROM reward_rules x
-                               WHERE x.challenge_id = r.challenge_id AND x.effective_from <= clock_timestamp())
-            ORDER BY r.challenge_id, r.tier
+            SELECT DISTINCT ON (challenge_id) challenge_id, currency, amount, cycle, ends_at, version, effective_from, created_by
+            FROM reward_rules WHERE effective_from <= clock_timestamp()
+            ORDER BY challenge_id, version DESC
             """))
         {
             await using var reader = await command.ExecuteReaderAsync(ct);
-            ladders = ReadLadders(await ReadRowsAsync(reader, ct));
+            while (await reader.ReadAsync(ct))
+            {
+                rules.Add(Read(reader));
+            }
         }
 
         var generations = new Dictionary<string, int>();
@@ -134,11 +126,11 @@ public static class RewardRules
             }
         }
 
-        return [.. ladders.Select(l => generations.TryGetValue(l.ChallengeId, out var g) ? l with { Generation = g } : l)];
+        return [.. rules.Select(r => generations.TryGetValue(r.ChallengeId, out var g) ? r with { Generation = g } : r)];
     }
 
     /// <summary>
-    /// A new version of the ladder plus its <c>RewardRuleChanged</c> event, in one transaction. The advisory lock on the
+    /// A new version of the rule plus its <c>RewardRuleChanged</c> event, in one transaction. The advisory lock on the
     /// challenge id serialises two admins, so versions are consecutive.
     /// </summary>
     public static async Task<RewardRule> PutAsync(NpgsqlDataSource dataSource, RewardRuleRequest request, Guid adminId,
@@ -151,47 +143,36 @@ public static class RewardRules
         return rule;
     }
 
-    /// <summary>The same inside a transaction the caller owns (lets a test prove the lock and the whole-ladder write).</summary>
+    /// <summary>The same inside a transaction the caller owns (lets a test prove the lock and the event write).</summary>
     public static async Task<RewardRule> InsertVersionAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
         RewardRuleRequest request, Guid adminId, string adminName, DateTimeOffset now, CancellationToken ct)
     {
         await LockAsync(connection, transaction, $"reward_rule|{request.ChallengeId}", ct);
 
-        IReadOnlyList<int>? previousTiers = null;
+        int? previousAmount = null;
         var version = 1;
         await using (var latest = new NpgsqlCommand(
-            "SELECT amount, version FROM reward_rules WHERE challenge_id = $1 AND version = (SELECT max(version) FROM reward_rules WHERE challenge_id = $1) ORDER BY tier",
-            connection, transaction))
+            "SELECT amount, version FROM reward_rules WHERE challenge_id = $1 ORDER BY version DESC LIMIT 1", connection, transaction))
         {
             latest.Parameters.Add(new NpgsqlParameter { Value = request.ChallengeId });
             await using var reader = await latest.ExecuteReaderAsync(ct);
-            var amounts = new List<int>();
-            while (await reader.ReadAsync(ct))
+            if (await reader.ReadAsync(ct))
             {
-                amounts.Add(reader.GetInt32(0));
+                previousAmount = reader.GetInt32(0);
                 version = reader.GetInt32(1) + 1;
-            }
-
-            if (amounts.Count > 0)
-            {
-                previousTiers = amounts is [0] ? [] : amounts;
             }
         }
 
-        // Retire = one row, tier 1, amount 0.
-        IReadOnlyList<int> tiers = request.Tiers.Count == 0 ? [0] : request.Tiers;
-        DateTimeOffset effectiveFrom = default;
-        for (var i = 0; i < tiers.Count; i++)
+        DateTimeOffset effectiveFrom;
+        await using (var insert = new NpgsqlCommand(
+            """
+            INSERT INTO reward_rules (challenge_id, currency, amount, cycle, ends_at, version, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING effective_from
+            """, connection, transaction))
         {
-            await using var insert = new NpgsqlCommand(
-                """
-                INSERT INTO reward_rules (challenge_id, currency, amount, tier, cycle, ends_at, version, created_by)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING effective_from
-                """, connection, transaction);
             insert.Parameters.Add(new NpgsqlParameter { Value = request.ChallengeId });
             insert.Parameters.Add(new NpgsqlParameter { Value = request.Currency });
-            insert.Parameters.Add(new NpgsqlParameter { Value = tiers[i] });
-            insert.Parameters.Add(new NpgsqlParameter { Value = i + 1 });
+            insert.Parameters.Add(new NpgsqlParameter { Value = request.Amount });
             insert.Parameters.Add(new NpgsqlParameter { Value = request.Cycle });
             insert.Parameters.Add(new NpgsqlParameter<DateTimeOffset?>
             {
@@ -204,23 +185,23 @@ public static class RewardRules
 
         await EconomyEvents.WriteAsync(connection, transaction, adminId, null, "economy", EventTypes.RewardRuleChanged,
             EventTopics.Economy, $"rule:{request.ChallengeId}", now,
-            new RewardRuleChangedPayload(request.ChallengeId, request.Currency, request.Tiers, request.Cycle, request.EndsAt,
-                version, previousTiers, adminName), ct);
-        return new RewardRule(request.ChallengeId, request.Currency, [.. request.Tiers], request.Cycle, request.EndsAt, version,
+            new RewardRuleChangedPayload(request.ChallengeId, request.Currency, request.Amount, request.Cycle, request.EndsAt,
+                version, previousAmount, adminName), ct);
+        return new RewardRule(request.ChallengeId, request.Currency, request.Amount, request.Cycle, request.EndsAt, version,
             effectiveFrom, adminName);
     }
 
     /// <summary>
-    /// Fills challenges that have NO rule yet: a restart never overwrites an admin's version. Returns how many ladders it
+    /// Fills challenges that have NO rule yet: a restart never overwrites an admin's version. Returns how many rules it
     /// created. Each is a normal version 1 with its event.
     /// </summary>
     public static async Task<int> SeedAsync(NpgsqlDataSource dataSource, IEnumerable<RewardRuleRequest> seeds,
-        int maxAmount, int maxTiers, DateTimeOffset now, CancellationToken ct)
+        int maxAmount, DateTimeOffset now, CancellationToken ct)
     {
         var created = 0;
         foreach (var seed in seeds)
         {
-            if (Validate(seed, maxAmount, maxTiers, now) is not null || seed.Tiers.Count == 0)  // a seed never retires
+            if (Validate(seed, maxAmount, now) is not null || seed.Amount == 0)  // a seed never retires
             {
                 continue;
             }
@@ -313,33 +294,9 @@ public static class RewardRules
         await command.ExecuteNonQueryAsync(ct);
     }
 
-    private sealed record TierRow(string ChallengeId, string Currency, int Amount, int Tier, string Cycle, DateTimeOffset? EndsAt,
-        int Version, DateTimeOffset EffectiveFrom, string CreatedBy);
-
-    private static async Task<List<TierRow>> ReadRowsAsync(NpgsqlDataReader reader, CancellationToken ct)
-    {
-        var rows = new List<TierRow>();
-        while (await reader.ReadAsync(ct))
-        {
-            rows.Add(new TierRow(reader.GetString(0), reader.GetString(1), reader.GetInt32(2), reader.GetInt32(3), reader.GetString(4),
-                reader.IsDBNull(5) ? null : reader.GetFieldValue<DateTimeOffset>(5), reader.GetInt32(6),
-                reader.GetFieldValue<DateTimeOffset>(7), reader.GetString(8)));
-        }
-
-        return rows;
-    }
-
-    /// <summary>Rows come ordered by challenge then tier; one ladder per challenge (the caller selected one version each).</summary>
-    private static List<RewardRule> ReadLadders(List<TierRow> rows) =>
-    [
-        .. rows.GroupBy(r => r.ChallengeId).Select(g =>
-        {
-            var first = g.First();
-            IReadOnlyList<int> tiers = first.Amount == 0 ? [] : [.. g.Select(r => r.Amount)];  // a retired version is one row of 0
-            return new RewardRule(first.ChallengeId, first.Currency, tiers, first.Cycle, first.EndsAt, first.Version,
-                first.EffectiveFrom, first.CreatedBy);
-        }),
-    ];
+    private static RewardRule Read(NpgsqlDataReader reader) => new(reader.GetString(0), reader.GetString(1), reader.GetInt32(2),
+        reader.GetString(3), reader.IsDBNull(4) ? null : reader.GetFieldValue<DateTimeOffset>(4), reader.GetInt32(5),
+        reader.GetFieldValue<DateTimeOffset>(6), reader.GetString(7));
 }
 
 /// <summary>Writes economy events into the outbox inside the caller's transaction (spec settlement-outbox 2.2).</summary>

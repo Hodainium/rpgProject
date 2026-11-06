@@ -213,9 +213,9 @@ func test_the_replay_reports_one_completion_per_earned_star() -> void:
 	var challenge: ChallengeDefinition = fixtures().challenges[&"fixture.challenge.boss_trial"]
 	var expected := []
 	for star in challenge.stars_reached(battle):
-		expected.append(ReplayRunner.completion_fact("fixture.challenge.boss_trial.%s" % star.id, 1))
+		expected.append(ReplayRunner.completion_fact("fixture.challenge.boss_trial.%s" % star.id))
 	check(not expected.is_empty(), "the won battle earns at least the win star")
-	eq(result["facts"]["completions"], expected, "one tier-1 completion per earned star, under its own reward id")
+	eq(result["facts"]["completions"], expected, "one completion per earned star, under its own reward id")
 	eq(result["facts"]["bossIds"], ["fixture.enemy.chief"], "the boss is still reported as a boss, separately")
 
 

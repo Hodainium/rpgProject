@@ -34,61 +34,54 @@ public class RewardRuleTests(StackFixture stack)
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static RewardRuleRequest Lich(params int[] tiers) => new("boss/enemy.lich", "gems", tiers);
-
-    private static string Tiers(IEnumerable<int>? tiers) => tiers is null ? "-" : string.Join(",", tiers);
+    private static RewardRuleRequest Lich(int amount) => new("boss/enemy.lich", "gems", amount);
 
     [Fact]
-    public async Task APut_CreatesConsecutiveVersions_AndTheListShowsTheLatestLadder()
+    public async Task APut_CreatesConsecutiveVersions_AndTheListShowsTheLatest()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Admin);
         var admin = await ClientAsync(factory, "designer");
 
         var first = await admin.PutRewardRuleAsync(Lich(10), Ct);
         var second = await admin.PutRewardRuleAsync(Lich(25), Ct);
-        await admin.PutRewardRuleAsync(new("boss/enemy.golem", "gems", [5]), Ct);
+        await admin.PutRewardRuleAsync(new("boss/enemy.golem", "gems", 5), Ct);
         var list = await admin.ListRewardRulesAsync(Ct);
 
-        Assert.Equal((1, "designer", "10"), (first.Version, first.CreatedBy, Tiers(first.Tiers)));
-        Assert.Equal((2, 0), (second.Version, second.Generation));
-        Assert.Equal(["boss/enemy.golem:1:5", "boss/enemy.lich:2:25"],
-            list.Rules.Select(r => $"{r.ChallengeId}:{r.Version}:{Tiers(r.Tiers)}"));
+        Assert.Equal((1, 10, "designer"), (first.Version, first.Amount, first.CreatedBy));
+        Assert.Equal((2, 25, 0), (second.Version, second.Amount, second.Generation));
+        Assert.Equal(["boss/enemy.golem:1:5", "boss/enemy.lich:2:25"], list.Rules.Select(r => $"{r.ChallengeId}:{r.Version}:{r.Amount}"));
         Assert.Equal(3L, await ScalarAsync(factory, "SELECT count(*) FROM reward_rules"));  // append-only
     }
 
     [Fact]
-    public async Task ALadder_IsOneRowPerTier_WithItsCycleAndEnd()
+    public async Task AWeeklyRule_StoresItsCycleAndEnd()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Admin);
         var admin = await ClientAsync(factory, "designer");
         var ends = DateTimeOffset.UtcNow.AddDays(30);
 
-        var put = await admin.PutRewardRuleAsync(
-            new("event.spring.trial-3", "gems", [10, 10, 15, 20, 40], RewardCycles.Weekly, ends), Ct);
+        var put = await admin.PutRewardRuleAsync(new("demo.challenge.lich_trial.fast", "gems", 10, RewardCycles.Weekly, ends), Ct);
         var list = await admin.ListRewardRulesAsync(Ct);
 
-        Assert.Equal("10,10,15,20,40", Tiers(put.Tiers));
-        Assert.Equal(RewardCycles.Weekly, put.Cycle);
+        Assert.Equal((10, RewardCycles.Weekly), (put.Amount, put.Cycle));
         Assert.Equal(ends.ToUnixTimeMilliseconds(), put.EndsAt!.Value.ToUnixTimeMilliseconds());
-        Assert.Equal(Tiers(put.Tiers), Tiers(list.Rules.Single().Tiers));
-        Assert.Equal(5L, await ScalarAsync(factory, "SELECT count(*) FROM reward_rules WHERE version = 1"));
-        Assert.Equal(1L, await ScalarAsync(factory, "SELECT count(DISTINCT ends_at) FROM reward_rules"));  // the same on every tier row
+        Assert.Equal((10, RewardCycles.Weekly), (list.Rules.Single().Amount, list.Rules.Single().Cycle));
+        Assert.Equal(ends.ToUnixTimeMilliseconds(), list.Rules.Single().EndsAt!.Value.ToUnixTimeMilliseconds());
     }
 
     [Fact]
-    public async Task APut_WritesRewardRuleChanged_WithThePreviousTiers_InTheSameTransaction()
+    public async Task APut_WritesRewardRuleChanged_WithThePreviousAmount_InTheSameTransaction()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Admin);
         var admin = await ClientAsync(factory, "designer");
 
         await admin.PutRewardRuleAsync(Lich(10), Ct);
-        await admin.PutRewardRuleAsync(Lich(25, 5), Ct);
+        await admin.PutRewardRuleAsync(Lich(25), Ct);
 
         var payloads = await TextsAsync(factory, "SELECT payload::text FROM outbox WHERE type = 'RewardRuleChanged' ORDER BY seq");
         var events = payloads.Select(p => System.Text.Json.JsonSerializer
             .Deserialize<DomainEvent<RewardRuleChangedPayload>>(p, RpgJson.Options)!).ToList();
-        Assert.Equal(["1:-:10", "2:10:25,5"],
-            events.Select(e => $"{e.Payload.Version}:{Tiers(e.Payload.PreviousTiers)}:{Tiers(e.Payload.Tiers)}"));
+        Assert.Equal([(1, (int?)null, 10), (2, 10, 25)], events.Select(e => (e.Payload.Version, e.Payload.PreviousAmount, e.Payload.Amount)));
         Assert.All(events, e => Assert.Equal("designer", e.Payload.ChangedBy));
         Assert.Equal(["rule:boss/enemy.lich"], await TextsAsync(factory, "SELECT DISTINCT key FROM outbox"));
         Assert.Equal([EventTopics.Economy], await TextsAsync(factory, "SELECT DISTINCT topic FROM outbox"));
@@ -96,24 +89,19 @@ public class RewardRuleTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task RetiringARule_IsAPutWithNoTiers_AndTheNextVersionSeesItAsRetired()
+    public async Task RetiringARule_IsAPutWithAmountZero()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Admin);
         var admin = await ClientAsync(factory, "designer");
         await admin.PutRewardRuleAsync(Lich(10), Ct);
 
-        var retired = await admin.PutRewardRuleAsync(Lich(), Ct);
-        await admin.PutRewardRuleAsync(Lich(12), Ct);
+        var retired = await admin.PutRewardRuleAsync(Lich(0), Ct);
 
-        Assert.Equal((2, 0), (retired.Version, retired.Tiers.Count));
-        var changes = (await TextsAsync(factory, "SELECT payload::text FROM outbox WHERE type = 'RewardRuleChanged' ORDER BY seq"))
-            .Select(p => System.Text.Json.JsonSerializer.Deserialize<DomainEvent<RewardRuleChangedPayload>>(p, RpgJson.Options)!.Payload).ToList();
-        Assert.Equal("10", Tiers(changes[1].PreviousTiers));
-        Assert.Equal("", Tiers(changes[2].PreviousTiers));  // the previous version was retired
+        Assert.Equal((2, 0), (retired.Version, retired.Amount));
     }
 
     [Fact]
-    public async Task APutWithoutTiers_IsRefused_NotTreatedAsRetire()
+    public async Task APutWithoutAnAmount_IsRefused_NotTreatedAsRetire()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Admin);
         var admin = await ClientAsync(factory, "designer");
@@ -129,31 +117,28 @@ public class RewardRuleTests(StackFixture stack)
         Assert.Equal(0L, await ScalarAsync(factory, "SELECT count(*) FROM reward_rules"));
     }
 
-    public static TheoryData<string, string, string, string, int> BadLadders() => new()
+    public static TheoryData<string, string, string, int, int> BadRules() => new()
     {
-        { "boss/enemy.lich", "dust", "once", "10", 0 },                     // unknown currency
-        { "boss/enemy:lich", "gems", "once", "10", 0 },                     // ':' in the id
-        { "boss/enemy lich", "gems", "once", "10", 0 },                     // whitespace
-        { "", "gems", "once", "10", 0 },                                    // empty id
-        { "boss/enemy.lich", "gems", "daily", "10", 0 },                    // unknown cycle
-        { "boss/enemy.lich", "gems", "once", "10,0,5", 0 },                 // a 0 inside a ladder
-        { "boss/enemy.lich", "gems", "once", "-1", 0 },
-        { "boss/enemy.lich", "gems", "once", "100001", 0 },                 // over the cap
-        { "boss/enemy.lich", "gems", "once", "1,1,1,1,1,1,1,1,1,1,1", 0 }, // 11 tiers, over MaxTiers
-        { "boss/enemy.lich", "gems", "once", "10", -1 },                    // endsAt one day in the past
+        { "boss/enemy.lich", "dust", "once", 10, 0 },     // unknown currency
+        { "boss/enemy:lich", "gems", "once", 10, 0 },     // ':' in the id
+        { "boss/enemy lich", "gems", "once", 10, 0 },     // whitespace
+        { "", "gems", "once", 10, 0 },                    // empty id
+        { "boss/enemy.lich", "gems", "daily", 10, 0 },    // unknown cycle
+        { "boss/enemy.lich", "gems", "once", -1, 0 },
+        { "boss/enemy.lich", "gems", "once", 100001, 0 }, // over the cap
+        { "boss/enemy.lich", "gems", "once", 10, -1 },    // endsAt one day in the past
     };
 
     [Theory]
-    [MemberData(nameof(BadLadders))]
-    public async Task InvalidLadder_Is400_1301_AndNothingIsWritten(string id, string currency, string cycle, string amounts, int endsInDays)  // C15
+    [MemberData(nameof(BadRules))]
+    public async Task InvalidRule_Is400_1301_AndNothingIsWritten(string id, string currency, string cycle, int amount, int endsInDays)  // C15
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Admin);
         var admin = await ClientAsync(factory, "designer");
-        var tiers = amounts.Split(',').Select(int.Parse).ToList();
         DateTimeOffset? ends = endsInDays == 0 ? null : DateTimeOffset.UtcNow.AddDays(endsInDays);
 
         var error = await Assert.ThrowsAsync<GameServerApiException>(
-            () => admin.PutRewardRuleAsync(new RewardRuleRequest(id, currency, tiers, cycle, ends), Ct));
+            () => admin.PutRewardRuleAsync(new RewardRuleRequest(id, currency, amount, cycle, ends), Ct));
 
         Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.RewardRuleInvalid), (error.StatusCode, error.ErrorCode));
         Assert.Equal(0L, await ScalarAsync(factory, "SELECT count(*) FROM reward_rules"));
@@ -161,20 +146,17 @@ public class RewardRuleTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task TheCaps_AreConfigurable()
+    public async Task TheCap_IsConfigurable()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(Admin)
         {
             ["Economy:MaxRewardAmount"] = "50",
-            ["Economy:MaxTiers"] = "2",
         });
         var admin = await ClientAsync(factory, "designer");
 
-        Assert.Equal("50,50", Tiers((await admin.PutRewardRuleAsync(Lich(50, 50), Ct)).Tiers));
-        var amount = await Assert.ThrowsAsync<GameServerApiException>(() => admin.PutRewardRuleAsync(Lich(51), Ct));
-        var count = await Assert.ThrowsAsync<GameServerApiException>(() => admin.PutRewardRuleAsync(Lich(1, 1, 1), Ct));
-        Assert.Equal(ApiErrors.RewardRuleInvalid, amount.ErrorCode);
-        Assert.Equal(ApiErrors.RewardRuleInvalid, count.ErrorCode);
+        Assert.Equal(50, (await admin.PutRewardRuleAsync(Lich(50), Ct)).Amount);
+        var error = await Assert.ThrowsAsync<GameServerApiException>(() => admin.PutRewardRuleAsync(Lich(51), Ct));
+        Assert.Equal(ApiErrors.RewardRuleInvalid, error.ErrorCode);
     }
 
     [Fact]
@@ -226,33 +208,19 @@ public class RewardRuleTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task ConcurrentLadderPuts_AreConsecutive_AndALadderIsNeverHalfVisible()  // C17
+    public async Task ConcurrentPuts_ProduceConsecutiveVersions()  // C17
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Admin);
         var admin = await ClientAsync(factory, "designer");
 
-        var responses = await Task.WhenAll(Enumerable.Range(1, 12).Select(n => admin.PutRewardRuleAsync(Lich(n, n + 1, n + 2), Ct)));
+        var responses = await Task.WhenAll(Enumerable.Range(1, 12).Select(n => admin.PutRewardRuleAsync(Lich(n), Ct)));
 
         Assert.Equal(Enumerable.Range(1, 12), responses.Select(r => r.Version).Order());
         Assert.Equal(12L, await ScalarAsync(factory, "SELECT count(DISTINCT version) FROM reward_rules"));
-        Assert.Equal(36L, await ScalarAsync(factory, "SELECT count(*) FROM reward_rules"));
-        // Every version holds all three tiers, and a version's tiers are n, n+1, n+2 of one request.
-        Assert.Equal(0L, await ScalarAsync(factory,
-            "SELECT count(*) FROM (SELECT version FROM reward_rules GROUP BY version HAVING count(*) <> 3 OR max(amount) - min(amount) <> 2) x"));
+        Assert.Equal(12L, await ScalarAsync(factory, "SELECT max(version) FROM reward_rules"));
+        // Each version's event names the amount before it.
         Assert.Equal(11L, await ScalarAsync(factory,
-            "SELECT count(*) FROM outbox WHERE (payload->'payload'->>'previousTiers') IS NOT NULL"));
-
-        // While an admin's transaction is open and uncommitted, a reader still sees the previous whole ladder.
-        var data = factory.Services.GetRequiredService<NpgsqlDataSource>();
-        await using var writer = await data.OpenConnectionAsync(Ct);
-        await using var open = await writer.BeginTransactionAsync(Ct);
-        await RewardRules.InsertVersionAsync(writer, open, Lich(900, 901, 902), Guid.NewGuid(), "designer", DateTimeOffset.UtcNow, Ct);
-        await using var reader = await data.OpenConnectionAsync(Ct);
-        await using var readTransaction = await reader.BeginTransactionAsync(Ct);
-        var seen = await RewardRules.LookupAsync(reader, readTransaction, "boss/enemy.lich", Ct);
-        Assert.Equal(12, seen!.Version);
-        Assert.Equal(3, seen.Tiers.Count);
-        await open.RollbackAsync(Ct);
+            "SELECT count(*) FROM outbox WHERE (payload->'payload'->>'previousAmount') IS NOT NULL"));
     }
 
     [Fact]
@@ -271,9 +239,9 @@ public class RewardRuleTests(StackFixture stack)
             await transaction.RollbackAsync(Ct);
         }
 
-        // The event write fails: the whole ladder goes with it.
+        // The event write fails: the rule goes with it.
         await ExecuteAsync(factory, "ALTER TABLE outbox ADD CONSTRAINT no_rule_events CHECK (type <> 'RewardRuleChanged')");
-        await Assert.ThrowsAnyAsync<Exception>(() => admin.PutRewardRuleAsync(Lich(10, 20, 30), Ct));
+        await Assert.ThrowsAnyAsync<Exception>(() => admin.PutRewardRuleAsync(Lich(10), Ct));
 
         Assert.Equal(0L, await ScalarAsync(factory, "SELECT count(*) FROM reward_rules"));
         Assert.Equal(0L, await ScalarAsync(factory, "SELECT count(*) FROM outbox"));
@@ -285,26 +253,26 @@ public class RewardRuleTests(StackFixture stack)
         var seeds = new Dictionary<string, string?>(Admin)
         {
             ["Economy:SeedRules:0:ChallengeId"] = "boss/enemy.lich", ["Economy:SeedRules:0:Currency"] = "gems",
-            ["Economy:SeedRules:0:Tiers:0"] = "10",
-            ["Economy:SeedRules:1:ChallengeId"] = "boss/enemy.golem", ["Economy:SeedRules:1:Currency"] = "gems",
-            ["Economy:SeedRules:1:Tiers:0"] = "5", ["Economy:SeedRules:1:Tiers:1"] = "6",
+            ["Economy:SeedRules:0:Amount"] = "10",
+            ["Economy:SeedRules:1:ChallengeId"] = "demo.challenge.lich_trial.fast", ["Economy:SeedRules:1:Currency"] = "gems",
+            ["Economy:SeedRules:1:Amount"] = "5", ["Economy:SeedRules:1:Cycle"] = "weekly",
         };
         await using var factory = await ApiFactory.RunsAsync(stack, settings: seeds);
         var admin = await ClientAsync(factory, "designer");
-        await WaitAsync(async () => await ScalarAsync(factory, "SELECT count(*) FROM reward_rules") == 3);
+        await WaitAsync(async () => await ScalarAsync(factory, "SELECT count(*) FROM reward_rules") == 2);
 
         await admin.PutRewardRuleAsync(Lich(25), Ct);
         var options = factory.Services.GetRequiredService<IOptions<Rpg.GameServerApi.Economy.EconomyOptions>>().Value;
         var created = await RewardRules.SeedAsync(factory.Services.GetRequiredService<NpgsqlDataSource>(), options.SeedRules,  // a restart
-            options.MaxRewardAmount, options.MaxTiers, DateTimeOffset.UtcNow, Ct);
+            options.MaxRewardAmount, DateTimeOffset.UtcNow, Ct);
 
         Assert.Equal(0, created);  // F9
         var list = await admin.ListRewardRulesAsync(Ct);
         var lich = list.Rules.Single(r => r.ChallengeId == "boss/enemy.lich");
-        var golem = list.Rules.Single(r => r.ChallengeId == "boss/enemy.golem");
-        Assert.Equal("2:25", $"{lich.Version}:{Tiers(lich.Tiers)}");
-        Assert.Equal("1:5,6", $"{golem.Version}:{Tiers(golem.Tiers)}");
-        Assert.Equal("seed", (await TextsAsync(factory, "SELECT DISTINCT created_by FROM reward_rules WHERE challenge_id = 'boss/enemy.golem'")).Single());
+        var fast = list.Rules.Single(r => r.ChallengeId == "demo.challenge.lich_trial.fast");
+        Assert.Equal((2, 25), (lich.Version, lich.Amount));
+        Assert.Equal((1, 5, RewardCycles.Weekly), (fast.Version, fast.Amount, fast.Cycle));
+        Assert.Equal("seed", (await TextsAsync(factory, "SELECT created_by FROM reward_rules WHERE challenge_id = 'demo.challenge.lich_trial.fast'")).Single());
     }
 
     [Fact]
@@ -313,9 +281,9 @@ public class RewardRuleTests(StackFixture stack)
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Admin);
         var admin = await ClientAsync(factory, "designer");
         await admin.PutRewardRuleAsync(Lich(10), Ct);
-        await admin.PutRewardRuleAsync(Lich(25, 5), Ct);
+        await admin.PutRewardRuleAsync(Lich(25), Ct);
         await ExecuteAsync(factory,
-            "INSERT INTO reward_rules (challenge_id, currency, amount, tier, version, effective_from, created_by) VALUES ('boss/enemy.lich','gems',99,1,3, now() + interval '1 hour','t')");
+            "INSERT INTO reward_rules (challenge_id, currency, amount, version, effective_from, created_by) VALUES ('boss/enemy.lich','gems',99,3, now() + interval '1 hour','t')");
 
         foreach (var id in new[] { "a:b", "a b", "a\tb", "" })
         {
@@ -324,14 +292,14 @@ public class RewardRuleTests(StackFixture stack)
         }
 
         await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync(factory,
-            "INSERT INTO reward_rules (challenge_id, currency, amount, tier, version, created_by) VALUES ('boss/enemy.lich','gems',1,1,2,'t')"));  // UNIQUE (challenge, version, tier)
+            "INSERT INTO reward_rules (challenge_id, currency, amount, version, created_by) VALUES ('boss/enemy.lich','gems',1,2,'t')"));  // UNIQUE (challenge, version)
         var data = factory.Services.GetRequiredService<NpgsqlDataSource>();
         await using var connection = await data.OpenConnectionAsync(Ct);
         await using var transaction = await connection.BeginTransactionAsync(Ct);
         var rule = await RewardRules.LookupAsync(connection, transaction, "boss/enemy.lich", Ct);
         var none = await RewardRules.LookupAsync(connection, transaction, "boss/enemy.nobody", Ct);
 
-        Assert.Equal("2:25,5", $"{rule!.Version}:{Tiers(rule.Tiers)}");  // the version dated in the future is ignored
+        Assert.Equal((2, 25), (rule!.Version, rule.Amount));  // the version dated in the future is ignored
         Assert.Null(none);
     }
 
@@ -424,7 +392,7 @@ public class RewardRuleTests(StackFixture stack)
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Admin);
         var admin = await ClientAsync(factory, "designer");
         await admin.PutRewardRuleAsync(Lich(10), Ct);
-        await admin.PutRewardRuleAsync(Lich(), Ct);
+        await admin.PutRewardRuleAsync(Lich(0), Ct);
 
         var reset = await admin.ResetRewardCycleAsync(new("boss/enemy.lich"), Ct);
 

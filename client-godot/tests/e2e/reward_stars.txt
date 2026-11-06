@@ -1,0 +1,52 @@
+# Spec economy-challenges 6: independent challenges ("stars") paid per cycle on the real stack. No game content emits these
+# completions in this scenario, so the worker runs over the test stub of Godot (tests/Rpg.VerifierWorker.Tests/stubs) that
+# reports three challenges for every battle, with the knight and the medic as the party: event.trial.win (10), .fast (10) and
+# .flawless (15), each weekly. The real server, outbox and Postgres do the rest.
+# Run 1: the first battle pays each challenge once to each character, 70 gems; the run's other battles pay nothing.
+# Run 2: the same week: nothing more. A reset of the three challenges for this player opens new cycle keys: run 3 pays again.
+# A reset for everyone opens another: run 4 pays again. Old marks and ledger rows stay.
+#! worker-stub
+#! worker-env STUB_FACTS={"encounterId":"fixture.encounter.trial","bossIds":[],"partyCharacterIds":["fixture.character.knight","fixture.character.medic"],"completions":[{"challengeId":"event.trial.win"},{"challengeId":"event.trial.fast"},{"challengeId":"event.trial.flawless"}]}
+#! env Monitors__Interval=00:00:01
+server reward event.trial.win 10 cycle=weekly
+server reward event.trial.fast 10 cycle=weekly
+server reward event.trial.flawless 15 cycle=weekly
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 70 120
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+server reward-reset event.trial.win player=me support asked
+server reward-reset event.trial.fast player=me support asked
+server reward-reset event.trial.flawless player=me support asked
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 140 120
+server reward-reset event.trial.win run the event again
+server reward-reset event.trial.fast run the event again
+server reward-reset event.trial.flawless run the event again
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 210 120
+server wallet
+e2e redpanda-check 90

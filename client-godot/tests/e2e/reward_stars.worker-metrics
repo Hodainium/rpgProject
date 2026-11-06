@@ -1,0 +1,3 @@
+rpg_settlements_total\{[^}]*result="granted"[^}]*\} [1-9]
+rpg_completion_marks_total\{[^}]*result="new"[^}]*\} 18
+rpg_completion_marks_total\{[^}]*result="existing"[^}]*\} [1-9]

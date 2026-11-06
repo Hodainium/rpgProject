@@ -11,16 +11,18 @@ using static Rpg.VerifierWorker.Tests.Infrastructure.WorkerHarness;
 namespace Rpg.VerifierWorker.Tests;
 
 /// <summary>
-/// Spec economy-challenges (slice 4d), section 4: a challenge is a ladder of tiers, a higher tier pays the difference, each
-/// tier once per cycle (C1–C14, C16, C21–C24). The fake runner reports <see cref="CompletionFact"/>s the way a future Godot
-/// challenge definition would; Godot emits none yet.
+/// Spec economy-challenges (slice 4d), section 4: a challenge pays its amount once per character per cycle (C1–C14, C16,
+/// C21–C24). A content star is a challenge of its own, so a score band is several independent challenges, not tiers. The fake
+/// runner reports <see cref="CompletionFact"/>s the way the replay does for earned stars.
 /// </summary>
 [Collection(StackCollection.Name)]
 public class ChallengeSettlementTests(Stack stack)
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private const string Trial = "event.spring.trial-3";
+    private const string Win = "demo.challenge.lich_trial.win";
+    private const string Fast = "demo.challenge.lich_trial.fast";
+    private const string Flawless = "demo.challenge.lich_trial.flawless";
 
     private static readonly DateTimeOffset Wednesday = new(2026, 11, 4, 12, 0, 0, TimeSpan.Zero);  // 2026-W45
     private static readonly DateTimeOffset NextWednesday = Wednesday.AddDays(7);                      // 2026-W46
@@ -29,18 +31,26 @@ public class ChallengeSettlementTests(Stack stack)
         string environment = "Development") =>
         WorkerHarness.CreateAsync(stack, settings, environment: environment);
 
-    /// <summary>Every battle reports these completions for this party, whichever battle it is.</summary>
-    private static void Completes(WorkerHarness worker, string[] party, params (string Id, int Tier)[] completions) =>
-        worker.Runner.Handler = (request, _) => Task.FromResult(FakeReplayRunner.Verified(FakeReplayRunner.BattleIdOf(request),
-            new BattleFacts("enc.trial", [], party, [.. completions.Select(c => new CompletionFact(c.Id, c.Tier))])));
+    /// <summary>The three star challenges of the demo, weekly: win 5, fast 5, flawless 10.</summary>
+    private static async Task PutStarsAsync(WorkerHarness worker, string cycle = RewardCycles.Weekly)
+    {
+        await worker.PutChallengeAsync(Win, 1, 5, cycle, null);
+        await worker.PutChallengeAsync(Fast, 1, 5, cycle, null);
+        await worker.PutChallengeAsync(Flawless, 1, 10, cycle, null);
+    }
 
-    /// <summary>The battle with this id reports the tier from <paramref name="tiers"/> (by battle id).</summary>
-    private static void CompletesByBattle(WorkerHarness worker, string challenge, string[] party, Dictionary<string, int> tiers) =>
+    /// <summary>Every battle reports these completions for this party.</summary>
+    private static void Completes(WorkerHarness worker, string[] party, params string[] challenges) =>
+        worker.Runner.Handler = (request, _) => Task.FromResult(FakeReplayRunner.Verified(FakeReplayRunner.BattleIdOf(request),
+            new BattleFacts("enc.trial", [], party, [.. challenges.Select(c => new CompletionFact(c))])));
+
+    /// <summary>The battle with this id reports its own completions (by battle id).</summary>
+    private static void CompletesByBattle(WorkerHarness worker, string[] party, Dictionary<string, string[]> perBattle) =>
         worker.Runner.Handler = (request, _) =>
         {
             var id = FakeReplayRunner.BattleIdOf(request);
             return Task.FromResult(FakeReplayRunner.Verified(id,
-                new BattleFacts("enc.trial", [], party, [new CompletionFact(challenge, tiers[id])])));
+                new BattleFacts("enc.trial", [], party, [.. perBattle[id].Select(c => new CompletionFact(c))])));
         };
 
     private static async Task<List<DomainEvent<RewardGrantedPayload>>> GrantsAsync(WorkerHarness worker) =>
@@ -51,11 +61,11 @@ public class ChallengeSettlementTests(Stack stack)
         worker.ScalarAsync<int?>("SELECT gems FROM wallets WHERE player_id = $1", player).ContinueWith(t => t.Result ?? 0, Ct);
 
     [Fact]
-    public async Task RedeliveredBattle_PaysEachTierOnce()  // C1
+    public async Task RedeliveredBattle_PaysEachChallengeOnce()  // C1
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10, 15);
-        Completes(worker, ["warrior"], (Trial, 3));
+        await PutStarsAsync(worker);
+        Completes(worker, ["warrior"], Win, Fast, Flawless);
         var battle = await worker.SeedAsync();
         worker.Processor.AfterCommit = () => throw new InvalidOperationException("the worker died before the ack");
 
@@ -65,133 +75,84 @@ public class ChallengeSettlementTests(Stack stack)
         var again = await worker.Processor.ProcessAsync(JobOf(battle), Ct);
 
         Assert.Equal(("duplicate", "duplicate"), (redelivered.Result, again.Result));
-        Assert.Equal(35, await GemsAsync(worker, battle.PlayerId));
+        Assert.Equal(20, await GemsAsync(worker, battle.PlayerId));
         Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
         Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox WHERE type = 'RewardGranted'"));
     }
 
     [Fact]
-    public async Task TheLedgerKeyPerTier_StopsADoublePayment_EvenWithoutTheMarkOrTheStatusGuard()
+    public async Task TheLedgerKey_StopsADoublePayment_EvenWithoutTheMarkOrTheStatusGuard()
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10, 15);
-        Completes(worker, ["warrior"], (Trial, 3));
+        await PutStarsAsync(worker);
+        Completes(worker, ["warrior"], Win, Fast);
         var battle = await worker.SeedAsync(submittedAt: Wednesday);
-        // Tier 2 of this very battle is in the ledger already (and the wallet holds it), but no mark exists.
-        await worker.ExecuteAsync("INSERT INTO wallets (player_id, gems, version) VALUES ($1, 10, 1)", battle.PlayerId);
+        // The fast star of this very battle is in the ledger already (and the wallet holds it), but no mark exists.
+        await worker.ExecuteAsync("INSERT INTO wallets (player_id, gems, version) VALUES ($1, 5, 1)", battle.PlayerId);
         await worker.ExecuteAsync(
-            "INSERT INTO wallet_ledger (player_id, currency, delta, reason, ref_battle_id, idempotency_key) VALUES ($1, 'gems', 10, 'completion_mark', 'x', $2)",
-            battle.PlayerId, $"mark:{battle.BattleId}:warrior:{Trial}:2");
+            "INSERT INTO wallet_ledger (player_id, currency, delta, reason, ref_battle_id, idempotency_key) VALUES ($1, 'gems', 5, 'completion_mark', 'x', $2)",
+            battle.PlayerId, $"mark:{battle.BattleId}:warrior:{Fast}");
 
         await worker.Processor.ProcessAsync(JobOf(battle), Ct);
 
-        Assert.Equal(10 + 10 + 15, await GemsAsync(worker, battle.PlayerId));  // tiers 1 and 3 paid now, tier 2 was already there
-        Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
-        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox WHERE type = 'RewardGranted'"));
+        Assert.Equal(5 + 5, await GemsAsync(worker, battle.PlayerId));  // win paid now, fast was already there
+        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
+        Assert.Equal(1L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox WHERE type = 'RewardGranted'"));
     }
 
     [Fact]
-    public async Task ThreeStarsAfterOne_PaysTiersTwoAndThree()  // C2
+    public async Task EachStarIsItsOwnChallenge_PaidOnItsOwn_InAnyOrder()
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10, 15);
-        var first = await worker.SeedAsync(submittedAt: Wednesday);
-        var second = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
-        CompletesByBattle(worker, Trial, ["warrior"], new() { [first.BattleId] = 1, [second.BattleId] = 3 });
-
-        await worker.Processor.ProcessAsync(JobOf(first), Ct);
-        await worker.Processor.ProcessAsync(JobOf(second), Ct);
-
-        Assert.Equal(35, await GemsAsync(worker, first.PlayerId));
-        Assert.Equal(["1:10:2026-W45", "2:10:2026-W45", "3:15:2026-W45"],
-            await worker.StringsAsync("SELECT tier || ':' || delta || ':' || cycle_key FROM wallet_ledger ORDER BY tier"));
-        Assert.Equal(3, await worker.ScalarAsync<int>("SELECT best_tier FROM completion_marks"));
-        Assert.Equal(1L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));
-        var grants = await GrantsAsync(worker);
-        Assert.Equal([1, 2, 3], grants.Select(g => g.Payload.Tier));
-        Assert.Equal([10, 20, 35], grants.Select(g => g.Payload.BalanceAfter));
-        Assert.All(grants, g => Assert.Equal((Trial, "2026-W45", (string?)null), (g.Payload.ChallengeId, g.Payload.CycleKey, g.Payload.BossId)));
-        Assert.Equal(1, worker.Metrics.Count("rpg.completion_marks", "result=new"));
-        Assert.Equal(1, worker.Metrics.Count("rpg.completion_marks", "result=advanced"));
-        Assert.Equal(3, worker.Metrics.Count("rpg.reward_tiers_paid"));
-    }
-
-    [Fact]
-    public async Task LowerTierAfterHigher_PaysNothing()  // C3
-    {
-        await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10, 15);
+        await PutStarsAsync(worker);
         var first = await worker.SeedAsync(submittedAt: Wednesday);
         var second = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
         var third = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(2));
-        CompletesByBattle(worker, Trial, ["warrior"], new() { [first.BattleId] = 3, [second.BattleId] = 2, [third.BattleId] = 3 });
+        CompletesByBattle(worker, ["warrior"], new()
+        {
+            [first.BattleId] = [Flawless],         // the third star without the first two
+            [second.BattleId] = [Win, Flawless],   // the first adds itself; the third is already held
+            [third.BattleId] = [Fast, Win, Flawless],
+        });
 
         await worker.Processor.ProcessAsync(JobOf(first), Ct);
+        Assert.Equal(10, await GemsAsync(worker, first.PlayerId));
         await worker.Processor.ProcessAsync(JobOf(second), Ct);
+        Assert.Equal(15, await GemsAsync(worker, first.PlayerId));
         await worker.Processor.ProcessAsync(JobOf(third), Ct);
 
-        Assert.Equal(35, await GemsAsync(worker, first.PlayerId));
+        Assert.Equal(20, await GemsAsync(worker, first.PlayerId));  // each star once: 5 + 5 + 10
+        Assert.Equal([Fast, Flawless, Win], await worker.StringsAsync("SELECT challenge_id FROM completion_marks ORDER BY challenge_id"));
         Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
-        Assert.Equal(3, await worker.ScalarAsync<int>("SELECT best_tier FROM completion_marks"));
-        Assert.Equal(2, worker.Metrics.Count("rpg.completion_marks", "result=unchanged"));
-        Assert.Equal(2, worker.Metrics.Count("rpg.settlements", "result=already_marked"));
+        var grants = await GrantsAsync(worker);
+        Assert.Equal([Flawless, Win, Fast], grants.Select(g => g.Payload.ChallengeId));
+        Assert.Equal([10, 15, 20], grants.Select(g => g.Payload.BalanceAfter));
+        Assert.All(grants, g => Assert.Equal(("2026-W45", (string?)null), (g.Payload.CycleKey, g.Payload.BossId)));
+        Assert.Equal(3, worker.Metrics.Count("rpg.completion_marks", "result=new"));
+        Assert.Equal(3, worker.Metrics.Count("rpg.completion_marks", "result=existing"));  // the second battle's flawless; the third's win + flawless... counted per character
     }
 
     [Fact]
-    public async Task FirstClearAtTop_PaysEveryTier()  // C4
+    public async Task OneBattle_PaysEveryStarItEarned_AtEachOwnAmount()
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10, 15, 20, 40);
-        Completes(worker, ["warrior"], (Trial, 5));
+        await PutStarsAsync(worker);
+        Completes(worker, ["warrior", "cleric"], Win, Fast, Flawless);
         var battle = await worker.SeedAsync(submittedAt: Wednesday);
 
         await worker.Processor.ProcessAsync(JobOf(battle), Ct);
 
-        Assert.Equal(95, await GemsAsync(worker, battle.PlayerId));
-        Assert.Equal(5L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
-        var grants = await GrantsAsync(worker);
-        Assert.Equal([1, 2, 3, 4, 5], grants.Select(g => g.Payload.Tier));
-        Assert.Equal([10, 20, 35, 55, 95], grants.Select(g => g.Payload.BalanceAfter));
-        Assert.Equal(5L, await worker.ScalarAsync<long>("SELECT version FROM wallets WHERE player_id = $1", battle.PlayerId));
-        Assert.Equal(1L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));  // one mark, one best tier
-    }
-
-    [Fact]
-    public async Task TierAboveTheLadder_IsCapped_AndALongerLadderLaterPaysTheRest()  // C5
-    {
-        await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10);
-        var first = await worker.SeedAsync(submittedAt: Wednesday);
-        var second = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
-        CompletesByBattle(worker, Trial, ["warrior"], new() { [first.BattleId] = 9, [second.BattleId] = 9 });
-
-        await worker.Processor.ProcessAsync(JobOf(first), Ct);
-
-        Assert.Equal(20, await GemsAsync(worker, first.PlayerId));
-        Assert.Equal(2, await worker.ScalarAsync<int>("SELECT best_tier FROM completion_marks"));  // the capped value, not 9
-        Assert.Equal(1, worker.Metrics.Count("rpg.completion_marks", "result=capped"));
-
-        await worker.PutLadderAsync(Trial, 2, RewardCycles.Weekly, null, 10, 10, 15);  // the designer adds a third star
-        await worker.Processor.ProcessAsync(JobOf(second), Ct);
-
-        Assert.Equal(35, await GemsAsync(worker, first.PlayerId));
-        Assert.Equal(3, await worker.ScalarAsync<int>("SELECT best_tier FROM completion_marks"));
-        Assert.Equal((3, 15, 2), (await worker.ScalarAsync<int>("SELECT tier FROM wallet_ledger WHERE rule_version = 2"),
-            await worker.ScalarAsync<int>("SELECT delta FROM wallet_ledger WHERE rule_version = 2"),
-            await worker.ScalarAsync<int>("SELECT rule_version FROM wallet_ledger WHERE tier = 3")));
+        Assert.Equal(40, await GemsAsync(worker, battle.PlayerId));  // 20 each for two characters
+        Assert.Equal(6L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
+        Assert.Equal([5, 5, 5, 5, 10, 10], await worker.IntsAsync("SELECT delta FROM wallet_ledger ORDER BY id"));  // challenge by challenge, each for both characters
     }
 
     [Fact]
     public async Task BadCompletionFacts_AreDropped_AndTheVerdictCommits()  // C6
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10);
-        worker.Runner.Handler = (request, _) => Task.FromResult(FakeReplayRunner.Verified(FakeReplayRunner.BattleIdOf(request),
-            new BattleFacts("enc.trial", [], ["warrior"],
-            [
-                new CompletionFact(Trial, 0), new CompletionFact(Trial, -3), new CompletionFact("bad:id", 1),
-                new CompletionFact("bad id", 1), new CompletionFact("", 2),
-            ])));
+        await PutStarsAsync(worker);
+        Completes(worker, ["warrior"], "bad:id", "bad id", "");
         var battle = await worker.SeedAsync(submittedAt: Wednesday);
 
         var decision = await worker.Processor.ProcessAsync(JobOf(battle), Ct);
@@ -207,13 +168,13 @@ public class ChallengeSettlementTests(Stack stack)
     public async Task AGoodFactBesideBadOnes_StillPays()
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10);
-        Completes(worker, ["warrior"], (Trial, 0), (Trial, 1), ("a:b", 4));
+        await PutStarsAsync(worker);
+        Completes(worker, ["warrior"], "a:b", Win, "");
         var battle = await worker.SeedAsync(submittedAt: Wednesday);
 
         await worker.Processor.ProcessAsync(JobOf(battle), Ct);
 
-        Assert.Equal(10, await GemsAsync(worker, battle.PlayerId));
+        Assert.Equal(5, await GemsAsync(worker, battle.PlayerId));
         Assert.Equal(1, worker.Metrics.Count("rpg.settlements", "result=granted"));
     }
 
@@ -221,7 +182,7 @@ public class ChallengeSettlementTests(Stack stack)
     public async Task AuthoredFact_CannotUseTheBossPrefix()  // C6
     {
         await using var worker = await CreateAsync(stack);  // boss/boss.lich pays 10 for a real boss clear
-        Completes(worker, ["warrior"], ("boss/boss.lich", 1));
+        Completes(worker, ["warrior"], "boss/boss.lich");
         var battle = await worker.SeedAsync();
 
         await worker.Processor.ProcessAsync(JobOf(battle), Ct);
@@ -235,8 +196,8 @@ public class ChallengeSettlementTests(Stack stack)
     public async Task WeeklyChallenge_PaysOncePerWeek_AndAgainInTheNext()  // C7
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10, 15);
-        Completes(worker, ["warrior"], (Trial, 2));
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, null);
+        Completes(worker, ["warrior"], Win);
         var mondayOfW45 = new DateTimeOffset(2026, 11, 2, 0, 0, 0, TimeSpan.Zero);
         var a = await worker.SeedAsync(submittedAt: mondayOfW45);
         var b = await worker.SeedAsync(player: a.PlayerId, runStatus: "Won", submittedAt: mondayOfW45.AddDays(6));
@@ -244,22 +205,38 @@ public class ChallengeSettlementTests(Stack stack)
 
         await worker.Processor.ProcessAsync(JobOf(a), Ct);
         await worker.Processor.ProcessAsync(JobOf(b), Ct);
-        Assert.Equal(20, await GemsAsync(worker, a.PlayerId));  // the same week: nothing more
+        Assert.Equal(10, await GemsAsync(worker, a.PlayerId));  // the same week: nothing more
 
         await worker.Processor.ProcessAsync(JobOf(c), Ct);
 
-        Assert.Equal(40, await GemsAsync(worker, a.PlayerId));  // a new week: the ladder pays again
-        Assert.Equal(["2026-W45:2", "2026-W46:2"],
-            await worker.StringsAsync("SELECT cycle_key || ':' || best_tier FROM completion_marks ORDER BY cycle_key"));
-        Assert.Equal(4L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));  // last week's rows are untouched
+        Assert.Equal(20, await GemsAsync(worker, a.PlayerId));  // a new week: it pays again
+        Assert.Equal(["2026-W45", "2026-W46"], await worker.StringsAsync("SELECT cycle_key FROM completion_marks ORDER BY cycle_key"));
+        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));  // last week's rows are untouched
+    }
+
+    [Fact]
+    public async Task OnceChallenge_PaysOnlyTheFirstTime()
+    {
+        await using var worker = await CreateAsync(stack);
+        await worker.PutChallengeAsync(Win, 1, 10);
+        Completes(worker, ["warrior"], Win);
+        var a = await worker.SeedAsync(submittedAt: Wednesday);
+        var b = await worker.SeedAsync(player: a.PlayerId, runStatus: "Won", submittedAt: NextWednesday.AddDays(60));
+
+        await worker.Processor.ProcessAsync(JobOf(a), Ct);
+        await worker.Processor.ProcessAsync(JobOf(b), Ct);
+
+        Assert.Equal(10, await GemsAsync(worker, a.PlayerId));
+        Assert.Equal(["once"], await worker.StringsAsync("SELECT cycle_key FROM completion_marks"));
+        Assert.Equal(1, worker.Metrics.Count("rpg.settlements", "result=already_marked"));
     }
 
     [Fact]
     public async Task WeekBoundary_UsesSubmissionTime()  // C8
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10);
-        Completes(worker, ["warrior"], (Trial, 1));
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, null);
+        Completes(worker, ["warrior"], Win);
         var sundayNight = new DateTimeOffset(2026, 11, 8, 23, 59, 59, TimeSpan.Zero);
         var mondayMidnight = new DateTimeOffset(2026, 11, 9, 0, 0, 0, TimeSpan.Zero);
         var a = await worker.SeedAsync(submittedAt: sundayNight);
@@ -299,8 +276,8 @@ public class ChallengeSettlementTests(Stack stack)
     {
         await using var worker = await CreateAsync(stack);
         var end = Wednesday;
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, end, 10, 10);
-        Completes(worker, ["warrior"], (Trial, 2));
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, end);
+        Completes(worker, ["warrior"], Win);
         var late = await worker.SeedAsync(submittedAt: end);  // ends_at <= submitted_at: over
 
         var decision = await worker.Processor.ProcessAsync(JobOf(late), Ct);
@@ -317,52 +294,51 @@ public class ChallengeSettlementTests(Stack stack)
     {
         await using var worker = await CreateAsync(stack);
         var end = DateTimeOffset.UtcNow.AddHours(-1);  // the event is over by the time the worker settles
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, end, 10, 10);
-        Completes(worker, ["warrior"], (Trial, 2));
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, end);
+        Completes(worker, ["warrior"], Win);
         var early = await worker.SeedAsync(submittedAt: end.AddMinutes(-1));
 
         await worker.Processor.ProcessAsync(JobOf(early), Ct);
 
-        Assert.Equal(20, await GemsAsync(worker, early.PlayerId));
+        Assert.Equal(10, await GemsAsync(worker, early.PlayerId));
     }
 
     [Fact]
-    public async Task LadderEdit_DoesNotRepayOrLoseProgress()  // C11
+    public async Task RuleEdit_PaysTheNewAmount_OnlyWhereNothingWasPaid()  // C11
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10);
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, null);
         var first = await worker.SeedAsync(submittedAt: Wednesday);
         var second = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
-        var third = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(2));
-        CompletesByBattle(worker, Trial, ["warrior"], new() { [first.BattleId] = 2, [second.BattleId] = 2, [third.BattleId] = 3 });
+        var third = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: NextWednesday);
+        Completes(worker, ["warrior"], Win);
         await worker.Processor.ProcessAsync(JobOf(first), Ct);
 
-        await worker.PutLadderAsync(Trial, 2, RewardCycles.Weekly, null, 5, 5, 5);  // retuned: lower amounts, a third star
-        await worker.Processor.ProcessAsync(JobOf(second), Ct);
-        await worker.Processor.ProcessAsync(JobOf(third), Ct);
+        await worker.PutChallengeAsync(Win, 2, 99, RewardCycles.Weekly, null);  // retuned
+        await worker.Processor.ProcessAsync(JobOf(second), Ct);                  // same week: the mark is held, nothing repaid
+        Assert.Equal(10, await GemsAsync(worker, first.PlayerId));
+        await worker.Processor.ProcessAsync(JobOf(third), Ct);                   // a new week pays under the new version
 
-        Assert.Equal(25, await GemsAsync(worker, first.PlayerId));  // 10 + 10 under v1, then only tier 3 at 5 under v2
-        Assert.Equal(["1:10:1", "2:10:1", "3:5:2"], await worker.StringsAsync(
-            "SELECT tier || ':' || delta || ':' || rule_version FROM wallet_ledger ORDER BY tier"));  // each row keeps the version it was paid at
-        Assert.Equal(3, await worker.ScalarAsync<int>("SELECT best_tier FROM completion_marks"));
+        Assert.Equal(109, await GemsAsync(worker, first.PlayerId));
+        Assert.Equal(["10:1", "99:2"], await worker.StringsAsync("SELECT delta || ':' || rule_version FROM wallet_ledger ORDER BY id"));
     }
 
     [Fact]
     public async Task CycleSwitch_UsesTheNewKey_AndSwitchingBackReusesTheOldMark()  // C11
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Once, null, 10);
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Once, null);
         var a = await worker.SeedAsync(submittedAt: Wednesday);
         var b = await worker.SeedAsync(player: a.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
         var c = await worker.SeedAsync(player: a.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(2));
-        Completes(worker, ["warrior"], (Trial, 1));
+        Completes(worker, ["warrior"], Win);
         await worker.Processor.ProcessAsync(JobOf(a), Ct);
 
-        await worker.PutLadderAsync(Trial, 2, RewardCycles.Weekly, null, 10);  // once -> weekly: the weekly key is new
+        await worker.PutChallengeAsync(Win, 2, 10, RewardCycles.Weekly, null);  // once -> weekly: the weekly key is new
         await worker.Processor.ProcessAsync(JobOf(b), Ct);
         Assert.Equal(20, await GemsAsync(worker, a.PlayerId));
 
-        await worker.PutLadderAsync(Trial, 3, RewardCycles.Once, null, 10);    // and back: the once mark still exists
+        await worker.PutChallengeAsync(Win, 3, 10, RewardCycles.Once, null);    // and back: the once mark still exists
         await worker.Processor.ProcessAsync(JobOf(c), Ct);
 
         Assert.Equal(20, await GemsAsync(worker, a.PlayerId));
@@ -370,28 +346,10 @@ public class ChallengeSettlementTests(Stack stack)
     }
 
     [Fact]
-    public async Task ShrunkLadder_KeepsMarks_AndPaysNothingMore()  // C12
+    public async Task ConcurrentBattles_NeverPayTheSameChallengeTwice()  // C13
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10, 15);
-        var a = await worker.SeedAsync(submittedAt: Wednesday);
-        var b = await worker.SeedAsync(player: a.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
-        Completes(worker, ["warrior"], (Trial, 3));
-        await worker.Processor.ProcessAsync(JobOf(a), Ct);
-
-        await worker.PutLadderAsync(Trial, 2, RewardCycles.Weekly, null, 10);  // two stars taken away
-        await worker.Processor.ProcessAsync(JobOf(b), Ct);
-
-        Assert.Equal(35, await GemsAsync(worker, a.PlayerId));
-        Assert.Equal(3, await worker.ScalarAsync<int>("SELECT best_tier FROM completion_marks"));  // never lowered
-        Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
-    }
-
-    [Fact]
-    public async Task ConcurrentBattles_NeverPayATierTwice()  // C13
-    {
-        await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10, 15);
+        await PutStarsAsync(worker);
         var a = await worker.SeedAsync(submittedAt: Wednesday);
         var b = await worker.SeedAsync(player: a.PlayerId, runStatus: "Won", submittedAt: Wednesday);
         var gate = new TaskCompletionSource();
@@ -405,40 +363,40 @@ public class ChallengeSettlementTests(Stack stack)
 
             await gate.Task;
             return FakeReplayRunner.Verified(FakeReplayRunner.BattleIdOf(request),
-                new BattleFacts("enc.trial", [], ["warrior"], [new CompletionFact(Trial, 3)]));
+                new BattleFacts("enc.trial", [], ["warrior"], [new CompletionFact(Win), new CompletionFact(Flawless)]));
         };
 
         await Task.WhenAll(worker.Processor.ProcessAsync(JobOf(a), Ct), worker.Processor.ProcessAsync(JobOf(b), Ct));
 
-        Assert.Equal(35, await GemsAsync(worker, a.PlayerId));  // the ladder once, not twice
-        Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
-        Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox WHERE type = 'RewardGranted'"));
-        Assert.Equal(1L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));
+        Assert.Equal(15, await GemsAsync(worker, a.PlayerId));  // each challenge once, not twice
+        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
+        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox WHERE type = 'RewardGranted'"));
+        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));
     }
 
     [Fact]
-    public async Task DuplicateFacts_AreMergedToTheHighestTier()  // C14
+    public async Task DuplicateFacts_AreMerged_AndABossAndACompletionAreSeparateChallenges()  // C14
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10, 15, 20);
+        await PutStarsAsync(worker);
         worker.Runner.Handler = (request, _) => Task.FromResult(FakeReplayRunner.Verified(FakeReplayRunner.BattleIdOf(request),
             new BattleFacts("enc.trial", ["boss.lich", "boss.lich"], ["warrior", "warrior"],
-                [new CompletionFact(Trial, 2), new CompletionFact(Trial, 4), new CompletionFact(Trial, 3)])));
+                [new CompletionFact(Win), new CompletionFact(Win), new CompletionFact(Fast)])));
         var battle = await worker.SeedAsync(submittedAt: Wednesday);
 
         await worker.Processor.ProcessAsync(JobOf(battle), Ct);
 
-        Assert.Equal(10 + 10 + 15 + 20 + 10, await GemsAsync(worker, battle.PlayerId));  // the ladder once, plus the boss's own 10
-        Assert.Equal(5L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
-        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));  // one per challenge, one character
+        Assert.Equal(5 + 5 + 10, await GemsAsync(worker, battle.PlayerId));  // win and fast once each, plus the boss's own 10
+        Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
+        Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));  // one per challenge, one character
     }
 
     [Fact]
     public async Task ACompletionWithNoRuleOrARetiredOne_PaysNothing_AndALaterRulePaysTheNextWin()  // C16
     {
         await using var worker = await CreateAsync(stack);
-        Completes(worker, ["warrior"], ("event.unruled", 2), ("event.retired", 1));
-        await worker.PutLadderAsync("event.retired", 1, 0);
+        Completes(worker, ["warrior"], "event.unruled", "event.retired");
+        await worker.PutChallengeAsync("event.retired", 1, 0);
         var first = await worker.SeedAsync(submittedAt: Wednesday);
         var second = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
 
@@ -449,32 +407,32 @@ public class ChallengeSettlementTests(Stack stack)
         Assert.Equal(1, worker.Metrics.Count("rpg.reward_rule_lookups", "result=retired"));
         Assert.Equal(1, worker.Metrics.Count("rpg.settlements", "result=no_rule"));
 
-        await worker.PutLadderAsync("event.unruled", 1, 7, 8);
+        await worker.PutChallengeAsync("event.unruled", 1, 7);
         await worker.Processor.ProcessAsync(JobOf(second), Ct);
 
-        Assert.Equal(15, await GemsAsync(worker, first.PlayerId));
+        Assert.Equal(7, await GemsAsync(worker, first.PlayerId));
     }
 
     [Fact]
-    public async Task PartyCharacters_EachHaveTheirOwnBestTier()
+    public async Task PartyCharacters_EachHaveTheirOwnMark()
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10, 10);
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, null);
         var a = await worker.SeedAsync(submittedAt: Wednesday);
         var b = await worker.SeedAsync(player: a.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
         worker.Runner.Handler = (request, _) =>
         {
             var id = FakeReplayRunner.BattleIdOf(request);
             return Task.FromResult(FakeReplayRunner.Verified(id, id == a.BattleId
-                ? new BattleFacts("enc", [], ["warrior"], [new CompletionFact(Trial, 2)])
-                : new BattleFacts("enc", [], ["warrior", "cleric"], [new CompletionFact(Trial, 2)])));
+                ? new BattleFacts("enc", [], ["warrior"], [new CompletionFact(Win)])
+                : new BattleFacts("enc", [], ["warrior", "cleric"], [new CompletionFact(Win)])));
         };
 
         await worker.Processor.ProcessAsync(JobOf(a), Ct);
         await worker.Processor.ProcessAsync(JobOf(b), Ct);
 
-        Assert.Equal(40, await GemsAsync(worker, a.PlayerId));  // warrior 20, then the cleric's own 20
-        Assert.Equal(["cleric:2", "warrior:2"], await worker.StringsAsync("SELECT character_id || ':' || best_tier FROM completion_marks ORDER BY 1"));
+        Assert.Equal(20, await GemsAsync(worker, a.PlayerId));  // the warrior once, the cleric on the second battle
+        Assert.Equal(["cleric", "warrior"], await worker.StringsAsync("SELECT character_id FROM completion_marks ORDER BY 1"));
     }
 
     // ---- Resets (C18, C21, C24) ----
@@ -490,31 +448,31 @@ public class ChallengeSettlementTests(Stack stack)
     public async Task Reset_LetsTheNextClearPayAgain_AndKeepsHistory()  // C18
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Once, null, 10, 10);
-        Completes(worker, ["warrior"], (Trial, 2));
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Once, null);
+        Completes(worker, ["warrior"], Win);
         var a = await worker.SeedAsync(submittedAt: Wednesday);
         var b = await worker.SeedAsync(player: a.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
         var c = await worker.SeedAsync(player: a.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(2));
         await worker.Processor.ProcessAsync(JobOf(a), Ct);
         await worker.Processor.ProcessAsync(JobOf(b), Ct);
-        Assert.Equal(20, await GemsAsync(worker, a.PlayerId));
+        Assert.Equal(10, await GemsAsync(worker, a.PlayerId));
 
-        await ResetAsync(worker, Trial);
+        await ResetAsync(worker, Win);
         await worker.Processor.ProcessAsync(JobOf(c), Ct);
 
-        Assert.Equal(40, await GemsAsync(worker, a.PlayerId));
+        Assert.Equal(20, await GemsAsync(worker, a.PlayerId));
         Assert.Equal(["once", "once.r1"], await worker.StringsAsync("SELECT cycle_key FROM completion_marks ORDER BY cycle_key"));  // the old mark stays
-        Assert.Equal(4L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
+        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
     }
 
     [Fact]
     public async Task BattleSettledAfterAReset_UsesTheNewGeneration()  // C21
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10);
-        Completes(worker, ["warrior"], (Trial, 1));
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, null);
+        Completes(worker, ["warrior"], Win);
         var played = await worker.SeedAsync(submittedAt: Wednesday);  // played before the reset, settled after it
-        await ResetAsync(worker, Trial);
+        await ResetAsync(worker, Win);
 
         await worker.Processor.ProcessAsync(JobOf(played), Ct);
 
@@ -525,8 +483,8 @@ public class ChallengeSettlementTests(Stack stack)
     public async Task PlayerReset_AffectsOnlyThatPlayer()  // C24
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Once, null, 10);
-        Completes(worker, ["warrior"], (Trial, 1));
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Once, null);
+        Completes(worker, ["warrior"], Win);
         var alice1 = await worker.SeedAsync(submittedAt: Wednesday);
         var bob1 = await worker.SeedAsync(submittedAt: Wednesday);
         var alice2 = await worker.SeedAsync(player: alice1.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
@@ -536,12 +494,12 @@ public class ChallengeSettlementTests(Stack stack)
             await worker.Processor.ProcessAsync(JobOf(battle), Ct);
         }
 
-        await ResetAsync(worker, Trial, alice1.PlayerId);
+        await ResetAsync(worker, Win, alice1.PlayerId);
         await worker.Processor.ProcessAsync(JobOf(alice2), Ct);
         await worker.Processor.ProcessAsync(JobOf(bob2), Ct);
 
         Assert.Equal(20, await GemsAsync(worker, alice1.PlayerId));  // paid again
-        Assert.Equal(10, await GemsAsync(worker, bob1.PlayerId));    // keeps their marks
+        Assert.Equal(10, await GemsAsync(worker, bob1.PlayerId));    // keeps their mark
         Assert.Equal(["once", "once.p1"], await worker.StringsAsync(
             "SELECT cycle_key FROM completion_marks WHERE player_id = $1 ORDER BY cycle_key", alice1.PlayerId));
         Assert.Equal(["once"], await worker.StringsAsync("SELECT cycle_key FROM completion_marks WHERE player_id = $1", bob1.PlayerId));
@@ -551,16 +509,16 @@ public class ChallengeSettlementTests(Stack stack)
     public async Task PlayerAndGlobalReset_Stack()  // C24
     {
         await using var worker = await CreateAsync(stack);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10);
-        Completes(worker, ["warrior"], (Trial, 1));
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, null);
+        Completes(worker, ["warrior"], Win);
         var first = await worker.SeedAsync(submittedAt: Wednesday);
         var second = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
         var third = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(2));
         await worker.Processor.ProcessAsync(JobOf(first), Ct);
-        await ResetAsync(worker, Trial, first.PlayerId);
+        await ResetAsync(worker, Win, first.PlayerId);
         await worker.Processor.ProcessAsync(JobOf(second), Ct);
 
-        await ResetAsync(worker, Trial);  // and now everyone, too
+        await ResetAsync(worker, Win);  // and now everyone, too
         await worker.Processor.ProcessAsync(JobOf(third), Ct);
 
         Assert.Equal(30, await GemsAsync(worker, first.PlayerId));
@@ -574,9 +532,9 @@ public class ChallengeSettlementTests(Stack stack)
     public async Task ClockOffset_MovesTheWeekAndTheEnd()  // C22
     {
         await using var worker = await CreateAsync(stack, new() { ["Settlement:CycleClockOffset"] = "7.00:00:00" });
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10);
-        await worker.PutLadderAsync("event.short", 1, RewardCycles.Weekly, Wednesday.AddDays(3), 10);
-        Completes(worker, ["warrior"], (Trial, 1), ("event.short", 1));
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, null);
+        await worker.PutChallengeAsync("event.short", 1, 50, RewardCycles.Weekly, Wednesday.AddDays(3));
+        Completes(worker, ["warrior"], Win, "event.short");
         var battle = await worker.SeedAsync(submittedAt: Wednesday);
 
         await worker.Processor.ProcessAsync(JobOf(battle), Ct);
@@ -592,8 +550,8 @@ public class ChallengeSettlementTests(Stack stack)
     public async Task ClockOffset_IsIgnoredOutsideDevelopment(string environment)  // C22
     {
         await using var worker = await CreateAsync(stack, new() { ["Settlement:CycleClockOffset"] = "7.00:00:00" }, environment);
-        await worker.PutLadderAsync(Trial, 1, RewardCycles.Weekly, null, 10);
-        Completes(worker, ["warrior"], (Trial, 1));
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, null);
+        Completes(worker, ["warrior"], Win);
         var battle = await worker.SeedAsync(submittedAt: Wednesday);
 
         await worker.Processor.ProcessAsync(JobOf(battle), Ct);
@@ -636,7 +594,7 @@ public class ChallengeSettlementTests(Stack stack)
     {
         await using var worker = await CreateAsync(stack);
         var tooLong = new string('x', 196);  // boss/ + 196 passes 200
-        await worker.PutLadderAsync("boss/" + tooLong[..195], 1, 99);
+        await worker.PutChallengeAsync("boss/" + tooLong[..195], 1, 99);
         worker.Runner.Handler = (request, _) => Task.FromResult(FakeReplayRunner.Verified(FakeReplayRunner.BattleIdOf(request),
             new BattleFacts("enc", ["has:colon", tooLong, "has space"], ["warrior"])));
         var battle = await worker.SeedAsync();
@@ -649,7 +607,7 @@ public class ChallengeSettlementTests(Stack stack)
     }
 
     [Fact]
-    public async Task ABossClear_IsBossSlashId_TierOne_AndTheEventKeepsTheBossId()
+    public async Task ABossClear_IsBossSlashId_AndTheEventKeepsTheBossId()
     {
         await using var worker = await CreateAsync(stack);
         worker.Runner.Handler = (request, _) => Task.FromResult(FakeReplayRunner.Verified(FakeReplayRunner.BattleIdOf(request),
@@ -658,8 +616,8 @@ public class ChallengeSettlementTests(Stack stack)
 
         await worker.Processor.ProcessAsync(JobOf(battle), Ct);
 
-        Assert.Equal(["boss/boss.lich:once:1"], await worker.StringsAsync("SELECT challenge_id || ':' || cycle_key || ':' || best_tier FROM completion_marks"));
+        Assert.Equal(["boss/boss.lich:once"], await worker.StringsAsync("SELECT challenge_id || ':' || cycle_key FROM completion_marks"));
         var grant = Assert.Single(await GrantsAsync(worker));
-        Assert.Equal(("boss.lich", "boss/boss.lich", 1, "once"), (grant.Payload.BossId, grant.Payload.ChallengeId, grant.Payload.Tier, grant.Payload.CycleKey));
+        Assert.Equal(("boss.lich", "boss/boss.lich", "once"), (grant.Payload.BossId, grant.Payload.ChallengeId, grant.Payload.CycleKey));
     }
 }

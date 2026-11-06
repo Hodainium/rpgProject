@@ -17,10 +17,7 @@ public sealed class EconomyOptions
     /// <summary>The most one rule can pay: a plain whole number (not x100).</summary>
     public int MaxRewardAmount { get; set; } = RewardRules.DefaultMaxAmount;
 
-    /// <summary>The most tiers one ladder can have (spec economy-challenges 3.7).</summary>
-    public int MaxTiers { get; set; } = RewardRules.DefaultMaxTiers;
-
-    /// <summary>Ladders applied at startup, only for challenges that have none yet (a demo or e2e starting point).</summary>
+    /// <summary>Rewards applied at startup, only for challenges that have none yet (a demo or e2e starting point).</summary>
     public RewardRuleRequest[] SeedRules { get; set; } = [];
 }
 
@@ -44,14 +41,14 @@ public sealed class RewardRuleSeeder(NpgsqlDataSource dataSource, MigrationRunne
                 await migrations.EnsureMigratedAsync(stoppingToken);
                 var now = clock.GetUtcNow();
                 foreach (var bad in options.Value.SeedRules.Where(r =>
-                    RewardRules.Validate(r, options.Value.MaxRewardAmount, options.Value.MaxTiers, now) is not null || r.Tiers.Count == 0))
+                    RewardRules.Validate(r, options.Value.MaxRewardAmount, now) is not null || r.Amount == 0))
                 {
-                    logger.LogWarning("Seed reward rule skipped as invalid: {Id} {Currency} [{Tiers}]",
-                        bad.ChallengeId, bad.Currency, string.Join(",", bad.Tiers ?? []));
+                    logger.LogWarning("Seed reward rule skipped as invalid: {Id} {Currency} {Amount}",
+                        bad.ChallengeId, bad.Currency, bad.Amount);
                 }
 
                 var created = await RewardRules.SeedAsync(dataSource, options.Value.SeedRules,
-                    options.Value.MaxRewardAmount, options.Value.MaxTiers, now, stoppingToken);
+                    options.Value.MaxRewardAmount, now, stoppingToken);
                 logger.LogInformation("Seeded {Count} reward rules", created);
                 return;
             }
@@ -79,7 +76,7 @@ public static class RewardRuleEndpoints
                 return Forbidden();
             }
 
-            if (RewardRules.Validate(request, options.Value.MaxRewardAmount, options.Value.MaxTiers, clock.GetUtcNow()) is { } problem)
+            if (RewardRules.Validate(request, options.Value.MaxRewardAmount, clock.GetUtcNow()) is { } problem)
             {
                 metrics.RewardRuleChange("invalid");
                 return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid reward rule",

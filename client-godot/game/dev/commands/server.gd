@@ -5,7 +5,7 @@ extends DevCommand
 func _init() -> void:
 	name = "server"
 	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | reward [...] | reward-reset ... | resume | forget | conflict]"
-	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount>[,<amount>...] [cycle=once|weekly] [ends=<UTC ISO>]: set a ladder (a new version; one amount per tier; 0 retires it); reward boss <boss id> <amounts>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
+	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
 	cheat = false
 
 
@@ -153,7 +153,7 @@ func _reward(ctx: DevContext, args: PackedStringArray) -> String:
 		if rules.is_empty():
 			return "no reward rules"
 		return "\n".join(PackedStringArray(rules.map(func(rule: Dictionary) -> String: return _describe_rule(rule))))
-	var usage := "usage: server reward [boss] <id> <amount>[,<amount>...] [cycle=once|weekly] [ends=<UTC ISO>]"
+	var usage := "usage: server reward [boss] <id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]"
 	var rest := args.slice(1)
 	var is_boss := rest.size() > 0 and rest[0] == "boss"
 	if is_boss:
@@ -161,14 +161,9 @@ func _reward(ctx: DevContext, args: PackedStringArray) -> String:
 	if rest.size() < 2:
 		return ctx.fail(usage)
 	var challenge := _challenge_id(rest[0], is_boss)
-	var tiers := []
-	for text in rest[1].split(",", false):
-		if not text.is_valid_int() or int(text) < 0:
-			return ctx.fail(usage + " (amounts are whole numbers)")
-		tiers.append(int(text))
-	if tiers == [0]:
-		tiers = []  # a lone 0 retires the challenge
-	var body := {"challengeId": challenge, "currency": "gems", "tiers": tiers}
+	if not rest[1].is_valid_int() or int(rest[1]) < 0:
+		return ctx.fail(usage + " (the amount is a whole number; 0 retires)")
+	var body := {"challengeId": challenge, "currency": "gems", "amount": int(rest[1])}
 	for option in rest.slice(2):
 		if option.begins_with("cycle="):
 			body["cycle"] = option.trim_prefix("cycle=")
@@ -255,9 +250,8 @@ func _check(ctx: DevContext) -> String:
 
 
 static func _describe_rule(rule: Dictionary) -> String:
-	var tiers: Array = rule.get("tiers", [])
-	var amounts := ",".join(PackedStringArray(tiers.map(func(amount: Variant) -> String: return str(int(amount)))))
+	var amount := int(rule.get("amount", 0))
 	var ends := " ends %s" % rule["endsAt"] if rule.has("endsAt") else ""
-	return "%s: %s %s %s%s (version %d, generation %d, by %s)%s" % [rule.get("challengeId", "?"), amounts if not tiers.is_empty() else "-",
+	return "%s: %d %s %s%s (version %d, generation %d, by %s)%s" % [rule.get("challengeId", "?"), amount,
 		rule.get("currency", "?"), rule.get("cycle", "?"), ends, int(rule.get("version", 0)), int(rule.get("generation", 0)),
-		rule.get("createdBy", "?"), " [retired: pays nothing]" if tiers.is_empty() else ""]
+		rule.get("createdBy", "?"), " [retired: pays nothing]" if amount == 0 else ""]

@@ -26,7 +26,7 @@ public class MigrationTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task Migration0006_MovesSlice4cData_ToChallengesTiersAndCycles_AndASecondApplyIsANoOp()
+    public async Task Migration0006_MovesSlice4cData_ToChallengesAndCycles_AndASecondApplyIsANoOp()
     {
         await using var dataSource = NpgsqlDataSource.Create(await stack.NewDatabaseAsync());
         var player = Guid.NewGuid();
@@ -63,14 +63,14 @@ public class MigrationTests(StackFixture stack)
         await new MigrationRunner(dataSource, NullLogger<MigrationRunner>.Instance).EnsureMigratedAsync(Ct);
         await new MigrationRunner(dataSource, NullLogger<MigrationRunner>.Instance).EnsureMigratedAsync(Ct);
 
-        Assert.Equal(["boss/demo.enemy.golem:1:1:0:once", "boss/demo.enemy.lich:1:1:25:once", "boss/demo.enemy.lich:2:1:30:once"],
+        Assert.Equal(["boss/demo.enemy.golem:1:0:once", "boss/demo.enemy.lich:1:25:once", "boss/demo.enemy.lich:2:30:once"],
             await ListAsync(dataSource,
-                "SELECT challenge_id || ':' || version || ':' || tier || ':' || amount || ':' || cycle FROM reward_rules ORDER BY 1"));
-        Assert.Equal(["boss/demo.enemy.lich:once:1"],
-            await ListAsync(dataSource, "SELECT challenge_id || ':' || cycle_key || ':' || best_tier FROM completion_marks"));
-        Assert.Equal(["-:-:-", "boss/demo.enemy.lich:2:-"],  // the older row has no challenge; tier and cycle stay null on both
+                "SELECT challenge_id || ':' || version || ':' || amount || ':' || cycle FROM reward_rules ORDER BY 1"));
+        Assert.Equal(["boss/demo.enemy.lich:once"],
+            await ListAsync(dataSource, "SELECT challenge_id || ':' || cycle_key FROM completion_marks"));
+        Assert.Equal(["-:-:-", "boss/demo.enemy.lich:2:-"],  // the older row has no challenge; the cycle key is null on both
             await ListAsync(dataSource,
-                "SELECT COALESCE(challenge_id, '-') || ':' || COALESCE(rule_version::text, '-') || ':' || COALESCE(tier::text, '-') " +
+                "SELECT COALESCE(challenge_id, '-') || ':' || COALESCE(rule_version::text, '-') || ':' || COALESCE(cycle_key, '-') " +
                 "FROM wallet_ledger ORDER BY 1"));
         Assert.Equal(["challenge_id", "character_id", "cycle_key", "player_id"],
             await ListAsync(dataSource,

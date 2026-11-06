@@ -160,8 +160,8 @@ func _facts(battle: Battle, encounter_id: String) -> Dictionary:
 	return facts
 
 
-## The stars `battle` earned, one `completion_fact` (tier 1) per star under its own reward id "<challenge>.<star>" (spec
-## economy-challenges: stars are independent, each a challenge of its own on the server). Empty when the content defines no
+## The stars `battle` earned, one `completion_fact` per star under its own reward id "<challenge>.<star>" (spec
+## economy-challenges: stars are independent, each a challenge of its own on the server; there are no tiers). Empty when the content defines no
 ## challenge for the encounter, so every fact written before challenges stays byte-identical. Only called for a won battle,
 ## and never hashed.
 func _completions(battle: Battle, encounter_id: String) -> Array:
@@ -170,14 +170,13 @@ func _completions(battle: Battle, encounter_id: String) -> Array:
 		return completions
 	for challenge in _content.challenges_for(encounter_id):
 		for star in challenge.stars_reached(battle, _tally):
-			completions.append(completion_fact(challenge.reward_id(star), 1))
+			completions.append(completion_fact(challenge.reward_id(star)))
 	return completions
 
 
-## One completion on the wire: the server's `CompletionFact(ChallengeId, Tier)`. A tier is the number of stars reached
-## (1 or more); what each is worth is the server's rule.
-static func completion_fact(challenge_id: String, tier: int) -> Dictionary:
-	return {"challengeId": challenge_id, "tier": tier}
+## One completion on the wire: the server's `CompletionFact(ChallengeId)`. What it is worth is the server's rule.
+static func completion_fact(challenge_id: String) -> Dictionary:
+	return {"challengeId": challenge_id}
 
 
 ## The exact Godot build, as Godot prints it at startup: "4.7.2.stable.mono.official.ed1daf0bf". The client and the

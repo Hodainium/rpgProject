@@ -1,6 +1,6 @@
 ## A challenge (spec economy-challenges): independent stars on one encounter. Each star is earned on its own, in any order:
 ## star 3 can be earned without star 2. A star is rewarded as a challenge of its own on the server, keyed by
-## `reward_id(star)` = "<challenge id>.<star id>", with its own ladder (usually one tier), cycle and amount; the replay
+## `reward_id(star)` = "<challenge id>.<star id>", with its own amount and cycle; the replay
 ## reports one completion per earned star. This resource carries no amounts.
 @tool
 class_name ChallengeDefinition

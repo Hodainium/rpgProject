@@ -1,1 +1,1 @@
-{"challengeId":"boss/enemy.lich","currency":"gems","tiers":[25],"cycle":"once","version":3,"previousTiers":[10],"changedBy":"designer"}
+{"challengeId":"boss/enemy.lich","currency":"gems","amount":25,"cycle":"once","version":3,"previousAmount":10,"changedBy":"designer"}

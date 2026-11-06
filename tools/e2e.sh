@@ -147,7 +147,7 @@ run_scenario() {  # <name> <index 1-15>
 	local boss_n=0 boss
 	for boss in fixture.enemy.chief fixture.enemy.lich fixture.enemy.mirror; do
 		env+=("Economy__SeedRules__${boss_n}__ChallengeId=boss/$boss"
-			"Economy__SeedRules__${boss_n}__Currency=gems" "Economy__SeedRules__${boss_n}__Tiers__0=10")
+			"Economy__SeedRules__${boss_n}__Currency=gems" "Economy__SeedRules__${boss_n}__Amount=10")
 		boss_n=$((boss_n + 1))
 	done
 	local line

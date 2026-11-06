@@ -189,22 +189,16 @@ public sealed class WorkerHarness : IAsyncDisposable
         return new SeededBattle(battleId, runId, playerId, 2, ruleset);
     }
 
-    /// <summary>A new version of a boss rule (a ladder of one tier, or retired for 0), as the API would write it.</summary>
-    public Task PutRuleAsync(string boss, int amount, int version) => PutLadderAsync("boss/" + boss, version, amount);
+    /// <summary>A new version of a boss's rule (retired for 0), as the API would write it.</summary>
+    public Task PutRuleAsync(string boss, int amount, int version) => PutChallengeAsync("boss/" + boss, version, amount);
 
-    /// <summary>A new version of a ladder: one row per tier (an amount of 0 alone retires it).</summary>
-    public Task PutLadderAsync(string challengeId, int version, params int[] tiers) =>
-        PutLadderAsync(challengeId, version, Rpg.Contracts.Economy.RewardCycles.Once, null, tiers);
+    /// <summary>A new version of a challenge's reward (an amount of 0 retires it).</summary>
+    public Task PutChallengeAsync(string challengeId, int version, int amount) =>
+        PutChallengeAsync(challengeId, version, amount, Rpg.Contracts.Economy.RewardCycles.Once, null);
 
-    public async Task PutLadderAsync(string challengeId, int version, string cycle, DateTimeOffset? endsAt, params int[] tiers)
-    {
-        for (var i = 0; i < tiers.Length; i++)
-        {
-            await ExecuteAsync(
-                "INSERT INTO reward_rules (challenge_id, currency, amount, tier, cycle, ends_at, version, created_by) VALUES ($1, 'gems', $2, $3, $4, $5, $6, 'test')",
-                challengeId, tiers[i], i + 1, cycle, endsAt?.ToUniversalTime() ?? (object)DBNull.Value, version);
-        }
-    }
+    public Task PutChallengeAsync(string challengeId, int version, int amount, string cycle, DateTimeOffset? endsAt) => ExecuteAsync(
+        "INSERT INTO reward_rules (challenge_id, currency, amount, cycle, ends_at, version, created_by) VALUES ($1, 'gems', $2, $3, $4, $5, 'test')",
+        challengeId, amount, cycle, endsAt?.ToUniversalTime() ?? (object)DBNull.Value, version);
 
     public static VerifyBattleJob JobOf(SeededBattle battle) =>
         new(battle.BattleId, battle.RunId, battle.Seq, battle.Ruleset, DateTimeOffset.UtcNow);
@@ -215,6 +209,10 @@ public sealed class WorkerHarness : IAsyncDisposable
         var result = await command.ExecuteScalarAsync();
         return result is null or DBNull ? default : (T)result;
     }
+
+    /// <summary>The first column of every row, as a number.</summary>
+    public async Task<List<int>> IntsAsync(string sql, params object[] values) =>
+        [.. (await StringsAsync(sql, values)).Select(int.Parse)];
 
     /// <summary>The first column of every row, as text.</summary>
     public async Task<List<string>> StringsAsync(string sql, params object[] values)

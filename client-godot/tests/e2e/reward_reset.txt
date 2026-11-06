@@ -1,7 +1,7 @@
 # Spec economy-challenges 1.2 and 6: a cycle reset on the real stack. The knight and medic beat the fixtures' boss and are paid
 # at the seeded 10 gems; the same party again pays nothing (the mark is held); `server reward-reset ... player=me` opens a new
 # cycle key for this player only, so the next win pays again; a reset for everyone opens another, and the third win pays again.
-# Old marks and ledger rows stay. (Completions with several tiers and the clock offset are proven in the worker tests: the
+# Old marks and ledger rows stay. (Independent challenges and the clock offset have their own scenarios, reward_stars and reward_clock_offset: the
 # fixtures' battles report only bosses.)
 #! worker
 #! env Monitors__Interval=00:00:01

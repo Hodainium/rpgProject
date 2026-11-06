@@ -148,7 +148,7 @@ public class SettlementTests(Stack stack)
         await worker.ExecuteAsync("INSERT INTO wallets (player_id, gems, version) VALUES ($1, 10, 1)", battle.PlayerId);
         await worker.ExecuteAsync(
             "INSERT INTO wallet_ledger (player_id, currency, delta, reason, ref_battle_id, idempotency_key) VALUES ($1, 'gems', 10, 'completion_mark', 'x', $2)",
-            battle.PlayerId, $"mark:{battle.BattleId}:warrior:boss/boss.lich:1");
+            battle.PlayerId, $"mark:{battle.BattleId}:warrior:boss/boss.lich");
         var earlier = await worker.SeedAsync(player: battle.PlayerId, runStatus: "Won");
         await worker.ExecuteAsync(
             "INSERT INTO completion_marks (player_id, character_id, challenge_id, battle_id) VALUES ($1, 'cleric', 'boss/boss.lich', $2)",
@@ -353,7 +353,7 @@ public class SettlementTests(Stack stack)
 
         Assert.Equal(50, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", battle.PlayerId));
         Assert.Equal(2L, await worker.ScalarAsync<long>(
-            "SELECT count(*) FROM wallet_ledger WHERE delta = 25 AND rule_version = 2 AND challenge_id = 'boss/boss.lich' AND tier = 1"));
+            "SELECT count(*) FROM wallet_ledger WHERE delta = 25 AND rule_version = 2 AND challenge_id = 'boss/boss.lich'"));
         var rewards = (await worker.OutboxPayloadsAsync("RewardGranted"))
             .Select(json => JsonSerializer.Deserialize<DomainEvent<RewardGrantedPayload>>(json, RpgJson.Options)!).ToList();
         Assert.All(rewards, r => Assert.Equal((25, 2), (r.Payload.Amount, r.Payload.RuleVersion)));

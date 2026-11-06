@@ -287,7 +287,7 @@ func test_server_wallet_and_wait_gems() -> void:
 func test_server_reward_command() -> void:
 	var bridge := _bridge()
 	var session := _session(bridge)
-	var rule := {"challengeId": "boss/demo.enemy.lich", "currency": "gems", "tiers": [25], "cycle": "once", "generation": 2, "version": 3,
+	var rule := {"challengeId": "boss/demo.enemy.lich", "currency": "gems", "amount": 25, "cycle": "once", "generation": 2, "version": 3,
 		"effectiveFrom": "2026-11-03T10:00:00+00:00", "createdBy": "designer"}
 	bridge.answers["ListRewardRules"] = [[true, {"rules": [rule]}]]
 	var listed := await _run(session, "server reward")
@@ -300,18 +300,19 @@ func test_server_reward_command() -> void:
 	check(set["ok"] and set["text"].contains("version 3"), "a rule is set and its version printed: " + set["text"])
 	var puts := func() -> Array: return bridge.calls.filter(func(call: Array) -> bool: return call[0] == "PutRewardRule")
 	var sent: Dictionary = JSON.parse_string(puts.call()[0][1])
-	check(sent.get("challengeId") == "boss/demo.enemy.lich" and sent.get("currency") == "gems" and sent.get("tiers") == [25.0] and not sent.has("cycle"), "the boss PUT body: " + str(sent))
-	await _run(session, "server reward event.spring.trial-3 10,10,15 cycle=weekly ends=2026-12-01T00:00:00Z")
-	var ladder: Dictionary = JSON.parse_string(puts.call()[1][1])
-	check(ladder.get("challengeId") == "event.spring.trial-3" and ladder.get("tiers") == [10.0, 10.0, 15.0] and ladder.get("cycle") == "weekly" and ladder.get("endsAt") == "2026-12-01T00:00:00Z", "the ladder PUT body: " + str(ladder))
+	check(sent.get("challengeId") == "boss/demo.enemy.lich" and sent.get("currency") == "gems" and int(sent.get("amount", -1)) == 25 and not sent.has("cycle"), "the boss PUT body: " + str(sent))
+	await _run(session, "server reward demo.challenge.lich_trial.fast 10 cycle=weekly ends=2026-12-01T00:00:00Z")
+	var weekly: Dictionary = JSON.parse_string(puts.call()[1][1])
+	check(weekly.get("challengeId") == "demo.challenge.lich_trial.fast" and int(weekly.get("amount", -1)) == 10 and weekly.get("cycle") == "weekly" and weekly.get("endsAt") == "2026-12-01T00:00:00Z", "the weekly PUT body: " + str(weekly))
 	await _run(session, "server reward boss demo.enemy.lich 0")
-	check(JSON.parse_string(puts.call()[2][1]).get("tiers") == [], "a lone 0 retires the ladder")
+	check(int(JSON.parse_string(puts.call()[2][1]).get("amount", -1)) == 0, "an amount of 0 retires the challenge")
 	bridge.answers["PutRewardRule"] = [ServerTests._error(403, 1302, "Economy admin required")]
 	var refused := await _run(session, "server reward boss demo.enemy.lich 5")
 	check(not refused["ok"] and refused["text"].contains("403") and refused["text"].contains("1302"), "a refusal is reported: " + refused["text"])
 	check(not (await _run(session, "server reward demo.enemy.lich"))["ok"], "usage: an amount is needed")
 	check(not (await _run(session, "server reward boss demo.enemy.lich x"))["ok"], "usage: the amount is a number")
-	check(not (await _run(session, "server reward boss demo.enemy.lich 10,-1"))["ok"], "usage: not negative")
+	check(not (await _run(session, "server reward boss demo.enemy.lich -1"))["ok"], "usage: not negative")
+	check(not (await _run(session, "server reward boss demo.enemy.lich 10,20"))["ok"], "usage: one amount, no list (there are no tiers)")
 	check(not (await _run(session, "server reward boss demo.enemy.lich 10 colour=red"))["ok"], "usage: unknown option")
 	await host.get_tree().process_frame
 

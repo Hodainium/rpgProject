@@ -152,10 +152,7 @@ public sealed class VerifyProcessor(VerdictStore store, VerifierRedis redis, IRe
                 metrics.RewardRuleLookups("retired", settled.Retired);
                 metrics.RewardRuleLookups("expired", settled.Expired);
                 metrics.CompletionMarks("new", settled.MarksNew);
-                metrics.CompletionMarks("advanced", settled.MarksAdvanced);
-                metrics.CompletionMarks("unchanged", settled.MarksUnchanged);
-                metrics.CompletionMarks("capped", settled.MarksCapped);
-                metrics.TiersPaid(settled.Grants.Count);
+                metrics.CompletionMarks("existing", settled.MarksExisting);
             }
             if (commit.Grants.Count > 0)
             {
