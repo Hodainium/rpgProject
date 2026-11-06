@@ -27,6 +27,8 @@ var trace: BattleTrace = null
 var runner_error: String = ""
 ## The content the replay runs on, kept so `_completions` can read the challenges of the encounter.
 var _content: ContentIndex = null
+## Counts the battle's gameplay events when the encounter has challenges (spec economy-challenges); it only observes.
+var _tally: ChallengeTally = null
 
 
 ## Runs the replay under `host` (a node inside the scene tree). Returns the ReplayResult JSON shape (field order
@@ -53,6 +55,10 @@ func run_on(request: Dictionary, content: ContentIndex, host: Node) -> Dictionar
 		battle.queue_free()
 		return _error(setup_error)
 
+	_tally = null
+	if not content.challenges_for(str(snapshot.get("encounterId", ""))).is_empty():
+		_tally = ChallengeTally.new()
+		_tally.attach(battle)
 	var controller := ReplayController.new(action_log["actions"])
 	battle.trace = trace
 	var frames_before := Engine.get_process_frames()
@@ -154,17 +160,17 @@ func _facts(battle: Battle, encounter_id: String) -> Dictionary:
 	return facts
 
 
-## The challenges `battle` completed, as `completion_fact` entries: each `ChallengeDefinition` of the encounter that the
-## finished battle reached a tier of (spec economy-challenges). Empty when the content defines none, so every fact written
-## before challenges stays byte-identical. Only called for a won battle, and never hashed.
+## The stars `battle` earned, one `completion_fact` (tier 1) per star under its own reward id "<challenge>.<star>" (spec
+## economy-challenges: stars are independent, each a challenge of its own on the server). Empty when the content defines no
+## challenge for the encounter, so every fact written before challenges stays byte-identical. Only called for a won battle,
+## and never hashed.
 func _completions(battle: Battle, encounter_id: String) -> Array:
 	var completions: Array = []
 	if _content == null:
 		return completions
 	for challenge in _content.challenges_for(encounter_id):
-		var tier := challenge.tier_for(battle)
-		if tier > 0:
-			completions.append(completion_fact(str(challenge.id), tier))
+		for star in challenge.stars_reached(battle, _tally):
+			completions.append(completion_fact(challenge.reward_id(star), 1))
 	return completions
 
 

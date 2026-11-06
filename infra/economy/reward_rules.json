@@ -15,7 +15,9 @@
       { "challengeId": "boss/demo.enemy.high_witch", "currency": "gems", "tiers": [30] },
       { "challengeId": "boss/demo.enemy.mother_heart", "currency": "gems", "tiers": [40] },
       { "challengeId": "boss/demo.enemy.nameless", "currency": "gems", "tiers": [50] },
-      { "challengeId": "demo.challenge.lich_trial", "currency": "gems", "tiers": [5, 5, 10], "cycle": "weekly" }
+      { "challengeId": "demo.challenge.lich_trial.win", "currency": "gems", "tiers": [5], "cycle": "weekly" },
+      { "challengeId": "demo.challenge.lich_trial.fast", "currency": "gems", "tiers": [5], "cycle": "weekly" },
+      { "challengeId": "demo.challenge.lich_trial.flawless", "currency": "gems", "tiers": [10], "cycle": "weekly" }
     ]
   }
 }
