@@ -8,7 +8,7 @@ missing=0
 while IFS= read -r file; do
   id=$(grep -m1 -E '^id = ' "$file" | sed -E 's/^id = &?"([^"]+)".*/\1/' | tr -d '\r')
   [ -z "$id" ] && continue
-  if ! grep -qF "\"sourceId\": \"$id\"" "$seed"; then
+  if ! grep -qF "\"challengeId\": \"boss/$id\"" "$seed"; then
     echo "no reward rule: $id  ($file)"
     missing=$((missing + 1))
   fi

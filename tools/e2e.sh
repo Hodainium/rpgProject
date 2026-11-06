@@ -142,11 +142,11 @@ run_scenario() {  # <name> <index 1-15>
 		"Seeds__Secret=$seed_secret" "Auth__SigningKey=$signing_key" Ruleset__AcceptAny=false
 		"Ruleset__Accepted__0=$ruleset" "Auth__DevAdmins__0=e2e-$name")
 	# Spec economy-rewards: what a boss pays is a server-owned rule. Every scenario starts with the fixtures' three bosses at
-	# 10 gems (the old flat amount); a scenario changes them through the admin path (the console's `server reward <boss> <amount>`).
+	# 10 gems (the old flat amount); a scenario changes them through the admin path (the console's `server reward boss <boss> <amounts>`).
 	local boss_n=0 boss
 	for boss in fixture.enemy.chief fixture.enemy.lich fixture.enemy.mirror; do
-		env+=("Economy__SeedRules__${boss_n}__SourceKind=boss" "Economy__SeedRules__${boss_n}__SourceId=$boss"
-			"Economy__SeedRules__${boss_n}__Currency=gems" "Economy__SeedRules__${boss_n}__Amount=10")
+		env+=("Economy__SeedRules__${boss_n}__ChallengeId=boss/$boss"
+			"Economy__SeedRules__${boss_n}__Currency=gems" "Economy__SeedRules__${boss_n}__Tiers__0=10")
 		boss_n=$((boss_n + 1))
 	done
 	local line

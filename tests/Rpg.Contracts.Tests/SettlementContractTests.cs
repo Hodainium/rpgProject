@@ -17,7 +17,14 @@ public class SettlementContractTests
     private static readonly DateTimeOffset At = new(2026, 10, 27, 12, 3, 9, TimeSpan.Zero);
     private static readonly BattleFacts Facts = new("encounter.lich", ["enemy.lich"], ["warrior", "cleric"]);
 
-    private static readonly RewardRuleResponse Rule = new("boss", "enemy.lich", "gems", 25, 3, At, "designer");
+    private static readonly BattleFacts CompletionFacts = new("encounter.trial", [], ["warrior", "cleric"],
+        [new CompletionFact("event.spring.trial-3", 3)]);
+    private static readonly Guid Target = Guid.Parse("019a2b3c-4d5e-7f60-8a7b-8c9d0e1f2a01");
+    private static readonly DateTimeOffset EventEnd = new(2026, 12, 1, 0, 0, 0, TimeSpan.Zero);
+
+    private static readonly RewardRuleResponse Rule = new("boss/enemy.lich", "gems", [25], RewardCycles.Once, null, 0, 3, At, "designer");
+    private static readonly RewardRuleResponse Ladder = new("event.spring.trial-3", "gems", [10, 10, 15, 20, 40], RewardCycles.Weekly,
+        EventEnd, 2, 1, At, "designer");
 
     public static TheoryData<string, object> Goldens() => new()
     {
@@ -35,16 +42,44 @@ public class SettlementContractTests
         {
             "event-reward-granted.json",
             new DomainEvent<RewardGrantedPayload>(EventId, EventTypes.RewardGranted, 1, Player, Guid.Parse(RunId), At,
-                Ruleset, new RewardGrantedPayload("completion_mark", $"{RunId}/f4/c12", "warrior", "enemy.lich", "gems", 10, 30, 2))
+                Ruleset, new RewardGrantedPayload("completion_mark", $"{RunId}/f4/c12", "warrior", "enemy.lich", "gems", 10, 30, 2,
+                    "boss/enemy.lich", 1, RewardCycles.Once))
         },
-        { "battle-facts.json", Facts },
-        { "reward-rule-request.json", new RewardRuleRequest(RewardSourceKinds.Boss, "enemy.lich", "gems", 25) },
+        {
+            "event-reward-granted-tier.json",
+            new DomainEvent<RewardGrantedPayload>(EventId, EventTypes.RewardGranted, 1, Player, Guid.Parse(RunId), At,
+                Ruleset, new RewardGrantedPayload("completion_mark", $"{RunId}/f4/c12", "warrior", null, "gems", 15, 45, 2,
+                    "event.spring.trial-3", 3, "2026-W44.r1.p2"))
+        },
+        { "battle-facts.json", Facts },  // no Completions: byte-identical to slice 4
+        { "battle-facts-completions.json", CompletionFacts },
+        { "reward-rule-request.json", new RewardRuleRequest("boss/enemy.lich", "gems", [25]) },
+        {
+            "reward-rule-request-ladder.json",
+            new RewardRuleRequest("event.spring.trial-3", "gems", [10, 10, 15, 20, 40], RewardCycles.Weekly, EventEnd)
+        },
+        { "reward-rule-request-retire.json", new RewardRuleRequest("boss/enemy.lich", "gems", []) },
         { "reward-rule-response.json", Rule },
+        { "reward-rule-response-ladder.json", Ladder },
         { "reward-rule-list-response.json", new RewardRuleListResponse([Rule]) },
-        { "reward-rule-changed.json", new RewardRuleChangedPayload("boss", "enemy.lich", "gems", 25, 3, 10, "designer") },
+        { "reward-rule-changed.json", new RewardRuleChangedPayload("boss/enemy.lich", "gems", [25], RewardCycles.Once, null, 3, [10], "designer") },
+        {
+            "reward-rule-changed-ladder.json",
+            new RewardRuleChangedPayload("event.spring.trial-3", "gems", [10, 10, 15, 20, 40], RewardCycles.Weekly, EventEnd, 1, null,
+                "designer")
+        },
+        { "reward-cycle-reset-request.json", new RewardCycleResetRequest("event.spring.trial-3", Target, "support") },
+        { "reward-cycle-reset-request-everyone.json", new RewardCycleResetRequest("event.spring.trial-3") },
+        { "reward-cycle-reset-response.json", new RewardCycleResetResponse("event.spring.trial-3", Target, 2, At, "designer") },
+        { "reward-cycle-reset-response-everyone.json", new RewardCycleResetResponse("event.spring.trial-3", null, 1, At, "designer") },
+        {
+            "reward-cycle-reset-event.json",
+            new RewardCycleResetPayload("event.spring.trial-3", null, 1, "designer", "run the event again")
+        },
         {
             "wallet-response.json",
-            new WalletResponse(30, 3, [new LedgerEntryDto("gems", 10, "completion_mark", $"{RunId}/f4/c12", At, 2)])
+            new WalletResponse(30, 3,
+                [new LedgerEntryDto("gems", 10, "completion_mark", $"{RunId}/f4/c12", At, 2, "boss/enemy.lich", 1, RewardCycles.Once)])
         },
         {
             "battle-verdict-verified-facts.json",
@@ -76,6 +111,27 @@ public class SettlementContractTests
             """{"currency":"gems","delta":10,"reason":"completion_mark","at":"2026-10-27T12:03:09+00:00"}""", RpgJson.Options)!;
 
         Assert.Null(parsed.RuleVersion);
+        Assert.Null(parsed.ChallengeId);
+        Assert.Null(parsed.Tier);
+        Assert.Null(parsed.CycleKey);
+    }
+
+    [Fact]
+    public void Facts_WithoutCompletions_WriteNoCompletionsField_AndSlice4JsonStillReads()
+    {
+        var text = ReadGolden("battle-facts.json");
+
+        var parsed = JsonSerializer.Deserialize<BattleFacts>(text, RpgJson.Options)!;
+
+        Assert.Null(parsed.Completions);
+        Assert.DoesNotContain("completions", text);
+    }
+
+    [Fact]
+    public void ARuleRequestWithoutTiers_IsRefusedAtParse_SoItCanNeverRetireByAccident()
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<RewardRuleRequest>(
+            """{"challengeId":"boss/x","currency":"gems"}""", RpgJson.Options));
     }
 
     [Fact]
@@ -95,7 +151,11 @@ public class SettlementContractTests
     {
         var text = File.ReadAllText(Path.Combine(RepoRoot(), "client-godot", "tests", "fixtures", "golden", "run-v2-seed-7.result.json"));
 
-        var result = JsonSerializer.Deserialize<ReplayResult>(text, RpgJson.Options)!;
+        // The committed fixture carries facts since slice 4; an older runner's result is the same JSON without them.
+        var older = System.Text.Json.Nodes.JsonNode.Parse(text)!.AsObject();
+        older.Remove("facts");
+
+        var result = JsonSerializer.Deserialize<ReplayResult>(older.ToJsonString(), RpgJson.Options)!;
 
         Assert.Null(result.Facts);
     }
@@ -103,8 +163,12 @@ public class SettlementContractTests
     [Fact]
     public void EventTypes_AndTopics_AreAFixedSet()
     {
-        Assert.Equal(["BattleVerified", "BattleRejected", "RewardGranted", "RewardRuleChanged"],
-            new[] { EventTypes.BattleVerified, EventTypes.BattleRejected, EventTypes.RewardGranted, EventTypes.RewardRuleChanged });
+        Assert.Equal(["BattleVerified", "BattleRejected", "RewardGranted", "RewardRuleChanged", "RewardCycleReset"],
+            new[]
+            {
+                EventTypes.BattleVerified, EventTypes.BattleRejected, EventTypes.RewardGranted, EventTypes.RewardRuleChanged,
+                EventTypes.RewardCycleReset,
+            });
         Assert.Equal(["rpg.battle.events", "rpg.economy.events"], new[] { EventTopics.Battle, EventTopics.Economy });
     }
 

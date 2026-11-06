@@ -105,7 +105,7 @@ public sealed class WorkerHarness : IAsyncDisposable
     public MetricsProbe Metrics { get; private set; } = null!;
 
     public static async Task<WorkerHarness> CreateAsync(Stack stack, Dictionary<string, string?>? settings = null,
-        string? postgres = null, string? redis = null, FakeReplayRunner? runner = null)
+        string? postgres = null, string? redis = null, FakeReplayRunner? runner = null, string environment = "Development")
     {
         var database = await stack.NewDatabaseAsync();
         await using (var data = NpgsqlDataSource.Create(database))
@@ -114,8 +114,8 @@ public sealed class WorkerHarness : IAsyncDisposable
             // Spec economy-rewards: what a boss pays is a rule in the table. These tests' bosses pay 10 unless a test says otherwise.
             await using var rules = data.CreateCommand(
                 """
-                INSERT INTO reward_rules (source_kind, source_id, currency, amount, version, created_by)
-                SELECT 'boss', id, 'gems', 10, 1, 'test' FROM unnest(ARRAY['boss.lich','boss.golem','boss.a','boss.b']) AS id
+                INSERT INTO reward_rules (challenge_id, currency, amount, version, created_by)
+                SELECT 'boss/' || id, 'gems', 10, 1, 'test' FROM unnest(ARRAY['boss.lich','boss.golem','boss.a','boss.b']) AS id
                 """);
             await rules.ExecuteNonQueryAsync();
         }
@@ -138,6 +138,7 @@ public sealed class WorkerHarness : IAsyncDisposable
         services.AddLogging();
         services.AddMetrics();
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(values).Build());
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostEnvironment>(new StubEnvironment(environment));
         services.AddVerifierWorker();
         services.AddSingleton<IReplayRunner>(runner);
         var provider = services.BuildServiceProvider();
@@ -148,7 +149,7 @@ public sealed class WorkerHarness : IAsyncDisposable
 
     /// <summary>One run owned by a new player, with a Submitted battle at seq 2.</summary>
     public async Task<SeededBattle> SeedAsync(string? ruleset = null, string status = "Submitted", Guid? player = null,
-        string runStatus = "Active")
+        string runStatus = "Active", DateTimeOffset? submittedAt = null)
     {
         ruleset ??= FakeReplayRunner.Version;
         var runId = Guid.NewGuid();
@@ -173,9 +174,9 @@ public sealed class WorkerHarness : IAsyncDisposable
         await ExecuteAsync(
             """
             INSERT INTO battle_sessions (battle_id, run_id, run_seq, seed, ruleset_version, conditions, action_log, status,
-              submitted_at) VALUES ($1, $2, 2, 1234567890123, $3, $4::jsonb, $5::jsonb, 'Submitted', now() - interval '3 seconds')
+              submitted_at) VALUES ($1, $2, 2, 1234567890123, $3, $4::jsonb, $5::jsonb, 'Submitted', COALESCE($6, now() - interval '3 seconds'))
             """, battleId, runId, ruleset, JsonSerializer.Serialize(conditions, RpgJson.Options),
-            JsonSerializer.Serialize(log, RpgJson.Options));
+            JsonSerializer.Serialize(log, RpgJson.Options), submittedAt?.ToUniversalTime() ?? (object)DBNull.Value);
         if (status != "Submitted")
         {
             var verdict = JsonSerializer.Serialize(new BattleVerdict(ReplayVerdict.Verified, null, null, null,
@@ -188,10 +189,22 @@ public sealed class WorkerHarness : IAsyncDisposable
         return new SeededBattle(battleId, runId, playerId, 2, ruleset);
     }
 
-    /// <summary>A new version of a boss rule, as the API would write it.</summary>
-    public Task PutRuleAsync(string boss, int amount, int version) => ExecuteAsync(
-        "INSERT INTO reward_rules (source_kind, source_id, currency, amount, version, created_by) VALUES ('boss', $1, 'gems', $2, $3, 'test')",
-        boss, amount, version);
+    /// <summary>A new version of a boss rule (a ladder of one tier, or retired for 0), as the API would write it.</summary>
+    public Task PutRuleAsync(string boss, int amount, int version) => PutLadderAsync("boss/" + boss, version, amount);
+
+    /// <summary>A new version of a ladder: one row per tier (an amount of 0 alone retires it).</summary>
+    public Task PutLadderAsync(string challengeId, int version, params int[] tiers) =>
+        PutLadderAsync(challengeId, version, Rpg.Contracts.Economy.RewardCycles.Once, null, tiers);
+
+    public async Task PutLadderAsync(string challengeId, int version, string cycle, DateTimeOffset? endsAt, params int[] tiers)
+    {
+        for (var i = 0; i < tiers.Length; i++)
+        {
+            await ExecuteAsync(
+                "INSERT INTO reward_rules (challenge_id, currency, amount, tier, cycle, ends_at, version, created_by) VALUES ($1, 'gems', $2, $3, $4, $5, $6, 'test')",
+                challengeId, tiers[i], i + 1, cycle, endsAt?.ToUniversalTime() ?? (object)DBNull.Value, version);
+        }
+    }
 
     public static VerifyBattleJob JobOf(SeededBattle battle) =>
         new(battle.BattleId, battle.RunId, battle.Seq, battle.Ruleset, DateTimeOffset.UtcNow);
@@ -201,6 +214,20 @@ public sealed class WorkerHarness : IAsyncDisposable
         await using var command = Command(sql, values);
         var result = await command.ExecuteScalarAsync();
         return result is null or DBNull ? default : (T)result;
+    }
+
+    /// <summary>The first column of every row, as text.</summary>
+    public async Task<List<string>> StringsAsync(string sql, params object[] values)
+    {
+        await using var command = Command(sql, values);
+        await using var reader = await command.ExecuteReaderAsync();
+        var rows = new List<string>();
+        while (await reader.ReadAsync())
+        {
+            rows.Add(reader.GetValue(0).ToString()!);
+        }
+
+        return rows;
     }
 
     /// <summary>The outbox row types for a destination, in the order the relay would send them.</summary>
@@ -403,4 +430,15 @@ public sealed class RabbitTools : IAsyncDisposable
         await _channel.DisposeAsync();
         await _connection.DisposeAsync();
     }
+}
+
+internal sealed class StubEnvironment(string name) : Microsoft.Extensions.Hosting.IHostEnvironment
+{
+    public string EnvironmentName { get; set; } = name;
+
+    public string ApplicationName { get; set; } = "test";
+
+    public string ContentRootPath { get; set; } = "";
+
+    public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = null!;
 }

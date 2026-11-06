@@ -162,7 +162,7 @@ func test_admin_calls_stay_out_of_the_player_build() -> void:
 	var open_at := bridge.find("#if DEBUG")
 	var close_at := bridge.find("#endif", open_at)
 	check(open_at >= 0 and close_at > open_at, "the bridge has a debug-only section")
-	for method in ["PutRewardRule", "ListRewardRules"]:
+	for method in ["PutRewardRule", "ListRewardRules", "ResetRewardCycle"]:
 		var at := bridge.find("public long " + method)
 		check(at > open_at and at < close_at, "%s is compiled only in debug builds" % method)
 	var player: Dictionary = _presets()["Windows Desktop"]
@@ -172,5 +172,5 @@ func test_admin_calls_stay_out_of_the_player_build() -> void:
 		if not path.get_extension() in ["gd", "tscn", "tres"] or _excluded(player["excludes"], path) or path.begins_with("res://tests/"):
 			continue
 		var text := FileAccess.get_file_as_string(path)
-		check(not text.contains("PutRewardRule") and not text.contains("ListRewardRules"),
+		check(not text.contains("PutRewardRule") and not text.contains("ListRewardRules") and not text.contains("ResetRewardCycle"),
 			"%s ships in the player build and must not name the admin calls" % path)

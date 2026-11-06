@@ -1,1 +1,1 @@
-{"sourceKind":"boss","sourceId":"enemy.lich","currency":"gems","amount":25}
+{"challengeId":"boss/enemy.lich","currency":"gems","tiers":[25],"cycle":"once"}

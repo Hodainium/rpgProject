@@ -16,6 +16,8 @@ public sealed class WorkerMetrics
     private readonly Counter<long> _settlements;
     private readonly Counter<long> _gems;
     private readonly Counter<long> _ruleLookups;
+    private readonly Counter<long> _marks;
+    private readonly Counter<long> _tiers;
     private readonly Counter<long> _cacheErrors;
     private readonly Histogram<double> _replayDuration;
     private readonly Histogram<double> _latency;
@@ -29,6 +31,8 @@ public sealed class WorkerMetrics
         _rejections = meter.CreateCounter<long>("rpg.battle_rejections", description: "Rejected battles by mismatch reason.");
         _settlements = meter.CreateCounter<long>("rpg.settlements", description: "Settlements by result (spec settlement-outbox 5).");
         _gems = meter.CreateCounter<long>("rpg.gems_granted", description: "Gems granted, by reason.");
+        _marks = meter.CreateCounter<long>("rpg.completion_marks", description: "Completion marks a settlement touched, by result (spec economy-challenges 5).");
+        _tiers = meter.CreateCounter<long>("rpg.reward_tiers_paid", description: "Ladder tiers paid (spec economy-challenges 5).");
         _ruleLookups = meter.CreateCounter<long>("rpg.reward_rule_lookups", description: "Reward-rule lookups per beaten boss, by result (spec economy-rewards 5).");
         _cacheErrors = meter.CreateCounter<long>("rpg.cache_errors", description: "Redis operations that failed and were skipped.");
         _replayDuration = meter.CreateHistogram<double>("rpg.verify_replay_duration", unit: "s",
@@ -70,7 +74,24 @@ public sealed class WorkerMetrics
     public void Rejection(MismatchReason reason) =>
         _rejections.Add(1, new KeyValuePair<string, object?>("reason", reason.ToString()));
 
-    /// <summary>result: found | missing | retired. A rising missing count means a boss without a reward rule.</summary>
+    /// <summary>result: new | advanced | unchanged | capped.</summary>
+    public void CompletionMarks(string result, int count)
+    {
+        if (count > 0)
+        {
+            _marks.Add(count, new KeyValuePair<string, object?>("result", result));
+        }
+    }
+
+    public void TiersPaid(int count)
+    {
+        if (count > 0)
+        {
+            _tiers.Add(count);
+        }
+    }
+
+    /// <summary>result: found | missing | retired | expired. A rising missing count means a boss without a reward rule.</summary>
     public void RewardRuleLookups(string result, int count)
     {
         if (count > 0)
@@ -79,7 +100,7 @@ public sealed class WorkerMetrics
         }
     }
 
-    /// <summary>result: granted | no_reward | no_rule | bad_id | already_marked | rejected.</summary>
+    /// <summary>result: granted | no_reward | no_rule | bad_id | ignored_fact | already_marked | rejected.</summary>
     public void Settlement(string result) => _settlements.Add(1, new KeyValuePair<string, object?>("result", result));
 
     /// <summary>reason: completion_mark.</summary>

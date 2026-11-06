@@ -90,6 +90,10 @@ public partial class ServerBridge : Node
 
     /// <summary>GET /api/v1/admin/reward-rules (economy-admin); completes with a RewardRuleListResponse.</summary>
     public long ListRewardRules() => Start(client => client.ListRewardRulesAsync());
+
+    /// <summary>POST /api/v1/admin/reward-cycles/reset with a RewardCycleResetRequest (economy-admin, spec economy-challenges); completes with a RewardCycleResetResponse.</summary>
+    public long ResetRewardCycle(string requestJson) =>
+        Start(client => client.ResetRewardCycleAsync(Parse<RewardCycleResetRequest>(requestJson)));
 #endif
 
     /// <summary>POST /api/v1/presence with a PresenceRequest; completes with "null" (204).</summary>

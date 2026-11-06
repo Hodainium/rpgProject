@@ -15,5 +15,6 @@ public static class ApiErrors
     public const int PreviousFloorUnverified = 1107;  // 409 + Retry-After (slice 4a)
     public const int RewardRuleInvalid = 1301;        // 400: unknown kind or currency, amount out of range, bad id
     public const int AdminRequired = 1302;            // 403: the economy-admin role is missing
+    public const int RewardTargetUnknown = 1303;      // 404: a cycle reset for a challenge with no rule, or a player that does not exist
     public const int RateLimited = 1201;              // 429 + Retry-After
 }

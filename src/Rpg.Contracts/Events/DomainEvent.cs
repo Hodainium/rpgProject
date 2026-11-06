@@ -26,6 +26,7 @@ public static class EventTypes
     public const string BattleRejected = "BattleRejected";
     public const string RewardGranted = "RewardGranted";
     public const string RewardRuleChanged = "RewardRuleChanged";
+    public const string RewardCycleReset = "RewardCycleReset";
 }
 
 /// <summary>Redpanda topic names (data only).</summary>
@@ -42,10 +43,17 @@ public sealed record BattleVerifiedPayload(string BattleId, int RunSeq, BattleOu
 public sealed record BattleRejectedPayload(string BattleId, int RunSeq, int ErrorCode, MismatchReason? Reason);
 
 /// <param name="Source">"completion_mark".</param>
+/// <param name="BossId">The boss id when the challenge id is "boss/…", otherwise null (kept for slice 4 consumers).</param>
 /// <param name="Currency">"gems".</param>
-public sealed record RewardGrantedPayload(string Source, string BattleId, string CharacterId, string BossId,
-    string Currency, int Amount, int BalanceAfter, int RuleVersion);
+/// <param name="ChallengeId">What was completed (spec economy-challenges 3.1).</param>
+/// <param name="Tier">The tier this event paid; a jump over several tiers is one event per tier.</param>
+/// <param name="CycleKey">"once", "2026-W45", plus ".r&lt;n&gt;" / ".p&lt;n&gt;" after a reset.</param>
+public sealed record RewardGrantedPayload(string Source, string BattleId, string CharacterId, [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? BossId,
+    string Currency, int Amount, int BalanceAfter, int RuleVersion, string ChallengeId, int Tier, string CycleKey);
 
-/// <summary>Economy topic, key <c>rule:{sourceKind}:{sourceId}</c> (spec economy-rewards 3.1).</summary>
-public sealed record RewardRuleChangedPayload(string SourceKind, string SourceId, string Currency, int Amount, int Version,
-    int? PreviousAmount, string ChangedBy);
+/// <summary>Economy topic, key <c>rule:{challengeId}</c> (spec economy-challenges 3.1).</summary>
+public sealed record RewardRuleChangedPayload(string ChallengeId, string Currency, IReadOnlyList<int> Tiers, string Cycle,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? EndsAt, int Version, [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<int>? PreviousTiers, string ChangedBy);
+
+/// <summary>Economy topic, key <c>rule:{challengeId}</c>. PlayerId null = a reset for everyone.</summary>
+public sealed record RewardCycleResetPayload(string ChallengeId, [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] Guid? PlayerId, int Generation, string ResetBy, [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? Reason);

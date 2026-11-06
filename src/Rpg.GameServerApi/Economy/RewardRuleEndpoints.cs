@@ -17,7 +17,10 @@ public sealed class EconomyOptions
     /// <summary>The most one rule can pay: a plain whole number (not x100).</summary>
     public int MaxRewardAmount { get; set; } = RewardRules.DefaultMaxAmount;
 
-    /// <summary>Rules applied at startup, only for sources that have none yet (a demo or e2e starting point).</summary>
+    /// <summary>The most tiers one ladder can have (spec economy-challenges 3.7).</summary>
+    public int MaxTiers { get; set; } = RewardRules.DefaultMaxTiers;
+
+    /// <summary>Ladders applied at startup, only for challenges that have none yet (a demo or e2e starting point).</summary>
     public RewardRuleRequest[] SeedRules { get; set; } = [];
 }
 
@@ -39,14 +42,16 @@ public sealed class RewardRuleSeeder(NpgsqlDataSource dataSource, MigrationRunne
             try
             {
                 await migrations.EnsureMigratedAsync(stoppingToken);
-                foreach (var bad in options.Value.SeedRules.Where(r => RewardRules.Validate(r, options.Value.MaxRewardAmount) is not null || r.Amount == 0))
+                var now = clock.GetUtcNow();
+                foreach (var bad in options.Value.SeedRules.Where(r =>
+                    RewardRules.Validate(r, options.Value.MaxRewardAmount, options.Value.MaxTiers, now) is not null || r.Tiers.Count == 0))
                 {
-                    logger.LogWarning("Seed reward rule skipped as invalid: {Kind} {Id} {Currency} {Amount}",
-                        bad.SourceKind, bad.SourceId, bad.Currency, bad.Amount);
+                    logger.LogWarning("Seed reward rule skipped as invalid: {Id} {Currency} [{Tiers}]",
+                        bad.ChallengeId, bad.Currency, string.Join(",", bad.Tiers ?? []));
                 }
 
                 var created = await RewardRules.SeedAsync(dataSource, options.Value.SeedRules,
-                    options.Value.MaxRewardAmount, clock.GetUtcNow(), stoppingToken);
+                    options.Value.MaxRewardAmount, options.Value.MaxTiers, now, stoppingToken);
                 logger.LogInformation("Seeded {Count} reward rules", created);
                 return;
             }
@@ -74,7 +79,7 @@ public static class RewardRuleEndpoints
                 return Forbidden();
             }
 
-            if (RewardRules.Validate(request, options.Value.MaxRewardAmount) is { } problem)
+            if (RewardRules.Validate(request, options.Value.MaxRewardAmount, options.Value.MaxTiers, clock.GetUtcNow()) is { } problem)
             {
                 metrics.RewardRuleChange("invalid");
                 return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid reward rule",
@@ -87,6 +92,38 @@ public static class RewardRuleEndpoints
             var rule = await RewardRules.PutAsync(data, request!, player.Id, player.Name, clock.GetUtcNow(), ct);
             metrics.RewardRuleChange("ok");
             return Results.Ok(rule.ToResponse());
+        }).RequireAuthorization();
+
+        app.MapPost("/api/v1/admin/reward-cycles/reset", async (HttpContext context, RewardCycleResetRequest? request,
+            NpgsqlDataSource data, MigrationRunner migrations, TimeProvider clock, RpgMetrics metrics, CancellationToken ct) =>
+        {
+            if (!context.User.IsEconomyAdmin())
+            {
+                metrics.RewardCycleReset("forbidden");
+                return Forbidden();
+            }
+
+            if (RewardRules.ValidateReset(request) is { } problem)
+            {
+                metrics.RewardCycleReset("invalid");
+                return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid cycle reset",
+                    detail: problem.Detail,
+                    extensions: new Dictionary<string, object?> { ["errorCode"] = ApiErrors.RewardRuleInvalid });
+            }
+
+            await migrations.EnsureMigratedAsync(ct);
+            var admin = context.User.Player();
+            var reset = await RewardRules.ResetAsync(data, request!, admin.Id, admin.Name, clock.GetUtcNow(), ct);
+            if (reset is null)
+            {
+                metrics.RewardCycleReset("unknown");
+                return Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Reset target unknown",
+                    detail: "The challenge has no reward rule, or the player does not exist.",
+                    extensions: new Dictionary<string, object?> { ["errorCode"] = ApiErrors.RewardTargetUnknown });
+            }
+
+            metrics.RewardCycleReset("ok");
+            return Results.Ok(reset);
         }).RequireAuthorization();
 
         app.MapGet("/api/v1/admin/reward-rules", async (HttpContext context, NpgsqlDataSource data, MigrationRunner migrations,

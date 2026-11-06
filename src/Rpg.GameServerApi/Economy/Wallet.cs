@@ -33,7 +33,7 @@ public sealed class WalletStore(NpgsqlDataSource dataSource, MigrationRunner mig
 
         var recent = new List<LedgerEntryDto>();
         await using (var ledger = dataSource.CreateCommand(
-            "SELECT currency, delta, reason, ref_battle_id, created_at, rule_version FROM wallet_ledger WHERE player_id = $1 ORDER BY id DESC LIMIT $2"))
+            "SELECT currency, delta, reason, ref_battle_id, created_at, rule_version, challenge_id, tier, cycle_key FROM wallet_ledger WHERE player_id = $1 ORDER BY id DESC LIMIT $2"))
         {
             ledger.Parameters.Add(new NpgsqlParameter { Value = playerId });
             ledger.Parameters.Add(new NpgsqlParameter { Value = RecentEntries });
@@ -42,7 +42,8 @@ public sealed class WalletStore(NpgsqlDataSource dataSource, MigrationRunner mig
             {
                 recent.Add(new LedgerEntryDto(reader.GetString(0), reader.GetInt32(1), reader.GetString(2),
                     reader.IsDBNull(3) ? null : reader.GetString(3), reader.GetFieldValue<DateTimeOffset>(4),
-                    reader.IsDBNull(5) ? null : reader.GetInt32(5)));
+                    reader.IsDBNull(5) ? null : reader.GetInt32(5), reader.IsDBNull(6) ? null : reader.GetString(6),
+                    reader.IsDBNull(7) ? null : reader.GetInt32(7), reader.IsDBNull(8) ? null : reader.GetString(8)));
             }
         }
 

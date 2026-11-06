@@ -12,6 +12,17 @@ public static class WorkerServices
     {
         services.AddOptions<VerifierOptions>().BindConfiguration(VerifierOptions.Section);
         services.AddOptions<SettlementOptions>().BindConfiguration(SettlementOptions.Section);
+        // Spec economy-challenges 1.2: the clock offset is a Development tool, ignored (loudly) anywhere else.
+        services.AddOptions<SettlementOptions>().PostConfigure<IHostEnvironment, ILoggerFactory>((options, environment, logs) =>
+        {
+            if (options.CycleClockOffset != TimeSpan.Zero && !environment.IsDevelopment())
+            {
+                logs.CreateLogger("Settlement").LogWarning(
+                    "Settlement:CycleClockOffset ({Offset}) is ignored outside Development (environment: {Environment})",
+                    options.CycleClockOffset, environment.EnvironmentName);
+                options.CycleClockOffset = TimeSpan.Zero;
+            }
+        });
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton(sp => NpgsqlDataSource.Create(
             sp.GetRequiredService<IConfiguration>().GetConnectionString("Postgres")

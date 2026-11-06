@@ -5,9 +5,9 @@
 #! worker
 #! env Monitors__Interval=00:00:01
 # Spec economy-rewards: the amount is the server's rule, set through the admin path (version 2 over the seeded 10).
-server reward fixture.enemy.chief 25
-server reward fixture.enemy.lich 25
-server reward fixture.enemy.mirror 25
+server reward boss fixture.enemy.chief 25
+server reward boss fixture.enemy.lich 25
+server reward boss fixture.enemy.mirror 25
 new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
 wait run
 autorun policy=smart
