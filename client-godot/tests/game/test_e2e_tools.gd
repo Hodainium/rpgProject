@@ -185,7 +185,7 @@ func test_e2e_scenarios_lint() -> void:
 	var console := DevConsole.new(host.get_tree())
 	console.keep_history = false
 	console.load_commands(false)
-	var env_line := RegEx.create_from_string("^#! (env [A-Za-z_][A-Za-z0-9_]*=.*|worker|content real)$")
+	var env_line := RegEx.create_from_string("^#! ((worker-)?env [A-Za-z_][A-Za-z0-9_]*=.*|worker|worker-stub|content real)$")
 	var names := Array(DirAccess.get_files_at(SCENARIOS)).filter(func(file: String) -> bool: return file.ends_with(".txt"))
 	check(names.size() >= 4, "the scenarios are there: %s" % [names])
 	for file in names:

@@ -50,8 +50,8 @@ validate() {  # <scenario>
 	[[ $name =~ ^[a-z0-9_]+$ ]] || { echo "e2e.sh: $name: scenario names are lower case, digits and _"; problems=$((problems + 1)); }
 	while IFS= read -r line || [[ -n $line ]]; do
 		line=${line%$'\r'}
-		if [[ $line == "#! "* && ! $line =~ ^#!\ env\ [A-Za-z_][A-Za-z0-9_]*=.*$ && $line != "#! worker" && $line != "#! content real" ]]; then
-			echo "e2e.sh: $name: bad directive '$line' (only '#! env KEY=VALUE', '#! worker' and '#! content real')"; problems=$((problems + 1))
+		if [[ $line == "#! "* && ! $line =~ ^#!\ (worker-)?env\ [A-Za-z_][A-Za-z0-9_]*=.*$ && $line != "#! worker" && $line != "#! worker-stub" && $line != "#! content real" ]]; then
+			echo "e2e.sh: $name: bad directive '$line' (only '#! env KEY=VALUE', '#! worker', '#! worker-stub', '#! worker-env KEY=VALUE' and '#! content real')"; problems=$((problems + 1))
 		fi
 	done < "$file"
 	if [[ -f $scenarios_dir/$name.sql ]]; then
@@ -62,7 +62,7 @@ validate() {  # <scenario>
 			[[ ${line,,} == select* ]] || { echo "e2e.sh: $name.sql: only select queries: $line"; problems=$((problems + 1)); }
 		done < "$scenarios_dir/$name.sql"
 	fi
-	if [[ -f $scenarios_dir/$name.worker-metrics ]] && ! grep -qE '^#! worker$|e2e worker-start' "$file"; then
+	if [[ -f $scenarios_dir/$name.worker-metrics ]] && ! grep -qE '^#! worker(-stub)?$|e2e worker-start' "$file"; then
 		echo "e2e.sh: $name: has .worker-metrics but never starts the worker"; problems=$((problems + 1))
 	fi
 }
@@ -132,7 +132,8 @@ kill_tree() {  # <bash pid>: the whole Windows process tree when there is one
 run_scenario() {  # <name> <index 1-15>
 	local name=$1 index=$2 dir="$out/$1" port=$((5100 + $2)) db="e2e_${stamp}_$1" started=$SECONDS
 	local control="$dir/control" result="$dir/result" pid_file="$dir/server.pid" loop_pid="" code=0
-	local wport=$((5200 + $2)) worker_pid_file="$dir/worker.pid" vhost="e2e_${stamp}_$1" want_worker=0
+	local wport=$((5200 + $2)) worker_pid_file="$dir/worker.pid" vhost="e2e_${stamp}_$1" want_worker=0 stub_worker=0
+	local -a worker_extra=()
 	local content_root="res://tests/fixtures/"
 	mkdir -p "$control"
 	local -a env=(ASPNETCORE_ENVIRONMENT=Development "ASPNETCORE_URLS=http://127.0.0.1:$port"
@@ -154,6 +155,8 @@ run_scenario() {  # <name> <index 1-15>
 		line=${line%$'\r'}
 		[[ $line == "#! env "* ]] && env+=("${line#\#! env }")
 		[[ $line == "#! worker" ]] && want_worker=1
+		[[ $line == "#! worker-stub" ]] && { want_worker=1; stub_worker=1; }
+		[[ $line == "#! worker-env "* ]] && worker_extra+=("${line#\#! worker-env }")
 		[[ $line == "#! content real" ]] && content_root=""
 	done < "$scenarios_dir/$name.txt"
 	# The verifier worker (spec battle-verify): the same databases and broker, the fixtures content like the game, the
@@ -164,6 +167,13 @@ run_scenario() {  # <name> <index 1-15>
 		"Urls=http://127.0.0.1:$wport" "Verifier__GodotPath=$(win "$godot")" "Verifier__ProjectPath=$(win "$root/client-godot")"
 		"Verifier__ContentRoot=$content_root" "Verifier__RulesetVersion=$ruleset" Verifier__Concurrency=2
 		Settlement__Enabled=true)
+	# Spec economy-challenges: "#! worker-stub" runs the worker over the test stub of Godot (tests/Rpg.VerifierWorker.Tests/stubs),
+	# which reports the facts in STUB_FACTS (set with "#! worker-env"): completions no content emits yet. "#! worker-env K=V"
+	# adds any variable to the worker's environment (e.g. Settlement__CycleClockOffset, ASPNETCORE_ENVIRONMENT).
+	if (( stub_worker )); then
+		worker_env+=("Verifier__GodotPath=$(win "$root/tests/Rpg.VerifierWorker.Tests/stubs/godot-stub.cmd")" STUB_MODE=verified-facts)
+	fi
+	if (( ${#worker_extra[@]} )); then worker_env+=("${worker_extra[@]}"); fi
 	start_worker() {
 		(cd "$worker_dir" && exec env "${worker_env[@]}" dotnet Rpg.VerifierWorker.dll >> "$dir/worker.log" 2>&1) &
 		echo $! > "$worker_pid_file"

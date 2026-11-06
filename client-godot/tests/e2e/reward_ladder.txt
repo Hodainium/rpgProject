@@ -1,0 +1,45 @@
+# Spec economy-challenges 6: a three-tier weekly challenge on the real stack. No game content emits completions yet, so the
+# worker runs over the test stub of Godot (tests/Rpg.VerifierWorker.Tests/stubs) that reports "event.trial, 3 stars" for every
+# battle, with the knight and the medic as the party. The real server, outbox and Postgres do the rest.
+# Run 1: the first battle pays tiers 1-3 (10 + 10 + 15) to each character, 70 gems; the run's other battles pay nothing.
+# Run 2: the same week, the same stars: nothing more. A reset for this player opens a new cycle key: run 3 pays again.
+# A reset for everyone opens another: run 4 pays again. Old marks and ledger rows stay.
+#! worker-stub
+#! worker-env STUB_FACTS={"encounterId":"fixture.encounter.trial","bossIds":[],"partyCharacterIds":["fixture.character.knight","fixture.character.medic"],"completions":[{"challengeId":"event.trial","tier":3}]}
+#! env Monitors__Interval=00:00:01
+server reward event.trial 10,10,15 cycle=weekly
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 70 120
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+server reward-reset event.trial player=me support asked
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 140 120
+server reward-reset event.trial run the event again
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+autorun policy=smart
+wait ended 60
+wait verdict all 240
+wait gems 210 120
+server wallet
+e2e redpanda-check 90
