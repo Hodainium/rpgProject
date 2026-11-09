@@ -27,7 +27,7 @@ Rules that follow from the table:
 2. **Godot never holds a balance or an ownership record.** The client can show the account (`GET /wallet`, later the
    collection) but the run can never read it while playing or write it.
 3. **Account to run is a one-way snapshot taken at run start** (slice 5): the server hands the run what the account
-   entitles it to (which characters, eidolon levels, unlocked item pools) and the run records it in its start state,
+   entitles it to (which characters and unlocked item pools: the core set plus the collected cards) and the run records it in its start state,
    so a replay is still deterministic. A card in an active run is locked in the account (already in the roadmap's "run
    lock"). Nothing flows back from the run except through rule 1.
 4. **Run to account is a one-way, idempotent grant**: verified fact in, ledger rows out, in one transaction (slice 4).
