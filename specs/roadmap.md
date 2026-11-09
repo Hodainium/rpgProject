@@ -496,12 +496,13 @@ speed) feeds a delayed review queue, not instant bans.
   never tiny: a player can't strip a collection down to one strong card and get it every run. Collected cards are
   typically stronger items (and the remaining characters), which is why players want them. **Size and shape:** each
   item card already carries the room pool it spawns in (`Pool.Treasure`, `Pool.Shop`, `Pool.Boss`, `Pool.Void`,
-  `Pool.Vault`, `Pool.Food`, `Pool.Chest`), and the core set gives every pool a baseline the size of Isaac's pool
-  for that room on a fresh save with nothing unlocked (item room, shop, boss), and the route pools follow the angel
-  and devil rooms: `Pool.Vault` is sized like Isaac's angel pool (Vault is the Cathedral route) and `Pool.Void` like
-  the devil pool (Void is the Black Coven route). The exact numbers are fixed in the spec from Isaac's unlock data
-  (full-game pool sizes in Repentance+ are about 94 for the shop, 59 boss, 93 devil and 66 angel per isaacguru.com;
-  fresh-save counts were not found). Collected cards add to those pools. Which cards are core
+  `Pool.Vault`, `Pool.Food`, `Pool.Chest`). The core set gives the standard pools (item room and shop) **30 cards each**
+  and the special route pools (`Pool.Vault`, `Pool.Void`) **15 each** (decided 2026-11-09; no outside benchmark).
+  The existing demo items become the first cards: the core cards are picked from them, the rest are collectible, so
+  a collected card adds to a pool the core set already fills. Today's demo pools hold 77 Treasure, 39 Shop, 21 Boss,
+  15 Void, 10 Vault and 4 Food items, so Vault is 5 short of its 15, Void would be entirely core, and Boss (21) is
+  under 30 if it counts as a standard pool; the spec settles those (new items, a lower target, or which pools count as
+  standard). Collected cards add to the pools. Which cards are core
   is content (a card set tag beside the pool tags); the balance gate is tuned on the core pool alone, the worst case for
   a new account.
 - **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
