@@ -477,8 +477,8 @@ leaves a card that already has a set tag as it is, so a second run proposes noth
 | F12 | Run start with a locked character | 400 1409, no run created | `RunStart_LockedCharacter_Refused` |
 | F13 | A client plays with a pool the server did not issue (tampered start) | The run hash differs → the step fails `WrongSetup`, verdict 2002, rollback as today (scenario 5) | `test_a_step_with_another_pool_than_the_runs_is_refused` (Godot), `verify_pool_tampered` (e2e: the genesis step rejects the run, nothing paid) |
 | F14 | Redis down or flushed | Catalog reads fall back to Postgres; opens never read the cache (scenario 4) | `Catalog_WithRedisUnreachable_StillReadsFromPostgres_AndPacksStillOpen` |
-| F15 | Redpanda down | Account actions still commit; their outbox rows drain after it is back, none lost (scenario 3) | `CardEvents_RedpandaDown_DrainAfterRestart` (real Redpanda, `docker pause`, like `WalletTests`), e2e `card_redpanda_down` (see section 9 for what is built) |
-| F16 | Postgres unreachable | 503 ProblemDetails as every other endpoint | `AccountEndpoints_WithPostgresUnreachable_Answer503` (open and collection; the reads and the admin GETs: section 9) |
+| F15 | Redpanda down | Account actions still commit; their outbox rows drain after it is back, none lost (scenario 3) | `CardEvents_RedpandaDown_DrainAfterRestart` in `OutboxTests` (real Redpanda, `docker pause`), e2e `card_redpanda_down` |
+| F16 | Postgres unreachable | 503 ProblemDetails as every other endpoint | `AccountActions_WithPostgresUnreachable_Answer503`, `EveryOtherCardEndpoint_WithPostgresUnreachable_Answers503_NeverA500` (catalog, packs, dust, craft, abandon, the admin GETs and puts) |
 | F17 | Content and server catalog disagree (a new item not yet exported) | The item is not in any issued pool; `check_card_catalog.sh` reports it | script check, no test |
 | F18 | Seed demotes a core card | The API refuses to start, naming the card | `Seeder_ACoreCardThatWouldStopBeingCore_RefusesTheWholeFile` (the seeder rethrows it: the host stops) |
 | F19 | Admin puts invalid rules | 400 1401 (odds not 10000, `CraftCost <= DustValue`, unknown set); non-admin 403 1302 | `PackType_Put_Validates`, `CardRates_Put_RequiresAdmin` |
@@ -486,7 +486,7 @@ leaves a card that already has a set tag as it is, so a second run proposes noth
 | F22 | Pity timer reaches N | The Nth pack since the last drop holds that rarity, forced into the lowest slot; counters reset; a replayed open does not move the counters twice | `Pity_TheNthPackHoldsTheRarity_FlaggedAndTheCounterResets`, `Pity_CountersArePerPackType_AndAReplayCountsOnce`, `Pity_FirstGuarantee_LandsWithinTheFirstNPacks`, the `PackDrawerTests` pity cases (incl. a forced card never dropped), e2e `card_pity` |
 | F25 | A pack with no Rare or better | The last unforced slot is redrawn among Rare and above; a pack is never all Common; the redraw is deterministic from the seed | `OpenPack_NeverReturnsAPackWithoutARareOrBetter_WhenTheGuaranteeIsOn`, `RareGuarantee_*` in `PackDrawerTests` |
 | F23 | Abandon a Verifying run | 409 1410; the lock stays until the verdict | `Dust_AVerifyingRunKeepsTheLock_…` (abandon refused 1410), `Abandon_ARetriedCancel_IsASuccess` |
-| F24 | Client tries to leave the main menu while its run is Verifying | The UI offers no way out; restart returns to the same screen | `test_a_won_server_run_blocks_leaving_until_the_server_accepts_it` (Godot); the Continue branch: section 9 |
+| F24 | Client tries to leave the main menu while its run is Verifying | The UI offers no way out; restart returns to the same screen | `test_a_won_server_run_blocks_leaving_until_the_server_accepts_it` (Godot); `test_continue_offers_a_verifying_run_only_from_a_save_that_holds_its_end` |
 | F21 | An open pack's price changes between the listing and the open | Price in force at the transaction is charged and returned in `GemsSpent` | `OpenPack_PriceChanged_ChargesCurrent` |
 
 No dead-letter handling: no queue. Redelivery does not exist here; retries are the client's, made safe by the request key.
@@ -544,14 +544,18 @@ All in `test_cards.gd` (with `card_world.gd`) and the pool cases of `test_step_r
 - the core proposal on an untagged fixture set reaches the targets, takes lowest rarity first, breaks ties by shortfall then id, takes
   all of Boss and the plain pools, reports a short or overshooting pool, and `apply` patches only the tags line.
 - the validator rules over broken sets; `core_pool_short` is a warning.
-- the server calls (`open_pack`, `dust_card`, `craft_card`, `abandon_run`, `new_request_key`, the admin call) over a fake bridge.
+- the server calls (`open_pack`, `dust_card`, `craft_card`, `abandon_run`, `new_request_key`, the admin call) over a fake bridge, and the
+  console commands over a fake server: `cards`, `packs` (list, open with and without a key, pity), `dust` (`first`, the 1403 explanation),
+  `craft`, `abandon`, `server pack-type` (merge into the latest version, a new pack's basics, unknown options), `server card-rate`,
+  `refused`; the main menu's Continue for a Verifying run (only from a current save that holds the end request).
 
 **End to end (`tools/e2e.sh`, on demand; `#! cards` turns the card system on with the real catalog and seed files, on the real demo
 content, through the real worker):** `card_pack` (a win pays gems, the real worker verifies every step with the run's pool, the player
 opens a pack, collection, wallet, ledgers and outbox agree), `card_run_lock` (dust refused during the second run, passes after
 `abandon`), `card_pity` (a tiny pack's Mythic timer fires on the 2nd open, across a server restart), `verify_pool_tampered` (the stored
-pool is narrowed with `e2e tamper-pool`: the genesis step rejects the client's start, the run ends Rejected, nothing paid). Existing
-scenarios keep running with `Cards__Enabled=false`. `card_redpanda_down` is not built (section 9).
+pool is narrowed with `e2e tamper-pool`: the genesis step rejects the client's start, the run ends Rejected, nothing paid),
+`card_redpanda_down` (Redpanda stopped while a pack is opened and a card dusted: both commit, every event drains after the restart; run it
+alone). Existing scenarios keep running with `Cards__Enabled=false`.
 
 **Not a test:** `tools/check_card_catalog.sh`, the comparison of content against `card_catalog.json`.
 
@@ -602,14 +606,11 @@ the tag and per-set packs work), card-based analytics projections (4b consumes t
 **Not built:**
 - Grafana "Card economy" row and a dedicated trace span per account action (section 5).
 - A Settings key for the local test pool (the console command exists).
-- e2e `card_redpanda_down`; the card events do pass `redpanda-check` in `card_pack`, and the relay's drain after Redpanda is down is
-  covered by `outbox_redpanda_down` and `OutboxTests`.
 - The screens (slice 5b), the retune, the new Food items and more events (slice 5c), the unique-events rule (slice 5d).
 
 **Decisions made while building** (reflected above): the pack RNG lives in `Rpg.Economy` (economy, not combat: the root rule about
 RNG is about battles); the card store sits in `Rpg.Economy` beside the wallet; an empty catalog disables enforcement; the run's pool
 travels with the step row; a save carries the pool and a digest of it.
 
-**Untested scenarios (as of this sync):** the card console commands' formatting and server paths against a fake server (only the link
-calls and "needs server mode" are tested); the main menu's Continue for a Verifying run (`GameMain.can_continue`); the Postgres-down
-503 on `/packs`, `/cards/catalog` and the admin GETs; the Redpanda-down drain of card events as its own test.
+**Untested scenarios:** none left from the list of this sync. (The first version of the Redpanda test drew its crafted card at
+random and collided with the packs' draws about half the time; it now picks a card the packs did not give.)
