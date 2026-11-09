@@ -18,7 +18,7 @@ A roguelike run in the shape of *The Binding of Isaac*, with *Honkai: Star Rail*
 - **Coins** are the run currency: scarce, with low prices (an item costs about 20).
 - **Items** work like Isaac items: passive or active, with a rarity, drawn from pools; a rare one or two act differently per holder (like Birthright), through abilities gated on character tags.
   Items are **unlocked by cards**, like characters: a run's item pools only contain items you hold at least one card
-  of (roadmap slice 5 `card-collection`, 2026-10-26: Hearthstone-style packs, dust and crafting, a card market).
+  of (roadmap slice 5 `card-collection`, 2026-10-26: Hearthstone-style packs, dust and crafting; no card trading).
 - **Active items and characters' spells/moves can be used in the dungeon, outside battle** (e.g. heal between rooms).
 - **Equipment** is per character, like HSR Light Cones/relics, kept simple at first.
 - **Completion marks** (beating a boss, or winning a run, with a given character) grant **gems**, the meta currency
@@ -160,7 +160,7 @@ loadout overrides. Two consequences:
 - Navigation is click-on-the-map for now; walking inside rooms is a late goal.
 - Active items and character spells work outside battle too.
 - Items and characters are unlocked through gacha in a hub (hub and gacha come later). **Replaced 2026-10-26:** they are
-  cards (packs bought with gems, dust from dusting or selling, base-set crafting, a card market; roadmap 5 and 5b).
+  cards (packs bought with gems, dust from dusting, crafting any card, a core set every account owns; roadmap 5).
 - Everything is seeded (section 5). Slice split as in section 7.
 - Loadout = starting kit only; a character's inventory (learned skills, passive items, 1–2 use slots, equipment,
   HP/MP/ult charge) is its run state, captured when each battle starts; other stats are re-derived. Inventory lives in
@@ -177,7 +177,7 @@ loadout overrides. Two consequences:
 ## 10. Player analytics and live monitoring (dashboard)
 Goal: understand how the game is played and how the service is doing. General behaviour, not tuning prices per player:
 which characters and parties people play, what they pick up, what they decide in events, which moves they use, what
-packs, dust and the card market do, and how many players are online or in a battle right now.
+packs and dust do, and how many players are online or in a battle right now.
 
 **Every player action is logged.** The server already stores them in order (runs and their quick messages, battle
 sessions, and from slice 3 each battle's action log). Analytics only reads and aggregates that log; nothing extra is
@@ -192,7 +192,7 @@ computed on the client. Aggregates can be filtered to **verified** runs and batt
 | **Events** | the decisions made on each event page |
 | **Runs** | runs started and finished, how far they get, where they end (floor, room, encounter), run length |
 | **Encounters** | wins and losses per encounter, how often elites appear |
-| **Cards (slices 5, 5b)** | packs opened per pack type and what comes out; dust created and spent; crafts; market volume and prices per card |
+| **Cards (slice 5)** | packs opened per pack type and what comes out; dust created and spent; crafts |
 | **Health** | the operational side (latency, errors, queue age, verification rejections) stays in Prometheus/Grafana |
 
 Live counts are plain aggregate numbers, so they can be Prometheus gauges; anything broken down by character, item,

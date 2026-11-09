@@ -18,7 +18,7 @@ start and resume, the stairs, a won run's ending, and account actions (cards, cu
 
 | Bucket | Meaning | What's in it |
 |---|---|---|
-| **Server-authoritative** | The server decides. The client asks and uses the answer; it can't change it. | Player identity (B); the run id; **every floor seed** (HMAC, issued at the stairs: A); which floor the run may be on (A); the **order** of a run's actions and what has been accepted (sequence numbers, B); run status (active, verifying, won, lost, abandoned; B); the **ruleset version** a run started under (A); later: verdicts (3, 4a), rewards and currency (4, 5), cards, packs and market trades (5, 5b) |
+| **Server-authoritative** | The server decides. The client asks and uses the answer; it can't change it. | Player identity (B); the run id; **every floor seed** (HMAC, issued at the stairs: A); which floor the run may be on (A); the **order** of a run's actions and what has been accepted (sequence numbers, B); run status (active, verifying, won, lost, abandoned; B); the **ruleset version** a run started under (A); later: verdicts (3, 4a), rewards and currency (4, 5), cards, packs and dust (5) |
 | **Server-verified** | The client runs it locally (offline-first, instant); the server stores it and later re-runs it in headless Godot. A mismatch is a `Rejected` verdict with `errorCode` 2002, never an HTTP error. | Every in-floor action: entering rooms (and spending a key on a lock), event choices, giving items, pickups, purchases, opening chests, field use, equipping and swapping armor, moving items, battles (start conditions, turns, result), taking the stairs (floor generation); the claimed state **snapshots** at checkpoints; the run's end. Floor maps, item pools, shop stock, coin drops, HP/MP/ult charge and run inventory are all derived from the floor seeds and the logged actions |
 | **Client-only** | Never trusted. | Animations, sounds, cues, camera, screen layout, Auto/Skip, menus, the map view, the content-root switch, dev tools and the console (disabled when connected), the **local save** (a cache of the server's log plus the not-yet-sent tail), the presence heartbeat (a hint for live monitoring, never used for decisions) |
 
@@ -337,7 +337,7 @@ token's `name`. A request without a valid token gets 401 from the JWT bearer han
 isn't a uuid is a routing 404. Idempotency: run start is not idempotent (a
 second start abandons the first, by design); floor seeds are idempotent by `(runId, floor)`; actions by
 `(runId, seq)` with body comparison. No `Idempotency-Key` header is needed on these; slice 3's `/battle/verify`-style
-job submission and slices 5 and 5b (cards, market) keep it.
+job submission and slice 5 (cards) keep it.
 
 ### 3.3 Floor seeds
 `floorSeed = int63(HMAC-SHA256(key = Seeds:Secret, message = "floor-seed-v1|{runId}|{floor}"))`: the first 8 bytes

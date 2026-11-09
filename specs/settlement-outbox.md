@@ -36,7 +36,7 @@ never depended on it; a killed worker's lock only delayed its job by up to ~2 mi
 | Prometheus / OpenTelemetry | Outbox lag, relay results, settlement counters, trace continued from the job through the event | GUTS metrics, tracing |
 
 **Not used here:** the run-level consequences of a rejection, `FloorVerified`, the run-end verdict and win-based
-completion marks (4a); analytics consumers and projections (4b); cards, packs, dust (5, 5b); SignalR push (7).
+completion marks (4a); analytics consumers and projections (4b); cards, packs, dust (5); SignalR push (7).
 
 **Acceptance scenarios covered:** 2 (worker killed after DB commit, before ack → no double reward), 3 (Redpanda down →
 outbox drains with no lost event), 1 (a duplicate job → one settlement), 4 (Redis flushed → wallet read from Postgres).
@@ -404,14 +404,14 @@ image check pass, and acceptance scenarios 2, 3, 1, 4 and 5 each have their name
    *Superseded for the amount (2026-11-03):* per-boss rules in a server-owned table (`specs/economy-rewards.md`); Godot still
    reports facts only.
 5. **Only completion marks for boss victories** settle in this slice: a character's first verified boss win pays once,
-   ever. Run-win marks, item/card rewards and spending come with 4a, 5 and 5b.
+   ever. Run-win marks, item/card rewards and spending come with 4a and 5.
 6. **Gems only**, one wallet row and an append-only ledger: enough to prove exactly-once effects without inventing a
    currency system early.
 7. **`lock:battle` is removed**, not shortened (the roadmap allowed either).
 8. **Per-key ordering by a `NOT EXISTS` rule** rather than one global in-order relay, so one stuck player cannot block everyone.
 
 **Out of scope:** consumers/projections/dashboards of the events (4b); `FloorVerified`, run-end verdict, win marks,
-rollback (4a); cards/dust/market (5, 5b); SignalR push (7); schema registry or Avro (JSON with `SchemaVersion` is enough
+rollback (4a); cards/dust (5); SignalR push (7); schema registry or Avro (JSON with `SchemaVersion` is enough
 for the demo); Debezium CDC; DB-level append-only enforcement of the ledger.
 
 ## 8. Open items

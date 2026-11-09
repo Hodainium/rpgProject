@@ -36,9 +36,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 7b. `data-retention` | ⬜ Not started | |
 | 8. `load-and-chaos` | ⬜ Not started | |
 | 9. `ruleset-versioning` | ⬜ Not started | |
-| 5b. `card-market` | ⏸️ Deferred: an optional stretch after 9, not part of the completion target (2026-11-09) | |
 
-Statuses: ⬜ Not started · ⏭️ Next · 📝 Spec written · 🔨 Implementing · ✅ Done (acceptance scenarios pass) · ⏸️ Deferred (optional, outside the completion target).
+Statuses: ⬜ Not started · ⏭️ Next · 📝 Spec written · 🔨 Implementing · ✅ Done (acceptance scenarios pass).
 **Claude keeps this table current:** update it whenever `/spec`, `/implement` or `/sync-spec` moves a slice, and
 include the change in that slice's commit.
 
@@ -155,17 +154,13 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   the worker, the ledger key includes the boss id (a battle can hold two bosses), the migration backfills only sessions
   not enqueued in the last 10 minutes, the relay has a failure breaker; trace continuity through the outbox is not built
   yet (spec section 9). At the user's request.
-- 2026-11-09: Slice 5b `card-market` deferred, at the user's request, because of its complexity (the matching design is
-  still open): it moves behind slice 9 as an optional stretch and is outside the completion target. Slice 5 keeps flat-rate
-  dusting to a house account and gains six "Prepared for 5b" requirements (escrow column, generic ledger, idempotent
-  account actions, run lock, house account row, outbox events) so a market can be added without migrating collections.
-  Market mentions in 4b, 7 and the Redis plan are now conditional. Not yet updated: root `CLAUDE.md`, `README.md` and
-  `specs/design/game-design.md`, which still describe the market as planned.
-  Slice 5 also changed the same day: no eidolons (one copy unlocks a card, duplicates add no power and are worth dust);
-  a core set every account owns, always in the pools and not dustable, so a collection can't be stripped down to one strong
-  item; the run lock covers every card acquired before the run started, duplicates by acquisition date; crafting works like Hearthstone (any card for dust, not only the base set, so every
-  card is reachable without a market); the run lock became removal-only (acquiring cards during a run is fine, copies
-  held at run start can't be dusted until the run ends); and the market's routes are reserved as `501` stubs.
+- 2026-11-09: Slice 5b `card-market` removed entirely, at the user's request (the matching design was still open and
+  the game is single-collection, like Hearthstone: no trading between players). Slice 5 is reshaped the same day: no
+  eidolons (one copy unlocks a card, duplicates add no power and are worth dust); a core set every account owns, always in
+  the pools and not dustable, so a collection can't be stripped down to one strong item; Hearthstone-style crafting (any
+  card for dust); and a removal-only run lock covering every card acquired before the run started, duplicates by
+  acquisition date. No house account, escrow or market routes. Market mentions in 4b, 7, the Redis plan and the other
+  specs and docs are removed.
 - 2026-11-08: Added slice 7b `data-retention` before 8, at the user's request: outbox, step, voided and settled-session
   tables grow forever and slice 8 should measure it. Also dropped the per-battle verifier role (`verify.battle`) with 4a:
   a battle is verified inside its step, so legacy runs (started before 4a) are simply never verified.
@@ -233,7 +228,7 @@ later by a worker; the server's verdict is final. **Free** = client-only, never 
 | **End the run (win)** | **Blocking** | run fan-in | The victory screen appears only after the server has verified every floor; rewards settle in the same step. A short "Verifying run…" screen covers it (usually only the last floor is still pending). Offline: the run waits at that screen until a connection. Rejected: rollback to the last valid checkpoint, no victory |
 | End the run (death) | Async | run fan-in | The defeat screen shows at once; nothing is paid out, so there's nothing to protect |
 | Save locally | Free | | `user://` save of the run state, the floor seed and the unsent action queue. A convenience copy: the server's acknowledged log always wins |
-| Opening packs, dusting, crafting, market orders, spending currency, the account collection | Blocking | | Server RNG (packs) and server state; settled with the outbox (5; market orders only if 5b is built). Cards held by a run in progress are locked |
+| Opening packs, dusting, crafting, spending currency, the account collection | Blocking | | Server RNG (packs) and server state; settled with the outbox (5). Cards held by a run in progress are locked |
 | Animations, sounds, camera, Auto/Skip, menus, settings, inspecting items, the map view | Free | | |
 
 ### Redis plan
@@ -251,7 +246,6 @@ Redis is never the source of correctness: every entry can be lost and rebuilt fr
 | **Live analytics counters** (items picked today, most played party this hour) | `HINCRBY` / sorted sets, fed from Redpanda; Postgres keeps the history | 4b |
 | **Leaderboards** (fastest clear, deepest floor per character; **verified runs only**) | sorted sets, fed from Redpanda, rebuildable from Postgres | 4b (shown in 7) |
 | **Pack catalog cache** (pack types, odds, card lists) | string/hash, invalidated when a pack changes | 5 |
-| **Market top of book** (best bid and ask per card) | hash per card, updated after each settled trade, rebuilt from Postgres | 5b (optional, deferred) |
 | **SignalR backplane** (a verdict reaches whichever API instance holds the player's socket) | pub/sub; the demo runs two API replicas | 7 |
 
 ## Slices
@@ -480,7 +474,7 @@ decision, field use, battle started and its moves and result) published through 
 consumer projects them into Postgres analytics tables (idempotent by event id, rebuildable from the topic); a read API
 for aggregates: most played characters and parties, most used moves, most picked-up items and who holds them, event
 decisions, how far runs get, encounter wins and losses, each filterable to verified runs. Pack and dust
-figures join in slice 5 (market figures only if 5b is built). No item, character or move ids as Prometheus labels.
+figures join in slice 5. No item, character or move ids as Prometheus labels.
 Redis: **live analytics counters** (`HINCRBY` / sorted sets fed from Redpanda, for the live tiles; Postgres keeps the
 history) and **leaderboards** (sorted sets, fastest clear and deepest floor per character, **verified runs only**,
 rebuildable from Postgres). A Redpanda consumer for **anomaly flags** (too-perfect play, abandon rate, inhuman action
@@ -490,8 +484,7 @@ speed) feeds a delayed review queue, not instant bans.
 **Purpose:** Hearthstone-style collecting instead of gacha pulls. Every playable character and every item is a
 **card** in the player's account collection.
 - **What owning a card does:** one copy unlocks it (a character becomes playable; an item enters the run's item
-  pools). **Duplicates add no power**, for characters or items (decided 2026-11-09: no eidolons); their value is dust
-  (and trade, if 5b is built).
+  pools). **Duplicates add no power**, for characters or items (decided 2026-11-09: no eidolons); their value is dust.
 - **Rarities:** characters are always Legendary; items are Common, Rare, Epic or Legendary.
 - **Core set (Hearthstone's Basic set; decided 2026-11-09):** a fixed set of cards every account owns from the start:
   the starter characters and a baseline of items. Core cards are always in the run's pools, can't be dusted, and are
@@ -499,20 +492,20 @@ speed) feeds a delayed review queue, not instant bans.
   never tiny: a player can't strip a collection down to one strong card and get it every run. Collected cards are
   typically stronger items (and the remaining characters), which is why players want them. Which cards are core is
   content (a card set tag); the balance gate is tuned on the core pool alone, the worst case for a new account.
-- **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards (or selling them, if 5b is built).
+- **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
 - **Packs:** several pack types, each with its own card list and rarity odds. Opening is server-side, on a pack RNG
   separate from combat RNG, recorded for audit.
 - **Dust:** any collected (non-core) card can be dusted for a flat rate per rarity, unless the run lock holds it. Dusting
-  moves the card to the **house account's** stock (a real account row); with no market the house just holds it, and 5b
-  would later list it. Duplicates are the main source of dust. Whether copies beyond a cap (Hearthstone: two, one for
-  Legendary) are dusted on opening is decided in the spec.
+  removes the copy from the account (as in Hearthstone); there is no trading between players. Duplicates are the main
+  source of dust. Whether copies beyond a cap (Hearthstone: two, one for Legendary) are dusted on opening is decided
+  in the spec.
 - **Crafting (Hearthstone-style):** any card can be crafted for dust at a fixed cost per rarity, whatever set it is from,
-  so with no market every card is still reachable. Dusting pays a fraction of the craft cost (Hearthstone: a quarter), so
+  so every card is reachable without trading. Dusting pays a fraction of the craft cost (Hearthstone: a quarter), so
   crafting is a dust sink. The costs and refunds live in a server-owned, versioned table like the reward rules, so
   retuning never changes the ruleset version. A copy cap per card (characters stop at 7 copies = E6) is decided in the spec.
 - **Run lock (removal only; decided 2026-11-09):** cards can always be acquired (packs, crafting) while a run is active,
   and a card acquired after the run started never affects it. Every card acquired before the run started is locked:
-  it can't be removed (dusted; later sold or listed) until the run ends or is abandoned, because the run's pools and
+  it can't be removed (dusted) until the run ends or is abandoned, because the run's pools and
   party were built from it. Duplicates follow the same date rule: the server compares each copy's acquisition time with
   `runs.started_at`, from the collection's ledger (the quantity held at the start is locked, copies acquired later can
   be dusted at once). Verification does not depend on the lock (the run's start inputs are stored at run start); the
@@ -527,19 +520,11 @@ characters and items (the run's pool) in the run's starting state.
 Redis: **pack catalog cache** (pack types, odds and card lists; Postgres is the source; invalidated when a pack
 changes).
 
-**Market endpoints, reserved (2026-11-09):** this slice defines the market's contracts and routes (listings, orders,
-cancel, the book) so 5b adds behaviour without changing the API. Until 5b they answer `501 Not Implemented` with a
-reserved error code, touch no data and are covered by one test that says so. (If that is too much surface, the
-alternative is contracts only, with no routes.)
-
-**Prepared for 5b** (so a market can be added later without migrating collections; each is a requirement of this slice):
-1. Ownership is counts per player and card with an `escrowed` count beside `owned`, never per-card instances.
-2. Every gem or dust change is a ledger row with a reason, a reference id and an idempotency key (the wallet ledger
-   pattern, extended to dust).
-3. Account actions (pack open, dust, craft) are idempotent by request key, like the run endpoints.
-4. The run lock (removal only, by acquisition time against the run's start) applies to anything that removes a card (dust now, listings later).
-5. The house is a real account row that dusting pays into and holds stock for.
-6. Every card or currency move writes an outbox event, so analytics and a later market feed need no backfill.
+**Account rules** (requirements of this slice): ownership is counts per player and card, and every card move is a
+ledger row with a time (the run lock reads these times); every gem or dust change is a ledger row with a reason, a
+reference id and an idempotency key (the wallet ledger pattern, extended to dust); account actions (pack open, dust,
+craft) are idempotent by request key, like the run endpoints; every card or currency move writes an outbox event, so
+analytics needs no backfill.
 
 > 🎨 Suggested design break 3, card feel: sets and rarities, dust rates and craft costs, pack odds, which cards are core,
 > pack-opening animation.
@@ -550,10 +535,10 @@ End-to-end traces HTTP → RabbitMQ → worker → outbox → Redpanda. Metrics:
 as code, including **battles per minute against server load** (CPU, memory, latency, queue age) on one panel.
 
 ### 7. `live-dashboard`
-SignalR hub pushing verdicts to client and browser. React/TS `web-dashboard` live feed: battles, packs opened, anti-cheat alerts (market trades if 5b is built).
+SignalR hub pushing verdicts to client and browser. React/TS `web-dashboard` live feed: battles, packs opened, anti-cheat alerts.
 **Live monitoring** (players online, players in a battle, runs in progress, service health) and **player analytics
 pages** over the `game-analytics` read API: characters and parties, moves, items picked up, event decisions, runs,
-encounters, packs and dust flows (the card market's volume and prices only if 5b is built), leaderboards.
+encounters, packs and dust flows, leaderboards.
 Redis **SignalR backplane** (pub/sub) so a verdict reaches whichever API instance holds the socket; the compose demo
 runs two API replicas behind a load balancer.
 
@@ -587,27 +572,3 @@ players waiting at the stairs gate.
 Multiple verifier versions; jobs routed by `ruleset_version`. **Scenario 6** (ruleset changes while a battle is open).
 
 > 🎨 Suggested design break 4, polish: UI, audio, balance pass. Safe to rebalance freely once slice 9 lands.
-
-### 5b. `card-market` (optional stretch, deferred 2026-11-09)
-Deferred by the user because of its complexity (the matching design is still open). It is **not part of the completion
-target**: slices 4b to 9 stand without it, and slice 5 is built so this can be added later without migrating collections
-(see slice 5, "Prepared for 5b"). If it is built, a smaller first version is an option: fixed-price peer-to-peer
-listings (escrow and an atomic purchase, first buyer wins) before the full order book with matching.
-**Purpose:** a community marketplace where players trade cards for dust, and the backend's trading-system showcase.
-- **Order book per card:** players post sell listings and buy orders at their own dust prices; the server matches
-  them (price, then time). A listing escrows the card and a buy order escrows the dust; a cancel returns the escrow.
-- **Settlement:** both sides of a match (card and dust) move in one Postgres transaction with an outbox row (exactly
-  once). Order submission is idempotent; one card or one dust balance can never be spent twice; two buyers racing for
-  one listing produce one trade.
-- **The house account** (the game owner) keeps supply healthy when players dust instead of selling. Its standing buy
-  at the flat dust rate *is* dusting (the price floor). It lists its stock (dusted cards) at a set price per rarity,
-  which caps market prices.
-- The spec decides the matching path (matching inside the request's transaction, or a single matching worker per card
-  partition fed by RabbitMQ) and how matching avoids lock contention under load.
-
-Redis: **top of book** per card (best bid and ask, for the market UI; rebuilt from Postgres), and the 2b rate limiter
-on order traffic.
-Analytics (4b pipeline): packs opened per pack type, dust created and spent, crafts, trade volume and prices per card.
-Card ids never become Prometheus labels.
-Failure scenarios: a duplicate order submission makes one order; a crash between match and acknowledgement loses no
-escrow and settles once; Redis flushed rebuilds the book from Postgres.
