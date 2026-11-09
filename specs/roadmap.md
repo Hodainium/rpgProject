@@ -30,7 +30,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 4c. `economy-rewards` | ✅ Done (commit f501e4e; spec `specs/economy-rewards.md`): per-boss reward rules in a server-owned table, the economy boundary (Godot run inventory vs account economy), admin endpoint and console command, and trace continuity through the outbox | |
 | 4a. `run-verify` | ✅ Done (spec synced; steps cut at the claimed snapshots with a genesis anchor the server builds at run start, a worker pool replaying each step in headless Godot with a battle simulated once, the fan-in aggregator (verified prefix, links, floors, win, rollback with epoch, `MaxRollbacks`), the stairs gate 1107 and epoch gate 1108, pending gems claimed at release, the floor read model, run hash `run-v2` covering everything that decides play; the per-battle worker is removed; 416 .NET, 582 Godot, the e2e scenarios and the Linux golden check pass; open: routing by ruleset (9), retention (7b)) | 2026-11-08 |
 | 4b. `game-analytics` | ⬜ Not started | |
-| 5. `card-collection` | ⬜ Not started | |
+| 5. `card-collection` | 📝 Spec written (`specs/card-collection.md`, awaiting review) | 2026-11-09 |
 | 5b. `card-ui` | ⬜ Not started | |
 | 5c. `card-balance` | ⬜ Not started | |
 | 6. `observability` | ⬜ Not started | |
@@ -167,6 +167,7 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   copy cap to decide); the run lock never expires and the player cancels the run from a pop-up to dust; the core set is
   sized like Isaac's starting item pools, with the existing room pool tags on each card. Market mentions in 4b, 7, the Redis plan and the other
   specs and docs are removed.
+- 2026-11-09: Slice 5 review answers: 6 core characters, characters are Mythic (above Legendary), Hearthstone-style pity timers for Legendary and Mythic, new Food items, new card fixtures, a Verifying run blocks leaving to the main menu. Numbers open for tuning. See `specs/card-collection.md` section 8.
 - 2026-11-08: Added slice 7b `data-retention` before 8, at the user's request: outbox, step, voided and settled-session
   tables grow forever and slice 8 should measure it. Also dropped the per-battle verifier role (`verify.battle`) with 4a:
   a battle is verified inside its step, so legacy runs (started before 4a) are simply never verified.
@@ -493,7 +494,7 @@ speed) feeds a delayed review queue, not instant bans.
   pools). **A card is owned once** (decided 2026-11-09): there are no eidolons and duplicates add no power, so a copy
   of a card the player already owns is **auto-dusted on arrival** (from a pack; a card that is already owned can't be
   crafted). Ownership is therefore a set, not a count.
-- **Rarities:** characters are always Legendary; items are Common, Rare, Epic or Legendary.
+- **Rarities:** characters are always **Mythic**, a tier above Legendary (decided 2026-11-09); items are Common, Rare, Epic or Legendary.
 - **Core set (Hearthstone's Basic set; decided 2026-11-09):** a fixed set of cards every account owns from the start:
   the starter characters and a baseline of items. Core cards are always in the run's pools, can't be dusted, and are
   never crafted or found in packs. The item pool of a run is the core set plus the collected cards, so the pool is
@@ -507,7 +508,7 @@ speed) feeds a delayed review queue, not instant bans.
   target; `Pool.Food` and `Pool.Chest` are plain tagged pools with no minimum. Today's demo pools hold 77 Treasure, 39
   Shop, 21 Boss, 15 Void, 10 Vault and 4 Food items. Decided 2026-11-09: **Boss stays at 21** (all core, no 30 target for
   now), **Void starts entirely core** (it already meets its 15) and **Vault must reach 15**, which needs **five new Vault
-  items** made in this slice (new content files; a list of paths and values is reported, nothing existing is changed).
+  items** (new content files; a list of paths and values is reported, nothing existing is changed), **made in 5c, not in this slice** (moved 2026-11-09).
   **Which items are core:** by lowest rarity first (Common, then Rare, then Epic, then Legendary), so the collected
   cards are the stronger ones; an item counts in every pool it belongs to, so the picks are made against the 30 / 15
   targets jointly, with ties broken in the spec. Boss and Void are all core, so their Epic and Legendary items are core
@@ -516,6 +517,8 @@ speed) feeds a delayed review queue, not instant bans.
   set. Collected cards add to the pools. Which cards are core
   is content (a card set tag beside the pool tags); the balance gate is tuned on the core pool alone, the worst case for
   a new account (the retune is slice 5c, below).
+- **Pity timers (Hearthstone-style; decided 2026-11-09):** per pack type and rarity, for Epic, Legendary and Mythic: the Nth pack since that rarity last dropped contains one, and a player's first packs of a type guarantee an Epic within 5, a Legendary within 10 and a character (Mythic) within 15. Set 2026-11-09: Epic pity 10, Legendary pity 20, Mythic pity 30 (Hearthstone: Epic 10, Legendary 40, first set 10); fine-tuned in 5c.
+- **Core characters:** 6 starter characters are core. A won run that is still Verifying keeps its lock and the client cannot leave to the main menu until the run is accepted. In server mode all currency and ownership live on the server; local mode only has a configurable test pool.
 - **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
 - **Packs:** several pack types, each with its own card list and rarity odds. Opening is server-side, on a pack RNG
   separate from combat RNG, recorded for audit.
@@ -561,7 +564,7 @@ Local mode keeps working without cards (the core set only).
 ### 5c. `card-balance`
 Added 2026-11-09, after 5b. The game balancing pass for cards: retune the win-rate gate on the core pool alone (30 / 30 / 21
 / 15 / 15 per room pool; the 31.8% figure was measured on the full item pool), then pack odds and prices in gems, dust
-and craft costs and refunds, and the gem income per run against them. Design break 3 (card feel) belongs here.
+and craft costs and refunds, and the gem income per run against them. Also here (decided 2026-11-09): **five new Vault items** (Vault 10 → 15) and **four new Food items** (Food holds 4, all core, today; this takes it to 8). Design break 3 (card feel) belongs here.
 
 ### 6. `observability`
 End-to-end traces HTTP → RabbitMQ → worker → outbox → Redpanda. Metrics: verify latency, queue age,
