@@ -1,6 +1,9 @@
 # Spec: run-verify (slice 4a)
 
-Status: 📝 Draft for review (2026-11-06). Not built. Builds on `specs/server-authority.md` (Part B stores the run's
+Status: ✅ Built and synced (2026-11-08): 416 .NET tests, 582 Godot tests, the e2e scenarios and the Linux golden check pass.
+Decisions taken while building are folded in below; the main ones: the stairs gate is on the floor just played, the run hash
+covers the whole snapshot, completion marks are claimed at release, and the per-battle worker (`verify.battle`) was removed
+(legacy runs are never verified). Builds on `specs/server-authority.md` (Part B stores the run's
 action log, claimed snapshots and battle sessions), `specs/battle-verify.md` (the verifier worker, `verify.battle`),
 `specs/settlement-outbox.md` (the outbox, boss settlement, `wallet_ledger`) and `specs/economy-challenges.md` (marks per
 cycle). Roadmap entry: "4a. `run-verify`". Design intent: `specs/roadmap.md` "Run authority model".
@@ -25,7 +28,7 @@ that point. Slice 4a verifies **whole runs** from the action log:
    verified and linked, and are voided (with an event) on rollback.
 7. **A battle is replayed once.** The battle step's replay produces both the post-battle run state and the battle's
    `ReplayResult` (outcome, final hash, `BattleFacts`). The step worker commits the step verdict, the battle verdict
-   and the settlement together. The separate `verify.battle` job is no longer created for new uploads (2.1).
+   and the settlement together. There is no separate per-battle job any more (2.1).
 8. **Malformed replay requests are rejected** (decided 2026-11-02, `battle-verify` 8.1): a request the runner refuses
    gets a distinct exit code and a `Rejected` 2002 verdict at once, for battles and steps.
 
@@ -33,8 +36,8 @@ that point. Slice 4a verifies **whole runs** from the action log:
 
 | Component | Role in this slice | Enterprise analogue |
 |---|---|---|
-| RabbitMQ | `verify.segment` work queue (retry tiers, DLQ) beside `verify.battle`; its own worker pool | Work queue per workload class, pools sized separately |
-| Verifier worker (`Rpg.VerifierWorker`) | A second role, `segment`: replays a step in headless Godot; commits the verdict and runs the aggregator in the same transaction | Versioned calculation worker |
+| RabbitMQ | `verify.segment` work queue (retry tiers, DLQ); the one worker pool (the `verify.battle` queue of slice 3 is no longer used) | Work queue per workload class, pools sized separately |
+| Verifier worker (`Rpg.VerifierWorker`) | Replays a step in headless Godot; commits the verdict and runs the aggregator in the same transaction. Its only consumer (the per-battle role was removed) | Versioned calculation worker |
 | Headless Godot 4.7.2 .NET | New `game/verify/step_main.tscn` (a `RunController` with no screens, the same `RunWire.apply` the resume tail uses) | The calculation engine the worker hosts |
 | PostgreSQL | `run_steps`, `runs.verified_seq` / `epoch`, voided-action archive, `wallet_ledger.status`; the aggregator's state and its transactional guard | Process-manager state, idempotent consumer |
 | Outbox → Redpanda | `FloorVerified`, `RunVerified`, `RunRolledBack`, `AntiCheatAlert`, `RewardPending/Voided`; step jobs themselves are outbox rows | Transactional outbox |
@@ -85,8 +88,9 @@ Godot client ── POST /runs/{id}/actions [… a checkpoint action with its sn
       INSERT run_steps (run_id, epoch, step_no, from_seq = p, to_seq = this seq, kind, status 'Pending')
       INSERT outbox  (rabbit, topic 'segment', key '{runId}/{epoch}/{step_no}', VerifyStepJob)
     a `battle` action still writes its battle_sessions row (status Submitted) but NO VerifyBattleJob: the step that
-      contains it produces the battle's verdict (2.2). `verify.battle` stays declared only to drain jobs queued before
-      the upgrade (their sessions are verified by the old path; the migration backfills nothing).
+      contains it produces the battle's verdict (2.2). Nothing publishes or consumes `verify.battle` any more (the per-battle worker was removed
+      in this slice). A run that existed when migration 0007 ran is `legacy`: it gets no steps and no gate, and its battles
+      stay `Submitted`, never verified.
   ◀── 200 RunActionAck {lastSeq, epoch, verifiedSeq}
 ```
 The first checkpoint (`start_run`, seq 1) opens no new step: the **genesis step** (`step_no` 0, 2.0) already exists and
@@ -94,12 +98,13 @@ only waits for this claim. When the upload stores seq 1, the same transaction ca
 `state_hash` at seq 1 must equal `runs.genesis_hash`. If the anchor is already there, the claim is accepted or rejected
 **at the upload** (a mismatch is the run's `Rejected` 2002 verdict, `GenesisMismatch`, not an HTTP error); if not, the
 comparison happens when the genesis job commits. Once they agree `verified_seq` is 1, and from then on every rollback
-has a verified checkpoint to return to. Step 1 then runs from seq 1 to the first checkpoint. Every later step starts at
+has a verified checkpoint to return to. Step 1 then runs from seq 1 to the first checkpoint, starting from `runs.genesis_snapshot` (the server's own copy), not the client's seq-1 snapshot. Every later step starts at
 the previous checkpoint and ends at the next. A step ends at every snapshot-bearing action, so a step is either a **segment** (out-of-battle actions up to the next
 checkpoint) or a **battle step** (the pending checkpoint and the `battle` action that follows it). The server cannot
 tell a pending-battle checkpoint from any other; it only needs "has a snapshot". A client that leaves out the pending
 checkpoint just makes a longer step, which still verifies (bounded by `Verifier:MaxStepActions`, 500: a longer one is
-a `400` at upload). `kind` = `genesis` for step 0 (made at run start), `battle` when the last action is `battle`, `end` for the end action, else `segment`.
+a `400` at upload). The client also attaches a snapshot to the last action of a commit once 100 actions
+(`RunWire.CHECKPOINT_EVERY`) have passed since its last one, so an honest step stays short. `kind` = `genesis` for step 0 (made at run start), `battle` when the last action is `battle`, `end` for the end action, else `segment`.
 
 ### 2.2 Verifying a step (the `segment` worker)
 
@@ -117,13 +122,14 @@ Verifier worker (role segment; prefetch 1 per consumer; Verifier:Segment:Concurr
        actions      run_actions.action for from_seq+1 … to_seq (battle bodies put back from battle_sessions)
        claimedEnd   the state_hash at to_seq, and for `end` the RunEndRequest hash
   3. godot --headless … res://game/verify/step_main.tscn  --request <file> --result <file>
-       exit 0 Verified · 2 Rejected (2002) · 3 Malformed (a Rejected verdict, 3.1) · 1 runner error (retry tiers)
+       exit 0 Verified · 2 Rejected (2002) · 3 Malformed (a Rejected verdict, but only when the runner's own result says
+            MalformedRequest; a bare 3 is a runner error) · 1 runner error (retry tiers)
   4. ONE transaction:
        UPDATE run_steps SET status, verdict, start_hash, end_hash, floor_digest WHERE … AND status = 'Pending' AND epoch = @e
          0 rows → ack (lost the race)                                          (the guard is the idempotency key)
        for each battle in the step: the guarded battle_sessions verdict update (WHERE status = 'Submitted'), then the
-         slice 4/4c settlement (marks, pending ledger rows, BattleVerified/Rejected/RewardPending outbox rows)
-         exactly as the battle worker did, from the ReplayResult the same Godot run returned
+         slice 4/4c settlement (pending ledger rows, BattleVerified/Rejected/RewardPending outbox rows; the
+         completion mark is only looked at, it is claimed at release, 2.5) exactly as the battle worker did, from the ReplayResult the same Godot run returned
        the aggregator (2.3) runs inside this transaction
        outbox rows for what the aggregator decided
   5. COMMIT; DEL run:summary:{runId}; write floor:{runId}:{n} if a floor became verified; ack RabbitMQ
@@ -152,7 +158,7 @@ that floor's **digest** (floor hash, room → role, encounter id, offers: the fl
 
 ### 2.3 Fan-in aggregator (inside the step verdict transaction)
 
-A C# class `RunAggregator` in `Rpg.Verification` (no game logic; it compares strings and numbers). It is called by the
+A C# class `RunAggregator` in `Rpg.Economy` (it releases gems; no game logic; it compares strings and numbers). It is called by the
 worker after every step verdict and is a pure function of table state, so running it twice changes nothing.
 
 ```
@@ -172,13 +178,17 @@ loop k = the step after the one containing verified_seq (steps 1, 2, …):
         for each floor f with end_seq ≤ verified_seq and verified_at IS NULL:
             UPDATE run_floors SET verified_at = now(), digest; outbox FloorVerified(playerId key)
         release pending ledger rows for battles with run_seq ≤ verified_seq (2.5)
+the last floor has no `next_floor` action: it is verified together with the win, when the end step is verified
 if run.status = 'Verifying' and verified_seq = run.end_seq:
    UPDATE runs SET status = 'Won', ended_at = now(); outbox RunVerified
 ```
 Links are string comparisons of two hashes that the *worker's Godot* computed (end of step k-1, start of step k): the
-claimed hashes only select which snapshot to start from. **Link strength equals `run_hash` coverage.** Every
-snapshot field that affects play must feed `run_hash` or be rebuilt from other hashed state; the fields that do not
-(presentation tallies) are an explicit allowlist, and a test fails when a snapshot field is neither (6, G4).
+claimed hashes only select which snapshot to start from. **Link strength equals `run_hash` coverage.** The
+run hash (`run-v2`) covers the whole snapshot through `StateHasher.canonical` (every map cell field, the open event, gifts, the
+pending battle, the floor waiting for its seed, the reveal flags). Only the run id, the seeds of floors not entered yet,
+`devCommands`, `map.attempts` and the log, tallies and requested floors are left out, and `test_snapshot_fields_are_covered`
+changes every leaf of a snapshot to prove it (6, G4). So the next step's check of its restored start against the hash
+claimed by the previous step binds the claimed snapshot to the replay; there is no separate snapshot comparison.
 
 ### 2.4 Rejection and rollback
 
@@ -190,7 +200,8 @@ ONE transaction, run row locked:
   INSERT run_actions_voided / battle_sessions_voided  SELECT … WHERE seq > rollback_to    then DELETE them
         (the archive keeps the claimed log for review; deleting frees the deterministic battle ids)
   run_steps with to_seq > rollback_to → status 'Voided' (kept; the epoch makes them history)
-  wallet_ledger rows of voided battles → 'voided', completion_marks of the same battle deleted, wallet unchanged
+  wallet_ledger rows of voided battles → 'voided' (their idempotency key renamed `…#voided:{id}` so a replay can pay again);
+    a pending row holds no completion mark, so none is deleted; the wallet is unchanged
   runs: epoch += 1, last_seq = rollback_to, rollbacks += 1, status = 'Active' (a Verifying run goes back to Active)
         if rollbacks > Verify:MaxRollbacks (3) (a GenesisMismatch never reaches this rollback: the anchor rule rejects the run directly, 2.3):
           status = 'Rejected', ended_at set  (terminal: nothing pays)
@@ -215,10 +226,14 @@ is the accepted cheat (`server-authority` 0), and `MaxRollbacks` bounds the retr
 
 ```
 step worker (slice 4/4c settlement, same transaction as the step and battle verdicts):
-   writes completion_marks + wallet_ledger(status 'pending') + RewardPending outbox row        (wallets unchanged)
+   writes wallet_ledger(status 'pending') + RewardPending outbox row   (wallets and marks unchanged; a mark already held
+                                                                        means this cycle is paid: no row is written)
    the aggregator runs right after, in the same transaction: a battle step inside the verified prefix releases at once
 release (the aggregator), for each pending row of a battle
   whose run_seq ≤ verified_seq:
+   INSERT completion_marks … ON CONFLICT DO NOTHING                  (the mark is claimed now: the first row released for this
+                                                                        player, character, challenge and cycle wins it)
+     0 rows → UPDATE wallet_ledger SET status = 'voided' (idempotency key renamed), outbox RewardVoided(reason AlreadyPaid), next row
    UPDATE wallet_ledger SET status = 'released', released_at = now() WHERE id = … AND status = 'pending' RETURNING delta
    UPDATE wallets SET gems = gems + delta, version = version + 1   (only rows the UPDATE returned)
    outbox RewardGranted (the existing event, now emitted at release); DEL wallet:{playerId}
@@ -253,8 +268,9 @@ keeps the release exactly once. `wallets.gems = SUM(delta) WHERE status = 'relea
   and the client starts the run again from it, sending `start_run` as seq 1. If the anchor job has not finished (seconds
   after the start) the snapshot is still null and the client retries as it does today.
 - **Run end.** `POST /end` for a win stores the `end` action *with its snapshot* (a step of kind `end`) and answers
-  `202 Verifying` as today, but `Run:AutoApproveWins` is **removed**; `Won` comes from the aggregator. A death (`Lost`)
-  needs no verification to end, but its steps are still verified (an honest death earns nothing; a rejected one rolls
+  `202 Verifying` as today, but `Run:AutoApproveWins` is **removed**; `Won` comes from the aggregator. A win submitted as the very first upload
+  (no checkpoint to verify it from) is refused with `409 1106`. A death (`Lost`)
+  needs no verification to end, but its steps are still verified (a death gets an ordinary `segment` step, never an `end` step) (an honest death earns nothing; a rejected one rolls
   back the unsettled tail like any other). The client polls `GET /runs/{id}` every 2 s as today.
 - **Ack carries progress.** `RunActionAck(LastSeq, Epoch, VerifiedSeq)`; the client shows nothing for it now, but the
   console's `server check` and the e2e scenarios read it. SignalR replaces polling in slice 7.
@@ -312,7 +328,7 @@ public sealed record StepVerdict(ReplayVerdict Status, int? ErrorCode, string? E
     string VerifierRulesetVersion, string EngineVersion, DateTimeOffset VerifiedAt);
 
 /// <summary>GET /runs/{id}/floors/{n}. Digest is opaque JSON owned by GDScript (floor hash, rooms, encounters, offers).</summary>
-public sealed record FloorDigestResponse(string RunId, int Floor, DateTimeOffset VerifiedAt, JsonElement Digest);
+public sealed record FloorDigestResponse(string RunId, int Floor, DateTimeOffset? VerifiedAt, JsonElement Digest);
 
 namespace Rpg.Contracts.Battle;
 // MismatchReason gains MalformedRequest (appended; ReplayRunner exits 3, the worker commits Rejected 2002 at once).
@@ -369,6 +385,7 @@ CREATE TABLE battle_sessions_voided (LIKE battle_sessions, epoch int NOT NULL, v
 
 ALTER TABLE wallet_ledger
   ADD COLUMN status text NOT NULL DEFAULT 'released' CHECK (status IN ('pending','released','voided')),
+  ADD COLUMN character_id text,             -- the party character a pending row pays (its mark's key)
   ADD COLUMN released_at timestamptz;       -- existing rows: released (they were settled by slice 4)
 UPDATE wallet_ledger SET released_at = created_at;
 CREATE INDEX wallet_ledger_pending ON wallet_ledger (ref_battle_id) WHERE status = 'pending';
@@ -401,7 +418,7 @@ Same exchange and DLX as battle-verify 3.3 (`rpg.verify`, `rpg.verify.dlx`). New
 
 Published only by the outbox relay (rows with `topic = 'segment'`). `VerifyTopology` and `VerifyMessaging` get the
 segment names; the consumer, tiers and `x-attempt` handling are the battle consumer's, parameterized by queue. Config:
-`Verifier:Role` = `battle` | `segment` | `both` (default `both` for dev; the compose file runs two services),
+The worker has one consumer (`Verifier:Role` existed during the build and was removed with the per-battle worker);
 `Verifier:Segment:Concurrency` (2), `Verifier:Segment:ProcessTimeout` (90 s), `Verifier:MaxStepActions` (500, API side).
 Verify section for the API: `Verify:GateRetryAfter` (5 s), `Verify:MaxRollbacks` (3).
 
@@ -431,9 +448,9 @@ No lock is added: row locks and the status guards are the dedup (the `lock:battl
   server's `genesis_snapshot`), loads it into a fresh `RunController`, logs and queues `start_run` as seq 1 carrying that
   snapshot, and plays on. A null snapshot (the anchor job is still running) is retried with backoff. A local save for the
   same run still wins when present. Test `test_resume_from_genesis_snapshot`.
-- **Dev:** local mode never sends; nothing changes. Console `server steps` lists steps and their status;
-  `server tamper <field>` (the e2e control `tamper-run`) edits a stored action or snapshot in Postgres between upload and
-  verification (Development only), like `tamper-battle`.
+- **Dev:** local mode never sends; nothing changes. Console `server steps` lists steps and their status, `wait epoch <n>`
+  waits for a rollback; the e2e controls `tamper-battle` and `tamper-genesis` edit a stored battle or the start state in
+  Postgres between upload and verification (Development only).
 
 ### 3.7 HTTP
 
@@ -458,10 +475,10 @@ No lock is added: row locks and the status guards are the dedup (the `lock:battl
 | F4 | Tampered action, hash, snapshot or conditions | Godot exits 2; `Rejected` 2002 with a `StepMismatchReason`; rollback (2.4). **Scenario 5** | Godot: `test_step_tampered_*` (one per reason); .NET: `RejectedStep_RollsBackToTheVerifiedCheckpoint`; e2e `run_tamper_rollback` |
 | F5 | Two steps individually valid but not linked (a forged snapshot that hashes as its claim yet differs from the replayed end) | `LinkBroken` blames the later step; rollback | `Aggregator_BrokenLink_RollsBack`; Godot `test_links_hold_for_the_goldens` |
 | F6 | Step finishes out of order | Aggregator advances only over a contiguous verified prefix | `Aggregator_OutOfOrderVerdicts_AdvanceInOrder` |
-| F7 | Malformed request (unknown content id, bad schema, unknown field) | Exit 3 → `Rejected` 2002 at once, **no retries**; closes `battle-verify` 8.1 | `Malformed_BattleRequest_IsRejectedAfterOneAttempt`, `Malformed_StepRequest_IsRejected`, Godot `test_malformed_request_exit_code` |
+| F7 | Malformed request (unknown content id, bad schema, unknown field) | Exit 3 with a result saying `MalformedRequest` → `Rejected` 2002 at once, **no retries**; a bare exit 3, or a 3 with any other result, is a runner error (retried); closes `battle-verify` 8.1 | `Malformed_BattleRequest_IsRejectedAfterOneAttempt`, `Malformed_StepRequest_IsRejected`, Godot `test_malformed_request_exit_code` |
 | F8 | Godot runner error / hang / `MaxAttempts` | Retry tiers 5 / 30 / 120 s; at the limit → DLQ, `dead_lettered_at`, the step stays `Pending`, the run is **not** rolled back (an infrastructure fault is not a cheat) and the gate keeps answering `1107`; a human requeues as in battle-verify | `StepRunnerErrors_RetryThenDeadLetter`, `DeadLetteredStep_DoesNotRollBack_AndBlocksTheGate` |
 | F9 | Wrong ruleset | DLQ `reason=ruleset`; the step stays `Pending` (slice 9 routes) | `WrongRuleset_StepDeadLetters` |
-| F10 | Rollback while jobs are in flight | A job with an old epoch finds no step / another epoch → ack as `superseded`; a pre-upgrade `verify.battle` job whose session was voided → ack `superseded` (not poison) | `StaleEpochJob_IsSupersededNotRejected`, `VoidedBattleJob_IsAcked` |
+| F10 | Rollback while jobs are in flight | A job with an old epoch finds no step / another epoch → ack as `superseded`. (The draft's `verify.battle` case is moot: that worker was removed) | `StaleEpochJob_IsSupersededNotRejected`, `VoidedBattleJob_IsAcked` |
 | F11 | Client keeps uploading after a rollback | `409 1108` on batch, stairs and end; nothing stored; client rebuilds from `/resume` | `Actions_StaleEpoch_Is1108`, `test_rollback_rebuilds_from_the_server` |
 | F12 | Stairs ahead of verification | `409 1107` + `Retry-After` until the floor just played is verified; the client retries and the player sees the pop-up | `Stairs_PreviousFloorUnverified_Is1107`, `Stairs_AfterVerification_Opens`; e2e `stairs_gate` |
 | F13 | Win submitted, steps still pending or one rejected | Stays `Verifying`; becomes `Won` only at `verified_seq = end_seq`; a rejection rolls back to `Active` (never a victory) | `Win_WaitsForEveryStep`, `Win_WithARejectedStep_RollsBack`; Godot `test_win_waits_for_verdict` (updated) |
@@ -478,6 +495,14 @@ No lock is added: row locks and the status guards are the dedup (the `lock:battl
 | F25 | Client crashes before its first upload | `/resume` returns `genesis_snapshot` with `checkpointSeq 0`; the client restarts the run from it | `Resume_NoUploads_ServesTheGenesisSnapshot`; Godot `test_resume_from_genesis_snapshot`; e2e `resume` extended |
 | F22 | Genesis inputs differ at the verifier (deploy mismatch) | The ruleset check comes first (F9). Content missing at an accepted ruleset would be a deploy bug; it would reject honest runs, so `MalformedRequest` details log the unknown id and a metric alert fires on `result=malformed` | `rpg_step_jobs_total{result="malformed"}` panel; documented risk |
 
+**Where the tests are.** The names in the Test column are the design's; the built tests are in `RunVerifyTests` (API),
+`StepProcessorTests`, `StepConsumerTests`, `GodotStepRunnerTests`, `GodotProcessTests`, `SettlementTests` and
+`ChallengeSettlementTests` (worker), `test_step_runner.gd` and `test_run_authority.gd` (Godot) and the e2e scenarios of
+section 6. Added at sync for rows that had none: F10 `VoidedBattleJob_IsAckedAsSuperseded` was written and then removed with the
+per-battle worker; F18 `TheAggregatorsEvents_AreWrittenInTheStepVerdictsTransaction_AllOrNothing` (a failing event insert rolls
+the whole verdict back); F19 `Upload_AClientWithoutAPendingBattleCheckpoint_MakesOneLongerBattleStep`; F21
+`Rollback_ConcurrentUpload_Is1108_BecauseTheEpochIsReadUnderTheRunLock`.
+
 **Idempotency summary:** upload creates steps and jobs once (the unique `(run_id, epoch, step_no)` and the action
 idempotency of Part B); the verdict is a guarded update; the aggregator is monotone and idempotent; the ledger status
 transitions are guarded; the queue is at-least-once. Dead letters are never retried automatically.
@@ -493,14 +518,13 @@ player, item, character or encounter ids.
 | `rpg_step_jobs_total` (worker) | counter | `result` = verified \| rejected \| malformed \| duplicate \| superseded \| runner_error \| retry \| dead_letter \| ruleset \| postponed \| run_gone |
 | `rpg_genesis_claims_total` | counter | `result` = match \| mismatch \| anchor_first \| claim_first |
 | `rpg_step_duration_seconds` (worker) | histogram | `kind` (Godot wall time incl. startup) |
-| `rpg_step_queue_wait_seconds` | histogram | (verdict time − `created_at`) |
+| `rpg_step_queue_wait_seconds` | histogram | (verdict time − `created_at`: how far behind verification is) |
 | `rpg_steps_pending` | gauge | (undecided, not dead-lettered; every `Monitors:Interval`) |
 | `rpg_step_oldest_pending_age_seconds` | gauge | |
-| `rpg_verify_segment_queue_depth` | gauge | (management API, like `rpg_verify_queue_depth`) |
+| `rpg_verify_queue_depth{queue="verify.segment"}` (also `segment_retry`, `segment_dlq`) | gauge | (management API; the existing gauge) |
 | `rpg_step_mismatches_total` | counter | `reason` = `StepMismatchReason` (fixed enum) |
 | `rpg_fanin_total` (worker) | counter | `result` = advanced \| waiting \| rolled_back \| link_broken \| won |
 | `rpg_floor_verified_total` | counter | |
-| `rpg_floor_verification_lag_seconds` | histogram | (floor `end_seq` stored → verified: how far behind the server is) |
 | `rpg_run_verdicts_total` | counter | `result` = won \| rejected |
 | `rpg_run_rollbacks_total` | counter | `reason`, `terminal` = true \| false |
 | `rpg_stairs_gate_total` | counter | `result` = open \| blocked |
@@ -510,16 +534,20 @@ player, item, character or encounter ids.
 
 Traces: the step job inherits the upload's `traceparent` through the outbox row (slice 4c), so one trace follows an
 action upload → outbox relay → RabbitMQ → worker → Godot process → verdict commit → events. The Godot span is the
-worker's child. A Grafana dashboard "Run verification" (provisioned): step queue wait and depth, step duration by kind,
-mismatches by reason, floor verification lag, gate blocks, rollbacks, pending gems; `workers` compose profile gains the
-segment pool.
+worker's child. The Grafana dashboard "Run verification" (`infra/grafana/provisioning/dashboards/run_verification.json`) shows
+step jobs by result, step queue wait, step duration by kind, undecided steps and their age, step queue depths and the DLQ,
+steps created, mismatches by reason, rollbacks, fan-in results, floors and run verdicts, the stairs gate, genesis claims,
+pending gems and ledger transitions, anti-cheat alerts. The older dashboard, now "Verification workers and settlement",
+lost its battle-job panels. The Prometheus names are the instruments' dotted names with underscores (`rpg.step_jobs` →
+`rpg_step_jobs_total`). Floor verification lag was not built as its own metric: the step queue wait and the pending-steps
+panels show the same thing.
 
 ## 6. Test plan
 
 ### Godot (`client-godot/tests/`, fixtures only)
-- **Goldens** in `tests/fixtures/golden/game/`: `run_scripted.steps.json` and `run_keyed.steps.json`, the step cut of
-  each committed scripted run (per step: `fromSeq`, `toSeq`, `kind`, `startHash`, `endHash`). Updated with
-  `--update-goldens`; changes only when the run itself changes.
+- **Step cut:** not stored as golden files. The tests play the committed scripted and keyed runs and cut them into steps
+  the way the server does (`_steps`); the Windows-recorded run files (`run_scripted.json`, `run_keyed.json`) are compared by
+  `test_run_scripted` and `test_keyed_run_golden`, which the Linux image check also runs.
 - **G1 `test_step_replays_the_goldens`**: every step of both runs verifies; each step's `endHash` equals the next step's
   `startHash` (the links); the last step's hash equals the run hash. Also with all object keys reversed and in jsonb key
   order (the same discipline as the combat goldens: the verifier reads data jsonb has reordered).
@@ -549,13 +577,22 @@ segment pool.
 - `SettlementContractTests` updated for `RewardPending` / `RewardVoided`.
 
 ### End to end (`tools/e2e.sh`, real Godot, on demand)
-`run_verify_full` (a whole scripted run: every step Verified, floors verified in order, the gate opens, the win becomes
-`Won` with no auto-approve, `/floors/{n}` answers); `stairs_gate` (worker stopped: the client waits at the stairs, then
-`worker-start` lets it through); `run_tamper_rollback` (the new `tamper-run` control step edits an action → rollback,
-`1108`, the client rebuilds and finishes); `run_tamper_conditions` (a fabricated boss: gems voided, no mark);
-`run_pending_gems` (pending, then released, wallet and events agree); `run_verify_worker_kill`,
-`run_verify_redis_flush`, `run_verify_redpanda_down`. The existing scenarios that relied on `Run:AutoApproveWins`
-(`full_run`, `resume`, `conflict`, `settle_boss`, reward scenarios) start a segment worker (`#! worker` now starts both roles).
+Built, under other names: `verify_battle` (a whole run on the fixtures' `titan` party: every step and battle Verified, floors
+verified in order, the win `Won` with no auto-approve, `/floors/{n}` answered); `stairs` (worker stopped: the client waits at
+the stairs, then `worker-start` lets it through); `verify_tampered` (the `tamper-battle` control step edits a stored battle →
+rollback, `1108`, the client rebuilds from the server and the titan party finishes the run to a verified win);
+`genesis_forged` (the `tamper-genesis` control step: a forged start ends the run Rejected); `settle_boss` and the reward
+scenarios (pending, then released, wallet and events agree); `verify_worker_kill`, `verify_redis_flush`,
+`outbox_redpanda_down` (with `redpanda-check`) and `verify_demo_content` (the real demo content). Not built: a fabricated-boss
+scenario (`run_tamper_conditions`; the Godot `ConditionsMismatch` test and the worker's rollback tests cover it). The
+scenarios that relied on `Run:AutoApproveWins` start the worker by default (`#! worker` is implied unless the script
+controls it with `e2e worker-start`).
+
+### Platform check (open item 5)
+`tools/verifier_image_check.sh` runs, inside the Linux image, the Godot golden tests that compare the platform with files
+recorded on Windows (floors, seeds, the scripted and keyed runs, the combat goldens) besides the combat replays. Passed
+2026-11-08. The `test_step_*` tests are not used for this: they play a run on the machine they run on, so they show only that
+the machine agrees with itself. Step goldens as committed files were not added.
 
 ## 7. Decisions, and what stays out
 
@@ -568,10 +605,10 @@ segment pool.
    costs a floor, not the run; `MaxRollbacks` bounds retries. Voided actions are archived, not deleted.
 4. **Dead-lettered steps never roll back**: an infrastructure fault must not punish a player; the gate holds instead.
 5. **A battle is replayed once**, inside its step. The step's Godot run yields the post-battle state and the
-   `ReplayResult`; the step worker settles. `verify.battle` stops receiving new jobs. The cost is that a battle's
+   `ReplayResult`; the step worker settles. There is no `verify.battle` job any more (the worker was removed at the end of the build; a run that existed before migration 0007 is `legacy` and never verified). The cost is that a battle's
    verdict now waits for its run's earlier steps only for *release*, not for the verdict itself.
 6. **`Run:AutoApproveWins` is removed**, and e2e and tests that used it run a segment worker.
-7. **Gate on the floor just played** (the user's rule, 2026-11-08; `server-authority` 2.1 and the roadmap said n-2, to be updated at sync) and `Retry-After` 5 s; the client retries. Early checkpoint uploads keep the wait short.
+7. **Gate on the floor just played** (the user's rule, 2026-11-08; `server-authority` and the roadmap now say so too) and `Retry-After` 5 s; the client retries. Early checkpoint uploads keep the wait short.
 8. **No SignalR push**: the ack and the poll carry `epoch` and `verifiedSeq`; slice 7 adds the push.
 10. **A genesis anchor is built at run start** (decided 2026-11-08): `POST /runs` queues a genesis job through the
     outbox (no Godot on the request path); a worker rebuilds the starting state from the server's inputs and stores
@@ -579,6 +616,11 @@ segment pool.
     compare, in the aggregator). It gives every rollback a verified checkpoint, serves seq 1 and zero-upload resume from
     the server's own copy, and costs one cheap Godot start per run (bounded by the run-start rate limit; skipped for
     runs already gone).
+11. **Completion marks are claimed at release** (decided 2026-11-08), not when the pending row is written: an unverified or
+    rolled-back run never blocks another run's payment. A row whose mark is already held is voided as `AlreadyPaid`.
+12. **The run hash covers the whole snapshot** (decided 2026-11-08), so the links bind the claimed snapshots to the replay and
+    no separate snapshot comparison exists.
+13. **The client sends a snapshot every 100 actions** (decided 2026-11-08) so an honest step stays short.
 9. **`RewardGranted` moves to release time**; `RewardPending` is new, so consumers of `RewardGranted` never see gems the
    player does not have.
 
@@ -589,12 +631,15 @@ state (5), warm Godot processes, load tests (8), a review tool for the voided ar
 
 1. **Cost:** a run is dozens of Godot process starts (one per step). Slice 8 measures it; mitigations if needed:
    warm workers, merging adjacent segments.
-2. **Link strength is `run_hash` coverage** (2.3). G4 pins today's coverage; any new run-state field must join the hash
-   or the allowlist, and `/implement` should add that rule to `client-godot/CLAUDE.md`.
-3. **A client with no battle-pending checkpoints** makes one long step per battle (F19); we accept it rather than
-   require pending checkpoints on the server, which cannot tell them apart.
+2. **Link strength is `run_hash` coverage** (2.3). The hash now covers the whole snapshot and G4
+   (`test_snapshot_fields_are_covered`) fails when a new leaf is neither hashed nor in its `NOT_HASHED` list.
+3. **A client with no battle-pending checkpoints** makes a longer step (F19); the honest client now also checkpoints every
+   100 actions, and the server refuses a step above `MaxStepActions` rather than requiring pending checkpoints.
 4. **Rollback leaves seeds issued** for floors beyond the checkpoint (same seed again). Accepted (hindsight cheat).
 5. **Honest false positives** from client/verifier divergence would roll back real players. The ruleset check, the
-   Linux/Windows image check (`tools/verifier_image_check.sh`) and `rpg_step_mismatches_total` are the defence; the
-   step goldens should be added to the image check.
-6. **Outbox retention** is still open (slice 4 item), and the new step and voided tables need retention too.
+   Linux/Windows image check (`tools/verifier_image_check.sh`, which now also runs the run and generation goldens on Linux)
+   and `rpg_step_mismatches_total` are the defence. A guard that fails when a snapshot holds a float with a fraction
+   (`StateHasher.canonical` prints it with `str()`) is not built. Another client platform needs the same golden tests run on it.
+6. **Retention**: the outbox, `run_steps`, the voided archives and settled sessions grow without bound. Roadmap slice 7b
+   `data-retention` owns it.
+7. **Routing by ruleset version** (slice 9): a step job for another ruleset dead-letters and its run waits at the stairs gate.

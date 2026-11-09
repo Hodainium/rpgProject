@@ -28,7 +28,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 4. `settlement-outbox` | ✅ Done (spec synced; one outbox for RabbitMQ jobs and Redpanda events with a relay, exactly-once boss settlement in the verdict transaction behind three gates, the wallet and `GET /wallet`, `BattleFacts` from the Godot replay, `lock:battle` and the sweeper removed; 257 .NET, 539 Godot, 14 e2e scenarios; open: trace continuity through the outbox, retention, pending gems in 4a) | 2026-11-03 |
 | 4d. `economy-challenges` | ✅ Done (a reward per challenge id paid once per cycle, no tiers (a score band is independent stars), weekly ISO-week cycles from battle time, event expiry, manual resets for everyone or one player, a Development clock offset, data-driven challenge conditions and stars in Godot content; 377 .NET, 558 Godot, e2e `reward_challenge`, `reward_stars`, `reward_clock_offset`, `reward_reset`) | 2026-11-06 |
 | 4c. `economy-rewards` | ✅ Done (commit f501e4e; spec `specs/economy-rewards.md`): per-boss reward rules in a server-owned table, the economy boundary (Godot run inventory vs account economy), admin endpoint and console command, and trace continuity through the outbox | |
-| 4a. `run-verify` | ⬜ Not started | |
+| 4a. `run-verify` | ✅ Done (spec synced; steps cut at the claimed snapshots with a genesis anchor the server builds at run start, a worker pool replaying each step in headless Godot with a battle simulated once, the fan-in aggregator (verified prefix, links, floors, win, rollback with epoch, `MaxRollbacks`), the stairs gate 1107 and epoch gate 1108, pending gems claimed at release, the floor read model, run hash `run-v2` covering everything that decides play; the per-battle worker is removed; 416 .NET, 582 Godot, the e2e scenarios and the Linux golden check pass; open: routing by ruleset (9), retention (7b)) | 2026-11-08 |
 | 4b. `game-analytics` | ⬜ Not started | |
 | 5. `card-collection` | ⬜ Not started | |
 | 5b. `card-market` | ⬜ Not started | |
@@ -441,10 +441,10 @@ needs slice 4 committed first.
 ### 4a. `run-verify`
 **Purpose:** verify whole floors in parallel and keep the client within one floor of the server
 ("Run authority model"). Comes after the outbox because it publishes `FloorVerified` and anti-cheat events and the
-run-end gate settles rewards. Same Godot verifier image, separate queues with their own worker pools:
-`verify.battle` and `verify.segment` (out-of-battle actions from a claimed snapshot, including floor generation at
-`next_floor`). A C# fan-in aggregator (process manager, idempotent, state in Postgres) checks the links between steps
-and emits the floor verdict through the outbox. The `1107` stairs gate (at most one unverified floor), the real
+run-end gate settles rewards. Same Godot verifier image, one step queue,
+`verify.segment` (actions from a claimed snapshot, a battle included, and floor generation at `next_floor`; the
+per-battle `verify.battle` worker of slice 3 was removed with this slice). A C# fan-in aggregator (process manager, idempotent, state in Postgres) checks the links between steps
+and emits the floor verdict through the outbox. The `1107` stairs gate (the floor just played must be verified), the real
 **run-end verdict** (removes `Run:AutoApproveWins`), `Rejected` + rollback to the last valid checkpoint, resume from
 the latest *verified* checkpoint, verdicts pushed to the client, anti-cheat events, and the **floor read model** in
 Redis (written when a floor's entry step is verified). Floor N+1 can't be generated ahead of time: its item pools
