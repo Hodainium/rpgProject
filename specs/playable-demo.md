@@ -239,7 +239,7 @@ the content files.
 trapdoor: the light route (Cathedral → Vault) or the dark route (Coven → Void). Floor 10 follows the route of floor 9.
 
 Item sources where there are no item rooms: every boss encounter **rewards** one `Pool.Boss` item (3.7 rewards), and
-events still appear. The Vault's treasure rooms draw from `Pool.Treasure` and a new `Pool.Vault`.
+events still appear. The Vault's treasure rooms draw from `Pool.Treasure` (they once drew from a `Pool.Vault` too; that pool was removed 2026-11-09, spec card-collection).
 
 **System (two battle hooks and one generator option; no wire change):**
 | Hook | Where | Rule |

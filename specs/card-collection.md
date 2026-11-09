@@ -1,6 +1,6 @@
 # Spec: card-collection (slice 5)
 
-Status: **spec written 2026-11-09, review answers applied 2026-11-09 (section 8); the pity numbers are still to be discussed and tuned.** Builds on `specs/economy-rewards.md` (the economy module, the
+Status: **implemented and synced 2026-11-09** (server and Godot halves, content tagged, four e2e scenarios; what is not built is in section 9). The numbers are placeholders for slice 5c. Builds on `specs/economy-rewards.md` (the economy module, the
 wallet and ledger, versioned server-owned rules), `specs/settlement-outbox.md` (outbox, wallet), `specs/run-verify.md`
 (the run's start inputs live on `runs`; the genesis step rebuilds the start from them) and the roadmap entry "5.
 `card-collection`" (the decisions of 2026-11-09 are the requirements; this spec makes them buildable). The screens are
@@ -64,9 +64,13 @@ Developer/Claude: godot game/tools/build_card_catalog.tscn   → infra/economy/c
 API startup: CardCatalogSeeder (Cards:CatalogFile)
    one transaction under an advisory lock:
      - insert cards not in the table; update rarity/set/pools of existing ones, bump catalog_version when the hash changed
-     - REFUSE (startup fails, log names the card): a core card turned non-core (owners would silently lose it)
-     - a card missing from the file: retired = true (stays owned and dustable, leaves packs and new pools)
-     - upsert the rate and pack seeds (Cards:SeedFile) only for rarities / packs that have no row yet
+     - REFUSE (startup fails, log names the card): a core card turned non-core or missing from the file (owners would silently
+       lose it); a file with an item of rarity mythic or a character of any other rarity (characters are Mythic, items never are)
+     - a non-core card missing from the file: retired = true (stays owned and dustable, leaves packs and new pools)
+     - the whole catalog is stored per version (catalog_versions.document), so an opening can be re-derived exactly
+     - the rate and pack seeds (Cards:SeedFile) are written only for rarities / packs that have no row yet; "has no row" is
+       decided inside each put's advisory lock, so two instances starting together seed once; seed entries that are invalid or name
+       a set with no cards are skipped with a warning in the log
    DEL catalog:cards, catalog:packs
 ```
 Content and the server catalog can disagree between a content change and the next export. `tools/check_card_catalog.sh`
@@ -87,12 +91,14 @@ Godot client ── POST /api/v1/packs/{packId}/open  { requestKey }
        FOR UPDATE); draw N cards with the pack RNG and the pity rules (3.4, 3.4a); update the counters
     6. per drawn card: owned (holdings, or drawn earlier in this pack) or core?  →  duplicate:
            wallet_ledger +dust_value (reason 'duplicate', ref pack opening), no holding
-       else holdings insert (acquired_at = now(), source 'pack'), card_ledger +1
+       else holdings insert (acquired_at = clock_timestamp() of the database, inside the account lock, source 'pack'), card_ledger +1
     7. pack_openings row (draw_seed, pity_before, pack and catalog versions, result), account_requests row (the response)
     8. outbox: PackOpened (key = playerId)
   ◀── 200 PackOpenResponse                     DEL nothing in Redis (ownership and wallet are not cached; wallet:{id} is deleted)
 ```
-`wallet:{playerId}` (slice 4's read cache) is deleted on every wallet change.
+`wallet:{playerId}` (slice 4's read cache) is deleted on every wallet change. Open, dust and craft use the `actions` rate-limit bucket.
+A pack none of whose odds-bearing rarities has an eligible card (a later catalog change retired them all) is `404 1408 PackUnavailable`
+and charges nothing; the admin put refuses to create such a pack (400 1401).
 
 ### 2.3 Dust a card
 
@@ -106,14 +112,17 @@ Godot client ── POST /api/v1/cards/{cardId}/dust  { requestKey }
 ```
 **Run lock** (decided 2026-11-09): the player's run with `status IN ('Active','Verifying')` (at most one is Active; a
 won run stays `Verifying` until the verifier says Won, then the lock goes). A holding is locked when
-`acquired_at <= runs.started_at` of that run. A card acquired after the start (a pack or a craft during the run) is not
-locked and never affects the run. The lock never expires; an abandoned-by-idleness run keeps it until the player
+`acquired_at <= runs.started_at` of that run; both are the database's `clock_timestamp()` taken inside the player's account lock
+(the run start, the open and the craft all take it), so the comparison follows the order the locks were won, not the app clock.
+A card acquired after the start (a pack or a craft during the run) is not locked and never affects the run. The lock never expires; an abandoned-by-idleness run keeps it until the player
 cancels the run or starts another.
 
 ```
 Godot client ── POST /api/v1/runs/{id}/abandon                    (new: the cancel path the 409 pop-up uses)
-  API: the same code path "start a new run" already uses to abandon the previous one → status Abandoned, caches deleted,
-       steps voided as today. Not a death: no event for analytics beyond the existing run-ended.
+  API, ONE transaction under the account lock: Active → Abandoned (caches deleted, `rpg_run_ends_total{status=Abandoned}`); the same
+       status as "start a new run" gives the previous one, and like it nothing is voided. Verifying → 409 1410 RunVerifying; another
+       player's or unknown run → 404; Lost / Won / Rejected → 409 1101. A repeated cancel of an already Abandoned run is a plain 204
+       (the first answer may have been lost) and is not counted again. Not a death: no analytics event beyond the run-ended.
 ```
 
 ### 2.4 Craft a card
@@ -132,22 +141,29 @@ reachable without luck.
 ```
 Godot client ── POST /api/v1/runs  { rulesetVersion, runStructureId, characterIds }          (request unchanged)
   API, in the existing run-start transaction (the player's advisory lock is taken first):
-    - Cards:Enabled false → exactly today's behaviour, no pool (CardPool absent)
+    - Cards:Enabled false, or no catalog seeded yet (the `cards` table is empty) → exactly today's behaviour, no pool, no character
+      check (CardPool absent): a server with nothing to enforce must not refuse every run
     - unlocked characters = core characters + owned characters; any characterId not in it → 400 1409 CharacterLocked
-    - item pool = core item cards + owned item cards that are not retired-and-unowned   → runs.card_pool (jsonb array, sorted)
-    - the genesis outbox job and every step request take the pool from runs (run-verify 3.3 already reserved this row)
+    - item pool = core item cards (not retired) + owned item cards (retired ones included)   → runs.card_pool (jsonb array, sorted),
+      and the unlocked characters → runs.unlocked_characters
+    - the genesis outbox job and every step request take the pool from runs (run-verify 3.3 already reserved this row); the worker
+      reads it with the step row it loads anyway, no second query
   ◀── 201 RunStartResponse { …, UnlockedCharacterIds, CardPool }
 ```
-`GET /runs/{id}/resume` returns `CardPool` and `UnlockedCharacterIds` from `runs`; the pool is not in the snapshots.
+`GET /runs/{id}/resume` returns `CardPool` and `UnlockedCharacterIds` from `runs`; the pool is not in the snapshots. Because a
+snapshot never carries it, a local save (`ServerLink` and `LocalSave`) keeps `cardPool` beside the snapshot with a `cardPoolDigest`;
+`RunState.save_pool_problem` notices a save that lost or changed it: online the run is rebuilt from the server's copy, offline (and for
+a local test pool) the save is refused with the reason, because every hash of such a run would differ from the server's.
 
 **Godot side (the pool is a verified input).** `RunState.card_pool` is a set of content ids, or `null` (unrestricted;
 local mode in this slice, so every golden is unchanged). It restricts only **picks from `Pool.*` queries** (item rooms,
 shops, boss and Vault/Void rewards, chests, events that pick by pool tag). It never touches starting loadouts, items
 named by id in an outcome, enemy drops, or boss mirrors. A pick that finds its filtered pool empty falls back as the
 room already does for an empty pool. `card_pool=<sha256 of the sorted ids>` joins the run hash **only when the pool is
-set**, so unset runs hash as before (`run-v2`, same rule as `floor_seeds`). `test_snapshot_fields_are_covered` gets the
-new field. The verifier gives `StepRequest.Setup.CardPool` from `runs`; the step restores the claimed snapshot and a
-different pool changes the hash → the existing `WrongSetup` mismatch, verdict 2002.
+set**, so unset runs hash as before (`run-v2`, same rule as `floor_seeds`). The pool is not a snapshot field, so
+`test_snapshot_fields_are_covered` is unchanged; `RunSnapshot.restore(…, card_pool)` takes it from the caller. The verifier gives
+`StepRequest.CardPool` from `runs`; the step restores the claimed snapshot with that pool and a different pool changes the hash →
+`SnapshotHashMismatch` (a genesis step: `GenesisMismatch`), verdict 2002.
 
 ### 2.6 Reading
 
@@ -210,17 +226,27 @@ public sealed record PackOpenResponse(string OpeningId, string PackId, int PackV
 public sealed record DustResponse(string CardId, int DustGained, int RateVersion, int Dust);
 public sealed record CraftResponse(string CardId, int DustSpent, int RateVersion, int Dust);
 
+// The two files the server seeds from (Cards:CatalogFile, Cards:SeedFile)
+public sealed record CardCatalogFile(string CatalogHash, IReadOnlyList<CatalogFileCard> Cards);       // written by build_card_catalog.tscn
+public sealed record CatalogFileCard(string Id, string Kind, string Rarity, string SetId, bool Core, IReadOnlyList<string> Pools);
+public sealed record CardEconomySeed(IReadOnlyList<CardRateRequest> Rates, IReadOnlyList<PackTypeRequest> Packs);
+
 // Admin
 public sealed record PackTypeRequest(string PackId, string Name, int PriceGems, int CardCount,
     IReadOnlyDictionary<string, int> OddsPer10000, IReadOnlyList<string> SetIds, bool Retired,
     IReadOnlyDictionary<string, int> PityPacks, IReadOnlyDictionary<string, int> FirstGuarantees, string? MinRarityPerPack);
+public sealed record PackTypeResponse(string PackId, string Name, int Version, int PriceGems, int CardCount,
+    IReadOnlyDictionary<string, int> OddsPer10000, IReadOnlyList<string> SetIds, bool Retired,
+    IReadOnlyDictionary<string, int> PityPacks, IReadOnlyDictionary<string, int> FirstGuarantees, string? MinRarityPerPack,
+    DateTimeOffset EffectiveFrom, string CreatedBy);
+public sealed record PackTypeListResponse(IReadOnlyList<PackTypeResponse> PackTypes);
 public sealed record CardRateRequest(string Rarity, int DustValue, int CraftCost);
 public sealed record CardRateResponse(string Rarity, int DustValue, int CraftCost, int Version, DateTimeOffset EffectiveFrom, string CreatedBy);
 public sealed record CardRateListResponse(IReadOnlyList<CardRateResponse> Rates);
 ```
 Additive changes to existing records (`WhenWritingNull`, so Cards-off responses are byte-identical):
 `RunStartResponse` and `RunResumeResponse` gain `IReadOnlyList<string>? UnlockedCharacterIds` and
-`IReadOnlyList<string>? CardPool`; `StepRequest.Setup` gains `CardPool`; `LedgerEntryDto.Currency` may now be `dust`.
+`IReadOnlyList<string>? CardPool`; `StepRequest` gains `CardPool` (the worker's own copy from `runs`); `LedgerEntryDto.Currency` may now be `dust`.
 
 Events (`Events/CardEvents.cs`, `DomainEvent<T>`, topic `rpg.economy.events`, key = playerId; the rule events key `rule:…`
 as in 4c):
@@ -238,14 +264,14 @@ Error codes (`ApiErrors`, new range 14xx; plain request errors, not verdicts):
 
 | Code | Name | HTTP | Meaning |
 |---|---|---|---|
-| 1401 | CardRuleInvalid | 400 | Admin put: bad odds sum, unknown rarity or set, `CraftCost <= DustValue`, amount out of range |
+| 1401 | CardRuleInvalid | 400 | Admin put: bad odds sum, unknown rarity or set, `CraftCost <= DustValue`, amount out of range, a pack with no drawable card |
 | 1402 | InsufficientCurrency | 409 | Not enough gems (pack) or dust (craft) |
 | 1403 | CardLockedByRun | 409 | Dust refused; the problem carries `runId` and `runStatus` (Active: the pop-up offers to cancel it; Verifying: it says to wait for the verdict) |
 | 1404 | CardNotCollectible | 400 | Unknown card, or a core card (cannot be dusted or crafted) |
 | 1405 | CardAlreadyOwned | 409 | Craft of a card already held |
 | 1406 | CardNotOwned | 409 | Dust of a card not held |
 | 1407 | RequestKeyReused | 409 | The key was used for a different action or body |
-| 1408 | PackUnavailable | 404 | Unknown or retired pack type |
+| 1408 | PackUnavailable | 404 | Unknown or retired pack type, or one with nothing left to draw |
 | 1409 | CharacterLocked | 400 | Run start with a character the account does not own |
 | 1410 | RunVerifying | 409 | Abandon refused: a won run is waiting for its verdict and cannot be cancelled |
 
@@ -257,7 +283,9 @@ CREATE TABLE cards (
   rarity text NOT NULL CHECK (rarity IN ('common','rare','epic','legendary','mythic')),
   set_id text NOT NULL, core boolean NOT NULL DEFAULT false, pools text[] NOT NULL DEFAULT '{}',
   retired boolean NOT NULL DEFAULT false, catalog_version int NOT NULL);
-CREATE TABLE catalog_versions (catalog_version int PRIMARY KEY, catalog_hash text NOT NULL UNIQUE, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE catalog_versions (catalog_version int PRIMARY KEY, catalog_hash text NOT NULL,        -- not unique: older content can be seeded again as a new version
+  document jsonb NOT NULL,                                                                               -- the whole catalog at that version, so an opening can be re-derived
+  created_at timestamptz NOT NULL DEFAULT now());
 
 CREATE TABLE card_holdings (
   player_id uuid NOT NULL REFERENCES players, card_id text NOT NULL REFERENCES cards,
@@ -288,7 +316,7 @@ CREATE TABLE pack_openings (opening_id uuid PRIMARY KEY, player_id uuid NOT NULL
 CREATE TABLE account_requests (player_id uuid NOT NULL REFERENCES players, request_key uuid NOT NULL, kind text NOT NULL CHECK (kind IN ('pack','dust','craft')),
   request_hash text NOT NULL, response jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (player_id, request_key));
 
-ALTER TABLE runs ADD COLUMN card_pool jsonb;   -- null = card system off for this run; written at run start, never updated
+ALTER TABLE runs ADD COLUMN card_pool jsonb, ADD COLUMN unlocked_characters jsonb;   -- null = card system off for this run; written at run start, never updated
 ```
 The ledger idempotency keys are `pack:{playerId}:{requestKey}[:{n}]`, `dust:…`, `craft:…`: a second line of defence behind
 `account_requests`. Existing rows are untouched (additive migration, the wallet's `gems` column and ledger keep working).
@@ -312,8 +340,9 @@ Not Godot's RNG: pack opening is economy, not combat. Integer-only **SplitMix64*
 For each of the `CardCount` slots: draw `r = next() % 10000`, walk the rarities in the fixed order common, rare, epic, legendary, mythic
 over the cumulative odds to pick the rarity (a rarity with 0 odds only ever comes from pity); draw `next() % n` to pick uniformly among the eligible cards of that rarity,
 sorted by id. **Eligible** = catalog at the opening's `catalog_version`, set in the pack's `set_ids`, not core, not
-retired. Legendary draws cover Legendary items; Mythic draws cover characters (the only Mythic cards). A rarity with zero eligible cards re-draws the rarity
-with that rarity's odds removed (renormalised by the same walk over the remaining cumulative range). Modulo bias is below
+retired. Legendary draws cover Legendary items; Mythic draws cover characters (the only Mythic cards). A rarity with zero eligible cards is left out of the
+walk: the slot makes one draw over the cumulative odds of the rarities that do have eligible cards (renormalised; with every rarity
+available it is exactly the walk above). Modulo bias is below
 10⁻¹⁵ and accepted. Because the seed, pack version and catalog version are stored, an audit re-derives any opening byte for
 byte (`PackDrawer` is a pure function and has golden vectors). Draws are **independent of what the player owns**: a
 duplicate is detected after the draw and auto-dusted.
@@ -342,15 +371,18 @@ What we build, the same shape with our own rarities:
 - **Resolution** (inside the draw, deterministic): draw the N slots as in 3.4. Then for each tracked rarity from the highest
   to the lowest, if `missed + 1 >= N` and the pack holds no card of that rarity, **force one**: it replaces the pack's
   lowest-rarity slot not already forced (ties: the last slot), and its card is drawn from the same SplitMix64 stream
-  (uniform among the eligible cards of that rarity, as in 3.4). Flag `Pity = true` on that `PackCardDto`.
+  (uniform among the eligible cards of that rarity, as in 3.4). Flag `Pity = true` on that `PackCardDto`. The slot is chosen in two
+  passes: first one that is nobody's only card of a tracked rarity (so a guarantee never undoes another); if every slot is, the
+  lowest one whose rarity is below the one being forced (that rarity's own timer is checked later in the same loop). A forced card
+  is therefore never silently dropped; with more due guarantees than slots the lowest ones simply do not fit.
 - **Rare guarantee** (`MinRarityPerPack`, Hearthstone's "every pack holds a Rare or better"; decided 2026-11-09, seed `rare`),
   applied **after** the pity step: if no card in the pack is of that rarity or better, the pack's last slot not forced by
-  pity is redrawn from the same stream among that rarity and above, with the pack's odds restricted to those rarities
+  pity (and, when possible, not the only card of a tracked rarity; otherwise any unforced slot) is redrawn from the same stream among that rarity and above, with the pack's odds restricted to those rarities
   (renormalised, Rare 78.85%, Epic 16.13%, Legendary 3.58%, Mythic 1.43% at the seed odds). Not flagged as pity. It counts as
   a natural drop for the counters (a redraw that lands on an Epic resets the Epic counter). A pack type may leave it unset.
   Validation: the rarity is one of the five, and the pack's odds give it at least one rarity at or above it with odds above 0.
 - **Counter update** after resolution: for each tracked rarity, `missed = 0` if the pack holds a card of exactly that rarity
-  (natural or forced), else `missed + 1`. A Mythic does **not** reset the Legendary counter (open question 8.1).
+  (natural or forced), else `missed + 1`. A Mythic does **not** reset the Legendary counter (decided 2026-11-09: each rarity counts its own drops).
 - Ownership is ignored: a forced card can be a duplicate and is auto-dusted like any other (a pity pull is never wasted
   entirely, it pays dust). This keeps the draw a pure function of (seed, pack version, catalog version, counters).
 - Audit: `pack_openings.pity_before` stores the counters used, so the opening is reproducible byte for byte.
@@ -376,40 +408,47 @@ the natural ones (the timers fire in a share of packs), which 5c measures.
 
 ### 3.5 Configuration (`Cards:*`)
 
-`Cards:Enabled` (default true; false = the run start ignores the account, no pool, the character check is off, so the
-existing e2e scenarios run unchanged; the new card scenarios run with it on over the **card fixtures**, 3.6), `Cards:CatalogFile` (`infra/economy/card_catalog.json`),
-`Cards:SeedFile` (`infra/economy/card_economy.json`: placeholder rates and one pack per set, flagged as placeholders for 5c),
-`Economy:MaxPackPrice`, `Economy:MaxCardCost` (both Development defaults 100000).
+`Cards:Enabled` (default true; false, or true with no catalog seeded yet = the run start ignores the account: no pool, the character
+check is off; `tools/e2e.sh` starts the server with `Cards__Enabled=false` unless `CARDS_ENABLED` is set or the scenario says
+`#! cards`), `Cards:CatalogFile` (`infra/economy/card_catalog.json`), `Cards:SeedFile` (`infra/economy/card_economy.json`:
+placeholder rates and one pack, flagged as placeholders for 5c; both files are set in `launchSettings.json` for `dotnet run`),
+`Economy:MaxPackPrice`, `Economy:MaxCardCost` (both default 100000).
 
 ### 3.6 Godot side
 
-- Tags (`godot_gas/`, the user's folder: the tags are **proposed, applied after approval**): `Card.Set.Core`,
-  `Card.Set.Descent` (every other demo card), future `Card.Set.<Name>` per expansion, and `Card.Rarity.Mythic` for
-  characters (item rarity keeps `Item.Rarity.*`). Existing item and character files
-  gain one set tag each; they are the user's, so the pass writes a proposal (3 below) and applies it only on `--apply`
-  after the user's OK.
-- `CardRules` resource (`game/defs/`): `pool_targets` (`Pool.Treasure` 30, `Pool.Shop` 30, `Pool.Vault` 15, `Pool.Void` 15)
-  and `all_core_pools` (`Pool.Boss`, `Pool.Void`); one instance in `content/demo/cards/`.
-- **Card fixtures** (`tests/fixtures/cards/`, built by a builder that only adds missing files like the other fixtures): a small
-  fixture set with two sets (core and one expansion), characters of every card rarity incl. one Mythic, items of every rarity
-  in every pool, a pool deliberately short of its target, and a matching fixture `card_catalog.json`. The new Godot tests,
-  the .NET tests (as the seeded catalog) and the new e2e scenarios use these, never the demo content.
-- **Run-end gate (client):** in server mode, while a won run is `Verifying` the run-end screen shows "Verifying run…" and
-  offers no way back to the main menu or to a new run; it leaves only on the server's verdict (Won, or Rejected and the run
-  is rebuilt from the rollback). Closing the app is allowed; Continue after a restart returns to the same screen. This is a
-  client rule matched by the server's (the lock in 2.3 holds and `abandon` of a Verifying run is refused with 1410).
+- Tags (`godot_gas/`, the user's folder; applied 2026-11-09 with the user's go-ahead): `Card.Set.Core` and `Card.Set.Descent`
+  (every other demo card), future `Card.Set.<Name>` per expansion. A set tag is on every card (items, equipment, characters);
+  a character's rarity is implicitly Mythic (no tag), item rarity keeps `Item.Rarity.*`.
+- `CardRules` resource (`game/defs/`, one per content root; none = no card checks at all): `pool_targets` (`Pool.Treasure` 30,
+  `Pool.Shop` 30, `Pool.Void` 15), `all_core_pools` (`Pool.Boss`, `Pool.Void`) and `starter_characters` (the six core characters);
+  one instance in `content/demo/cards/card_rules.tres`. `ContentIndex.card_rules` holds it.
+- **Card fixtures** are built in memory (`tests/game/card_world.gd`, the same idea as `keys_world.gd`) and on the server side in
+  `CardFixtures.cs`, not as a content folder: two sets (core and "descent"), characters of both kinds incl. Mythics, items of every
+  rarity in the pools, a Dev item and an item in no pool, and small pool targets. No test reads the demo content.
+- **Run-end gate (client):** in server mode, while a won run waits for the verdict (`GameMain.leaving_blocked()`: mode `run`, run
+  status Won) `back_to_menu` and `save_and_quit` refuse with a message and the run menu's Save and quit is disabled; it leaves
+  only on the server's verdict (Won, which shows the end screen, or Rejected and the run is rebuilt from the rollback). Closing the
+  app is allowed; Continue after a restart returns to the same wait when the save holds the end request and is at least as far as
+  the server's log. Matched by the server (the lock in 2.3 holds and `abandon` of a Verifying run is refused with 1410).
 - **Local mode** has no account: no wallet, no gems, no dust, no ownership, and nothing is ever stored as if owned. For testing
-  and design work a **local test collection** can be configured: the console command `cards local core|all|<id> …` (and a
-  Settings key `local_cards`) sets `RunState.card_pool` for local runs only. It is not synced, rewards nothing and cannot
-  reach a server run.
-- `game/tools/build_card_catalog.tscn` (exports the catalog, 2.1), `game/tools/build_card_pass.tscn` (the proposal below),
-  `RunState.card_pool`, `RunController.start_server_run(…, card_pool)`, `ServerBridge` + `Rpg.Client` methods for the endpoints,
-  console commands (dev-tools parity): `cards` (collection), `packs`, `open <pack>`, `dust <card>`, `craft <card>`,
-  `abandon`, `pity` (the counters), and admin `server pack-type …` / `server card-rate …` (the `reward` pattern).
-- Validator (`UIPolicyCheck`-style rules): `card_set_missing` (a card with a pool tag and no set), `card_set_unknown`,
-  `core_pool_empty` (**error**: a room pool tag used by a room with no core card in it, the invariant that pools are never
-  empty), `core_pool_short` (warning: under its target), `card_rarity_mismatch` (a character not Mythic, or an item Mythic),
-  `core_character_count` (error: the core set must hold exactly 6 characters); `core_not_in_catalog` is a tool report.
+  and design work a **local test collection** can be configured: the console command `cards local core|all|<id> …` sets
+  `GameMain.local_card_pool` and so `RunState.card_pool` for local runs only (refused in server mode). It is not synced, rewards
+  nothing and cannot reach a server run. (A Settings key for it is not built.)
+- Tools: `game/tools/build_card_catalog.tscn` (exports the catalog, 2.1; exit 3 and nothing written while the content has card
+  problems), `game/tools/build_card_pass.tscn` (the proposal below; `--rules` uses rules from anywhere for a dry run, `--create-rules`
+  writes a `CardRules` resource if absent, `--apply` appends the proposed set tags to the definition files by a text patch of the
+  tags line, run only with the user's go-ahead), `tools/check_card_catalog.sh` (content against the file; a report, not a test).
+  `RunState.card_pool`, `RunController.start_run` / `start_server_run` / `load_snapshot` take the pool, `ServerBridge` + `Rpg.Client`
+  have the endpoints (the admin ones inside `#if DEBUG`, kept out of the player build by `test_admin_calls_stay_out_of_the_player_build`).
+- Console commands (dev-tools parity): `cards [local|catalog|issues]` (the collection in server mode), `packs [open <pack id> [key] |
+  pity]` (`open` is taken by the chest command), `dust <card id|first> [key]`, `craft <card id> [key]`, `abandon [run id]`, `refused
+  <text> <command>` (a script says a command must be refused), and admin `server pack-type …` / `server card-rate …` (the `reward`
+  pattern). An account action prints its request key; pass the same key again to retry without paying twice.
+- Validator (rules of `CardCatalog.problems`, shown by `ContentValidator`, only when the content root has a `CardRules`):
+  `card_set_missing` (a card with no set tag), `card_set_unknown` (a card with more than one set tag), `card_rarity_missing`,
+  `card_rarity_mismatch` (an item that is Mythic), `core_character_count` (error: the core characters must be exactly the starter
+  characters), `core_pool_empty` (**error**: a room pool tag some card carries with no core card in it, the invariant that pools
+  are never empty), `core_pool_short` (warning: under its target); `core_not_in_catalog` is the tool report.
 
 **Core selection (the proposal pass, deterministic).** Targets above; Boss and Void are all core; items whose only pools
 are `Pool.Food` / `Pool.Chest` are core (those pools have no minimum and must never be empty); items with no pool tag are
@@ -417,8 +456,8 @@ not cards. Food holds four items today and all four are core; **four more Food i
 content/balance pass (decided 2026-11-09)**, not in this slice. Then, until every target pool is met: sort the remaining items by (rarity ascending Common→Legendary, number of
 target pools still short descending, id ascending) and take the first item that belongs to at least one short pool. An item
 counts in every pool it carries, so overshoot is possible and reported. The pass reports per-pool core counts, the list of
-core ids. Vault holds ten items today, so until 5c adds five more all ten are core and the pass reports Vault
-as short of its 15 (the `core_pool_short` warning, expected).
+core ids. (Vault was a pool when this was first written; it was removed on 2026-11-09, so no pool is expected short.) The proposal
+leaves a card that already has a set tag as it is, so a second run proposes nothing new.
 
 ## 4. Failure modes
 
@@ -426,28 +465,28 @@ as short of its 15 (the `core_pool_short` warning, expected).
 |---|---|---|---|
 | F1 | Same `requestKey`, same action and body, again (client retry, timeout) | Returns the stored response, 200, nothing changes (scenario 1) | `OpenPack_Replayed_SpendsOnce`, `Dust_Replayed_PaysOnce`, `Craft_Replayed_ChargesOnce` |
 | F2 | Same key, different pack, card or kind | 409 1407, nothing changes | `RequestKey_ReusedForOtherAction_Rejected` |
-| F3 | API dies after the commit, before the response | The client retries with the same key → F1 (scenario 2) | `OpenPack_ConnectionKilledAfterCommit_RetryReturnsSameCards` |
+| F3 | API dies after the commit, before the response | The client retries with the same key → F1 (scenario 2) | `OpenPack_Replayed_SpendsOnce_AndReturnsTheSameCards` (the stored answer; a killed connection is the same path) |
 | F4 | Two opens at once with gems for one | The advisory lock serialises; the second gets 409 1402; wallet never negative | `OpenPack_Concurrent_NeverOverdraws` |
 | F5 | Dust or craft with too little currency | 409 1402, no change | `Craft_NotEnoughDust_Rejected` |
 | F6 | Dust a core card, an unknown card, a card not held | 400 1404 / 409 1406 | `Dust_Core_Refused`, `Dust_NotOwned_Refused` |
-| F7 | Dust a card acquired before the run started | 409 1403 with the run id; nothing changes; passes after `abandon`, after Lost, after Won | `Dust_LockedByActiveRun`, `Dust_FreedWhenRunEnds`, `Dust_AfterAbandon_Succeeds` |
+| F7 | Dust a card acquired before the run started | 409 1403 with the run id; nothing changes; passes after `abandon`, after Lost, after Won | `Dust_ACardOwnedWhenTheRunStarted_IsLockedUntilTheRunEnds`, `Dust_AVerifyingRunKeepsTheLock_UntilTheVerdict_AndCannotBeAbandoned`, `Dust_AfterTheRunIsAbandoned_Succeeds`, e2e `card_run_lock` |
 | F8 | Dust a card acquired after the run started | Allowed (never in that run's pool) | `Dust_AcquiredAfterRunStart_Allowed` |
-| F9 | Dust races a run start | The advisory lock orders them: either the run snapshots the card and it is then locked, or the dust wins and the card is not in the pool | `RunStart_ConcurrentWithDust_PoolMatchesHoldings` |
-| F10 | A duplicate in a pack, or two of the same card in one pack | Auto-dusted at the card's dust value, never a second holding; works during a run and never touches the locked copy | `Pack_Duplicate_AutoDusted`, `Pack_SameCardTwice_OneHolding` |
+| F9 | Dust races a run start | The advisory lock orders them: either the run snapshots the card and it is then locked, or the dust wins and the card is not in the pool | `RunStart_ConcurrentWithDust_PoolMatchesHoldings` (the account lock, timestamps from the database clock) |
+| F10 | A duplicate in a pack, or two of the same card in one pack | Auto-dusted at the card's dust value, never a second holding; works during a run and never touches the locked copy | `OpenPack_ADuplicate_IsAutoDusted_NeverASecondHolding`, `OpenPack_ADuplicateDuringARun_NeverTouchesTheLockedCopy` |
 | F11 | Craft a card already held | 409 1405 | `Craft_Owned_Refused` |
 | F12 | Run start with a locked character | 400 1409, no run created | `RunStart_LockedCharacter_Refused` |
-| F13 | A client plays with a pool the server did not issue (tampered start) | The run hash differs → the step fails `WrongSetup`, verdict 2002, rollback as today (scenario 5) | `step_rejects_foreign_pool` (Godot), `verify_pool_tampered` (e2e) |
-| F14 | Redis down or flushed | Catalog reads fall back to Postgres; opens never read the cache (scenario 4) | `Catalog_RedisFlushed_ReadsPostgres`, `OpenPack_RedisDown_Works` |
-| F15 | Redpanda down | Account actions still commit; their outbox rows drain after it is back, none lost (scenario 3) | `CardEvents_RedpandaDown_DrainAfterRestart` (real Redpanda, `docker pause`, like `WalletTests`) |
-| F16 | Postgres unreachable | 503 ProblemDetails as every other endpoint | `AccountEndpoints_PostgresDown_503` |
+| F13 | A client plays with a pool the server did not issue (tampered start) | The run hash differs → the step fails `WrongSetup`, verdict 2002, rollback as today (scenario 5) | `test_a_step_with_another_pool_than_the_runs_is_refused` (Godot), `verify_pool_tampered` (e2e: the genesis step rejects the run, nothing paid) |
+| F14 | Redis down or flushed | Catalog reads fall back to Postgres; opens never read the cache (scenario 4) | `Catalog_WithRedisUnreachable_StillReadsFromPostgres_AndPacksStillOpen` |
+| F15 | Redpanda down | Account actions still commit; their outbox rows drain after it is back, none lost (scenario 3) | `CardEvents_RedpandaDown_DrainAfterRestart` (real Redpanda, `docker pause`, like `WalletTests`), e2e `card_redpanda_down` (see section 9 for what is built) |
+| F16 | Postgres unreachable | 503 ProblemDetails as every other endpoint | `AccountEndpoints_WithPostgresUnreachable_Answer503` (open and collection; the reads and the admin GETs: section 9) |
 | F17 | Content and server catalog disagree (a new item not yet exported) | The item is not in any issued pool; `check_card_catalog.sh` reports it | script check, no test |
-| F18 | Seed demotes a core card | The API refuses to start, naming the card | `Seeder_CoreDemotion_FailsStartup` |
+| F18 | Seed demotes a core card | The API refuses to start, naming the card | `Seeder_ACoreCardThatWouldStopBeingCore_RefusesTheWholeFile` (the seeder rethrows it: the host stops) |
 | F19 | Admin puts invalid rules | 400 1401 (odds not 10000, `CraftCost <= DustValue`, unknown set); non-admin 403 1302 | `PackType_Put_Validates`, `CardRates_Put_RequiresAdmin` |
 | F20 | A pack is retired while a client holds its old listing | Open returns 404 1408 | `OpenPack_Retired_404` |
-| F22 | Pity timer reaches N | The Nth pack since the last drop holds that rarity, forced into the lowest slot; counters reset; a replayed open does not move the counters twice | `Pity_GuaranteedAtN`, `Pity_ResetsOnNaturalDrop`, `Pity_Replay_CountsOnce`, `Pity_ScopedPerPack`, `FirstGuarantees_LandWithinN`, `Pity_ForcedCardDuplicate_AutoDusted` |
-| F25 | A pack with no Rare or better | The last unforced slot is redrawn among Rare and above; a pack is never all Common; the redraw is deterministic from the seed | `Pack_NeverAllCommon`, `RareGuarantee_RedrawsLastUnforcedSlot`, `RareGuarantee_ResetsExactRarityCounter` |
-| F23 | Abandon a Verifying run | 409 1410; the lock stays until the verdict | `Abandon_Verifying_Refused` |
-| F24 | Client tries to leave the main menu while its run is Verifying | The UI offers no way out; restart returns to the same screen | `test_run_end_gate` (Godot) |
+| F22 | Pity timer reaches N | The Nth pack since the last drop holds that rarity, forced into the lowest slot; counters reset; a replayed open does not move the counters twice | `Pity_TheNthPackHoldsTheRarity_FlaggedAndTheCounterResets`, `Pity_CountersArePerPackType_AndAReplayCountsOnce`, `Pity_FirstGuarantee_LandsWithinTheFirstNPacks`, the `PackDrawerTests` pity cases (incl. a forced card never dropped), e2e `card_pity` |
+| F25 | A pack with no Rare or better | The last unforced slot is redrawn among Rare and above; a pack is never all Common; the redraw is deterministic from the seed | `OpenPack_NeverReturnsAPackWithoutARareOrBetter_WhenTheGuaranteeIsOn`, `RareGuarantee_*` in `PackDrawerTests` |
+| F23 | Abandon a Verifying run | 409 1410; the lock stays until the verdict | `Dust_AVerifyingRunKeepsTheLock_…` (abandon refused 1410), `Abandon_ARetriedCancel_IsASuccess` |
+| F24 | Client tries to leave the main menu while its run is Verifying | The UI offers no way out; restart returns to the same screen | `test_a_won_server_run_blocks_leaving_until_the_server_accepts_it` (Godot); the Continue branch: section 9 |
 | F21 | An open pack's price changes between the listing and the open | Price in force at the transaction is charged and returned in `GemsSpent` | `OpenPack_PriceChanged_ChargesCurrent` |
 
 No dead-letter handling: no queue. Redelivery does not exist here; retries are the client's, made safe by the request key.
@@ -456,17 +495,17 @@ No dead-letter handling: no queue. Redelivery does not exist here; retries are t
 
 Prometheus (no card or character ids as labels; `pack` is a configured pack id, a bounded set):
 - `rpg_packs_opened_total{pack}`; `rpg_pack_cards_total{rarity,duplicate}`
-- `rpg_cards_dusted_total{rarity}`, `rpg_cards_crafted_total{rarity}`
+- `rpg_cards_dusted_total`, `rpg_cards_crafted_total`; `rpg_pack_pity_triggers_total{rarity}` (cards forced by a pity timer)
 - `rpg_gems_spent_total{reason="pack"}`; `rpg_dust_total{direction="in|out",reason="duplicate|dust|craft"}` (faucet and sink; the Grafana panel shows the ratio)
 - `rpg_card_actions_refused_total{action,reason}` (`reason` = the error name: InsufficientCurrency, CardLockedByRun, …)
 - `rpg_account_request_replays_total{action}` (F1 working)
 - `rpg_account_action_duration_seconds{action}` histogram (the whole transaction)
-- `rpg_card_catalog_reads_total{source="redis|postgres"}`, `rpg_card_rule_changes_total{kind="pack|rate"}`
-- `rpg_cards_owned_total` gauge (rows in `card_holdings`, sampled by the monitor every `Monitors:Interval`)
+- `rpg_card_catalog_reads_total{source="redis|postgres"}`, `rpg_card_rule_changes_total{kind="pack|rate|invalid|forbidden"}`
+- `rpg_cards_owned` gauge (rows in `card_holdings`, sampled by `CardsOwnedMonitor` every `Monitors:Interval`)
 
-Traces: one span per account action with `player.id`, `pack.id`, `request.replay`; the outbox row carries `traceparent` (slice 4c).
-Grafana: a "Card economy" row (packs per minute, dust faucet/sink, refusals by reason, action latency). Metrics are
-named in `Observability/RpgMetrics.cs` with the others.
+Traces: the request's own span carries `rpg.pack_id` on an open (no dedicated span per action, no replay tag); the outbox row
+carries `traceparent` (slice 4c). Grafana: a "Card economy" row is **not built** (section 9). Metrics are named in
+`Observability/RpgMetrics.cs` with the others.
 
 ## 6. Test plan
 
@@ -480,7 +519,9 @@ named in `Observability/RpgMetrics.cs` with the others.
 - Rules: versions are append-only, the latest in force is used, a put never changes an existing ledger row.
 - Run start: pool = core + owned (not owned-after), stored on `runs.card_pool`, returned on start and resume; Cards off →
   responses and behaviour equal today's (existing tests unchanged).
-- Seeder: first run, re-run is a no-op, an added card, a retired card, a demotion refused, hash change bumps the version.
+- Seeder: first run, re-run is a no-op, a retired card (still owned), a demotion or a removed core card refused, a Mythic item or a
+  non-Mythic character refused, hash change bumps the version, the shipped `card_economy.json` seeds its pack over the fixture catalog,
+  seeding twice never overwrites an admin's version; an empty catalog means run starts are not enforced.
 - Auth: every card endpoint 401 without a token; a player cannot read or change another's account.
 
 **`Rpg.Contracts.Tests`:** golden JSON for every record in 3.1 and the five event payloads; additive fields absent when null
@@ -488,30 +529,36 @@ named in `Observability/RpgMetrics.cs` with the others.
 fixture (the `test_battle_facts` pattern); purity guard still passes (no game logic in Contracts).
 
 **Godot (`client-godot/tests/`, fixtures only):**
-- `test_run_end_gate`: a Verifying run offers no exit to the main menu or a new run, leaves on Won, and rebuilds on Rejected.
-- `test_card_local`: `cards local` sets a pool for local runs, is never written to a server run or counted as ownership.
-- `test_card_pool`: with `card_pool` set, shop / item room / boss / chest picks come only from it; with it `null`, every
+All in `test_cards.gd` (with `card_world.gd`) and the pool cases of `test_step_runner.gd`:
+- the run-end gate: a won server run cannot leave (`back_to_menu`, `save_and_quit`) until the end screen; a cancelled run stops
+  uploading and loses its save; a save that lost or changed its pool is noticed (local continue refuses).
+- `cards local` sets a pool for local runs; the server commands need server mode.
+- pool picks: with `card_pool` set, shop / item room / boss / chest picks come only from it; with it `null`, every
   existing golden (floors, scripted run, keyed run) is unchanged; starting loadouts, named gifts, drops and mirrors ignore it;
   an empty filtered pool falls back.
-- `test_run_authority` / `test_step_runner`: `card_pool=` joins the hash only when set; snapshot round trip and field coverage
-  with the pool; a step with a different pool is rejected `WrongSetup`; resume with the pool from the server response.
-- `test_card_catalog`: the export of a fixture content tree matches a committed JSON (golden), canonical hash stable under key order.
-- `test_card_pass`: the core selection on a fixture item set reaches targets, takes lowest rarity first, breaks ties by
-  shortfall then id, takes all of Boss and Void, never touches existing files without `--apply`.
-- Validator: `card_set_missing`, `card_set_unknown` (broken fixtures), `core_pool_short` warning.
-- Console commands: `cards`, `packs`, `open`, `dust`, `craft`, `abandon` against a fake bridge (the `test_server_mode` pattern).
+- the run hash line `card_pool=` only when set and order-independent; a snapshot never holds the pool and a restore without it
+  hashes differently; steps of a pool run verify and link; a step with a stripped, widened or foreign pool is refused
+  (`SnapshotHashMismatch`); a malformed `cardPool` is exit 3.
+- the catalog export matches a committed golden (`tests/fixtures/golden/game/card_catalog.json`, read by the C# `CardContractTests` as the
+  server's `CardCatalogFile`), canonical hash stable.
+- the core proposal on an untagged fixture set reaches the targets, takes lowest rarity first, breaks ties by shortfall then id, takes
+  all of Boss and the plain pools, reports a short or overshooting pool, and `apply` patches only the tags line.
+- the validator rules over broken sets; `core_pool_short` is a warning.
+- the server calls (`open_pack`, `dust_card`, `craft_card`, `abandon_run`, `new_request_key`, the admin call) over a fake bridge.
 
-**End to end (`tools/e2e.sh`, on demand):** `card_pack` (a boss win pays gems, the player opens a pack, the collection and the
-wallet agree, the duplicate path pays dust), `card_run_lock` (dust refused during the run, passes after `abandon`),
-`verify_pool_tampered` (a start with a foreign pool is rejected, nothing paid), `card_redpanda_down` (scenario 3).
-`card_pity` (a fixture pack with a tiny timer guarantees a Mythic by the Nth pack, counters persist across a restart of the API). The new scenarios use the card fixtures with `Cards:Enabled=true`. Existing scenarios keep running with `Cards:Enabled=false`.
+**End to end (`tools/e2e.sh`, on demand; `#! cards` turns the card system on with the real catalog and seed files, on the real demo
+content, through the real worker):** `card_pack` (a win pays gems, the real worker verifies every step with the run's pool, the player
+opens a pack, collection, wallet, ledgers and outbox agree), `card_run_lock` (dust refused during the second run, passes after
+`abandon`), `card_pity` (a tiny pack's Mythic timer fires on the 2nd open, across a server restart), `verify_pool_tampered` (the stored
+pool is narrowed with `e2e tamper-pool`: the genesis step rejects the client's start, the run ends Rejected, nothing paid). Existing
+scenarios keep running with `Cards__Enabled=false`. `card_redpanda_down` is not built (section 9).
 
 **Not a test:** `tools/check_card_catalog.sh`, the comparison of content against `card_catalog.json`.
 
 ## 7. Decisions, assumptions to confirm, and what stays out
 
 **Decided by the roadmap (2026-11-09):** a card is owned once and a duplicate is auto-dusted; a core set every account owns;
-sizes 30 / 30 / 15 / 15 with Boss all core, Void all core and five new Vault items; core picked by lowest rarity first;
+sizes 30 / 30 / 15 (Treasure, Shop, Void; the Vault pool was removed 2026-11-09) with Boss all core and Void all core; core picked by lowest rarity first;
 craft any card for dust, dust pays a fraction of the craft cost; the run lock is removal-only, covers cards acquired
 before the run started, never expires, and the player cancels the run from a pop-up; no trading.
 
@@ -532,22 +579,37 @@ before the run started, never expires, and the player cancels the run from a pop
    run; the abandon of a Verifying run is refused (1410).
 8. **Equipment is a card** (an item card); items with no pool tag are not cards.
 9. **Pack RNG is a server-side integer SplitMix64**, seed and versions stored per opening.
-10. **Cancel run** is a new `POST /runs/{id}/abandon`, reusing the abandon path of "start a new run".
+10. **Cancel run** is a new `POST /runs/{id}/abandon` (its own transaction, same Abandoned status as "start a new run"; see 2.3).
 
 **Stays out:** trading and any market, golden cards (and so their long pity timers), bundles and real-money purchase,
 pack-opening animation and every screen (5b), the balance retune and real numbers (5c), expansion sets themselves (only
 the tag and per-set packs work), card-based analytics projections (4b consumes the events), retention of `pack_openings`,
 `pack_pity` and `account_requests` (7b).
 
-## 8. Open items for the next review
+## 8. Outcome of the review items (all decided 2026-11-09)
 
-1. **Does a Mythic reset the Legendary counter?** Proposed: no (each rarity counts its own drops). The alternative is
-   friendlier to players and cheaper for us to explain; it makes Legendary supply a little lower.
-2. **Which 6 characters are core?** Proposed: Warrior, Cleric, Arcanist, Ranger, Bard, Bulwark (frontline, healer, magic damage,
-   ranged damage, support, tank); the collectible five are Cryomancer, Pyromancer, Ember Knight, Shatterweaver, Plaguewright.
-   Please confirm or name others. Core characters are never in packs, so the Mythic pool of a pack is those five.
-3. **Pity and pack odds: final (2026-11-09)**, in 3.4a and 3.4b (including the Rare guarantee). Still to show the player: pity counters (the collection response carries them).
-4. **New content moved to 5c (decided 2026-11-09)**: four more Food items and the five new Vault items (Vault 10 → 15) are
-   made in the 5c content/balance pass, not here. Until then Vault is all core and 5 short of its target.
-5. **Names: decided 2026-11-09**: the rarity above Legendary is `Mythic`; the second set tag is `Card.Set.Descent`.
-6. **Dust and craft values: set to Hearthstone's** (3.4b), Mythic at twice Legendary (craft 3200, dust 800).
+1. A Mythic does **not** reset the Legendary counter (each rarity counts its own drops).
+2. The six core characters are Warrior, Cleric, Arcanist, Ranger, Bard and Bulwark (`starter_characters` in `card_rules.tres`);
+   Cryomancer, Pyromancer, Ember Knight, Shatterweaver and Plaguewright are the Mythic cards of the Descent pack.
+3. Pity and pack odds are final for this slice (3.4a, 3.4b, with the Rare guarantee); 5c tunes them.
+4. Four more Food items are made in 5c. There is no Vault pool (removed from the content, the registry and the rules), so no new
+   Vault items. Slice 5d `unique-events` (spec `specs/unique-events.md`) lands with 5c.
+5. Names: the rarity above Legendary is `Mythic`; the second set tag is `Card.Set.Descent`.
+6. Dust and craft values are Hearthstone's (3.4b), Mythic at twice Legendary.
+
+## 9. Implementation notes: what is not built, what is not tested
+
+**Not built:**
+- Grafana "Card economy" row and a dedicated trace span per account action (section 5).
+- A Settings key for the local test pool (the console command exists).
+- e2e `card_redpanda_down`; the card events do pass `redpanda-check` in `card_pack`, and the relay's drain after Redpanda is down is
+  covered by `outbox_redpanda_down` and `OutboxTests`.
+- The screens (slice 5b), the retune, the new Food items and more events (slice 5c), the unique-events rule (slice 5d).
+
+**Decisions made while building** (reflected above): the pack RNG lives in `Rpg.Economy` (economy, not combat: the root rule about
+RNG is about battles); the card store sits in `Rpg.Economy` beside the wallet; an empty catalog disables enforcement; the run's pool
+travels with the step row; a save carries the pool and a digest of it.
+
+**Untested scenarios (as of this sync):** the card console commands' formatting and server paths against a fake server (only the link
+calls and "needs server mode" are tested); the main menu's Continue for a Verifying run (`GameMain.can_continue`); the Postgres-down
+503 on `/packs`, `/cards/catalog` and the admin GETs; the Redpanda-down drain of card events as its own test.
