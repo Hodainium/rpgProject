@@ -176,6 +176,7 @@ public class RunAuthorityTests(StackFixture stack)
         var none = await Assert.ThrowsAsync<GameServerApiException>(() =>
             client.GetFloorSeedAsync(run.RunId, 1, new FloorSeedRequest(), Ct));
         await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.NextFloor(4)), Ct);
+        await GateOpenAsync(factory, run.RunId);
         var issued = await client.GetFloorSeedAsync(run.RunId, 1, new FloorSeedRequest(4), Ct);
         var repeated = await client.GetFloorSeedAsync(run.RunId, 1, new FloorSeedRequest(), Ct);  // a retry needs no gate
 
@@ -204,9 +205,10 @@ public class RunAuthorityTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task EndRun_Won_VerifyingThenAutoApproved()
+    public async Task EndRun_Won_StaysVerifying_ThereIsNoAutoApprove()
     {
-        await using (var factory = await ApiFactory.RunsAsync(stack))
+        await using (var factory = await ApiFactory.RunsAsync(stack,
+                         settings: new Dictionary<string, string?> { ["Run:AutoApproveWins"] = "true" }))   // the setting is gone
         {
             var client = await ClientAsync(factory, "alice");
             var run = await client.StartRunAsync(Start, Ct);
@@ -229,19 +231,6 @@ public class RunAuthorityTests(StackFixture stack)
                 $"SELECT count(*) FROM runs WHERE run_id = '{run.RunId}' AND claimed_run_hash = 'run3'"));
         }
 
-        await using (var factory = await ApiFactory.RunsAsync(stack,
-                         settings: new Dictionary<string, string?> { ["Run:AutoApproveWins"] = "true" }))
-        {
-            var client = await ClientAsync(factory, "alice");
-            var run = await client.StartRunAsync(Start, Ct);
-            await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start()), Ct);
-
-            var end = await client.EndRunAsync(run.RunId, RunLog.End(2, RunEndStatus.Won), Ct);
-
-            Assert.Equal(RunStatus.Won, end.Status);
-            Assert.NotNull((await client.GetRunAsync(run.RunId, Ct)).EndedAt);
-            Assert.Null(await client.GetCurrentRunAsync(Ct));
-        }
     }
 
     [Fact]
@@ -342,6 +331,7 @@ public class RunAuthorityTests(StackFixture stack)
         ];
         await alice.SendActionsAsync(run.RunId,
             RunLog.Batch(RunLog.Start(), RunLog.Room(2), RunLog.NextFloor(3)), Ct);
+        await GateOpenAsync(factory, run.RunId);
         await alice.GetFloorSeedAsync(run.RunId, 1, new FloorSeedRequest(3), Ct);
         await alice.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Battle(run.RunId, 4, floor: 1, cell: 9)), Ct);
         await alice.SendActionsAsync(run.RunId, RunLog.Batch(tail[0], tail[1]), Ct);
@@ -355,7 +345,13 @@ public class RunAuthorityTests(StackFixture stack)
         Assert.Single(empty.FloorSeeds);
         Assert.Equal([0, 1], resumed.FloorSeeds.Select(f => f.Floor));
         Assert.Equal(run.FloorSeed, resumed.FloorSeeds[0].FloorSeed);
-        Assert.Equal(4, resumed.CheckpointSeq);  // the battle: the latest snapshot
+        // Spec run-verify 2.6: resume starts from the latest *verified* checkpoint, so nothing verified yet means seq 1.
+        Assert.Equal(1, resumed.CheckpointSeq);
+        Assert.Equal([2, 3, 4, 5, 6], resumed.Tail.Select(a => a.Seq));
+        await ExecuteAsync(factory, $"UPDATE runs SET verified_seq = 4 WHERE run_id = '{run.RunId}'");
+        resumed = await alice.ResumeAsync(run.RunId, Ct);
+        Assert.Equal(4, resumed.CheckpointSeq);  // the battle: the latest verified snapshot
+        Assert.Equal(4, resumed.VerifiedSeq);
         Assert.True(JsonElement.DeepEquals(RunLog.Snapshot(4), resumed.Snapshot));
         Assert.Equal([5, 6], resumed.Tail.Select(a => a.Seq));
         Assert.Equal(Json(tail[0]), Json(resumed.Tail[0]));
@@ -364,6 +360,7 @@ public class RunAuthorityTests(StackFixture stack)
 
         // A later checkpoint moves the cut; an ended run can't be resumed.
         await alice.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Battle(run.RunId, 7, floor: 1, cell: 4)), Ct);
+        await ExecuteAsync(factory, $"UPDATE runs SET verified_seq = 7 WHERE run_id = '{run.RunId}'");
         var withBattle = await alice.ResumeAsync(run.RunId, Ct);
         Assert.Equal(7, withBattle.CheckpointSeq);
         await alice.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Room(8, floor: 1)), Ct);
@@ -383,11 +380,7 @@ public class RunAuthorityTests(StackFixture stack)
         // in the database to check the tail rebuilds the battle from battle_sessions.
         var battle = RunLog.Battle(run.RunId, 2);
         await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), battle, RunLog.Room(3)), Ct);
-        await using (var command = factory.Services.GetRequiredService<Npgsql.NpgsqlDataSource>().CreateCommand(
-                         $"UPDATE run_actions SET snapshot = NULL WHERE run_id = '{run.RunId}' AND seq = 2"))
-        {
-            await command.ExecuteNonQueryAsync(Ct);
-        }
+        await ExecuteAsync(factory, $"UPDATE run_actions SET snapshot = NULL WHERE run_id = '{run.RunId}' AND seq = 2");
 
         var resumed = await client.ResumeAsync(run.RunId, Ct);
 
@@ -408,6 +401,7 @@ public class RunAuthorityTests(StackFixture stack)
         var run = await client.StartRunAsync(Start, Ct);
 
         var ex = await Assert.ThrowsAsync<GameServerApiException>(() => client.StartRunAsync(Start, Ct));
+        await GateOpenAsync(factory, run.RunId);
         var stairs = await client.GetFloorSeedAsync(run.RunId, 1, new FloorSeedRequest(0), Ct);  // another bucket
 
         Assert.Equal(HttpStatusCode.TooManyRequests, ex.StatusCode);

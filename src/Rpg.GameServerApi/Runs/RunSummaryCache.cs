@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Rpg.Contracts.Runs;
 using Rpg.Contracts.Serialization;
 using Rpg.GameServerApi.Infrastructure;
 using Rpg.GameServerApi.Observability;
@@ -22,6 +23,32 @@ public sealed class RunSummaryCache(RedisConnection redis, RpgMetrics metrics, I
     public static string SummaryKey(Guid runId) => $"run:summary:{runId:D}";
 
     public static string CurrentKey(Guid playerId) => $"run:current:{playerId:D}";
+
+    /// <summary>Spec run-verify 3.5: a verified floor's digest and its owner, 30 min.</summary>
+    public static string FloorKey(Guid runId, int floor) => $"floor:{runId:D}:{floor}";
+
+    public async Task<(Guid PlayerId, FloorDigestResponse Digest)?> GetFloorAsync(Guid runId, int floor)
+    {
+        var value = await GetAsync(FloorKey(runId, floor));
+        try
+        {
+            return value.IsNullOrEmpty
+                ? null
+                : JsonSerializer.Deserialize<CachedFloor>(value.ToString(), RpgJson.Options) is { } cached
+                    ? (cached.PlayerId, cached.Digest)
+                    : null;
+        }
+        catch (JsonException)
+        {
+            metrics.CacheError("get");   // an entry another build wrote: a miss, the next fill replaces it
+            return null;
+        }
+    }
+
+    public Task SetFloorAsync(Guid runId, int floor, Guid playerId, FloorDigestResponse digest) =>
+        SetAsync(FloorKey(runId, floor), JsonSerializer.Serialize(new CachedFloor(playerId, digest), RpgJson.Options));
+
+    private sealed record CachedFloor(Guid PlayerId, FloorDigestResponse Digest);
 
     public async Task<StoredRun?> GetSummaryAsync(Guid runId)
     {

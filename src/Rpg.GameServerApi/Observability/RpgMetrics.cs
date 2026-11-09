@@ -37,6 +37,14 @@ public sealed class RpgMetrics
     private long _battlesUnverified = -1;
     private double _oldestUnverifiedAge;
     private readonly ConcurrentDictionary<string, long> _verifyQueueDepth = new();
+    // Spec run-verify 5.
+    private readonly Counter<long> _stepsCreated;
+    private readonly Counter<long> _stairsGate;
+    private readonly Counter<long> _genesisClaims;
+    private readonly Counter<long> _rollbacks;
+    private long _stepsPending = -1;
+    private double _oldestPendingStepAge;
+    private long _gemsPending = -1;
 
     public RpgMetrics(IMeterFactory meterFactory, BuildInfo build)
     {
@@ -132,8 +140,52 @@ public sealed class RpgMetrics
         meter.CreateObservableGauge("rpg.verify_queue_depth",
             () => _verifyQueueDepth.Select(kv => new Measurement<long>(kv.Value,
                 new KeyValuePair<string, object?>("queue", kv.Key))),
-            description: "Messages waiting in verify.battle, the retry queues (summed) and the DLQ.");
+            description: "Messages waiting in verify.battle, verify.segment, the retry queues (summed) and the DLQs.");
+
+        // Slice 4a (spec run-verify 5).
+        _stepsCreated = meter.CreateCounter<long>("rpg.steps_created", description: "Verification steps created by uploads, by kind.");
+        _stairsGate = meter.CreateCounter<long>("rpg.stairs_gate", description: "Stairs requests the verification gate looked at, by result.");
+        _genesisClaims = meter.CreateCounter<long>("rpg.genesis_claims", description: "The client's seq 1 against the server's anchor, by result.");
+        _rollbacks = meter.CreateCounter<long>("rpg.run_rollbacks", description: "Runs rolled back or ended by the verifier, by reason and terminal.");
+        meter.CreateObservableGauge("rpg.steps_pending",
+            () => Interlocked.Read(ref _stepsPending) is var count and >= 0
+                ? [new Measurement<long>(count)]
+                : Array.Empty<Measurement<long>>(),
+            description: "Verification steps not decided and not dead-lettered, recomputed from Postgres.");
+        meter.CreateObservableGauge("rpg.step_oldest_pending_age", () =>
+                Interlocked.Read(ref _stepsPending) >= 0
+                    ? [new Measurement<double>(Volatile.Read(ref _oldestPendingStepAge))]
+                    : Array.Empty<Measurement<double>>(),
+            unit: "s", description: "Age of the oldest pending verification step (0 when none).");
+        meter.CreateObservableGauge("rpg.gems_pending",
+            () => Interlocked.Read(ref _gemsPending) is var gems and >= 0
+                ? [new Measurement<long>(gems)]
+                : Array.Empty<Measurement<long>>(),
+            description: "Gems in pending ledger rows: settled, waiting for their battle to be verified.");
     }
+
+    /// <summary>kind: genesis | segment | battle | end.</summary>
+    public void StepCreated(string kind, int count = 1) =>
+        _stepsCreated.Add(count, new KeyValuePair<string, object?>("kind", kind));
+
+    /// <summary>result: open | blocked.</summary>
+    public void StairsGate(string result) => _stairsGate.Add(1, new KeyValuePair<string, object?>("result", result));
+
+    /// <summary>result: match | mismatch (the first comparison of an upload's seq 1).</summary>
+    public void GenesisClaim(string result) => _genesisClaims.Add(1, new KeyValuePair<string, object?>("result", result));
+
+    /// <summary>reason: a coarse category (StateMismatch | Illegal | Seed | Link | Malformed); terminal: true | false.</summary>
+    public void RunRolledBack(string reason, bool terminal) => _rollbacks.Add(1,
+        new KeyValuePair<string, object?>("reason", reason), new KeyValuePair<string, object?>("terminal", terminal));
+
+    /// <summary>Set by <c>BattleVerifyMonitor</c>.</summary>
+    public void SetStepsPending(long count, double oldestAgeSeconds)
+    {
+        Volatile.Write(ref _oldestPendingStepAge, Math.Max(0, oldestAgeSeconds));
+        Interlocked.Exchange(ref _stepsPending, count);
+    }
+
+    public void SetGemsPending(long gems) => Interlocked.Exchange(ref _gemsPending, gems);
 
     /// <summary>result: created | abandoned_previous | rejected.</summary>
     public void RunStart(string result) => _runStarts.Add(1, new KeyValuePair<string, object?>("result", result));
@@ -163,7 +215,7 @@ public sealed class RpgMetrics
 
     public void BattleSubmitted() => _battlesSubmitted.Add(1);
 
-    /// <summary>status: won | lost | auto_approved.</summary>
+    /// <summary>status: won | lost.</summary>
     public void RunEnd(string status) => _runEnds.Add(1, new KeyValuePair<string, object?>("status", status));
 
     /// <summary>bucket: actions | runs | floors.</summary>

@@ -1,9 +1,10 @@
-# Spec battle-verify 6: a whole run on the real stack. Every battle is uploaded in the log, becomes a job on RabbitMQ
-# and is replayed by the verifier worker's real headless Godot (on the fixtures content, like the game): the replay
-# must reach the client's own final hash and outcome, so every session ends Verified.
+# Spec battle-verify 6 and run-verify 6: a whole run on the real stack. The run starts with its genesis step (the server's own
+# start state), every checkpoint of the log becomes a step job on RabbitMQ, and the verifier worker's real headless Godot
+# replays each step, the battles inside it included (a battle is simulated once): the replay must reach the client's own
+# hashes, so every step and every battle session ends Verified, the floors are verified in order and the win is verified last.
 #! worker
 #! env Monitors__Interval=00:00:01
-new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+new fixture.character.titan run=fixture.run.two_floors
 wait run
 autorun policy=smart
 wait floor 1

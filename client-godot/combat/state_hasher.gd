@@ -67,6 +67,33 @@ static func canonical_lines(battle: Battle) -> Dictionary:
 	return {"lines": lines, "error": ""}
 
 
+## Spec run-verify: canonical text for any plain data, to hash it whole: dictionaries by sorted key, arrays in order, Vector2i as
+## (x,y), whole floats as ints. Hand-picked lines forget a field added later; this text contains every field that is there.
+static func canonical(value: Variant) -> String:
+	match typeof(value):
+		TYPE_DICTIONARY:
+			var keys: Array = value.keys()
+			keys.sort_custom(func(a: Variant, b: Variant) -> bool: return str(a) < str(b))
+			var parts := PackedStringArray()
+			for key in keys:
+				parts.append("%s=%s" % [key, canonical(value[key])])
+			return "{" + ",".join(parts) + "}"
+		TYPE_ARRAY:
+			var items := PackedStringArray()
+			for item in value:
+				items.append(canonical(item))
+			return "[" + ",".join(items) + "]"
+		TYPE_VECTOR2I:
+			return "(%d,%d)" % [value.x, value.y]
+		TYPE_BOOL:
+			return "1" if value else "0"
+		TYPE_FLOAT:
+			return str(int(value)) if is_equal_approx(value, floorf(value)) else str(value)
+		TYPE_NIL:
+			return "~"
+	return str(value)
+
+
 static func sha256_hex(text: String) -> String:
 	var context := HashingContext.new()
 	context.start(HashingContext.HASH_SHA256)

@@ -45,7 +45,7 @@ public sealed class ApiFactory(string postgres, string redis, string rabbitMq, s
                 ["Ruleset:Accepted:0"] = TestRuleset,
                 ["Auth:SigningKey"] = TestSigningKey,
                 ["Auth:DevTokens"] = "true",
-                ["Run:AutoApproveWins"] = "false",
+
             };
             foreach (var bucket in new[] { "actions", "runs", "floors" })
             {

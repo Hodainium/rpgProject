@@ -27,6 +27,13 @@ public static class EventTypes
     public const string RewardGranted = "RewardGranted";
     public const string RewardRuleChanged = "RewardRuleChanged";
     public const string RewardCycleReset = "RewardCycleReset";
+    // Spec run-verify 3.1.
+    public const string FloorVerified = "FloorVerified";
+    public const string RunVerified = "RunVerified";
+    public const string RunRolledBack = "RunRolledBack";
+    public const string AntiCheatAlert = "AntiCheatAlert";
+    public const string RewardPending = "RewardPending";
+    public const string RewardVoided = "RewardVoided";
 }
 
 /// <summary>Redpanda topic names (data only).</summary>
@@ -34,6 +41,8 @@ public static class EventTopics
 {
     public const string Battle = "rpg.battle.events";
     public const string Economy = "rpg.economy.events";
+    public const string Run = "rpg.run.events";            // spec run-verify: FloorVerified, RunVerified, RunRolledBack
+    public const string Security = "rpg.security.events";  // spec run-verify: AntiCheatAlert
 }
 
 public sealed record BattleVerifiedPayload(string BattleId, int RunSeq, BattleOutcome Outcome, int Turns,

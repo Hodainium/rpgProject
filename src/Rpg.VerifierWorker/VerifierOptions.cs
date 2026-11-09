@@ -5,6 +5,9 @@ public sealed class VerifierOptions
 {
     public const string Section = "Verifier";
 
+    /// <summary>The step pool (spec run-verify 3.4).</summary>
+    public SegmentOptions Segment { get; set; } = new();
+
     /// <summary>Consumers, each with prefetch 1, so this many Godot processes at most.</summary>
     public int Concurrency { get; set; } = 2;
 
@@ -38,6 +41,15 @@ public sealed class VerifierOptions
 
     /// <summary>How long a stopping worker lets running jobs finish before it gives the rest back to the broker.</summary>
     public TimeSpan ShutdownGrace { get; set; } = TimeSpan.FromSeconds(70);  // longer than ProcessTimeout
+}
+
+/// <summary>Configuration section <c>Verifier:Segment</c>: the step queue's consumers (spec run-verify 3.4).</summary>
+public sealed class SegmentOptions
+{
+    public int Concurrency { get; set; } = 2;
+
+    /// <summary>A step replay that runs longer is killed and counts as a runner error.</summary>
+    public TimeSpan ProcessTimeout { get; set; } = TimeSpan.FromSeconds(90);
 }
 
 /// <summary>Configuration section <c>Settlement</c> (spec settlement-outbox 3.7). What a boss pays is a server-owned rule (spec economy-rewards), not configuration.</summary>

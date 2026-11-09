@@ -1,16 +1,17 @@
-# Spec battle-verify 6, acceptance scenario 2 (the verdict half) end to end: the worker is killed while it is replaying, the
-# unacked job returns to the queue, a new worker finishes it, and every battle ends with exactly one verdict and, for the
-# boss, exactly one settlement (spec settlement-outbox 6: no lock to wait out, so the retry is quick).
+# Spec battle-verify 6 and run-verify 4 (F2, F3), acceptance scenario 2 end to end: the worker is killed while it is replaying a
+# step, the unacked job returns to the queue, a new worker finishes it, and every step and battle ends with exactly one verdict
+# and, for the boss, exactly one settlement. No worker runs while floor 0 is played, so every step of it waits in the queue and the
+# stairs wait for them (the gate); the run goes on once the replacement worker has verified the floor.
 #! env Monitors__Interval=00:00:01
 new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
 wait run
 autorun policy=smart
-wait floor 1
-autorun policy=smart
-wait ended 60
 e2e worker-start 120
 e2e worker-stop
 e2e worker-start 120
+wait floor 1 240
+autorun policy=smart
+wait ended 240
 wait verdict all 240
 wait gems 20 120
 server verdict

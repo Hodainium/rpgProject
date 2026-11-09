@@ -86,7 +86,7 @@ next_floor → floor_seed_needed(1) → ServerLink (retried while offline) ─�
                                                  one transaction: SELECT runs … FOR UPDATE
                                                    floor == current_floor     → 200, same seed (a retry)
                                                    floor == current_floor + 1 → (B: afterSeq == last_seq, else 409 1106)
-                                                                                 (4a: floor − 2 verified, else 409 1107)
+                                                                                 (4a: the floor just played verified, else 409 1107)
                                                                                  INSERT run_floors; UPDATE current_floor
                                                    otherwise                  → 409 1105
                                                  issued: DEL run:summary:{runId} (best effort) ───▶ Redis
@@ -619,8 +619,8 @@ Descent); `rpg_players_in_battle` is checked by the server test only, not end to
 ## 7. What later slices pick up
 - **Slice 3 `battle-verify`:** a submitted battle (conditions + log) becomes a verify job on RabbitMQ; verdict cache
   and duplicate-work locks in Redis; `BattleSessionStatus` gains Verified/Rejected.
-- **Slice 4a `run-verify`:** step jobs on `verify.segment` and `verify.battle` from the stored checkpoints, the
-  fan-in link check, the floor verdict, the `1107` stairs gate (at most one unverified floor), the real run-end
+- **Slice 4a `run-verify`:** step jobs on `verify.segment` from the stored checkpoints, the
+  fan-in link check, the floor verdict, the `1107` stairs gate (the floor just played must be verified), the real run-end
   verdict (removes `Run:AutoApproveWins`), `Rejected` + rollback, resume from the latest *verified* checkpoint, and
   the floor read model in Redis (written when a floor's entry step is verified). Floor N+1 can't be generated ahead
   of time: its item pools depend on what was seen and held on floor N, so its generation is verified as part of the

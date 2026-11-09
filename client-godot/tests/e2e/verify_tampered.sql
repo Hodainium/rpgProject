@@ -1,8 +1,13 @@
-select count(*) >= 2 from battle_sessions
-select count(*) = 1 from battle_sessions where status = 'Rejected'
-select (select count(*) from battle_sessions where status = 'Verified') = (select count(*) from battle_sessions) - 1
-select bool_and(verdict->>'errorCode' = '2002' and verdict->>'error' = 'ReplayMismatch' and verdict->'mismatch'->>'reason' = 'FinalHashMismatch') from battle_sessions where status = 'Rejected'
-select bool_and(run_seq = (select min(run_seq) from battle_sessions)) from battle_sessions where status = 'Rejected'
-select bool_and(attempts = 1 and dead_lettered_at is null) from battle_sessions
-select count(*) = 0 from wallet_ledger where ref_battle_id in (select battle_id from battle_sessions where status = 'Rejected')
-select count(*) = 0 from completion_marks where battle_id in (select battle_id from battle_sessions where status = 'Rejected')
+select (select epoch from runs) = 1 and (select rollbacks from runs) = 1 and (select status from runs) = 'Won'
+select count(*) = 1 from battle_sessions_voided where status = 'Rejected' and verdict->>'errorCode' = '2002' and verdict->'mismatch'->>'reason' = 'FinalHashMismatch'
+select count(*) = 1 from run_steps where verdict->'mismatch'->>'reason' = 'BattleMismatch'
+select count(*) > 0 from run_steps where status = 'Voided'
+select count(*) > 0 from run_actions_voided
+select count(*) = 0 from battle_sessions where status = 'Rejected'
+select (select last_seq from runs) = (select verified_seq from runs)
+select (select verified_seq from runs) = (select end_seq from runs)
+select count(*) = 1 from outbox where type = 'RunRolledBack'
+select count(*) = 1 from outbox where type = 'AntiCheatAlert'
+select count(*) = 0 from wallet_ledger where status = 'pending'
+select count(*) = 1 from outbox where type = 'RunVerified'
+select count(*) = 2 from outbox where type = 'FloorVerified'

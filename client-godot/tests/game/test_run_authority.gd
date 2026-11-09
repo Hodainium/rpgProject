@@ -104,13 +104,17 @@ func test_checkpoints_attached() -> void:
 	var run := _journaled(fixtures(), requests)
 	await RunPlayer.play(run)
 	var types := {}
+	var since := 0
 	for index in requests.size():
 		var request: Dictionary = requests[index]
 		var type := str(request["action"]["type"])
 		types[type] = true
+		since += 1
 		var next_is_battle: bool = index + 1 < requests.size() and requests[index + 1]["action"]["type"] == "battle"
-		eq(request.has("snapshot"), RunWire.CHECKPOINTS.has(type) or next_is_battle,
-			"seq %d (%s): a snapshot only at a checkpoint" % [request["seq"], type])
+		var expected: bool = RunWire.CHECKPOINTS.has(type) or next_is_battle or since >= RunWire.CHECKPOINT_EVERY
+		eq(request.has("snapshot"), expected, "seq %d (%s): a snapshot only at a checkpoint" % [request["seq"], type])
+		if request.has("snapshot"):
+			since = 0
 	for type in ["start_run", "enter_room", "battle"]:
 		check(types.has(type), "the run has a %s" % type)
 	var battle: Dictionary = requests.filter(func(request) -> bool: return request["action"]["type"] == "battle")[0]
@@ -119,6 +123,20 @@ func test_checkpoints_attached() -> void:
 	eq(int(battle["action"]["battle"]["actionLog"]["schemaVersion"]), 2, "and its action log")
 	check(not run.run_log.any(func(entry: Dictionary) -> bool: return entry.has("conditions")),
 		"the conditions travel only in the queue, never in run_log")
+
+
+## Spec run-verify 2.2: a snapshot also goes up once CHECKPOINT_EVERY actions have passed since the last one, so steps stay short.
+func test_a_snapshot_every_n_actions() -> void:
+	var requests: Array = []
+	var run := _journaled(fixtures(), requests)
+	run._since_checkpoint = RunWire.CHECKPOINT_EVERY - 1
+	await RunPlayer.play(run)
+	var second: Dictionary = requests[1]
+	check(not RunWire.CHECKPOINTS.has(str(second["action"]["type"])), "the next action is not a checkpoint type")
+	check(second.has("snapshot"), "but it carries a snapshot, being the %dth since the last" % RunWire.CHECKPOINT_EVERY)
+	var other: RunController = _add(RunController.new())
+	eq(other.load_snapshot(fixtures(), second["snapshot"]), "", "which loads")
+	eq(other.state.run_hash(), second["stateHash"], "to the state hash the action claimed")
 
 
 # --- Linked runs (FakeBridge) ---------------------------------------------------------------------------------------
@@ -384,3 +402,138 @@ func test_token_refreshed_on_401() -> void:
 	check(result["ok"], "a 401 fetches a fresh token and tries once more")
 	eq(bridge.of("GetDevToken").size(), 2, "two tokens")
 	eq(JSON.parse_string(bridge.of("GetDevToken")[0][1]), {"playerName": "tester"}, "for the player's name")
+
+
+# --- Spec run-verify: epoch, the stairs gate, rollback, a resume before the first upload -------------------------------
+
+func _answer_with(base: Array, extra: Dictionary) -> Array:
+	var answer: Array = base.duplicate(true)
+	answer[1].merge(extra, true)
+	return answer
+
+
+func test_the_epoch_travels_on_every_request_and_is_saved() -> void:
+	var bridge := _bridge()
+	bridge.answers["SendActions"] = ["default"]
+	var link := _link(bridge)
+	var run := _server_run(link)
+	await RunPlayer.play(run, 3)
+	await link.drained()
+	eq(JSON.parse_string(bridge.of("SendActions")[0][2]).get("epoch"), 0, "epoch 0 until a rollback")
+	link.epoch = 2   # as an acknowledgement or a resume leaves it
+	await RunPlayer.play(run, 3)
+	await link.drained()
+	var last: Array = bridge.of("SendActions")[-1]
+	eq(int(JSON.parse_string(last[2]).get("epoch")), 2, "batches carry the epoch the client last saw")
+	eq(int(link.load_save().get("epoch", -1)), 2, "and the local save keeps it")
+	# An acknowledgement that reports a newer epoch and the verified prefix updates both.
+	bridge.answers["SendActions"] = [[true, {"lastSeq": run.run_log.size() + 50, "epoch": 3, "verifiedSeq": 9}]]
+	await RunPlayer.play(run, 2)
+	await link.drained()
+	eq([link.epoch, link.verified_seq], [3, 9], "acks bring the epoch and the verified prefix")
+
+
+func test_the_stairs_wait_for_the_previous_floor_to_verify() -> void:
+	var bridge := _bridge()
+	var blocked := ServerMode._error(409, 1107, "Previous floor not verified")
+	bridge.answers["GetFloorSeed"] = [blocked, blocked, [true, {"runId": RUN_ID, "floor": 1, "floorSeed": str(FLOOR_SEEDS[1])}]]
+	var link := _link(bridge)
+	var run := _server_run(link)
+	await RunPlayer.play(run)
+	check(await _until(func() -> bool: return run.state.floor_index == 1), "the stairs open floor 1 once the floor is verified")
+	eq(bridge.of("GetFloorSeed").size(), 3, "asked again after each 1107, then issued")
+	eq(run.runner_error, "", "a 1107 never stops the run")
+	check(JSON.parse_string(bridge.of("GetFloorSeed")[2][3]).has("epoch"), "and every ask carries the epoch")
+
+
+func test_a_rollback_rebuilds_the_run_from_the_server() -> void:
+	var bridge := _bridge()
+	bridge.offline = true   # play on offline: the queue grows
+	var link := _link(bridge)
+	var run := _server_run(link)
+	await RunPlayer.play(run, 14)
+	var played := link.queued()
+	var kept := played.filter(func(request: Dictionary) -> bool: return int(request["seq"]) <= 6)   # what the server kept
+	check(played.size() > kept.size() and kept.any(func(request: Dictionary) -> bool: return request.has("snapshot")),
+		"the run went past a verified checkpoint")
+	bridge.offline = false
+	bridge.answers["SendActions"] = [ServerMode._error(409, 1108, "Run rolled back"), "default"]
+	bridge.answers["Resume"] = [_answer_with(_resume_answer(kept, 1), {"epoch": 1, "verifiedSeq": 5})]
+	var messages: Array[String] = []
+	GameplayMessages.listen(GameplayMessageRouter.NOTIFICATION, func(_channel: StringName, message: NotificationMessage) -> void: messages.append(message.text),
+		GameplayMessageRouter.Match.EXACT, NotificationMessage, link)
+	link._pump()
+	check(await _until(func() -> bool: return link.epoch == 1), "the run is rebuilt from the server")
+	eq(bridge.of("Resume").size(), 1, "from GET /resume")
+	eq(run.state.run_hash(), str(kept[-1]["stateHash"]), "at the kept log's last state")
+	eq(link.queued(), [], "what the server rolled back is gone from the queue")
+	eq(link.verified_seq, 5, "the verified prefix is the server's")
+	check(messages.has(link.rollback_text), "and the player is told")
+	check(not FileAccess.file_exists(link.save_path()) or int(link.load_save().get("epoch", 0)) == 1, "no stale save")
+	await RunPlayer.play(run, 2)
+	await link.drained()
+	eq(int(JSON.parse_string(bridge.of("SendActions")[-1][2]).get("epoch")), 1, "later uploads carry the new epoch")
+
+
+func test_a_win_rolled_back_while_verifying_is_rebuilt_not_stopped() -> void:
+	var bridge := _bridge()
+	var verifying := {"runId": RUN_ID, "status": "Verifying", "currentFloor": 1, "lastSeq": 0, "rulesetVersion": "x",
+		"startedAt": "2026-10-27T12:00:00+00:00", "endedAt": null}
+	var rolled := verifying.duplicate()
+	rolled["status"] = "Active"
+	rolled["epoch"] = 1
+	bridge.answers["EndRun"] = [[true, {"runId": RUN_ID, "status": "Verifying"}]]
+	bridge.answers["GetRun"] = [[true, verifying], [true, rolled]]
+	var link := _link(bridge)
+	var run := _server_run(link)
+	await RunPlayer.play(run, 4)
+	await link.drained()
+	var accepted := _uploaded(bridge)
+	bridge.answers["Resume"] = [_answer_with(_resume_answer(accepted, 1), {"epoch": 1})]
+	var ended: Array[String] = []
+	run.run_ended.connect(func(status: String) -> void: ended.append(status))
+	run.state.floor_index = 1
+	run._clear_room(run.state.map.boss, false)
+	run._commit_after("")
+	check(await _until(func() -> bool: return link.epoch == 1), "the poll showed a rollback: the run is rebuilt")
+	eq(ended, [], "no victory")
+	eq(run.runner_error, "", "and the run was not stopped")
+
+
+func test_a_resume_before_the_first_upload_starts_again_from_the_servers_snapshot() -> void:
+	var reference: Array = []
+	var sender := _bridge()
+	var first := _link(sender)
+	var original := _server_run(first)
+	await RunPlayer.play(original, 2)
+	await first.drained()
+	reference = _uploaded(sender)
+	var start: Dictionary = reference[0]
+	var bridge := _bridge()
+	var answer := [true, {"runId": RUN_ID, "status": "Active", "floorSeeds": [{"runId": RUN_ID, "floor": 0,
+		"floorSeed": str(FLOOR_SEEDS[0])}], "checkpointSeq": 0, "snapshot": null, "tail": []}]
+	var ready := answer.duplicate(true)
+	ready[1]["snapshot"] = start["snapshot"]
+	bridge.answers["Resume"] = [answer, ready]   # the genesis job has not finished on the first ask
+	var link := _link(bridge)
+	var resumed: RunController = _add(RunController.new())
+	eq(await link.resume_into(resumed, fixtures(), {"runId": RUN_ID, "status": "Active", "lastSeq": 0}), "", "resumes")
+	eq(bridge.of("Resume").size(), 2, "asked again while the server had no start state yet")
+	eq(resumed.state.run_hash(), str(start["stateHash"]), "at the server's own start state")
+	check(await _until(func() -> bool: return link.last_acked_seq() == 1), "start_run goes up as seq 1")
+	var sent: Dictionary = JSON.parse_string(bridge.of("SendActions")[0][2])["actions"][0]
+	eq([int(sent["seq"]), sent["action"]["type"], sent["stateHash"]], [1, "start_run", str(start["stateHash"])], "an ordinary upload")
+	check(sent.has("snapshot"), "carrying the snapshot")
+	eq(WireJson.stringify(sent["snapshot"]["run"]["party"]), WireJson.stringify(start["snapshot"]["run"]["party"]), "which is the start state")
+	eq(resumed.run_log.size(), 1, "the next action is seq 2")
+
+
+func test_a_resume_that_finds_no_start_state_in_time_fails_loudly() -> void:
+	var bridge := _bridge()
+	bridge.answers["Resume"] = [[true, {"runId": RUN_ID, "status": "Active", "floorSeeds": [], "checkpointSeq": 0,
+		"snapshot": null, "tail": []}]]
+	var link := _link(bridge)
+	link.resume_attempts = 3
+	var error: String = await link.resume_into(_add(RunController.new()), fixtures(), {"runId": RUN_ID, "status": "Active", "lastSeq": 0})
+	check(error.contains("no start state"), "it says so: %s" % error)
+	eq(bridge.of("Resume").size(), 3, "after the attempts it was given")

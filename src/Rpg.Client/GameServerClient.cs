@@ -68,6 +68,15 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
         RequiredAsync<BattleSessionResponse>(HttpMethod.Get,
             $"api/v1/runs/{Uri.EscapeDataString(runId)}/battles/{seq}", null, ct);
 
+    /// <summary>GET /api/v1/runs/{runId}/steps (Development only, spec run-verify 3.7): the run's verification steps.</summary>
+    public Task<List<RunStepDto>> GetStepsAsync(string runId, CancellationToken ct = default) =>
+        RequiredAsync<List<RunStepDto>>(HttpMethod.Get, $"api/v1/runs/{Uri.EscapeDataString(runId)}/steps", null, ct);
+
+    /// <summary>GET /api/v1/runs/{runId}/floors/{floor} (spec run-verify 2.7): the verified read model of a floor.</summary>
+    public Task<FloorDigestResponse> GetFloorDigestAsync(string runId, int floor, CancellationToken ct = default) =>
+        RequiredAsync<FloorDigestResponse>(HttpMethod.Get,
+            $"api/v1/runs/{Uri.EscapeDataString(runId)}/floors/{floor}", null, ct);
+
     /// <summary>GET /api/v1/wallet (spec settlement-outbox 2.4): the player's gems and recent ledger rows.</summary>
     public Task<WalletResponse> GetWalletAsync(CancellationToken ct = default) =>
         RequiredAsync<WalletResponse>(HttpMethod.Get, "api/v1/wallet", null, ct);

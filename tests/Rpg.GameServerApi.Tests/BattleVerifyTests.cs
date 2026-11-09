@@ -54,101 +54,6 @@ public class BattleVerifyTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task Upload_Battle_WritesOneOutboxRow_AndTheRelayPublishesOneJob()
-    {
-        await using var probe = await RabbitProbe.OpenAsync(stack.RabbitMqUri);
-        await probe.PurgeAsync();
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
-        var (client, run) = await StartedAsync(factory);
-
-        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2)), Ct);
-        var jobs = await probe.TakeAsync();
-        await WaitAsync(async () => await ScalarAsync(factory,
-            $"SELECT count(*) FROM outbox WHERE key = '{run.RunId}/f0/c5' AND published_at IS NOT NULL") == 1);
-
-        var (job, attempt) = Assert.Single(jobs);
-        Assert.Equal($"{run.RunId}/f0/c5", job.BattleId);
-        Assert.Equal(Guid.Parse(run.RunId), job.RunId);
-        Assert.Equal(2, job.RunSeq);
-        Assert.Equal(ApiFactory.TestRuleset, job.RulesetVersion);
-        Assert.Equal(0, attempt);
-        Assert.Equal(1L, await ScalarAsync(factory,
-            $"SELECT count(*) FROM outbox WHERE destination = 'rabbit' AND type = 'VerifyBattleJob' AND key = '{run.RunId}/f0/c5'"));
-    }
-
-    [Fact]
-    public async Task Upload_SameBattleAgain_PublishesNothingNew()
-    {
-        await using var probe = await RabbitProbe.OpenAsync(stack.RabbitMqUri);
-        await probe.PurgeAsync();
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
-        var (client, run) = await StartedAsync(factory);
-        var batch = RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2));
-
-        await client.SendActionsAsync(run.RunId, batch, Ct);
-        await client.SendActionsAsync(run.RunId, batch, Ct);
-        await Task.Delay(800, Ct);  // a second job would be relayed within a poll or two
-        var jobs = await probe.TakeAsync();
-
-        Assert.Single(jobs);  // F1: one session, one outbox row, one job
-        Assert.Equal(1L, await ScalarAsync(factory, $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}'"));
-        Assert.Equal(1L, await ScalarAsync(factory, $"SELECT count(*) FROM outbox WHERE key LIKE '{run.RunId}/%'"));
-    }
-
-    [Fact]
-    public async Task Upload_BrokerDown_StillStores_AndTheRowWaitsInTheOutbox()
-    {
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(QuietBackground)
-        {
-            ["RabbitMq:Uri"] = "amqp://guest:guest@127.0.0.1:1/",
-        });
-        var (client, run) = await StartedAsync(factory);
-
-        var ack = await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2)), Ct);
-        await factory.Services.GetRequiredService<OutboxRelay>().RunOnceAsync(Ct);
-
-        Assert.Equal(2, ack.LastSeq);  // F10: the upload never depends on the broker
-        Assert.Equal(1L, await ScalarAsync(factory,
-            $"SELECT count(*) FROM outbox WHERE key = '{run.RunId}/f0/c5' AND published_at IS NULL AND dead_lettered_at IS NULL"));
-    }
-
-    [Fact]
-    public async Task Relay_PublishesRowsWrittenWhileItWasPaused()
-    {
-        await using var probe = await RabbitProbe.OpenAsync(stack.RabbitMqUri);
-        await probe.PurgeAsync();
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(QuietBackground)
-        {
-            ["Outbox:Enabled"] = "false",
-        });
-        var (client, run) = await StartedAsync(factory);
-        await client.SendActionsAsync(run.RunId,
-            RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2, cell: 1), RunLog.Battle(run.RunId, 3, cell: 2)), Ct);
-        Assert.Empty(await probe.TakeAsync(wait: TimeSpan.FromMilliseconds(500)));  // paused: nothing leaves
-
-        var relay = factory.Services.GetRequiredService<OutboxRelay>();
-        Assert.Equal(2, await relay.RunOnceAsync(Ct));
-        var jobs = await probe.TakeAsync();
-
-        Assert.Equal([$"{run.RunId}/f0/c1", $"{run.RunId}/f0/c2"], jobs.Select(j => j.Job.BattleId));  // in order
-    }
-
-    [Fact]
-    public async Task UploadAndOutboxRow_AreOneTransaction()
-    {
-        await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
-        var (client, run) = await StartedAsync(factory);
-        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2, cell: 1)), Ct);
-
-        // seq 3 is a new battle (session + outbox row written), seq 4 reuses battle c1's id: the whole batch rolls back.
-        await Assert.ThrowsAsync<GameServerApiException>(() => client.SendActionsAsync(run.RunId,
-            RunLog.Batch(RunLog.Battle(run.RunId, 3, cell: 2), RunLog.Battle(run.RunId, 4, cell: 1)), Ct));
-
-        Assert.Equal(1L, await ScalarAsync(factory, $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}'"));
-        Assert.Equal(1L, await ScalarAsync(factory, $"SELECT count(*) FROM outbox WHERE key LIKE '{run.RunId}/%'"));  // F18
-    }
-
-    [Fact]
     public async Task GetBattle_SubmittedVerifiedRejected_ShowTheVerdict_AndARejectionIs200()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
@@ -284,25 +189,19 @@ public class BattleVerifyTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task Monitor_ExportsTheBacklogAndTheQueueDepths()
+    public async Task Monitor_ExportsTheBacklogOfUnverifiedBattles()
     {
-        await using var probe = await RabbitProbe.OpenAsync(stack.RabbitMqUri);
-        await probe.PurgeAsync();
         await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
         var (client, run) = await StartedAsync(factory);
         await client.SendActionsAsync(run.RunId,
             RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2, cell: 1), RunLog.Battle(run.RunId, 3, cell: 2)), Ct);
         await SetVerdictAsync(factory, $"{run.RunId}/f0/c2", Verdict(ReplayVerdict.Verified));
-        await WaitAsync(async () => await probe.DepthAsync(VerifyTopology.Queue) == 2);
 
         await factory.Services.GetRequiredService<BattleVerifyMonitor>().CountOnceAsync(Ct);
-        var metrics = await PollMetricsAsync(factory, text => text.Contains("rpg_verify_queue_depth"));
+        var metrics = await PollMetricsAsync(factory, text => text.Contains("rpg_battles_unverified"));
 
         Assert.Equal("1", Sample(metrics, "rpg_battles_unverified"));
         Assert.Contains("rpg_battle_oldest_unverified_age_seconds", metrics);
-        Assert.Equal("2", Sample(metrics, "rpg_verify_queue_depth", "queue=\"verify.battle\""));
-        Assert.Equal("0", Sample(metrics, "rpg_verify_queue_depth", "queue=\"dlq\""));
-        Assert.Equal("2", Sample(metrics, "rpg_outbox_published_total", "destination=\"rabbit\"", "result=\"ok\""));
     }
 
     private static async Task WaitAsync(Func<Task<bool>> condition)
@@ -315,10 +214,14 @@ public class BattleVerifyTests(StackFixture stack)
         }
     }
 
+    /// <summary>
+    /// A started run. (Before slice 4a a battle upload queued a per-battle job; it now rides in a step: RunVerifyTests.)
+    /// </summary>
     private static async Task<(GameServerClient Client, RunStartResponse Run)> StartedAsync(ApiFactory factory)
     {
         var client = await ClientAsync(factory, "alice");
-        return (client, await client.StartRunAsync(Start, Ct));
+        var run = await client.StartRunAsync(Start, Ct);
+        return (client, run);
     }
 
     private static BattleVerdict Verdict(ReplayVerdict status, MismatchReason? reason = null) =>

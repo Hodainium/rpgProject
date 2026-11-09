@@ -28,12 +28,13 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 4. `settlement-outbox` | ✅ Done (spec synced; one outbox for RabbitMQ jobs and Redpanda events with a relay, exactly-once boss settlement in the verdict transaction behind three gates, the wallet and `GET /wallet`, `BattleFacts` from the Godot replay, `lock:battle` and the sweeper removed; 257 .NET, 539 Godot, 14 e2e scenarios; open: trace continuity through the outbox, retention, pending gems in 4a) | 2026-11-03 |
 | 4d. `economy-challenges` | ✅ Done (a reward per challenge id paid once per cycle, no tiers (a score band is independent stars), weekly ISO-week cycles from battle time, event expiry, manual resets for everyone or one player, a Development clock offset, data-driven challenge conditions and stars in Godot content; 377 .NET, 558 Godot, e2e `reward_challenge`, `reward_stars`, `reward_clock_offset`, `reward_reset`) | 2026-11-06 |
 | 4c. `economy-rewards` | ✅ Done (commit f501e4e; spec `specs/economy-rewards.md`): per-boss reward rules in a server-owned table, the economy boundary (Godot run inventory vs account economy), admin endpoint and console command, and trace continuity through the outbox | |
-| 4a. `run-verify` | ⬜ Not started | |
+| 4a. `run-verify` | ✅ Done (spec synced; steps cut at the claimed snapshots with a genesis anchor the server builds at run start, a worker pool replaying each step in headless Godot with a battle simulated once, the fan-in aggregator (verified prefix, links, floors, win, rollback with epoch, `MaxRollbacks`), the stairs gate 1107 and epoch gate 1108, pending gems claimed at release, the floor read model, run hash `run-v2` covering everything that decides play; the per-battle worker is removed; 416 .NET, 582 Godot, the e2e scenarios and the Linux golden check pass; open: routing by ruleset (9), retention (7b)) | 2026-11-08 |
 | 4b. `game-analytics` | ⬜ Not started | |
 | 5. `card-collection` | ⬜ Not started | |
 | 5b. `card-market` | ⬜ Not started | |
 | 6. `observability` | ⬜ Not started | |
 | 7. `live-dashboard` | ⬜ Not started | |
+| 7b. `data-retention` | ⬜ Not started | |
 | 8. `load-and-chaos` | ⬜ Not started | |
 | 9. `ruleset-versioning` | ⬜ Not started | |
 
@@ -154,6 +155,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   the worker, the ledger key includes the boss id (a battle can hold two bosses), the migration backfills only sessions
   not enqueued in the last 10 minutes, the relay has a failure breaker; trace continuity through the outbox is not built
   yet (spec section 9). At the user's request.
+- 2026-11-08: Added slice 7b `data-retention` before 8, at the user's request: outbox, step, voided and settled-session
+  tables grow forever and slice 8 should measure it. Also dropped the per-battle verifier role (`verify.battle`) with 4a:
+  a battle is verified inside its step, so legacy runs (started before 4a) are simply never verified.
 - 2026-11-03: Added slice 4c `economy-rewards` as the immediate next slice, before 4a, at the user's request: gem rewards
   become per-boss rows in a versioned, server-owned table (not content, not configuration), so retuning never changes the
   ruleset version; and the economy boundary is recorded: the run's inventory stays in Godot, the account economy
@@ -437,10 +441,10 @@ needs slice 4 committed first.
 ### 4a. `run-verify`
 **Purpose:** verify whole floors in parallel and keep the client within one floor of the server
 ("Run authority model"). Comes after the outbox because it publishes `FloorVerified` and anti-cheat events and the
-run-end gate settles rewards. Same Godot verifier image, separate queues with their own worker pools:
-`verify.battle` and `verify.segment` (out-of-battle actions from a claimed snapshot, including floor generation at
-`next_floor`). A C# fan-in aggregator (process manager, idempotent, state in Postgres) checks the links between steps
-and emits the floor verdict through the outbox. The `1107` stairs gate (at most one unverified floor), the real
+run-end gate settles rewards. Same Godot verifier image, one step queue,
+`verify.segment` (actions from a claimed snapshot, a battle included, and floor generation at `next_floor`; the
+per-battle `verify.battle` worker of slice 3 was removed with this slice). A C# fan-in aggregator (process manager, idempotent, state in Postgres) checks the links between steps
+and emits the floor verdict through the outbox. The `1107` stairs gate (the floor just played must be verified), the real
 **run-end verdict** (removes `Run:AutoApproveWins`), `Rejected` + rollback to the last valid checkpoint, resume from
 the latest *verified* checkpoint, verdicts pushed to the client, anti-cheat events, and the **floor read model** in
 Redis (written when a floor's entry step is verified). Floor N+1 can't be generated ahead of time: its item pools
@@ -532,6 +536,16 @@ pages** over the `game-analytics` read API: characters and parties, moves, items
 encounters, packs and the card market (volume, prices, dust flows), leaderboards.
 Redis **SignalR backplane** (pub/sub) so a verdict reaches whichever API instance holds the socket; the compose demo
 runs two API replicas behind a load balancer.
+
+### 7b. `data-retention`
+Added 2026-11-08, before load testing so slice 8 measures table growth. Nothing is ever purged today: published `outbox`
+rows, `run_steps`, the voided archives (`run_actions_voided`, `battle_sessions_voided`), settled `battle_sessions` and
+`run_actions` of finished runs, and the ledger all grow without bound. For each table a decision (spec first): the outbox
+is purged once published and past Redpanda's own retention; the voided archives are evidence (the `AntiCheatAlert` trail)
+and are kept N days, then moved to cold storage or dropped; `run_steps` and the claimed logs of verified, finished runs
+can be dropped after the analytics projection (4b) has read them; the wallet ledger and completion marks are never purged
+(they are the account's record). A retention job (a BackgroundService with a lease, batches, metrics) and a test per
+table, including that a purge never touches a row a verifier or the relay can still read.
 
 ### 8. `load-and-chaos`
 Locust profiles (`/stress`); scripted chaos runs for scenarios 2, 3, 4; **scenario 7** (spike → backpressure →

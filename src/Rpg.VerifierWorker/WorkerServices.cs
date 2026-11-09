@@ -5,7 +5,7 @@ namespace Rpg.VerifierWorker;
 public static class WorkerServices
 {
     /// <summary>
-    /// Registers the worker (spec battle-verify 2.3). Tests call this and then replace <see cref="IReplayRunner"/> with a
+    /// Registers the worker (spec battle-verify 2.3). Tests call this and then replace <see cref="IGodotProcess"/> with a
     /// fake; Program adds the host around it.
     /// </summary>
     public static IServiceCollection AddVerifierWorker(this IServiceCollection services)
@@ -27,14 +27,18 @@ public static class WorkerServices
         services.AddSingleton(sp => NpgsqlDataSource.Create(
             sp.GetRequiredService<IConfiguration>().GetConnectionString("Postgres")
             ?? throw new InvalidOperationException("ConnectionStrings:Postgres is not configured.")));
+        services.AddOptions<Rpg.Economy.RunVerifyOptions>().BindConfiguration(Rpg.Economy.RunVerifyOptions.Section);
         services.AddSingleton<VerdictStore>();
+        services.AddSingleton<StepStore>();
         services.AddSingleton<VerifierRedis>();
         services.AddSingleton<WorkerMetrics>();
         services.AddSingleton<WorkerState>();
-        services.AddSingleton<IReplayRunner, GodotReplayRunner>();
-        services.AddSingleton<VerifyProcessor>();
-        services.AddSingleton<VerifyConsumer>();
-        services.AddHostedService(sp => sp.GetRequiredService<VerifyConsumer>());
+        services.AddSingleton<GodotProcess>();
+        services.AddSingleton<IGodotProcess>(sp => sp.GetRequiredService<GodotProcess>());
+        services.AddSingleton<IStepRunner, GodotStepRunner>();
+        services.AddSingleton<StepProcessor>();
+        services.AddSingleton<StepConsumer>();
+        services.AddHostedService(sp => sp.GetRequiredService<StepConsumer>());
         return services;
     }
 }

@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Options;
 using Rpg.Contracts.Api.V1;
 using Rpg.Contracts.Runs;
+using Rpg.Economy;
 using Rpg.GameServerApi.Auth;
 using Rpg.GameServerApi.Observability;
 using Rpg.GameServerApi.RateLimiting;
@@ -60,6 +62,7 @@ public static class RunEndpoints
 
         await cache.InvalidateAsync([.. keys]);
         metrics.RunStart(result.Outcome == StartOutcome.Created ? "created" : "abandoned_previous");
+        metrics.StepCreated("genesis");
         Activity.Current?.SetTag("rpg.run_id", result.RunId.ToString("D"));
 
         var response = new RunStartResponse(result.RunId.ToString("D"), 0, result.FloorSeed.ToString(), result.StartedAt);
@@ -68,17 +71,27 @@ public static class RunEndpoints
 
     /// <summary>The next floor needs <c>AfterSeq</c> = the run's last stored seq (Part B gate, 409 1106 otherwise).</summary>
     private static async Task<IResult> FloorSeedAsync(HttpContext context, Guid runId, int floor,
-        FloorSeedRequest? request, RunStore store, RunSummaryCache cache, RpgMetrics metrics, TimeProvider clock,
-        CancellationToken ct)
+        FloorSeedRequest? request, RunStore store, RunSummaryCache cache, RpgMetrics metrics,
+        IOptions<RunVerifyOptions> verify, TimeProvider clock, CancellationToken ct)
     {
         var player = context.User.Player();
         Activity.Current?.SetTag("rpg.run_id", runId.ToString("D"));
         Activity.Current?.SetTag("rpg.floor", floor);
-        var result = await store.IssueFloorAsync(player.Id, runId, floor, request?.AfterSeq, clock.GetUtcNow(), ct);
+        var result = await store.IssueFloorAsync(player.Id, runId, floor, request?.AfterSeq, request?.Epoch ?? 0,
+            clock.GetUtcNow(), ct);
         switch (result.Outcome)
         {
             case FloorOutcome.NotFound:
                 return NotFound(runId);
+            case FloorOutcome.RolledBack:
+                return RolledBack(result.Epoch, result.VerifiedSeq, result.Reason);
+            case FloorOutcome.Unverified:
+                // Spec run-verify 2.6: the floor just played is not verified yet; the client retries after Retry-After.
+                metrics.StairsGate("blocked");
+                context.Response.Headers.RetryAfter = Math.Max(1, (int)Math.Ceiling(verify.Value.GateRetryAfter.TotalSeconds)).ToString();
+                return Conflict(ApiErrors.PreviousFloorUnverified, "Previous floor not verified",
+                    "The floor you just played is still being verified. Try again shortly.",
+                    new Dictionary<string, object?> { ["verifiedSeq"] = result.VerifiedSeq });
             case FloorOutcome.NotActive:
                 return Conflict(ApiErrors.RunNotActive, "Run not active", $"Run {runId:D} has ended.");
             case FloorOutcome.NotReachable:
@@ -91,6 +104,7 @@ public static class RunEndpoints
             case FloorOutcome.Issued:
                 await cache.InvalidateAsync(RunSummaryCache.SummaryKey(runId));
                 metrics.FloorSeed("issued");
+                metrics.StairsGate("open");
                 break;
             default:
                 metrics.FloorSeed("repeated");
@@ -181,6 +195,12 @@ public static class RunEndpoints
     internal static IResult UploadIncomplete(int lastSeq, string detail) =>
         Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Upload incomplete", detail: detail,
             extensions: new Dictionary<string, object?> { ["errorCode"] = ApiErrors.UploadIncomplete, ["lastSeq"] = lastSeq });
+
+    /// <summary>Spec run-verify 2.4: 409 1108. The client rebuilds from /resume; <c>reason</c> is a coarse category.</summary>
+    internal static IResult RolledBack(int epoch, int verifiedSeq, string? reason) =>
+        Conflict(ApiErrors.RunRolledBack, "Run rolled back",
+            "The server rolled this run back to its last verified checkpoint; resume from the server.",
+            new Dictionary<string, object?> { ["epoch"] = epoch, ["rollbackSeq"] = verifiedSeq, ["reason"] = reason });
 
     internal static IResult BadRequest(string detail) =>
         Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Bad request", detail: detail);

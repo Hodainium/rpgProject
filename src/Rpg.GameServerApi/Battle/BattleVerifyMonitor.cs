@@ -39,21 +39,32 @@ public sealed class BattleVerifyMonitor(RunStore store, RabbitMqConnection rabbi
 
         try
         {
+            var (steps, oldestStep) = await store.PendingStepsAsync(ct);
+            metrics.SetStepsPending(steps, oldestStep is null ? 0 : (clock.GetUtcNow() - oldestStep.Value).TotalSeconds);
+            metrics.SetGemsPending(await store.PendingGemsAsync(ct));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogDebug("Pending steps not counted: {Message}", ex.Message);
+        }
+
+        try
+        {
             if (rabbit.OpenConnection is not { } connection)
             {
                 return;
             }
 
             await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
-            metrics.SetVerifyQueueDepth("verify.battle", await DepthAsync(channel, VerifyTopology.Queue, ct));
-            long retry = 0;
-            foreach (var tier in VerifyTopology.RetryTiers)
+            metrics.SetVerifyQueueDepth("verify.segment", await DepthAsync(channel, VerifyTopology.SegmentQueue, ct));
+            long segmentRetry = 0;
+            foreach (var tier in VerifyTopology.SegmentRetryTiers)
             {
-                retry += await DepthAsync(channel, tier.Queue, ct);
+                segmentRetry += await DepthAsync(channel, tier.Queue, ct);
             }
 
-            metrics.SetVerifyQueueDepth("retry", retry);
-            metrics.SetVerifyQueueDepth("dlq", await DepthAsync(channel, VerifyTopology.DeadLetterQueue, ct));
+            metrics.SetVerifyQueueDepth("segment_retry", segmentRetry);
+            metrics.SetVerifyQueueDepth("segment_dlq", await DepthAsync(channel, VerifyTopology.SegmentDeadLetterQueue, ct));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

@@ -36,13 +36,18 @@ public sealed class RabbitOutboxSink(RabbitMqConnection rabbit) : IOutboxSink
 
     public async Task PublishAsync(OutboxRow row, CancellationToken ct)
     {
-        if (row.Topic != VerifyTopology.RoutingKey)
+        if (row.Topic is not (VerifyTopology.RoutingKey or VerifyTopology.SegmentRoutingKey))
         {
             throw new OutboxPermanentException($"unknown routing key '{row.Topic}'");
         }
 
-        var job = VerifyMessaging.ParseJob(Encoding.UTF8.GetBytes(row.PayloadJson))
+        // Spec run-verify 3.4: a step job goes to verify.segment; anything else on this destination is a battle job.
+        var segment = row.Topic == VerifyTopology.SegmentRoutingKey;
+        var bytes = Encoding.UTF8.GetBytes(row.PayloadJson);
+        var job = segment ? null : VerifyMessaging.ParseJob(bytes)
                   ?? throw new OutboxPermanentException("the payload is not a verify job");
+        var stepJob = segment ? VerifyMessaging.ParseStepJob(bytes)
+                  ?? throw new OutboxPermanentException("the payload is not a step job") : null;
 
         await _gate.WaitAsync(ct);
         try
@@ -52,8 +57,16 @@ public sealed class RabbitOutboxSink(RabbitMqConnection rabbit) : IOutboxSink
             var channel = await ChannelAsync(limit.Token) ?? throw new InvalidOperationException("RabbitMQ is not connected");
             try
             {
-                await VerifyMessaging.PublishAsync(channel, VerifyTopology.Exchange, VerifyTopology.RoutingKey, job, 0, null,
-                    limit.Token);
+                if (stepJob is not null)
+                {
+                    await VerifyMessaging.PublishAsync(channel, VerifyTopology.Exchange, VerifyTopology.SegmentRoutingKey,
+                        stepJob, 0, null, limit.Token);
+                }
+                else
+                {
+                    await VerifyMessaging.PublishAsync(channel, VerifyTopology.Exchange, VerifyTopology.RoutingKey, job!, 0,
+                        null, limit.Token);
+                }
             }
             catch
             {
@@ -103,7 +116,8 @@ public sealed class RabbitOutboxSink(RabbitMqConnection rabbit) : IOutboxSink
 public sealed class KafkaOutboxSink(IOptions<KafkaOptions> kafka, IOptions<OutboxOptions> options, ILogger<KafkaOutboxSink> logger)
     : IOutboxSink, IDisposable
 {
-    public static readonly IReadOnlyList<string> Topics = [EventTopics.Battle, EventTopics.Economy];
+    public static readonly IReadOnlyList<string> Topics =
+        [EventTopics.Battle, EventTopics.Economy, EventTopics.Run, EventTopics.Security];
 
     private IProducer<string, string>? _producer;
 

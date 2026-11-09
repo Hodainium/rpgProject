@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/strike.tscn" id="1_8ujfd"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_i21l4"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="3_hyjko"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="4_lwmkn"]
+
+[resource]
+script = ExtResource("4_lwmkn")
+id = &"fixture.character.titan"
+attribute_set = ExtResource("2_i21l4")
+abilities = Array[PackedScene]([ExtResource("1_8ujfd")])
+display_name = "Titan"
+display_color = Color(1, 0.84313726, 0, 1)
+tags = Array[StringName]([&"Fixture.Character.Titan"])
+stats_x100 = Dictionary[String, int]({
+"atk": 900000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 900000,
+"energy": 0,
+"hp": 500000000,
+"max_hp": 500000000,
+"max_mp": 10000,
+"mp": 10000,
+"spd": 20000
+})

@@ -8,6 +8,10 @@
 ## stairs gate (the floor's log uploaded first, AfterSeq), a won run's end (the queue drained, then POST /end and a
 ## poll until Won); resume with or without the save; a 409 1103 discards the save and resumes from the server's log;
 ## the presence heartbeat.
+## Spec run-verify: the run's `epoch` (bumped by every rollback) travels on every upload, stairs and end request; a 409 1108
+## means the verifier rolled the run back, and it is rebuilt from the server like a 1103 (with its own message); a 409 1107 at
+## the stairs (the floor just played is not verified yet) is retried after its Retry-After while the player waits; a resume
+## before the first upload starts the run again from the server's own start snapshot.
 ##
 ## Server mode is on when the Settings (user://game_main.cfg, section "server") name a url; the console's `server`
 ## sets it. Tests give it a fake bridge with the same methods and the Completed signal. Every call resolves to
@@ -34,6 +38,8 @@ const BATCH_SIZE: int = 50
 const SEQUENCE_GAP: int = 1102
 const SEQUENCE_CONFLICT: int = 1103
 const UPLOAD_INCOMPLETE: int = 1106
+const PREVIOUS_FLOOR_UNVERIFIED: int = 1107
+const RUN_ROLLED_BACK: int = 1108
 const RUN_NOT_ACTIVE: int = 1101
 ## Shown when the server has already ended the run this client is playing (it died, was won or abandoned elsewhere).
 const ENDED_ELSEWHERE: String = "This run has already ended on the server (another game window or device played on)"
@@ -55,6 +61,11 @@ var offline_heartbeat_seconds: float = 5.0
 var wait_floor_text: String = "Connecting to the server…"
 var wait_end_text: String = "Verifying the run…"
 var wait_rebuild_text: String = "Restoring the run from the server…"
+var wait_verify_text: String = "Verifying the previous floor…"
+## Shown when the verifier rolled the run back (spec run-verify 2.4).
+var rollback_text: String = "The server rolled your run back to its last verified checkpoint"
+## How often a resume asks again while the server has no start snapshot yet (its genesis job runs for a few seconds).
+var resume_attempts: int = 10
 var poll_seconds: float = 2.0
 ## Rebuilds and conflicts so far (the dev report's server block).
 var resumes: int = 0
@@ -72,6 +83,10 @@ var _sign_in_error: Dictionary = {}
 # The linked run (Part B).
 var _run: RunController
 var _run_id: String = ""
+## Spec run-verify 2.4: the run's epoch (0 until a rollback) and the server's verified prefix, as the server last said.
+var epoch: int = 0
+var verified_seq: int = 0
+var _rebuilding: bool = false
 ## RunActionRequests not acknowledged yet, in seq order; the last acknowledged seq; the last acknowledged request.
 var _queue: Array = []
 var _last_acked: int = 0
@@ -149,12 +164,12 @@ func start_run(ruleset_version: String, run_structure_id: String, character_ids:
 ## POST /api/v1/runs/{runId}/floors/{floor}, once: data = FloorSeedResponse {runId, floor, floorSeed}. `after_seq`:
 ## the last seq of the floor being left (Part B's gate; null asks for the current floor again).
 func floor_seed(run_id: String, floor_index: int, after_seq: Variant = null) -> Dictionary:
-	return await _request("GetFloorSeed", [run_id, floor_index, WireJson.stringify({"afterSeq": after_seq})])
+	return await _request("GetFloorSeed", [run_id, floor_index, WireJson.stringify({"afterSeq": after_seq, "epoch": epoch})])
 
 
 ## The floor seed, retried with backoff while there is no answer, a 5xx or a 429; any other error returns at once.
 ## For the linked run, the queue is uploaded first and AfterSeq is its last seq (a 1106 drains it and asks again).
-func floor_seed_until_issued(run_id: String, floor_index: int) -> Dictionary:
+func floor_seed_until_issued(run_id: String, floor_index: int, wait_key: StringName = &"") -> Dictionary:
 	var delay := retry_base_seconds
 	while true:
 		var after_seq: Variant = null
@@ -167,6 +182,13 @@ func floor_seed_until_issued(run_id: String, floor_index: int) -> Dictionary:
 		if after_seq != null and int(_code(result["error"])) == UPLOAD_INCOMPLETE:
 			await get_tree().create_timer(retry_base_seconds).timeout
 			continue  # the log isn't all in yet: drain and ask again
+		if int(_code(result["error"])) == PREVIOUS_FLOOR_UNVERIFIED:
+			# Spec run-verify 2.6: the floor just played is still being verified. The player waits for it (the rest stop usually
+			# hides this); the pop-up says what for.
+			if wait_key != &"" and _waits.has(wait_key):
+				begin_wait(wait_key, wait_verify_text)
+			await _backoff(result["error"], retry_base_seconds)
+			continue
 		if not retryable(result["error"]):
 			return result
 		await _backoff(result["error"], delay)
@@ -187,6 +209,11 @@ func get_current_run() -> Dictionary:
 ## GET /api/v1/runs/{runId}/battles/{seq}: data = BattleSessionResponse.
 func get_battle(run_id: String, seq: int) -> Dictionary:
 	return await _request("GetBattle", [run_id, seq])
+
+
+## GET /api/v1/runs/{runId}/steps (Development servers; spec run-verify 3.7): data = [RunStepDto].
+func get_steps(run_id: String) -> Dictionary:
+	return await _request("GetSteps", [run_id])
 
 
 ## GET /api/v1/wallet (spec settlement-outbox): data = WalletResponse {gems, version, recent}.
@@ -255,6 +282,8 @@ func link(run: RunController, run_id: String) -> void:
 	_last_sent = {}
 	_end_request = {}
 	_snapshot = {}
+	epoch = 0
+	verified_seq = 0
 	_end_run_waits()
 	run.journal = true
 	run.verify_wins = true
@@ -308,11 +337,13 @@ func _pump() -> void:
 	var delay := retry_base_seconds
 	while not _queue.is_empty() and _linked() and _run == run:
 		var batch: Array = _queue.slice(0, BATCH_SIZE)
-		var result := await _request("SendActions", [_run_id, WireJson.stringify({"actions": batch})])
+		var result := await _request("SendActions", [_run_id, WireJson.stringify({"actions": batch, "epoch": epoch})])
 		if _run != run or not _linked():
 			break
 		if result["ok"]:
 			_acknowledge(int(result["data"]["lastSeq"]))
+			epoch = int(result["data"].get("epoch", epoch))
+			verified_seq = int(result["data"].get("verifiedSeq", verified_seq))
 			delay = retry_base_seconds
 			continue
 		var error: Dictionary = result["error"]
@@ -323,6 +354,8 @@ func _pump() -> void:
 		_uploading = false
 		if int(_code(error)) == SEQUENCE_CONFLICT:
 			await _rebuild_after_conflict(run)
+		elif int(_code(error)) == RUN_ROLLED_BACK:
+			await _rebuild_after_rollback(run)
 		else:
 			_refused(run, error)
 		queue_changed.emit()
@@ -366,13 +399,18 @@ func _finish_win_waiting(run: RunController) -> void:
 	var status := ""
 	while _run == run and _linked():
 		await drained()
-		var result := await _request("EndRun", [_run_id, WireJson.stringify(_end_request)])
+		var request := _end_request.duplicate()
+		request["epoch"] = epoch
+		var result := await _request("EndRun", [_run_id, WireJson.stringify(request)])
 		if result["ok"]:
 			status = str(result["data"]["status"])
 			break
 		if int(_code(result["error"])) == UPLOAD_INCOMPLETE:
 			await get_tree().create_timer(retry_base_seconds).timeout
 			continue
+		if int(_code(result["error"])) == RUN_ROLLED_BACK:
+			await _rebuild_after_rollback(run)
+			return
 		if not retryable(result["error"]):
 			_refused(run, result["error"])
 			return
@@ -383,6 +421,11 @@ func _finish_win_waiting(run: RunController) -> void:
 		var summary := await get_run(_run_id)
 		if summary["ok"]:
 			status = str(summary["data"]["status"])
+			if status == "Active" or int(summary["data"].get("epoch", epoch)) != epoch:
+				# Spec run-verify 2.4: the verifier rolled the run back while it was waiting for its verdict.
+				_end_request = {}
+				await _rebuild_after_rollback(run)
+				return
 	if _run != run:
 		return
 	if status == "Won":
@@ -413,7 +456,7 @@ func save() -> void:
 		floor_seeds[str(floor_index)] = str(_run.state.floor_seeds[floor_index])
 	file.store_string(WireJson.stringify({"schemaVersion": 1, "runId": _run_id, "player": player,
 		"floorSeeds": floor_seeds, "snapshot": _snapshot, "queue": _queue, "lastAckedSeq": _last_acked,
-		"end": _end_request}))
+		"end": _end_request, "epoch": epoch}))
 	file.close()
 
 
@@ -463,6 +506,7 @@ func _load_save_into(run: RunController, content_index: ContentIndex, saved: Dic
 		run.state.floor_seeds[str(floor_index).to_int()] = str(floor_seeds[floor_index]).to_int()
 	_queue.assign(saved.get("queue", []))
 	_last_acked = int(saved.get("lastAckedSeq", 0))
+	epoch = int(saved.get("epoch", 0))
 	_end_request = saved.get("end", {})
 	_snapshot = saved["snapshot"]
 	_resumed(run, "save")
@@ -484,30 +528,50 @@ func resume_offline(run: RunController, content_index: ContentIndex) -> String:
 ## Rebuilds the run from GET /resume: the latest checkpoint snapshot, then the accepted actions after it replayed on a
 ## run of its own (no screens, no queue), checked against each action's state hash, then loaded into `run`.
 func _resume_from_server(run: RunController, content_index: ContentIndex) -> String:
-	var result := await _request("Resume", [_run_id])
-	if not result["ok"]:
-		return "resume: " + describe(result["error"])
-	var data: Dictionary = result["data"]
+	var data: Dictionary = {}
+	for attempt in maxi(resume_attempts, 1):
+		var result := await _request("Resume", [_run_id])
+		if not result["ok"]:
+			return "resume: " + describe(result["error"])
+		data = result["data"]
+		if data["snapshot"] != null:
+			break
+		# Spec run-verify 2.6: the server's own start is rebuilt by a worker a few seconds after the run starts.
+		await get_tree().create_timer(retry_base_seconds).timeout
 	if data["snapshot"] == null:
-		return "resume: the server has no checkpoint for run %s yet" % _run_id
+		return "resume: the server has no start state for run %s yet" % _run_id
 	var replay := RunController.new()
 	replay.name = "ResumeReplay"
 	add_child(replay)
 	var error := replay.load_snapshot(content_index, data["snapshot"])
+	var seeds := {}
 	for floor_seed in data["floorSeeds"]:
-		replay.state.floor_seeds[int(floor_seed["floor"])] = str(floor_seed["floorSeed"]).to_int()
+		seeds[int(floor_seed["floor"])] = str(floor_seed["floorSeed"]).to_int()
 	var last_seq := int(data["checkpointSeq"])
 	for request in data["tail"] if error == "" else []:
+		# The server's seeds are handed over as the log needs them, not all at once (RunWire.hash_matches).
+		RunWire.provide_waiting(replay, seeds)
 		error = await RunWire.apply(replay, request["action"])
 		if error == "" and replay.runner_error != "":
 			error = replay.runner_error
-		if error == "" and replay.state.run_hash() != str(request["stateHash"]):
+		if error == "" and not RunWire.hash_matches(replay, str(request["stateHash"]), seeds):
 			error = "the replay differs from the server's log at seq %d" % int(request["seq"])
 		if error != "":
 			error = "resume: seq %d: %s" % [int(request["seq"]), error]
 			break
 		last_seq = int(request["seq"])
+	if error == "":
+		RunWire.provide_waiting(replay, seeds)
+		for floor_index in seeds:  # every seed the server issued, so a floor the player already holds opens at once
+			if not replay.state.floor_seeds.has(floor_index):
+				replay.state.floor_seeds[floor_index] = seeds[floor_index]
 	var snapshot := replay.snapshot() if error == "" else {}
+	var started_again := last_seq == 0 and error == "" and not replay.run_log.is_empty()
+	var start_request := {}
+	if started_again:
+		# Spec run-verify 2.6: the client crashed before its first upload, so the server never saw seq 1. The run starts again from
+		# the server's own start state and sends `start_run` as seq 1, an ordinary upload.
+		start_request = RunWire.request(replay, replay.run_log[0], 1, replay.state.run_hash(), snapshot, {})
 	replay.free()
 	if error != "":
 		return error
@@ -515,7 +579,11 @@ func _resume_from_server(run: RunController, content_index: ContentIndex) -> Str
 	if error != "":
 		return error
 	_queue.clear()
+	if not start_request.is_empty():
+		_queue.append(JSON.parse_string(WireJson.stringify(start_request)))
 	_last_acked = last_seq
+	epoch = int(data.get("epoch", 0))
+	verified_seq = int(data.get("verifiedSeq", 0))
 	_end_request = {}
 	_snapshot = snapshot
 	_resumed(run, "server")
@@ -539,6 +607,28 @@ func _rebuild_after_conflict(run: RunController) -> void:
 	else:
 		GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION,
 			NotificationMessage.make("The run continues from the server's log"))
+
+
+## A 1108 (or a poll that shows a new epoch): the verifier rolled the run back to its last verified checkpoint. Like a 1103 the
+## save is dropped and the run rebuilt from the server's log (after the battle in progress, if any), with its own message.
+func _rebuild_after_rollback(run: RunController) -> void:
+	if _rebuilding or run != _run:
+		return
+	_rebuilding = true
+	forget_save()
+	_queue.clear()
+	_end_request = {}
+	if run.current_battle != null:
+		await run.battle_finished
+	var wait := StringName("rebuild/" + _run_id)
+	begin_wait(wait, wait_rebuild_text)
+	var error := await _resume_from_server(run, run.content)
+	end_wait(wait)
+	_rebuilding = false
+	if error != "":
+		run.stop_on_server_error(error)
+	else:
+		GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION, NotificationMessage.make(rollback_text))
 
 
 func _resumed(run: RunController, source: String) -> void:
@@ -664,7 +754,7 @@ func _fetch_floor(run: RunController, run_id: String, floor_index: int) -> void:
 	run.floor_waiting.connect(on_waiting)
 	if run.waiting_for_floor() == floor_index:
 		begin_wait(wait, wait_floor_text)
-	var result := await floor_seed_until_issued(run_id, floor_index)
+	var result := await floor_seed_until_issued(run_id, floor_index, wait)
 	if is_instance_valid(run) and run.floor_waiting.is_connected(on_waiting):
 		run.floor_waiting.disconnect(on_waiting)
 	end_wait(wait)
@@ -674,6 +764,8 @@ func _fetch_floor(run: RunController, run_id: String, floor_index: int) -> void:
 		run.provide_floor_seed(floor_index, str(result["data"]["floorSeed"]).to_int())
 		if run == _run:
 			save()  # the save knows the seed: resumed there, the floor opens even offline
+	elif int(_code(result["error"])) == RUN_ROLLED_BACK:
+		await _rebuild_after_rollback(run)  # the rebuilt run asks for this seed again if it still needs it
 	else:
 		_refused(run, result["error"])
 

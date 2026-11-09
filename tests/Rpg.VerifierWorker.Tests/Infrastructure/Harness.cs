@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using RabbitMQ.Client;
 using Rpg.Contracts.Battle;
+using Rpg.Contracts.Runs;
 using Rpg.Contracts.Serialization;
 using Rpg.GameServerApi.Migrations;
 using Rpg.Verification;
@@ -13,20 +14,33 @@ using StackExchange.Redis;
 
 namespace Rpg.VerifierWorker.Tests.Infrastructure;
 
-/// <summary>Stands in for headless Godot (spec battle-verify 6): canned results, call counting, optional gating.</summary>
-public sealed class FakeReplayRunner : IReplayRunner
+/// <summary>Stands in for the Godot project's version lookup: a fixed ruleset version.</summary>
+public sealed class FakeGodotProcess : IGodotProcess
 {
-    private readonly List<string> _requests = [];
-    private int _calls;
-
     public const string Version = "4.7.2.stable.mono+aaaaaaaaaaaaaaaa";
 
-    /// <summary>What a replay returns; the default verifies the battle in the request.</summary>
-    public Func<string, CancellationToken, Task<ReplayRun>>? Handler { get; set; }
+    public Task<string> RulesetVersionAsync(CancellationToken ct) => Task.FromResult(Version);
+}
+
+/// <summary>
+/// Stands in for the headless step runner (spec run-verify 6): by default an honest verifier, which reproduces what the
+/// request claims; tests set <see cref="Handler"/> to tamper, fail or hang.
+/// </summary>
+public sealed class FakeStepRunner : IStepRunner
+{
+    private readonly List<StepRequest> _requests = [];
+    private int _calls;
+
+    public const string GenesisHash = "genesis-hash";
+
+    /// <summary>The boss facts every battle in a step reports (null = an ordinary battle).</summary>
+    public BattleFacts? Facts { get; set; }
+
+    public Func<StepRequest, CancellationToken, Task<StepRun>>? Handler { get; set; }
 
     public int Calls => Volatile.Read(ref _calls);
 
-    public IReadOnlyList<string> Requests
+    public IReadOnlyList<StepRequest> Requests
     {
         get
         {
@@ -37,37 +51,44 @@ public sealed class FakeReplayRunner : IReplayRunner
         }
     }
 
-    public Task<ReplayRun> ReplayAsync(string requestJson, CancellationToken ct)
+    public Task<StepRun> RunAsync(string requestJson, CancellationToken ct)
     {
         Interlocked.Increment(ref _calls);
+        var request = JsonSerializer.Deserialize<StepRequest>(requestJson, RpgJson.Options)!;
         lock (_requests)
         {
-            _requests.Add(requestJson);
+            _requests.Add(request);
         }
 
-        return (Handler ?? ((request, _) => Task.FromResult(Verified(BattleIdOf(request)))))(requestJson, ct);
+        return Handler is { } handler ? handler(request, ct) : Task.FromResult(Honest(request));
     }
 
-    public Task<string> RulesetVersionAsync(CancellationToken ct) => Task.FromResult(Version);
-
-    public static string BattleIdOf(string requestJson)
+    /// <summary>The verdict of a verifier that agrees with the client: hashes as claimed, every battle Verified.</summary>
+    public StepRun Honest(StepRequest request)
     {
-        using var document = JsonDocument.Parse(requestJson);
-        return document.RootElement.GetProperty("snapshot").GetProperty("battleId").GetString()!;
+        if (request.Kind == StepKind.Genesis)
+        {
+            var snapshot = JsonDocument.Parse("""{"schemaVersion":1,"genesis":true}""").RootElement.Clone();
+            return Ok(new StepVerdict(ReplayVerdict.Verified, null, null, null, "", GenesisHash, snapshot, [], null, "", "fake",
+                DateTimeOffset.UtcNow));
+        }
+
+        var battles = request.Actions.Where(a => a.Action.Battle is not null)
+            .Select(a => new ReplayResult(1, a.Action.Battle!.BattleId, ReplayVerdict.Verified, null, null, null,
+                BattleOutcome.Victory, 12, new string('c', 64), "fake-engine", Facts))
+            .ToList();
+        return Ok(new StepVerdict(ReplayVerdict.Verified, null, null, null, request.StartStateHash ?? "",
+            request.Actions[^1].StateHash, null, battles, null, "", "fake", DateTimeOffset.UtcNow));
     }
 
-    public static ReplayRun Verified(string battleId, BattleFacts? facts = null, BattleOutcome outcome = BattleOutcome.Victory) =>
-        new(ReplayRunStatus.Completed,
-            new ReplayResult(1, battleId, ReplayVerdict.Verified, null, null, null, outcome, 12,
-                new string('c', 64), "fake-engine", facts), "");
+    public static StepRun Ok(StepVerdict verdict) => new(ReplayRunStatus.Completed, verdict, "");
 
-    public static ReplayRun Rejected(string battleId, MismatchReason reason = MismatchReason.FinalHashMismatch) => new(
-        ReplayRunStatus.Completed,
-        new ReplayResult(1, battleId, ReplayVerdict.Rejected, ReplayErrors.ReplayMismatchCode,
-            ReplayErrors.ReplayMismatchName, new ReplayMismatch(reason, 4, "tampered"), BattleOutcome.Victory, 12,
-            new string('d', 64), "fake-engine"), "");
+    /// <summary>A rejection of the step with <paramref name="reason"/> at <paramref name="seq"/>.</summary>
+    public static StepRun Rejected(StepMismatchReason reason, int seq = 0, IReadOnlyList<ReplayResult>? battles = null) =>
+        Ok(new StepVerdict(ReplayVerdict.Rejected, ReplayErrors.ReplayMismatchCode, ReplayErrors.ReplayMismatchName,
+            new StepMismatch(reason, seq, "tampered"), "", "", null, battles ?? [], null, "", "fake", DateTimeOffset.UtcNow));
 
-    public static ReplayRun Error(string detail = "boom") => new(ReplayRunStatus.RunnerError, null, detail);
+    public static StepRun Error(string detail = "boom") => new(ReplayRunStatus.RunnerError, null, detail);
 }
 
 public sealed record SeededBattle(string BattleId, Guid RunId, Guid PlayerId, int Seq, string Ruleset);
@@ -80,23 +101,29 @@ public sealed class WorkerHarness : IAsyncDisposable
 {
     private readonly Stack _stack;
 
-    private WorkerHarness(Stack stack, ServiceProvider services, string postgres, FakeReplayRunner runner)
+    private WorkerHarness(Stack stack, ServiceProvider services, string postgres, FakeGodotProcess runner)
     {
         _stack = stack;
         Services = services;
         Postgres = postgres;
-        Runner = runner;
     }
 
     public ServiceProvider Services { get; }
 
     public string Postgres { get; }
 
-    public FakeReplayRunner Runner { get; }
+    public FakeReplayRunner Runner { get; } = new();
 
-    public VerifyProcessor Processor => Services.GetRequiredService<VerifyProcessor>();
+    private BattleSettler? _settler;
 
-    public VerifyConsumer Consumer => Services.GetRequiredService<VerifyConsumer>();
+    /// <summary>Settles a seeded battle through the production settlement code (see BattleSettler).</summary>
+    public BattleSettler Processor => _settler ??= new BattleSettler(Services, Runner);
+
+    public StepProcessor Steps => Services.GetRequiredService<StepProcessor>();
+
+    public StepConsumer StepConsumer => Services.GetRequiredService<StepConsumer>();
+
+    public FakeStepRunner StepRunner => (FakeStepRunner)Services.GetRequiredService<IStepRunner>();
 
     public NpgsqlDataSource Data => Services.GetRequiredService<NpgsqlDataSource>();
 
@@ -105,7 +132,7 @@ public sealed class WorkerHarness : IAsyncDisposable
     public MetricsProbe Metrics { get; private set; } = null!;
 
     public static async Task<WorkerHarness> CreateAsync(Stack stack, Dictionary<string, string?>? settings = null,
-        string? postgres = null, string? redis = null, FakeReplayRunner? runner = null, string environment = "Development")
+        string? postgres = null, string? redis = null, FakeGodotProcess? runner = null, string environment = "Development")
     {
         var database = await stack.NewDatabaseAsync();
         await using (var data = NpgsqlDataSource.Create(database))
@@ -120,13 +147,13 @@ public sealed class WorkerHarness : IAsyncDisposable
             await rules.ExecuteNonQueryAsync();
         }
 
-        runner ??= new FakeReplayRunner();
+        runner ??= new FakeGodotProcess();
         var values = new Dictionary<string, string?>
         {
             ["ConnectionStrings:Postgres"] = postgres ?? database,
             ["ConnectionStrings:Redis"] = redis ?? stack.RedisConnectionString,
             ["RabbitMq:Uri"] = stack.RabbitMq.GetConnectionString(),
-            ["Verifier:RulesetVersion"] = FakeReplayRunner.Version,
+            ["Verifier:RulesetVersion"] = FakeGodotProcess.Version,
             ["Verifier:Concurrency"] = "1",
         };
         foreach (var (key, value) in settings ?? [])
@@ -140,7 +167,8 @@ public sealed class WorkerHarness : IAsyncDisposable
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(values).Build());
         services.AddSingleton<Microsoft.Extensions.Hosting.IHostEnvironment>(new StubEnvironment(environment));
         services.AddVerifierWorker();
-        services.AddSingleton<IReplayRunner>(runner);
+        services.AddSingleton<IGodotProcess>(runner);
+        services.AddSingleton<IStepRunner>(new FakeStepRunner());
         var provider = services.BuildServiceProvider();
         var harness = new WorkerHarness(stack, provider, database, runner);
         harness.Metrics = new MetricsProbe(provider.GetRequiredService<IMeterFactory>());
@@ -151,7 +179,7 @@ public sealed class WorkerHarness : IAsyncDisposable
     public async Task<SeededBattle> SeedAsync(string? ruleset = null, string status = "Submitted", Guid? player = null,
         string runStatus = "Active", DateTimeOffset? submittedAt = null)
     {
-        ruleset ??= FakeReplayRunner.Version;
+        ruleset ??= FakeGodotProcess.Version;
         var runId = Guid.NewGuid();
         var playerId = player ?? Guid.NewGuid();
         var battleId = $"{runId:D}/f0/c5";
@@ -202,6 +230,94 @@ public sealed class WorkerHarness : IAsyncDisposable
 
     public static VerifyBattleJob JobOf(SeededBattle battle) =>
         new(battle.BattleId, battle.RunId, battle.Seq, battle.Ruleset, DateTimeOffset.UtcNow);
+
+    // ---- runs with steps (spec run-verify 2) -----------------------------------------------------------------------
+
+    /// <summary>A run that went through the step pipeline: Active, floor 0, and its genesis step (step 0) Pending.</summary>
+    public async Task<SeededRun> SeedRunAsync(string runStatus = "Active", int lastSeq = 0, Guid? player = null)
+    {
+        var runId = Guid.NewGuid();
+        var playerId = player ?? Guid.NewGuid();
+        await ExecuteAsync(
+            "INSERT INTO players (player_id, display_name, created_at) VALUES ($1, 'p', now()) ON CONFLICT DO NOTHING", playerId);
+        await ExecuteAsync(
+            """
+            INSERT INTO runs (run_id, player_id, ruleset_version, run_structure_id, character_ids, status, current_floor,
+              last_seq, started_at) VALUES ($1, $2, $3, 'descent', ARRAY['warrior'], $4, 0, $5, now())
+            """, runId, playerId, FakeGodotProcess.Version, runStatus, lastSeq);
+        await ExecuteAsync("INSERT INTO run_floors (run_id, floor, floor_seed, issued_at) VALUES ($1, 0, 11, now())", runId);
+        await ExecuteAsync(
+            """
+            INSERT INTO run_steps (run_id, epoch, step_no, from_seq, to_seq, kind, status) VALUES ($1, 0, 0, 0, 1, 'genesis', 'Pending')
+            """, runId);
+        return new SeededRun(runId, playerId);
+    }
+
+    /// <summary>
+    /// What an upload does for one action: the run_actions row (a snapshot-bearing one is a checkpoint and, after seq 1, closes
+    /// a step) and, for a battle, its session. Hashes are "h&lt;seq&gt;" unless given.
+    /// </summary>
+    public async Task<int?> UploadAsync(SeededRun run, int seq, string type = "enter_room", bool snapshot = false,
+        string? hash = null, int floor = 0, int epoch = 0)
+    {
+        var battle = type == RunActionTypes.Battle;
+        await ExecuteAsync(
+            """
+            INSERT INTO run_actions (run_id, seq, floor, type, action, state_hash, snapshot, played_at, received_at)
+            VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7::jsonb, now(), now())
+            """, run.RunId, seq, floor, type, $$"""{"type":"{{type}}","floor":{{floor}}}""", hash ?? $"h{seq}",
+            snapshot ? """{"schemaVersion":1,"marker":1}""" : DBNull.Value);
+        await ExecuteAsync("UPDATE runs SET last_seq = $2 WHERE run_id = $1", run.RunId, seq);
+        if (type == RunActionTypes.NextFloor)
+        {
+            await ExecuteAsync("UPDATE run_floors SET end_seq = $3 WHERE run_id = $1 AND floor = $2", run.RunId, floor, seq);
+        }
+
+        if (battle)
+        {
+            var id = $"{run.RunId:D}/f{floor}/c{seq}";
+            var conditions = new BattleSnapshot(2, id, "1234567890123", "fixture.encounter.duel",
+                [new PartyMemberSnapshot(1, "fixture.character.duelist", 1, Hp: 50000)], ScalingId: "fixture.scaling", Depth: floor);
+            var log = new ActionLog(2, [new ActionEntry(1, "P1", "Ability.Attack", "E1")], BattleOutcome.Victory,
+                new string('a', 64));
+            await ExecuteAsync(
+                $$"""
+                UPDATE run_actions SET action = '{"type":"battle","floor":{{floor}}}'::jsonb WHERE run_id = $1 AND seq = $2
+                """, run.RunId, seq);
+            await ExecuteAsync(
+                """
+                INSERT INTO battle_sessions (battle_id, run_id, run_seq, seed, ruleset_version, conditions, action_log, status,
+                  submitted_at) VALUES ($1, $2, $3, 1234567890123, $4, $5::jsonb, $6::jsonb, 'Submitted', now())
+                """, id, run.RunId, seq, FakeGodotProcess.Version, JsonSerializer.Serialize(conditions, RpgJson.Options),
+                JsonSerializer.Serialize(log, RpgJson.Options));
+        }
+
+        if (!snapshot || seq == 1)
+        {
+            return null;
+        }
+
+        var from = await ScalarAsync<int>("SELECT COALESCE(max(seq), 0) FROM run_actions WHERE run_id = $1 AND snapshot IS NOT NULL AND seq < $2",
+            run.RunId, seq);
+        var stepNo = await ScalarAsync<int>("SELECT COALESCE(max(step_no), -1) + 1 FROM run_steps WHERE run_id = $1", run.RunId);
+        var kind = battle ? "battle" : type == RunActionTypes.End ? "end" : "segment";
+        await ExecuteAsync(
+            "INSERT INTO run_steps (run_id, epoch, step_no, from_seq, to_seq, kind, status) VALUES ($1, $2, $3, $4, $5, $6, 'Pending')",
+            run.RunId, epoch, stepNo, from, seq, kind);
+        return stepNo;
+    }
+
+    public static VerifyStepJob StepJobOf(SeededRun run, int stepNo, int epoch = 0) =>
+        new(run.RunId, epoch, stepNo, FakeGodotProcess.Version, DateTimeOffset.UtcNow);
+
+    /// <summary>The run's verified prefix, status, epoch and last_seq.</summary>
+    public async Task<(string Status, int Epoch, int VerifiedSeq, int LastSeq)> RunStateAsync(SeededRun run)
+    {
+        await using var command = Command("SELECT status, epoch, verified_seq, last_seq FROM runs WHERE run_id = $1", [run.RunId]);
+        await using var reader = await command.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        return (reader.GetString(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetInt32(3));
+    }
 
     public async Task<T?> ScalarAsync<T>(string sql, params object[] values)
     {
@@ -276,14 +392,14 @@ public sealed class WorkerHarness : IAsyncDisposable
     public async Task<IDatabase> RedisAsync() =>
         (await ConnectionMultiplexer.ConnectAsync(_stack.RedisConnectionString)).GetDatabase();
 
-    /// <summary>Starts the consumer and waits until it is attached to the queue.</summary>
-    public async Task StartConsumerAsync(CancellationToken ct)
+    /// <summary>Starts the step consumer and waits until it is attached to verify.segment.</summary>
+    public async Task StartStepConsumerAsync(CancellationToken ct)
     {
-        await Consumer.StartAsync(ct);
+        await StepConsumer.StartAsync(ct);
         var deadline = DateTime.UtcNow.AddSeconds(30);
         while (!State.Ready)
         {
-            Assert.True(DateTime.UtcNow < deadline, "the consumer did not become ready");
+            Assert.True(DateTime.UtcNow < deadline, "the step consumer did not become ready");
             await Task.Delay(100, ct);
         }
     }
@@ -293,7 +409,7 @@ public sealed class WorkerHarness : IAsyncDisposable
         Metrics.Dispose();
         try
         {
-            await Consumer.StopAsync(CancellationToken.None);
+            await StepConsumer.StopAsync(CancellationToken.None);
         }
         catch (Exception)
         {
@@ -378,7 +494,22 @@ public sealed class RabbitTools : IAsyncDisposable
         {
             await _channel.QueuePurgeAsync(tier.Queue);
         }
+
+        await _channel.QueuePurgeAsync(VerifyTopology.SegmentQueue);
+        await _channel.QueuePurgeAsync(VerifyTopology.SegmentDeadLetterQueue);
+        foreach (var tier in VerifyTopology.SegmentRetryTiers)
+        {
+            await _channel.QueuePurgeAsync(tier.Queue);
+        }
     }
+
+    public Task PublishStepAsync(VerifyStepJob job, int attempt = 0) =>
+        VerifyMessaging.PublishAsync(_channel, VerifyTopology.Exchange, VerifyTopology.SegmentRoutingKey, job, attempt, null,
+            CancellationToken.None);
+
+    public Task PublishRawSegmentAsync(byte[] body) =>
+        _channel.BasicPublishAsync(VerifyTopology.Exchange, VerifyTopology.SegmentRoutingKey, mandatory: false,
+            new BasicProperties { Persistent = true }, body).AsTask();
 
     public Task PublishAsync(VerifyBattleJob job, int attempt = 0) =>
         VerifyMessaging.PublishAsync(_channel, VerifyTopology.Exchange, VerifyTopology.RoutingKey, job, attempt, null,
@@ -429,6 +560,8 @@ public sealed class RabbitTools : IAsyncDisposable
         await _connection.DisposeAsync();
     }
 }
+
+public sealed record SeededRun(Guid RunId, Guid PlayerId);
 
 internal sealed class StubEnvironment(string name) : Microsoft.Extensions.Hosting.IHostEnvironment
 {

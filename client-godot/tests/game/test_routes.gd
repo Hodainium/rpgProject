@@ -147,7 +147,7 @@ func test_price_item_pickups() -> void:
 	run.state.map.cells[cell]["pickups"] = entries
 	run.state.map.cells[cell]["cleared"] = true
 	var lines_before := "\n".join(run.state.map.canonical_lines())
-	check(lines_before.contains(":fixture.item.scar"), "a priced pickup's price item is part of the map hash")
+	check(lines_before.contains("priceItem=fixture.item.scar"), "a priced pickup's price item is part of the map hash")
 	var max_before := int(run.party_stats()[1][BattleUnit.MAX_HP])
 	eq(run.take(1, 1), "", "take the first priced pickup")
 	eq(run.take(2, 1), "", "and the second")

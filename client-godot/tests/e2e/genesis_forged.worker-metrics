@@ -1,0 +1,2 @@
+rpg_run_rollbacks_total\{[^}]*terminal="true"[^}]*\} 1( |$)
+rpg_anticheat_events_total\{[^}]*kind="StateMismatch"[^}]*\} 1( |$)

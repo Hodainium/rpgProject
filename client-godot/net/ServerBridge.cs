@@ -18,7 +18,8 @@ namespace rpgDemo.Net;
 /// No game logic, no retries (ServerLink decides those).
 /// <para>Completed(requestId, ok, json): ok → the response record's JSON ("null" for a 204); not ok →
 /// <c>{"status": int (0 = no response), "errorCode": int|null, "title": string, "detail": string,
-/// "retryAfterSeconds": number|null, "expectedSeq": int|null (1102), "lastSeq": int|null (1103, 1106)}</c>.</para>
+/// "retryAfterSeconds": number|null, "expectedSeq": int|null (1102), "lastSeq": int|null (1103, 1106),
+/// "epoch": int|null, "rollbackSeq": int|null, "reason": string|null (1108, spec run-verify 2.4)}</c>.</para>
 /// </summary>
 public partial class ServerBridge : Node
 {
@@ -80,6 +81,12 @@ public partial class ServerBridge : Node
     /// <summary>GET /api/v1/runs/{runId}/battles/{seq}; completes with a BattleSessionResponse.</summary>
     public long GetBattle(string runId, int seq) => Start(client => client.GetBattleAsync(runId, seq));
 
+    /// <summary>GET /api/v1/runs/{runId}/steps (Development servers only); completes with a list of RunStepDto.</summary>
+    public long GetSteps(string runId) => Start(client => client.GetStepsAsync(runId));
+
+    /// <summary>GET /api/v1/runs/{runId}/floors/{floor}; completes with a FloorDigestResponse.</summary>
+    public long GetFloorDigest(string runId, int floor) => Start(client => client.GetFloorDigestAsync(runId, floor));
+
     /// <summary>GET /api/v1/wallet; completes with a WalletResponse.</summary>
     public long GetWallet() => Start(client => client.GetWalletAsync());
 
@@ -125,13 +132,14 @@ public partial class ServerBridge : Node
         {
             ok = false;
             json = Error((int)ex.StatusCode, ex.ErrorCode, ex.Problem?.Title ?? ex.Message, ex.Problem?.Detail ?? "",
-                ex.RetryAfter?.TotalSeconds, ex.Problem?.ExpectedSeq, ex.Problem?.LastSeq);
+                ex.RetryAfter?.TotalSeconds, ex.Problem?.ExpectedSeq, ex.Problem?.LastSeq, ex.Problem?.Epoch,
+                ex.Problem?.RollbackSeq, ex.Problem?.Reason);
         }
         catch (Exception ex)
         {
             // No response at all: network down, timeout, refused connection, unreadable body.
             ok = false;
-            json = Error(0, null, ex.GetType().Name, ex.Message, null, null, null);
+            json = Error(0, null, ex.GetType().Name, ex.Message, null, null, null, null, null, null);
         }
 
         // The game may be quitting (a heartbeat still in flight): a disposed bridge has no one to tell.
@@ -149,7 +157,9 @@ public partial class ServerBridge : Node
         ?? throw new ArgumentException($"Expected a {typeof(T).Name} JSON object.");
 
     private static string Error(int status, int? errorCode, string title, string detail, double? retryAfterSeconds,
-        int? expectedSeq, int? lastSeq) =>
-        JsonSerializer.Serialize(new { status, errorCode, title, detail, retryAfterSeconds, expectedSeq, lastSeq },
-            RpgJson.Options);
+        int? expectedSeq, int? lastSeq, int? epoch, int? rollbackSeq, string? reason) =>
+        JsonSerializer.Serialize(new
+        {
+            status, errorCode, title, detail, retryAfterSeconds, expectedSeq, lastSeq, epoch, rollbackSeq, reason,
+        }, RpgJson.Options);
 }

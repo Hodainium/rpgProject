@@ -1,8 +1,5 @@
 using System.Diagnostics;
-using System.Text.Json;
 using Microsoft.Extensions.Options;
-using Rpg.Contracts.Battle;
-using Rpg.Contracts.Serialization;
 
 namespace Rpg.VerifierWorker;
 
@@ -20,92 +17,19 @@ public enum ReplayRunStatus
 /// <summary>What one Godot process cost: its CPU time and its peak working set, sampled while it ran.</summary>
 public sealed record ReplayUsage(TimeSpan CpuTime, long PeakMemoryBytes);
 
-public sealed record ReplayRun(ReplayRunStatus Status, ReplayResult? Result, string Detail, ReplayUsage? Usage = null);
-
-/// <summary>Runs one replay. The real one starts headless Godot; tests use a fake (spec battle-verify 6).</summary>
-public interface IReplayRunner
+/// <summary>The Godot project the worker runs: its ruleset version (asked once, at startup) and the process handling.</summary>
+public interface IGodotProcess
 {
-    /// <param name="requestJson">A <c>ReplayRequest</c>: the battle's conditions and action log.</param>
-    Task<ReplayRun> ReplayAsync(string requestJson, CancellationToken ct);
-
-    /// <summary>The ruleset version of the project this runner replays with (asked once, at startup).</summary>
     Task<string> RulesetVersionAsync(CancellationToken ct);
 }
 
 /// <summary>
-/// <c>godot --headless --path P --quit-after N res://combat/headless/replay_main.tscn -- --in req.json --out res.json</c>
-/// (client-godot/CLAUDE.md section 4). Exit 0 Verified, 2 Rejected, 1 runner error. The process tree is killed at the
-/// timeout.
+/// Starts headless Godot for the step runner (spec run-verify 3.6) and for the ruleset version: the process tree is killed at
+/// the timeout and CPU time and peak memory are sampled while it runs.
 /// </summary>
-public sealed partial class GodotReplayRunner(IOptions<VerifierOptions> options, ILogger<GodotReplayRunner> logger) : IReplayRunner
+public sealed partial class GodotProcess(IOptions<VerifierOptions> options, ILogger<GodotProcess> logger) : IGodotProcess
 {
-    private const string ReplayScene = "res://combat/headless/replay_main.tscn";
     private const string RulesetScene = "res://game/tools/print_ruleset_version.tscn";
-
-    public async Task<ReplayRun> ReplayAsync(string requestJson, CancellationToken ct)
-    {
-        var settings = options.Value;
-        var directory = Directory.CreateTempSubdirectory("rpg-verify-");
-        try
-        {
-            var input = Path.Combine(directory.FullName, "req.json");
-            var output = Path.Combine(directory.FullName, "res.json");
-            await File.WriteAllTextAsync(input, requestJson, ct);
-
-            List<string> arguments =
-            [
-                "--headless", "--path", settings.ProjectPath, "--quit-after", settings.QuitAfterFrames.ToString(),
-                ReplayScene, "--", "--in", input, "--out", output,
-            ];
-            if (settings.ContentRoot.Length > 0)
-            {
-                arguments.AddRange(["--content-root", settings.ContentRoot]);
-            }
-
-            var (exitCode, status, detail, _, usage) = await RunWithOutputAsync(arguments, settings.ProcessTimeout, ct);
-            if (status != ReplayRunStatus.Completed)
-            {
-                return new ReplayRun(status, null, detail, usage);
-            }
-
-            if (exitCode is not (0 or 2))
-            {
-                return new ReplayRun(ReplayRunStatus.RunnerError, null, $"godot exited with {exitCode}: {detail}", usage);
-            }
-
-            if (!File.Exists(output))
-            {
-                return new ReplayRun(ReplayRunStatus.RunnerError, null, $"godot exited with {exitCode} and wrote no result", usage);
-            }
-
-            ReplayResult? result;
-            try
-            {
-                result = JsonSerializer.Deserialize<ReplayResult>(await File.ReadAllTextAsync(output, ct), RpgJson.Options);
-            }
-            catch (JsonException ex)
-            {
-                return new ReplayRun(ReplayRunStatus.RunnerError, null, $"unreadable result: {ex.Message}", usage);
-            }
-
-            var expected = exitCode == 0 ? ReplayVerdict.Verified : ReplayVerdict.Rejected;
-            return result is null || result.Verdict != expected
-                ? new ReplayRun(ReplayRunStatus.RunnerError, null,
-                    $"exit code {exitCode} does not match the result's verdict {result?.Verdict}", usage)
-                : new ReplayRun(ReplayRunStatus.Completed, result, "", usage);
-        }
-        finally
-        {
-            try
-            {
-                directory.Delete(recursive: true);
-            }
-            catch (IOException ex)
-            {
-                logger.LogDebug("Temp folder {Path} not removed: {Message}", directory.FullName, ex.Message);
-            }
-        }
-    }
 
     public async Task<string> RulesetVersionAsync(CancellationToken ct)
     {
@@ -128,7 +52,7 @@ public sealed partial class GodotReplayRunner(IOptions<VerifierOptions> options,
     private static partial System.Text.RegularExpressions.Regex VersionLine();
 
     /// <summary>Starts godot, returns its exit code, its output (for messages) and its stdout alone; kills the tree at the timeout.</summary>
-    private async Task<(int ExitCode, ReplayRunStatus Status, string Detail, string Stdout, ReplayUsage? Usage)> RunWithOutputAsync(
+    internal async Task<(int ExitCode, ReplayRunStatus Status, string Detail, string Stdout, ReplayUsage? Usage)> RunWithOutputAsync(
         IEnumerable<string> arguments, TimeSpan timeout, CancellationToken ct)
     {
         var info = new ProcessStartInfo(options.Value.GodotPath)

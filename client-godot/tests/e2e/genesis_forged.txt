@@ -1,0 +1,12 @@
+# Spec run-verify 4 (F23), acceptance scenario 5 for the start of a run: a client whose start state is not the one the server
+# rebuilds from its own inputs (here: the claimed hash at seq 1 is replaced after the upload) is rejected as soon as the
+# worker has rebuilt the start. There is no verified checkpoint to return to, so the run ends Rejected, nothing pays, and the
+# client, asking for the next floor, is told the run is over. The worker starts only after the tampering.
+#! env Monitors__Interval=00:00:01
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+server check
+e2e tamper-genesis
+e2e worker-start 120
+wait stopped 120

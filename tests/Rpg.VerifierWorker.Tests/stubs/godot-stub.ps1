@@ -29,7 +29,43 @@ function VerifiedWithFacts {
     $v.Substring(0, $v.Length - 1) + ',"facts":' + $env:STUB_FACTS + '}'
 }
 
+# Spec run-verify (steps): the step scene reads a StepRequest and writes a StepVerdict.
+function StepVerified {
+    '{"status":"Verified","errorCode":null,"error":null,"mismatch":null,"startHash":"s","endHash":"e","battles":[],"verifierRulesetVersion":"","engineVersion":"stub","verifiedAt":"2026-11-08T00:00:00Z"}'
+}
+
+function StepRejected {
+    '{"status":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"StateHashMismatch","seq":3,"detail":"d"},"startHash":"s","endHash":"","battles":[],"verifierRulesetVersion":"","engineVersion":"stub","verifiedAt":"2026-11-08T00:00:00Z"}'
+}
+
+# Spec run-verify (e2e): a worker over the stub that reports facts. A step request is answered here, except the genesis
+# step, which must produce the real start the client's seq 1 is compared with, so it goes to the real engine (STUB_REAL_GODOT).
+if ($mode -eq 'verified-facts' -and $all -contains 'res://game/verify/step_main.tscn') {
+    $step = Get-Content $inPath -Raw | ConvertFrom-Json
+    if ($step.kind -eq 'Genesis') {
+        & $env:STUB_REAL_GODOT @all
+        exit $LASTEXITCODE
+    }
+    $reported = @()
+    foreach ($item in $step.actions) {
+        if ($item.action.battle) {
+            $facts = if ($env:STUB_FACTS) { ',"facts":' + $env:STUB_FACTS } else { '' }
+            $reported += ('{"schemaVersion":1,"battleId":"' + $item.action.battle.battleId + '","verdict":"Verified","errorCode":null,"error":null,"mismatch":null,"outcome":"Victory","turns":5,"finalStateHash":"abc","engineVersion":"stub"' + $facts + '}')
+        }
+    }
+    $last = $step.actions[$step.actions.Count - 1]
+    $text = '{"status":"Verified","errorCode":null,"error":null,"mismatch":null,"startHash":"' + $step.startStateHash + '","endHash":"' + $last.stateHash + '","battles":[' + ($reported -join ',') + '],"verifierRulesetVersion":"","engineVersion":"stub","verifiedAt":"2026-11-08T00:00:00Z"}'
+    [System.IO.File]::WriteAllText($outPath, $text)
+    exit 0
+}
+
 switch ($mode) {
+    'step-verified' { [System.IO.File]::WriteAllText($outPath, (StepVerified)); exit 0 }
+    'step-rejected' { [System.IO.File]::WriteAllText($outPath, (StepRejected)); exit 2 }
+    'malformed-step-result' { [System.IO.File]::WriteAllText($outPath, ((StepRejected) -replace 'StateHashMismatch', 'MalformedRequest')); exit 3 }
+    'malformed-battle-result' { [System.IO.File]::WriteAllText($outPath, ((Rejected) -replace 'TurnMismatch', 'MalformedRequest')); exit 3 }
+    'malformed' { exit 3 }
+    'malformed-with-result' { [System.IO.File]::WriteAllText($outPath, (StepRejected)); exit 3 }
     'verified-facts' { [System.IO.File]::WriteAllText($outPath, (VerifiedWithFacts)); exit 0 }
     'verified' { [System.IO.File]::WriteAllText($outPath, (Verified)); exit 0 }
     'rejected' { [System.IO.File]::WriteAllText($outPath, (Rejected)); exit 2 }

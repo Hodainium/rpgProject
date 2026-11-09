@@ -1,7 +1,7 @@
 map=9x8|start=40|boss=13
-cell=13|boss||fixture.room.throne|4|encounter|fixture.encounter.boss||1:fixture.enemy.chief:<null>:<null>,2:fixture.enemy.grunt:<null>:<null>|3:fixture.item.satchel:0:0|0|0
-cell=22|normal||fixture.room.shrine|7|event||fixture.event.coin|||0|0
-cell=23|special|Fixture.Room.Type.Treasure|fixture.room.vault|8|none||||1:fixture.item.banner:0:0|0|0
-cell=30|special|Fixture.Room.Type.Shop|fixture.room.market|2|none||||1:fixture.item.flask:3:0,2:fixture.item.feather:3:0,3:fixture.item.crumb:1:0|0|0
-cell=31|normal||fixture.room.shrine|13|event||fixture.event.coin|||0|0
-cell=40|start||fixture.room.start|1|none|||||0|0
+cell=13|{cell=(4,1),cleared=0,content={encounter=fixture.encounter.boss,enemies=[{loadoutRef=~,slot=1,unitDefId=fixture.enemy.chief,variantId=~},{loadoutRef=~,slot=2,unitDefId=fixture.enemy.grunt,variantId=~}],event=,kind=encounter},doors=4,pickups=[{item=fixture.item.satchel,placement=3,price=0,taken=0}],role=boss,room=fixture.room.throne,special_tag=,visited=0}
+cell=22|{cell=(4,2),cleared=0,content={encounter=,enemies=[],event=fixture.event.coin,kind=event},doors=7,pickups=[],role=normal,room=fixture.room.shrine,special_tag=,visited=0}
+cell=23|{cell=(5,2),cleared=0,content={encounter=,enemies=[],event=,kind=none},doors=8,pickups=[{item=fixture.item.banner,placement=1,price=0,taken=0}],role=special,room=fixture.room.vault,special_tag=Fixture.Room.Type.Treasure,visited=0}
+cell=30|{cell=(3,3),cleared=0,content={encounter=,enemies=[],event=,kind=none},doors=2,pickups=[{item=fixture.item.flask,placement=1,price=3,taken=0},{item=fixture.item.feather,placement=2,price=3,taken=0},{item=fixture.item.crumb,placement=3,price=1,taken=0}],role=special,room=fixture.room.market,special_tag=Fixture.Room.Type.Shop,visited=0}
+cell=31|{cell=(4,3),cleared=0,content={encounter=,enemies=[],event=fixture.event.coin,kind=event},doors=13,pickups=[],role=normal,room=fixture.room.shrine,special_tag=,visited=0}
+cell=40|{cell=(4,4),cleared=0,content={encounter=,enemies=[],event=,kind=none},doors=1,pickups=[],role=start,room=fixture.room.start,special_tag=,visited=0}

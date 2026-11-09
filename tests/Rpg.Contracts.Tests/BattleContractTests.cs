@@ -109,7 +109,7 @@ public class BattleContractTests
         // Spec atomic-battles: CheckpointMismatch is gone. The Godot replay runner emits exactly these names.
         Assert.Equal(
             ["TurnMismatch", "ActorMismatch", "IllegalAbility", "InvalidTarget", "LogExhausted", "TrailingActions",
-             "OutcomeMismatch", "FinalHashMismatch", "TurnLimitExceeded"],
+             "OutcomeMismatch", "FinalHashMismatch", "TurnLimitExceeded", "MalformedRequest"],
             Enum.GetNames<MismatchReason>());
     }
 

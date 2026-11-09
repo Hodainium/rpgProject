@@ -1,7 +1,8 @@
 ## Headless replay entry point (spec "Replay mode (verify)"):
 ##   godot --headless --path client-godot res://combat/headless/replay_main.tscn -- --in request.json --out result.json
 ##         [--content-root res://content/]
-## Exit code 0 = Verified, 2 = Rejected (2002), 1 = runner error.
+## Exit code 0 = Verified, 2 = Rejected (2002), 3 = Malformed (a Rejected verdict for a request the runner refuses, spec
+## run-verify 3.6), 1 = runner error.
 extends Node
 
 const DEFAULT_CONTENT_ROOT: String = "res://content/"

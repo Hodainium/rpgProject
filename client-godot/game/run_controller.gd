@@ -47,7 +47,17 @@ var runner_error: String = ""
 ## Local mode: battles accept dev decisions (spec dev-tools 3.6). Slice 2 turns it off when connected.
 var allow_dev: bool = true
 ## The battle waiting for fight(): {"cell", "encounter", "enemies", "label"}.
-var pending_battle: Dictionary = {}
+## Journaled actions since the last one that carried a snapshot (spec run-verify 2.2).
+var _since_checkpoint: int = 0
+## The battle waiting in the current room. Held by the RunState (spec run-verify: it is part of the run hash).
+var pending_battle: Dictionary:
+	get:
+		return state.pending_battle if state != null else _no_data
+	set(value):
+		if state != null:
+			state.pending_battle = value
+## Returned by the properties above before a run has a state.
+var _no_data: Dictionary = {}
 ## The battle fight() is playing, from battle_started until battle_finished (null otherwise): a view made after
 ## battle_started reads it here (spec ui-fixes B3).
 var current_battle: Battle
@@ -70,7 +80,12 @@ var _chest_toasts: Array = []
 var _recipient_draws: int = 0
 ## Spec server-authority 2.1 (server mode): the floor enter_floor() waits on until its seed arrives
 ## ({"floor": int, "choice": StringName}, else empty), and the floors whose seed was asked for.
-var _waiting_floor: Dictionary = {}
+var _waiting_floor: Dictionary:
+	get:
+		return state.waiting_floor if state != null else _no_data
+	set(value):
+		if state != null:
+			state.waiting_floor = value
 var _requested_floors: Array[int] = []
 ## Spec server-authority Part B (server mode, set by ServerLink.link): `journal` builds a RunActionRequest for every
 ## logged entry (actions_committed); `verify_wins` holds a won run at "Verifying run…" until confirm_end(). Both off in
@@ -354,6 +369,26 @@ func _install_floor(map: FloorMap, pools: Dictionary, clear_start: bool) -> void
 	var chapter: ChapterDefinition = content.chapters.get(state.chapter_id)
 	_send(GameplayMessageRouter.RUN_FLOOR_ENTERED, &"Verb.Enter", &"", state.chapter_id, state.floor_index + 1, [],
 		{"chapterName": chapter.display_name if chapter != null and chapter.display_name != "" else String(state.chapter_id)})
+
+
+## Spec run-verify 2.7 (the floor read model): what a verified floor looked like when the run entered it. Take it right after
+## `floor_entered`, before anything is visited: the floor, its chapter, a hash of the generated map and, per room, its role,
+## room, content kind and the pickups on offer. Plain data for the server to keep and serve, never read back by the run.
+func floor_digest() -> Dictionary:
+	var rooms: Array = []
+	for index in state.map.sorted_indices():
+		var data: Dictionary = state.map.cells[index]
+		var content: Dictionary = data["content"]
+		var room := {"cell": index, "role": str(data["role"]), "room": String(data["room"]), "kind": str(content["kind"])}
+		if String(content.get("encounter", "")) != "":
+			room["encounter"] = String(content["encounter"])
+		if String(content.get("event", "")) != "":
+			room["event"] = String(content["event"])
+		if not data["pickups"].is_empty():
+			room["offers"] = RunWire.offers(state, index)
+		rooms.append(room)
+	return {"floor": state.floor_index, "chapter": String(state.chapter_id),
+		"floorHash": StateHasher.sha256_hex("\n".join(state.map.canonical_lines())), "rooms": rooms}
 
 
 ## After the boss: the next floor, or the run is won after the last one (that happens in _clear_room).
@@ -2232,8 +2267,14 @@ func _commit_after(result: Variant) -> Variant:
 	for index in range(_committed, run_log.size()):
 		var entry: Dictionary = run_log[index]
 		var seq := index + 1
+		_since_checkpoint += 1
+		var is_last := index == run_log.size() - 1
+		# Only the last entry of a commit can carry a periodic snapshot: the captured state is the one after it.
 		var checkpoint: bool = RunWire.CHECKPOINTS.has(str(entry["type"])) \
-			or (index == run_log.size() - 1 and not pending_battle.is_empty())
+			or (is_last and not pending_battle.is_empty()) \
+			or (is_last and _since_checkpoint >= RunWire.CHECKPOINT_EVERY)
+		if checkpoint:
+			_since_checkpoint = 0
 		if checkpoint or (entry["type"] == "end" and entry["status"] == RunState.WON):
 			if snapshot.is_empty():
 				snapshot = RunSnapshot.capture(self)

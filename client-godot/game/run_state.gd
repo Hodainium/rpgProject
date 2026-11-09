@@ -38,6 +38,10 @@ var gifts_on_floor: int = 0
 ## The open event: {"cell": int, "event": StringName, "page": int}, or empty. Spec event-items: while a choice waits for
 ## give_to it also holds "after" ({"kind": "page" | "encounter" | "end", "page", "encounter"}).
 var event: Dictionary = {}
+## Spec run-verify: the battle waiting in the current room and the floor waiting for its seed. They decide what the run can do
+## next, so they belong to the state the run hash covers (RunController reads and writes them through its own properties).
+var pending_battle: Dictionary = {}
+var waiting_floor: Dictionary = {}
 ## Spec event-items: items waiting for the player to pick their holder (give_to), in order. Not hashed: the hash is
 ## taken between actions, and a given item is hashed in its holder's line.
 var pending_gifts: Array[StringName] = []
@@ -129,7 +133,7 @@ func anyone_alive() -> bool:
 ## Canonical lines for the run hash (spec 3.6).
 func canonical_lines() -> PackedStringArray:
 	var lines := PackedStringArray([
-		"run-v1",
+		"run-v2",
 		"seed=%d" % run_seed,
 		"structure=%s" % run_structure_id,
 		"status=%s" % status,
@@ -166,6 +170,24 @@ func canonical_lines() -> PackedStringArray:
 		lines.append("keys=%d|golden=%d|chests=%s|serial=%d" % [keys, 1 if golden_key else 0, ",".join(held), chest_serial])
 	if map != null:
 		lines.append_array(map.canonical_lines())
+	# Spec run-verify: everything else that decides play, each only when set (so most lines are absent most of the time). Left out on
+	# purpose, with the reason: run_id (identity, which a step compares against the run itself), the seeds of floors not entered yet
+	# (the server's own are the reference), dev_commands (a counter of console cheats), and the log, tallies and requested floors
+	# (summaries and network bookkeeping, never read by a rule).
+	if not event.is_empty():
+		lines.append("event=" + StateHasher.canonical(event))
+	if not pending_gifts.is_empty():
+		lines.append("gifts=" + ",".join(pending_gifts))
+	if revealed:
+		lines.append("revealed=1")
+	if reveal_events:
+		lines.append("reveal_events=1")
+	if sandbox:
+		lines.append("sandbox=1")
+	if not pending_battle.is_empty():
+		lines.append("pending=" + StateHasher.canonical(pending_battle))
+	if not waiting_floor.is_empty():
+		lines.append("waiting=" + StateHasher.canonical(waiting_floor))
 	if dev:
 		lines.append("dev=1")
 	return lines

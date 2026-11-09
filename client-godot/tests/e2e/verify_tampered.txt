@@ -1,14 +1,19 @@
-# Spec battle-verify 6, acceptance scenario 5 end to end: a battle whose stored log was altered after the upload (the first
-# one's claimed final hash, as a cheating client would send it) is rejected by the real replay with the 2002 verdict,
-# while the untouched battles are verified. The worker only starts after the tampering, so the jobs wait in the queue.
+# Spec battle-verify 6, run-verify 4 (F4, F11) and acceptance scenario 5 end to end: a battle whose stored log was altered after
+# the upload (the first one's claimed final hash, as a cheating client would send it) is rejected by the real replay with the
+# 2002 verdict, and with it the step that contains it. The run is rolled back to its last verified checkpoint, the client learns
+# at its next request (409 1108) and rebuilds from the server's log at that checkpoint. The party is the fixtures' titan, which no
+# fixture enemy can beat, so the rebuilt run is played to the end whatever the dice say and must be verified and Won. The worker
+# only starts after the tampering, so the steps wait in the queue (and the stairs with them).
 #! env Monitors__Interval=00:00:01
-new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+new fixture.character.titan run=fixture.run.two_floors
 wait run
 autorun policy=smart
-wait floor 1
-autorun policy=smart
-wait ended 60
 e2e tamper-battle
 e2e worker-start 120
+wait epoch 1 240
+autorun policy=smart
+wait floor 1 240
+autorun policy=smart
+wait ended 120
 wait verdict all 240
-server verdict
+server steps

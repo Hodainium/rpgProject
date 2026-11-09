@@ -334,6 +334,10 @@ func _build_run_world() -> void:
 		run_stats, ["haste", "strike"], ["mend"], medic_kit, Color.SEA_GREEN)
 	_character("rogue", {"max_hp": 880, "hp": 880, "atk": 380, "def": 260, "spd": 95.5, "crit_rate": 7.5, "crit_dmg": 60},
 		run_stats, ["poison", "strike"], [], null, Color.MEDIUM_PURPLE)
+	# Spec run-verify 4: a party that cannot lose to any fixture enemy, so an e2e scenario can play a whole run (through a
+	# rollback and a rebuild) and still end Won whatever the dice say. Nothing refers to it but the scenarios that name it.
+	_character("titan", {"max_hp": 5000000, "hp": 5000000, "atk": 9000, "def": 9000, "spd": 200, "crit_rate": 5,
+		"crit_dmg": 50}, run_stats, ["strike"], [], null, Color.GOLD)
 	_item("crest", [&"Fixture.Pool.Treasure"], ItemDefinition.Kind.PASSIVE, _ability_set(["crest_knight", "crest_medic"], []))
 	_enemy("grunt", {"max_hp": 600, "hp": 600, "atk": 250, "def": 150, "spd": 90, "crit_rate": 5, "crit_dmg": 50},
 		["claw"], [], Color.INDIAN_RED)

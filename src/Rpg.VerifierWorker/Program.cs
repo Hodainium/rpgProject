@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddVerifierWorker();
 // The host waits for the running jobs: the consumer's grace period (Verifier:ShutdownGrace) plus a margin.
-builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(90));
+builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(115));  // a step replay's timeout (90 s) plus a margin
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(r => r.AddService("rpg-verifier-worker", serviceInstanceId: Environment.MachineName))
     .WithMetrics(metrics => metrics
@@ -20,7 +20,7 @@ builder.Services.AddOpenTelemetry()
         tracing
             .AddAspNetCoreInstrumentation(o => o.Filter = ctx =>
                 !ctx.Request.Path.StartsWithSegments("/health") && !ctx.Request.Path.StartsWithSegments("/metrics"))
-            .AddSource(VerifyProcessor.Source.Name)
+            .AddSource(WorkerTrace.Source.Name)
             .AddSource("Npgsql");
         if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
         {

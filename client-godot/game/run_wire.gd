@@ -8,6 +8,8 @@ extends RefCounted
 
 ## Entry types that always carry a snapshot; an action that leaves a battle pending does too (RunController).
 const CHECKPOINTS: Array[String] = ["start_run", "battle", "next_floor"]
+## Spec run-verify 2.2: a snapshot is also attached once this many actions have gone by since the last one, so a step stays short.
+const CHECKPOINT_EVERY: int = 100
 const TREASURE_TAG: StringName = &"Room.Type.Treasure"
 
 
@@ -171,6 +173,26 @@ static func apply(run: RunController, wire: Dictionary) -> String:
 		"next_floor":
 			return run.next_floor(StringName(str(wire.get("chapter", ""))))
 	return "unknown action type %s" % type
+
+
+## Spec run-verify 2.2: the replay of a logged action against what the client claimed. A floor's seed reaches a client at some
+## moment the log does not record, so the replay hands out the server's seeds lazily instead of all at once: a run that waits
+## for a floor's seed stays waiting until the claimed hash shows it had the seed (`hash_matches`) or the next action proves it.
+## Returns true when the run is waiting for a floor whose seed `seeds` (floor → int) holds, and gives it to the run.
+static func provide_waiting(run: RunController, seeds: Dictionary) -> bool:
+	var waiting := run.waiting_for_floor()
+	if waiting < 0 or not seeds.has(waiting):
+		return false
+	run.provide_floor_seed(waiting, int(seeds[waiting]))
+	return true
+
+
+## Whether the run's state hash is `claimed`, in either of the two states the client can have been in: still waiting for the
+## floor's seed, or already holding it (then the seed is handed over and the hash taken again).
+static func hash_matches(run: RunController, claimed: String, seeds: Dictionary) -> bool:
+	if run.state.run_hash() == claimed:
+		return true
+	return provide_waiting(run, seeds) and run.state.run_hash() == claimed
 
 
 static func _pickup(state: RunState, cell: int, placement: int) -> Dictionary:

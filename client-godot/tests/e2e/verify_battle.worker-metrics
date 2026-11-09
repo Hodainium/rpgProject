@@ -1,9 +1,13 @@
-rpg_verify_jobs_total\{[^}]*result="verified"[^}]*\} [2-9]
-rpg_verify_replay_duration_seconds_count\{[^}]*result="verified"[^}]*\} [2-9]
-rpg_verify_latency_seconds_count(\{[^}]*\})? [2-9]
-rpg_settlements_total\{[^}]*\} [2-9]
-rpg_verify_godot_cpu_time_seconds_count\{[^}]*result="verified"[^}]*\} [2-9]
-rpg_verify_godot_peak_memory_bytes_count\{[^}]*result="verified"[^}]*\} [2-9]
+rpg_step_jobs_total\{[^}]*result="verified"[^}]*\} [1-9]
+rpg_step_duration_seconds_count\{[^}]*kind="battle"[^}]*\} [1-9]
+rpg_step_queue_wait_seconds_count(\{[^}]*\})? [1-9]
+rpg_settlements_total\{[^}]*\} [1-9]
+rpg_verify_godot_cpu_time_seconds_count\{[^}]*result="verified"[^}]*\} [1-9]
+rpg_verify_godot_peak_memory_bytes_count\{[^}]*result="verified"[^}]*\} [1-9]
 rpg_verify_godot_peak_memory_bytes_bucket\{[^}]*result="verified"[^}]*le="64000000"\} 0
 dotnet_process_memory_working_set_bytes\{[^}]*\} [0-9]+
 dotnet_process_cpu_time_seconds_total\{[^}]*\} [0-9.]+
+rpg_fanin_total\{[^}]*result="advanced"[^}]*\} [1-9]
+rpg_floor_verified_total(\{[^}]*\})? 2( |$)
+rpg_run_verdicts_total\{[^}]*result="won"[^}]*\} 1( |$)
+rpg_ledger_transitions_total\{[^}]*to="pending"[^}]*\} [1-9]

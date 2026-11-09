@@ -7,25 +7,25 @@ const DEFAULT_SECONDS: float = 30.0
 
 func _init() -> void:
 	name = "wait"
-	usage = "wait run | floor <n> | stopped | ended | verdict all|<seq> | gems <n> | notice <text> [seconds]"
-	help = "Waits (default 30 s) until a run is playable, floor n is entered, the run stopped, the run ended (a win only once the server says Won), the verifier decided the battles (verdict all, or one battle's seq: Verified or Rejected, polled from the server), the wallet holds at least n gems (spec settlement-outbox, polled from the server), or a notice arrived."
+	usage = "wait run | floor <n> | epoch <n> | stopped | ended | verdict all|<seq> | gems <n> | notice <text> [seconds]"
+	help = "Waits (default 30 s) until a run is playable, floor n is entered, the run is at epoch n or later (the verifier rolled it back and the client rebuilt it, spec run-verify), the run stopped, the run ended (a win only once the server says Won), the verifier decided the battles (verdict all, or one battle's seq: Verified or Rejected, polled from the server), the wallet holds at least n gems (spec settlement-outbox, polled from the server), or a notice arrived."
 	cheat = false
 	arg_kinds.assign(["text", "text", "int"])
 
 
 func run(ctx: DevContext, args: PackedStringArray) -> String:
-	if args.is_empty() or not ["run", "floor", "stopped", "ended", "verdict", "gems", "notice"].has(args[0]):
+	if args.is_empty() or not ["run", "floor", "epoch", "stopped", "ended", "verdict", "gems", "notice"].has(args[0]):
 		return ctx.fail("usage: " + usage)
 	var kind := args[0]
 	var rest := args.slice(1)
 	var target := ""
-	if kind == "floor" or kind == "notice" or kind == "verdict" or kind == "gems":
+	if kind == "floor" or kind == "epoch" or kind == "notice" or kind == "verdict" or kind == "gems":
 		if rest.is_empty():
 			return ctx.fail("usage: " + usage)
 		target = rest[0]
 		rest = rest.slice(1)
-		if kind == "floor" and not target.is_valid_int():
-			return ctx.fail("floor takes a number")
+		if (kind == "floor" or kind == "epoch") and not target.is_valid_int():
+			return ctx.fail("%s takes a number" % kind)
 		if kind == "gems" and not target.is_valid_int():
 			return ctx.fail("gems takes a number")
 		if kind == "verdict" and target != "all" and not (target.is_valid_int() and int(target) >= 1):
@@ -128,6 +128,8 @@ static func _holds(ctx: DevContext, kind: String, target: String) -> bool:
 			return live and run.state.status == RunState.ACTIVE and run.runner_error == "" and run.waiting_for_floor() < 0
 		"floor":
 			return live and run.state.floor_index == int(target) and run.waiting_for_floor() < 0
+		"epoch":
+			return live and game.server != null and game.server.epoch >= int(target)
 		"stopped":
 			return live and run.runner_error != ""
 		"ended":
