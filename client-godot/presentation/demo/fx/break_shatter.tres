@@ -1,0 +1,93 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_0il6x"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_on8r1"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_yjibq"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="4_ctdby"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_l6a3a"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="6_mjhnf"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shake_layer.gd" id="7_pyhce"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_mesh_flash_layer.gd" id="8_wjxt4"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="9_vjtlt"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="10_nqo8y"]
+
+[sub_resource type="Resource" id="Resource_2a7k8"]
+script = ExtResource("2_on8r1")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_ot3rq"]
+script = ExtResource("2_on8r1")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 2.0
+
+[sub_resource type="Resource" id="Resource_nlr7w"]
+script = ExtResource("3_yjibq")
+shader = ExtResource("4_ctdby")
+size = Vector2(3.4, 3.4)
+id = &"ring"
+space = 2
+duration = 0.5
+bindings = Array[ExtResource("2_on8r1")]([SubResource("Resource_2a7k8"), SubResource("Resource_ot3rq")])
+
+[sub_resource type="Resource" id="Resource_kjk1j"]
+script = ExtResource("2_on8r1")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_yoe6b"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_n6d8e"]
+script = ExtResource("6_mjhnf")
+amount = 28
+lifetime = 0.7
+color_ramp = SubResource("Gradient_yoe6b")
+size_min = 0.12
+size_max = 0.26
+speed_min = 3.0
+speed_max = 7.0
+gravity = Vector3(0, -9, 0)
+id = &"shards"
+bindings = Array[ExtResource("2_on8r1")]([SubResource("Resource_kjk1j")])
+
+[sub_resource type="Resource" id="Resource_iltuv"]
+script = ExtResource("7_pyhce")
+strength_world = 0.06
+seconds = 0.3
+id = &"shake"
+min_quality = 2
+
+[sub_resource type="Resource" id="Resource_7taba"]
+script = ExtResource("2_on8r1")
+property = "color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_pclb6"]
+script = ExtResource("8_wjxt4")
+id = &"flash"
+bindings = Array[ExtResource("2_on8r1")]([SubResource("Resource_7taba")])
+
+[sub_resource type="Resource" id="Resource_mqodp"]
+script = ExtResource("9_vjtlt")
+name = &"color"
+kind = 3
+default_value = Color(0.8, 0.95, 1, 1)
+description = "Colour of the shards."
+
+[sub_resource type="Resource" id="Resource_o662o"]
+script = ExtResource("9_vjtlt")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("10_nqo8y")
+id = &"fx.break_shatter"
+display_name = "Break shatter"
+params = Array[ExtResource("9_vjtlt")]([SubResource("Resource_mqodp"), SubResource("Resource_o662o")])
+layers = Array[ExtResource("1_0il6x")]([SubResource("Resource_nlr7w"), SubResource("Resource_n6d8e"), SubResource("Resource_iltuv"), SubResource("Resource_pclb6")])
+tags = Array[StringName]([&"Fx.Kind.Break"])
+description = "A shockwave ring, shards and a little camera shake when a unit's toughness breaks."

@@ -1,0 +1,67 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_wkptr"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_j63vd"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_2d_layer.gd" id="3_idbpe"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_rmfvh"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_tween_layer.gd" id="5_y4njh"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="6_4w7ml"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="7_gnt2l"]
+
+[sub_resource type="Resource" id="Resource_dfm1l"]
+script = ExtResource("2_j63vd")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_cnqym"]
+colors = PackedColorArray(1, 1, 1, 0.9, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_vxws6"]
+script = ExtResource("3_idbpe")
+amount = 48
+lifetime = 1.1
+explosiveness = 0.25
+color_ramp = SubResource("Gradient_cnqym")
+size_min = 0.08
+size_max = 0.3
+spread = 40.0
+speed_min = 20.0
+speed_max = 90.0
+gravity = Vector3(0, -30, 0)
+additive = false
+fit_to_anchor = true
+id = &"dust"
+bindings = Array[ExtResource("2_j63vd")]([SubResource("Resource_dfm1l")])
+
+[sub_resource type="Curve" id="Curve_yi7bv"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_0ghq5"]
+script = ExtResource("4_rmfvh")
+property = "modulate"
+curve = SubResource("Curve_yi7bv")
+mode = 2
+
+[sub_resource type="Resource" id="Resource_juhnj"]
+script = ExtResource("5_y4njh")
+seconds = 1.0
+id = &"fade"
+tracks = Array[ExtResource("4_rmfvh")]([SubResource("Resource_0ghq5")])
+
+[sub_resource type="Resource" id="Resource_pd3ti"]
+script = ExtResource("6_4w7ml")
+name = &"color"
+kind = 3
+default_value = Color(0.75, 0.8, 0.95, 1)
+description = "Colour of the dust."
+
+[resource]
+script = ExtResource("7_gnt2l")
+id = &"fx.card_dust"
+display_name = "Card dust"
+params = Array[ExtResource("6_4w7ml")]([SubResource("Resource_pd3ti")])
+layers = Array[ExtResource("1_wkptr")]([SubResource("Resource_vxws6"), SubResource("Resource_juhnj")])
+space = 1
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "A card turns to dust (the dust action). The card fades; remove it when the effect ends."

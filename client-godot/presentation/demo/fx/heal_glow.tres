@@ -1,0 +1,95 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_tdmyo"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_fnl1i"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_q3iqp"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_03aas"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="5_pkxej"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="6_vii8b"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_light_layer.gd" id="7_qj0j1"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="8_w2kqc"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="9_t26bh"]
+
+[sub_resource type="Resource" id="Resource_cjs32"]
+script = ExtResource("2_fnl1i")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_1giwv"]
+offsets = PackedFloat32Array(0, 0.3, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_2q26p"]
+script = ExtResource("3_q3iqp")
+amount = 22
+lifetime = 1.0
+explosiveness = 0.3
+color_ramp = SubResource("Gradient_1giwv")
+size_min = 0.16
+size_max = 0.32
+spread = 40.0
+speed_min = 0.8
+speed_max = 1.8
+gravity = Vector3(0, 0.8, 0)
+emission_radius = 0.4
+id = &"motes"
+bindings = Array[ExtResource("2_fnl1i")]([SubResource("Resource_cjs32")])
+
+[sub_resource type="Resource" id="Resource_0wgl1"]
+script = ExtResource("2_fnl1i")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_ab4pw"]
+script = ExtResource("2_fnl1i")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_8jplk"]
+script = ExtResource("5_pkxej")
+shader = ExtResource("6_vii8b")
+shader_params = {
+"fade_out": 0.7,
+"falloff": 3.0
+}
+size = Vector2(2.2, 2.2)
+id = &"glow"
+space = 2
+duration = 1.0
+bindings = Array[ExtResource("2_fnl1i")]([SubResource("Resource_0wgl1"), SubResource("Resource_ab4pw")])
+
+[sub_resource type="Resource" id="Resource_3lxyg"]
+script = ExtResource("2_fnl1i")
+property = "light_color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_6as53"]
+script = ExtResource("7_qj0j1")
+energy = 1.5
+seconds = 0.9
+id = &"light"
+min_quality = 2
+bindings = Array[ExtResource("2_fnl1i")]([SubResource("Resource_3lxyg")])
+
+[sub_resource type="Resource" id="Resource_dsrrn"]
+script = ExtResource("8_w2kqc")
+name = &"color"
+kind = 3
+default_value = Color(0.45, 1, 0.55, 1)
+description = "Colour of the heal."
+
+[sub_resource type="Resource" id="Resource_lhur6"]
+script = ExtResource("8_w2kqc")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("9_t26bh")
+id = &"fx.heal_glow"
+display_name = "Heal glow"
+params = Array[ExtResource("8_w2kqc")]([SubResource("Resource_dsrrn"), SubResource("Resource_lhur6")])
+layers = Array[ExtResource("1_tdmyo")]([SubResource("Resource_2q26p"), SubResource("Resource_8jplk"), SubResource("Resource_6as53")])
+tags = Array[StringName]([&"Fx.Kind.Heal"])
+description = "Green motes rise around a unit that was healed."

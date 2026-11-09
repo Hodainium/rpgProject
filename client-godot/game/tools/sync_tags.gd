@@ -34,6 +34,9 @@ const SYSTEM_TAGS: Array[StringName] = [
 	&"UI.Layer.Menu", &"UI.Layer.Modal",
 	# Spec keys-and-gear: where abilities work, and the run modifier tags the run reads from held items.
 	&"Ability.Usage.Field", &"Ability.Usage.Battle", &"Run.Keys.Double", &"Run.Chest.Double", &"Run.Chest.NoKey",
+	# Spec vfx-framework: the effect cues the proof set registers (cue_registry.tres). Effect asset tags (Fx.Kind.*) are
+	# gas::tag fields, found in presentation/.
+	&"Cue.Fx.HitSpark", &"Cue.Fx.Heal", &"Cue.Fx.Break", &"Cue.Fx.Aura",
 ]
 const FORMAT: String = "^([A-Z][a-zA-Z0-9]*)(\\.[A-Z][a-zA-Z0-9]*)*$"
 

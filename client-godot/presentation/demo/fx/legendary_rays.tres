@@ -1,0 +1,126 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_ylft2"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_5dhd6"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_qsrwd"]
+[ext_resource type="Shader" path="res://game/fx/shaders/rays.gdshader" id="4_58nxy"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_dxj2i"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_2d_layer.gd" id="6_2umq3"]
+[ext_resource type="Shader" path="res://game/fx/shaders/vignette_flash.gdshader" id="7_usxcw"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="8_fmaao"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="9_jsy5a"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_sub_fx_layer.gd" id="10_6d026"]
+
+[sub_resource type="Resource" id="Resource_bxynm"]
+script = ExtResource("2_5dhd6")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_s7c3d"]
+script = ExtResource("2_5dhd6")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_2ihcn"]
+script = ExtResource("3_qsrwd")
+shader = ExtResource("4_58nxy")
+size = Vector2(1000, 1000)
+id = &"rays"
+duration = 2.2
+bindings = Array[ExtResource("2_5dhd6")]([SubResource("Resource_bxynm"), SubResource("Resource_s7c3d")])
+
+[sub_resource type="Resource" id="Resource_f53tm"]
+script = ExtResource("2_5dhd6")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_c351p"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_vncin"]
+script = ExtResource("6_2umq3")
+amount = 50
+lifetime = 1.6
+color_ramp = SubResource("Gradient_c351p")
+size_min = 0.1
+size_max = 0.34
+speed_min = 120.0
+speed_max = 380.0
+gravity = Vector3(0, 40, 0)
+id = &"motes"
+min_quality = 2
+bindings = Array[ExtResource("2_5dhd6")]([SubResource("Resource_f53tm")])
+
+[sub_resource type="Resource" id="Resource_d5ym5"]
+script = ExtResource("2_5dhd6")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_5bpbh"]
+script = ExtResource("2_5dhd6")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_2344t"]
+script = ExtResource("3_qsrwd")
+shader = ExtResource("7_usxcw")
+id = &"flash"
+duration = 0.6
+bindings = Array[ExtResource("2_5dhd6")]([SubResource("Resource_d5ym5"), SubResource("Resource_5bpbh")])
+
+[sub_resource type="Resource" id="Resource_f6e1c"]
+script = ExtResource("8_fmaao")
+name = &"color"
+kind = 3
+default_value = Color(1, 1, 1, 1)
+description = "Colour of the flash."
+
+[sub_resource type="Resource" id="Resource_5qdib"]
+script = ExtResource("8_fmaao")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[sub_resource type="Resource" id="Resource_b7i32"]
+script = ExtResource("9_jsy5a")
+id = &"fx.screen_flash"
+display_name = "Screen flash"
+params = Array[ExtResource("8_fmaao")]([SubResource("Resource_f6e1c"), SubResource("Resource_5qdib")])
+layers = Array[ExtResource("1_ylft2")]([SubResource("Resource_2344t")])
+space = 2
+tags = Array[StringName]([&"Fx.Kind.Flash"])
+description = "The edges of the screen flare and fade."
+
+[sub_resource type="Resource" id="Resource_5k64g"]
+script = ExtResource("10_6d026")
+effect = SubResource("Resource_b7i32")
+param_map = {
+"color": "$color",
+"intensity": 0.8
+}
+id = &"flash"
+
+[sub_resource type="Resource" id="Resource_4dc01"]
+script = ExtResource("8_fmaao")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.7, 0.2, 1)
+description = "Colour of the rays."
+
+[sub_resource type="Resource" id="Resource_vsttq"]
+script = ExtResource("8_fmaao")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("9_jsy5a")
+id = &"fx.legendary_rays"
+display_name = "Legendary rays"
+params = Array[ExtResource("8_fmaao")]([SubResource("Resource_4dc01"), SubResource("Resource_vsttq")])
+layers = Array[ExtResource("1_ylft2")]([SubResource("Resource_2ihcn"), SubResource("Resource_vncin"), SubResource("Resource_5k64g")])
+space = 3
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "Rays, motes and a screen flash for a Legendary reveal."

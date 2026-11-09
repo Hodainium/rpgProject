@@ -112,6 +112,8 @@ func _on_battle_started(battle: Battle) -> void:
 		var fallback := Vector2i(2 if unit.is_party() else 10, unit.slot + 1)
 		var view := _unit(_spawn(room, kind, unit.slot, fallback), unit.definition)
 		_views[unit.unit_id] = view
+		if view is UnitAnimator:
+			view.unit_id = unit.unit_id  # spec vfx-framework: effects find a unit's view by this id
 		view.set_dead(not unit.alive)
 	battle.execution_resolved.connect(_on_execution)
 	battle.unit_died.connect(_set_dead.bind(true))

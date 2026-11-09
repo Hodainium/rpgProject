@@ -17,7 +17,16 @@ const GodotGasProjectSettings: = preload("res://addons/GodotGAS/utilities/projec
 var _pool: Dictionary = {}
 
 ## Internal dictionary holding the cached PackedScenes. Format: { "tag": PackedScene }
+## rpgProject patch (client-godot/CLAUDE.md section 0): filled on a cue's first use, not when the registry loads.
 var _cue_scenes: Dictionary = {}
+
+## rpgProject patch: the registry's entries by tag. An entry only names its scene; the scene loads when the cue first runs.
+var _entries: Dictionary = {}
+
+## rpgProject patch (Unreal's ShouldSuppressGameplayCues): when true, execute_cue does nothing and add_persistent_cue
+## returns null. A process that draws and plays nothing (the headless verifier) sets it, so no cue scene is ever loaded
+## and no cue node is made per hit.
+var suppress_cues: bool = false
 
 
 #region Initialization
@@ -40,18 +49,72 @@ func _load_registry() -> void:
 	if not registry:
 		return
 		
-	# Register everything found in the resource
+	# Register everything found in the resource. rpgProject patch: an entry only names its scene (scene_path); the scene
+	# is loaded by _scene_for the first time the cue runs.
 	for entry in registry.entries:
-		if entry.tag and entry.scene:
-			_cue_scenes[entry.tag] = entry.scene
+		if entry.tag and entry.scene_path() != "":
+			_entries[entry.tag] = entry
 			_pool[entry.tag] = []
+
+
+## rpgProject patch: true when `tag` has a cue scene (registered by the registry or by register_cue).
+func has_cue(tag: StringName) -> bool:
+	return _cue_scenes.has(tag) or _entries.has(tag)
+
+
+## rpgProject patch: adds (or replaces) a cue at run time, like Unreal's runtime cue registration. Tests and mods use it.
+func register_cue(tag: StringName, scene: PackedScene) -> void:
+	unregister_cue(tag)  # frees the pooled nodes of the cue being replaced
+	_cue_scenes[tag] = scene
+	_pool[tag] = []
+
+
+## rpgProject patch: removes a cue; pooled instances are freed.
+func unregister_cue(tag: StringName) -> void:
+	_cue_scenes.erase(tag)
+	_entries.erase(tag)
+	for pooled in _pool.get(tag, []):
+		if is_instance_valid(pooled):
+			pooled.free()
+	_pool.erase(tag)
+
+
+## rpgProject patch: starts loading a cue's scene in the background (Unreal's async load), so its first use does not
+## wait. Call it for the cues a floor will need. Does nothing for a cue that is loaded or unknown.
+func preload_cue(tag: StringName) -> void:
+	if _cue_scenes.has(tag) or not _entries.has(tag):
+		return
+	var path: String = _entries[tag].scene_path()
+	if path != "" and not ResourceLoader.has_cached(path):
+		ResourceLoader.load_threaded_request(path)
+
+
+## rpgProject patch: the cue's scene, loaded the first time it is asked for (null when unknown or it fails to load).
+func _scene_for(tag: StringName) -> PackedScene:
+	if _cue_scenes.has(tag):
+		return _cue_scenes[tag]
+	if not _entries.has(tag):
+		return null
+	var path: String = _entries[tag].scene_path()
+	var scene: PackedScene = null
+	if path != "" and ResourceLoader.exists(path):  # a missing file is one warning below, not engine load errors
+		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			scene = ResourceLoader.load_threaded_get(path) as PackedScene
+		if scene == null:
+			scene = load(path) as PackedScene
+	if scene == null:
+		push_warning("GodotGAS: cue '%s' could not load its scene %s" % [tag, path])
+		_entries.erase(tag)  # remembered: the warning and the file read happen once, not on every hit
+		return null
+	_cue_scenes[tag] = scene
+	return scene
 #endregion
 
 
 #region Cue Execution
 ## The main public API called by the ASC to spawn a one-off burst effect.
 func execute_cue(tag: StringName, target: Node, payload: Dictionary = {}) -> void:
-	if not _cue_scenes.has(tag):
+	if suppress_cues or not has_cue(tag):  # rpgProject patch: suppression, lazy scenes
 		return
 		
 	var cue_instance: GameplayCueNotify = _get_or_create_cue(tag)
@@ -68,7 +131,7 @@ func execute_cue(tag: StringName, target: Node, payload: Dictionary = {}) -> voi
 ## Adds a persistent cue that will not automatically destroy itself.
 ## Returns the live node so the ASC can track and suppress it later.
 func add_persistent_cue(tag: StringName, target: Node, payload: Dictionary = {}) -> GameplayCueNotify:
-	if not _cue_scenes.has(tag):
+	if suppress_cues or not has_cue(tag):  # rpgProject patch: suppression, lazy scenes
 		return null
 		
 	var cue_instance: GameplayCueNotify = _get_or_create_cue(tag)
@@ -104,7 +167,10 @@ func _get_or_create_cue(tag: StringName) -> GameplayCueNotify:
 		return pooled_cue
 		
 	# 2. If the pool is empty, instance a brand new one
-	var raw_instance = _cue_scenes[tag].instantiate()
+	var scene := _scene_for(tag)  # rpgProject patch: loaded on first use
+	if scene == null:
+		return null
+	var raw_instance = scene.instantiate()
 	
 	# TYPE CHECK: Is this scene actually a GameplayCueNotify?
 	if not raw_instance is GameplayCueNotify:

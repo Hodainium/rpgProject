@@ -1,0 +1,68 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_o30ca"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_kr5p3"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_7qhdy"]
+[ext_resource type="Shader" path="res://game/fx/shaders/radial_burst.gdshader" id="4_cfcgd"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_8l6ib"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_tween_layer.gd" id="6_rtkud"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="7_ug4md"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="8_2toa3"]
+
+[sub_resource type="Resource" id="Resource_76v8q"]
+script = ExtResource("2_kr5p3")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_xx7dl"]
+script = ExtResource("2_kr5p3")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_0b0i1"]
+script = ExtResource("3_7qhdy")
+shader = ExtResource("4_cfcgd")
+size = Vector2(560, 560)
+id = &"burst"
+duration = 0.55
+bindings = Array[ExtResource("2_kr5p3")]([SubResource("Resource_76v8q"), SubResource("Resource_xx7dl")])
+
+[sub_resource type="Curve" id="Curve_wfe68"]
+_limits = [0.0, 1.5, 0.0, 1.0]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.4, 1.1), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Resource" id="Resource_e87nu"]
+script = ExtResource("5_8l6ib")
+property = "scale"
+curve = SubResource("Curve_wfe68")
+mode = 2
+
+[sub_resource type="Resource" id="Resource_dr6rx"]
+script = ExtResource("6_rtkud")
+id = &"punch"
+tracks = Array[ExtResource("5_8l6ib")]([SubResource("Resource_e87nu")])
+
+[sub_resource type="Resource" id="Resource_4k8l0"]
+script = ExtResource("7_ug4md")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.92, 0.7, 1)
+description = "Flash colour (the card's rarity)."
+
+[sub_resource type="Resource" id="Resource_m5mdl"]
+script = ExtResource("7_ug4md")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("8_2toa3")
+id = &"fx.card_flip_flash"
+display_name = "Card flip flash"
+params = Array[ExtResource("7_ug4md")]([SubResource("Resource_4k8l0"), SubResource("Resource_m5mdl")])
+layers = Array[ExtResource("1_o30ca")]([SubResource("Resource_0b0i1"), SubResource("Resource_dr6rx")])
+space = 1
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "The flash when a card flips face up."

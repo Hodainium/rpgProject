@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_hxicx"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_wgr3k"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shake_layer.gd" id="3_urav6"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_23u0d"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="5_g6r4h"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="6_uv6i7"]
+
+[sub_resource type="Resource" id="Resource_v666p"]
+script = ExtResource("2_wgr3k")
+property = "strength_px"
+param = &"strength"
+scale = 12.0
+
+[sub_resource type="Resource" id="Resource_126m2"]
+script = ExtResource("2_wgr3k")
+property = "strength_world"
+param = &"strength"
+scale = 0.1
+
+[sub_resource type="Resource" id="Resource_haup4"]
+script = ExtResource("3_urav6")
+strength_px = 0.0
+strength_world = 0.0
+id = &"shake"
+bindings = Array[ExtResource("2_wgr3k")]([SubResource("Resource_v666p"), SubResource("Resource_126m2")])
+
+[sub_resource type="Resource" id="Resource_dcuqh"]
+script = ExtResource("5_g6r4h")
+name = &"strength"
+default_value = 1.0
+max_value = 4.0
+description = "1 = a firm shake."
+
+[resource]
+script = ExtResource("6_uv6i7")
+id = &"fx.screen_shake"
+display_name = "Screen shake"
+params = Array[ExtResource("5_g6r4h")]([SubResource("Resource_dcuqh")])
+layers = Array[ExtResource("1_hxicx")]([SubResource("Resource_haup4")])
+space = 2
+tags = Array[StringName]([&"Fx.Kind.Shake"])
+description = "Shakes the window and the 3D camera."

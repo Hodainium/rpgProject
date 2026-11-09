@@ -1,0 +1,151 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_decd2"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_e32u2"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_ey4l6"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_ryqhi"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="5_mx7al"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="6_cw7ac"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_light_layer.gd" id="7_ahlnp"]
+[ext_resource type="Shader" path="res://game/fx/shaders/radial_burst.gdshader" id="8_wfqfn"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shake_layer.gd" id="9_tu1j6"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="10_tj0t1"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="11_rkgqx"]
+
+[sub_resource type="Resource" id="Resource_gaum7"]
+script = ExtResource("2_e32u2")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_pndmj"]
+script = ExtResource("2_e32u2")
+property = "amount"
+param = &"count"
+
+[sub_resource type="Gradient" id="Gradient_eeemd"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_nafyw"]
+script = ExtResource("3_ey4l6")
+amount = 70
+lifetime = 1.1
+color_ramp = SubResource("Gradient_eeemd")
+size_min = 0.05
+size_max = 0.16
+speed_min = 3.0
+speed_max = 8.0
+gravity = Vector3(0, -3, 0)
+id = &"sparks"
+bindings = Array[ExtResource("2_e32u2")]([SubResource("Resource_gaum7"), SubResource("Resource_pndmj")])
+
+[sub_resource type="Resource" id="Resource_rrohp"]
+script = ExtResource("2_e32u2")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_voc3l"]
+script = ExtResource("2_e32u2")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.5
+
+[sub_resource type="Resource" id="Resource_4i5kv"]
+script = ExtResource("5_mx7al")
+shader = ExtResource("6_cw7ac")
+size = Vector2(3.4, 3.4)
+id = &"glow"
+space = 2
+duration = 0.7
+bindings = Array[ExtResource("2_e32u2")]([SubResource("Resource_rrohp"), SubResource("Resource_voc3l")])
+
+[sub_resource type="Resource" id="Resource_rbrhx"]
+script = ExtResource("2_e32u2")
+property = "light_color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_n1a80"]
+script = ExtResource("7_ahlnp")
+energy = 4.0
+light_range = 8.0
+seconds = 0.6
+id = &"light"
+bindings = Array[ExtResource("2_e32u2")]([SubResource("Resource_rbrhx")])
+
+[sub_resource type="Resource" id="Resource_rpc6b"]
+script = ExtResource("2_e32u2")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_gx3n1"]
+script = ExtResource("2_e32u2")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_1tncl"]
+script = ExtResource("5_mx7al")
+shader = ExtResource("8_wfqfn")
+size = Vector2(900, 900)
+id = &"ring"
+duration = 0.9
+bindings = Array[ExtResource("2_e32u2")]([SubResource("Resource_rpc6b"), SubResource("Resource_gx3n1")])
+
+[sub_resource type="Resource" id="Resource_t15d8"]
+script = ExtResource("2_e32u2")
+property = "strength_px"
+param = &"shake"
+scale = 16.0
+
+[sub_resource type="Resource" id="Resource_3ak3v"]
+script = ExtResource("2_e32u2")
+property = "strength_world"
+param = &"shake"
+scale = 0.1
+
+[sub_resource type="Resource" id="Resource_x0rrd"]
+script = ExtResource("9_tu1j6")
+strength_px = 0.0
+strength_world = 0.0
+seconds = 0.45
+id = &"shake"
+bindings = Array[ExtResource("2_e32u2")]([SubResource("Resource_t15d8"), SubResource("Resource_3ak3v")])
+
+[sub_resource type="Resource" id="Resource_lvnkp"]
+script = ExtResource("10_tj0t1")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.78, 0.25, 1)
+description = "Colour of the burst."
+
+[sub_resource type="Resource" id="Resource_5ovpn"]
+script = ExtResource("10_tj0t1")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[sub_resource type="Resource" id="Resource_i4ipy"]
+script = ExtResource("10_tj0t1")
+name = &"count"
+kind = 1
+default_value = 70
+min_value = 10.0
+max_value = 200.0
+description = "Number of sparks."
+
+[sub_resource type="Resource" id="Resource_v6nis"]
+script = ExtResource("10_tj0t1")
+name = &"shake"
+default_value = 1.0
+max_value = 4.0
+description = "Shake strength (0 = none)."
+
+[resource]
+script = ExtResource("11_rkgqx")
+id = &"fx.pack_burst"
+display_name = "Pack burst"
+params = Array[ExtResource("10_tj0t1")]([SubResource("Resource_lvnkp"), SubResource("Resource_5ovpn"), SubResource("Resource_i4ipy"), SubResource("Resource_v6nis")])
+layers = Array[ExtResource("1_decd2")]([SubResource("Resource_nafyw"), SubResource("Resource_4i5kv"), SubResource("Resource_n1a80"), SubResource("Resource_1tncl"), SubResource("Resource_x0rrd")])
+space = 3
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "A pack bursts open on a hybrid stage (3D sparks, glow and light, 2D shockwave, shake)."

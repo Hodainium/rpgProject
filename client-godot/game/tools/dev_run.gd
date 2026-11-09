@@ -6,7 +6,7 @@
 ##   godot --headless --path client-godot --quit-after 100000 res://game/tools/dev_run.tscn -- --script run.txt
 ##     [--out state.json] [--content-root res://content/] [--commands <folder of throwaway commands>] [--manual]
 ##     [--window --shots <folder>]   (--window: run without --headless so `shot <name>` can capture the screen)
-##     [--server <url> [--player <name>]] [--control <folder>]   (spec dev-tools E3: server mode without touching the
+##     [--server <url> [--player <name>] | --local] [--control <folder>]   (spec dev-tools E3: server mode without touching the
 ##     Settings, and the folder for `e2e` fault requests; tools/e2e.sh passes both)
 extends Node
 
@@ -31,6 +31,9 @@ func _ready() -> void:
 		_copy_commands(_arg(args, "--commands", ""))
 	game = GAME.instantiate()
 	game.skip_animations = true
+	if args.has("--local") and _arg(args, "--server", "") == "":
+		game.force_local = true  # before _ready, which would build the Settings' server link
+		game.local_saves = false  # and leave no Continue save behind
 	add_child(game)
 	var root := _arg(args, "--content-root", "")
 	if root != "":

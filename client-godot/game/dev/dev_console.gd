@@ -190,6 +190,10 @@ func candidates(kind: String) -> Array[String]:
 			values.assign(["on", "off"])
 		"messages_op":
 			values.assign(["on", "off", "last"])
+		"fx_op":
+			values.assign(["list", "params", "play", "stop", "stats", "check", "quality", "log"])
+		"fx":
+			values.assign(FxManager.catalog())
 		"channel":
 			for channel in GameplayMessageRouter.CHANNELS:
 				var parts := String(channel).split(".")

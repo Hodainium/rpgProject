@@ -10,5 +10,5 @@ script = ExtResource("2_5rh58")
 
 [resource]
 script = ExtResource("4_4wktp")
-application_cue_tags = Array[StringName]([&"Cue.Sfx.Hit"])
+application_cue_tags = Array[StringName]([&"Cue.Sfx.Hit", &"Cue.Fx.HitSpark"])
 executions =Array[ExtResource("1_hckk0")]([SubResource("Resource_q5wlo")])

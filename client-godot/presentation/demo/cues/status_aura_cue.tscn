@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_vi3hu"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/status_aura.tres" id="2_r7677"]
+
+[node name="StatusAuraCue" type="Node" unique_id=1758310191]
+script = ExtResource("1_vi3hu")
+fx = ExtResource("2_r7677")
+stop_fade = 0.4
+offset = Vector3(0, 0.2, 0)
+auto_destroy = false
