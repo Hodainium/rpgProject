@@ -31,6 +31,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 4a. `run-verify` | ✅ Done (spec synced; steps cut at the claimed snapshots with a genesis anchor the server builds at run start, a worker pool replaying each step in headless Godot with a battle simulated once, the fan-in aggregator (verified prefix, links, floors, win, rollback with epoch, `MaxRollbacks`), the stairs gate 1107 and epoch gate 1108, pending gems claimed at release, the floor read model, run hash `run-v2` covering everything that decides play; the per-battle worker is removed; 416 .NET, 582 Godot, the e2e scenarios and the Linux golden check pass; open: routing by ruleset (9), retention (7b)) | 2026-11-08 |
 | 4b. `game-analytics` | ⬜ Not started | |
 | 5. `card-collection` | ⬜ Not started | |
+| 5b. `card-ui` | ⬜ Not started | |
+| 5c. `card-balance` | ⬜ Not started | |
 | 6. `observability` | ⬜ Not started | |
 | 7. `live-dashboard` | ⬜ Not started | |
 | 7b. `data-retention` | ⬜ Not started | |
@@ -159,6 +161,8 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   eidolons (one copy unlocks a card, duplicates add no power and are worth dust); a core set every account owns, always in
   the pools and not dustable, so a collection can't be stripped down to one strong item; Hearthstone-style crafting (any
   card for dust); and a removal-only run lock covering every card acquired before the run started, one acquisition time per card. No house account, escrow or market routes.
+  Then: Boss stays at 21 cards, Void starts all core, Vault gets five new items to reach 15, core items are picked by
+  lowest rarity first, and two sub-slices follow slice 5: 5b `card-ui` (the number 5b, freed by the market, is reused) and 5c `card-balance`.
   Later the same day: a card is owned once (a duplicate is auto-dusted on arrival, so ownership is a set and there is no
   copy cap to decide); the run lock never expires and the player cancels the run from a pop-up to dust; the core set is
   sized like Isaac's starting item pools, with the existing room pool tags on each card. Market mentions in 4b, 7, the Redis plan and the other
@@ -501,12 +505,17 @@ speed) feeds a delayed review queue, not instant bans.
   The existing demo items become the first cards: the core cards are picked from them, the rest are collectible, so
   a collected card adds to a pool the core set already fills. Only the room pools carry a size
   target; `Pool.Food` and `Pool.Chest` are plain tagged pools with no minimum. Today's demo pools hold 77 Treasure, 39
-  Shop, 21 Boss, 15 Void, 10 Vault and 4 Food items. Void therefore starts entirely core (it already meets its 15) and
-  Vault is 5 short; the spec settles Vault and whether Boss is a standard pool (21, under 30). A pool that already hits
-  its mark simply grows later: new cards arrive as **expansion sets** (a card set tag, like Hearthstone's expansions
-  and booster sets), which is new content with no schema change, and packs can draw per set. Collected cards add to the pools. Which cards are core
+  Shop, 21 Boss, 15 Void, 10 Vault and 4 Food items. Decided 2026-11-09: **Boss stays at 21** (all core, no 30 target for
+  now), **Void starts entirely core** (it already meets its 15) and **Vault must reach 15**, which needs **five new Vault
+  items** made in this slice (new content files; a list of paths and values is reported, nothing existing is changed).
+  **Which items are core:** by lowest rarity first (Common, then Rare, then Epic, then Legendary), so the collected
+  cards are the stronger ones; an item counts in every pool it belongs to, so the picks are made against the 30 / 15
+  targets jointly, with ties broken in the spec. Boss and Void are all core, so their Epic and Legendary items are core
+  by exception. A pool that already hits its mark grows later: new cards arrive as **expansion sets** (a card set tag,
+  like Hearthstone's expansions and booster sets), which is new content with no schema change, and packs can draw per
+  set. Collected cards add to the pools. Which cards are core
   is content (a card set tag beside the pool tags); the balance gate is tuned on the core pool alone, the worst case for
-  a new account.
+  a new account (the retune is slice 5c, below).
 - **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
 - **Packs:** several pack types, each with its own card list and rarity odds. Opening is server-side, on a pack RNG
   separate from combat RNG, recorded for audit.
@@ -542,6 +551,17 @@ analytics needs no backfill.
 
 > 🎨 Suggested design break 3, card feel: sets and rarities, dust rates and craft costs, pack odds, which cards are core and their sizes per room pool,
 > pack-opening animation.
+
+### 5b. `card-ui`
+Added 2026-11-09, right after slice 5. The screens for the card system, built on the UI framework and the FF7 theme:
+the collection (browse by set, rarity and room pool, a core badge, owned or not), pack opening, dust and craft with their
+costs, and the pop-up that offers to cancel the active run when a dust is refused by the run lock (409 naming the run).
+Local mode keeps working without cards (the core set only).
+
+### 5c. `card-balance`
+Added 2026-11-09, after 5b. The game balancing pass for cards: retune the win-rate gate on the core pool alone (30 / 30 / 21
+/ 15 / 15 per room pool; the 31.8% figure was measured on the full item pool), then pack odds and prices in gems, dust
+and craft costs and refunds, and the gem income per run against them. Design break 3 (card feel) belongs here.
 
 ### 6. `observability`
 End-to-end traces HTTP → RabbitMQ → worker → outbox → Redpanda. Metrics: verify latency, queue age,
