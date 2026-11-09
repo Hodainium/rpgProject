@@ -31,7 +31,9 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 4a. `run-verify` | ✅ Done (spec synced; steps cut at the claimed snapshots with a genesis anchor the server builds at run start, a worker pool replaying each step in headless Godot with a battle simulated once, the fan-in aggregator (verified prefix, links, floors, win, rollback with epoch, `MaxRollbacks`), the stairs gate 1107 and epoch gate 1108, pending gems claimed at release, the floor read model, run hash `run-v2` covering everything that decides play; the per-battle worker is removed; 416 .NET, 582 Godot, the e2e scenarios and the Linux golden check pass; open: routing by ruleset (9), retention (7b)) | 2026-11-08 |
 | 4b. `game-analytics` | ⬜ Not started | |
 | 5. `card-collection` | ✅ Done (spec synced; the account's cards on the server: catalog, packs with Epic / Legendary / Mythic pity and a Rare guarantee, dust and craft, the run lock, the run's item pool as a verified input, `POST /runs/{id}/abandon`; Godot: the pool in the run hash and steps, card tags on all 160 demo cards, core-set proposal, console commands, run-end gate; no Vault pool; 535 .NET, 626 Godot, 5 card e2e scenarios; not built: the Grafana row; the screens are 5b, the numbers 5c) | 2026-11-09 |
-| 5b. `card-ui` | ⬜ Not started | |
+| 5a. `vfx-framework` | 📝 Spec drafted, awaiting review (`specs/vfx-framework.md`; data-driven FX in 2D, 3D and hybrid, cue bridge, shader library, dev tools; built before 5b) | 2026-11-09 |
+| 5a2. `vfx-content-pass` | ⬜ Not started (after 5a's proof set works: FX for the existing abilities, statuses, items and events, by a proposal pass the user approves; may fold into 5a on request) | |
+| 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |
 | 6. `observability` | ⬜ Not started | |
@@ -563,6 +565,21 @@ Added 2026-11-09, right after slice 5. The screens for the card system, built on
 the collection (browse by set, rarity and room pool, a core badge, owned or not), pack opening, dust and craft with their
 costs, and the pop-up that offers to cancel the active run when a dust is refused by the run lock (409 naming the run).
 Local mode keeps working without cards (the core set only).
+
+**Look and feel (user, 2026-11-09), carry into the `card-ui` spec:**
+- Aim for an almost 1-to-1 mapping of **Hearthstone's** collection viewer and pack opening: browsing the collection
+  (card grid with page turning, set/cost/rarity filters, owned and golden-style states, a crafting/dust side panel)
+  and the pack opening (the pack bursts, cards fan out face-down, flip one at a time with a rarity-colored flash,
+  extra drama on Epic/Legendary/Mythic and on pity hits).
+- It reaches the player only through **Open packs** and **View collection**. The **main menu is not redesigned**;
+  the new screens keep the **current FF7 window theme** (`ui_theme.tres`, Chakra Petch) for chrome, buttons and text.
+- Hearthstone's card screens have **3D elements** (cards and packs are 3D objects that tilt, flip and catch light).
+  So these screens are **hybrid**: a 3D stage (`FxStage`, a SubViewport) under 2D chrome. Our own art and layout in
+  that style; Hearthstone's assets are not copied.
+- All glow, burst, flip and shake effects come from **`vfx-framework` (5a)** as `FxDefinition` data; this slice authors
+  effect data (rarity colors and parameters, the pack-opening choreography), not a new effects system.
+- Built on the UI framework (`UIPolicy` states, `UIScreen`s, shared components, Back top left, hover previews, click
+  selects) and the server calls already in `ServerLink`.
 
 ### 5c. `card-balance`
 Added 2026-11-09, after 5b. The game balancing pass for cards: retune the win-rate gate on the core pool alone (30 / 30 / 21
