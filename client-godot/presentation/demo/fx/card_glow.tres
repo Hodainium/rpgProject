@@ -1,0 +1,92 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_sucep"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_h68og"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_ap1lq"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_aura.gdshader" id="4_0bn4c"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_uwetf"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_2d_layer.gd" id="6_n0tq5"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="7_oopxo"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="8_wyxij"]
+
+[sub_resource type="Resource" id="Resource_4ig6t"]
+script = ExtResource("2_h68og")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_j3a7w"]
+script = ExtResource("2_h68og")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_vo2sv"]
+script = ExtResource("2_h68og")
+property = "material:shader_parameter/pulse_speed"
+param = &"pulse"
+
+[sub_resource type="Resource" id="Resource_cqm3c"]
+script = ExtResource("3_ap1lq")
+shader = ExtResource("4_0bn4c")
+grow = 44.0
+id = &"glow"
+loop = true
+loop_period = 4.0
+bindings = Array[ExtResource("2_h68og")]([SubResource("Resource_4ig6t"), SubResource("Resource_j3a7w"), SubResource("Resource_vo2sv")])
+
+[sub_resource type="Resource" id="Resource_rms5w"]
+script = ExtResource("2_h68og")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_tbd7r"]
+offsets = PackedFloat32Array(0, 0.3, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_tavib"]
+script = ExtResource("6_n0tq5")
+amount = 14
+lifetime = 1.8
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_tbd7r")
+size_min = 0.1
+size_max = 0.28
+spread = 25.0
+speed_min = 12.0
+speed_max = 40.0
+gravity = Vector3(0, -10, 0)
+fit_to_anchor = true
+id = &"sparkles"
+loop = true
+min_quality = 2
+bindings = Array[ExtResource("2_h68og")]([SubResource("Resource_rms5w")])
+
+[sub_resource type="Resource" id="Resource_31xor"]
+script = ExtResource("7_oopxo")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.78, 0.25, 1)
+description = "Rarity colour of the aura."
+
+[sub_resource type="Resource" id="Resource_gkd3p"]
+script = ExtResource("7_oopxo")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness of the glow."
+
+[sub_resource type="Resource" id="Resource_ieg0j"]
+script = ExtResource("7_oopxo")
+name = &"pulse"
+default_value = 1.5
+max_value = 6.0
+description = "Pulses per second."
+
+[resource]
+script = ExtResource("8_wyxij")
+id = &"fx.card_glow"
+display_name = "Card glow"
+params = Array[ExtResource("7_oopxo")]([SubResource("Resource_31xor"), SubResource("Resource_gkd3p"), SubResource("Resource_ieg0j")])
+layers = Array[ExtResource("1_sucep")]([SubResource("Resource_cqm3c"), SubResource("Resource_tavib")])
+space = 1
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "Looping rarity aura for a card (start it on hover, a reveal or the collection). Stop it with a fade."

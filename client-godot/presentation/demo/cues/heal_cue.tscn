@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_rj073"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/heal_glow.tres" id="2_vli3w"]
+
+[node name="HealCue" type="Node" unique_id=1582272048]
+script = ExtResource("1_rj073")
+fx = ExtResource("2_vli3w")
+offset = Vector3(0, 0.1, 0)

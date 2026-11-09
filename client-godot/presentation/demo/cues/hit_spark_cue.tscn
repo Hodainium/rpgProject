@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_lrdev"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/hit_spark.tres" id="2_n55kg"]
+
+[node name="HitSparkCue" type="Node" unique_id=178934146]
+script = ExtResource("1_lrdev")
+fx = ExtResource("2_n55kg")
+offset = Vector3(0, 0.45, 0)

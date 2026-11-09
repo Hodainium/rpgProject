@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_137ru"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/break_shatter.tres" id="2_a60xt"]
+
+[node name="BreakCue" type="Node" unique_id=218998351]
+script = ExtResource("1_137ru")
+fx = ExtResource("2_a60xt")
+offset = Vector3(0, 0.4, 0)

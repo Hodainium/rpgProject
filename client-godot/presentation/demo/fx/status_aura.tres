@@ -1,0 +1,84 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_t06xq"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_vlyj4"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_r54yu"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_rvswo"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="5_xrbp4"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="6_wppjq"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="7_g3sn8"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="8_o35u6"]
+
+[sub_resource type="Resource" id="Resource_rbf64"]
+script = ExtResource("2_vlyj4")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_v16yl"]
+offsets = PackedFloat32Array(0, 0.3, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_m52td"]
+script = ExtResource("3_r54yu")
+amount = 16
+lifetime = 1.2
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_v16yl")
+size_min = 0.14
+size_max = 0.28
+spread = 30.0
+speed_min = 0.4
+speed_max = 1.0
+gravity = Vector3(0, 0, 0)
+emission_radius = 0.45
+id = &"motes"
+loop = true
+bindings = Array[ExtResource("2_vlyj4")]([SubResource("Resource_rbf64")])
+
+[sub_resource type="Resource" id="Resource_ogif5"]
+script = ExtResource("2_vlyj4")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_dsnpb"]
+script = ExtResource("2_vlyj4")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_31dfr"]
+script = ExtResource("5_xrbp4")
+shader = ExtResource("6_wppjq")
+shader_params = {
+"fade_out": 0.0,
+"pulse_amount": 0.3,
+"pulse_speed": 0.5
+}
+size = Vector2(1.8, 1.8)
+id = &"glow"
+space = 2
+loop = true
+loop_period = 2.0
+bindings = Array[ExtResource("2_vlyj4")]([SubResource("Resource_ogif5"), SubResource("Resource_dsnpb")])
+
+[sub_resource type="Resource" id="Resource_joco2"]
+script = ExtResource("7_g3sn8")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.45, 0.2, 1)
+description = "Colour of the status."
+
+[sub_resource type="Resource" id="Resource_30rmu"]
+script = ExtResource("7_g3sn8")
+name = &"intensity"
+default_value = 1.4
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("8_o35u6")
+id = &"fx.status_aura"
+display_name = "Status aura"
+params = Array[ExtResource("7_g3sn8")]([SubResource("Resource_joco2"), SubResource("Resource_30rmu")])
+layers = Array[ExtResource("1_t06xq")]([SubResource("Resource_m52td"), SubResource("Resource_31dfr")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "A looping aura for a status effect on a unit."

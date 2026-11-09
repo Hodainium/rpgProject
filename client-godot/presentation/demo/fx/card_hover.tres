@@ -1,0 +1,71 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_boirc"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_k0v3u"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_vy5jp"]
+[ext_resource type="Shader" path="res://game/fx/shaders/outline.gdshader" id="4_fmdcd"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_vx602"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_aura.gdshader" id="6_rwrcp"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="7_obt4b"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="8_ql7ur"]
+
+[sub_resource type="Resource" id="Resource_28vxf"]
+script = ExtResource("2_k0v3u")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_dbkhr"]
+script = ExtResource("2_k0v3u")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_ibtwo"]
+script = ExtResource("3_vy5jp")
+shader = ExtResource("4_fmdcd")
+grow = 10.0
+id = &"outline"
+loop = true
+loop_period = 3.0
+bindings = Array[ExtResource("2_k0v3u")]([SubResource("Resource_28vxf"), SubResource("Resource_dbkhr")])
+
+[sub_resource type="Resource" id="Resource_nic55"]
+script = ExtResource("2_k0v3u")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_rvjbx"]
+script = ExtResource("3_vy5jp")
+shader = ExtResource("6_rwrcp")
+shader_params = {
+"falloff": 0.14,
+"intensity": 0.5
+}
+grow = 26.0
+id = &"glow"
+loop = true
+loop_period = 3.0
+bindings = Array[ExtResource("2_k0v3u")]([SubResource("Resource_nic55")])
+
+[sub_resource type="Resource" id="Resource_co2h5"]
+script = ExtResource("7_obt4b")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.95, 0.7, 1)
+description = "Outline and glow colour."
+
+[sub_resource type="Resource" id="Resource_waguc"]
+script = ExtResource("7_obt4b")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness of the outline."
+
+[resource]
+script = ExtResource("8_ql7ur")
+id = &"fx.card_hover"
+display_name = "Card hover"
+params = Array[ExtResource("7_obt4b")]([SubResource("Resource_co2h5"), SubResource("Resource_waguc")])
+layers = Array[ExtResource("1_boirc")]([SubResource("Resource_ibtwo"), SubResource("Resource_rvjbx")])
+space = 1
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "Outline and soft glow while the pointer is over a card."

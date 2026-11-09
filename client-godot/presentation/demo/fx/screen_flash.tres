@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_gf426"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_ujw45"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_t8yqq"]
+[ext_resource type="Shader" path="res://game/fx/shaders/vignette_flash.gdshader" id="4_u1fmb"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_8rh4h"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="6_ibe78"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="7_vtny5"]
+
+[sub_resource type="Resource" id="Resource_d5ym5"]
+script = ExtResource("2_ujw45")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_5bpbh"]
+script = ExtResource("2_ujw45")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_2344t"]
+script = ExtResource("3_t8yqq")
+shader = ExtResource("4_u1fmb")
+id = &"flash"
+duration = 0.6
+bindings = Array[ExtResource("2_ujw45")]([SubResource("Resource_d5ym5"), SubResource("Resource_5bpbh")])
+
+[sub_resource type="Resource" id="Resource_f6e1c"]
+script = ExtResource("6_ibe78")
+name = &"color"
+kind = 3
+default_value = Color(1, 1, 1, 1)
+description = "Colour of the flash."
+
+[sub_resource type="Resource" id="Resource_5qdib"]
+script = ExtResource("6_ibe78")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("7_vtny5")
+id = &"fx.screen_flash"
+display_name = "Screen flash"
+params = Array[ExtResource("6_ibe78")]([SubResource("Resource_f6e1c"), SubResource("Resource_5qdib")])
+layers = Array[ExtResource("1_gf426")]([SubResource("Resource_2344t")])
+space = 2
+tags = Array[StringName]([&"Fx.Kind.Flash"])
+description = "The edges of the screen flare and fade."

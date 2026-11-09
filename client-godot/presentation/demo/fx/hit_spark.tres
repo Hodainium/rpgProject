@@ -1,0 +1,107 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_rxpcn"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_0n6u6"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_sqcf1"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_26n05"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="5_hsefg"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="6_sv0fu"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_light_layer.gd" id="7_lqv78"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_mesh_flash_layer.gd" id="8_svvtr"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="9_0af75"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="10_fvaqc"]
+
+[sub_resource type="Resource" id="Resource_33qt8"]
+script = ExtResource("2_0n6u6")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_d42af"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_nkk4g"]
+script = ExtResource("3_sqcf1")
+amount = 20
+lifetime = 0.4
+color_ramp = SubResource("Gradient_d42af")
+size_min = 0.14
+size_max = 0.3
+speed_min = 2.5
+speed_max = 6.0
+gravity = Vector3(0, -6, 0)
+id = &"sparks"
+bindings = Array[ExtResource("2_0n6u6")]([SubResource("Resource_33qt8")])
+
+[sub_resource type="Resource" id="Resource_0ou5t"]
+script = ExtResource("2_0n6u6")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_koylq"]
+script = ExtResource("2_0n6u6")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 2.4
+
+[sub_resource type="Resource" id="Resource_8jwe4"]
+script = ExtResource("5_hsefg")
+shader = ExtResource("6_sv0fu")
+size = Vector2(1.8, 1.8)
+id = &"glow"
+space = 2
+duration = 0.25
+bindings = Array[ExtResource("2_0n6u6")]([SubResource("Resource_0ou5t"), SubResource("Resource_koylq")])
+
+[sub_resource type="Resource" id="Resource_lq1md"]
+script = ExtResource("2_0n6u6")
+property = "light_color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_0vahj"]
+script = ExtResource("7_lqv78")
+energy = 2.2
+light_range = 3.5
+seconds = 0.18
+id = &"light"
+min_quality = 2
+bindings = Array[ExtResource("2_0n6u6")]([SubResource("Resource_lq1md")])
+
+[sub_resource type="Resource" id="Resource_rro88"]
+script = ExtResource("2_0n6u6")
+property = "color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_5uvyn"]
+script = ExtResource("2_0n6u6")
+property = "intensity"
+param = &"intensity"
+scale = 0.6
+
+[sub_resource type="Resource" id="Resource_ytlx6"]
+script = ExtResource("8_svvtr")
+seconds = 0.16
+id = &"flash"
+bindings = Array[ExtResource("2_0n6u6")]([SubResource("Resource_rro88"), SubResource("Resource_5uvyn")])
+
+[sub_resource type="Resource" id="Resource_mhm5i"]
+script = ExtResource("9_0af75")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.85, 0.5, 1)
+description = "Colour of the sparks (the damage type)."
+
+[sub_resource type="Resource" id="Resource_q5doq"]
+script = ExtResource("9_0af75")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("10_fvaqc")
+id = &"fx.hit_spark"
+display_name = "Hit spark"
+params = Array[ExtResource("9_0af75")]([SubResource("Resource_mhm5i"), SubResource("Resource_q5doq")])
+layers = Array[ExtResource("1_rxpcn")]([SubResource("Resource_nkk4g"), SubResource("Resource_8jwe4"), SubResource("Resource_0vahj"), SubResource("Resource_ytlx6")])
+tags = Array[StringName]([&"Fx.Kind.Hit"])
+description = "Sparks, a flash and a light on a unit that was hit."
