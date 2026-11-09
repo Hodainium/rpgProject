@@ -1,7 +1,13 @@
+using System.Text.Json;
+using Microsoft.Extensions.Options;
 using Npgsql;
+using Rpg.Contracts.Battle;
 using Rpg.Contracts.Runs;
+using Rpg.Contracts.Serialization;
+using Rpg.Economy;
 using Rpg.GameServerApi.Auth;
 using Rpg.GameServerApi.Migrations;
+using Rpg.Verification;
 
 namespace Rpg.GameServerApi.Runs;
 
@@ -13,19 +19,22 @@ public enum StartOutcome { Created, AbandonedPrevious, PreviousVerifying }
 public sealed record StartResult(StartOutcome Outcome, Guid RunId, long FloorSeed, DateTimeOffset StartedAt,
     Guid? AbandonedRunId);
 
-public enum FloorOutcome { Issued, Repeated, NotFound, NotActive, NotReachable, UploadIncomplete }
+public enum FloorOutcome { Issued, Repeated, NotFound, NotActive, NotReachable, UploadIncomplete, Unverified, RolledBack }
 
 /// <param name="LastSeq">For <see cref="FloorOutcome.UploadIncomplete"/>: the last stored seq.</param>
-public sealed record FloorResult(FloorOutcome Outcome, long FloorSeed = 0, int LastSeq = 0);
+/// <param name="Epoch">For <see cref="FloorOutcome.RolledBack"/>: the run's epoch now; with the verified prefix and the reason (spec run-verify 2.4).</param>
+public sealed record FloorResult(FloorOutcome Outcome, long FloorSeed = 0, int LastSeq = 0, int Epoch = 0, int VerifiedSeq = 0,
+    string? Reason = null);
 
 /// <summary>
 /// Postgres access for runs (spec server-authority 2.1, 3.4). Every write is one transaction that locks what it
 /// changes (the player row for a run start, the run row for the stairs), so ordering never depends on Redis.
 /// </summary>
-public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunner migrations, FloorSeeds seeds)
+public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunner migrations, FloorSeeds seeds,
+    IOptions<RunVerifyOptions> verify)
 {
     private const string SummaryColumns =
-        "run_id, player_id, status, current_floor, last_seq, ruleset_version, started_at, ended_at";
+        "run_id, player_id, status, current_floor, last_seq, ruleset_version, started_at, ended_at, epoch, verified_seq";
 
     /// <summary>
     /// Starts a run: abandons the player's Active run (a Verifying one can't be: <see cref="StartOutcome.PreviousVerifying"/>,
@@ -80,6 +89,13 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
         await Execute(connection, transaction,
             "INSERT INTO run_floors (run_id, floor, floor_seed, issued_at) VALUES ($1, 0, $2, $3)",
             ct, runId, floorSeed, now);
+        // Spec run-verify 2.0: the genesis step (step 0, the start state the server will rebuild) and its job, outbox only.
+        await Execute(connection, transaction,
+            """
+            INSERT INTO run_steps (run_id, epoch, step_no, from_seq, to_seq, kind, status, created_at)
+            VALUES ($1, 0, 0, 0, 1, 'genesis', 'Pending', $2)
+            """, ct, runId, now);
+        await InsertStepJobAsync(connection, transaction, runId, 0, 0, request.RulesetVersion, now, ct);
         await transaction.CommitAsync(ct);
 
         return new StartResult(abandoned is null ? StartOutcome.Created : StartOutcome.AbandonedPrevious, runId,
@@ -92,7 +108,7 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
     /// <see cref="FloorOutcome.UploadIncomplete"/>); anything else is not reachable. Another player's run is
     /// <see cref="FloorOutcome.NotFound"/>.
     /// </summary>
-    public async Task<FloorResult> IssueFloorAsync(Guid playerId, Guid runId, int floor, int? afterSeq,
+    public async Task<FloorResult> IssueFloorAsync(Guid playerId, Guid runId, int floor, int? afterSeq, int epoch,
         DateTimeOffset now, CancellationToken ct)
     {
         await migrations.EnsureMigratedAsync(ct);
@@ -101,9 +117,11 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
 
         string status;
         int currentFloor;
-        int lastSeq;
+        int lastSeq, runEpoch, verifiedSeq;
+        string? rollbackReason;
+        bool legacy;
         await using (var select = Command(connection, transaction,
-                         "SELECT status, current_floor, last_seq FROM runs WHERE run_id = $1 AND player_id = $2 FOR UPDATE",
+                         "SELECT status, current_floor, last_seq, epoch, verified_seq, rollback_reason, legacy FROM runs WHERE run_id = $1 AND player_id = $2 FOR UPDATE",
                          runId, playerId))
         await using (var reader = await select.ExecuteReaderAsync(ct))
         {
@@ -115,6 +133,15 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
             status = reader.GetString(0);
             currentFloor = reader.GetInt32(1);
             lastSeq = reader.GetInt32(2);
+            runEpoch = reader.GetInt32(3);
+            verifiedSeq = reader.GetInt32(4);
+            rollbackReason = reader.IsDBNull(5) ? null : reader.GetString(5);
+            legacy = reader.GetBoolean(6);
+        }
+
+        if (epoch != runEpoch)
+        {
+            return new FloorResult(FloorOutcome.RolledBack, Epoch: runEpoch, VerifiedSeq: verifiedSeq, Reason: rollbackReason);
         }
 
         if (status != nameof(RunStatus.Active))
@@ -139,9 +166,21 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
             return new FloorResult(FloorOutcome.UploadIncomplete, LastSeq: lastSeq);
         }
 
+        // Spec run-verify 2.6: the floor just played must itself be verified before the next seed is issued.
+        if (!legacy)
+        {
+            await using var gate = Command(connection, transaction,
+                "SELECT verified_at IS NOT NULL FROM run_floors WHERE run_id = $1 AND floor = $2", runId, currentFloor);
+            if (await gate.ExecuteScalarAsync(ct) is not true)
+            {
+                return new FloorResult(FloorOutcome.Unverified, LastSeq: lastSeq, VerifiedSeq: verifiedSeq);
+            }
+        }
+
         var floorSeed = seeds.Derive(runId, floor);
+        // After a rollback the seed of this floor may be stored already (the same floor, the same seed).
         await Execute(connection, transaction,
-            "INSERT INTO run_floors (run_id, floor, floor_seed, issued_at) VALUES ($1, $2, $3, $4)",
+            "INSERT INTO run_floors (run_id, floor, floor_seed, issued_at) VALUES ($1, $2, $3, $4) ON CONFLICT (run_id, floor) DO NOTHING",
             ct, runId, floor, floorSeed, now);
         await Execute(connection, transaction, "UPDATE runs SET current_floor = $2 WHERE run_id = $1", ct, runId, floor);
         await transaction.CommitAsync(ct);
@@ -189,7 +228,18 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
             reader.GetInt32(4),
             reader.GetString(5),
             reader.GetFieldValue<DateTimeOffset>(6),
-            reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7)));
+            reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
+            reader.GetInt32(8), reader.GetInt32(9)));
+    }
+
+    /// <summary>The step job as an outbox row (spec run-verify 2.1): written in the transaction that created the step.</summary>
+    internal static Task InsertStepJobAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid runId, int epoch,
+        int stepNo, string ruleset, DateTimeOffset now, CancellationToken ct)
+    {
+        var job = new VerifyStepJob(runId, epoch, stepNo, ruleset, now);
+        return OutboxWriter.InsertAsync(connection, transaction,
+            new OutboxMessage(Guid.NewGuid(), OutboxDestination.Rabbit, VerifyTopology.SegmentRoutingKey,
+                $"{runId:D}/{epoch}/{stepNo}", nameof(VerifyStepJob), JsonSerializer.Serialize(job, RpgJson.Options)), ct);
     }
 
     private static NpgsqlCommand Command(NpgsqlConnection connection, NpgsqlTransaction transaction, string sql,

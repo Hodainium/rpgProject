@@ -1,4 +1,7 @@
-rpg_outbox_published_total\{[^}]*destination="rabbit"[^}]*result="ok"[^}]*\} [2-9]
+rpg_outbox_published_total\{[^}]*destination="rabbit"[^}]*result="ok"[^}]*\} [1-9]
 rpg_battles_submitted_total(\{[^}]*\})? [2-9]
 rpg_battles_unverified(\{[^}]*\})? 0( |$)
-rpg_verify_queue_depth\{[^}]*queue="dlq"[^}]*\} 0( |$)
+rpg_verify_queue_depth\{[^}]*queue="segment_dlq"[^}]*\} 0( |$)
+rpg_steps_created_total\{[^}]*kind="battle"[^}]*\} [1-9]
+rpg_stairs_gate_total\{[^}]*result="open"[^}]*\} [1-9]
+rpg_steps_pending(\{[^}]*\})? 0( |$)

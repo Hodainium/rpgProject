@@ -1,7 +1,10 @@
 ## Re-runs a battle from a ReplayRequest and returns a ReplayResult (spec "Replay mode (verify)").
 ##
-## Exit codes for the headless entry point: 0 Verified, 2 Rejected (errorCode 2002), 1 runner error.
-## A runner error is never a verdict: malformed input or broken content (slice 3 routes it to retry / DLQ).
+## Exit codes for the headless entry point: 0 Verified, 2 Rejected (errorCode 2002), 3 Malformed, 1 runner error.
+## A runner error is never a verdict: broken content or a runner bug (the worker retries it, then dead-letters it).
+## Malformed (spec run-verify 3.6): the request itself is refused (a bad schema version, an unknown field, an unknown
+## content id). That is a Rejected verdict with the reason MalformedRequest, written like any rejection, so the worker
+## commits it at once instead of retrying a request that can never succeed (closes battle-verify 8.1).
 class_name ReplayRunner
 extends RefCounted
 
@@ -16,6 +19,7 @@ const SNAPSHOT_SCHEMA_VERSIONS: Array[int] = [1, 2]
 const EXIT_VERIFIED: int = 0
 const EXIT_RUNNER_ERROR: int = 1
 const EXIT_REJECTED: int = 2
+const EXIT_MALFORMED: int = 3
 const BOSS_TAG: StringName = &"Enemy.Boss"
 const REPLAY_MISMATCH_CODE: int = 2002
 const REPLAY_MISMATCH_NAME: String = "ReplayMismatch"
@@ -42,7 +46,7 @@ func run(request: Dictionary, content_root: String, host: Node) -> Dictionary:
 func run_on(request: Dictionary, content: ContentIndex, host: Node) -> Dictionary:
 	var problem := _validate_request(request)
 	if problem != "":
-		return _error(problem)
+		return _malformed(problem, request)
 	var snapshot: Dictionary = request["snapshot"]
 	var action_log: Dictionary = request["actionLog"]
 	_content = content
@@ -53,7 +57,7 @@ func run_on(request: Dictionary, content: ContentIndex, host: Node) -> Dictionar
 	var setup_error := battle.setup(snapshot, content, HeadlessGate.new())
 	if setup_error != "":
 		battle.queue_free()
-		return _error(setup_error)
+		return _malformed(setup_error, request)   # an unknown encounter, unit, ability or item id
 
 	_tally = null
 	if not content.challenges_for(str(snapshot.get("encounterId", ""))).is_empty():
@@ -78,6 +82,24 @@ func run_on(request: Dictionary, content: ContentIndex, host: Node) -> Dictionar
 		trace.reason = result["mismatch"]["reason"] if result["mismatch"] != null else null
 	battle.queue_free()
 	return result
+
+
+## Spec run-verify 2.2: a battle played INSIDE a run (a verifier step replays the whole run, battles included, so each
+## battle is simulated once). Call before the battle runs; it starts the challenge tally this battle's stars read.
+func begin_observing(battle: Battle, content: ContentIndex, snapshot: Dictionary) -> void:
+	_content = content
+	_tally = null
+	if not content.challenges_for(str(snapshot.get("encounterId", ""))).is_empty():
+		_tally = ChallengeTally.new()
+		_tally.attach(battle)
+
+
+## The ReplayResult of a battle that has just ended inside a run: the claims in `action_log` are checked against what the run
+## simulated, exactly as `run_on` would have. `controller` is the one that drove the battle (it counts the unused entries).
+func finish_observing(battle: Battle, controller: ReplayController, snapshot: Dictionary, action_log: Dictionary) -> Dictionary:
+	if battle.mismatch.is_empty():
+		_check_claims(battle, controller, action_log)
+	return _result(battle, snapshot)
 
 
 ## Reads the request file, runs it and writes the result file. Returns the exit code.
@@ -211,6 +233,32 @@ func _validate_request(request: Dictionary) -> String:
 			if not str(key) in ENTRY_KEYS:
 				return "unknown field \"%s\" in action %d" % [key, index]
 	return ""
+
+
+## A request the runner refuses (spec run-verify 3.6): a Rejected ReplayResult with the reason MalformedRequest and exit code 3.
+## It is a verdict about the request, not a fault of the runner, so it is written like every rejection.
+func _malformed(message: String, request: Dictionary) -> Dictionary:
+	runner_error = ""
+	exit_code = EXIT_MALFORMED
+	var battle_id := ""
+	var snapshot: Variant = request.get("snapshot")
+	if snapshot is Dictionary:
+		battle_id = str(snapshot.get("battleId", ""))
+	if trace != null:
+		trace.verdict = "Malformed"
+		trace.reason = message
+	return {
+		"schemaVersion": RESULT_SCHEMA_VERSION,
+		"battleId": battle_id,
+		"verdict": "Rejected",
+		"errorCode": REPLAY_MISMATCH_CODE,
+		"error": REPLAY_MISMATCH_NAME,
+		"mismatch": {"reason": "MalformedRequest", "turn": 0, "detail": message},
+		"outcome": "Ongoing",
+		"turns": 0,
+		"finalStateHash": "",
+		"engineVersion": engine_version(),
+	}
 
 
 func _error(message: String) -> Dictionary:

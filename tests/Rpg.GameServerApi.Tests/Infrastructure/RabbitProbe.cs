@@ -1,6 +1,7 @@
 using System.Text.Json;
 using RabbitMQ.Client;
 using Rpg.Contracts.Battle;
+using Rpg.Contracts.Runs;
 using Rpg.Contracts.Serialization;
 using Rpg.Verification;
 
@@ -38,6 +39,39 @@ public sealed class RabbitProbe : IAsyncDisposable
         {
             await _channel.QueuePurgeAsync(tier.Queue);
         }
+
+        await _channel.QueuePurgeAsync(VerifyTopology.SegmentQueue);
+        await _channel.QueuePurgeAsync(VerifyTopology.SegmentDeadLetterQueue);
+        foreach (var tier in VerifyTopology.SegmentRetryTiers)
+        {
+            await _channel.QueuePurgeAsync(tier.Queue);
+        }
+    }
+
+    /// <summary>Takes (and acks) every step job on verify.segment within a short wait (spec run-verify 3.4).</summary>
+    public async Task<List<(VerifyStepJob Job, int Attempt)>> TakeStepsAsync(TimeSpan? wait = null)
+    {
+        var jobs = new List<(VerifyStepJob, int)>();
+        var deadline = DateTime.UtcNow + (wait ?? TimeSpan.FromSeconds(3));
+        while (DateTime.UtcNow < deadline)
+        {
+            var message = await _channel.BasicGetAsync(VerifyTopology.SegmentQueue, autoAck: true);
+            if (message is null)
+            {
+                if (jobs.Count > 0)
+                {
+                    break;
+                }
+
+                await Task.Delay(100);
+                continue;
+            }
+
+            jobs.Add((JsonSerializer.Deserialize<VerifyStepJob>(message.Body.Span, RpgJson.Options)!,
+                VerifyMessaging.Attempt(message.BasicProperties)));
+        }
+
+        return jobs;
     }
 
     /// <summary>Takes (and acks) every job on <paramref name="queue"/> within a short wait.</summary>

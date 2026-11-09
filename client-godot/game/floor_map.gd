@@ -86,23 +86,10 @@ func distances() -> Dictionary:
 	return result
 
 
-## Canonical text lines for hashing (stable order, integers and ids only).
+## Canonical text lines for hashing. Spec run-verify: every field of a cell is in its line (StateHasher.canonical), so a field
+## added to the map later, a pickup's kind or an enemy's loadout can't fall outside the run hash.
 func canonical_lines() -> PackedStringArray:
 	var lines := PackedStringArray(["map=%dx%d|start=%d|boss=%d" % [size.x, size.y, start, boss]])
 	for index in sorted_indices():
-		var data: Dictionary = cells[index]
-		var content: Dictionary = data["content"]
-		var enemies := PackedStringArray()
-		for enemy in content.get("enemies", []):
-			enemies.append("%d:%s:%s:%s" % [enemy["slot"], enemy["unitDefId"], enemy["loadoutRef"], enemy["variantId"]])
-		var pickups := PackedStringArray()
-		for pickup in data["pickups"]:
-			var line := "%d:%s:%d:%d" % [pickup["placement"], pickup["item"], pickup["price"], 1 if pickup["taken"] else 0]
-			if pickup.has("priceItem"):
-				line += ":%s" % pickup["priceItem"]  # spec playable-demo 3.8; absent on every older pickup
-			pickups.append(line)
-		lines.append("cell=%d|%s|%s|%s|%d|%s|%s|%s|%s|%s|%d|%d" % [index, data["role"], data["special_tag"], data["room"],
-			data["doors"], content["kind"], content.get("encounter", ""), content.get("event", ""), ",".join(enemies),
-			",".join(pickups), 1 if data["visited"] else 0, 1 if data["cleared"] else 0]
-			+ ("|opened" if data.get("opened", false) else ""))
+		lines.append("cell=%d|%s" % [index, StateHasher.canonical(cells[index])])
 	return lines

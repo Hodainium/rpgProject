@@ -62,4 +62,7 @@ public enum MismatchReason
     FinalHashMismatch,
     /// <summary>The simulation hit the 1000-turn limit.</summary>
     TurnLimitExceeded,
+    /// <summary>Spec run-verify 3.1: the runner refused the request itself (unknown content id, bad schema version, unknown
+    /// field). Exit code 3; a Rejected verdict at once, never retried (closes battle-verify 8.1).</summary>
+    MalformedRequest,
 }

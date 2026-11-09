@@ -38,7 +38,7 @@ public class SettlementTests(Stack stack)
         Assert.Equal(20, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", battle.PlayerId));
         Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT version FROM wallets WHERE player_id = $1", battle.PlayerId));
         Assert.Equal(20, await worker.ScalarAsync<int>("SELECT sum(delta)::int FROM wallet_ledger WHERE player_id = $1", battle.PlayerId));
-        Assert.Equal(["BattleVerified", "RewardGranted", "RewardGranted"],
+        Assert.Equal(["BattleVerified", "RewardPending", "RewardPending", "RewardGranted", "RewardGranted"],
             await worker.OutboxTypesAsync("redpanda"));
 
         var rewards = (await worker.OutboxPayloadsAsync("RewardGranted"))
@@ -72,7 +72,7 @@ public class SettlementTests(Stack stack)
         Assert.Equal("duplicate", second.Result);  // F1, scenario 1
         Assert.Equal(10, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", battle.PlayerId));
         Assert.Equal(1L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
-        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox"));
+        Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox"));   // verified, pending, granted
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class SettlementTests(Stack stack)
         Assert.Equal("duplicate", redelivered.Result);  // F2, scenario 2 (settlement half)
         Assert.Equal(20, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", battle.PlayerId));
         Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
-        Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox"));
+        Assert.Equal(5L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox"));   // verified, 2 pending, 2 granted
         Assert.Equal(1, worker.Runner.Calls);
     }
 
@@ -134,7 +134,7 @@ public class SettlementTests(Stack stack)
 
         Assert.Equal(2, worker.Runner.Calls);  // F4: both replayed, one transaction won
         Assert.Equal(20, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", battle.PlayerId));
-        Assert.Equal(3L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox"));
+        Assert.Equal(5L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox"));
     }
 
     [Fact]
@@ -216,7 +216,7 @@ public class SettlementTests(Stack stack)
 
         Assert.Equal(10, await worker.ScalarAsync<int>("SELECT gems FROM wallets WHERE player_id = $1", first.PlayerId));  // F8
         Assert.Equal(1L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));
-        Assert.Equal(["BattleVerified", "RewardGranted", "BattleVerified"], await worker.OutboxTypesAsync("redpanda"));
+        Assert.Equal(["BattleVerified", "RewardPending", "RewardGranted", "BattleVerified"], await worker.OutboxTypesAsync("redpanda"));
         Assert.Equal(1, worker.Metrics.Count("rpg.settlements", "result=already_marked"));
     }
 
@@ -326,7 +326,7 @@ public class SettlementTests(Stack stack)
         foreach (var player in players)
         {
             var gems = await worker.ScalarAsync<int?>("SELECT gems FROM wallets WHERE player_id = $1", player) ?? 0;
-            var ledger = await worker.ScalarAsync<int?>("SELECT sum(delta)::int FROM wallet_ledger WHERE player_id = $1", player) ?? 0;
+            var ledger = await worker.ScalarAsync<int?>("SELECT sum(delta)::int FROM wallet_ledger WHERE player_id = $1 AND status = 'released'", player) ?? 0;
             var marks = await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks WHERE player_id = $1", player);
             Assert.Equal(gems, ledger);
             Assert.Equal(marks * 10, gems);

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using RabbitMQ.Client;
 using Rpg.Contracts.Battle;
+using Rpg.Contracts.Runs;
 using Rpg.Contracts.Serialization;
 
 namespace Rpg.Verification;
@@ -47,7 +48,56 @@ public static class VerifyMessaging
                 }, cancellationToken: ct);
             await channel.QueueBindAsync(tier.Queue, VerifyTopology.Exchange, tier.RoutingKey, cancellationToken: ct);
         }
+
+        // Spec run-verify 3.4: the step queue, its retry tiers and its own dead-letter queue.
+        await channel.QueueDeclareAsync(VerifyTopology.SegmentDeadLetterQueue, durable: true, exclusive: false,
+            autoDelete: false, cancellationToken: ct);
+        await channel.QueueBindAsync(VerifyTopology.SegmentDeadLetterQueue, VerifyTopology.DeadLetterExchange,
+            VerifyTopology.SegmentDeadRoutingKey, cancellationToken: ct);
+        await channel.QueueDeclareAsync(VerifyTopology.SegmentQueue, durable: true, exclusive: false, autoDelete: false,
+            arguments: new Dictionary<string, object?>
+            {
+                ["x-dead-letter-exchange"] = VerifyTopology.DeadLetterExchange,
+                ["x-dead-letter-routing-key"] = VerifyTopology.SegmentDeadRoutingKey,
+            }, cancellationToken: ct);
+        await channel.QueueBindAsync(VerifyTopology.SegmentQueue, VerifyTopology.Exchange,
+            VerifyTopology.SegmentRoutingKey, cancellationToken: ct);
+        foreach (var tier in VerifyTopology.SegmentRetryTiers)
+        {
+            await channel.QueueDeclareAsync(tier.Queue, durable: true, exclusive: false, autoDelete: false,
+                arguments: new Dictionary<string, object?>
+                {
+                    ["x-message-ttl"] = (int)tier.Delay.TotalMilliseconds,
+                    ["x-dead-letter-exchange"] = VerifyTopology.Exchange,
+                    ["x-dead-letter-routing-key"] = VerifyTopology.SegmentRoutingKey,
+                }, cancellationToken: ct);
+            await channel.QueueBindAsync(tier.Queue, VerifyTopology.Exchange, tier.RoutingKey, cancellationToken: ct);
+        }
     }
+
+    public static byte[] Body(VerifyStepJob job) => JsonSerializer.SerializeToUtf8Bytes(job, RpgJson.Options);
+
+    /// <summary>Null when the body isn't a usable step job (a poison message).</summary>
+    public static VerifyStepJob? ParseStepJob(ReadOnlyMemory<byte> body)
+    {
+        try
+        {
+            var job = JsonSerializer.Deserialize<VerifyStepJob>(body.Span, RpgJson.Options);
+            return job is { RulesetVersion.Length: > 0, StepNo: >= 0, Epoch: >= 0 } && job.RunId != Guid.Empty ? job : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The retry tier for the n-th failed attempt (1-based) on the step queue.</summary>
+    public static RetryTier SegmentTierForAttempt(int attempt) =>
+        VerifyTopology.SegmentRetryTiers[Math.Clamp(attempt, 1, VerifyTopology.SegmentRetryTiers.Count) - 1];
+
+    public static Task PublishAsync(IChannel channel, string exchange, string routingKey, VerifyStepJob job,
+        int attempt, string? reason, CancellationToken ct) =>
+        PublishBodyAsync(channel, exchange, routingKey, Body(job), attempt, reason, ct);
 
     public static byte[] Body(VerifyBattleJob job) => JsonSerializer.SerializeToUtf8Bytes(job, RpgJson.Options);
 
@@ -69,7 +119,11 @@ public static class VerifyMessaging
     /// Publishes a job and waits for the broker's confirm (the channel must have publisher confirmations on). Persistent;
     /// carries the attempt count and the current trace context.
     /// </summary>
-    public static async Task PublishAsync(IChannel channel, string exchange, string routingKey, VerifyBattleJob job,
+    public static Task PublishAsync(IChannel channel, string exchange, string routingKey, VerifyBattleJob job,
+        int attempt, string? reason, CancellationToken ct) =>
+        PublishBodyAsync(channel, exchange, routingKey, Body(job), attempt, reason, ct);
+
+    private static async Task PublishBodyAsync(IChannel channel, string exchange, string routingKey, byte[] body,
         int attempt, string? reason, CancellationToken ct)
     {
         var headers = new Dictionary<string, object?> { [VerifyTopology.AttemptHeader] = attempt };
@@ -89,7 +143,7 @@ public static class VerifyMessaging
             ContentType = "application/json",
             Headers = headers,
         };
-        await channel.BasicPublishAsync(exchange, routingKey, mandatory: false, properties, Body(job), ct);
+        await channel.BasicPublishAsync(exchange, routingKey, mandatory: false, properties, body, ct);
     }
 
     /// <summary>The channel options for publishing: confirms on, tracked per publish.</summary>

@@ -1,0 +1,108 @@
+{
+  "uid": "rpg-run-verification",
+  "title": "Run verification",
+  "tags": ["rpg", "verification", "runs"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "Step jobs by result (per second)",
+      "description": "Worker: verified / rejected / malformed / duplicate / superseded / runner_error / retry / dead_letter / ruleset / postponed / run_gone.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum by (result) (rate(rpg_step_jobs_total[1m]))", "legendFormat": "{{result}}" }]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Step queue wait: created to verdict (p50 / p95)",
+      "description": "How far behind verification is. The stairs gate waits for this.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.5, sum by (le) (rate(rpg_step_queue_wait_seconds_bucket[2m])))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(rpg_step_queue_wait_seconds_bucket[2m])))", "legendFormat": "p95" }
+      ]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Step duration by kind (p95, Godot wall time incl. startup)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, kind) (rate(rpg_step_duration_seconds_bucket[2m])))", "legendFormat": "{{kind}}" }]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Undecided steps and the oldest one's age",
+      "description": "Not dead-lettered. A rising age with a flat job rate means the worker pool is down or stuck.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "rpg_steps_pending", "legendFormat": "pending steps" },
+        { "expr": "rpg_step_oldest_pending_age_seconds", "legendFormat": "oldest age (s)" }
+      ]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Step queues: depth",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [{ "expr": "rpg_verify_queue_depth{queue=~\"verify.segment|segment_retry|segment_dlq\"}", "legendFormat": "{{queue}}" }]
+    },
+    {
+      "id": 6, "type": "stat", "title": "Dead-lettered steps (segment DLQ)",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 16 },
+      "targets": [{ "expr": "rpg_verify_queue_depth{queue=\"segment_dlq\"}" }]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Steps created (per second, by kind)",
+      "description": "API: one per snapshot-bearing upload, plus the genesis step at run start.",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 16 },
+      "targets": [{ "expr": "sum by (kind) (rate(rpg_steps_created_total[1m]))", "legendFormat": "{{kind}}" }]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "Rejected steps by mismatch reason (per 5 minutes)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [{ "expr": "sum by (reason) (increase(rpg_step_mismatches_total[5m]))", "legendFormat": "{{reason}}" }]
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "Rollbacks (per 5 minutes, by reason and terminal)",
+      "description": "terminal=true: the run was ended Rejected (past MaxRollbacks, or a forged start).",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [{ "expr": "sum by (reason, terminal) (increase(rpg_run_rollbacks_total[5m]))", "legendFormat": "{{reason}} terminal={{terminal}}" }]
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Fan-in aggregator results (per second)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "targets": [{ "expr": "sum by (result) (rate(rpg_fanin_total[1m]))", "legendFormat": "{{result}}" }]
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "Floors verified (per minute) and run verdicts (per 5 minutes)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "targets": [
+        { "expr": "sum(rate(rpg_floor_verified_total[5m])) * 60", "legendFormat": "floors verified / min" },
+        { "expr": "sum by (result) (increase(rpg_run_verdicts_total[5m]))", "legendFormat": "runs {{result}} / 5 min" }
+      ]
+    },
+    {
+      "id": 12, "type": "timeseries", "title": "Stairs gate (per second): open vs blocked (409 1107)",
+      "description": "Blocked means a player reached the stairs before the floor they just played was verified.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "targets": [{ "expr": "sum by (result) (rate(rpg_stairs_gate_total[1m]))", "legendFormat": "{{result}}" }]
+    },
+    {
+      "id": 13, "type": "timeseries", "title": "Genesis claims (per 5 minutes): the client's seq 1 against the server's anchor",
+      "description": "mismatch = a forged starting state; claim_first / anchor_first show which side arrived first.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "targets": [{ "expr": "sum by (result) (increase(rpg_genesis_claims_total[5m]))", "legendFormat": "{{result}}" }]
+    },
+    {
+      "id": 14, "type": "timeseries", "title": "Pending gems and ledger transitions",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 48 },
+      "targets": [
+        { "expr": "rpg_gems_pending", "legendFormat": "gems pending" },
+        { "expr": "sum by (to) (increase(rpg_ledger_transitions_total[5m]))", "legendFormat": "rows {{to}} / 5 min" }
+      ]
+    },
+    {
+      "id": 15, "type": "timeseries", "title": "Anti-cheat alerts (per 5 minutes, by kind)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 48 },
+      "targets": [{ "expr": "sum by (kind) (increase(rpg_anticheat_events_total[5m]))", "legendFormat": "{{kind}}" }]
+    }
+  ]
+}

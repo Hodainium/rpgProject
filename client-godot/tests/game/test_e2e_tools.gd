@@ -368,11 +368,11 @@ func test_e2e_worker_actions() -> void:
 		var file := FileAccess.open(CONTROL.path_join("done"), FileAccess.WRITE)
 		file.store_string("ok")
 		file.close()
-	for action in ["worker-start", "worker-stop", "tamper-battle"]:
+	for action in ["worker-start", "worker-stop", "tamper-battle", "tamper-genesis"]:
 		host.get_tree().create_timer(0.3).timeout.connect(answer)
 		var done := await _run(session, "e2e %s 5" % action)
 		check(done["ok"], "%s: %s" % [action, done["text"]])
-	eq(seen, ["worker-start", "worker-stop", "tamper-battle"], "each asked for its own action")
+	eq(seen, ["worker-start", "worker-stop", "tamper-battle", "tamper-genesis"], "each asked for its own action")
 
 
 ## Spec dev-tools E9: `wait ended` holds until the end screen (a death here; a win only after the verdict).

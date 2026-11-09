@@ -81,6 +81,7 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
     });
 builder.Services.AddAuthorization();
 builder.Services.AddOptions<RunOptions>().BindConfiguration(RunOptions.Section);
+builder.Services.AddOptions<Rpg.Economy.RunVerifyOptions>().BindConfiguration(Rpg.Economy.RunVerifyOptions.Section);
 builder.Services.AddSingleton<BattleSessionCache>();
 // Slice 3 (spec battle-verify): the queue and backlog gauges. Slice 4 (spec settlement-outbox): the outbox relay carries
 // verify jobs to RabbitMQ and domain events to Redpanda; the wallet read model.

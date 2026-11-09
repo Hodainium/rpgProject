@@ -136,8 +136,13 @@ func test_malformed_input() -> void:
 	log_v1["actionLog"]["schemaVersion"] = 1
 	var leftover_checkpoint := copy(good)
 	leftover_checkpoint["actionLog"]["actions"][0]["checkpoint"] = "ab12"
+	# Spec run-verify 3.6: a request the runner refuses is a Rejected verdict (MalformedRequest, exit 3), never a runner
+	# error the worker would retry five times.
 	for request in [{}, bad_version, missing_field, bad_seed, log_v1, leftover_checkpoint]:
 		var runner := ReplayRunner.new()
 		var result := await runner.run(request, FIXTURES, host)
-		check(result.has("runnerError"), "malformed input is a runner error: %s" % [result])
-		eq(runner.exit_code, ReplayRunner.EXIT_RUNNER_ERROR, "exit code 1")
+		eq(result.get("verdict"), "Rejected", "malformed input is a rejection: %s" % [result])
+		eq(result["mismatch"]["reason"], "MalformedRequest", "with its own reason")
+		eq(result.get("errorCode"), 2002, "2002 like every rejection")
+		eq(runner.exit_code, ReplayRunner.EXIT_MALFORMED, "exit code 3")
+		eq(runner.runner_error, "", "and not a runner error")

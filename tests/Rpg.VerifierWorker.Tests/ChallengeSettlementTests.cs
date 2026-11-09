@@ -369,7 +369,7 @@ public class ChallengeSettlementTests(Stack stack)
         await Task.WhenAll(worker.Processor.ProcessAsync(JobOf(a), Ct), worker.Processor.ProcessAsync(JobOf(b), Ct));
 
         Assert.Equal(15, await GemsAsync(worker, a.PlayerId));  // each challenge once, not twice
-        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger"));
+        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger WHERE status = 'released'"));   // the other two rows were voided: AlreadyPaid
         Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM outbox WHERE type = 'RewardGranted'"));
         Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks"));
     }

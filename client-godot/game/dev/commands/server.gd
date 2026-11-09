@@ -5,7 +5,7 @@ extends DevCommand
 func _init() -> void:
 	name = "server"
 	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | reward [...] | reward-reset ... | resume | forget | conflict]"
-	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
+	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. steps: the run's verification steps and their state (a Development server; spec run-verify). verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
 	cheat = false
 
 
@@ -14,6 +14,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		return RulesetVersion.current()
 	if args.size() > 0 and args[0] == "check":
 		return await _check(ctx)
+	if args.size() > 0 and args[0] == "steps":
+		return await _steps(ctx)
 	if args.size() > 0 and args[0] == "verdict":
 		return await _verdict(ctx, args)
 	if args.size() > 0 and args[0] == "wallet":
@@ -107,6 +109,27 @@ static func _floor_open(ctx: DevContext, run: RunController) -> bool:
 		Watchdog.beat("server resume: floor seed")
 		await ctx.console.tree.process_frame
 	return run.waiting_for_floor() < 0
+
+
+## Spec run-verify 3.7: the steps the server cut the run's log into and where each stands (the log drains first). A Development
+## server only; read-only.
+func _steps(ctx: DevContext) -> String:
+	if ctx.game == null or ctx.game.server == null:
+		return ctx.fail("not in server mode")
+	var run := ctx.run
+	if run == null or run.state == null or not run.state.seeds().server_mode():
+		return ctx.fail("no server run")
+	var link: ServerLink = ctx.game.server
+	await link.drained()
+	var answer: Dictionary = await link.get_steps(run.state.run_id)
+	if not answer["ok"]:
+		return ctx.fail("GET steps: " + ServerLink.describe(answer["error"]))
+	var lines := PackedStringArray(["epoch %d, verified up to seq %d" % [link.epoch, link.verified_seq]])
+	for step in answer["data"]:
+		lines.append("step %d (epoch %d): seq %d to %d, %s, %s%s" % [int(step["stepNo"]), int(step["epoch"]), int(step["fromSeq"]),
+			int(step["toSeq"]), str(step["kind"]).to_lower(), step["status"], " (%s)" % step["reason"] if step.get("reason") != null else ""])
+	return "
+".join(lines)
 
 
 ## Spec battle-verify 2.2: what the verifier decided about each battle of the run (the log drains first, so every

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Rpg.Contracts.Api.V1;
 using Rpg.Contracts.Battle;
 using Rpg.Contracts.Runs;
+using Rpg.Economy;
 using Rpg.GameServerApi.Auth;
 using Rpg.GameServerApi.Battle;
 using Rpg.GameServerApi.Observability;
@@ -12,13 +13,10 @@ using Rpg.Verification;
 
 namespace Rpg.GameServerApi.Runs;
 
-/// <summary>Configuration section <c>Run</c>.</summary>
+/// <summary>Configuration section <c>Run</c>. (<c>AutoApproveWins</c> is gone: spec run-verify 2.6, a win waits for the verifier.)</summary>
 public sealed class RunOptions
 {
     public const string Section = "Run";
-
-    /// <summary>Development only, until slice 4a verifies runs: a won run becomes Won at once instead of Verifying.</summary>
-    public bool AutoApproveWins { get; set; }
 }
 
 /// <summary>
@@ -37,10 +35,13 @@ public static class RunActionEndpoints
         runs.MapPost("/{runId:guid}/end", EndRunAsync);
         runs.MapGet("/{runId:guid}/resume", ResumeAsync);
         runs.MapGet("/{runId:guid}/battles/{seq:int}", GetBattleAsync);
+        runs.MapGet("/{runId:guid}/floors/{floor:int}", GetFloorAsync);
+        runs.MapGet("/{runId:guid}/steps", GetStepsAsync);
     }
 
     private static async Task<IResult> SendActionsAsync(HttpContext context, Guid runId, RunActionBatch? batch,
-        RunStore store, RunSummaryCache cache, RpgMetrics metrics, TimeProvider clock, CancellationToken ct)
+        RunStore store, RunSummaryCache cache, RpgMetrics metrics, IOptions<RunVerifyOptions> options, TimeProvider clock,
+        CancellationToken ct)
     {
         var started = Stopwatch.GetTimestamp();
         var player = context.User.Player();
@@ -51,7 +52,7 @@ public static class RunActionEndpoints
         }
 
         var now = clock.GetUtcNow();
-        var result = await store.AppendAsync(player.Id, runId, batch!.Actions, now, ct);
+        var result = await store.AppendAsync(player.Id, runId, batch!.Actions, batch.Epoch, now, ct);
         foreach (var (type, outcome) in result.Counted)
         {
             metrics.RunAction(type, outcome);
@@ -63,6 +64,13 @@ public static class RunActionEndpoints
             case AppendOutcome.NotFound:
                 return RunEndpoints.NotFound(runId);
             case AppendOutcome.NotActive:
+                if (result.Aggregate is { Result: "rejected" } rejected && rejected.Reason is { } why)
+                {
+                    metrics.GenesisClaim("mismatch");
+                    metrics.RunRolledBack(RunAggregator.CategoryOf(why), terminal: true);
+                    await cache.InvalidateAsync(RunSummaryCache.SummaryKey(runId), RunSummaryCache.CurrentKey(player.Id));
+                }
+
                 return RunEndpoints.Conflict(ApiErrors.RunNotActive, "Run not active", $"Run {runId:D} has ended.");
             case AppendOutcome.Gap:
                 return RunEndpoints.Conflict(ApiErrors.SequenceGap, "Sequence gap",
@@ -72,6 +80,11 @@ public static class RunActionEndpoints
                 return RunEndpoints.Conflict(ApiErrors.SequenceConflict, "Sequence conflict",
                     "A stored action has the same seq and a different body; the server's log wins.",
                     new Dictionary<string, object?> { ["lastSeq"] = result.LastSeq });
+            case AppendOutcome.RolledBack:
+                return RunEndpoints.RolledBack(result.Epoch, result.VerifiedSeq, result.Reason);
+            case AppendOutcome.StepTooLong:
+                return RunEndpoints.BadRequest(
+                    $"No more than {options.Value.MaxStepActions} actions may pass between two snapshots (a battle, a floor change or a pending-battle checkpoint).");
         }
 
         // Counted has one entry per action, in batch order.
@@ -88,9 +101,35 @@ public static class RunActionEndpoints
             metrics.BattleSubmitted();
         }
 
-        if (result.Ended)
+        foreach (var kind in result.StepKinds ?? [])
         {
-            metrics.RunEnd("lost");
+            metrics.StepCreated(kind);
+        }
+
+        if (result.Aggregate is { Changed: true })
+        {
+            // Releasing gems or verifying floors on this path (steps verified before the anchor arrived) leaves these stale.
+            await cache.InvalidateAsync(VerifyPolicy.WalletKey(player.Id), RunSummaryCache.SummaryKey(runId),
+                RunSummaryCache.CurrentKey(player.Id));
+        }
+
+        if (result.Aggregate is { } aggregate)
+        {
+            // "waiting": the anchor job has not finished, so nothing was compared yet (the worker compares when it commits).
+            metrics.GenesisClaim(aggregate.Result == "rejected" ? "mismatch" : aggregate.VerifiedSeq >= 1 ? "match" : "waiting");
+            if (aggregate.Result is "rejected" or "rolled_back" && aggregate.Reason is { } reason)
+            {
+                metrics.RunRolledBack(RunAggregator.CategoryOf(reason), aggregate.Result == "rejected");
+            }
+        }
+
+        if (result.Ended || result.Aggregate is { StatusChanged: true })
+        {
+            if (result.Ended)
+            {
+                metrics.RunEnd("lost");
+            }
+
             await cache.InvalidateAsync(RunSummaryCache.SummaryKey(runId), RunSummaryCache.CurrentKey(player.Id));
         }
         else if (result.Counted.Any(c => c.Result == "accepted"))
@@ -98,12 +137,11 @@ public static class RunActionEndpoints
             await cache.InvalidateAsync(RunSummaryCache.SummaryKey(runId));
         }
 
-        return Results.Ok(new RunActionAck(result.LastSeq));
+        return Results.Ok(new RunActionAck(result.LastSeq, result.Epoch, result.VerifiedSeq));
     }
 
     private static async Task<IResult> EndRunAsync(HttpContext context, Guid runId, RunEndRequest? request,
-        RunStore store, RunSummaryCache cache, RpgMetrics metrics, IOptions<RunOptions> options,
-        IHostEnvironment environment, TimeProvider clock, CancellationToken ct)
+        RunStore store, RunSummaryCache cache, RpgMetrics metrics, TimeProvider clock, CancellationToken ct)
     {
         var player = context.User.Player();
         Activity.Current?.SetTag("rpg.run_id", runId.ToString("D"));
@@ -116,12 +154,16 @@ public static class RunActionEndpoints
                 "(a JSON object with schemaVersion 1) are required.");
         }
 
-        var autoApprove = options.Value.AutoApproveWins && environment.IsDevelopment();
-        var result = await store.EndAsync(player.Id, runId, request, autoApprove, clock.GetUtcNow(), ct);
+        var result = await store.EndAsync(player.Id, runId, request, clock.GetUtcNow(), ct);
         switch (result.Outcome)
         {
             case EndOutcome.NotFound:
                 return RunEndpoints.NotFound(runId);
+            case EndOutcome.RolledBack:
+                return RunEndpoints.RolledBack(result.Epoch, result.VerifiedSeq, result.Reason);
+            case EndOutcome.NoCheckpoint:
+                return RunEndpoints.UploadIncomplete(result.LastSeq,
+                    "A win needs the run's start (a snapshot) uploaded first: upload the rest of the log.");
             case EndOutcome.NotActive:
                 return RunEndpoints.Conflict(ApiErrors.RunNotActive, "Run not active",
                     $"Run {runId:D} is {result.Status}.");
@@ -134,11 +176,10 @@ public static class RunActionEndpoints
                     new Dictionary<string, object?> { ["lastSeq"] = result.LastSeq });
             case EndOutcome.Ended:
                 metrics.RunEnd(request.Status == RunEndStatus.Lost ? "lost" : "won");
-                if (result.Status == RunStatus.Won)
+                if (result.Status == RunStatus.Verifying)
                 {
-                    metrics.RunEnd("auto_approved");
+                    metrics.StepCreated("end");
                 }
-
                 await cache.InvalidateAsync(RunSummaryCache.SummaryKey(runId), RunSummaryCache.CurrentKey(player.Id));
                 break;
         }
@@ -159,6 +200,47 @@ public static class RunActionEndpoints
                 $"Run {runId:D} can't be resumed."),
             _ => RunEndpoints.NotFound(runId),
         };
+    }
+
+    /// <summary>Spec run-verify 2.7: the verified read model of a floor. 404 until its digest is written (also for another player's run).</summary>
+    private static async Task<IResult> GetFloorAsync(HttpContext context, Guid runId, int floor, RunStore store,
+        RunSummaryCache cache, RpgMetrics metrics, CancellationToken ct)
+    {
+        var player = context.User.Player();
+        var cached = await cache.GetFloorAsync(runId, floor);
+        if (cached is not null)
+        {
+            metrics.CacheRead("floor", "redis");
+        }
+        else
+        {
+            cached = await store.FloorDigestAsync(runId, floor, ct);
+            metrics.CacheRead("floor", cached is null ? "missing" : "postgres");
+            if (cached is { } stored)
+            {
+                await cache.SetFloorAsync(runId, floor, stored.PlayerId, stored.Digest);
+            }
+        }
+
+        return cached is { } found && found.PlayerId == player.Id
+            ? Results.Ok(found.Digest)
+            : Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Floor not verified",
+                detail: $"No verified floor {floor} for run {runId:D}.");
+    }
+
+    /// <summary>Development only (tests and e2e): the run's steps and their state.</summary>
+    private static async Task<IResult> GetStepsAsync(HttpContext context, Guid runId, RunStore store,
+        IHostEnvironment environment, CancellationToken ct)
+    {
+        if (!environment.IsDevelopment())
+        {
+            return Results.NotFound();
+        }
+
+        var steps = await store.StepsAsync(runId, ct);
+        return steps is { } found && found.PlayerId == context.User.Player().Id
+            ? Results.Ok(found.Steps)
+            : RunEndpoints.NotFound(runId);
     }
 
     private static async Task<IResult> GetBattleAsync(HttpContext context, Guid runId, int seq, RunStore store,

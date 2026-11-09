@@ -5,24 +5,29 @@ using NpgsqlTypes;
 using Rpg.Contracts.Battle;
 using Rpg.Contracts.Runs;
 using Rpg.Contracts.Serialization;
+using Rpg.Economy;
 using Rpg.Verification;
 
 namespace Rpg.GameServerApi.Runs;
 
-public enum AppendOutcome { Stored, NotFound, NotActive, Gap, Conflict }
+public enum AppendOutcome { Stored, NotFound, NotActive, Gap, Conflict, RolledBack, StepTooLong }
 
 /// <param name="LastSeq">The run's last stored seq afterwards (unchanged when nothing was stored).</param>
 /// <param name="ExpectedSeq"><see cref="AppendOutcome.Gap"/>: the seq the server needs next.</param>
 /// <param name="Counted">(type, result) per action looked at, for <c>rpg_run_actions_total</c>.</param>
-/// <param name="Battles">Battle sessions written; each also wrote its verify job to the outbox in the same transaction
-/// (spec settlement-outbox 2.1).</param>
+/// <param name="Battles">Battle sessions written (spec run-verify 2.1: the step that contains a battle verifies it, so no
+/// separate verify job is written).</param>
 /// <param name="Ended">An <c>end</c> action was stored: the run is Lost.</param>
+/// <param name="Epoch">The run's epoch and verified prefix after the call; with the reason on <see cref="AppendOutcome.RolledBack"/>.</param>
+/// <param name="Aggregate">Set when the call ran the aggregator (the client's seq 1 arrived).</param>
 public sealed record AppendResult(AppendOutcome Outcome, int LastSeq, IReadOnlyList<(string Type, string Result)> Counted,
-    int ExpectedSeq = 0, int Battles = 0, bool Ended = false);
+    int ExpectedSeq = 0, int Battles = 0, bool Ended = false, int Epoch = 0, int VerifiedSeq = 0, string? Reason = null,
+    IReadOnlyList<string>? StepKinds = null, AggregateResult? Aggregate = null);
 
-public enum EndOutcome { Ended, Repeated, NotFound, NotActive, UploadIncomplete, Conflict }
+public enum EndOutcome { Ended, Repeated, NotFound, NotActive, UploadIncomplete, Conflict, RolledBack, NoCheckpoint }
 
-public sealed record EndResult(EndOutcome Outcome, RunStatus Status = RunStatus.Active, int LastSeq = 0);
+public sealed record EndResult(EndOutcome Outcome, RunStatus Status = RunStatus.Active, int LastSeq = 0, int Epoch = 0,
+    int VerifiedSeq = 0, string? Reason = null);
 
 public enum ResumeOutcome { Found, NotFound, NotActive }
 
@@ -42,7 +47,7 @@ public sealed partial class RunStore
     /// skipped; a different body is <see cref="AppendOutcome.Conflict"/>; a seq past the next one is a
     /// <see cref="AppendOutcome.Gap"/>; new actions on a run that isn't Active are <see cref="AppendOutcome.NotActive"/>.
     /// </summary>
-    public async Task<AppendResult> AppendAsync(Guid playerId, Guid runId, IReadOnlyList<RunActionRequest> actions,
+    public async Task<AppendResult> AppendAsync(Guid playerId, Guid runId, IReadOnlyList<RunActionRequest> actions, int epoch,
         DateTimeOffset now, CancellationToken ct)
     {
         await migrations.EnsureMigratedAsync(ct);
@@ -53,6 +58,12 @@ public sealed partial class RunStore
             return new AppendResult(AppendOutcome.NotFound, 0, []);
         }
 
+        if (epoch != run.Epoch)
+        {
+            return new AppendResult(AppendOutcome.RolledBack, run.LastSeq, [], Epoch: run.Epoch, VerifiedSeq: run.VerifiedSeq,
+                Reason: run.RollbackReason);
+        }
+
         var stored = actions[0].Seq <= run.LastSeq
             ? await StoredActionsAsync(connection, transaction, runId, actions[0].Seq, run.LastSeq, ct)
             : [];
@@ -60,6 +71,9 @@ public sealed partial class RunStore
         var lastSeq = run.LastSeq;
         var status = run.Status;
         var battles = 0;
+        var stepKinds = new List<string>();
+        var anchorStored = false;
+        var lastCheckpoint = run.Legacy ? 0 : await LastCheckpointAsync(connection, transaction, runId, ct);
         foreach (var action in actions)
         {
             var type = action.Action.Type;
@@ -106,11 +120,41 @@ public sealed partial class RunStore
                     return new AppendResult(AppendOutcome.Conflict, run.LastSeq, [.. counted, (type, "conflict")]);
                 }
 
-                var job = new VerifyBattleJob(battle.BattleId, runId, action.Seq, run.Ruleset, now);
-                await OutboxWriter.InsertAsync(connection, transaction,
-                    new OutboxMessage(Guid.NewGuid(), OutboxDestination.Rabbit, VerifyTopology.RoutingKey, battle.BattleId,
-                        nameof(VerifyBattleJob), JsonSerializer.Serialize(job, RpgJson.Options)), ct);
+                // Spec run-verify 2.1: no per-battle job. The step that contains this battle replays it and commits its verdict.
+                // (A legacy run, started before slice 4a, is never verified: its battles stay Submitted.)
                 battles++;
+            }
+
+            if (!run.Legacy)
+            {
+                if (type == RunActionTypes.NextFloor)
+                {
+                    await Execute(connection, transaction,
+                        // The floor the run stands on, as the server knows it, not the action's own label (an unverified claim
+                        // that would steer the stairs gate).
+                        "UPDATE run_floors SET end_seq = $3 WHERE run_id = $1 AND floor = $2", ct, runId, run.CurrentFloor, action.Seq);
+                }
+
+                if (action.Snapshot is not null)
+                {
+                    if (lastCheckpoint == 0)
+                    {
+                        anchorStored = true;   // seq 1: the genesis step (made at run start) waits for this claim
+                    }
+                    else
+                    {
+                        if (action.Seq - lastCheckpoint > verify.Value.MaxStepActions)
+                        {
+                            return new AppendResult(AppendOutcome.StepTooLong, run.LastSeq, [.. counted, (type, "too_long")]);
+                        }
+
+                        // A queued end is a death (Lost): its step replays the run like any other and has nothing to prove "won".
+                        stepKinds.Add(await InsertStepAsync(connection, transaction, runId, run, lastCheckpoint, action.Seq,
+                            type == RunActionTypes.Battle ? "battle" : "segment", now, ct));
+                    }
+
+                    lastCheckpoint = action.Seq;
+                }
             }
 
             counted.Add((type, "accepted"));
@@ -122,15 +166,67 @@ public sealed partial class RunStore
         }
 
         var ended = status != run.Status;
+        AggregateResult? aggregate = null;
         if (lastSeq != run.LastSeq)
         {
             await Execute(connection, transaction,
                 "UPDATE runs SET last_seq = $2, status = $3, ended_at = CASE WHEN $4 THEN $5 ELSE ended_at END WHERE run_id = $1",
                 ct, runId, lastSeq, status, ended, now);
+            if (anchorStored)
+            {
+                // The anchor rule (spec run-verify 2.3): compares seq 1 with the server's own start when it is there.
+                aggregate = await RunAggregator.RunAsync(connection, transaction, runId, verify.Value, now, ct);
+            }
+
             await transaction.CommitAsync(ct);
         }
 
-        return new AppendResult(AppendOutcome.Stored, lastSeq, counted, Battles: battles, Ended: ended);
+        if (aggregate is { Result: "rejected" })
+        {
+            // The start disagreed with the server's own (or the run ended some other way): nothing of this upload stands.
+            return new AppendResult(AppendOutcome.NotActive, 0, counted, Aggregate: aggregate);
+        }
+
+        var (nowEpoch, nowVerified) = aggregate is null ? (run.Epoch, run.VerifiedSeq) : await ProgressAsync(runId, ct);
+        return new AppendResult(AppendOutcome.Stored, lastSeq, counted, Battles: battles, Ended: ended, Epoch: nowEpoch,
+            VerifiedSeq: nowVerified, StepKinds: stepKinds, Aggregate: aggregate);
+    }
+
+    private static async Task<int> LastCheckpointAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid runId,
+        CancellationToken ct)
+    {
+        await using var select = Command(connection, transaction,
+            "SELECT COALESCE(max(seq), 0) FROM run_actions WHERE run_id = $1 AND snapshot IS NOT NULL", runId);
+        return Convert.ToInt32(await select.ExecuteScalarAsync(ct));
+    }
+
+    /// <summary>One step per snapshot-bearing action after seq 1 (spec run-verify 2.1), with its job in the same transaction.</summary>
+    private static async Task<string> InsertStepAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid runId,
+        LockedRun run, int fromSeq, int toSeq, string kind, DateTimeOffset now, CancellationToken ct)
+    {
+        int stepNo;
+        await using (var next = Command(connection, transaction,
+                         "SELECT COALESCE(max(step_no), -1) + 1 FROM run_steps WHERE run_id = $1", runId))
+        {
+            stepNo = Convert.ToInt32(await next.ExecuteScalarAsync(ct));
+        }
+
+        await Execute(connection, transaction,
+            """
+            INSERT INTO run_steps (run_id, epoch, step_no, from_seq, to_seq, kind, status, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, 'Pending', $7)
+            """, ct, runId, run.Epoch, stepNo, fromSeq, toSeq, kind, now);
+        await InsertStepJobAsync(connection, transaction, runId, run.Epoch, stepNo, run.Ruleset, now, ct);
+        return kind;
+    }
+
+    /// <summary>The run's epoch and verified prefix right now (after an aggregation).</summary>
+    private async Task<(int Epoch, int VerifiedSeq)> ProgressAsync(Guid runId, CancellationToken ct)
+    {
+        await using var command = dataSource.CreateCommand("SELECT epoch, verified_seq FROM runs WHERE run_id = $1");
+        command.Parameters.Add(new NpgsqlParameter { Value = runId });
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        return await reader.ReadAsync(ct) ? (reader.GetInt32(0), reader.GetInt32(1)) : (0, 0);
     }
 
     /// <summary>
@@ -138,8 +234,8 @@ public sealed partial class RunStore
     /// <paramref name="autoApproveWins"/>). The end is stored as an <c>end</c> action carrying the claimed run hash and
     /// snapshot, so a retried end with the same body answers the run's status again.
     /// </summary>
-    public async Task<EndResult> EndAsync(Guid playerId, Guid runId, RunEndRequest request, bool autoApproveWins,
-        DateTimeOffset now, CancellationToken ct)
+    public async Task<EndResult> EndAsync(Guid playerId, Guid runId, RunEndRequest request, DateTimeOffset now,
+        CancellationToken ct)
     {
         await migrations.EnsureMigratedAsync(ct);
         await using var connection = await dataSource.OpenConnectionAsync(ct);
@@ -147,6 +243,12 @@ public sealed partial class RunStore
         if (await LockRunAsync(connection, transaction, playerId, runId, ct) is not { } run)
         {
             return new EndResult(EndOutcome.NotFound);
+        }
+
+        if (request.Epoch != run.Epoch)
+        {
+            return new EndResult(EndOutcome.RolledBack, Enum.Parse<RunStatus>(run.Status), run.LastSeq, run.Epoch,
+                run.VerifiedSeq, run.RollbackReason);
         }
 
         var status = Enum.Parse<RunStatus>(run.Status);
@@ -174,20 +276,40 @@ public sealed partial class RunStore
             return new EndResult(EndOutcome.UploadIncomplete, status, run.LastSeq);
         }
 
+        // Spec run-verify 2.6: a win waits for the verifier (Run:AutoApproveWins is gone). A legacy run was never verified.
         var ended = request.Status == RunEndStatus.Lost ? RunStatus.Lost
-            : autoApproveWins ? RunStatus.Won
+            : run.Legacy ? RunStatus.Won
             : RunStatus.Verifying;
+        var previousCheckpoint = run.Legacy ? 0 : await LastCheckpointAsync(connection, transaction, runId, ct);
+        if (!run.Legacy && request.Status == RunEndStatus.Won && previousCheckpoint == 0)
+        {
+            // Without a checkpoint there is no end step to verify the win with: the start must be uploaded first. (Otherwise a
+            // client could "win" with the start state's own hash and never play.)
+            return new EndResult(EndOutcome.NoCheckpoint, status, run.LastSeq, run.Epoch, run.VerifiedSeq);
+        }
+
         await InsertActionAsync(connection, transaction, runId, request.Seq,
             new RunAction(RunActionTypes.End, run.CurrentFloor), request.RunHash, request.Snapshot, now, now, ct);
         await Execute(connection, transaction,
             """
             UPDATE runs SET last_seq = $2, status = $3, claimed_run_hash = $4,
-              ended_at = CASE WHEN $5 THEN $6 ELSE NULL END
+              ended_at = CASE WHEN $5 THEN $6 ELSE NULL END, end_seq = $2
             WHERE run_id = $1
             """,
             ct, runId, request.Seq, ended.ToString(), request.RunHash, ended != RunStatus.Verifying, now);
+        if (!run.Legacy)
+        {
+            // The end is a step like any checkpoint: its snapshot is what the verifier checks the win against.
+            if (previousCheckpoint > 0 && previousCheckpoint < request.Seq)
+            {
+                // Only a win has an end step (kind end: "the run is actually won"); a death is replayed as an ordinary segment.
+                await InsertStepAsync(connection, transaction, runId, run, previousCheckpoint, request.Seq,
+                    request.Status == RunEndStatus.Won ? "end" : "segment", now, ct);
+            }
+        }
+
         await transaction.CommitAsync(ct);
-        return new EndResult(EndOutcome.Ended, ended, request.Seq);
+        return new EndResult(EndOutcome.Ended, ended, request.Seq, run.Epoch, run.VerifiedSeq);
     }
 
     /// <summary>
@@ -201,15 +323,24 @@ public sealed partial class RunStore
         await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
 
         RunStatus status;
+        int epoch, verifiedSeq;
+        bool legacy;
+        JsonElement? genesis = null;
         await using (var select = Command(connection, transaction,
-                         "SELECT status FROM runs WHERE run_id = $1 AND player_id = $2", runId, playerId))
+                         "SELECT status, epoch, verified_seq, legacy, genesis_snapshot::text FROM runs WHERE run_id = $1 AND player_id = $2",
+                         runId, playerId))
+        await using (var reader = await select.ExecuteReaderAsync(ct))
         {
-            if (await select.ExecuteScalarAsync(ct) is not string text)
+            if (!await reader.ReadAsync(ct))
             {
                 return new ResumeResult(ResumeOutcome.NotFound);
             }
 
-            status = Enum.Parse<RunStatus>(text);
+            status = Enum.Parse<RunStatus>(reader.GetString(0));
+            epoch = reader.GetInt32(1);
+            verifiedSeq = reader.GetInt32(2);
+            legacy = reader.GetBoolean(3);
+            genesis = reader.IsDBNull(4) ? null : Parse(reader.GetString(4));
         }
 
         if (status != RunStatus.Active)
@@ -228,11 +359,16 @@ public sealed partial class RunStore
             }
         }
 
+        // Spec run-verify 2.6: the latest *verified* checkpoint (a legacy run: the latest claimed one, as before). Seq 1 is
+        // served from the server's own genesis snapshot; a run with no uploads yet gets that snapshot at seq 0.
         var checkpointSeq = 0;
         var snapshot = JsonDocument.Parse("null").RootElement;
         await using (var select = Command(connection, transaction,
-                         "SELECT seq, snapshot FROM run_actions WHERE run_id = $1 AND snapshot IS NOT NULL ORDER BY seq DESC LIMIT 1",
-                         runId))
+                         """
+                         SELECT seq, snapshot FROM run_actions
+                         WHERE run_id = $1 AND snapshot IS NOT NULL AND ($2 OR seq <= GREATEST($3, 1))
+                         ORDER BY seq DESC LIMIT 1
+                         """, runId, legacy, verifiedSeq))
         await using (var reader = await select.ExecuteReaderAsync(ct))
         {
             if (await reader.ReadAsync(ct))
@@ -240,6 +376,11 @@ public sealed partial class RunStore
                 checkpointSeq = reader.GetInt32(0);
                 snapshot = Parse(reader.GetString(1));
             }
+        }
+
+        if (!legacy && checkpointSeq <= 1 && genesis is { } own)
+        {
+            snapshot = own;
         }
 
         var tail = new List<RunActionRequest>();
@@ -270,7 +411,7 @@ public sealed partial class RunStore
         }
 
         return new ResumeResult(ResumeOutcome.Found,
-            new RunResumeResponse(runId.ToString("D"), status, floors, checkpointSeq, snapshot, tail));
+            new RunResumeResponse(runId.ToString("D"), status, floors, checkpointSeq, snapshot, tail, epoch, verifiedSeq));
     }
 
     /// <summary>The battle stored with the run's action <paramref name="seq"/>, and the run's owner.</summary>
@@ -301,17 +442,19 @@ public sealed partial class RunStore
             reader.IsDBNull(7) ? null : JsonSerializer.Deserialize<BattleVerdict>(reader.GetString(7), RpgJson.Options)));
     }
 
-    private sealed record LockedRun(string Status, int LastSeq, int CurrentFloor, string Ruleset);
+    private sealed record LockedRun(string Status, int LastSeq, int CurrentFloor, string Ruleset, int Epoch, int VerifiedSeq,
+        string? RollbackReason, bool Legacy);
 
     private static async Task<LockedRun?> LockRunAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
         Guid playerId, Guid runId, CancellationToken ct)
     {
         await using var select = Command(connection, transaction,
-            "SELECT status, last_seq, current_floor, ruleset_version FROM runs WHERE run_id = $1 AND player_id = $2 FOR UPDATE",
+            "SELECT status, last_seq, current_floor, ruleset_version, epoch, verified_seq, rollback_reason, legacy FROM runs WHERE run_id = $1 AND player_id = $2 FOR UPDATE",
             runId, playerId);
         await using var reader = await select.ExecuteReaderAsync(ct);
         return await reader.ReadAsync(ct)
-            ? new LockedRun(reader.GetString(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3))
+            ? new LockedRun(reader.GetString(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetInt32(4),
+                reader.GetInt32(5), reader.IsDBNull(6) ? null : reader.GetString(6), reader.GetBoolean(7))
             : null;
     }
 

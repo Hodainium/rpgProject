@@ -2,15 +2,15 @@
 ## <control>/request and waits for the harness to act and write <control>/done ("ok" or why not).
 extends DevCommand
 
-const ACTIONS: Array[String] = ["server-stop", "server-start", "redis-flush", "worker-start", "worker-stop", "tamper-battle",
+const ACTIONS: Array[String] = ["server-stop", "server-start", "redis-flush", "worker-start", "worker-stop", "tamper-battle", "tamper-genesis",
 	"redpanda-stop", "redpanda-start", "redpanda-check"]
 const DEFAULT_SECONDS: float = 60.0
 
 
 func _init() -> void:
 	name = "e2e"
-	usage = "e2e server-stop | server-start | redis-flush | worker-start | worker-stop | tamper-battle | redpanda-stop | redpanda-start | redpanda-check [seconds]"
-	help = "End-to-end harness only (dev_run --control): asks the harness for a fault and waits until it is done. worker-start / worker-stop: the verifier worker (stop kills it mid-job); tamper-battle: the stored log of the run's first battle is altered, so the verifier must reject it. redpanda-stop / redpanda-start (spec settlement-outbox): the event broker goes down and comes back; start returns once the outbox has drained; check reads the topics back and fails unless every published outbox event is on them."
+	usage = "e2e server-stop | server-start | redis-flush | worker-start | worker-stop | tamper-battle | tamper-genesis | redpanda-stop | redpanda-start | redpanda-check [seconds]"
+	help = "End-to-end harness only (dev_run --control): asks the harness for a fault and waits until it is done. worker-start / worker-stop: the verifier worker (stop kills it mid-job); tamper-battle: the stored log of the run's first battle is altered, so the verifier must reject it. tamper-genesis: the claimed hash of the run's start (seq 1) is replaced (spec run-verify), so the server's own rebuilt start disagrees and the run is rejected. redpanda-stop / redpanda-start (spec settlement-outbox): the event broker goes down and comes back; start returns once the outbox has drained; check reads the topics back and fails unless every published outbox event is on them."
 	cheat = false
 	arg_kinds.assign(["text", "int"])
 

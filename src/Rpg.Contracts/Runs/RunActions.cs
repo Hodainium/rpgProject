@@ -6,7 +6,10 @@ namespace Rpg.Contracts.Runs;
 
 /// <summary>POST /api/v1/runs/{runId}/actions (spec server-authority 2.2): 1–50 actions with consecutive seqs, in
 /// order. All-or-nothing; seqs already stored with the same body are skipped, so a retried batch is a no-op.</summary>
-public sealed record RunActionBatch(IReadOnlyList<RunActionRequest> Actions);
+/// <param name="Epoch">Spec run-verify 3.1: the run's epoch the client last saw (0 = never rolled back). A stale one is
+/// 409 1108. Omitted from the JSON when 0.</param>
+public sealed record RunActionBatch(IReadOnlyList<RunActionRequest> Actions,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int Epoch = 0);
 
 /// <summary>One run_log entry.</summary>
 /// <param name="Seq">1-based, consecutive per run (seq 1 is <c>start_run</c>).</param>
@@ -99,5 +102,8 @@ public enum OfferSource { Treasure, Shop, BossReward, Other }
 /// <summary>item-pass: pedestals and shelves offer armor; keys-and-gear: shops sell keys.</summary>
 public enum ItemKind { Item, Equipment, Keys }
 
-/// <summary>200: everything up to <c>LastSeq</c> is stored; the client's queue drops it.</summary>
-public sealed record RunActionAck(int LastSeq);
+/// <summary>200: everything up to <c>LastSeq</c> is stored; the client's queue drops it. Spec run-verify 3.1: the run's
+/// <c>Epoch</c> and the verified prefix (<c>VerifiedSeq</c>); both are omitted from the JSON when 0.</summary>
+public sealed record RunActionAck(int LastSeq,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int Epoch = 0,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int VerifiedSeq = 0);

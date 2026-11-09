@@ -46,6 +46,31 @@ public sealed class VerifierRedis(IConfiguration configuration, ILogger<Verifier
         }
     }
 
+    /// <summary>
+    /// After a step verdict changed a run (spec run-verify 3.5): its cached summary, current-run pointer, wallet and floor
+    /// digests are stale. Floors 0 to 40 are deleted explicitly (no key scan). Returns false on a Redis error.
+    /// </summary>
+    public async Task<bool> InvalidateRunAsync(Guid runId, Guid playerId, bool floors)
+    {
+        try
+        {
+            var database = await DatabaseAsync();
+            var keys = new List<RedisKey> { $"run:summary:{runId:D}", $"run:current:{playerId:D}", VerifyPolicy.WalletKey(playerId) };
+            if (floors)
+            {
+                keys.AddRange(Enumerable.Range(0, 40).Select(floor => (RedisKey)$"floor:{runId:D}:{floor}"));
+            }
+
+            await database.KeyDeleteAsync(keys.ToArray());
+            return true;
+        }
+        catch (Exception ex) when (IsRedisError(ex))
+        {
+            logger.LogDebug("Run caches not cleared: {Message}", ex.Message);
+            return false;
+        }
+    }
+
     /// <summary>After the commit: the verdict cache is filled and the Submitted copy deleted. Returns false on a Redis error.</summary>
     public async Task<bool> PublishVerdictAsync(StoredBattle battle)
     {

@@ -153,7 +153,10 @@ from C#.**
   `tests/fixtures/attribute_generator/` so the test pins the new builder.
 - **Fixtures:** `res://tests/tools/build_fixtures.tscn` rebuilds `tests/fixtures/`; rerun only when fixtures must change.
 - **Replay one battle:** `godot --headless --path client-godot res://combat/headless/replay_main.tscn -- --in req.json
-  --out result.json [--content-root res://content/]`; exit code 0 Verified, 2 Rejected (2002), 1 runner error.
+  --out result.json [--content-root res://content/]`; exit code 0 Verified, 2 Rejected (2002), 3 Malformed (a request it refuses: a Rejected result with the reason `MalformedRequest`), 1 runner error.
+- **Verify one run step** (spec `run-verify`): `godot --headless --path client-godot res://game/verify/step_main.tscn -- --in step.json
+  --out verdict.json [--content-root res://content/]` (a `StepRequest` in, a `StepVerdict` out; the same exit codes). The server's verifier
+  worker runs it per step; `tests/game/test_step_runner.gd` builds steps from the committed runs the way the server cuts them.
 - **Find where a battle diverges** (spec `atomic-battles`; the log has no per-action hashes): `trace_main.tscn -- --in
   req.json --out trace.json --lines [--content-root ...]` writes the hash and canonical lines after every action;
   `trace_main.tscn -- --diff a.json b.json` prints the first divergent action and the differing lines (exit 0 match,

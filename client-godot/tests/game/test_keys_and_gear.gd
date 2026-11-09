@@ -184,7 +184,7 @@ func test_locked_rooms() -> void:
 	eq([run.state.keys, run.run_log[-1]["unlock"], run.state.map.cells[vault]["opened"]], [0, "key", true],
 		"one key spent, logged, the room stays open")
 	check(not run.room_locked(vault), "no longer locked")
-	check(Array(run.state.map.canonical_lines()).any(func(line: String) -> bool: return line.ends_with("|opened")),
+	check(Array(run.state.map.canonical_lines()).any(func(line: String) -> bool: return line.contains("opened=1")),
 		"an opened room is hashed")
 	eq(run.enter_room(run.state.map.start), "", "back to the start")
 	eq(run.enter_room(vault), "", "re-entering")

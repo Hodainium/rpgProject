@@ -29,6 +29,19 @@ public static class VerifyTopology
         new("verify.battle.retry.120s", "retry.120s", TimeSpan.FromSeconds(120)),
     ];
 
+    // Spec run-verify 3.4: the segment (step) queue beside verify.battle, on the same exchange and dead-letter exchange.
+    public const string SegmentRoutingKey = "segment";
+    public const string SegmentDeadRoutingKey = "dead.segment";
+    public const string SegmentQueue = "verify.segment";
+    public const string SegmentDeadLetterQueue = "verify.segment.dlq";
+
+    public static readonly IReadOnlyList<RetryTier> SegmentRetryTiers =
+    [
+        new("verify.segment.retry.5s", "segment.retry.5s", TimeSpan.FromSeconds(5)),
+        new("verify.segment.retry.30s", "segment.retry.30s", TimeSpan.FromSeconds(30)),
+        new("verify.segment.retry.120s", "segment.retry.120s", TimeSpan.FromSeconds(120)),
+    ];
+
     /// <summary>Header: how many runner errors this job has had (int, default 0).</summary>
     public const string AttemptHeader = "x-attempt";
 

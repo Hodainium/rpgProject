@@ -27,7 +27,7 @@ public sealed record CommitResult(bool Committed, SettlementResult Result, IRead
 /// </summary>
 public sealed class VerdictStore(NpgsqlDataSource dataSource)
 {
-    public const string RequiredMigration = "0006_reward_challenges.sql";
+    public const string RequiredMigration = "0007_run_verify.sql";
 
     /// <summary>Blocks until the API has applied the verdict migration (the worker never migrates).</summary>
     public async Task WaitForSchemaAsync(TimeSpan interval, CancellationToken ct)
@@ -52,35 +52,15 @@ public sealed class VerdictStore(NpgsqlDataSource dataSource)
         }
     }
 
-    public async Task<BattleRow?> LoadAsync(string battleId, CancellationToken ct)
-    {
-        await using var command = dataSource.CreateCommand(
-            """
-            SELECT b.run_id, b.run_seq, r.player_id, b.status, b.ruleset_version, b.conditions::text, b.action_log::text,
-                   b.submitted_at, b.attempts
-            FROM battle_sessions b JOIN runs r ON r.run_id = b.run_id
-            WHERE b.battle_id = $1
-            """);
-        command.Parameters.Add(new NpgsqlParameter { Value = battleId });
-        await using var reader = await command.ExecuteReaderAsync(ct);
-        return await reader.ReadAsync(ct)
-            ? new BattleRow(battleId, reader.GetGuid(0), reader.GetInt32(1), reader.GetGuid(2), reader.GetString(3),
-                reader.GetString(4), reader.GetString(5), reader.GetString(6), reader.GetFieldValue<DateTimeOffset>(7),
-                reader.GetInt32(8))
-            : null;
-    }
-
     /// <summary>
-    /// The verdict, the settlement and the events that describe them, in ONE transaction (spec settlement-outbox 2.2).
-    /// The guarded update is the first idempotency gate: zero rows means someone else already decided, and nothing
-    /// below runs. The completion-mark primary key and the ledger's unique key are the second.
+    /// The same writes inside a transaction the caller owns and commits (a verifier step's, spec run-verify 2.2). With
+    /// <paramref name="pending"/> the settlement leaves gems pending until the run's verified prefix reaches the battle.
+    /// <see cref="CommitResult.Committed"/> false means the guarded update found the battle decided already: nothing was
+    /// written and the caller should not commit on its account.
     /// </summary>
-    public async Task<CommitResult> CommitAsync(BattleRow row, BattleVerdict verdict, SettlementOptions settlement,
-        DateTimeOffset now, CancellationToken ct)
+    public static async Task<CommitResult> CommitInTransactionAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
+        BattleRow row, BattleVerdict verdict, SettlementOptions settlement, DateTimeOffset now, bool pending, CancellationToken ct)
     {
-        await using var connection = await dataSource.OpenConnectionAsync(ct);
-        await using var transaction = await connection.BeginTransactionAsync(ct);
-
         await using (var update = new NpgsqlCommand(
             """
             UPDATE battle_sessions
@@ -98,7 +78,6 @@ public sealed class VerdictStore(NpgsqlDataSource dataSource)
             update.Parameters.Add(new NpgsqlParameter { Value = verdict.VerifierRulesetVersion });
             if (await update.ExecuteNonQueryAsync(ct) != 1)
             {
-                await transaction.RollbackAsync(CancellationToken.None);
                 return new CommitResult(false, SettlementResult.None, []);
             }
         }
@@ -125,7 +104,7 @@ public sealed class VerdictStore(NpgsqlDataSource dataSource)
         {
             summary = await ChallengeSettlement.SettleAsync(connection, transaction,
                 new SettlementContext(row.PlayerId, row.RunId, row.BattleId, row.Ruleset,
-                    row.SubmittedAt + settlement.CycleClockOffset), facts, now, ct);
+                    row.SubmittedAt + settlement.CycleClockOffset), facts, now, ct, pending);
             grants = summary.Grants;
             // A challenge with no rule outranks "already marked": the missing rule is what an operator must see.
             result = grants.Count > 0 ? SettlementResult.Granted
@@ -136,7 +115,6 @@ public sealed class VerdictStore(NpgsqlDataSource dataSource)
                 : result;
         }
 
-        await transaction.CommitAsync(ct);
         return new CommitResult(true, result, grants, summary);
     }
 
@@ -148,28 +126,5 @@ public sealed class VerdictStore(NpgsqlDataSource dataSource)
         return OutboxWriter.InsertAsync(connection, transaction,
             new OutboxMessage(id, OutboxDestination.Redpanda, topic, row.PlayerId.ToString("D"), type,
                 JsonSerializer.Serialize(envelope, RpgJson.Options)), ct);
-    }
-
-    /// <summary>Counts one runner error; returns the attempts so far.</summary>
-    public async Task<int> RecordAttemptAsync(string battleId, CancellationToken ct)
-    {
-        await using var command = dataSource.CreateCommand(
-            "UPDATE battle_sessions SET attempts = attempts + 1 WHERE battle_id = $1 RETURNING attempts");
-        command.Parameters.Add(new NpgsqlParameter { Value = battleId });
-        return await command.ExecuteScalarAsync(ct) is int attempts ? attempts : 0;
-    }
-
-    /// <summary>Marks the session dead-lettered so the sweeper leaves it alone (3.2).</summary>
-    public async Task DeadLetterAsync(string battleId, string reason, DateTimeOffset now, CancellationToken ct)
-    {
-        await using var command = dataSource.CreateCommand(
-            """
-            UPDATE battle_sessions SET dead_lettered_at = $2, dead_letter_reason = $3
-            WHERE battle_id = $1 AND status = 'Submitted'
-            """);
-        command.Parameters.Add(new NpgsqlParameter { Value = battleId });
-        command.Parameters.Add(new NpgsqlParameter { Value = now.ToUniversalTime() });
-        command.Parameters.Add(new NpgsqlParameter { Value = reason });
-        await command.ExecuteNonQueryAsync(ct);
     }
 }

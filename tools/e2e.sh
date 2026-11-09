@@ -4,13 +4,13 @@
 #   tools/e2e.sh [scenario ...] [--keep] [-j N]      (default: every client-godot/tests/e2e/*.txt, N = 4)
 #   tools/e2e.sh --check                             (no Docker: lists and validates the scenarios, finds the tools)
 # Per scenario: a fresh Postgres database e2e_<stamp>_<scenario>, Redis index 1-15, a server on its own port
-# (Development, so dev tokens and Run:AutoApproveWins; test seed and token secrets; only the live ruleset version
+# (Development, so dev tokens; test seed and token secrets; only the live ruleset version
 # accepted; plus the scenario's "#! env K=V" lines) and a RabbitMQ vhost of its own (so parallel scenarios never
 # consume each other's verify jobs),
 # then dev_run.tscn --server --player e2e-<scenario> --control <folder>, then the scenario's .sql (every line returns t),
 # .metrics (every line is a regex the final server /metrics scrape matches) and .worker-metrics (the same for the verifier
 # worker's /metrics). Fault steps (`e2e <action>` in a script) reach the control loop here: server-stop, server-start,
-# redis-flush, worker-start, worker-stop (a kill), tamper-battle (spec battle-verify 6), redpanda-stop and
+# redis-flush, worker-start, worker-stop (a kill), tamper-battle (spec battle-verify 6), tamper-genesis (spec run-verify 4 F23), redpanda-stop and
 # redpanda-start (spec settlement-outbox 6: the shared Redpanda container is stopped, and started again once the outbox of
 # the scenario has drained; run such a scenario alone, other scenarios share the broker), redpanda-check (every outbox row
 # of the scenario marked published is on the topics: the topics are read from the start for 6 s each and the event ids
@@ -134,6 +134,7 @@ run_scenario() {  # <name> <index 1-15>
 	local control="$dir/control" result="$dir/result" pid_file="$dir/server.pid" loop_pid="" code=0
 	local wport=$((5200 + $2)) worker_pid_file="$dir/worker.pid" vhost="e2e_${stamp}_$1" want_worker=0 stub_worker=0
 	local -a worker_extra=()
+	local manual_worker=0
 	local content_root="res://tests/fixtures/"
 	mkdir -p "$control"
 	local -a env=(ASPNETCORE_ENVIRONMENT=Development "ASPNETCORE_URLS=http://127.0.0.1:$port"
@@ -155,10 +156,14 @@ run_scenario() {  # <name> <index 1-15>
 		line=${line%$'\r'}
 		[[ $line == "#! env "* ]] && env+=("${line#\#! env }")
 		[[ $line == "#! worker" ]] && want_worker=1
+		[[ $line != "#"* && $line == *"e2e worker-start"* ]] && manual_worker=1   # a script line, not a comment that mentions it
 		[[ $line == "#! worker-stub" ]] && { want_worker=1; stub_worker=1; }
 		[[ $line == "#! worker-env "* ]] && worker_extra+=("${line#\#! worker-env }")
 		[[ $line == "#! content real" ]] && content_root=""
 	done < "$scenarios_dir/$name.txt"
+	# Spec run-verify 2.6: the stairs wait for the floor just played to be verified, so a run past floor 0 needs the verifier.
+	# Every scenario starts the worker with the server, unless its script controls the worker itself (`e2e worker-start`).
+	(( manual_worker )) || want_worker=1
 	# The verifier worker (spec battle-verify): the same databases and broker, the fixtures content like the game, the
 	# ruleset version the server accepts, and the real headless Godot for every job.
 	local -a worker_env=("ConnectionStrings__Postgres=Host=127.0.0.1;Port=5432;Database=$db;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD"
@@ -171,7 +176,7 @@ run_scenario() {  # <name> <index 1-15>
 	# which reports the facts in STUB_FACTS (set with "#! worker-env"): completions no content emits yet. "#! worker-env K=V"
 	# adds any variable to the worker's environment (e.g. Settlement__CycleClockOffset, ASPNETCORE_ENVIRONMENT).
 	if (( stub_worker )); then
-		worker_env+=("Verifier__GodotPath=$(win "$root/tests/Rpg.VerifierWorker.Tests/stubs/godot-stub.cmd")" STUB_MODE=verified-facts)
+		worker_env+=("Verifier__GodotPath=$(win "$root/tests/Rpg.VerifierWorker.Tests/stubs/godot-stub.cmd")" STUB_MODE=verified-facts "STUB_REAL_GODOT=$(win "$godot")")
 	fi
 	if (( ${#worker_extra[@]} )); then worker_env+=("${worker_extra[@]}"); fi
 	start_worker() {
@@ -223,7 +228,7 @@ run_scenario() {  # <name> <index 1-15>
 					worker-stop)  # a kill, but only once a job is in flight (unacked), so the scenario proves a redelivery
 						local tries=0 unacked=0
 						while (( tries < 120 )); do
-							unacked=$(rabbit list_queues -p "$vhost" name messages_unacknowledged -q 2> /dev/null | tr -d '\r' | awk '$1 == "verify.battle" {print $2}')
+							unacked=$(rabbit list_queues -p "$vhost" name messages_unacknowledged -q 2> /dev/null | tr -d '\r' | awk '$1 == "verify.battle" || $1 == "verify.segment" {n += $2} END {print n + 0}')
 							(( ${unacked:-0} >= 1 )) && break
 							tries=$((tries + 1)); sleep 0.25
 						done
@@ -250,7 +255,7 @@ run_scenario() {  # <name> <index 1-15>
 							tries=$((tries + 1)); sleep 0.5
 						done
 						ids=$(psql -d "$db" -c "SELECT id FROM outbox WHERE destination = 'redpanda' AND published_at IS NOT NULL" 2>/dev/null | tr -d '')
-						dump=$(for topic in rpg.battle.events rpg.economy.events; do
+						dump=$(for topic in rpg.battle.events rpg.economy.events rpg.run.events rpg.security.events; do
 							"${compose[@]}" exec -T redpanda timeout 6 rpk topic consume "$topic" -o start -f '%v
 ' < /dev/null 2>/dev/null
 						done)
@@ -262,6 +267,8 @@ run_scenario() {  # <name> <index 1-15>
 					tamper-battle)  # the first battle's claimed final hash is replaced, as a cheating client would
 						[[ $(psql -d "$db" -c "UPDATE battle_sessions SET action_log = jsonb_set(action_log, '{claimedFinalHash}', to_jsonb(repeat('0', 64))) WHERE run_seq = (SELECT min(run_seq) FROM battle_sessions) RETURNING 1" 2>&1 | head -1 | tr -d '\r') == 1 ]] \
 							|| answer="no battle to tamper with" ;;
+					tamper-genesis)  # the claimed hash of the run's start (seq 1) is replaced, as a client with a richer start would send it
+						[[ $(psql -d "$db" -c "UPDATE run_actions SET state_hash = repeat('f', 64) WHERE seq = 1 RETURNING 1" 2>&1 | head -1 | tr -d '') == 1 ]] 							|| answer="no start to tamper with" ;;
 					*) answer="unknown action $action" ;;
 				esac
 				echo "[e2e] $action: $answer" >> "$dir/control.log"

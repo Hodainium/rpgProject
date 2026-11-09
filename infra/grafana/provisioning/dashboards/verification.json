@@ -1,112 +1,286 @@
 {
   "uid": "rpg-verification",
-  "title": "Battle verification",
-  "tags": ["rpg", "verification"],
+  "title": "Verification workers and settlement",
+  "tags": [
+    "rpg",
+    "verification"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "10s",
-  "time": { "from": "now-30m", "to": "now" },
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
   "panels": [
     {
-      "id": 1, "type": "timeseries", "title": "Verify jobs by result (per second)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-      "targets": [{ "expr": "sum by (result) (rate(rpg_verify_jobs_total[1m]))", "legendFormat": "{{result}}" }]
-    },
-    {
-      "id": 2, "type": "timeseries", "title": "Submitted to verdict latency (p50 / p95)",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
+      "id": 3,
+      "type": "timeseries",
+      "title": "Queue depth",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
       "targets": [
-        { "expr": "histogram_quantile(0.5, sum by (le) (rate(rpg_verify_latency_seconds_bucket[2m])))", "legendFormat": "p50" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(rpg_verify_latency_seconds_bucket[2m])))", "legendFormat": "p95" }
+        {
+          "expr": "rpg_verify_queue_depth",
+          "legendFormat": "{{queue}}"
+        }
       ]
     },
     {
-      "id": 3, "type": "timeseries", "title": "Queue depth",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "targets": [{ "expr": "rpg_verify_queue_depth", "legendFormat": "{{queue}}" }]
-    },
-    {
-      "id": 4, "type": "stat", "title": "Dead-lettered (DLQ size)",
-      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
-      "targets": [{ "expr": "rpg_verify_queue_depth{queue=\"dlq\"}" }]
-    },
-    {
-      "id": 5, "type": "timeseries", "title": "Oldest unverified battle (queue age)",
-      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
+      "id": 5,
+      "type": "timeseries",
+      "title": "Oldest unverified battle (queue age)",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
       "targets": [
-        { "expr": "rpg_battle_oldest_unverified_age_seconds", "legendFormat": "oldest" },
-        { "expr": "rpg_battles_unverified", "legendFormat": "unverified count" }
+        {
+          "expr": "rpg_battle_oldest_unverified_age_seconds",
+          "legendFormat": "oldest"
+        },
+        {
+          "expr": "rpg_battles_unverified",
+          "legendFormat": "unverified count"
+        }
       ]
     },
     {
-      "id": 6, "type": "timeseries", "title": "Rejections by mismatch reason (per minute)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
-      "targets": [{ "expr": "sum by (reason) (increase(rpg_battle_rejections_total[1m]))", "legendFormat": "{{reason}}" }]
-    },
-    {
-      "id": 7, "type": "timeseries", "title": "Godot replay time (p95, by result)",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, result) (rate(rpg_verify_replay_duration_seconds_bucket[2m])))", "legendFormat": "{{result}}" }]
-    },
-    {
-      "id": 8, "type": "timeseries", "title": "Worker process CPU (cores, per worker)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
-      "fieldConfig": { "defaults": { "unit": "none" } },
-      "targets": [{ "expr": "sum by (instance) (rate(dotnet_process_cpu_time_seconds_total[1m]))", "legendFormat": "{{instance}}" }]
-    },
-    {
-      "id": 9, "type": "timeseries", "title": "Worker process memory (working set, per worker)",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
-      "fieldConfig": { "defaults": { "unit": "bytes" } },
-      "targets": [{ "expr": "dotnet_process_memory_working_set_bytes", "legendFormat": "{{instance}}" }]
-    },
-    {
-      "id": 10, "type": "timeseries", "title": "Godot replay CPU time (p95, by result)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, result) (rate(rpg_verify_godot_cpu_time_seconds_bucket[2m])))", "legendFormat": "{{result}}" }]
-    },
-    {
-      "id": 11, "type": "timeseries", "title": "Godot replay peak memory (p95, by result)",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
-      "fieldConfig": { "defaults": { "unit": "bytes" } },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, result) (rate(rpg_verify_godot_peak_memory_bytes_bucket[2m])))", "legendFormat": "{{result}}" }]
-    },
-    {
-      "id": 12, "type": "timeseries", "title": "Outbox lag (oldest unpublished row, by destination)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
-      "fieldConfig": { "defaults": { "unit": "s" } },
-      "targets": [{ "expr": "rpg_outbox_oldest_unpublished_age_seconds", "legendFormat": "{{destination}}" }]
-    },
-    {
-      "id": 13, "type": "timeseries", "title": "Outbox pending and dead-lettered rows",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "id": 6,
+      "type": "timeseries",
+      "title": "Rejections by mismatch reason (per minute)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
       "targets": [
-        { "expr": "rpg_outbox_pending", "legendFormat": "pending {{destination}}" },
-        { "expr": "rpg_outbox_dead_lettered", "legendFormat": "dead-lettered {{destination}}" }
+        {
+          "expr": "sum by (reason) (increase(rpg_battle_rejections_total[1m]))",
+          "legendFormat": "{{reason}}"
+        }
       ]
     },
     {
-      "id": 14, "type": "timeseries", "title": "Outbox publishes (per second, by destination and result)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 48 },
-      "targets": [{ "expr": "sum by (destination, result) (rate(rpg_outbox_published_total[1m]))", "legendFormat": "{{destination}} {{result}}" }]
-    },
-    {
-      "id": 15, "type": "timeseries", "title": "Settlements (per second, by result) and gems granted",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 48 },
+      "id": 7,
+      "type": "timeseries",
+      "title": "Godot replay time (p95, by result)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
       "targets": [
-        { "expr": "sum by (result) (rate(rpg_settlements_total[1m]))", "legendFormat": "{{result}}" },
-        { "expr": "sum(rate(rpg_gems_granted_total[1m]))", "legendFormat": "gems/s" }
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(rpg_verify_replay_duration_seconds_bucket[2m])))",
+          "legendFormat": "{{result}}"
+        }
       ]
     },
     {
-      "id": 16, "type": "timeseries", "title": "Reward-rule lookups (per second, by result): a rising missing means a boss has no rule",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 56 },
-      "targets": [{ "expr": "sum by (result) (rate(rpg_reward_rule_lookups_total[5m]))", "legendFormat": "{{result}}" }]
+      "id": 8,
+      "type": "timeseries",
+      "title": "Worker process CPU (cores, per worker)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (instance) (rate(dotnet_process_cpu_time_seconds_total[1m]))",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Worker process memory (working set, per worker)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "expr": "dotnet_process_memory_working_set_bytes",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Godot replay CPU time (p95, by result)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(rpg_verify_godot_cpu_time_seconds_bucket[2m])))",
+          "legendFormat": "{{result}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Godot replay peak memory (p95, by result)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, result) (rate(rpg_verify_godot_peak_memory_bytes_bucket[2m])))",
+          "legendFormat": "{{result}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Outbox lag (oldest unpublished row, by destination)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rpg_outbox_oldest_unpublished_age_seconds",
+          "legendFormat": "{{destination}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Outbox pending and dead-lettered rows",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "targets": [
+        {
+          "expr": "rpg_outbox_pending",
+          "legendFormat": "pending {{destination}}"
+        },
+        {
+          "expr": "rpg_outbox_dead_lettered",
+          "legendFormat": "dead-lettered {{destination}}"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Outbox publishes (per second, by destination and result)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "targets": [
+        {
+          "expr": "sum by (destination, result) (rate(rpg_outbox_published_total[1m]))",
+          "legendFormat": "{{destination}} {{result}}"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Settlements (per second, by result) and gems granted",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "targets": [
+        {
+          "expr": "sum by (result) (rate(rpg_settlements_total[1m]))",
+          "legendFormat": "{{result}}"
+        },
+        {
+          "expr": "sum(rate(rpg_gems_granted_total[1m]))",
+          "legendFormat": "gems/s"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Reward-rule lookups (per second, by result): a rising missing means a boss has no rule",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 56
+      },
+      "targets": [
+        {
+          "expr": "sum by (result) (rate(rpg_reward_rule_lookups_total[5m]))",
+          "legendFormat": "{{result}}"
+        }
+      ]
     }
   ]
 }

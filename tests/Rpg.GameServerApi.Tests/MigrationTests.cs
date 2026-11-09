@@ -20,8 +20,9 @@ public class MigrationTests(StackFixture stack)
         await new MigrationRunner(dataSource, NullLogger<MigrationRunner>.Instance).EnsureMigratedAsync(Ct);
 
         Assert.Equal(MigrationRunner.Scripts.Select(s => s.Name), await AppliedAsync(dataSource));
-        Assert.Equal(["battle_sessions", "completion_marks", "outbox", "players", "reward_cycle_resets", "reward_rules", "run_actions",
-                "run_floors", "runs", "schema_migrations", "wallet_ledger", "wallets"],
+        Assert.Equal(["battle_sessions", "battle_sessions_voided", "completion_marks", "outbox", "players", "reward_cycle_resets",
+                "reward_rules", "run_actions", "run_actions_voided", "run_floors", "run_steps", "runs", "schema_migrations",
+                "wallet_ledger", "wallets"],
             await TablesAsync(dataSource));
     }
 
@@ -76,7 +77,63 @@ public class MigrationTests(StackFixture stack)
             await ListAsync(dataSource,
                 "SELECT a.attname FROM pg_index i JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY (i.indkey) " +
                 "WHERE i.indrelid = 'completion_marks'::regclass AND i.indisprimary ORDER BY 1"));
-        Assert.Equal(6, (await AppliedAsync(dataSource)).Count);
+        Assert.Equal(MigrationRunner.Scripts.Count, (await AppliedAsync(dataSource)).Count);
+    }
+
+    [Fact]
+    public async Task Migration0007_MarksTheRunsThatExist_Legacy_AndReleasesTheirLedgerRows()
+    {
+        await using var dataSource = NpgsqlDataSource.Create(await stack.NewDatabaseAsync());
+        var player = Guid.NewGuid();
+        var run = Guid.NewGuid();
+        await using (var connection = await dataSource.OpenConnectionAsync(Ct))
+        {
+            // The schema as slice 4d left it: scripts 0001..0006, recorded as applied, with a run, an action and a paid mark.
+            await ExecuteAsync(connection, "CREATE TABLE schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL)");
+            foreach (var (name, sql) in MigrationRunner.Scripts.Where(s => string.CompareOrdinal(s.Name, "0007") < 0))
+            {
+                await ExecuteAsync(connection, sql);
+                await ExecuteAsync(connection, $"INSERT INTO schema_migrations (name, applied_at) VALUES ('{name}', now())");
+            }
+
+            await ExecuteAsync(connection, $"INSERT INTO players (player_id, display_name, created_at) VALUES ('{player}', 'p', now())");
+            await ExecuteAsync(connection,
+                $"INSERT INTO runs (run_id, player_id, ruleset_version, run_structure_id, character_ids, status, started_at) " +
+                $"VALUES ('{run}', '{player}', 'r', 's', '{{a}}', 'Active', now())");
+            await ExecuteAsync(connection,
+                $"INSERT INTO wallet_ledger (player_id, currency, delta, reason, ref_battle_id, idempotency_key) " +
+                $"VALUES ('{player}', 'gems', 10, 'completion_mark', 'b1', 'mark:b1:a:boss/x')");
+            await ExecuteAsync(connection, $"INSERT INTO wallets (player_id, gems, version) VALUES ('{player}', 10, 1)");
+        }
+
+        await new MigrationRunner(dataSource, NullLogger<MigrationRunner>.Instance).EnsureMigratedAsync(Ct);
+        await new MigrationRunner(dataSource, NullLogger<MigrationRunner>.Instance).EnsureMigratedAsync(Ct);   // a no-op
+
+        Assert.Equal(["true:0:0"], await ListAsync(dataSource, "SELECT legacy || ':' || epoch || ':' || verified_seq FROM runs"));
+        Assert.Equal(["released:true"], await ListAsync(dataSource,
+            "SELECT status || ':' || (released_at IS NOT NULL) FROM wallet_ledger"));   // slice 4 settled it
+        await using (var connection = await dataSource.OpenConnectionAsync(Ct))
+        {
+            // A run started after the migration verifies, and the ledger invariant counts released rows only.
+            await ExecuteAsync(connection,
+                $"INSERT INTO runs (run_id, player_id, ruleset_version, run_structure_id, character_ids, status, started_at) " +
+                $"VALUES ('{Guid.NewGuid()}', '{player}', 'r', 's', '{{a}}', 'Abandoned', now())");
+            await ExecuteAsync(connection,
+                $"INSERT INTO wallet_ledger (player_id, currency, delta, reason, idempotency_key, status) " +
+                $"VALUES ('{player}', 'gems', 5, 'completion_mark', 'k2', 'pending')");
+        }
+
+        Assert.Equal(["false", "true"], await ListAsync(dataSource, "SELECT legacy::text FROM runs ORDER BY legacy"));
+        Assert.Equal(["10"], await ListAsync(dataSource,
+            $"SELECT COALESCE(sum(delta), 0)::text FROM wallet_ledger WHERE player_id = '{player}' AND status = 'released'"));
+        var badStatus = await Assert.ThrowsAsync<PostgresException>(async () =>
+        {
+            await using var connection = await dataSource.OpenConnectionAsync(Ct);
+            await ExecuteAsync(connection,
+                $"INSERT INTO wallet_ledger (player_id, currency, delta, reason, idempotency_key, status) " +
+                $"VALUES ('{player}', 'gems', 1, 'x', 'k3', 'maybe')");
+        });
+        Assert.Equal(PostgresErrorCodes.CheckViolation, badStatus.SqlState);
     }
 
     private static async Task ExecuteAsync(NpgsqlConnection connection, string sql)

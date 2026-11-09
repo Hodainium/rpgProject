@@ -69,6 +69,7 @@ func test_replay_rejects_dev_item() -> void:
 	check(snapshot["party"][0]["items"].has("dev.up.atk"), "the snapshot carries the dev item")
 	var result := await replay(copy({"snapshot": snapshot, "actionLog": ActionRecorder.build_log([], Battle.VICTORY, "")}))
 	check(result.get("verdict") != "Verified", "it never verifies")
-	check(str(result.get("runnerError", "")).contains("unknown item 'dev.up.atk'"),
+	eq(result["mismatch"]["reason"], "MalformedRequest", "it is refused as a malformed request")
+	check(str(result["mismatch"]["detail"]).contains("unknown item 'dev.up.atk'"),
 		"setup stops cleanly naming the item: %s" % result)
 	run.free()

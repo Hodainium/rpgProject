@@ -139,6 +139,53 @@ static func restore(run: RunController, content_index: ContentIndex, snapshot: D
 	return ""
 
 
+
+const TOP_KEYS: Array[String] = ["schemaVersion", "run", "map", "pendingBattle", "waitingFloor", "requestedFloors", "log", "tally"]
+const RUN_KEYS: Array[String] = ["runId", "runSeed", "floorSeeds", "structure", "party", "coins", "seenItems", "armor", "floor",
+	"chapter", "currentCell", "bossCleared", "fieldActions", "gifts", "event", "pendingGifts", "status", "dev", "sandbox", "revealed",
+	"revealEvents", "keys", "goldenKey", "chests", "chestSerial", "devCommands"]
+const MEMBER_KEYS: Array[String] = ["slot", "character", "level", "xp", "hp", "mp", "energy", "alive", "skills", "items", "useSlots",
+	"equipment"]
+const CELL_KEYS: Array[String] = ["index", "cell", "role", "special_tag", "room", "doors", "content", "pickups", "visited", "cleared"]
+
+
+## "" when `saved` has the shape restore() reads, else what is missing. A snapshot comes from a client and a
+## missing key is a script error in the verifier, so the step runner refuses such a request as malformed instead of failing on it.
+static func shape_problem(saved: Variant) -> String:
+	if not saved is Dictionary:
+		return "a snapshot must be an object"
+	for key in TOP_KEYS:
+		if not saved.has(key):
+			return "the snapshot has no \"%s\"" % key
+	if not saved["run"] is Dictionary:
+		return "snapshot.run must be an object"
+	for key in RUN_KEYS:
+		if not saved["run"].has(key):
+			return "snapshot.run has no \"%s\"" % key
+	if not saved["run"]["party"] is Array or not saved["run"]["floorSeeds"] is Dictionary or not saved["log"] is Array 			or not saved["requestedFloors"] is Array or not saved["tally"] is Dictionary:
+		return "a snapshot field has the wrong type"
+	for member in saved["run"]["party"]:
+		if not member is Dictionary:
+			return "a party member must be an object"
+		for key in MEMBER_KEYS:
+			if not member.has(key):
+				return "a party member has no \"%s\"" % key
+	if saved["map"] != null:
+		if not saved["map"] is Dictionary or not saved["map"].get("cells") is Array:
+			return "snapshot.map must be an object with cells"
+		for key in ["size", "start", "boss", "attempts"]:
+			if not saved["map"].has(key):
+				return "snapshot.map has no \"%s\"" % key
+		for cell in saved["map"]["cells"]:
+			if not cell is Dictionary:
+				return "a map cell must be an object"
+			for key in CELL_KEYS:
+				if not cell.has(key):
+					return "a map cell has no \"%s\"" % key
+	return ""
+
+
+
 static func _map(map: FloorMap) -> Dictionary:
 	var cells: Array = []
 	for index in map.sorted_indices():

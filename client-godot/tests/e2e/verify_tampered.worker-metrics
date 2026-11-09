@@ -1,3 +1,6 @@
-rpg_verify_jobs_total\{[^}]*result="rejected"[^}]*\} 1( |$)
+rpg_step_jobs_total\{[^}]*result="rejected"[^}]*\} 1( |$)
+rpg_step_mismatches_total\{[^}]*reason="BattleMismatch"[^}]*\} 1( |$)
 rpg_battle_rejections_total\{[^}]*reason="FinalHashMismatch"[^}]*\} 1( |$)
-rpg_verify_jobs_total\{[^}]*result="verified"[^}]*\} [1-9]
+rpg_run_rollbacks_total\{[^}]*reason="Illegal"[^}]*terminal="false"[^}]*\} 1( |$)
+rpg_anticheat_events_total\{[^}]*kind="Illegal"[^}]*\} 1( |$)
+rpg_step_jobs_total\{[^}]*result="verified"[^}]*\} [1-9]

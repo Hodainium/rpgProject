@@ -106,7 +106,9 @@ public class RunTests(StackFixture stack)
         var client = await ClientAsync(factory, "alice");
         var run = await client.StartRunAsync(Start, Ct);
 
+        await GateOpenAsync(factory, run.RunId);
         var floor1 = await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
+        await GateOpenAsync(factory, run.RunId);
         var floor2 = await client.GetFloorSeedAsync(run.RunId, 2, Stairs, Ct);
 
         Assert.Equal(Seeds(factory).Derive(Guid.Parse(run.RunId), 1).ToString(), floor1.FloorSeed);
@@ -121,6 +123,7 @@ public class RunTests(StackFixture stack)
         var client = await ClientAsync(factory, "alice");
         var run = await client.StartRunAsync(Start, Ct);
 
+        await GateOpenAsync(factory, run.RunId);
         var first = await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
         var retry = await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
 
@@ -137,6 +140,7 @@ public class RunTests(StackFixture stack)
         var run = await client.StartRunAsync(Start, Ct);
 
         var skip = await Assert.ThrowsAsync<GameServerApiException>(() => client.GetFloorSeedAsync(run.RunId, 2, Stairs, Ct));
+        await GateOpenAsync(factory, run.RunId);
         await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
         var back = await Assert.ThrowsAsync<GameServerApiException>(() => client.GetFloorSeedAsync(run.RunId, 0, Stairs, Ct));
 
@@ -245,6 +249,7 @@ public class RunTests(StackFixture stack)
 
         await client.GetRunAsync(run.RunId, Ct);
         var filled = await redis.GetDatabase().KeyExistsAsync(key);
+        await GateOpenAsync(factory, run.RunId);
         await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
         var afterWrite = await redis.GetDatabase().KeyExistsAsync(key);
         var fresh = await client.GetRunAsync(run.RunId, Ct);
@@ -263,6 +268,7 @@ public class RunTests(StackFixture stack)
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
         var run = await client.StartRunAsync(Start, Ct);
+        await GateOpenAsync(factory, run.RunId);
         await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct);
         var before = await client.GetRunAsync(run.RunId, Ct);
         var current = await client.GetCurrentRunAsync(Ct);
@@ -283,6 +289,7 @@ public class RunTests(StackFixture stack)
 
         var first = await client.StartRunAsync(Start, Ct);
         var second = await client.StartRunAsync(Start, Ct);
+        await GateOpenAsync(factory, second.RunId);
         var floor = await client.GetFloorSeedAsync(second.RunId, 1, Stairs, Ct);
 
         Assert.Equal(RunStatus.Abandoned, (await client.GetRunAsync(first.RunId, Ct)).Status);
@@ -314,7 +321,6 @@ public class RunTests(StackFixture stack)
             {
                 ["Ruleset:AcceptAny"] = "true",
                 ["Auth:DevTokens"] = "true",
-                ["Run:AutoApproveWins"] = "true",
             });
 
         // No dev tokens outside Development, whatever Auth:DevTokens says.
@@ -333,7 +339,7 @@ public class RunTests(StackFixture stack)
         Assert.False(ruleset.Accepts("anything"));
         Assert.True(ruleset.Accepts(ApiFactory.TestRuleset));
 
-        // AutoApproveWins is set, but a won run still waits for its verdict.
+        // A won run waits for its verdict (Run:AutoApproveWins is gone, spec run-verify 2.6).
         var run = await client.StartRunAsync(Start, Ct);
         await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(1)), Ct);
         var end = await client.EndRunAsync(run.RunId, RunLog.End(2, RunEndStatus.Won), Ct);
@@ -349,6 +355,7 @@ public class RunTests(StackFixture stack)
         await client.StartRunAsync(Start, Ct);
         await client.GetFloorSeedAsync(run.RunId, 1, Stairs, Ct).ContinueWith(_ => { }, Ct);  // ended: not counted
         var live = await client.StartRunAsync(Start, Ct);
+        await GateOpenAsync(factory, live.RunId);
         await client.GetFloorSeedAsync(live.RunId, 1, Stairs, Ct);
         await client.GetFloorSeedAsync(live.RunId, 1, Stairs, Ct);
         await client.GetFloorSeedAsync(live.RunId, 3, Stairs, Ct).ContinueWith(_ => { }, Ct);
@@ -411,6 +418,23 @@ public class RunTests(StackFixture stack)
 
     private static FloorSeeds Seeds(ApiFactory factory) =>
         new(factory.Services.GetRequiredService<IOptions<SeedOptions>>());
+
+    /// <summary>
+    /// Marks every issued floor of the run verified. The seed and stairs tests here are about seeds and ordering, not about
+    /// verification; the gate itself (1107) is tested in RunVerifyTests.
+    /// </summary>
+    internal static async Task GateOpenAsync(ApiFactory factory, string runId)
+    {
+        await using var command = factory.Services.GetRequiredService<Npgsql.NpgsqlDataSource>()
+            .CreateCommand($"UPDATE run_floors SET verified_at = now() WHERE run_id = '{runId}'");
+        await command.ExecuteNonQueryAsync(Ct);
+    }
+
+    internal static async Task ExecuteAsync(ApiFactory factory, string sql)
+    {
+        await using var command = factory.Services.GetRequiredService<Npgsql.NpgsqlDataSource>().CreateCommand(sql);
+        await command.ExecuteNonQueryAsync(Ct);
+    }
 
     internal static async Task<long> ScalarAsync(ApiFactory factory, string sql)
     {

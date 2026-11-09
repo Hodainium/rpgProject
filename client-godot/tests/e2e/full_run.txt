@@ -1,6 +1,6 @@
 # Spec server-authority Part B (dev-tools E9): a whole server run. Every action uploads in order (snapshots at the
 # checkpoints, battles as battle sessions), the stairs wait for the floor's log, and the run ends: a death at once, a
-# win only after the server's verdict (Run:AutoApproveWins in Development). The presence monitor counts every second.
+# win only after the verifier's verdict on every step (spec run-verify; the worker runs with the server). The presence monitor counts every second.
 #! env Monitors__Interval=00:00:01
 new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
 wait run
