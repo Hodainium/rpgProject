@@ -4,7 +4,8 @@
 ## Pick a rarity colour and a quality tier, toggle looping effects, stop everything. Dev builds and the editor only.
 ##   godot --path client-godot res://game/dev/fx_gallery.tscn                       (a window)
 ##   ... -- --play fx.hit_spark,fx.card_glow --shots <dir> [--shot-at 0.1,0.4,0.8]  (play, screenshot, quit)
-## Claude uses the second form to look at an effect: one PNG per effect and time in <dir>.
+## Claude uses the second form to look at an effect: one PNG per effect and time in <dir>. `--tiers high,low,medium,off` changes
+## the quality tier between frames instead (the mid-game Settings change).
 extends Node
 
 const RARITIES: Dictionary = {"Common": Color(0.8, 0.82, 0.86), "Rare": Color(0.35, 0.6, 1.0), "Epic": Color(0.7, 0.4, 1.0),
@@ -204,10 +205,21 @@ func _run_shots(args: PackedStringArray) -> void:
 		_use_color = true
 		_color = Color.from_string(_arg(args, "--color", "#ffa626"), Color.WHITE)
 	await get_tree().create_timer(0.4).timeout
+	var tiers: PackedStringArray = _arg(args, "--tiers", "").split(",", false)
 	for id in ids:
 		var handle := _play(StringName(id))
 		var frames: Array[Image] = []
 		var last := 0.0
+		# --tiers high,low,medium,off: change the quality tier while the (looping) effect plays and take a frame after each
+		# change (a mid-game Settings change; spec vfx-framework). The first frame is taken before any change.
+		if not tiers.is_empty():
+			for tier_name in tiers:
+				FxManager.quality = FxQuality.from_text(tier_name)
+				await get_tree().create_timer(0.5).timeout
+				if dir != "":
+					await RenderingServer.frame_post_draw
+					frames.append(get_viewport().get_texture().get_image())
+			times = []
 		for time in times:
 			await get_tree().create_timer(maxf(time - last, 0.001)).timeout
 			last = time
