@@ -483,7 +483,7 @@ No lock is added: row locks and the status guards are the dedup (the `lock:battl
 | F12 | Stairs ahead of verification | `409 1107` + `Retry-After` until the floor just played is verified; the client retries and the player sees the pop-up | `Stairs_PreviousFloorUnverified_Is1107`, `Stairs_AfterVerification_Opens`; e2e `stairs_gate` |
 | F13 | Win submitted, steps still pending or one rejected | Stays `Verifying`; becomes `Won` only at `verified_seq = end_seq`; a rejection rolls back to `Active` (never a victory) | `Win_WaitsForEveryStep`, `Win_WithARejectedStep_RollsBack`; Godot `test_win_waits_for_verdict` (updated) |
 | F14 | Pending gems | Pending at the battle verdict; released when the battle is inside the verified prefix; voided with its mark on rollback; the other order (run verified first) releases at once; exactly once either way | `Gems_PendingThenReleased`, `Gems_RunVerifiedFirst_ReleasedAtOnce`, `Gems_VoidedOnRollback_MarkFreed`, `Gems_ReleaseTwice_PaysOnce`, `WalletInvariant_EqualsReleasedLedger`; e2e `run_pending_gems` |
-| F15 | Fabricated battle conditions (an easy "boss") | `ConditionsMismatch` rejects the battle step → rollback, gems voided. Closes `settlement-outbox` 8.1 | Godot `test_step_tampered_conditions`; e2e `run_tamper_conditions` |
+| F15 | Fabricated battle conditions (an easy "boss") | `ConditionsMismatch` rejects the battle step → rollback, gems voided. Closes `settlement-outbox` 8.1 | Godot `test_fabricated_battle_conditions_are_named`; worker `AFabricatedBattle_IsRejectedAsConditionsMismatch_RollsTheRunBack_AndNothingIsPaid`; e2e `verify_fabricated_conditions` |
 | F16 | Postgres down at verdict time | Postpone on the 30 s tier without counting an attempt (as battle-verify F12) | `PostgresDown_PostponesStep` |
 | F17 | Redis flushed or down | Floor read model and caches rebuild from Postgres; verification unaffected. **Scenario 4** | `FloorDigest_RedisFlushed_ServedFromPostgres`; e2e `run_verify_redis_flush` |
 | F18 | Redpanda down during aggregation | Events are outbox rows written in the aggregator's transaction; they drain when it returns. **Scenario 3** | `Aggregator_WritesEventsInTheSameTransaction`; e2e `run_verify_redpanda_down` (with `redpanda-check`) |
@@ -583,8 +583,10 @@ the stairs, then `worker-start` lets it through); `verify_tampered` (the `tamper
 rollback, `1108`, the client rebuilds from the server and the titan party finishes the run to a verified win);
 `genesis_forged` (the `tamper-genesis` control step: a forged start ends the run Rejected); `settle_boss` and the reward
 scenarios (pending, then released, wallet and events agree); `verify_worker_kill`, `verify_redis_flush`,
-`outbox_redpanda_down` (with `redpanda-check`) and `verify_demo_content` (the real demo content). Not built: a fabricated-boss
-scenario (`run_tamper_conditions`; the Godot `ConditionsMismatch` test and the worker's rollback tests cover it). The
+`outbox_redpanda_down` (with `redpanda-check`) and `verify_demo_content` (the real demo content). `verify_fabricated_conditions` (the
+`tamper-conditions` control step alters the first battle's stored conditions: the step is rejected as `ConditionsMismatch`
+without replaying the battle, the run is rolled back, nothing is paid for it and the rebuilt run is played to a verified
+win; pending gems of later steps verified first are voided on the rollback). The
 scenarios that relied on `Run:AutoApproveWins` start the worker by default (`#! worker` is implied unless the script
 controls it with `e2e worker-start`).
 
