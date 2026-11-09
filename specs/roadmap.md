@@ -158,8 +158,10 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   the game is single-collection, like Hearthstone: no trading between players). Slice 5 is reshaped the same day: no
   eidolons (one copy unlocks a card, duplicates add no power and are worth dust); a core set every account owns, always in
   the pools and not dustable, so a collection can't be stripped down to one strong item; Hearthstone-style crafting (any
-  card for dust); and a removal-only run lock covering every card acquired before the run started, duplicates by
-  acquisition date. No house account, escrow or market routes. Market mentions in 4b, 7, the Redis plan and the other
+  card for dust); and a removal-only run lock covering every card acquired before the run started, one acquisition time per card. No house account, escrow or market routes.
+  Later the same day: a card is owned once (a duplicate is auto-dusted on arrival, so ownership is a set and there is no
+  copy cap to decide); the run lock never expires and the player cancels the run from a pop-up to dust; the core set is
+  sized like Isaac's starting item pools, with the existing room pool tags on each card. Market mentions in 4b, 7, the Redis plan and the other
   specs and docs are removed.
 - 2026-11-08: Added slice 7b `data-retention` before 8, at the user's request: outbox, step, voided and settled-session
   tables grow forever and slice 8 should measure it. Also dropped the per-battle verifier role (`verify.battle`) with 4a:
@@ -484,49 +486,54 @@ speed) feeds a delayed review queue, not instant bans.
 **Purpose:** Hearthstone-style collecting instead of gacha pulls. Every playable character and every item is a
 **card** in the player's account collection.
 - **What owning a card does:** one copy unlocks it (a character becomes playable; an item enters the run's item
-  pools). **Duplicates add no power**, for characters or items (decided 2026-11-09: no eidolons); their value is dust.
+  pools). **A card is owned once** (decided 2026-11-09): there are no eidolons and duplicates add no power, so a copy
+  of a card the player already owns is **auto-dusted on arrival** (from a pack; a card that is already owned can't be
+  crafted). Ownership is therefore a set, not a count.
 - **Rarities:** characters are always Legendary; items are Common, Rare, Epic or Legendary.
 - **Core set (Hearthstone's Basic set; decided 2026-11-09):** a fixed set of cards every account owns from the start:
   the starter characters and a baseline of items. Core cards are always in the run's pools, can't be dusted, and are
   never crafted or found in packs. The item pool of a run is the core set plus the collected cards, so the pool is
   never tiny: a player can't strip a collection down to one strong card and get it every run. Collected cards are
-  typically stronger items (and the remaining characters), which is why players want them. Which cards are core is
-  content (a card set tag); the balance gate is tuned on the core pool alone, the worst case for a new account.
+  typically stronger items (and the remaining characters), which is why players want them. **Size and shape:** each
+  item card already carries the room pool it spawns in (`Pool.Treasure`, `Pool.Shop`, `Pool.Boss`, `Pool.Void`,
+  `Pool.Vault`, `Pool.Food`, `Pool.Chest`), and the core set gives every pool a baseline about the size of Isaac's
+  starting pools for that room (item room, shop, boss, ...). Collected cards add to those pools. Which cards are core
+  is content (a card set tag beside the pool tags); the balance gate is tuned on the core pool alone, the worst case for
+  a new account. Whether Void and Vault (route rooms) have core cards is a spec question.
 - **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
 - **Packs:** several pack types, each with its own card list and rarity odds. Opening is server-side, on a pack RNG
   separate from combat RNG, recorded for audit.
 - **Dust:** any collected (non-core) card can be dusted for a flat rate per rarity, unless the run lock holds it. Dusting
-  removes the copy from the account (as in Hearthstone); there is no trading between players. Duplicates are the main
-  source of dust. Whether copies beyond a cap (Hearthstone: two, one for Legendary) are dusted on opening is decided
-  in the spec.
+  removes the card from the account (as in Hearthstone); there is no trading between players. Auto-dusted duplicates are
+  the main source of dust.
 - **Crafting (Hearthstone-style):** any card can be crafted for dust at a fixed cost per rarity, whatever set it is from,
   so every card is reachable without trading. Dusting pays a fraction of the craft cost (Hearthstone: a quarter), so
   crafting is a dust sink. The costs and refunds live in a server-owned, versioned table like the reward rules, so
-  retuning never changes the ruleset version. A copy cap per card (characters stop at 7 copies = E6) is decided in the spec.
+  retuning never changes the ruleset version.
 - **Run lock (removal only; decided 2026-11-09):** cards can always be acquired (packs, crafting) while a run is active,
-  and a card acquired after the run started never affects it. Every card acquired before the run started is locked:
-  it can't be removed (dusted) until the run ends or is abandoned, because the run's pools and
-  party were built from it. Duplicates follow the same date rule: the server compares each copy's acquisition time with
-  `runs.started_at`, from the collection's ledger (the quantity held at the start is locked, copies acquired later can
-  be dusted at once). Verification does not depend on the lock (the run's start inputs are stored at run start); the
-  lock stops a player taking dust from cards the run is built on. To settle in the spec: abandoned or stale active runs
-  (a new start already abandons the previous run; a long-idle run should stop locking), since the rule locks the whole
-  collected collection while a run is active.
+  and a card acquired after the run started never affects it. Every card acquired before the run started is locked: it
+  can't be dusted until the run ends or is cancelled, because the run's pools and party were built from it. Each card has
+  one acquisition time, compared with `runs.started_at`. The lock **never expires**: an idle or abandoned run keeps
+  it until the player cancels the run. Trying to dust while a run is active gets a `409` naming the run, and the client
+  shows a pop-up offering to cancel it (the cancel path ends the run as abandoned, not as a death; starting a new run
+  already abandons the previous one). A duplicate that arrives during a run is auto-dusted as usual, which never touches
+  the locked copy. Verification does not depend on the lock (the run's start inputs are stored at run start); the lock
+  stops a player taking dust from cards the run is built on.
 
-Server: account collection (card counts), currency ledgers and pack catalog in Postgres; collection, pack, dust and
+Server: account collection (one row per player and card, with its acquisition time), currency ledgers and pack catalog in Postgres; collection, pack, dust and
 craft endpoints (blocking account actions, idempotent by request key); currency changes and card moves in one
 transaction with an outbox row (pack opened, card dusted, card crafted). Contracts: the collection, plus the unlocked
 characters and items (the run's pool) in the run's starting state.
 Redis: **pack catalog cache** (pack types, odds and card lists; Postgres is the source; invalidated when a pack
 changes).
 
-**Account rules** (requirements of this slice): ownership is counts per player and card, and every card move is a
-ledger row with a time (the run lock reads these times); every gem or dust change is a ledger row with a reason, a
+**Account rules** (requirements of this slice): ownership is one row per player and card with the time it was acquired
+(the run lock compares it with the run's start), and every card move is also a ledger row; every gem or dust change is a ledger row with a reason, a
 reference id and an idempotency key (the wallet ledger pattern, extended to dust); account actions (pack open, dust,
 craft) are idempotent by request key, like the run endpoints; every card or currency move writes an outbox event, so
 analytics needs no backfill.
 
-> 🎨 Suggested design break 3, card feel: sets and rarities, dust rates and craft costs, pack odds, which cards are core,
+> 🎨 Suggested design break 3, card feel: sets and rarities, dust rates and craft costs, pack odds, which cards are core and their sizes per room pool,
 > pack-opening animation.
 
 ### 6. `observability`
