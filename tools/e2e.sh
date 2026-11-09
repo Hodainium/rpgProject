@@ -67,8 +67,11 @@ validate() {  # <scenario>
 	fi
 }
 for name in "${picked[@]}"; do validate "$name"; done
-if (( ! check )) && [[ " ${picked[*]} " == *" outbox_redpanda_down "* ]] && (( ${#picked[@]} > 1 )); then
-	echo "e2e.sh: outbox_redpanda_down stops the shared Redpanda: run it alone"; problems=$((problems + 1))
+if (( ! check )) && (( ${#picked[@]} > 1 )); then
+	for name in "${picked[@]}"; do  # a scenario that stops the shared Redpanda (`e2e redpanda-stop`) runs alone
+		grep -qE '^e2e redpanda-stop' "$scenarios_dir/$name.txt" 2>/dev/null \
+			&& { echo "e2e.sh: $name stops the shared Redpanda: run it alone"; problems=$((problems + 1)); }
+	done
 fi
 for tool in "$godot" dotnet docker curl; do
 	command -v "$tool" > /dev/null 2>&1 || [[ -x $tool ]] || { echo "e2e.sh: $tool not found"; problems=$((problems + 1)); }

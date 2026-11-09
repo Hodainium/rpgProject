@@ -955,4 +955,30 @@ public class CardCollectionTests(StackFixture stack)
         Assert.Equal(HttpStatusCode.ServiceUnavailable, open.StatusCode);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, collection.StatusCode);
     }
+
+    [Fact]
+    public async Task EveryOtherCardEndpoint_WithPostgresUnreachable_Answers503_NeverA500()
+    {
+        // The catalogs fall back to Postgres on a Redis miss, and the admin calls reach it after the role check.
+        await using var factory = new ApiFactory(StackFixture.Unreachable.Postgres, stack.RedisConnectionString, stack.RabbitMqUri,
+            "Development", Cards);
+        var player = new GameServerClient(factory.CreateClient(), Token(factory, "alice"));
+        var admin = new GameServerClient(factory.CreateClient(), Token(factory, "designer"));
+        var pack = Pack("p", 10, 3, new Dictionary<string, int> { [CardRarities.Common] = 10_000 });
+
+        var failures = new[]
+        {
+            await RefusedAsync(() => player.GetCardCatalogAsync(Ct)),
+            await RefusedAsync(() => player.GetPacksAsync(Ct)),
+            await RefusedAsync(() => player.DustCardAsync("item.k1", Guid.NewGuid(), Ct)),
+            await RefusedAsync(() => player.CraftCardAsync("item.k1", Guid.NewGuid(), Ct)),
+            await RefusedAsync(() => player.AbandonRunAsync(Guid.NewGuid().ToString("D"), Ct)),
+            await RefusedAsync(() => admin.ListPackTypesAsync(Ct)),
+            await RefusedAsync(() => admin.ListCardRatesAsync(Ct)),
+            await RefusedAsync(() => admin.PutPackTypeAsync(pack, Ct)),
+            await RefusedAsync(() => admin.PutCardRateAsync(new CardRateRequest(CardRarities.Epic, 100, 400), Ct)),
+        };
+
+        Assert.All(failures, e => Assert.Equal(HttpStatusCode.ServiceUnavailable, e.StatusCode));
+    }
 }

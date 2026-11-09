@@ -549,3 +549,200 @@ func test_a_won_server_run_blocks_leaving_until_the_server_accepts_it() -> void:
 	check(not game.leaving_blocked(), "once the server accepted it (the end screen) the player can leave")
 	game.back_to_menu()
 	eq(game.mode, "menu", "and does")
+
+
+# --- The card console commands against a fake server --------------------------------------------------------------------------
+
+## A GameMain in server mode over a fake bridge, and the console attached to it.
+func _server_session(bridge: FakeBridge) -> Array:
+	var session := _session()
+	var game: GameMain = session[0]
+	var link := _link(bridge)
+	game.server = link
+	return [game, session[1], link]
+
+
+const COLLECTION := {"owned": [{"cardId": "item.a", "acquiredAt": "t", "source": "pack", "lockedByRunId": "r1"},
+	{"cardId": "item.b", "acquiredAt": "t", "source": "craft", "lockedByRunId": null}], "gems": 5, "dust": 40, "version": 2,
+	"activeRunId": "r1", "activeRunStatus": "Active", "pity": [{"packId": "p", "missedPacks": {"legendary": 7, "mythic": 3}}]}
+
+
+func test_the_cards_command_shows_the_account() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers["GetCollection"] = [[true, COLLECTION]]
+	var session := _server_session(bridge)
+	var result: Dictionary = await session[1].execute("cards")
+	check(result["ok"], "cards works: %s" % result["text"])
+	for part in ["gems 5, dust 40", "2 collected", "item.a", "locked by the run", "item.b", "pity p", "legendary 7"]:
+		check(result["text"].contains(part), "the account line has '%s': %s" % [part, result["text"]])
+	bridge.answers["GetCollection"] = [[false, {"status": 503, "errorCode": null, "title": "down", "detail": ""}]]
+	var down: Dictionary = await session[1].execute("cards")
+	check(not down["ok"] and down["text"].contains("503"), "a server error is a failed command: %s" % down["text"])
+
+
+func test_the_packs_command_lists_opens_and_shows_pity() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers["GetPacks"] = [[true, {"packs": [{"packId": "descent-pack", "name": "Descent", "version": 1, "priceGems": 100, "cardCount": 5,
+		"oddsPer10000": {"common": 7210, "rare": 2200, "epic": 450, "legendary": 100, "mythic": 40}, "setIds": ["descent"], "cardIds": [],
+		"pityPacks": {"epic": 10, "legendary": 20, "mythic": 30}, "firstGuarantees": {}, "minRarityPerPack": "rare"}]}]]
+	bridge.answers["OpenPack"] = [[true, {"openingId": "o", "packId": "descent-pack", "packVersion": 1, "gemsSpent": 100, "gems": 400, "dust": 25,
+		"drawSeed": "9", "cards": [{"cardId": "item.a", "rarity": "common", "duplicate": false, "dustGained": 0, "pity": false},
+			{"cardId": "item.b", "rarity": "rare", "duplicate": true, "dustGained": 20, "pity": false},
+			{"cardId": "hero.m", "rarity": "mythic", "duplicate": false, "dustGained": 0, "pity": true}]}]]
+	bridge.answers["GetCollection"] = [[true, COLLECTION]]
+	var session := _server_session(bridge)
+	var listed: Dictionary = await session[1].execute("packs")
+	check(listed["ok"] and listed["text"].contains("descent-pack: 100 gems, 5 cards") and listed["text"].contains("common 72.10%")
+		and listed["text"].contains("pity epic 10") and listed["text"].contains("at least a rare"), "the pack line: %s" % listed["text"])
+	var opened: Dictionary = await session[1].execute("packs open descent-pack")
+	check(opened["ok"], "open works: %s" % opened["text"])
+	for part in ["opened descent-pack", "for 100 gems", "gems 400, dust 25", "common item.a  NEW", "(duplicate: +20 dust)", "[pity]"]:
+		check(opened["text"].contains(part), "the opening has '%s': %s" % [part, opened["text"]])
+	var sent: Dictionary = JSON.parse_string(bridge.of("OpenPack")[0][2])
+	check(opened["text"].contains(str(sent["requestKey"])), "the reply prints the request key the call used")
+	eq(bridge.of("OpenPack")[0][1], "descent-pack", "for that pack")
+	var retried: Dictionary = await session[1].execute("packs open descent-pack 11111111-2222-4333-8444-555555555555")
+	check(retried["ok"], "a retry with a key")
+	eq(JSON.parse_string(bridge.of("OpenPack")[1][2])["requestKey"], "11111111-2222-4333-8444-555555555555", "uses the key it was given")
+	var pity: Dictionary = await session[1].execute("packs pity")
+	check(pity["ok"] and pity["text"].contains("p: packs since") and pity["text"].contains("mythic 3"), "the pity counters: %s" % pity["text"])
+	var bad: Dictionary = await session[1].execute("packs open")
+	check(not bad["ok"], "open needs a pack id")
+
+
+func test_the_dust_command_resolves_first_and_names_the_locking_run() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers["GetCollection"] = [[true, COLLECTION]]
+	bridge.answers["DustCard"] = [[false, {"status": 409, "errorCode": 1403, "title": "Card locked by the run", "detail": "", "runId": "r1", "runStatus": "Active"}],
+		[true, {"cardId": "item.a", "dustGained": 5, "rateVersion": 2, "dust": 45}]]
+	var session := _server_session(bridge)
+	var locked: Dictionary = await session[1].execute("dust first")
+	check(not locked["ok"] and locked["text"].contains("1403") and locked["text"].contains("r1") and locked["text"].contains("Active")
+		and locked["text"].contains("abandon"), "the lock is explained: %s" % locked["text"])
+	eq(bridge.of("DustCard")[0][1], "item.a", "'first' is the first card of the collection")
+	var done: Dictionary = await session[1].execute("dust item.a")
+	check(done["ok"] and done["text"].contains("dusted item.a: +5 dust (rate version 2), dust now 45"), "a dust: %s" % done["text"])
+	var none: Dictionary = await session[1].execute("dust")
+	check(not none["ok"], "a card id is needed")
+
+
+func test_the_craft_command_reports_the_cost_and_the_refusal() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers["CraftCard"] = [[false, {"status": 409, "errorCode": 1402, "title": "Not enough currency", "detail": ""}],
+		[true, {"cardId": "item.e1", "dustSpent": 400, "rateVersion": 1, "dust": 60}]]
+	var session := _server_session(bridge)
+	var poor: Dictionary = await session[1].execute("craft item.e1")
+	check(not poor["ok"] and poor["text"].contains("1402") and poor["text"].contains("key "), "a refusal names its code and the key: %s" % poor["text"])
+	var crafted: Dictionary = await session[1].execute("craft item.e1")
+	check(crafted["ok"] and crafted["text"].contains("crafted item.e1 for 400 dust") and crafted["text"].contains("dust now 60"), "a craft: %s" % crafted["text"])
+
+
+func test_the_abandon_command_cancels_the_run_on_the_server() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers["AbandonRun"] = [[true, null], [false, {"status": 409, "errorCode": 1410, "title": "A run is being verified", "detail": ""}]]
+	var session := _server_session(bridge)
+	var nothing: Dictionary = await session[1].execute("abandon")
+	check(not nothing["ok"] and nothing["text"].contains("no server run"), "no run on screen and no id: %s" % nothing["text"])
+	var named: Dictionary = await session[1].execute("abandon run-7")
+	check(named["ok"] and named["text"].contains("run run-7 abandoned"), "by id: %s" % named["text"])
+	eq(bridge.of("AbandonRun")[0][1], "run-7", "the call names the run")
+	var verifying: Dictionary = await session[1].execute("abandon run-8")
+	check(not verifying["ok"] and verifying["text"].contains("1410"), "a run being verified cannot be cancelled: %s" % verifying["text"])
+
+
+func test_the_server_pack_type_command_merges_into_the_latest_version() -> void:
+	var latest := {"packId": "descent-pack", "name": "Descent Pack", "version": 2, "priceGems": 100, "cardCount": 5,
+		"oddsPer10000": {"common": 7210, "rare": 2200, "epic": 450, "legendary": 100, "mythic": 40}, "setIds": ["descent"], "retired": false,
+		"pityPacks": {"epic": 10}, "firstGuarantees": {"epic": 5}, "minRarityPerPack": "rare", "createdBy": "dev"}
+	var bridge := FakeBridge.new()
+	bridge.answers["ListPackTypes"] = [[true, {"packTypes": [latest]}]]
+	bridge.answers["PutPackType"] = [[true, latest.merged({"version": 3, "priceGems": 150}, true)]]
+	var session := _server_session(bridge)
+	var listed: Dictionary = await session[1].execute("server pack-type")
+	check(listed["ok"] and listed["text"].contains("descent-pack v2: 100 gems, 5 cards"), "the list: %s" % listed["text"])
+	var changed: Dictionary = await session[1].execute("server pack-type descent-pack price=150 min=none pity=epic:8,legendary:20")
+	check(changed["ok"] and changed["text"].contains("v3") and changed["text"].contains("150 gems"), "a change: %s" % changed["text"])
+	var body: Dictionary = JSON.parse_string(bridge.of("PutPackType")[0][1])
+	eq(body["priceGems"], 150, "the new price")
+	eq(body["cardCount"], 5, "what was left out keeps the latest version's value")
+	eq(body["oddsPer10000"]["mythic"], 40, "also the odds")
+	check(not body.has("minRarityPerPack"), "min=none clears the guarantee")
+	eq([int(body["pityPacks"]["epic"]), int(body["pityPacks"]["legendary"]), body["pityPacks"].size()], [8, 20, 2], "pity=… replaces the map")
+	var incomplete: Dictionary = await session[1].execute("server pack-type brand-new price=10")
+	check(not incomplete["ok"] and incomplete["text"].contains("needs price, cards, odds and sets"), "a new pack needs its basics: %s" % incomplete["text"])
+	var unknown: Dictionary = await session[1].execute("server pack-type descent-pack colour=red")
+	check(not unknown["ok"] and unknown["text"].contains("unknown option"), "an unknown option is refused")
+
+
+func test_the_server_card_rate_command_lists_and_writes() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers["ListCardRates"] = [[true, {"rates": [{"rarity": "epic", "dustValue": 100, "craftCost": 400, "version": 1, "createdBy": "seed"}]}]]
+	bridge.answers["PutCardRate"] = [[true, {"rarity": "epic", "dustValue": 130, "craftCost": 520, "version": 2, "createdBy": "dev"}]]
+	var session := _server_session(bridge)
+	var listed: Dictionary = await session[1].execute("server card-rate")
+	check(listed["ok"] and listed["text"].contains("epic: dust 100, craft 400 (version 1"), "the list: %s" % listed["text"])
+	var put: Dictionary = await session[1].execute("server card-rate epic 130 520")
+	check(put["ok"] and put["text"].contains("dust 130, craft 520 (version 2"), "a write: %s" % put["text"])
+	var rate_body: Dictionary = JSON.parse_string(bridge.of("PutCardRate")[0][1])
+	eq([rate_body["rarity"], int(rate_body["dustValue"]), int(rate_body["craftCost"])], ["epic", 130, 520], "the body")
+	var bad: Dictionary = await session[1].execute("server card-rate epic x 5")
+	check(not bad["ok"] and bad["text"].contains("usage"), "numbers are whole: %s" % bad["text"])
+
+
+func test_refused_passes_only_for_a_refusal_with_that_text() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers["GetCollection"] = [[true, COLLECTION]]
+	bridge.answers["DustCard"] = [[false, {"status": 409, "errorCode": 1403, "title": "locked", "detail": "", "runId": "r1", "runStatus": "Active"}],
+		[false, {"status": 409, "errorCode": 1403, "title": "locked", "detail": "", "runId": "r1", "runStatus": "Active"}],
+		[true, {"cardId": "item.a", "dustGained": 5, "rateVersion": 1, "dust": 5}]]
+	var session := _server_session(bridge)
+	var ok: Dictionary = await session[1].execute("refused 1403 dust first")
+	check(ok["ok"] and ok["text"].contains("refused as expected"), "a refusal with its code: %s" % ok["text"])
+	var wrong: Dictionary = await session[1].execute("refused 9999 dust first")
+	check(not wrong["ok"] and wrong["text"].contains("not with '9999'"), "another text is a failure: %s" % wrong["text"])
+	var worked: Dictionary = await session[1].execute("refused 1403 dust first")
+	check(not worked["ok"] and worked["text"].contains("it worked"), "a command that works is a failure: %s" % worked["text"])
+	var empty: Dictionary = await session[1].execute("refused 1403")
+	check(not empty["ok"], "it needs a command")
+
+
+# --- Continue for a won run waiting for its verdict ------------------------------------------------------------------------
+
+func _write_save(link: ServerLink, run_id: String, last_acked: int, end: Dictionary) -> void:
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(link.save_path().get_base_dir()))
+	var file := FileAccess.open(link.save_path(), FileAccess.WRITE)
+	file.store_string(JSON.stringify({"schemaVersion": 1, "runId": run_id, "player": link.player, "floorSeeds": {}, "snapshot": {"run": {"status": "Won"}},
+		"queue": [], "lastAckedSeq": last_acked, "end": end, "epoch": 0}))
+	file.close()
+
+
+func test_continue_offers_a_verifying_run_only_from_a_save_that_holds_its_end() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers["GetCurrentRun"] = [[true, {"runId": "r-9", "status": "Verifying", "currentFloor": 0, "lastSeq": 6, "startedAt": "2026-11-09T12:00:00+00:00"}]]
+	var session := _server_session(bridge)
+	var game: GameMain = session[0]
+	var link: ServerLink = session[2]
+
+	var without_save: Dictionary = await game.can_continue()
+	check(not without_save["enabled"] and without_save["reason"] == "verifying", "no save: there is nothing to show but the wait is not ours: %s" % [without_save])
+
+	_write_save(link, "r-9", 6, {})
+	var no_end: Dictionary = await game.can_continue()
+	check(not no_end["enabled"] and no_end["reason"] == "verifying", "a save without the end request cannot resume the wait")
+
+	_write_save(link, "r-9", 3, {"seq": 4, "status": "Won", "runHash": "h", "snapshot": {}})
+	var behind: Dictionary = await game.can_continue()
+	check(not behind["enabled"], "a save behind the server's log is not offered (resume_into would refuse it)")
+
+	_write_save(link, "other-run", 6, {"seq": 7, "status": "Won", "runHash": "h", "snapshot": {}})
+	var other: Dictionary = await game.can_continue()
+	check(not other["enabled"], "another run's save is not offered")
+
+	_write_save(link, "r-9", 6, {"seq": 7, "status": "Won", "runHash": "h", "snapshot": {}})
+	var ready: Dictionary = await game.can_continue()
+	check(ready["enabled"] and ready["tag"] == "Synced" and ready["subtitle"].contains("waiting for the server"), "a current save with its end request: %s" % [ready])
+	forget_save(link)
+
+
+func forget_save(link: ServerLink) -> void:
+	link.forget_save()

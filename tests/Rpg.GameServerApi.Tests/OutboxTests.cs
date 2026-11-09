@@ -268,6 +268,64 @@ public class OutboxTests(StackFixture stack)
     }
 
     [Fact]
+    public async Task CardEvents_RedpandaDown_DrainAfterRestart()
+    {
+        // Spec card-collection F15 and acceptance scenario 3: pack, dust and craft commit while Redpanda is down (their outbox rows
+        // are in the same transaction), and every event reaches the topic, in order, once it is back.
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(Paused) { ["Cards:Enabled"] = "true" });
+        await CardFixtures.SeedAsync(factory);
+        var client = new Rpg.Client.GameServerClient(factory.CreateClient());
+        var token = await client.GetDevTokenAsync(new Rpg.Contracts.Auth.DevTokenRequest("redpanda-cards-" + Guid.NewGuid().ToString("N")[..8]), Ct);
+        client.AccessToken = token.AccessToken;
+        await CardFixtures.GrantAsync(factory, token.PlayerId, gems: 1000, dust: 5000);
+        var options = new OutboxOptions { KafkaMessageTimeout = TimeSpan.FromSeconds(3), BackoffBase = TimeSpan.Zero };
+        var relay = RealRelay(factory, options);
+
+        await client.OpenPackAsync(CardFixtures.StarterPack, Guid.NewGuid(), Ct);
+        await relay.RunOnceAsync(Ct);  // warm: the topic exists and the first event is out
+        await Docker("pause", stack.Redpanda.Id);
+        try
+        {
+            await client.OpenPackAsync(CardFixtures.StarterPack, Guid.NewGuid(), Ct);  // the account actions still work
+            // A card the two packs did not give (the draw is random), crafted and dusted again.
+            var owned = (await client.GetCollectionAsync(Ct)).Owned.Select(o => o.CardId).ToHashSet();
+            var spare = (await client.GetCardCatalogAsync(Ct)).Cards.First(c => !c.Core && !c.Retired && c.Kind == "item" && !owned.Contains(c.Id)).Id;
+            await client.CraftCardAsync(spare, Guid.NewGuid(), Ct);
+            await client.DustCardAsync(spare, Guid.NewGuid(), Ct);
+            await relay.RunOnceAsync(Ct);  // fails after the message timeout; the row backs off
+            Assert.True(await ScalarAsync(factory,
+                "SELECT count(*) FROM outbox WHERE destination = 'redpanda' AND published_at IS NULL AND dead_lettered_at IS NULL") >= 3);
+        }
+        finally
+        {
+            await Docker("unpause", stack.Redpanda.Id);
+        }
+
+        var deadline = DateTime.UtcNow.AddSeconds(60);
+        while (await ScalarAsync(factory, "SELECT count(*) FROM outbox WHERE destination = 'redpanda' AND published_at IS NULL") > 0)
+        {
+            Assert.True(DateTime.UtcNow < deadline, "the card events did not drain after Redpanda returned");
+            await relay.RunOnceAsync(Ct);
+            await Task.Delay(200, Ct);
+        }
+
+        var ids = new List<Guid>();
+        await using (var command = factory.Services.GetRequiredService<NpgsqlDataSource>().CreateCommand(
+            $"SELECT id FROM outbox WHERE destination = 'redpanda' AND key = '{token.PlayerId}' ORDER BY seq"))
+        await using (var reader = await command.ExecuteReaderAsync(Ct))
+        {
+            while (await reader.ReadAsync(Ct))
+            {
+                ids.Add(reader.GetGuid(0));
+            }
+        }
+
+        var received = await ConsumeAsync(EventTopics.Economy, token.PlayerId, ids.Count);
+        Assert.Equal(4, ids.Count);  // PackOpened x2, CardCrafted, CardDusted
+        Assert.Equal(ids, received.Select(m => m.EventId));  // all of them, in order, none lost
+    }
+
+    [Fact]
     public async Task ARowForAnUnknownTopic_IsDeadLetteredAtOnce_ByTheRealSink()
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Paused);
@@ -408,7 +466,7 @@ public class OutboxTests(StackFixture stack)
 
             var id = Guid.Parse(System.Text.Encoding.UTF8.GetString(result.Message.Headers.GetLastBytes("event-id")));
             using var document = System.Text.Json.JsonDocument.Parse(result.Message.Value);
-            received.Add(new Received(id, result.Message.Key, document.RootElement.GetProperty("n").GetInt32()));
+            received.Add(new Received(id, result.Message.Key, document.RootElement.TryGetProperty("n", out var n) ? n.GetInt32() : 0));
         }
 
         return received;
