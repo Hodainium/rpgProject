@@ -14,6 +14,8 @@ extends Node
 
 signal played(handle: FxHandle)
 signal finished(handle: FxHandle)
+## The tier changed (a persistent cue that played while effects were off starts its effect again).
+signal quality_changed(tier: int)
 
 enum Follow { NONE, COPY_CONTROL, PROJECT, PROJECT_STAGE, SCREEN }
 
@@ -29,7 +31,20 @@ const META_DEPTH: StringName = &"fx_depth"
 var enabled: bool = DisplayServer.get_name() != "headless"
 ## Tests and tools drive the clock themselves with advance().
 var manual_clock: bool = false
-var quality: int = FxQuality.HIGH
+## off / low / medium / high (FxQuality). Changing it takes effect at once: off stops every live effect, any other tier
+## re-applies to the looping ones (layers above the tier stop, layers that now qualify start, particle counts rescale).
+## One-shots already playing finish as they started.
+var quality: int = FxQuality.HIGH:
+	set(value):
+		value = clampi(value, FxQuality.OFF, FxQuality.HIGH)
+		if value == quality:
+			return
+		quality = value
+		if quality == FxQuality.OFF:
+			stop_all()
+		else:
+			_requalify_live()
+		quality_changed.emit(quality)
 var registry: FxRegistry
 ## A battle unit's view by unit id (default: the UnitAnimator group). Tests and other views can set their own.
 var unit_resolver: Callable = Callable()
@@ -191,11 +206,48 @@ func advance(dt: float) -> void:
 		if handle.done:
 			continue
 		var all_done := true
-		for state in handle.states:
-			if state == FxHandle.LayerState.PENDING or state == FxHandle.LayerState.RUNNING:
+		for index in handle.states.size():
+			if handle.states[index] == FxHandle.LayerState.PENDING or handle.states[index] == FxHandle.LayerState.RUNNING:
 				all_done = false
+			elif handle.quality_skipped[index] == 1 and handle.definition.is_looping() and not handle.stopping:
+				all_done = false  # a looping effect left out by the tier stays alive: a higher tier brings it back
 		if all_done or (handle.stopping and handle.elapsed >= handle.stop_at):
 			_finish(handle)
+
+
+## The tier changed (not to off): re-applies it to the looping effects that are playing. One-shots finish as they started.
+func _requalify_live() -> void:
+	for handle in _live.duplicate():
+		if not handle.done and not handle.stopping and handle.definition.is_looping():
+			_requalify(handle)
+
+
+func _requalify(handle: FxHandle) -> void:
+	var def := handle.definition
+	for index in def.layers.size():
+		var layer := def.layers[index]
+		var node := handle.instance.nodes[index]
+		if layer == null or node == null:
+			continue
+		var allowed := int(layer.min_quality) <= quality
+		match handle.states[index]:
+			FxHandle.LayerState.SKIPPED:
+				if handle.quality_skipped[index] == 1 and allowed:
+					layer.apply(node, handle.params, handle.anchor, quality, def)
+					handle.starts[index] = handle.elapsed + layer.start_delay
+					handle.ends[index] = handle.starts[index] + layer.length(node, handle.params)
+					handle.states[index] = FxHandle.LayerState.PENDING
+					handle.quality_skipped[index] = 0
+			FxHandle.LayerState.PENDING, FxHandle.LayerState.RUNNING:
+				if not allowed:
+					if handle.states[index] == FxHandle.LayerState.RUNNING:
+						layer.stop(node, 0.0)
+						layer.ended(node)
+					layer.reset(node)
+					handle.states[index] = FxHandle.LayerState.SKIPPED
+					handle.quality_skipped[index] = 1
+				elif handle.states[index] == FxHandle.LayerState.RUNNING:
+					layer.apply(node, handle.params, handle.anchor, quality, def)  # the particle count follows the tier
 
 
 ## Stops every live effect at once (the run ended, a screen closed).
@@ -434,11 +486,16 @@ func _prepare_layers(handle: FxHandle) -> void:
 	handle.states.resize(count)
 	handle.starts.resize(count)
 	handle.ends.resize(count)
+	handle.quality_skipped.resize(count)
 	for index in count:
 		var layer := def.layers[index]
 		var node := instance.nodes[index]
 		handle.states[index] = FxHandle.LayerState.SKIPPED
-		if layer == null or node == null or int(layer.min_quality) > quality:
+		handle.quality_skipped[index] = 0
+		if layer != null and node != null and int(layer.min_quality) > quality:
+			handle.quality_skipped[index] = 1
+			continue
+		if layer == null or node == null:
 			continue
 		var holder: Node = instance.holder_of(index)
 		if holder == null or holder.get_parent() == null:

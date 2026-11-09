@@ -1191,3 +1191,158 @@ func test_registering_a_cue_again_frees_its_pooled_nodes() -> void:
 	manager.register_cue(tag, scene)
 	check(not is_instance_valid(pooled), "the old pooled node was freed")
 	manager.unregister_cue(tag)
+
+
+# --- The Settings quality selector and the inspector's Preview button -----------------------------------------------------
+
+func test_the_settings_screen_has_the_effects_quality_selector() -> void:
+	var game: GameMain = load("res://game/game_main.tscn").instantiate()
+	game.skip_animations = true
+	host.add_child(game)
+	_nodes.append(game)
+	game.content_root = FIXTURES
+	game.load_content()
+	var screen := game.ui.push(&"UI.Layer.Menu", load("res://presentation/demo/ui/settings.tscn"))
+	check(screen != null, "the Settings screen opens")
+	if screen == null:
+		return
+	var picker := screen.get_node_or_null("%FxQuality") as OptionButton
+	check(picker != null, "it has the quality selector")
+	if picker == null:
+		return
+	eq(picker.item_count, 4, "four tiers")
+	var names: Array[String] = []
+	for index in picker.item_count:
+		names.append(picker.get_item_text(index))
+	eq(names, ["Off", "Low", "Medium", "High"], "named like the console's tiers")
+	eq(picker.selected, FxManager.quality, "the current tier is selected")
+	check(picker.item_selected.get_connections().size() > 0, "choosing a tier is wired (it applies the tier and saves the Settings key)")
+
+
+func test_the_preview_request_reaches_the_gallery() -> void:
+	var path := "res://presentation/demo/fx/hit_spark.tres"
+	eq(FxPreviewRequest.write(path), OK, "the request is written")
+	eq(FxPreviewRequest.take(), path, "and read back")
+	eq(FxPreviewRequest.take(), "", "once: it is deleted when read")
+	FxPreviewRequest.write(path)
+	var gallery := (load("res://game/dev/fx_gallery.tscn") as PackedScene).instantiate()
+	host.add_child(gallery)
+	_nodes.append(gallery)
+	eq(FxPreviewRequest.take(), "", "the gallery consumed the request")
+	check(FxManager.definition(&"fx.hit_spark") != null, "and registered the effect it names")
+
+
+# --- Changing the quality tier while effects are playing ------------------------------------------------------------------
+
+func _tiered_loop(effect_id: StringName) -> FxDefinition:
+	var low := _particles(&"low", 0.5, 10)
+	low.loop = true
+	var medium := _particles(&"medium", 0.5, 10)
+	medium.loop = true
+	medium.min_quality = FxLayer.Quality.MEDIUM
+	var high := _particles(&"high", 0.5, 10)
+	high.loop = true
+	high.min_quality = FxLayer.Quality.HIGH
+	return _def(effect_id, [low, medium, high])
+
+
+func test_switching_to_off_stops_every_live_effect() -> void:
+	var service := _service()
+	var aura := _tiered_loop(&"fx.offloop")
+	var shot := _def(&"fx.offshot", [_particles(&"a", 5.0)])
+	service.register(aura)
+	service.register(shot)
+	var anchor := FxAnchor.node3d(_keep(Node3D.new()))
+	var loop_handle := service.play(aura, anchor)
+	var shot_handle := service.play(shot, anchor)
+	var heard := [0]
+	service.quality_changed.connect(func(_tier: int) -> void: heard[0] += 1)
+	service.quality = FxQuality.OFF
+	check(not loop_handle.is_playing() and not shot_handle.is_playing(), "off ends the loop and the one-shot")
+	eq(service.live_count(), 0, "nothing is live")
+	eq(heard[0], 1, "quality_changed fired once")
+	service.quality = FxQuality.OFF
+	eq(heard[0], 1, "setting the same tier again does nothing")
+
+
+func test_changing_the_tier_re_applies_a_running_loop() -> void:
+	var service := _service()
+	var def := _tiered_loop(&"fx.retier")
+	service.register(def)
+	var handle := service.play(def, FxAnchor.node3d(_keep(Node3D.new())))
+	service.advance(0.1)
+	eq(handle.states[2], FxHandle.LayerState.RUNNING, "high runs all three layers")
+	eq(handle.instance.nodes[0].amount, 10, "at full amount")
+	service.quality = FxQuality.LOW
+	check(handle.is_playing(), "the same handle keeps playing")
+	eq(handle.states[0], FxHandle.LayerState.RUNNING, "the low layer stays")
+	eq(handle.states[1], FxHandle.LayerState.SKIPPED, "the medium layer stops")
+	eq(handle.states[2], FxHandle.LayerState.SKIPPED, "the high layer stops")
+	check(not handle.instance.nodes[2].emitting, "and its particles stop emitting")
+	eq(handle.instance.nodes[0].amount, 4, "the low layer's count follows the tier (40%)")
+	service.quality = FxQuality.MEDIUM
+	service.advance(0.1)
+	eq(handle.states[1], FxHandle.LayerState.RUNNING, "medium brings the medium layer back")
+	eq(handle.states[2], FxHandle.LayerState.SKIPPED, "and not the high one")
+	eq(handle.instance.nodes[0].amount, 7, "at 70%")
+	service.quality = FxQuality.HIGH
+	service.advance(0.1)
+	eq(handle.states[2], FxHandle.LayerState.RUNNING, "high brings everything back")
+	eq(handle.instance.nodes[0].amount, 10, "at full amount")
+	check(handle.instance.nodes[2].emitting, "and the high layer emits again")
+	service.stop_all()
+
+
+func test_a_loop_with_every_layer_above_the_tier_stays_alive() -> void:
+	var service := _service()
+	var only_high := _particles(&"high", 0.5, 10)
+	only_high.loop = true
+	only_high.min_quality = FxLayer.Quality.HIGH
+	var def := _def(&"fx.allhigh", [only_high])
+	service.register(def)
+	var handle := service.play(def, FxAnchor.node3d(_keep(Node3D.new())))
+	service.quality = FxQuality.LOW
+	service.advance(1.0)
+	check(handle.is_playing(), "the loop is not ended by the tier: a higher tier can bring it back")
+	service.quality = FxQuality.HIGH
+	service.advance(0.1)
+	eq(handle.states[0], FxHandle.LayerState.RUNNING, "and it runs again")
+	handle.stop(0.0)
+
+
+func test_one_shots_in_flight_are_not_changed_by_a_new_tier() -> void:
+	var service := _service()
+	var layers := [_particles(&"a", 1.0, 10)]
+	var high := _particles(&"b", 1.0, 10)
+	high.min_quality = FxLayer.Quality.HIGH
+	layers.append(high)
+	var def := _def(&"fx.inflight", layers)
+	service.register(def)
+	var handle := service.play(def, FxAnchor.node3d(_keep(Node3D.new())))
+	service.quality = FxQuality.LOW
+	check(handle.is_playing(), "the one-shot is still playing")
+	eq(handle.states[1], FxHandle.LayerState.RUNNING, "with the layers it started with")
+	service.advance(3.0)
+	check(not handle.is_playing(), "and ends on its own")
+
+
+func test_a_persistent_cue_that_played_while_effects_were_off_starts_when_the_tier_is_raised() -> void:
+	var service := _service()
+	FxCueNotify.service_override = service
+	service.quality = FxQuality.OFF
+	var cue := FxCueNotify.new()
+	cue.fx = _tiered_loop(&"fx.cueoff")
+	cue.auto_destroy = false
+	cue.stop_fade = 0.05
+	_keep(cue)
+	var done := [0]
+	cue.cue_finished.connect(func(_node, _tag) -> void: done[0] += 1)
+	cue.execute_cue(_keep(Node3D.new()))
+	eq(service.live_count(), 0, "nothing plays at off")
+	service.quality = FxQuality.MEDIUM
+	eq(service.live_count(&"fx.cueoff"), 1, "raising the tier starts the aura of the cue that is still on")
+	cue.end_cue()
+	service.advance(1.0)
+	eq(done[0], 1, "ending the cue finishes it")
+	service.quality = FxQuality.HIGH
+	eq(service.live_count(), 0, "and a later tier change starts nothing for a cue that ended")

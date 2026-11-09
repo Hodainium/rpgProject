@@ -25,6 +25,8 @@ var ticking: bool = false
 var states: PackedInt32Array = PackedInt32Array()
 var starts: PackedFloat64Array = PackedFloat64Array()
 var ends: PackedFloat64Array = PackedFloat64Array()
+## Per layer: 1 when the layer was left out only because of the quality tier (a later tier can bring it back).
+var quality_skipped: PackedByteArray = PackedByteArray()
 ## How the 2D holder follows the anchor (set by FxService).
 var ui_follow: int = 0
 

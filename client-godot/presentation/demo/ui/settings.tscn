@@ -59,6 +59,18 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Auto casts ultimates"
 
+[node name="FxRow" type="HBoxContainer" parent="Panel/Margin/Box"]
+layout_mode = 2
+
+[node name="FxLabel" type="Label" parent="Panel/Margin/Box/FxRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Visual effects"
+
+[node name="FxQuality" type="OptionButton" parent="Panel/Margin/Box/FxRow"]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="ServerTitle" type="Label" parent="Panel/Margin/Box"]
 layout_mode = 2
 theme_type_variation = &"Title"

@@ -245,7 +245,7 @@ from C#.**
   `combat/` never names an FX class (checked by `test_combat_never_references_the_effects_system`). Headless `FxManager.enabled`
   is false and `play` is inert.
 - **Look at it:** console `fx list | params <id> | play <id> key=value | check | stats | quality`; `game/tools/fx_smoke.tscn`
-  (headless, every effect at every tier); the window gallery `res://game/dev/fx_gallery.tscn -- --play fx.a,fx.b --shots <dir>`
+  (headless, every effect at every tier); the window gallery `res://game/dev/fx_gallery.tscn -- --play fx.a,fx.b --shots <dir>` (also opened by the inspector's "Preview in the FX gallery" button on an `FxDefinition`)
   (one contact-sheet PNG per effect: take the pictures to `H:\claudeOutShots\<date> <topic>\`); a windowed `dev_run` needs
   `--local` (it then ignores the Settings' server and writes no Continue save: without it a window run can write
   `user://saves/local/run.json`).

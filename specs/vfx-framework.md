@@ -311,8 +311,16 @@ approved first, per the design-ownership rule).
   manager loads it on first use (`scene_ref`, `GameplayCueManager._scene_for`, `preload_cue`), and `suppress_cues` turns cues
   off in headless processes (the verifier loads no cue scene and makes no cue node per hit; this also covers the hit sound).
   See `client-godot/CLAUDE.md` section 0, patches 3 and 4, and `test_godotgas_patches`.
-- **Not built:** the Settings screen's quality selector (the console's `fx quality` and the Settings key work), the inspector
-  preview button in the `rpg_dev` dock (the gallery and `fx play` cover it), a Grafana-style anything (N/A). Effects for the
-  existing abilities, statuses and items are slice 5a2.
-- **Tests:** 53 in `tests/game/test_fx.gd` (683 in all), the tool `game/tools/fx_smoke.tscn` (36 plays: 12 effects × 3 tiers),
+- **Changing the tier mid-game (user, 2026-11-09):** `FxService.quality` is a property with a setter and a `quality_changed`
+  signal. Off stops every live effect; another tier re-applies to the looping ones (a layer above the tier stops, a layer that
+  now qualifies starts, particle counts rescale; an effect whose layers are all above the tier stays alive for a later tier);
+  one-shots in flight finish as they started; a persistent `FxCueNotify` that played while effects were off starts its effect
+  when the tier is raised (`FxHandle.quality_skipped`, `FxService._requalify`). Tests: the last five in `test_fx`.
+- **Settings quality selector and inspector preview (added after the first PR push, at the user's request):** the Settings
+  screen has a "Visual effects" dropdown (off / low / medium / high, applied at once, saved as `settings.fx_quality`;
+  `presentation/demo/ui/settings.tscn` and `.gd`). An `FxDefinition` in the inspector has a "Preview in the FX gallery"
+  button (`addons/rpg_dev`): it saves the effect, writes `user://fx_preview.cfg` (`FxPreviewRequest`) and opens the gallery,
+  which registers that effect (a new one need not be in the registry) and plays it. Effects for the existing abilities,
+  statuses and items are slice 5a2.
+- **Tests:** 66 in `tests/game/test_fx.gd` (696 in all), the tool `game/tools/fx_smoke.tscn` (36 plays: 12 effects × 3 tiers),
   `validate_content.tscn` (clean), and window runs of the gallery and of a real battle for the pictures.

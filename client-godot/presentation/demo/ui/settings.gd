@@ -22,6 +22,13 @@ func bind(context: UIContext) -> void:
 	%AutoUlts.toggled.connect(func(on):
 		GameMain.save_setting("settings", "auto_ults", on)
 		context.main.auto_ults = on)
+	# Spec vfx-framework F4: the effects quality tier (off, low, medium, high), applied at once and kept for next time.
+	for tier in FxQuality.NAMES:
+		%FxQuality.add_item(tier.capitalize())
+	%FxQuality.select(FxManager.quality)
+	%FxQuality.item_selected.connect(func(index):
+		FxManager.quality = index
+		GameMain.save_setting(FxService.SETTINGS_SECTION, FxService.SETTINGS_KEY, FxQuality.NAMES[index]))
 	# Spec main-menu M7: the server switch; editable only while no run is playing.
 	%Url.text = str(GameMain.load_setting(ServerLink.SETTINGS_SECTION, "url", "")) if context.main.server == null \
 		else context.main.server.url
