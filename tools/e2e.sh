@@ -10,7 +10,7 @@
 # then dev_run.tscn --server --player e2e-<scenario> --control <folder>, then the scenario's .sql (every line returns t),
 # .metrics (every line is a regex the final server /metrics scrape matches) and .worker-metrics (the same for the verifier
 # worker's /metrics). Fault steps (`e2e <action>` in a script) reach the control loop here: server-stop, server-start,
-# redis-flush, worker-start, worker-stop (a kill), tamper-battle (spec battle-verify 6), tamper-genesis (spec run-verify 4 F23), redpanda-stop and
+# redis-flush, worker-start, worker-stop (a kill), tamper-battle (spec battle-verify 6), tamper-genesis (spec run-verify 4 F23), tamper-conditions (spec run-verify 4 F15), redpanda-stop and
 # redpanda-start (spec settlement-outbox 6: the shared Redpanda container is stopped, and started again once the outbox of
 # the scenario has drained; run such a scenario alone, other scenarios share the broker), redpanda-check (every outbox row
 # of the scenario marked published is on the topics: the topics are read from the start for 6 s each and the event ids
@@ -267,6 +267,8 @@ run_scenario() {  # <name> <index 1-15>
 					tamper-battle)  # the first battle's claimed final hash is replaced, as a cheating client would
 						[[ $(psql -d "$db" -c "UPDATE battle_sessions SET action_log = jsonb_set(action_log, '{claimedFinalHash}', to_jsonb(repeat('0', 64))) WHERE run_seq = (SELECT min(run_seq) FROM battle_sessions) RETURNING 1" 2>&1 | head -1 | tr -d '\r') == 1 ]] \
 							|| answer="no battle to tamper with" ;;
+					tamper-conditions)  # the first battle's claimed conditions are altered (a harder-scaled fight than the run produces), as a client fabricating a battle would send them
+						[[ $(psql -d "$db" -c "UPDATE battle_sessions SET conditions = jsonb_set(conditions, '{depth}', to_jsonb(coalesce((conditions->>'depth')::int, 0) + 7), true) WHERE run_seq = (SELECT min(run_seq) FROM battle_sessions) RETURNING 1" 2>&1 | head -1 | tr -d '') == 1 ]] 							|| answer="no battle to tamper with" ;;
 					tamper-genesis)  # the claimed hash of the run's start (seq 1) is replaced, as a client with a richer start would send it
 						[[ $(psql -d "$db" -c "UPDATE run_actions SET state_hash = repeat('f', 64) WHERE seq = 1 RETURNING 1" 2>&1 | head -1 | tr -d '') == 1 ]] 							|| answer="no start to tamper with" ;;
 					*) answer="unknown action $action" ;;

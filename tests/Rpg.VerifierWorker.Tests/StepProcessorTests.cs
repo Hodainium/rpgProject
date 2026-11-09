@@ -203,6 +203,38 @@ public class StepProcessorTests(Stack stack)
     }
 
     [Fact]
+    public async Task AFabricatedBattle_IsRejectedAsConditionsMismatch_RollsTheRunBack_AndNothingIsPaid()
+    {
+        await using var worker = await CreateAsync(stack);
+        worker.StepRunner.Facts = BossFacts;   // were it replayed, this battle would pay for beating a boss
+        var run = await VerifiedStartAsync(worker);
+        await worker.UploadAsync(run, 2);
+        await worker.UploadAsync(run, 3, RunActionTypes.Battle, snapshot: true);   // step 1: 1 to 3, the "boss"
+        // Godot finds the claimed conditions are not what the run produces at this point: the step is rejected before the
+        // battle is replayed, so the result carries no battle verdict at all (F15).
+        worker.StepRunner.Handler = (_, _) => Task.FromResult(FakeStepRunner.Rejected(StepMismatchReason.ConditionsMismatch, seq: 3));
+
+        var decision = await worker.Steps.ProcessAsync(StepJobOf(run, 1), Ct);
+
+        Assert.Equal("rejected", decision.Result);
+        var state = await worker.RunStateAsync(run);
+        Assert.Equal(("Active", 1, 1, 1), (state.Status, state.Epoch, state.VerifiedSeq, state.LastSeq));   // back to the verified checkpoint
+        Assert.Equal(0L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger WHERE player_id = $1", run.PlayerId));
+        Assert.Equal(0L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks WHERE player_id = $1", run.PlayerId));
+        Assert.Equal(0, await WalletAsync(worker, run));
+        Assert.Equal(0L, await worker.ScalarAsync<long>("SELECT count(*) FROM battle_sessions WHERE run_id = $1", run.RunId));
+        Assert.Equal(1L, await worker.ScalarAsync<long>(
+            "SELECT count(*) FROM battle_sessions_voided WHERE run_id = $1 AND status = 'Submitted'", run.RunId));   // archived, never decided
+        var rolledBack = JsonDocument.Parse((await worker.OutboxPayloadsAsync("RunRolledBack")).Single()).RootElement.GetProperty("payload");
+        Assert.Equal("ConditionsMismatch", rolledBack.GetProperty("reason").GetString());
+        Assert.False(rolledBack.GetProperty("terminal").GetBoolean());
+        Assert.Single(await worker.OutboxPayloadsAsync("AntiCheatAlert"));
+        Assert.Empty(await worker.OutboxPayloadsAsync("BattleVerified"));
+        Assert.Empty(await worker.OutboxPayloadsAsync("RewardPending"));
+        Assert.Equal(1, worker.Metrics.Count("rpg.step_mismatches", "reason=ConditionsMismatch"));
+    }
+
+    [Fact]
     public async Task TheAggregatorsEvents_AreWrittenInTheStepVerdictsTransaction_AllOrNothing()
     {
         await using var worker = await CreateAsync(stack);

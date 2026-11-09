@@ -1,0 +1,24 @@
+# Spec run-verify 4 (F15), acceptance scenario 5 for a fabricated fight: the stored conditions of the run's first battle are
+# altered after the upload (a harder-scaled fight than the run produces at that point, as a client claiming a different
+# battle would send it). The step's replay finds the conditions are not what the run produces (ConditionsMismatch), so the
+# battle is never replayed or settled, the step is rejected and the run is rolled back to its last verified checkpoint. The
+# client rebuilds from the server and the fixtures' titan party plays the run to a verified win: nothing was paid for the
+# fabricated battle, and the honest ones pay once. (Later steps of the first attempt may be verified before the rejected one
+# and hold pending gems; the rollback voids those, so voided ledger rows are expected and each has its RewardVoided event.)
+# The worker only starts after the tampering.
+#! env Monitors__Interval=00:00:01
+server reward boss fixture.enemy.chief 25
+server reward boss fixture.enemy.lich 25
+server reward boss fixture.enemy.mirror 25
+new fixture.character.titan run=fixture.run.two_floors
+wait run
+autorun policy=smart
+e2e tamper-conditions
+e2e worker-start 120
+wait epoch 1 240
+autorun policy=smart
+wait floor 1 240
+autorun policy=smart
+wait ended 120
+wait verdict all 240
+server steps
