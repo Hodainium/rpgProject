@@ -1191,3 +1191,42 @@ func test_registering_a_cue_again_frees_its_pooled_nodes() -> void:
 	manager.register_cue(tag, scene)
 	check(not is_instance_valid(pooled), "the old pooled node was freed")
 	manager.unregister_cue(tag)
+
+
+# --- The Settings quality selector and the inspector's Preview button -----------------------------------------------------
+
+func test_the_settings_screen_has_the_effects_quality_selector() -> void:
+	var game: GameMain = load("res://game/game_main.tscn").instantiate()
+	game.skip_animations = true
+	host.add_child(game)
+	_nodes.append(game)
+	game.content_root = FIXTURES
+	game.load_content()
+	var screen := game.ui.push(&"UI.Layer.Menu", load("res://presentation/demo/ui/settings.tscn"))
+	check(screen != null, "the Settings screen opens")
+	if screen == null:
+		return
+	var picker := screen.get_node_or_null("%FxQuality") as OptionButton
+	check(picker != null, "it has the quality selector")
+	if picker == null:
+		return
+	eq(picker.item_count, 4, "four tiers")
+	var names: Array[String] = []
+	for index in picker.item_count:
+		names.append(picker.get_item_text(index))
+	eq(names, ["Off", "Low", "Medium", "High"], "named like the console's tiers")
+	eq(picker.selected, FxManager.quality, "the current tier is selected")
+	check(picker.item_selected.get_connections().size() > 0, "choosing a tier is wired (it applies the tier and saves the Settings key)")
+
+
+func test_the_preview_request_reaches_the_gallery() -> void:
+	var path := "res://presentation/demo/fx/hit_spark.tres"
+	eq(FxPreviewRequest.write(path), OK, "the request is written")
+	eq(FxPreviewRequest.take(), path, "and read back")
+	eq(FxPreviewRequest.take(), "", "once: it is deleted when read")
+	FxPreviewRequest.write(path)
+	var gallery := (load("res://game/dev/fx_gallery.tscn") as PackedScene).instantiate()
+	host.add_child(gallery)
+	_nodes.append(gallery)
+	eq(FxPreviewRequest.take(), "", "the gallery consumed the request")
+	check(FxManager.definition(&"fx.hit_spark") != null, "and registered the effect it names")

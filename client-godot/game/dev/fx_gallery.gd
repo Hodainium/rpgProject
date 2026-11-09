@@ -22,9 +22,15 @@ var _status: Label
 
 
 func _ready() -> void:
+	# The inspector's Preview button (FxPreviewRequest): register that effect (it may not be in the registry yet) and play it.
+	var preview_path := FxPreviewRequest.take()
+	var preview := load(preview_path) as FxDefinition if preview_path != "" and ResourceLoader.exists(preview_path) else null
+	if preview != null:
+		FxManager.register(preview)
 	_build_world()
 	_build_hud()
-	FxManager.reload()
+	if preview != null:
+		get_tree().create_timer(0.5).timeout.connect(func() -> void: _play(preview.id))
 	var args := OS.get_cmdline_user_args()
 	if args.has("--play"):
 		_run_shots(args)

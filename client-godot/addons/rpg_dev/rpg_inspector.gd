@@ -10,10 +10,18 @@ var undo_redo: EditorUndoRedoManager
 
 
 func _can_handle(object: Object) -> bool:
-	return _kind_of(object) != ""
+	return _kind_of(object) != "" or object is FxDefinition
 
 
 func _parse_begin(object: Object) -> void:
+	if object is FxDefinition:
+		# Spec vfx-framework: a Preview button on an effect (the console's `fx play <id>` does the same headless).
+		var preview := Button.new()
+		preview.text = "Preview in the FX gallery"
+		preview.tooltip_text = "Saves the effect, then opens the gallery playing it: a 3D room, mock cards and a hybrid stage."
+		preview.pressed.connect(func() -> void: Plugin.preview_fx(object))
+		add_custom_control(preview)
+		return
 	var kind := _kind_of(object)
 	var box := VBoxContainer.new()
 	var play := Button.new()

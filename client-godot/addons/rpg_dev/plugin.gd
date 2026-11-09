@@ -25,6 +25,16 @@ func _exit_tree() -> void:
 	_dock.queue_free()
 
 
+## Saves an effect and opens the gallery playing it (spec vfx-framework: the inspector's Preview button).
+static func preview_fx(definition: FxDefinition) -> void:
+	if definition.resource_path == "" or definition.resource_path.contains("::"):
+		push_warning("RPG Dev Tools: save the effect to its own file before previewing it.")
+		return
+	ResourceSaver.save(definition, definition.resource_path)
+	FxPreviewRequest.write(definition.resource_path)
+	EditorInterface.play_custom_scene("res://game/dev/fx_gallery.tscn")
+
+
 ## Saves the asset and starts the game in play_main.tscn with it (spec dev-tools 2.4).
 static func play(kind: String, resource: Resource) -> void:
 	if resource.resource_path == "" or resource.resource_path.contains("::"):
