@@ -339,6 +339,13 @@ func _pick_pooled(stream: RandomNumberGenerator, candidates: Array) -> Variant:
 	return RunSeeds.pick_weighted_by(stream, candidates, weights)
 
 
+## Spec card-collection 2.5: a pick is allowed when the run has no card pool, or the pool holds the id. Only the three pick
+## functions below ask; fixed items, loadouts, drops and mirrors never do.
+static func _in_card_pool(pools: Dictionary, id: StringName) -> bool:
+	var pool: Variant = pools.get("card_pool")
+	return pool == null or pool.has(id)
+
+
 ## A fixed item, or one picked from the pool (unlocked, not held, not seen this run).
 ## Falls back to the run structure's fallback_item.
 func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNumberGenerator, pools: Dictionary) -> ItemDefinition:
@@ -349,7 +356,7 @@ func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNum
 		var item: ItemDefinition = content.items[item_id]
 		if not Unlocks.is_unlocked(item) or not TagMatch.matches(query, item.tags) or TagMatch.has(item.tags, DEV_TAG):
 			continue
-		if pools.get("held", []).has(item_id) or pools.get("seen", []).has(item_id):
+		if pools.get("held", []).has(item_id) or pools.get("seen", []).has(item_id) or not _in_card_pool(pools, item_id):
 			continue
 		candidates.append(item)
 	var picked: ItemDefinition = _pick_pooled(stream, candidates)
@@ -375,7 +382,7 @@ func pick_pickup(fixed_item: ItemDefinition, fixed_equipment: EquipmentDefinitio
 				continue
 			if table == content.equipment and entry.tags.is_empty():
 				continue  # unpooled equipment (loadouts, events) is never offered
-			if pools.get("held", []).has(id) or pools.get("seen", []).has(id):
+			if pools.get("held", []).has(id) or pools.get("seen", []).has(id) or not _in_card_pool(pools, id):
 				continue
 			candidates.append(entry)
 	var picked: Resource = _pick_pooled(stream, candidates)
@@ -394,7 +401,8 @@ func pick_equipment(query: GameplayTagQuery, stream: RandomNumberGenerator, pool
 		var piece: EquipmentDefinition = content.equipment[id]
 		if piece.tags.is_empty() or not Unlocks.is_unlocked(piece) or not TagMatch.matches(query, piece.tags):
 			continue
-		if TagMatch.has(piece.tags, DEV_TAG) or pools.get("held", []).has(id) or pools.get("seen", []).has(id):
+		if TagMatch.has(piece.tags, DEV_TAG) or pools.get("held", []).has(id) or pools.get("seen", []).has(id) \
+				or not _in_card_pool(pools, id):
 			continue
 		candidates.append(piece)
 		if prefer_slots.has(piece.slot):

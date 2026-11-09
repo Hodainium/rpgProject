@@ -61,6 +61,22 @@ public class StepProcessorTests(Stack stack)
     }
 
     [Fact]
+    public async Task Step_CarriesTheRunsCardPoolFromPostgres_AndNoneForARunStartedWithoutCards()
+    {
+        // Spec card-collection 2.5: the pool is a server input read from `runs`, never from the client.
+        await using var worker = await CreateAsync(stack);
+        var plain = await worker.SeedRunAsync();
+        var pooled = await worker.SeedRunAsync();
+        await worker.ExecuteAsync("UPDATE runs SET card_pool = $2::jsonb WHERE run_id = $1", pooled.RunId, "[\"item.core1\",\"item.e1\"]");
+
+        await worker.Steps.ProcessAsync(StepJobOf(plain, 0), Ct);
+        await worker.Steps.ProcessAsync(StepJobOf(pooled, 0), Ct);
+
+        Assert.Null(worker.StepRunner.Requests[0].CardPool);
+        Assert.Equal(["item.core1", "item.e1"], worker.StepRunner.Requests[1].CardPool);
+    }
+
+    [Fact]
     public async Task Genesis_AClaimThatMatchesTheAnchor_SetsVerifiedSeqToOne_UploadFirstOrAnchorFirst()
     {
         await using var worker = await CreateAsync(stack);

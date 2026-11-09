@@ -4,8 +4,8 @@ extends DevCommand
 
 func _init() -> void:
 	name = "server"
-	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | reward [...] | reward-reset ... | resume | forget | conflict]"
-	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. steps: the run's verification steps and their state (a Development server; spec run-verify). verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
+	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | reward [...] | reward-reset ... | pack-type [...] | card-rate [...] | resume | forget | conflict]"
+	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. steps: the run's verification steps and their state (a Development server; spec run-verify). verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. pack-type: list the server's pack types; pack-type <id> [price=<gems>] [cards=<n>] [odds=common:7210,rare:2200,...] [sets=descent,...] [pity=epic:10,legendary:20,...] [first=epic:5,...] [min=rare|none] [retired=true|false]: a new version (fields you leave out keep the latest version's value; a new pack needs price, cards, odds and sets). card-rate: list the dust value and craft cost per rarity; card-rate <rarity> <dust value> <craft cost>: a new version (spec card-collection 2.7; both need the economy-admin role). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
 	cheat = false
 
 
@@ -24,6 +24,10 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		return await _reward(ctx, args)
 	if args.size() > 0 and args[0] == "reward-reset":
 		return await _reward_reset(ctx, args)
+	if args.size() > 0 and args[0] == "pack-type":
+		return await _pack_type(ctx, args)
+	if args.size() > 0 and args[0] == "card-rate":
+		return await _card_rate(ctx, args)
 	if args.size() > 0 and args[0] in ["resume", "forget", "conflict"]:
 		return await _part_b(ctx, args[0])
 	if ctx.game == null:
@@ -203,6 +207,120 @@ func _reward(ctx: DevContext, args: PackedStringArray) -> String:
 ## The challenge id of a boss is "boss/" + its id, the same rule the server uses (spec economy-challenges 1.1).
 static func _challenge_id(id: String, is_boss: bool) -> String:
 	return "boss/" + id if is_boss else id
+
+
+## Spec card-collection 2.7: lists the pack types, or writes a new version of one. Fields left out keep the latest version's.
+func _pack_type(ctx: DevContext, args: PackedStringArray) -> String:
+	if ctx.game == null or ctx.game.server == null:
+		return ctx.fail("not in server mode")
+	var listed: Dictionary = await ctx.game.server.request("ListPackTypes", [])
+	if not listed["ok"]:
+		return ctx.fail("GET pack-types: " + ServerLink.describe(listed["error"]))
+	var current := {}
+	for pack in listed["data"].get("packTypes", []):
+		current[str(pack["packId"])] = pack
+	if args.size() == 1:
+		if current.is_empty():
+			return "no pack types"
+		var ids := current.keys()
+		ids.sort()
+		return "\n".join(PackedStringArray(ids.map(func(id: String) -> String: return _describe_pack(current[id]))))
+	var usage := "usage: server pack-type <id> [price=<gems>] [cards=<n>] [odds=common:7210,...] [sets=a,b] [pity=epic:10,...] [first=epic:5,...] [min=rare|none] [retired=true|false]"
+	var id := args[1]
+	var body: Dictionary = {}
+	if current.has(id):
+		var latest: Dictionary = current[id]
+		body = {"packId": id, "name": latest.get("name", id), "priceGems": latest["priceGems"], "cardCount": latest["cardCount"],
+			"oddsPer10000": latest["oddsPer10000"], "setIds": latest["setIds"], "retired": latest.get("retired", false),
+			"pityPacks": latest.get("pityPacks", {}), "firstGuarantees": latest.get("firstGuarantees", {})}
+		if latest.get("minRarityPerPack") != null:
+			body["minRarityPerPack"] = latest["minRarityPerPack"]
+	else:
+		body = {"packId": id, "name": id, "retired": false, "pityPacks": {}, "firstGuarantees": {}}
+	for option in args.slice(2):
+		var key := option.get_slice("=", 0)
+		var value := option.get_slice("=", 1)
+		match key:
+			"price":
+				body["priceGems"] = int(value)
+			"cards":
+				body["cardCount"] = int(value)
+			"odds":
+				body["oddsPer10000"] = _int_map(value)
+			"pity":
+				body["pityPacks"] = _int_map(value)
+			"first":
+				body["firstGuarantees"] = _int_map(value)
+			"sets":
+				body["setIds"] = Array(value.split(",", false))
+			"min":
+				if value == "none":
+					body.erase("minRarityPerPack")
+				else:
+					body["minRarityPerPack"] = value
+			"retired":
+				body["retired"] = value == "true"
+			_:
+				return ctx.fail(usage + " (unknown option %s)" % option)
+	for needed in ["priceGems", "cardCount", "oddsPer10000", "setIds"]:
+		if not body.has(needed):
+			return ctx.fail(usage + " (a new pack type needs price, cards, odds and sets)")
+	var answer: Dictionary = await ctx.game.server.request("PutPackType", [WireJson.stringify(body)])
+	if not answer["ok"]:
+		return ctx.fail("PUT pack-types: " + ServerLink.describe(answer["error"]))
+	return _describe_pack(answer["data"])
+
+
+## `common:7210,rare:2200` → {"common": 7210, "rare": 2200}.
+static func _int_map(text: String) -> Dictionary:
+	var result := {}
+	for part in text.split(",", false):
+		result[part.get_slice(":", 0)] = int(part.get_slice(":", 1))
+	return result
+
+
+static func _describe_pack(pack: Dictionary) -> String:
+	var odds: Dictionary = pack["oddsPer10000"]
+	var parts := PackedStringArray()
+	for rarity in odds:
+		parts.append("%s %d" % [rarity, int(odds[rarity])])
+	var pity: Dictionary = pack.get("pityPacks", {})
+	var pity_parts := PackedStringArray()
+	for rarity in pity:
+		pity_parts.append("%s %d" % [rarity, int(pity[rarity])])
+	var first: Dictionary = pack.get("firstGuarantees", {})
+	var first_parts := PackedStringArray()
+	for rarity in first:
+		first_parts.append("%s %d" % [rarity, int(first[rarity])])
+	return "%s v%d: %d gems, %d cards, odds/10000 [%s], sets %s, pity [%s], first [%s], min %s%s" % [pack["packId"],
+		int(pack["version"]), int(pack["priceGems"]), int(pack["cardCount"]), ", ".join(parts), ",".join(PackedStringArray(pack["setIds"])),
+		", ".join(pity_parts), ", ".join(first_parts), pack.get("minRarityPerPack", "none"), " [retired]" if pack.get("retired", false) else ""]
+
+
+## Spec card-collection 2.7: lists the dust value and craft cost per rarity, or writes a new version of one rarity.
+func _card_rate(ctx: DevContext, args: PackedStringArray) -> String:
+	if ctx.game == null or ctx.game.server == null:
+		return ctx.fail("not in server mode")
+	if args.size() == 1:
+		var listed: Dictionary = await ctx.game.server.request("ListCardRates", [])
+		if not listed["ok"]:
+			return ctx.fail("GET card-rates: " + ServerLink.describe(listed["error"]))
+		var rates: Array = listed["data"].get("rates", [])
+		if rates.is_empty():
+			return "no card rates"
+		return "\n".join(PackedStringArray(rates.map(func(rate: Dictionary) -> String: return _describe_rate(rate))))
+	if args.size() != 4 or not args[2].is_valid_int() or not args[3].is_valid_int():
+		return ctx.fail("usage: server card-rate <rarity> <dust value> <craft cost>")
+	var body := {"rarity": args[1], "dustValue": int(args[2]), "craftCost": int(args[3])}
+	var answer: Dictionary = await ctx.game.server.request("PutCardRate", [WireJson.stringify(body)])
+	if not answer["ok"]:
+		return ctx.fail("PUT card-rates: " + ServerLink.describe(answer["error"]))
+	return _describe_rate(answer["data"])
+
+
+static func _describe_rate(rate: Dictionary) -> String:
+	return "%s: dust %d, craft %d (version %d, by %s)" % [rate["rarity"], int(rate["dustValue"]), int(rate["craftCost"]),
+		int(rate["version"]), rate.get("createdBy", "?")]
 
 
 ## Spec economy-challenges 2.2: `server reward-reset [boss] <id> [player=me|<player id>] [reason...]`.

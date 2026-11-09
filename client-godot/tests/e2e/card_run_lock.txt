@@ -1,0 +1,22 @@
+# Spec card-collection 2.3 (the run lock) end to end: a card owned when a run starts cannot be dusted while the run is active
+# (409 1403 naming the run), and can once the run is cancelled. First run: a win that pays gems; then a pack; then a second run is
+# started (its pool holds the new card), the dust is refused, `abandon` cancels the run on the server, and the same dust works.
+#! worker
+#! content real
+#! cards
+#! env Monitors__Interval=00:00:01
+server reward boss demo.enemy.rat_king 300
+server reward boss demo.enemy.golem 300
+new demo.character.warrior,demo.character.cleric run=demo.run.one_floor
+wait run
+autorun policy=smart
+wait ended 180
+wait verdict all 300
+wait gems 100 180
+packs open descent-pack
+new demo.character.warrior,demo.character.cleric run=demo.run.one_floor
+wait run
+refused 1403 dust first
+abandon
+dust first
+cards

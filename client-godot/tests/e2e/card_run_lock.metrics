@@ -1,0 +1,2 @@
+rpg_card_actions_refused_total\{[^}]*action="dust"[^}]*reason="CardLockedByRun"[^}]*\} 1
+rpg_cards_dusted_total\{[^}]*\} 1

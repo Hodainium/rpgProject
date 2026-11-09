@@ -8,7 +8,9 @@
       "applicationUrl": "http://localhost:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "Economy__SeedFile": "../../infra/economy/reward_rules.json"
+        "Economy__SeedFile": "../../infra/economy/reward_rules.json",
+        "Cards__CatalogFile": "../../infra/economy/card_catalog.json",
+        "Cards__SeedFile": "../../infra/economy/card_economy.json"
       }
     }
   }

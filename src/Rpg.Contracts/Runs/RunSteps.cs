@@ -24,7 +24,8 @@ public enum StepStatus { Pending, Verified, Rejected, Voided }
 public sealed record StepRequest(int SchemaVersion, string RunId, string RunStructureId,
     IReadOnlyList<string> CharacterIds, IReadOnlyDictionary<int, string> FloorSeeds, int FromSeq, int ToSeq,
     StepKind Kind, JsonElement? StartSnapshot, string? StartStateHash, IReadOnlyList<RunActionRequest> Actions,
-    string? EndRunHash);
+    string? EndRunHash,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? CardPool = null);   // spec card-collection 2.5: the run's pool from `runs`, never the client's
 
 public enum StepMismatchReason
 {

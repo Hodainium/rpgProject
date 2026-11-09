@@ -1,0 +1,4 @@
+rpg_packs_opened_total\{[^}]*pack="descent-pack"[^}]*\} 1
+rpg_pack_cards_total\{
+rpg_account_action_duration_seconds_count\{[^}]*action="open_pack"
+rpg_card_catalog_reads_total

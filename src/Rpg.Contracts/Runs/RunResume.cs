@@ -10,4 +10,6 @@ namespace Rpg.Contracts.Runs;
 public sealed record RunResumeResponse(string RunId, RunStatus Status, IReadOnlyList<FloorSeedResponse> FloorSeeds,
     int CheckpointSeq, JsonElement Snapshot, IReadOnlyList<RunActionRequest> Tail,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] int Epoch = 0,
-    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] int VerifiedSeq = 0);   // spec run-verify 2.6: the latest verified checkpoint, or the server's genesis snapshot at seq 0/1
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] int VerifiedSeq = 0,   // spec run-verify 2.6: the latest verified checkpoint, or the server's genesis snapshot at seq 0/1
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? UnlockedCharacterIds = null,   // spec card-collection 2.5
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? CardPool = null);

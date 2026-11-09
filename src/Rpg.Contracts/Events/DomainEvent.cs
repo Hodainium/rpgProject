@@ -27,6 +27,12 @@ public static class EventTypes
     public const string RewardGranted = "RewardGranted";
     public const string RewardRuleChanged = "RewardRuleChanged";
     public const string RewardCycleReset = "RewardCycleReset";
+    // Spec card-collection 3.1.
+    public const string PackOpened = "PackOpened";
+    public const string CardDusted = "CardDusted";
+    public const string CardCrafted = "CardCrafted";
+    public const string PackTypeChanged = "PackTypeChanged";
+    public const string CardRatesChanged = "CardRatesChanged";
     // Spec run-verify 3.1.
     public const string FloorVerified = "FloorVerified";
     public const string RunVerified = "RunVerified";

@@ -63,6 +63,49 @@ var chests: Array[Dictionary] = []
 var chest_serial: int = 0
 ## Dev commands so far; the k-th one draws from the stream "dev/<k>".
 var dev_commands: int = 0
+## Spec card-collection 2.5: the item pool of the run (item and equipment ids: the core set and the cards owned at the start).
+## Only picks from the item pools are restricted to it (FloorGenerator); loadouts, named gifts, drops and mirrors ignore it.
+## `card_pool_set` false = unrestricted (local mode today). The pool is the server's input (never in a snapshot), and the run
+## hash covers a digest of it only when it is set, so runs without one hash exactly as before.
+var card_pool: Array[StringName] = []
+var card_pool_set: bool = false
+
+
+## Restricts the item pools to `ids` (any array of ids); sorted, so the digest never depends on the order they arrived in.
+func set_card_pool(ids: Array) -> void:
+	var sorted: Array[String] = []
+	for id in ids:
+		sorted.append(String(id))
+	sorted.sort()
+	card_pool.clear()
+	for id in sorted:
+		card_pool.append(StringName(id))
+	card_pool_set = true
+
+
+## SHA-256 of the sorted pool ids joined by commas (what the run hash carries).
+func card_pool_digest() -> String:
+	return digest_of(card_pool)
+
+
+## The same digest for any array of ids (a save's pool, checked against the digest it was written with).
+static func digest_of(ids: Array) -> String:
+	var sorted: Array[String] = []
+	for id in ids:
+		sorted.append(String(id))
+	sorted.sort()
+	return StateHasher.sha256_hex(",".join(sorted))
+
+
+## "" when `saved` (a local save or ServerLink save) kept the pool it was written with, else why not. A save of a run without a
+## pool has no digest and is fine. A missing or changed pool would make every hash of the run differ from the server's.
+static func save_pool_problem(saved: Dictionary) -> String:
+	if not saved.has("cardPoolDigest"):
+		return ""
+	if not saved.get("cardPool") is Array:
+		return "the save lost its card pool"
+	return "" if digest_of(saved["cardPool"]) == str(saved["cardPoolDigest"]) else "the save's card pool was changed"
+
 
 
 ## The run's seed source: local (the run seed) or server (the issued floor seeds).
@@ -188,6 +231,8 @@ func canonical_lines() -> PackedStringArray:
 		lines.append("pending=" + StateHasher.canonical(pending_battle))
 	if not waiting_floor.is_empty():
 		lines.append("waiting=" + StateHasher.canonical(waiting_floor))
+	if card_pool_set:
+		lines.append("card_pool=" + card_pool_digest())  # spec card-collection 2.5
 	if dev:
 		lines.append("dev=1")
 	return lines

@@ -45,6 +45,20 @@ public sealed class RpgMetrics
     private long _stepsPending = -1;
     private double _oldestPendingStepAge;
     private long _gemsPending = -1;
+    // Spec card-collection 5.
+    private readonly Counter<long> _packsOpened;
+    private readonly Counter<long> _packCards;
+    private readonly Counter<long> _packPity;
+    private readonly Counter<long> _cardsDusted;
+    private readonly Counter<long> _cardsCrafted;
+    private readonly Counter<long> _gemsSpent;
+    private readonly Counter<long> _dustMoved;
+    private readonly Counter<long> _cardRefusals;
+    private readonly Counter<long> _accountReplays;
+    private readonly Histogram<double> _cardActionDuration;
+    private readonly Counter<long> _cardCatalogReads;
+    private readonly Counter<long> _cardRuleChanges;
+    private long _cardsOwned = -1;
 
     public RpgMetrics(IMeterFactory meterFactory, BuildInfo build)
     {
@@ -115,6 +129,25 @@ public sealed class RpgMetrics
         _ruleChanges = meter.CreateCounter<long>("rpg.reward_rule_changes", description: "Reward-rule admin writes, by result.");
         _cycleResets = meter.CreateCounter<long>("rpg.reward_cycle_resets", description: "Reward cycle resets, by result (spec economy-challenges 5).");
         _walletReads = meter.CreateCounter<long>("rpg.wallet_reads", description: "Wallet reads by where the answer came from.");
+        // Spec card-collection 5. Labels are small fixed sets: never a card or character id; `pack` is a configured pack type.
+        _packsOpened = meter.CreateCounter<long>("rpg.packs_opened", description: "Packs opened, by pack type.");
+        _packCards = meter.CreateCounter<long>("rpg.pack_cards", description: "Cards drawn from packs, by rarity and whether they were duplicates.");
+        _packPity = meter.CreateCounter<long>("rpg.pack_pity_triggers", description: "Cards forced by a pity timer, by rarity.");
+        _cardsDusted = meter.CreateCounter<long>("rpg.cards_dusted", description: "Cards dusted.");
+        _cardsCrafted = meter.CreateCounter<long>("rpg.cards_crafted", description: "Cards crafted.");
+        _gemsSpent = meter.CreateCounter<long>("rpg.gems_spent", description: "Gems spent, by reason.");
+        _dustMoved = meter.CreateCounter<long>("rpg.dust", description: "Dust moved: direction in (faucet) or out (sink), by reason.");
+        _cardRefusals = meter.CreateCounter<long>("rpg.card_actions_refused", description: "Account actions refused, by action and reason.");
+        _accountReplays = meter.CreateCounter<long>("rpg.account_request_replays", description: "Account requests answered from the request log, by action.");
+        _cardActionDuration = meter.CreateHistogram<double>("rpg.account_action_duration", unit: "s",
+            description: "The whole transaction of one account action.");
+        _cardCatalogReads = meter.CreateCounter<long>("rpg.card_catalog_reads", description: "Catalog reads by where the answer came from.");
+        _cardRuleChanges = meter.CreateCounter<long>("rpg.card_rule_changes", description: "Pack-type and card-rate admin writes, by kind.");
+        meter.CreateObservableGauge("rpg.cards_owned",
+            () => Interlocked.Read(ref _cardsOwned) is var count and >= 0
+                ? [new Measurement<long>(count)]
+                : Array.Empty<Measurement<long>>(),
+            description: "Rows in card_holdings, recomputed every 30 s from Postgres.");
         meter.CreateObservableGauge("rpg.outbox_pending",
             () => _outbox.Select(kv => new Measurement<long>(kv.Value.Pending,
                 new KeyValuePair<string, object?>("destination", kv.Key))),
@@ -243,6 +276,54 @@ public sealed class RpgMetrics
 
     /// <summary>source: redis | postgres.</summary>
     public void WalletRead(string source) => _walletReads.Add(1, new KeyValuePair<string, object?>("source", source));
+
+    // Spec card-collection 5.
+    public void PackOpened(string pack, int gems)
+    {
+        _packsOpened.Add(1, new KeyValuePair<string, object?>("pack", pack));
+        _gemsSpent.Add(gems, new KeyValuePair<string, object?>("reason", "pack"));
+    }
+
+    public void PackCard(string rarity, bool duplicate, bool pity, int dust)
+    {
+        _packCards.Add(1, new KeyValuePair<string, object?>("rarity", rarity),
+            new KeyValuePair<string, object?>("duplicate", duplicate ? "true" : "false"));
+        if (pity)
+        {
+            _packPity.Add(1, new KeyValuePair<string, object?>("rarity", rarity));
+        }
+
+        if (dust > 0)
+        {
+            _dustMoved.Add(dust, new KeyValuePair<string, object?>("direction", "in"), new KeyValuePair<string, object?>("reason", "duplicate"));
+        }
+    }
+
+    public void CardDusted(int dust)
+    {
+        _cardsDusted.Add(1);
+        _dustMoved.Add(dust, new KeyValuePair<string, object?>("direction", "in"), new KeyValuePair<string, object?>("reason", "dust"));
+    }
+
+    public void CardCrafted(int dust)
+    {
+        _cardsCrafted.Add(1);
+        _dustMoved.Add(dust, new KeyValuePair<string, object?>("direction", "out"), new KeyValuePair<string, object?>("reason", "craft"));
+    }
+
+    public void CardActionRefused(string action, string reason) => _cardRefusals.Add(1,
+        new KeyValuePair<string, object?>("action", action), new KeyValuePair<string, object?>("reason", reason));
+
+    public void AccountReplay(string action) => _accountReplays.Add(1, new KeyValuePair<string, object?>("action", action));
+
+    public void CardActionDuration(string action, TimeSpan duration) => _cardActionDuration.Record(duration.TotalSeconds,
+        new KeyValuePair<string, object?>("action", action));
+
+    public void CardCatalogRead(string source) => _cardCatalogReads.Add(1, new KeyValuePair<string, object?>("source", source));
+
+    public void CardRuleChange(string kind) => _cardRuleChanges.Add(1, new KeyValuePair<string, object?>("kind", kind));
+
+    public void SetCardsOwned(long count) => Interlocked.Exchange(ref _cardsOwned, count);
 
     /// <summary>Set by <c>BattleVerifyMonitor</c>; nothing is exported until the first count arrives.</summary>
     public void SetBattlesUnverified(long count, double oldestAgeSeconds)

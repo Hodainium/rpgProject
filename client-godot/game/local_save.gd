@@ -26,6 +26,9 @@ static func write(path: String, run: RunController, content: ContentIndex) -> bo
 		"summary": {"runName": structure_name, "floor": run.state.floor_index + 1, "party": party},
 		"snapshot": run.snapshot(),
 	}
+	if run.state.card_pool_set:
+		data["cardPool"] = run.state.card_pool.map(func(id: StringName) -> String: return String(id))  # a local test pool, spec card-collection 3.6
+		data["cardPoolDigest"] = run.state.card_pool_digest()  # so a save that loses or changes it is noticed (RunState.save_pool_problem)
 	var tmp := path + ".tmp"
 	var file := FileAccess.open(tmp, FileAccess.WRITE)
 	if file == null:

@@ -67,7 +67,9 @@ static func capture(run: RunController) -> Dictionary:
 
 ## Loads `snapshot` (as captured, or parsed back from JSON) into `run`, a RunController that isn't playing yet.
 ## "" or the error. Emits nothing: the caller announces the run (run_started, floor_entered) once it is in place.
-static func restore(run: RunController, content_index: ContentIndex, snapshot: Dictionary) -> String:
+## `card_pool` (spec card-collection 2.5) is the run's item pool, which is never part of a snapshot: the server's own copy
+## on a resume or a step, the local save's on a local continue; null = the run has none.
+static func restore(run: RunController, content_index: ContentIndex, snapshot: Dictionary, card_pool: Variant = null) -> String:
 	if int(snapshot.get("schemaVersion", 0)) != SCHEMA_VERSION:
 		return "unknown snapshot schema %s" % snapshot.get("schemaVersion")
 	var data: Dictionary = _ints(snapshot)
@@ -80,6 +82,8 @@ static func restore(run: RunController, content_index: ContentIndex, snapshot: D
 		return picked["error"]
 	run.structure = picked["run"]
 	var state := RunState.new()
+	if card_pool != null:
+		state.set_card_pool(card_pool)
 	state.run_id = str(saved["runId"])
 	state.run_seed = str(saved["runSeed"]).to_int()
 	for floor_index in saved["floorSeeds"]:

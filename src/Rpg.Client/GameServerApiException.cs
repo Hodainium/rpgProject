@@ -26,4 +26,4 @@ public sealed class GameServerApiException(HttpStatusCode statusCode, ApiProblem
 /// </summary>
 public sealed record ApiProblem(string? Type, string? Title, int? Status, string? Detail, string? Instance,
     int? ErrorCode = null, int? ExpectedSeq = null, int? LastSeq = null, int? Epoch = null, int? RollbackSeq = null,
-    string? Reason = null);
+    string? Reason = null, string? RunId = null, string? RunStatus = null);   // RunId / RunStatus: a 1403 CardLockedByRun (spec card-collection)

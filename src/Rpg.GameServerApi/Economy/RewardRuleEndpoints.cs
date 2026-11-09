@@ -17,6 +17,11 @@ public sealed class EconomyOptions
     /// <summary>The most one rule can pay: a plain whole number (not x100).</summary>
     public int MaxRewardAmount { get; set; } = RewardRules.DefaultMaxAmount;
 
+    /// <summary>Spec card-collection 3.5: the most a pack can cost in gems, and the most a craft can cost in dust.</summary>
+    public int MaxPackPrice { get; set; } = 100_000;
+
+    public int MaxCardCost { get; set; } = 100_000;
+
     /// <summary>Rewards applied at startup, only for challenges that have none yet (a demo or e2e starting point).</summary>
     public RewardRuleRequest[] SeedRules { get; set; } = [];
 }

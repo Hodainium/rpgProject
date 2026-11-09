@@ -28,7 +28,8 @@ func after_each() -> void:
 ## A server-mode run played to the end of its floors, the way a linked client does it: the journal on, every logged request
 ## through JSON as the server stores it, a floor's seed handed over the moment it is asked for (`late`: held back until
 ## `provide_late()` so the run waits at the stairs).
-func _play(content: ContentIndex, structure: StringName, late: bool = false, steps: int = 400, seeds: Array = SEEDS) -> Dictionary:
+func _play(content: ContentIndex, structure: StringName, late: bool = false, steps: int = 400, seeds: Array = SEEDS,
+		pool: Variant = null) -> Dictionary:
 	var requests: Array = []
 	var ends: Array = []
 	var run: RunController = RunController.new()
@@ -39,9 +40,9 @@ func _play(content: ContentIndex, structure: StringName, late: bool = false, ste
 	run.run_verifying.connect(func(end_request: Dictionary) -> void: ends.append(JSON.parse_string(WireJson.stringify(end_request))))
 	if not late:
 		run.floor_seed_needed.connect(func(floor_index: int) -> void: run.provide_floor_seed(floor_index, seeds[floor_index]))
-	eq(run.start_server_run(content, PARTY, RUN_ID, seeds[0], structure), "", "the run starts")
+	eq(run.start_server_run(content, PARTY, RUN_ID, seeds[0], structure, pool), "", "the run starts")
 	var stopped: String = await RunPlayer.play(run, steps)
-	return {"run": run, "requests": requests, "stopped": stopped, "end": ends[0] if not ends.is_empty() else {}}
+	return {"run": run, "requests": requests, "stopped": stopped, "end": ends[0] if not ends.is_empty() else {}, "pool": pool}
 
 
 ## The server's cut: a genesis step (0 to 1), then one step per snapshot-bearing action after seq 1; a won run's end request
@@ -53,6 +54,8 @@ func _steps(_content: ContentIndex, structure: StringName, played: Dictionary) -
 	for floor_index in run.state.floor_seeds:
 		seeds[str(floor_index)] = str(run.state.floor_seeds[floor_index])
 	var base := {"schemaVersion": 1, "runId": RUN_ID, "runStructureId": String(structure), "characterIds": PARTY, "floorSeeds": seeds}
+	if played.get("pool") != null:
+		base["cardPool"] = played["pool"].map(func(id: Variant) -> String: return String(id))  # the server's own, from `runs`
 	var steps: Array[Dictionary] = []
 	var genesis := base.duplicate()
 	genesis.merge({"fromSeq": 0, "toSeq": 1, "kind": "Genesis", "startSnapshot": null, "startStateHash": null, "actions": [],
@@ -520,3 +523,80 @@ func test_a_late_floor_seed_verifies() -> void:
 		return request["stateHash"] == waiting_hash).back()
 	check(not last_wait.is_empty(), "a request carries the waiting state's hash")
 	check(verdicts.size() >= 3, "the steps around the wait verified (%d)" % verdicts.size())
+
+
+# --- Spec card-collection 2.5: the run's item pool is the server's input --------------------------------------------------
+
+## A pool that leaves out some of the fixtures' items, so it matters which one a run is told it has.
+func _pool(content: ContentIndex, leave_out: Array = ["fixture.item.ember_charm", "fixture.item.crest"]) -> Array:
+	var ids: Array = []
+	for table in [content.items, content.equipment]:
+		for id in table:
+			if not leave_out.has(String(id)):
+				ids.append(String(id))
+	ids.sort()
+	return ids
+
+
+func test_steps_of_a_run_with_a_card_pool_verify_and_link() -> void:
+	var content := fixtures()
+	var pool := _pool(content)
+	var played := await _play(content, TWO_FLOORS, false, 400, SEEDS, pool)
+	eq(played["run"].runner_error, "", "the run with a pool plays")
+	check(played["run"].state.card_pool_set, "the run holds the pool")
+	var steps := _steps(content, TWO_FLOORS, played)
+	check(steps.size() >= 3, "several steps (%d)" % steps.size())
+	check(steps[0].has("cardPool"), "the genesis request carries the pool")
+	var verdicts := await _all_verify(content, steps, "pool run")
+	eq(verdicts[0]["endHash"], played["requests"][0]["stateHash"], "the server's own start hashes as the client's seq 1, pool included")
+
+
+func test_the_pool_is_part_of_the_run_hash_only_when_set() -> void:
+	var content := fixtures()
+	var plain := await _play(content, TWO_FLOORS, false, 3)
+	var pooled := await _play(content, TWO_FLOORS, false, 3, SEEDS, _pool(content))
+	var reordered := await _play(content, TWO_FLOORS, false, 3, SEEDS, _pool(content).duplicate().map(func(id: String) -> String: return id))
+	check(plain["requests"][0]["stateHash"] != pooled["requests"][0]["stateHash"], "a run with a pool hashes differently from one without")
+	eq(pooled["requests"][0]["stateHash"], reordered["requests"][0]["stateHash"], "the same pool, the same hash")
+	check(not "card_pool=" in "\n".join(plain["run"].state.canonical_lines()), "a run without a pool has no card_pool line")
+	var shuffled := _pool(content)
+	shuffled.reverse()
+	var other := await _play(content, TWO_FLOORS, false, 3, SEEDS, shuffled)
+	eq(other["requests"][0]["stateHash"], pooled["requests"][0]["stateHash"], "the pool's order does not change the hash")
+
+
+func test_a_step_with_another_pool_than_the_runs_is_refused() -> void:
+	var content := fixtures()
+	var pool := _pool(content)
+	var played := await _play(content, TWO_FLOORS, false, 400, SEEDS, pool)
+	var steps := _steps(content, TWO_FLOORS, played)
+	var step: Dictionary = steps[1].duplicate(true)
+
+	var stripped := step.duplicate(true)
+	stripped.erase("cardPool")
+	var verdict := await _verify(content, stripped)
+	eq(verdict.get("status"), "Rejected", "a step that forgets the pool is refused")
+	eq(verdict["mismatch"]["reason"], "SnapshotHashMismatch", "named as the start the claim does not reach")
+
+	var widened := step.duplicate(true)
+	widened["cardPool"] = _pool(content, [])
+	verdict = await _verify(content, widened)
+	eq(verdict.get("status"), "Rejected", "a wider pool than the one the run was started with is refused")
+	eq(verdict["mismatch"]["reason"], "SnapshotHashMismatch", "the same name")
+
+	var genesis_other: Dictionary = steps[0].duplicate(true)
+	genesis_other["cardPool"] = _pool(content, [])
+	var rebuilt := await _verify(content, genesis_other)
+	eq(rebuilt.get("status"), "Verified", "(sanity) the genesis answers with a verdict")
+	check(rebuilt.get("endHash") != (await _verify(content, steps[0])).get("endHash"), "a genesis with another pool rebuilds another start")
+
+
+func test_a_malformed_pool_is_exit_3() -> void:
+	var content := fixtures()
+	var played := await _play(content, TWO_FLOORS, false, 3)
+	var step: Dictionary = _steps(content, TWO_FLOORS, played)[0].duplicate(true)
+	for bad in ["item", 5, [1, 2], [""]]:
+		var request := step.duplicate(true)
+		request["cardPool"] = bad
+		var verdict := await _verify(content, request)
+		eq(verdict["_exit"], StepRunner.EXIT_MALFORMED, "cardPool %s is malformed" % [bad])

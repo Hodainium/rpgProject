@@ -64,7 +64,7 @@ public class RunContractTests
             .Select(field => (int)field.GetRawConstantValue()!)
             .ToList();
 
-        Assert.Equal(12, codes.Count);
+        Assert.Equal(22, codes.Count);   // spec card-collection 3.1 adds 1401–1410
         Assert.Equal(codes.Count, codes.Distinct().Count());
         Assert.DoesNotContain(ReplayErrors.ReplayMismatchCode, codes);
     }

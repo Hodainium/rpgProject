@@ -326,8 +326,9 @@ public sealed partial class RunStore
         int epoch, verifiedSeq;
         bool legacy;
         JsonElement? genesis = null;
+        IReadOnlyList<string>? cardPool = null, unlockedCharacters = null;
         await using (var select = Command(connection, transaction,
-                         "SELECT status, epoch, verified_seq, legacy, genesis_snapshot::text FROM runs WHERE run_id = $1 AND player_id = $2",
+                         "SELECT status, epoch, verified_seq, legacy, genesis_snapshot::text, card_pool::text, unlocked_characters::text FROM runs WHERE run_id = $1 AND player_id = $2",
                          runId, playerId))
         await using (var reader = await select.ExecuteReaderAsync(ct))
         {
@@ -341,6 +342,8 @@ public sealed partial class RunStore
             verifiedSeq = reader.GetInt32(2);
             legacy = reader.GetBoolean(3);
             genesis = reader.IsDBNull(4) ? null : Parse(reader.GetString(4));
+            cardPool = reader.IsDBNull(5) ? null : JsonSerializer.Deserialize<List<string>>(reader.GetString(5), RpgJson.Options);
+            unlockedCharacters = reader.IsDBNull(6) ? null : JsonSerializer.Deserialize<List<string>>(reader.GetString(6), RpgJson.Options);
         }
 
         if (status != RunStatus.Active)
@@ -411,7 +414,8 @@ public sealed partial class RunStore
         }
 
         return new ResumeResult(ResumeOutcome.Found,
-            new RunResumeResponse(runId.ToString("D"), status, floors, checkpointSeq, snapshot, tail, epoch, verifiedSeq));
+            new RunResumeResponse(runId.ToString("D"), status, floors, checkpointSeq, snapshot, tail, epoch, verifiedSeq,
+                unlockedCharacters, cardPool));
     }
 
     /// <summary>The battle stored with the run's action <paramref name="seq"/>, and the run's owner.</summary>

@@ -1,0 +1,24 @@
+{
+  "_comment": "PLACEHOLDER numbers (spec card-collection 3.4b, matched to Hearthstone's): slice 5c card-balance retunes them. Loaded through Cards:SeedFile; fills only rates and packs that have no row yet, so an admin's edit is never overwritten.",
+  "rates": [
+    { "rarity": "common", "dustValue": 5, "craftCost": 40 },
+    { "rarity": "rare", "dustValue": 20, "craftCost": 100 },
+    { "rarity": "epic", "dustValue": 100, "craftCost": 400 },
+    { "rarity": "legendary", "dustValue": 400, "craftCost": 1600 },
+    { "rarity": "mythic", "dustValue": 800, "craftCost": 3200 }
+  ],
+  "packs": [
+    {
+      "packId": "descent-pack",
+      "name": "Descent Pack",
+      "priceGems": 100,
+      "cardCount": 5,
+      "oddsPer10000": { "common": 7210, "rare": 2200, "epic": 450, "legendary": 100, "mythic": 40 },
+      "setIds": [ "descent" ],
+      "retired": false,
+      "pityPacks": { "epic": 10, "legendary": 20, "mythic": 30 },
+      "firstGuarantees": { "epic": 5, "legendary": 10, "mythic": 15 },
+      "minRarityPerPack": "rare"
+    }
+  ]
+}
