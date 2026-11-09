@@ -31,7 +31,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 4a. `run-verify` | ✅ Done (spec synced; steps cut at the claimed snapshots with a genesis anchor the server builds at run start, a worker pool replaying each step in headless Godot with a battle simulated once, the fan-in aggregator (verified prefix, links, floors, win, rollback with epoch, `MaxRollbacks`), the stairs gate 1107 and epoch gate 1108, pending gems claimed at release, the floor read model, run hash `run-v2` covering everything that decides play; the per-battle worker is removed; 416 .NET, 582 Godot, the e2e scenarios and the Linux golden check pass; open: routing by ruleset (9), retention (7b)) | 2026-11-08 |
 | 4b. `game-analytics` | ⬜ Not started | |
 | 5. `card-collection` | ⬜ Not started | |
-| 5b. `card-market` | ⬜ Not started | |
+| 5b. `card-ui` | ⬜ Not started | |
+| 5c. `card-balance` | ⬜ Not started | |
 | 6. `observability` | ⬜ Not started | |
 | 7. `live-dashboard` | ⬜ Not started | |
 | 7b. `data-retention` | ⬜ Not started | |
@@ -155,6 +156,17 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   the worker, the ledger key includes the boss id (a battle can hold two bosses), the migration backfills only sessions
   not enqueued in the last 10 minutes, the relay has a failure breaker; trace continuity through the outbox is not built
   yet (spec section 9). At the user's request.
+- 2026-11-09: Slice 5b `card-market` removed entirely, at the user's request (the matching design was still open and
+  the game is single-collection, like Hearthstone: no trading between players). Slice 5 is reshaped the same day: no
+  eidolons (one copy unlocks a card, duplicates add no power and are worth dust); a core set every account owns, always in
+  the pools and not dustable, so a collection can't be stripped down to one strong item; Hearthstone-style crafting (any
+  card for dust); and a removal-only run lock covering every card acquired before the run started, one acquisition time per card. No house account, escrow or market routes.
+  Then: Boss stays at 21 cards, Void starts all core, Vault gets five new items to reach 15, core items are picked by
+  lowest rarity first, and two sub-slices follow slice 5: 5b `card-ui` (the number 5b, freed by the market, is reused) and 5c `card-balance`.
+  Later the same day: a card is owned once (a duplicate is auto-dusted on arrival, so ownership is a set and there is no
+  copy cap to decide); the run lock never expires and the player cancels the run from a pop-up to dust; the core set is
+  sized like Isaac's starting item pools, with the existing room pool tags on each card. Market mentions in 4b, 7, the Redis plan and the other
+  specs and docs are removed.
 - 2026-11-08: Added slice 7b `data-retention` before 8, at the user's request: outbox, step, voided and settled-session
   tables grow forever and slice 8 should measure it. Also dropped the per-battle verifier role (`verify.battle`) with 4a:
   a battle is verified inside its step, so legacy runs (started before 4a) are simply never verified.
@@ -222,7 +234,7 @@ later by a worker; the server's verdict is final. **Free** = client-only, never 
 | **End the run (win)** | **Blocking** | run fan-in | The victory screen appears only after the server has verified every floor; rewards settle in the same step. A short "Verifying run…" screen covers it (usually only the last floor is still pending). Offline: the run waits at that screen until a connection. Rejected: rollback to the last valid checkpoint, no victory |
 | End the run (death) | Async | run fan-in | The defeat screen shows at once; nothing is paid out, so there's nothing to protect |
 | Save locally | Free | | `user://` save of the run state, the floor seed and the unsent action queue. A convenience copy: the server's acknowledged log always wins |
-| Opening packs, dusting, crafting, market orders, spending currency, the account collection | Blocking | | Server RNG (packs) and server state; settled with the outbox (5, 5b). Cards held by a run in progress are locked |
+| Opening packs, dusting, crafting, spending currency, the account collection | Blocking | | Server RNG (packs) and server state; settled with the outbox (5). Cards held by a run in progress are locked |
 | Animations, sounds, camera, Auto/Skip, menus, settings, inspecting items, the map view | Free | | |
 
 ### Redis plan
@@ -240,7 +252,6 @@ Redis is never the source of correctness: every entry can be lost and rebuilt fr
 | **Live analytics counters** (items picked today, most played party this hour) | `HINCRBY` / sorted sets, fed from Redpanda; Postgres keeps the history | 4b |
 | **Leaderboards** (fastest clear, deepest floor per character; **verified runs only**) | sorted sets, fed from Redpanda, rebuildable from Postgres | 4b (shown in 7) |
 | **Pack catalog cache** (pack types, odds, card lists) | string/hash, invalidated when a pack changes | 5 |
-| **Market top of book** (best bid and ask per card) | hash per card, updated after each settled trade, rebuilt from Postgres | 5b |
 | **SignalR backplane** (a verdict reaches whichever API instance holds the player's socket) | pub/sub; the demo runs two API replicas | 7 |
 
 ## Slices
@@ -468,8 +479,8 @@ behaviour, not per-player pricing. Run and battle events (run started and ended,
 decision, field use, battle started and its moves and result) published through the slice 4 outbox to Redpanda; a
 consumer projects them into Postgres analytics tables (idempotent by event id, rebuildable from the topic); a read API
 for aggregates: most played characters and parties, most used moves, most picked-up items and who holds them, event
-decisions, how far runs get, encounter wins and losses, each filterable to verified runs. Pack, dust and market
-figures join in slices 5 and 5b. No item, character or move ids as Prometheus labels.
+decisions, how far runs get, encounter wins and losses, each filterable to verified runs. Pack and dust
+figures join in slice 5. No item, character or move ids as Prometheus labels.
 Redis: **live analytics counters** (`HINCRBY` / sorted sets fed from Redpanda, for the live tiles; Postgres keeps the
 history) and **leaderboards** (sorted sets, fastest clear and deepest floor per character, **verified runs only**,
 rebuildable from Postgres). A Redpanda consumer for **anomaly flags** (too-perfect play, abandon rate, inhuman action
@@ -478,51 +489,79 @@ speed) feeds a delayed review queue, not instant bans.
 ### 5. `card-collection` (replaces `gacha`, 2026-10-26)
 **Purpose:** Hearthstone-style collecting instead of gacha pulls. Every playable character and every item is a
 **card** in the player's account collection.
-- **What owning a card does:** at least 1 copy unlocks it (a character becomes playable; an item enters the run's item
-  pools). Extra item copies change nothing in game; they only have value to trade or dust.
+- **What owning a card does:** one copy unlocks it (a character becomes playable; an item enters the run's item
+  pools). **A card is owned once** (decided 2026-11-09): there are no eidolons and duplicates add no power, so a copy
+  of a card the player already owns is **auto-dusted on arrival** (from a pack; a card that is already owned can't be
+  crafted). Ownership is therefore a set, not a count.
 - **Rarities:** characters are always Legendary; items are Common, Rare, Epic or Legendary.
-- **Eidolons (HSR):** a character's level is copies held − 1, up to E6. Selling or dusting a copy lowers it. Eidolon
-  effects are content (one AbilitySet per level, GAS-first). The level is captured in the run's starting state, so a
-  battle replays with the level the run started with.
-- **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting or selling cards.
+- **Core set (Hearthstone's Basic set; decided 2026-11-09):** a fixed set of cards every account owns from the start:
+  the starter characters and a baseline of items. Core cards are always in the run's pools, can't be dusted, and are
+  never crafted or found in packs. The item pool of a run is the core set plus the collected cards, so the pool is
+  never tiny: a player can't strip a collection down to one strong card and get it every run. Collected cards are
+  typically stronger items (and the remaining characters), which is why players want them. **Size and shape:** each
+  item card already carries the room pool it spawns in (`Pool.Treasure`, `Pool.Shop`, `Pool.Boss`, `Pool.Void`,
+  `Pool.Vault`, `Pool.Food`, `Pool.Chest`). The core set gives the standard pools (item room and shop) **30 cards each**
+  and the special route pools (`Pool.Vault`, `Pool.Void`) **15 each** (decided 2026-11-09; no outside benchmark).
+  The existing demo items become the first cards: the core cards are picked from them, the rest are collectible, so
+  a collected card adds to a pool the core set already fills. Only the room pools carry a size
+  target; `Pool.Food` and `Pool.Chest` are plain tagged pools with no minimum. Today's demo pools hold 77 Treasure, 39
+  Shop, 21 Boss, 15 Void, 10 Vault and 4 Food items. Decided 2026-11-09: **Boss stays at 21** (all core, no 30 target for
+  now), **Void starts entirely core** (it already meets its 15) and **Vault must reach 15**, which needs **five new Vault
+  items** made in this slice (new content files; a list of paths and values is reported, nothing existing is changed).
+  **Which items are core:** by lowest rarity first (Common, then Rare, then Epic, then Legendary), so the collected
+  cards are the stronger ones; an item counts in every pool it belongs to, so the picks are made against the 30 / 15
+  targets jointly, with ties broken in the spec. Boss and Void are all core, so their Epic and Legendary items are core
+  by exception. A pool that already hits its mark grows later: new cards arrive as **expansion sets** (a card set tag,
+  like Hearthstone's expansions and booster sets), which is new content with no schema change, and packs can draw per
+  set. Collected cards add to the pools. Which cards are core
+  is content (a card set tag beside the pool tags); the balance gate is tuned on the core pool alone, the worst case for
+  a new account (the retune is slice 5c, below).
+- **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
 - **Packs:** several pack types, each with its own card list and rarity odds. Opening is server-side, on a pack RNG
   separate from combat RNG, recorded for audit.
-- **Dust:** any card can be dusted at any time for a flat rate per rarity. Dusting sells the card to the house (5b),
-  which keeps the card in its stock.
-- **Crafting:** the **base set** can always be crafted for a fixed dust cost per rarity. Cards from other sets come only
-  from packs or the market (5b).
-- **Run lock:** a card held by a run in progress can't be dusted, sold or listed until that run ends, so a run never
-  loses a character or item it is verified with.
+- **Dust:** any collected (non-core) card can be dusted for a flat rate per rarity, unless the run lock holds it. Dusting
+  removes the card from the account (as in Hearthstone); there is no trading between players. Auto-dusted duplicates are
+  the main source of dust.
+- **Crafting (Hearthstone-style):** any card can be crafted for dust at a fixed cost per rarity, whatever set it is from,
+  so every card is reachable without trading. Dusting pays a fraction of the craft cost (Hearthstone: a quarter), so
+  crafting is a dust sink. The costs and refunds live in a server-owned, versioned table like the reward rules, so
+  retuning never changes the ruleset version.
+- **Run lock (removal only; decided 2026-11-09):** cards can always be acquired (packs, crafting) while a run is active,
+  and a card acquired after the run started never affects it. Every card acquired before the run started is locked: it
+  can't be dusted until the run ends or is cancelled, because the run's pools and party were built from it. Each card has
+  one acquisition time, compared with `runs.started_at`. The lock **never expires**: an idle or abandoned run keeps
+  it until the player cancels the run. Trying to dust while a run is active gets a `409` naming the run, and the client
+  shows a pop-up offering to cancel it (the cancel path ends the run as abandoned, not as a death; starting a new run
+  already abandons the previous one). A duplicate that arrives during a run is auto-dusted as usual, which never touches
+  the locked copy. Verification does not depend on the lock (the run's start inputs are stored at run start); the lock
+  stops a player taking dust from cards the run is built on.
 
-Server: account collection (card counts), currency ledgers and pack catalog in Postgres; collection, pack, dust and
+Server: account collection (one row per player and card, with its acquisition time), currency ledgers and pack catalog in Postgres; collection, pack, dust and
 craft endpoints (blocking account actions, idempotent by request key); currency changes and card moves in one
-transaction with an outbox row (pack opened, card dusted, card crafted). Contracts: the collection, plus eidolon levels
-and unlocked items in the run's starting state.
+transaction with an outbox row (pack opened, card dusted, card crafted). Contracts: the collection, plus the unlocked
+characters and items (the run's pool) in the run's starting state.
 Redis: **pack catalog cache** (pack types, odds and card lists; Postgres is the source; invalidated when a pack
 changes).
 
-> 🎨 Suggested design break 3, card feel: sets and rarities, dust rates and craft costs, pack odds, eidolon effects
-> per character, pack-opening animation.
+**Account rules** (requirements of this slice): ownership is one row per player and card with the time it was acquired
+(the run lock compares it with the run's start), and every card move is also a ledger row; every gem or dust change is a ledger row with a reason, a
+reference id and an idempotency key (the wallet ledger pattern, extended to dust); account actions (pack open, dust,
+craft) are idempotent by request key, like the run endpoints; every card or currency move writes an outbox event, so
+analytics needs no backfill.
 
-### 5b. `card-market`
-**Purpose:** a community marketplace where players trade cards for dust, and the backend's trading-system showcase.
-- **Order book per card:** players post sell listings and buy orders at their own dust prices; the server matches
-  them (price, then time). A listing escrows the card and a buy order escrows the dust; a cancel returns the escrow.
-- **Settlement:** both sides of a match (card and dust) move in one Postgres transaction with an outbox row (exactly
-  once). Order submission is idempotent; one card or one dust balance can never be spent twice; two buyers racing for
-  one listing produce one trade.
-- **The house account** (the game owner) keeps supply healthy when players dust instead of selling. Its standing buy
-  at the flat dust rate *is* dusting (the price floor). It lists its stock (dusted cards) at a set price per rarity,
-  which caps market prices.
-- The spec decides the matching path (matching inside the request's transaction, or a single matching worker per card
-  partition fed by RabbitMQ) and how matching avoids lock contention under load.
+> 🎨 Suggested design break 3, card feel: sets and rarities, dust rates and craft costs, pack odds, which cards are core and their sizes per room pool,
+> pack-opening animation.
 
-Redis: **top of book** per card (best bid and ask, for the market UI; rebuilt from Postgres), and the 2b rate limiter
-on order traffic.
-Analytics (4b pipeline): packs opened per pack type, dust created and spent, crafts, trade volume and prices per card.
-Card ids never become Prometheus labels.
-Failure scenarios: a duplicate order submission makes one order; a crash between match and acknowledgement loses no
-escrow and settles once; Redis flushed rebuilds the book from Postgres.
+### 5b. `card-ui`
+Added 2026-11-09, right after slice 5. The screens for the card system, built on the UI framework and the FF7 theme:
+the collection (browse by set, rarity and room pool, a core badge, owned or not), pack opening, dust and craft with their
+costs, and the pop-up that offers to cancel the active run when a dust is refused by the run lock (409 naming the run).
+Local mode keeps working without cards (the core set only).
+
+### 5c. `card-balance`
+Added 2026-11-09, after 5b. The game balancing pass for cards: retune the win-rate gate on the core pool alone (30 / 30 / 21
+/ 15 / 15 per room pool; the 31.8% figure was measured on the full item pool), then pack odds and prices in gems, dust
+and craft costs and refunds, and the gem income per run against them. Design break 3 (card feel) belongs here.
 
 ### 6. `observability`
 End-to-end traces HTTP → RabbitMQ → worker → outbox → Redpanda. Metrics: verify latency, queue age,
@@ -530,10 +569,10 @@ End-to-end traces HTTP → RabbitMQ → worker → outbox → Redpanda. Metrics:
 as code, including **battles per minute against server load** (CPU, memory, latency, queue age) on one panel.
 
 ### 7. `live-dashboard`
-SignalR hub pushing verdicts to client and browser. React/TS `web-dashboard` live feed: battles, packs opened, market trades, anti-cheat alerts.
+SignalR hub pushing verdicts to client and browser. React/TS `web-dashboard` live feed: battles, packs opened, anti-cheat alerts.
 **Live monitoring** (players online, players in a battle, runs in progress, service health) and **player analytics
 pages** over the `game-analytics` read API: characters and parties, moves, items picked up, event decisions, runs,
-encounters, packs and the card market (volume, prices, dust flows), leaderboards.
+encounters, packs and dust flows, leaderboards.
 Redis **SignalR backplane** (pub/sub) so a verdict reaches whichever API instance holds the socket; the compose demo
 runs two API replicas behind a load balancer.
 

@@ -8,14 +8,14 @@ slice 5 card ownership) lives **outside Godot** and is separate from the run's i
 ## 1. Purpose & enterprise mapping
 
 **What this slice does.** It replaces slice 4's one configured number (`Settlement:GemsPerBossMark`) with a **versioned
-reward-rule table** in Postgres, and it draws the line between the game and the economy so that cards (slices 5 and 5b)
+reward-rule table** in Postgres, and it draws the line between the game and the economy so that cards (slice 5)
 and anything that may one day involve real money have a home.
 
 **The boundary (the design decision this slice records):**
 
 | | The run (Godot) | The account economy (server) |
 |---|---|---|
-| Owns | the run's inventory: items found, equipment worn, HP, gold, keys, floors, battles | currencies (gems now, dust later), the ledger, reward rules, and from slice 5 **card ownership**, packs, the market |
+| Owns | the run's inventory: items found, equipment worn, HP, gold, keys, floors, battles | currencies (gems now, dust later), the ledger, reward rules, and from slice 5 **card ownership**, packs |
 | Lives in | Godot, deterministic, replayed and verified | Postgres, owned by one module with one writer path |
 | Truth is | the action log + the state hash | the **ledger** (append-only) and holdings tables |
 | Changes by | the player's actions during a run | **verified facts** from a replay, or an explicit economy action (open pack, dust, trade) |
@@ -27,7 +27,7 @@ Rules that follow from the table:
 2. **Godot never holds a balance or an ownership record.** The client can show the account (`GET /wallet`, later the
    collection) but the run can never read it while playing or write it.
 3. **Account to run is a one-way snapshot taken at run start** (slice 5): the server hands the run what the account
-   entitles it to (which characters, eidolon levels, unlocked item pools) and the run records it in its start state,
+   entitles it to (which characters and unlocked item pools: the core set plus the collected cards) and the run records it in its start state,
    so a replay is still deterministic. A card in an active run is locked in the account (already in the roadmap's "run
    lock"). Nothing flows back from the run except through rule 1.
 4. **Run to account is a one-way, idempotent grant**: verified fact in, ledger rows out, in one transaction (slice 4).
@@ -51,7 +51,7 @@ Redis (rules are read from Postgres inside the transaction; see 3.5). No game ru
 
 **Out of scope, on purpose:** real-money purchases and payment providers (the model must not preclude them: every
 ledger row says why and under which rule, and holdings will follow the same append-only pattern); card ownership,
-packs, dust and the market (slices 5 and 5b; section 7 sketches how they plug in); pending gems and run-level
+packs and dust (slice 5; section 7 sketches how they plug in); pending gems and run-level
 verification (4a); per-character or difficulty modifiers; timed multipliers (live-ops "double gems weekend").
 
 ## 2. Sequence flow
@@ -262,13 +262,13 @@ column is the audit trail for "why did this player get 25".
    existing tests as proof.
 5. Admin access is a JWT role, dev-only for now (3.6).
 
-**How cards (slices 5 and 5b) fit without another redesign** (a sketch to constrain this slice, not a spec):
+**How cards (slice 5) fit without another redesign** (a sketch to constrain this slice, not a spec):
 - Ownership is a server table (`card_holdings`: player, card id, copies) with an append-only `card_ledger` beside the
   currency ledger, each row naming its cause (pack opened, dusted, crafted, traded) and idempotent by a request key.
   Same pattern, same module, same transaction-plus-outbox rule. Godot never writes either.
 - The run reads the account once, at run start, as a snapshot (rule 3 in section 1); the run lock keeps those cards
   from being dusted or sold meanwhile.
-- Gems spent on packs, dust from dusting and market trades are more ledger rows. `reward_rules.currency` and
+- Gems spent on packs, dust from dusting are more ledger rows. `reward_rules.currency` and
   `wallet_ledger.currency` CHECK lists widen in slice 5's migration. Pack odds and prices are table data like rewards.
 - Real money, if ever added, is a source of ledger credits behind a payment provider's webhook, with the same
   idempotency key discipline; nothing in the run or the replay changes.

@@ -46,7 +46,7 @@ that point. Slice 4a verifies **whole runs** from the action log:
 
 **Not used here:** SignalR push of verdicts (slice 7: the client learns from the upload ack and by polling, 2.6),
 analytics projections of the new events (4b), ruleset routing (slice 9: a wrong-ruleset step job is dead-lettered like
-a battle job, 4 F9), cards and eidolon levels in the start state (slice 5 adds them to the genesis inputs, 3.3).
+a battle job, 4 F9), the unlocked cards (playable characters and the item pool) in the start state (slice 5 adds them to the genesis inputs, 3.3).
 
 **Acceptance scenarios covered:** 1 (duplicate step job → one verdict, one release), 2 (worker killed after the commit,
 before the ack → no second aggregation, no second release), 3 (Redpanda down → the new events drain from the outbox),
@@ -401,7 +401,7 @@ log, which is why a floor's end is the `next_floor` seq, not the last action tag
 | Input | Source | Why not the client |
 |---|---|---|
 | Floor seeds | `run_floors` | The client could claim a seed with a friendlier floor |
-| Run structure, characters | `runs` | The party and run rules are fixed at start. Slice 5 adds the card collection's eidolon levels here (stored at run start) |
+| Run structure, characters | `runs` | The party and run rules are fixed at start. Slice 5 adds the account's unlocked cards here (the characters and the item pool, stored at run start) |
 | Genesis state | rebuilt by Godot at run start from the two above; stored as `genesis_hash` + `genesis_snapshot` | A claimed start snapshot with extra keys, items or levels is the cheapest cheat; the server's own copy is also what resume and rollback return for seq 1 |
 | Ruleset version | `runs.ruleset_version` (worker must accept it) | Scenario 6 groundwork |
 | Start snapshot, actions, hashes | `run_actions` (claimed, checked by replay) | These are the claims being verified |

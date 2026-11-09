@@ -38,7 +38,7 @@ Do not describe or code against components listed as empty as though they exist.
   `POST /api/v1/runs/{id}/floors/{n}` (floor seed at the stairs), `POST /api/v1/runs/{id}/actions` (batched async
   quick messages; battles travel here), `POST /api/v1/runs/{id}/end`, `GET /api/v1/runs/current`,
   `GET /api/v1/runs/{id}/resume`, `GET /api/v1/runs/{id}/battles/{seq}` (session and, from slice 3, its verdict).
-  Auth: `POST /api/v1/auth/dev-token` (development). Cards (slices 5, 5b): collection, packs, dust, craft and market order endpoints. Analytics read API for the
+  Auth: `POST /api/v1/auth/dev-token` (development). Cards (slice 5): collection, packs, dust and craft endpoints. Analytics read API for the
   dashboard (player behaviour aggregates). Spec for battles and runs: `specs/server-authority.md`.
 - **`src/Rpg.Contracts`**: .NET 10 class library holding only the wire contracts: HTTP request/response `record` DTOs and
   queue/event message schemas. Referenced by the server and `Rpg.Client`.
@@ -48,23 +48,23 @@ Do not describe or code against components listed as empty as though they exist.
 - **Verifier workers**: headless Godot 4.7.2 .NET containers running the `client-godot` project. They consume
   verification jobs from RabbitMQ.
 - **PostgreSQL**: the source of truth for players, runs and their ordered action logs, run inventory, account
-  card collection, currency ledgers (gems, dust), market orders and trades, battle sessions (seed + conditions + ruleset version), settlements, the outbox,
+  card collection, currency ledgers (gems, dust), battle sessions (seed + conditions + ruleset version), settlements, the outbox,
   and the analytics projections.
 - **Redis**: a cache in front of Postgres battle sessions (30-min TTL) plus `lock:battle:{id}` / `lock:player:{id}`
   to suppress duplicate work; also live presence, per-player rate limiting, the floor read model, verdict cache, live
-  analytics counters, leaderboards, the pack catalog cache, the market top of book and the SignalR backplane (slice placement: "Redis plan" in
+  analytics counters, leaderboards, the pack catalog cache and the SignalR backplane (slice placement: "Redis plan" in
   `specs/roadmap.md`). **Never the source of correctness:** every entry can be rebuilt from Postgres or the event log.
 - **Run authority (2026-10-20):** the client gets one floor at a time (HMAC floor seed at the stairs) and plays it
   offline; every in-floor action is async and verified in parallel by headless Godot; the client stays within one
   floor of the last verified floor. Action policy table: "Run authority model" in `specs/roadmap.md`.
 - **RabbitMQ**: work queues with acks, retries and DLQ, for verification jobs and reward settlement.
 - **Redpanda**: append-only event log (runs, run actions such as item offers, pickups and purchases, verified
-  battles, packs opened, cards dusted and crafted, market trades, anti-cheat alerts), fed only by the outbox relay. Analytics consumers project it into
+  battles, packs opened, cards dusted and crafted, anti-cheat alerts), fed only by the outbox relay. Analytics consumers project it into
   Postgres tables for the dashboard.
 - **Prometheus/Grafana + OpenTelemetry .NET**: operational metrics and traces (latency, queue age, rejections).
   **`web-dashboard`**: React/TS, with SignalR as the browser push gateway: live monitoring (players online, players
   in a battle, service health) **and** player analytics (most played characters and parties, most used moves, items
-  picked up, event decisions, packs opened, dust flows and card market prices). **`load-test`**: Locust.
+  picked up, event decisions, packs opened, dust flows). **`load-test`**: Locust.
 
 ## Battle workflow decisions (2026-10-14)
 - **Single combat implementation:** GodotGAS (GDScript) in `client-godot/` is the only combat logic. Never
@@ -101,7 +101,7 @@ Do not describe or code against components listed as empty as though they exist.
   nothing rewarded). Dev tools and system tests use it.
 - **Player analytics:** every player action is logged (runs and their quick messages, battle sessions and action
   logs). General behaviour metrics (most played characters and parties, most used moves, items picked up, event
-  decisions, packs, dust and market trades) are aggregated from that log: published through the outbox to Redpanda and
+  decisions, packs and dust) are aggregated from that log: published through the outbox to Redpanda and
   projected into Postgres tables the dashboard reads, filterable to verified runs. Live counts (players online, in a
   battle) are Prometheus gauges. **Never use item, character, move or encounter ids as Prometheus labels** (unbounded
   cardinality). Design: `specs/design/game-design.md` section 10.
