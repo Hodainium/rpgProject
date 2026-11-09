@@ -34,6 +34,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5b. `card-market` | ⬜ Not started | |
 | 6. `observability` | ⬜ Not started | |
 | 7. `live-dashboard` | ⬜ Not started | |
+| 7b. `data-retention` | ⬜ Not started | |
 | 8. `load-and-chaos` | ⬜ Not started | |
 | 9. `ruleset-versioning` | ⬜ Not started | |
 
@@ -154,6 +155,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   the worker, the ledger key includes the boss id (a battle can hold two bosses), the migration backfills only sessions
   not enqueued in the last 10 minutes, the relay has a failure breaker; trace continuity through the outbox is not built
   yet (spec section 9). At the user's request.
+- 2026-11-08: Added slice 7b `data-retention` before 8, at the user's request: outbox, step, voided and settled-session
+  tables grow forever and slice 8 should measure it. Also dropped the per-battle verifier role (`verify.battle`) with 4a:
+  a battle is verified inside its step, so legacy runs (started before 4a) are simply never verified.
 - 2026-11-03: Added slice 4c `economy-rewards` as the immediate next slice, before 4a, at the user's request: gem rewards
   become per-boss rows in a versioned, server-owned table (not content, not configuration), so retuning never changes the
   ruleset version; and the economy boundary is recorded: the run's inventory stays in Godot, the account economy
@@ -532,6 +536,16 @@ pages** over the `game-analytics` read API: characters and parties, moves, items
 encounters, packs and the card market (volume, prices, dust flows), leaderboards.
 Redis **SignalR backplane** (pub/sub) so a verdict reaches whichever API instance holds the socket; the compose demo
 runs two API replicas behind a load balancer.
+
+### 7b. `data-retention`
+Added 2026-11-08, before load testing so slice 8 measures table growth. Nothing is ever purged today: published `outbox`
+rows, `run_steps`, the voided archives (`run_actions_voided`, `battle_sessions_voided`), settled `battle_sessions` and
+`run_actions` of finished runs, and the ledger all grow without bound. For each table a decision (spec first): the outbox
+is purged once published and past Redpanda's own retention; the voided archives are evidence (the `AntiCheatAlert` trail)
+and are kept N days, then moved to cold storage or dropped; `run_steps` and the claimed logs of verified, finished runs
+can be dropped after the analytics projection (4b) has read them; the wallet ledger and completion marks are never purged
+(they are the account's record). A retention job (a BackgroundService with a lease, batches, metrics) and a test per
+table, including that a purge never touches a row a verifier or the relay can still read.
 
 ### 8. `load-and-chaos`
 Locust profiles (`/stress`); scripted chaos runs for scenarios 2, 3, 4; **scenario 7** (spike → backpressure →
