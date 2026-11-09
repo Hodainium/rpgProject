@@ -16,5 +16,5 @@ display_name = "Hunting Knife"
 description = "+40 ATK, +5 SPD."
 slot = &"Equipment.Slot.Weapon"
 grants = SubResource("Resource_grants")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 6

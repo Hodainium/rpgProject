@@ -16,5 +16,5 @@ display_name = "Vein Cloak"
 description = "+150 max HP, immune to Bleed."
 slot = &"Equipment.Slot.Body"
 grants = SubResource("Resource_fx143")
-tags = Array[StringName]([&"Pool.Boss", &"Pool.Treasure", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Boss", &"Pool.Treasure", &"Item.Rarity.Rare", &"Card.Set.Core"])
 price = 7

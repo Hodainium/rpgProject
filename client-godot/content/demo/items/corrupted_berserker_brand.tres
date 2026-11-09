@@ -15,6 +15,6 @@ script = ExtResource("5_knmgd")
 id = &"demo.item.corrupted_berserker_brand"
 display_name = "Corrupted Brand"
 description = "+40% damage dealt; +20% damage taken."
-tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 0
 grants = SubResource("Resource_nktc1")

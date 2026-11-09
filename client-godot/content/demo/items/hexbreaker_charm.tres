@@ -14,6 +14,6 @@ script = ExtResource("5_487t1")
 id = &"demo.item.hexbreaker_charm"
 display_name = "Hexbreaker Charm"
 description = "At the start of every battle: Ward (immune to control) for 2 turns."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Descent"])
 price = 6
 grants = SubResource("Resource_wlo31")

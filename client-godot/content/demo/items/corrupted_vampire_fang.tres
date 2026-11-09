@@ -17,6 +17,6 @@ script = ExtResource("6_ufads")
 id = &"demo.item.corrupted_vampire_fang"
 display_name = "Corrupted Vampire Fang"
 description = "Heal 35 HP whenever you deal damage. −20% max HP."
-tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 0
 grants = SubResource("Resource_hoodf")

@@ -16,5 +16,5 @@ display_name = "Quickstep Anklet"
 description = "+8 SPD."
 slot = &"Equipment.Slot.Accessory"
 grants = SubResource("Resource_grants")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Rare", &"Card.Set.Core"])
 price = 8

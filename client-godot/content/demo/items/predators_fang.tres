@@ -15,6 +15,6 @@ script = ExtResource("5_wqf0y")
 id = &"demo.item.predators_fang"
 display_name = "Predator's Fang"
 description = "+25% damage to Broken enemies."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Descent"])
 price = 9
 grants = SubResource("Resource_0mldd")

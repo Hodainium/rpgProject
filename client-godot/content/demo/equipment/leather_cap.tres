@@ -16,5 +16,5 @@ display_name = "Leather Cap"
 description = "+20 DEF, +100 max HP."
 slot = &"Equipment.Slot.Head"
 grants = SubResource("Resource_3yj0n")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 5

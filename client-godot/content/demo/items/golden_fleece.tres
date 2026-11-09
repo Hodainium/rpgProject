@@ -15,6 +15,6 @@ script = ExtResource("5_i2ko2")
 id = &"demo.item.golden_fleece"
 display_name = "Golden Fleece"
 description = "+20% max HP."
-tags = Array[StringName]([&"Pool.Vault", &"Pool.Treasure", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 9
 grants = SubResource("Resource_oijdx")

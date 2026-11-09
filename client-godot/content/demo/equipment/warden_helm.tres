@@ -16,5 +16,5 @@ display_name = "Warden Helm"
 description = "Immune to Freeze and Stun."
 slot = &"Equipment.Slot.Head"
 grants = SubResource("Resource_ibr4v")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 9

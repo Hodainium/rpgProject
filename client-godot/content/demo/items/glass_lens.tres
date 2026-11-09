@@ -15,6 +15,6 @@ script = ExtResource("5_mi2bg")
 id = &"demo.item.glass_lens"
 display_name = "Glass Lens"
 description = "+40% crit damage, but −150 max HP."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare", &"Card.Set.Descent"])
 price = 7
 grants = SubResource("Resource_wb4r8")

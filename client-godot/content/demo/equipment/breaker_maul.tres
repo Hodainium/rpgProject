@@ -16,5 +16,5 @@ display_name = "Breaker Maul"
 description = "+50 ATK, +50% toughness damage."
 slot = &"Equipment.Slot.Weapon"
 grants = SubResource("Resource_grants")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Rare", &"Card.Set.Core"])
 price = 8

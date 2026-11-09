@@ -16,5 +16,5 @@ display_name = "Chain Vest"
 description = "+60 DEF."
 slot = &"Equipment.Slot.Body"
 grants = SubResource("Resource_varcp")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 6

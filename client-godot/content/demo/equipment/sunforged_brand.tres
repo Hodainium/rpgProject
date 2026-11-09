@@ -16,5 +16,5 @@ display_name = "Sunforged Brand"
 description = "+80 ATK, +20% crit damage, ignores 10% DEF."
 slot = &"Equipment.Slot.Weapon"
 grants = SubResource("Resource_grants")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Chest", &"Item.Rarity.Legendary"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Chest", &"Item.Rarity.Legendary", &"Card.Set.Descent"])
 price = 12

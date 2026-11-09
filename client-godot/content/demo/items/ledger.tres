@@ -13,6 +13,6 @@ script = ExtResource("3_yvdxa")
 id = &"demo.item.ledger"
 display_name = "Ledger"
 description = "+2 coins for every room you clear."
-tags = Array[StringName]([&"Pool.Vault", &"Pool.Treasure", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare", &"Card.Set.Core"])
 price = 6
 on_room_cleared = Array[ExtResource("1_ydnpb")]([SubResource("Resource_do1x7")])

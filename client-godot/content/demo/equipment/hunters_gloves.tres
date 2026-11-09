@@ -16,5 +16,5 @@ display_name = "Hunter's Gloves"
 description = "Hitting a weakness gives +10 ult charge."
 slot = &"Equipment.Slot.Arms"
 grants = SubResource("Resource_d6u5d")
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare", &"Card.Set.Descent"])
 price = 8

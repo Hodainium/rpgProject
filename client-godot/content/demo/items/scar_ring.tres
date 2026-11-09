@@ -15,6 +15,6 @@ script = ExtResource("5_m0nsf")
 id = &"demo.item.scar_ring"
 display_name = "Scar Ring"
 description = "You resist Physical (half damage)."
-tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 9
 grants = SubResource("Resource_i1332")

@@ -16,5 +16,5 @@ display_name = "Swift Boots"
 description = "+10 SPD."
 slot = &"Equipment.Slot.Legs"
 grants = SubResource("Resource_mds0n")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 6

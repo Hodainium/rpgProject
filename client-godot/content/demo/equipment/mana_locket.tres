@@ -16,5 +16,5 @@ display_name = "Mana Locket"
 description = "+40 max SP, +10% ult charge gain."
 slot = &"Equipment.Slot.Accessory"
 grants = SubResource("Resource_grants")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 5

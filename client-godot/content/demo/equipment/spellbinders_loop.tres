@@ -16,5 +16,5 @@ display_name = "Spellbinder's Loop"
 description = "Your abilities cost 33% less SP. −10% ATK."
 slot = &"Equipment.Slot.Accessory"
 grants = SubResource("Resource_grants")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 10

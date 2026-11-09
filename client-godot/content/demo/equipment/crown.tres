@@ -16,5 +16,5 @@ display_name = "Crown"
 description = "+10% ATK, DEF and SPD."
 slot = &"Equipment.Slot.Head"
 grants = SubResource("Resource_84gei")
-tags = Array[StringName]([&"Pool.Vault", &"Pool.Boss", &"Item.Rarity.Legendary"])
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Core"])
 price = 12

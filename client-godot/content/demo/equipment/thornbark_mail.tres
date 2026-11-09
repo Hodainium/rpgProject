@@ -16,5 +16,5 @@ display_name = "Thornbark Mail"
 description = "When hit, Poison the attacker."
 slot = &"Equipment.Slot.Body"
 grants = SubResource("Resource_ruphc")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Descent"])
 price = 7

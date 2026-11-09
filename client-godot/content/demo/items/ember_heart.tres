@@ -15,6 +15,6 @@ script = ExtResource("5_rxome")
 id = &"demo.item.ember_heart"
 display_name = "Ember Heart"
 description = "Fire hits deal 50 more Fire damage."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Descent"])
 price = 9
 grants = SubResource("Resource_18ghj")

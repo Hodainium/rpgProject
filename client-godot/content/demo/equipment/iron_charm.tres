@@ -16,5 +16,5 @@ display_name = "Iron Charm"
 description = "+80 max HP."
 slot = &"Equipment.Slot.Accessory"
 grants = SubResource("Resource_grants")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 5

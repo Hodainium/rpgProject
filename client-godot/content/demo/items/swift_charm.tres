@@ -15,6 +15,6 @@ script = ExtResource("5_7pje3")
 id = &"demo.item.swift_charm"
 display_name = "Swift Charm"
 description = "+12 SPD."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 6
 grants = SubResource("Resource_4cefy")

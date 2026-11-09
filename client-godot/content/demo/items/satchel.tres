@@ -8,6 +8,6 @@ script = ExtResource("2_hhj3m")
 id = &"demo.item.satchel"
 display_name = "Satchel"
 description = "+1 item slot: carry a second use item."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 6
 extra_use_slots = 1

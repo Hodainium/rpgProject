@@ -17,6 +17,6 @@ script = ExtResource("6_yfub7")
 id = &"demo.item.halo"
 display_name = "Halo"
 description = "Ward at the start of every battle; +10% healing given."
-tags = Array[StringName]([&"Pool.Boss", &"Pool.Vault", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Boss",&"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 9
 grants = SubResource("Resource_h0i8s")

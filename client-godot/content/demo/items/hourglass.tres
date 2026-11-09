@@ -15,6 +15,6 @@ script = ExtResource("5_w2hen")
 id = &"demo.item.hourglass"
 display_name = "Hourglass"
 description = "Heal 5% of max HP at the start of each of your turns."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Descent"])
 price = 8
 grants = SubResource("Resource_xi7cv")

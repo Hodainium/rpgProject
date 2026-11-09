@@ -15,6 +15,6 @@ script = ExtResource("5_o2u1x")
 id = &"demo.item.frost_ember_charm"
 display_name = "Frost-Ember Charm"
 description = "Ice damage you deal is followed by 60 Fire damage."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Descent"])
 price = 8
 grants = SubResource("Resource_n1wrh")

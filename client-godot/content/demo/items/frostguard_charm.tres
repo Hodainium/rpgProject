@@ -15,6 +15,6 @@ script = ExtResource("5_qabxt")
 id = &"demo.item.frostguard_charm"
 display_name = "Frostguard Charm"
 description = "You resist Ice (half damage). A weakness to Ice still wins."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Descent"])
 price = 6
 grants = SubResource("Resource_typwt")

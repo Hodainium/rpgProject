@@ -13,6 +13,6 @@ script = ExtResource("3_2bbrp")
 id = &"demo.item.gilded_idol"
 display_name = "Gilded Idol"
 description = "Worth 25 coins the moment you pick it up."
-tags = Array[StringName]([&"Pool.Vault", &"Pool.Treasure", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 3
 on_pickup = Array[ExtResource("1_bbnk6")]([SubResource("Resource_vcaks")])

@@ -16,5 +16,5 @@ display_name = "Warding Talisman"
 description = "−10% damage taken."
 slot = &"Equipment.Slot.Accessory"
 grants = SubResource("Resource_grants")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Rare", &"Card.Set.Descent"])
 price = 8

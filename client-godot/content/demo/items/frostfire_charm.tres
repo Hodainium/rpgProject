@@ -13,6 +13,6 @@ script = ExtResource("5_item")
 id = &"demo.item.frostfire_charm"
 display_name = "Frostfire Charm"
 description = "Your Ice hits trigger a follow-up: 30% ATK Fire."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Descent"])
 price = 7
 grants = SubResource("Resource_grants")

@@ -16,5 +16,5 @@ display_name = "Mage Robe"
 description = "+50 max SP, +5% ATK."
 slot = &"Equipment.Slot.Body"
 grants = SubResource("Resource_ibx1d")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 6

@@ -13,6 +13,6 @@ script = ExtResource("3_fmerc")
 id = &"demo.item.golden_idol"
 display_name = "Golden Idol"
 description = "Worth 10 coins the moment you pick it up."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Common", &"Card.Set.Descent"])
 price = 3
 on_pickup = Array[ExtResource("1_r6x68")]([SubResource("Resource_cmkgw")])

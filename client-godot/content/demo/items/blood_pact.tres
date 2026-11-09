@@ -17,6 +17,6 @@ script = ExtResource("6_e5177")
 id = &"demo.item.blood_pact"
 display_name = "Blood Pact"
 description = "+25% damage dealt; you start every battle Bleeding."
-tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 9
 grants = SubResource("Resource_6r0d3")

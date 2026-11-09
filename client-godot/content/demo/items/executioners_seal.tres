@@ -15,6 +15,6 @@ script = ExtResource("5_4erwv")
 id = &"demo.item.executioners_seal"
 display_name = "Executioner's Seal"
 description = "Critical hits trigger a follow-up: 50% ATK Physical."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Legendary"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Core"])
 price = 10
 grants = SubResource("Resource_tbtd1")

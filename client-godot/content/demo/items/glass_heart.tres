@@ -15,6 +15,6 @@ script = ExtResource("5_usfrd")
 id = &"demo.item.glass_heart"
 display_name = "Glass Heart"
 description = "Heal 80 HP when you take a critical hit."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare", &"Card.Set.Descent"])
 price = 5
 grants = SubResource("Resource_2dm84")

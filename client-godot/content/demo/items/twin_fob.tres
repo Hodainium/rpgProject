@@ -7,5 +7,5 @@ script = ExtResource("1_item")
 id = &"demo.item.twin_fob"
 display_name = "Twin Fob"
 description = "Every key you find counts twice."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Run.Keys.Double"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Run.Keys.Double", &"Card.Set.Descent"])
 price = 10

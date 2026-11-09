@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardRules" format=3]
+
+[ext_resource type="Script" path="res://game/defs/card_rules.gd" id="1_b58c7"]
+
+[resource]
+script = ExtResource("1_b58c7")
+id = &"demo.cards.rules"
+pool_targets = {
+&"Pool.Shop": 30,
+&"Pool.Treasure": 30,
+&"Pool.Void": 15
+}
+all_core_pools = Array[StringName]([&"Pool.Boss", &"Pool.Void"])
+starter_characters = Array[StringName]([&"demo.character.warrior", &"demo.character.cleric", &"demo.character.arcanist", &"demo.character.ranger", &"demo.character.bard", &"demo.character.bulwark"])
