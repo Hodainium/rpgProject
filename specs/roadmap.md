@@ -499,10 +499,12 @@ speed) feeds a delayed review queue, not instant bans.
   `Pool.Vault`, `Pool.Food`, `Pool.Chest`). The core set gives the standard pools (item room and shop) **30 cards each**
   and the special route pools (`Pool.Vault`, `Pool.Void`) **15 each** (decided 2026-11-09; no outside benchmark).
   The existing demo items become the first cards: the core cards are picked from them, the rest are collectible, so
-  a collected card adds to a pool the core set already fills. Today's demo pools hold 77 Treasure, 39 Shop, 21 Boss,
-  15 Void, 10 Vault and 4 Food items, so Vault is 5 short of its 15, Void would be entirely core, and Boss (21) is
-  under 30 if it counts as a standard pool; the spec settles those (new items, a lower target, or which pools count as
-  standard). Collected cards add to the pools. Which cards are core
+  a collected card adds to a pool the core set already fills. Only the room pools carry a size
+  target; `Pool.Food` and `Pool.Chest` are plain tagged pools with no minimum. Today's demo pools hold 77 Treasure, 39
+  Shop, 21 Boss, 15 Void, 10 Vault and 4 Food items. Void therefore starts entirely core (it already meets its 15) and
+  Vault is 5 short; the spec settles Vault and whether Boss is a standard pool (21, under 30). A pool that already hits
+  its mark simply grows later: new cards arrive as **expansion sets** (a card set tag, like Hearthstone's expansions
+  and booster sets), which is new content with no schema change, and packs can draw per set. Collected cards add to the pools. Which cards are core
   is content (a card set tag beside the pool tags); the balance gate is tuned on the core pool alone, the worst case for
   a new account.
 - **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
