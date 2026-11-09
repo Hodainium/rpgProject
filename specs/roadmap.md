@@ -496,11 +496,14 @@ speed) feeds a delayed review queue, not instant bans.
   never tiny: a player can't strip a collection down to one strong card and get it every run. Collected cards are
   typically stronger items (and the remaining characters), which is why players want them. **Size and shape:** each
   item card already carries the room pool it spawns in (`Pool.Treasure`, `Pool.Shop`, `Pool.Boss`, `Pool.Void`,
-  `Pool.Vault`, `Pool.Food`, `Pool.Chest`), and the core set gives every pool a baseline about the size of Isaac's
-  starting pools for that room (item room, shop, boss, ...). Collected cards add to those pools. Which cards are core
+  `Pool.Vault`, `Pool.Food`, `Pool.Chest`), and the core set gives every pool a baseline the size of Isaac's pool
+  for that room on a fresh save with nothing unlocked (item room, shop, boss), and the route pools follow the angel
+  and devil rooms: `Pool.Vault` is sized like Isaac's angel pool (Vault is the Cathedral route) and `Pool.Void` like
+  the devil pool (Void is the Black Coven route). The exact numbers are fixed in the spec from Isaac's unlock data
+  (full-game pool sizes in Repentance+ are about 94 for the shop, 59 boss, 93 devil and 66 angel per isaacguru.com;
+  fresh-save counts were not found). Collected cards add to those pools. Which cards are core
   is content (a card set tag beside the pool tags); the balance gate is tuned on the core pool alone, the worst case for
-  a new account. Whether Void and Vault (route rooms) have core cards is a spec question.
-- **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
+  a new account. - **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
 - **Packs:** several pack types, each with its own card list and rarity odds. Opening is server-side, on a pack RNG
   separate from combat RNG, recorded for audit.
 - **Dust:** any collected (non-core) card can be dusted for a flat rate per rarity, unless the run lock holds it. Dusting
