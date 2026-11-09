@@ -15,7 +15,7 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
 | `presentation/` | **User** | Battle scenes, UI, VFX, animation, flare. Listens to `combat/` signals and never changes combat state. |
 | `godot_gas/` | **User** (via GodotGAS dashboard) | Tag registry, attribute drafts, generated files. |
 | `tests/fixtures/` | System (Claude) | Frozen test-only content for system tests. Never references `content/`. |
-| `addons/GodotGAS/` | Vendored | Never edited by anyone; upgrade only by replacing the whole addon. **Approved on-disk patches (2026-10-26, user), each marked "rpgProject patch" in the file:** `effects/gameplay_effect.gd` `overflow_effects` is `Array[Resource]`, not `Array[GameplayEffect]` (Godot 4.7.2 leaks a script at exit that @exports a typed array of its own class); `managers/gameplay_cue_manager.gd` and `utilities/project_settings.gd` reach `EditorInterface` through `Engine.get_singleton` (a bare editor class name fails to parse in export templates, so the cue manager autoload broke every export). `test_godotgas_patches` fails when an upgrade brings either bug back; re-apply the patch then, or drop it once upstream fixed it. No other addon edits without the user's OK. |
+| `addons/GodotGAS/` | Vendored | Never edited by anyone; upgrade only by replacing the whole addon. **Approved on-disk patches (2026-10-26, user), each marked "rpgProject patch" in the file:** `effects/gameplay_effect.gd` `overflow_effects` is `Array[Resource]`, not `Array[GameplayEffect]` (Godot 4.7.2 leaks a script at exit that @exports a typed array of its own class); `managers/gameplay_cue_manager.gd` and `utilities/project_settings.gd` reach `EditorInterface` through `Engine.get_singleton` (a bare editor class name fails to parse in export templates, so the cue manager autoload broke every export). **Patches 3 and 4 (2026-11-09, user, spec `vfx-framework`; Unreal's soft cue references and `ShouldSuppressGameplayCues`):** `cues/gameplay_cue_entry.gd` stores its scene as `scene_ref` (a UID or path, `@export_storage`) and keeps `scene` as a getter/setter property over it, so a saved registry loads no cue scene and the dashboard still works (an older registry that stored the scene still loads); `managers/gameplay_cue_manager.gd` loads a cue's scene on first use (`_scene_for`, `preload_cue` for a background load, `has_cue`, `register_cue`, `unregister_cue`) and has `suppress_cues` (execute_cue does nothing, add_persistent_cue returns null), which `FxManager` sets in headless processes so the verifier loads no cue scene and makes no cue node per hit. Marked "rpgProject patch" in both files. `test_godotgas_patches` fails when an upgrade brings any of these four back; re-apply the patch then, or drop it once upstream has it. No other addon edits without the user's OK. |
 
 - `content/`, `presentation/` and `godot_gas/` have `ask` permission rules: every edit there prompts the user.
   Create files there only when a spec needs them or the user asks, and edit them with minimal `Edit`s.
@@ -38,6 +38,10 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
   `ResourceSaver` into `content/demo/` and `presentation/demo/` only, and never overwrites an existing file. Run it
   only with the user's go-ahead. `game/tools/build_animation_sets.tscn` (spec `animation-sets` 3.3) works the same way
   for `presentation/demo/animation_sets/` (the default unit animation set).
+- **Second approved builder (spec `vfx-framework`, 2026-11-09, the user's go-ahead):** `game/tools/build_fx_set.tscn` writes the
+  proof set of effects and their cue scenes through `ResourceSaver` into `presentation/demo/fx/` and `presentation/demo/cues/`
+  only, never overwrites an existing file (`-- --force` rewrites this set's own files and discards tuning). The shader library
+  and the framework are system code in `game/fx/`.
 - **Approved generators (2026-10-20):** `game/tools/generate_attributes.tscn` (the dashboard's attribute Generate,
   headless) and `game/tools/sync_tags.tscn` write GodotGAS's generated files in `godot_gas/` the way the dashboard
   does. Claude runs them after editing `attributes_draft.cfg` or the tag registry (each edit itself still prompts).
@@ -225,3 +229,23 @@ from C#.**
   battle panel extends `UIBattlePanel`; a menu screen inherits `menu_frame.tscn` (Back top left, description window
   on top, characters at the bottom) and reuses `list_entry`, `member_row`, `map_cell`, `description_window`; hover
   previews, click selects. Esc reaches HUD panels with pages (`handles_back`). Console: `tab on|off` holds Tab.
+
+
+## 7. Effects (spec `vfx-framework`): how an effect is added
+- **An effect is data:** an `FxDefinition` `.tres` (exposed parameters + layers) listed in `presentation/demo/fx/fx_registry.tres`;
+  play it with `FxManager.play(&"fx.id", FxAnchor.control(card) / .node3d(n) / .unit("P1") / .on_stage(stage, mesh) / .screen(),
+  {color = ...})`. Layers bind their properties to parameters (`FxBinding`) or animate over time (`FxCurveTrack`). A new layer
+  kind is one small script extending `FxLayer` (override `build`, `apply`, `start`, `update`, `stop`, `ended`); a new look is a
+  shader in `game/fx/shaders/` with a documented header (`// @uniform name text`, checked by `test_fx`).
+- **From GodotGAS:** an `FxCueNotify` scene (set `fx`, `bindings`) registered under a `Cue.*` tag in `godot_gas/cue_registry.tres`,
+  then any effect, ability or item lists that tag in `application_cue_tags` / `persistent_cue_tags` / `removal_cue_tags`.
+  From a screen: an `FxListener` (message channel → effect) or `FxManager.play` directly. Hybrid card screens put an `FxStage`
+  in the screen and anchor with `FxAnchor.on_stage`.
+- **Presentation only:** never touch combat or run state, never draw from a run or battle RNG (the sound layer has its own),
+  `combat/` never names an FX class (checked by `test_combat_never_references_the_effects_system`). Headless `FxManager.enabled`
+  is false and `play` is inert.
+- **Look at it:** console `fx list | params <id> | play <id> key=value | check | stats | quality`; `game/tools/fx_smoke.tscn`
+  (headless, every effect at every tier); the window gallery `res://game/dev/fx_gallery.tscn -- --play fx.a,fx.b --shots <dir>`
+  (one contact-sheet PNG per effect: take the pictures to `H:\claudeOutShots\<date> <topic>\`); a windowed `dev_run` needs
+  `--local` (it then ignores the Settings' server and writes no Continue save: without it a window run can write
+  `user://saves/local/run.json`).

@@ -31,7 +31,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 4a. `run-verify` | ✅ Done (spec synced; steps cut at the claimed snapshots with a genesis anchor the server builds at run start, a worker pool replaying each step in headless Godot with a battle simulated once, the fan-in aggregator (verified prefix, links, floors, win, rollback with epoch, `MaxRollbacks`), the stairs gate 1107 and epoch gate 1108, pending gems claimed at release, the floor read model, run hash `run-v2` covering everything that decides play; the per-battle worker is removed; 416 .NET, 582 Godot, the e2e scenarios and the Linux golden check pass; open: routing by ruleset (9), retention (7b)) | 2026-11-08 |
 | 4b. `game-analytics` | ⬜ Not started | |
 | 5. `card-collection` | ✅ Done (spec synced; the account's cards on the server: catalog, packs with Epic / Legendary / Mythic pity and a Rare guarantee, dust and craft, the run lock, the run's item pool as a verified input, `POST /runs/{id}/abandon`; Godot: the pool in the run hash and steps, card tags on all 160 demo cards, core-set proposal, console commands, run-end gate; no Vault pool; 535 .NET, 626 Godot, 5 card e2e scenarios; not built: the Grafana row; the screens are 5b, the numbers 5c) | 2026-11-09 |
-| 5a. `vfx-framework` | 📝 Spec drafted, awaiting review (`specs/vfx-framework.md`; data-driven FX in 2D, 3D and hybrid, cue bridge, shader library, dev tools; built before 5b) | 2026-11-09 |
+| 5a. `vfx-framework` | 🔨 Built, awaiting the user's review (`specs/vfx-framework.md`; data-driven FX in 2D, 3D and hybrid, the GodotGAS cue bridge, the hybrid stage, a shader library, a proof set of 12 effects, dev tools, the gallery; 683 Godot tests; every hit in a battle now sparks; spec to sync after tuning) | 2026-11-09 |
 | 5a2. `vfx-content-pass` | ⬜ Not started (after 5a's proof set works: FX for the existing abilities, statuses, items and events, by a proposal pass the user approves; may fold into 5a on request) | |
 | 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
 | 5c. `card-balance` | ⬜ Not started | |
@@ -559,6 +559,17 @@ analytics needs no backfill.
 
 > 🎨 Suggested design break 3, card feel: sets and rarities, dust rates and craft costs, pack odds, which cards are core and their sizes per room pool,
 > pack-opening animation.
+
+### 5a2. `vfx-content-pass`
+Added 2026-11-09, right after slice 5a. Adds effects to the abilities, statuses, items and events made before the FX framework
+existed, by a proposal pass the user approves (it edits existing content).
+
+**Requirement from the user (2026-11-09):** the generic hit spark that slice 5a put on `content/demo/effects/damage.tres`
+(`Cue.Fx.HitSpark` in `application_cue_tags`, so every damage application sparks the same way) was accepted for now and must
+be **tuned in this slice**. There must be no one generic effect on every damage proc: poison, bleed, burn and other DoTs show
+their own effects, and hits differ by damage type (and crit, weakness, break). A cue only receives its target, so per-hit
+variants need either separate damage effect variants with their own cue tags, or a listener on `Message.Battle.Damage` (it
+carries the hit tags) with a tag filter, which `FxListener` does not have yet. Decide the approach in this slice's spec.
 
 ### 5b. `card-ui`
 Added 2026-11-09, right after slice 5. The screens for the card system, built on the UI framework and the FF7 theme:

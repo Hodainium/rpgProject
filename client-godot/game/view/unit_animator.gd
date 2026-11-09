@@ -31,6 +31,9 @@ var display_color: Color = Color.WHITE
 var is_dead: bool = false
 ## The unit definition this view shows (set by instantiate_for).
 var definition_id: StringName = &""
+## The battle unit this view shows ("P1", "E2"), set by the room view; the effects system finds a unit's view by it
+## (spec vfx-framework: FxAnchor.unit). Empty outside a battle.
+var unit_id: StringName = &""
 
 var _gate: ClientGate
 var _cast_id: int = 0

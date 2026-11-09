@@ -83,6 +83,8 @@ var _server_problem_shown: bool = false
 ## Spec main-menu M5 (D2): local-mode runs are saved after every action. Off headless (tests turn it on with their own
 ## `local_save_path`).
 var local_saves: bool = DisplayServer.get_name() != "headless"
+## Set before the scene enters the tree: play locally even in a window, ignoring the Settings' server url (dev_run --local).
+var force_local: bool = false
 var local_save_path: String = LocalSave.DEFAULT_PATH
 ## While a save loads: a run that stops then keeps its file (the menu offers "Delete save").
 var _loading_save: bool = false
@@ -121,7 +123,7 @@ func _ready() -> void:
 		_error_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
 		push_warning("GameMain: " + problem)
 	load_content()
-	if DisplayServer.get_name() != "headless":
+	if DisplayServer.get_name() != "headless" and not force_local:
 		use_server(ServerLink.from_settings())  # headless runs (tests, tools, the verifier) stay local
 	set_mode("menu")  # spec main-menu D1: nothing resumes on its own; the main menu's Continue does
 
@@ -552,6 +554,8 @@ func back_to_menu() -> void:
 
 func set_mode(new_mode: String) -> void:
 	mode = new_mode
+	if new_mode == "menu":
+		FxManager.stop_all()  # spec vfx-framework: no looping aura outlives its run
 	mode_changed.emit(mode)
 
 

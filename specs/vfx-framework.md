@@ -1,6 +1,6 @@
 # Spec: vfx-framework (slice 5a, before 5b `card-ui`)
 
-Status: **decisions F1-F7 settled; awaiting final review** · Date: 2026-11-09 · Roadmap: new slice 5a, between 5 `card-collection` and
+Status: **built 2026-11-09, awaiting the user's review** (decisions F1-F7 settled; section 8 lists where the build differs from this text) · Date: 2026-11-09 · Roadmap: new slice 5a, between 5 `card-collection` and
 5b `card-ui` (the roadmap entry is added when this spec is approved).
 Model: Unreal's **Niagara system assets** (reusable effects with exposed, tunable user parameters) triggered from
 **GameplayCues** (Lyra's `GameplayCueNotify` pattern). Builds on `specs/gameplay-messages.md` (the bus effects can
@@ -284,3 +284,35 @@ approved first, per the design-ownership rule).
 - **F6. 2D, 3D and hybrid** are all supported from the first slice. Decided.
 - **F7. `FxStage` (SubViewport) is part of this slice,** because the Hearthstone-style card screens are 3D under 2D
   chrome. The card meshes, flip animation and pack models are slice 5b. Decided.
+
+## 8. Implementation notes (2026-11-09: where the build differs from the text above)
+
+- **Shader library is system code:** the shaders live in `game/fx/shaders/` (not `presentation/demo/fx/shaders/`), so the
+  framework ships with them and no ownership prompt is needed. The proof effects and cue scenes are in `presentation/demo/fx/`
+  and `presentation/demo/cues/`, made by `game/tools/build_fx_set.tscn` (never overwrites; `--force`). The shaders are
+  pixel-based for the UI ones (`rect_size`, `margin`, `corner` in pixels; the layer drives `rect_size` and `margin`).
+- **Names:** `FxParam.min_value` / `max_value` / `default_value`, `FxDefinition.Space`, `FxLayer.Quality {LOW=1, MEDIUM=2,
+  HIGH=3}` and `FxQuality` (off 0 … high 3; `FxLayer.min_quality` replaces the `Fx.Quality.High` tag idea). The service class is
+  `FxService` (the autoload is named `FxManager`).
+- **Layer lifecycle** (section 2): `build` → `apply` → `start` → `update` every tick → `stop` → `ended` (restores what the layer
+  changed on the anchor, as soon as the layer ends) → `reset` (pool). `is_finished` lets a sub-effect layer last as long as its
+  child. Layers keep per-play state in node metadata; `FxValueNode` carries named values for layers with no engine node.
+- **Anchors:** 2D layers follow a 3D anchor by projection, 3D layers on a Control are skipped, a SCREEN effect always fills the
+  window (or the stage's overlay). `FxAnchor.unit(id)` finds the view through `UnitAnimator.unit_id`, set by the room view.
+- **Cue bridge:** `FxCueNotify` finishes itself only when it should: a one-shot cue when its effect ends, a persistent cue
+  (auto_destroy false) only in `end_cue`, so GodotGAS's pooling never sees it twice.
+- **Accepted for now, to be tuned in 5a2 (user, 2026-11-09):** the one generic hit spark on `damage.tres`. DoTs such as poison
+  must show their own effects and hits must differ by type; see the roadmap entry 5a2.
+- **Content touched (user's permission, 2026-11-09):** `content/demo/effects/damage.tres` lists `Cue.Fx.HitSpark` after
+  `Cue.Sfx.Hit` (every damage hit sparks; visual only, never hashed); `godot_gas/cue_registry.tres` has the four effect cues; the
+  tag registry has 12 new tags (`Cue.Fx.*`, `Fx.Kind.*`, `Message.Dev.Fx`); `presentation/demo/room_view_3d.gd` sets
+  `view.unit_id`. Changing `damage.tres` changes the ruleset version (the content hash), like any content edit.
+- **Addon patches (2026-11-09, user): Unreal's cue model.** The cue registry stores each scene as a reference and the
+  manager loads it on first use (`scene_ref`, `GameplayCueManager._scene_for`, `preload_cue`), and `suppress_cues` turns cues
+  off in headless processes (the verifier loads no cue scene and makes no cue node per hit; this also covers the hit sound).
+  See `client-godot/CLAUDE.md` section 0, patches 3 and 4, and `test_godotgas_patches`.
+- **Not built:** the Settings screen's quality selector (the console's `fx quality` and the Settings key work), the inspector
+  preview button in the `rpg_dev` dock (the gallery and `fx play` cover it), a Grafana-style anything (N/A). Effects for the
+  existing abilities, statuses and items are slice 5a2.
+- **Tests:** 53 in `tests/game/test_fx.gd` (683 in all), the tool `game/tools/fx_smoke.tscn` (36 plays: 12 effects × 3 tiers),
+  `validate_content.tscn` (clean), and window runs of the gallery and of a real battle for the pictures.
