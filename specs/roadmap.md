@@ -503,7 +503,8 @@ speed) feeds a delayed review queue, not instant bans.
   (full-game pool sizes in Repentance+ are about 94 for the shop, 59 boss, 93 devil and 66 angel per isaacguru.com;
   fresh-save counts were not found). Collected cards add to those pools. Which cards are core
   is content (a card set tag beside the pool tags); the balance gate is tuned on the core pool alone, the worst case for
-  a new account. - **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
+  a new account.
+- **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
 - **Packs:** several pack types, each with its own card list and rarity odds. Opening is server-side, on a pack RNG
   separate from combat RNG, recorded for audit.
 - **Dust:** any collected (non-core) card can be dusted for a flat rate per rarity, unless the run lock holds it. Dusting
