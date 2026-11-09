@@ -5,6 +5,8 @@ using Rpg.Contracts.Battle;
 using Rpg.Contracts.Runs;
 using Rpg.Contracts.Serialization;
 using Rpg.Economy;
+using Rpg.Economy.Cards;
+using Rpg.GameServerApi.Cards;
 using Rpg.GameServerApi.Auth;
 using Rpg.GameServerApi.Migrations;
 using Rpg.Verification;
@@ -14,10 +16,12 @@ namespace Rpg.GameServerApi.Runs;
 /// <summary>A run as stored, with its owner (the summary DTO has no owner, so ownership checks need this).</summary>
 public sealed record StoredRun(Guid PlayerId, RunSummaryResponse Summary);
 
-public enum StartOutcome { Created, AbandonedPrevious, PreviousVerifying }
+public enum StartOutcome { Created, AbandonedPrevious, PreviousVerifying, CharacterLocked }
 
 public sealed record StartResult(StartOutcome Outcome, Guid RunId, long FloorSeed, DateTimeOffset StartedAt,
-    Guid? AbandonedRunId);
+    Guid? AbandonedRunId, RunPool? Pool = null, string? Detail = null);
+
+public enum AbandonOutcome { Abandoned, AlreadyAbandoned, NotFound, NotActive, Verifying }
 
 public enum FloorOutcome { Issued, Repeated, NotFound, NotActive, NotReachable, UploadIncomplete, Unverified, RolledBack }
 
@@ -31,7 +35,7 @@ public sealed record FloorResult(FloorOutcome Outcome, long FloorSeed = 0, int L
 /// changes (the player row for a run start, the run row for the stairs), so ordering never depends on Redis.
 /// </summary>
 public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunner migrations, FloorSeeds seeds,
-    IOptions<RunVerifyOptions> verify)
+    IOptions<RunVerifyOptions> verify, IOptions<CardOptions> cardOptions)
 {
     private const string SummaryColumns =
         "run_id, player_id, status, current_floor, last_seq, ruleset_version, started_at, ended_at, epoch, verified_seq";
@@ -47,6 +51,10 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
 
+        // Spec card-collection 3.3: the account lock first (before the player row lock below), so a dust that races this start
+        // either lands before the pool is read or after the run exists, and never in between.
+        await Execute(connection, transaction, "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", ct,
+            "acct:" + player.Id.ToString("D"));
         await Execute(connection, transaction,
             "INSERT INTO players (player_id, display_name, created_at) VALUES ($1, $2, $3) ON CONFLICT (player_id) DO NOTHING",
             ct, player.Id, player.Name, now);
@@ -70,6 +78,19 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
             }
         }
 
+        // Spec card-collection 2.5: the party must be unlocked characters and the item pool is fixed now.
+        RunPool? pool = null;
+        if (cardOptions.Value.Enabled)
+        {
+            var snapshot = await CardStore.SnapshotForRunAsync(connection, transaction, player.Id, request.CharacterIds, ct);
+            if (snapshot.Problem is { } locked)
+            {
+                return new StartResult(StartOutcome.CharacterLocked, Guid.Empty, 0, now, null, null, locked.Detail);
+            }
+
+            pool = snapshot.Value;
+        }
+
         if (abandoned is { } previous)
         {
             await Execute(connection, transaction,
@@ -81,11 +102,14 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
         var floorSeed = seeds.Derive(runId, 0);
         await Execute(connection, transaction,
             """
-            INSERT INTO runs (run_id, player_id, ruleset_version, run_structure_id, character_ids, status, started_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO runs (run_id, player_id, ruleset_version, run_structure_id, character_ids, status, started_at,
+                              card_pool, unlocked_characters)
+            VALUES ($1, $2, $3, $4, $5, $6, clock_timestamp(), $7, $8)
             """,
             ct, runId, player.Id, request.RulesetVersion, request.RunStructureId, request.CharacterIds.ToArray(),
-            nameof(RunStatus.Active), now);
+            nameof(RunStatus.Active),
+            new NpgsqlParameter { NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Jsonb, Value = pool is null ? DBNull.Value : JsonSerializer.Serialize(pool.CardPool, RpgJson.Options) },
+            new NpgsqlParameter { NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Jsonb, Value = pool is null ? DBNull.Value : JsonSerializer.Serialize(pool.UnlockedCharacterIds, RpgJson.Options) });
         await Execute(connection, transaction,
             "INSERT INTO run_floors (run_id, floor, floor_seed, issued_at) VALUES ($1, 0, $2, $3)",
             ct, runId, floorSeed, now);
@@ -99,7 +123,52 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
         await transaction.CommitAsync(ct);
 
         return new StartResult(abandoned is null ? StartOutcome.Created : StartOutcome.AbandonedPrevious, runId,
-            floorSeed, now, abandoned);
+            floorSeed, now, abandoned, pool);
+    }
+
+    /// <summary>
+    /// Cancels the player's Active run (spec card-collection 2.3): the path the dust pop-up offers. The same Abandoned status
+    /// that "start a new run" gives the previous one. A run waiting for its verdict can't be cancelled.
+    /// </summary>
+    public async Task<AbandonOutcome> AbandonAsync(Guid playerId, Guid runId, DateTimeOffset now, CancellationToken ct)
+    {
+        await migrations.EnsureMigratedAsync(ct);
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+        // The account lock first, as the dust and the run start take it: a dust sees the run either Active or gone.
+        await Execute(connection, transaction, "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", ct,
+            "acct:" + playerId.ToString("D"));
+        string status;
+        await using (var select = Command(connection, transaction,
+                         "SELECT status FROM runs WHERE run_id = $1 AND player_id = $2 FOR UPDATE", runId, playerId))
+        {
+            if (await select.ExecuteScalarAsync(ct) is not string found)
+            {
+                return AbandonOutcome.NotFound;
+            }
+
+            status = found;
+        }
+
+        if (status == nameof(RunStatus.Verifying))
+        {
+            return AbandonOutcome.Verifying;
+        }
+
+        if (status == nameof(RunStatus.Abandoned))
+        {
+            return AbandonOutcome.AlreadyAbandoned;   // a retried cancel (the first 204 was lost) is a success, not a second run end
+        }
+
+        if (status != nameof(RunStatus.Active))
+        {
+            return AbandonOutcome.NotActive;
+        }
+
+        await Execute(connection, transaction, "UPDATE runs SET status = $2, ended_at = $3 WHERE run_id = $1", ct,
+            runId, nameof(RunStatus.Abandoned), now);
+        await transaction.CommitAsync(ct);
+        return AbandonOutcome.Abandoned;
     }
 
     /// <summary>

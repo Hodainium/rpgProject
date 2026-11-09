@@ -16,6 +16,6 @@ script = ExtResource("6_vbcti")
 id = &"demo.item.mimic_tooth"
 display_name = "Mimic Tooth"
 description = "Critical hits make the target Bleed and heal you 30 HP."
-tags = Array[StringName]([&"Pool.Vault", &"Pool.Treasure", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 9
 grants = SubResource("Resource_8vak7")

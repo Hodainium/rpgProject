@@ -15,6 +15,6 @@ script = ExtResource("5_xhu5m")
 id = &"demo.item.bellows"
 display_name = "Bellows"
 description = "Breaking an enemy gives +15 ult charge."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Descent"])
 price = 7
 grants = SubResource("Resource_owr0u")

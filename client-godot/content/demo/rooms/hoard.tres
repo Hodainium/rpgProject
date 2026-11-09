@@ -25,7 +25,7 @@ slot = 4
 
 [sub_resource type="Resource" id="Resource_8d302"]
 script = ExtResource("2_ilkh3")
-require_any_tags = Array[StringName]([&"Pool.Vault", &"Pool.Treasure"])
+require_any_tags = Array[StringName]([&"Pool.Treasure"])
 
 [sub_resource type="Resource" id="Resource_47y2x"]
 script = ExtResource("1_ahhn3")

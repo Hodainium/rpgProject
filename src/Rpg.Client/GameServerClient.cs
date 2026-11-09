@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using Rpg.Contracts.Api.V1;
 using Rpg.Contracts.Auth;
 using Rpg.Contracts.Battle;
+using Rpg.Contracts.Cards;
 using Rpg.Contracts.Economy;
 using Rpg.Contracts.Presence;
 using Rpg.Contracts.Runs;
@@ -94,6 +95,57 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
     public Task<RewardCycleResetResponse> ResetRewardCycleAsync(RewardCycleResetRequest request, CancellationToken ct = default) =>
         RequiredAsync<RewardCycleResetResponse>(HttpMethod.Post, "api/v1/admin/reward-cycles/reset",
             JsonContent.Create(request, options: RpgJson.Options), ct);
+
+    // ---- Cards (spec card-collection) ----------------------------------------------------------------------------
+
+    /// <summary>GET /api/v1/cards/catalog: every card with the rates in force.</summary>
+    public Task<CatalogResponse> GetCardCatalogAsync(CancellationToken ct = default) =>
+        RequiredAsync<CatalogResponse>(HttpMethod.Get, "api/v1/cards/catalog", null, ct);
+
+    /// <summary>GET /api/v1/packs: the packs on sale with their odds, pity rules and card lists.</summary>
+    public Task<PackListResponse> GetPacksAsync(CancellationToken ct = default) =>
+        RequiredAsync<PackListResponse>(HttpMethod.Get, "api/v1/packs", null, ct);
+
+    /// <summary>GET /api/v1/cards/collection: the account's cards (core cards implied), gems, dust and pity counters.</summary>
+    public Task<CollectionResponse> GetCollectionAsync(CancellationToken ct = default) =>
+        RequiredAsync<CollectionResponse>(HttpMethod.Get, "api/v1/cards/collection", null, ct);
+
+    /// <summary>POST /api/v1/packs/{packId}/open: spends gems. Retrying with the same key returns the same cards.</summary>
+    public Task<PackOpenResponse> OpenPackAsync(string packId, Guid requestKey, CancellationToken ct = default) =>
+        RequiredAsync<PackOpenResponse>(HttpMethod.Post, $"api/v1/packs/{Uri.EscapeDataString(packId)}/open",
+            JsonContent.Create(new AccountActionRequest(requestKey), options: RpgJson.Options), ct);
+
+    /// <summary>POST /api/v1/cards/{cardId}/dust: removes the card for dust (409 1403 while the active run holds it).</summary>
+    public Task<DustResponse> DustCardAsync(string cardId, Guid requestKey, CancellationToken ct = default) =>
+        RequiredAsync<DustResponse>(HttpMethod.Post, $"api/v1/cards/{Uri.EscapeDataString(cardId)}/dust",
+            JsonContent.Create(new AccountActionRequest(requestKey), options: RpgJson.Options), ct);
+
+    /// <summary>POST /api/v1/cards/{cardId}/craft: spends dust on a card the account does not own.</summary>
+    public Task<CraftResponse> CraftCardAsync(string cardId, Guid requestKey, CancellationToken ct = default) =>
+        RequiredAsync<CraftResponse>(HttpMethod.Post, $"api/v1/cards/{Uri.EscapeDataString(cardId)}/craft",
+            JsonContent.Create(new AccountActionRequest(requestKey), options: RpgJson.Options), ct);
+
+    /// <summary>POST /api/v1/runs/{runId}/abandon: cancels the Active run (204); 409 1410 while it is being verified.</summary>
+    public Task AbandonRunAsync(string runId, CancellationToken ct = default) =>
+        SendAsync<object>(HttpMethod.Post, $"api/v1/runs/{Uri.EscapeDataString(runId)}/abandon", null, ct, allowNoContent: true);
+
+    /// <summary>PUT /api/v1/admin/pack-types (economy-admin): a new version of one pack type.</summary>
+    public Task<PackTypeResponse> PutPackTypeAsync(PackTypeRequest request, CancellationToken ct = default) =>
+        RequiredAsync<PackTypeResponse>(HttpMethod.Put, "api/v1/admin/pack-types",
+            JsonContent.Create(request, options: RpgJson.Options), ct);
+
+    /// <summary>GET /api/v1/admin/pack-types (economy-admin): the latest version of every pack type.</summary>
+    public Task<PackTypeListResponse> ListPackTypesAsync(CancellationToken ct = default) =>
+        RequiredAsync<PackTypeListResponse>(HttpMethod.Get, "api/v1/admin/pack-types", null, ct);
+
+    /// <summary>PUT /api/v1/admin/card-rates (economy-admin): a new version of one rarity's dust value and craft cost.</summary>
+    public Task<CardRateResponse> PutCardRateAsync(CardRateRequest request, CancellationToken ct = default) =>
+        RequiredAsync<CardRateResponse>(HttpMethod.Put, "api/v1/admin/card-rates",
+            JsonContent.Create(request, options: RpgJson.Options), ct);
+
+    /// <summary>GET /api/v1/admin/card-rates (economy-admin): the latest version of every rarity's rates.</summary>
+    public Task<CardRateListResponse> ListCardRatesAsync(CancellationToken ct = default) =>
+        RequiredAsync<CardRateListResponse>(HttpMethod.Get, "api/v1/admin/card-rates", null, ct);
 
     /// <summary>POST /api/v1/presence: the heartbeat (204).</summary>
     public Task HeartbeatAsync(PresenceRequest request, CancellationToken ct = default) =>

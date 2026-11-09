@@ -1,0 +1,22 @@
+# Spec card-collection 3.4a end to end: a pity timer fires on the Nth pack and its counter survives the server restarting. A tiny
+# pack with common-only odds and a Mythic timer of 2 is made through the admin path; the first open misses, the server is stopped
+# and started again, and the second open must hold a Mythic, flagged as pity. A first run pays the gems for it.
+#! worker
+#! content real
+#! cards
+#! env Monitors__Interval=00:00:01
+server reward boss demo.enemy.rat_king 300
+server reward boss demo.enemy.golem 300
+new demo.character.warrior,demo.character.cleric run=demo.run.one_floor
+wait run
+autorun policy=smart
+wait ended 180
+wait verdict all 300
+wait gems 100 180
+server pack-type tiny price=10 cards=1 odds=common:10000 sets=descent pity=mythic:2 min=none
+packs open tiny
+packs pity
+e2e server-stop
+e2e server-start
+packs open tiny
+packs pity

@@ -15,6 +15,6 @@ script = ExtResource("5_igpbr")
 id = &"demo.item.interrupters_badge"
 display_name = "Interrupter's Badge"
 description = "After an out-of-turn ult, +15% ATK for 1 turn."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare", &"Card.Set.Descent"])
 price = 6
 grants = SubResource("Resource_nqryx")

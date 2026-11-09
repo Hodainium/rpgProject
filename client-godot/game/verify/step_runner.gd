@@ -17,7 +17,7 @@ const EXIT_REJECTED: int = 2
 const EXIT_MALFORMED: int = 3
 const KINDS: Array[String] = ["Genesis", "Segment", "Battle", "End"]
 const REQUEST_KEYS: Array[String] = ["schemaVersion", "runId", "runStructureId", "characterIds", "floorSeeds", "fromSeq", "toSeq",
-	"kind", "startSnapshot", "startStateHash", "actions", "endRunHash"]
+	"kind", "startSnapshot", "startStateHash", "actions", "endRunHash", "cardPool"]
 
 var exit_code: int = EXIT_RUNNER_ERROR
 ## Set on a runner error; the result file is then {"runnerError": ...} instead of a StepVerdict.
@@ -111,6 +111,12 @@ static func validate(request: Dictionary) -> String:
 			return "%s must be a number" % key
 	if not request.get("actions") is Array:
 		return "actions must be an array"
+	if request.get("cardPool") != null:
+		if not request["cardPool"] is Array:
+			return "cardPool must be an array of ids"
+		for id in request["cardPool"]:
+			if not id is String or str(id) == "":
+				return "cardPool must hold non-empty id strings"
 	if str(request["kind"]) == "Genesis":
 		return ""
 	if not request.get("startSnapshot") is Dictionary or not request.get("startStateHash") is String:
@@ -139,7 +145,7 @@ static func validate(request: Dictionary) -> String:
 ## The start the server's inputs produce: nothing of the client's goes in. Returns the verdict with the rebuilt snapshot.
 func _genesis(request: Dictionary) -> Dictionary:
 	var error := _run.start_server_run(_content, _names(request["characterIds"]), str(request["runId"]),
-		int(_server_seeds.get(0, 0)), StringName(str(request["runStructureId"])))
+		int(_server_seeds.get(0, 0)), StringName(str(request["runStructureId"])), _card_pool(request))
 	if error == "" and _run.runner_error != "":
 		error = _run.runner_error
 	if error != "":
@@ -151,7 +157,7 @@ func _genesis(request: Dictionary) -> Dictionary:
 
 func _replay(request: Dictionary) -> Dictionary:
 	var from_seq := int(request["fromSeq"])
-	var error := _run.load_snapshot(_content, request["startSnapshot"])
+	var error := _run.load_snapshot(_content, request["startSnapshot"], _card_pool(request))
 	if error != "":
 		return _reject("SnapshotHashMismatch", from_seq, "the start snapshot can't be restored: " + error)
 	var wrong := _wrong_setup(request)
@@ -187,6 +193,12 @@ func _replay(request: Dictionary) -> Dictionary:
 	# The run hash covers everything that decides play, so the next step's check of its restored start against the hash claimed
 	# here binds the claimed snapshot to this replay: no separate comparison of snapshots is needed.
 	return _verified(start_hash, _run.state.run_hash(), {}, _digest)
+
+
+## Spec card-collection 2.5: the run's item pool, the server's own (from `runs`): null when the run was started without cards.
+## A claimed snapshot never carries it, so a client cannot widen its own pool: a different pool changes the run hash.
+static func _card_pool(request: Dictionary) -> Variant:
+	return request["cardPool"] if request.get("cardPool") is Array else null
 
 
 ## Plays one logged action. {} or the rejection verdict.

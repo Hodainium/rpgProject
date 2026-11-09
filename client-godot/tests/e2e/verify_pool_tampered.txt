@@ -1,0 +1,14 @@
+# Spec card-collection 2.5 and acceptance scenario 5 for the item pool: a client that plays with a pool other than the one the
+# server fixed at run start is rejected. Here the stored pool is narrowed after the client started and played (so the client's
+# hashes carry the full pool's digest and the server's own rebuilt start carries the narrower one), and only then does the worker
+# start: the genesis step rebuilds the start from the server's pool, the client's claimed seq 1 is not it, and the run ends
+# Rejected as a genesis mismatch. Nothing pays. Same shape as genesis_forged, with the pool as the forged input (the one-floor run is over before the worker starts, so the client waits for the verdict and is told the run was rejected).
+#! content real
+#! cards
+#! env Monitors__Interval=00:00:01
+new demo.character.warrior,demo.character.cleric run=demo.run.one_floor
+wait run
+autorun policy=smart
+e2e tamper-pool
+e2e worker-start 180
+wait stopped 180

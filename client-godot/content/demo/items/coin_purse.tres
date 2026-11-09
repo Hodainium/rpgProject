@@ -12,6 +12,6 @@ script = ExtResource("3_fw7r3")
 id = &"demo.item.coin_purse"
 display_name = "Coin Purse"
 description = "+1 coin for every room you clear."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 5
 on_room_cleared = Array[ExtResource("1_iw0lw")]([SubResource("Resource_87lxd")])

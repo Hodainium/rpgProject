@@ -24,6 +24,7 @@ var runs: Dictionary = {}        # StringName -> RunStructure
 var layouts: Dictionary = {}     # StringName -> FloorLayout
 var chests: Dictionary = {}      # StringName -> ChestDefinition (spec keys-and-gear)
 var challenges: Dictionary = {}  # StringName -> ChallengeDefinition (spec economy-challenges)
+var card_rules: Dictionary = {}  # StringName -> CardRules (spec card-collection; none = no card checks)
 var problems := PackedStringArray()
 
 
@@ -47,7 +48,7 @@ func overlay(resources: Array) -> ContentIndex:
 	var copy := ContentIndex.new("")
 	copy.root = root
 	for name in ["units", "characters", "encounters", "loadouts", "variants", "equipment", "items", "events", "rooms",
-			"chapters", "scaling", "floor_rules", "runs", "layouts", "chests", "challenges"]:
+			"chapters", "scaling", "floor_rules", "runs", "layouts", "chests", "challenges", "card_rules"]:
 		copy.set(name, get(name).duplicate())
 	copy.problems = problems.duplicate()
 	for resource in resources:
@@ -101,6 +102,8 @@ func _table_for(resource: Resource) -> Array:
 		return [chests, "chest"]
 	if resource is ChallengeDefinition:
 		return [challenges, "challenge"]
+	if resource is CardRules:
+		return [card_rules, "card rules"]
 	return []
 
 

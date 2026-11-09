@@ -33,6 +33,8 @@ const CONTENT_ROOTS: Array[String] = ["res://content/", "res://tests/fixtures/"]
 ## Spec playtest-fixes B9: what the connecting pop-up says while a server run starts or resumes.
 @export var wait_start_text: String = "Starting the run…"
 @export var wait_resume_text: String = "Resuming your run…"
+## Spec card-collection 3.6: shown when the player tries to leave a won run the server has not accepted yet.
+@export var leaving_blocked_text: String = "The run is being verified. You can leave once the server accepts it."
 ## Spec playtest-fixes B11: the message line once the server answers again after a server problem was shown.
 @export var reconnected_text: String = "Connected to the server as %s"
 ## Spec main-menu M4: the mode line of the main menu and Settings.
@@ -220,6 +222,11 @@ func load_content() -> void:
 	content_changed.emit(content)
 
 
+## Spec card-collection 3.6: the local test collection (the console's `cards local`): the item pool local runs start with, or
+## null (everything, today's behaviour). Not ownership and never sent anywhere: a server run takes only the server's pool.
+var local_card_pool: Variant = null
+
+
 ## Starts a run with the chosen characters (ids) and a seed typed as a decimal string. "" or the error.
 ## `run_id` picks the RunStructure (spec playable-demo 2.2); empty = the only or the default one.
 ## In server mode the seed is ignored: the server opens the run and issues every floor seed; "" returns at once and the
@@ -229,7 +236,7 @@ func start_run(character_ids: Array, seed_text: String, run_id: StringName = &""
 		_start_server_run(character_ids, run_id)
 		return ""
 	_new_run()
-	var error := run.start_run(content, character_ids, seed_text, run_id)
+	var error := run.start_run(content, character_ids, seed_text, run_id, local_card_pool)
 	if error != "":
 		set_mode("end")
 	return error
@@ -255,7 +262,7 @@ func _start_server_run(character_ids: Array, run_id: StringName) -> void:
 	_new_run()
 	server.link(run, server_run_id)
 	var error := run.start_server_run(content, character_ids, server_run_id, str(result["data"]["floorSeed"]).to_int(),
-		StringName(structure_id))
+		StringName(structure_id), result["data"].get("cardPool"))  # spec card-collection 2.5: the server's pool, or none
 	if error != "":
 		set_mode("end")
 
@@ -422,6 +429,13 @@ func can_continue() -> Dictionary:
 		return _no_continue("none")
 	var data: Dictionary = current["data"]
 	var status := str(data.get("status", ""))
+	if status == "Verifying":
+		# Spec card-collection 3.6: a won run waiting for its verdict is continued into the same "Verifying the run…" wait, from
+		# the save that holds its end request (the player may have closed the game meanwhile); without it there is nothing to show.
+		var waiting := link.load_save()
+		if not waiting.is_empty() and str(waiting.get("runId", "")) == str(data.get("runId", "")) and not waiting.get("end", {}).is_empty() \
+				and ServerLink.save_seq(waiting) >= int(data.get("lastSeq", 0)):  # the same test resume_into applies to a save
+			return {"enabled": true, "reason": "", "tag": "Synced", "subtitle": "won run · waiting for the server to accept it", "older": false}
 	if status != "Active":
 		return _no_continue("verifying" if status == "Verifying" else "none")
 	var text := "floor %d · started %s" % [int(data.get("currentFloor", 0)) + 1, ago(str(data.get("startedAt", "")))]
@@ -487,9 +501,12 @@ func continue_local_run() -> String:
 	var read := LocalSave.read(local_save_path)
 	if read["state"] != "ok":
 		return "The saved run couldn't be read" if read["state"] == "bad" else "No saved run"
+	var damaged := RunState.save_pool_problem(read["data"])
+	if damaged != "":
+		return damaged + "; it can't be continued"  # a local test pool is not recoverable from anywhere else
 	_loading_save = true
 	_new_run()
-	var error := run.load_snapshot(content, read["data"]["snapshot"])
+	var error := run.load_snapshot(content, read["data"]["snapshot"], read["data"].get("cardPool"))
 	_loading_save = false
 	if error != "":
 		set_mode("menu")
@@ -498,8 +515,22 @@ func continue_local_run() -> String:
 	return ""
 
 
+## Spec card-collection 3.6: a won server run waits for the server to accept it (the "Verifying the run…" wait) and the player
+## cannot leave to the main menu until it has: the verdict decides what the win is worth, and a rolled-back run goes on playing.
+## Closing the game is allowed; Continue brings the same wait back. True from the win until the run-end screen.
+func leaving_blocked() -> bool:
+	return server != null and mode == "run" and run != null and run.state != null and run.state.status == RunState.WON
+
+
+func _blocked_message() -> void:
+	show_message(leaving_blocked_text)
+
+
 ## Spec main-menu M9: leaves the run for the main menu with the run saved (local mode: the file is written now).
 func save_and_quit() -> void:
+	if leaving_blocked():
+		_blocked_message()
+		return
 	save_local_run()
 	back_to_menu()
 
@@ -511,6 +542,9 @@ func abandon_local_run() -> void:
 
 
 func back_to_menu() -> void:
+	if leaving_blocked():
+		_blocked_message()
+		return
 	if run != null and run.state != null and run.state.sandbox:
 		sandbox_closed.emit()
 	set_mode("menu")

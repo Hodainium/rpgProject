@@ -107,8 +107,9 @@ const CHEST_NO_KEY_TAG: StringName = &"Run.Chest.NoKey"
 
 ## Starts a run with 1-4 characters (ids of CharacterDefinitions) and a seed typed as a decimal string or seed code.
 ## `run_id` names the RunStructure; empty picks it as pick_run() does (spec playable-demo 2.2).
-func start_run(content_index: ContentIndex, character_ids: Array, seed_text: String, run_id: StringName = &"") -> String:
-	var error := _begin_run(content_index, character_ids, seed_text, run_id)
+func start_run(content_index: ContentIndex, character_ids: Array, seed_text: String, run_id: StringName = &"",
+		card_pool: Variant = null) -> String:
+	var error := _begin_run(content_index, character_ids, seed_text, run_id, false, card_pool)
 	if error != "":
 		return error
 	return _commit_after(_open_run())
@@ -117,8 +118,8 @@ func start_run(content_index: ContentIndex, character_ids: Array, seed_text: Str
 ## Spec server-authority 2.1 (server mode): starts the run the server opened as `server_run_id`, with floor 0's issued
 ## seed. Every stream then comes from issued floor seeds (SeedSource); each later floor waits for its own.
 func start_server_run(content_index: ContentIndex, character_ids: Array, server_run_id: String, floor_seed: int,
-		run_id: StringName = &"") -> String:
-	var error := _begin_run(content_index, character_ids, "0", run_id)
+		run_id: StringName = &"", card_pool: Variant = null) -> String:
+	var error := _begin_run(content_index, character_ids, "0", run_id, false, card_pool)
 	if error != "":
 		return error
 	state.run_id = server_run_id
@@ -243,7 +244,7 @@ static func pick_run(content_index: ContentIndex, run_id: StringName = &"", leni
 
 ## Everything start_run does before the first floor: checks, run state, party from default loadouts, the start_run entry.
 func _begin_run(content_index: ContentIndex, character_ids: Array, seed_text: String, run_id: StringName = &"",
-		lenient: bool = false) -> String:
+		lenient: bool = false, card_pool: Variant = null) -> String:
 	content = content_index
 	if not content.problems.is_empty():
 		return _stop("content problems: " + "; ".join(content.problems))
@@ -259,6 +260,8 @@ func _begin_run(content_index: ContentIndex, character_ids: Array, seed_text: St
 	if character_ids.is_empty() or character_ids.size() > 4:
 		return _stop("pick 1 to 4 characters")
 	state = RunState.new()
+	if card_pool != null:
+		state.set_card_pool(card_pool)  # spec card-collection 2.5: before anything is picked
 	state.run_seed = seed_value
 	state.run_id = "run-%d" % seed_value
 	state.run_structure_id = structure.id
@@ -2177,8 +2180,11 @@ func _run_hooks(kind: String) -> void:
 
 
 func _pools() -> Dictionary:
-	return {"party": state.party_characters(), "held": state.held_items() + state.held_equipment(),
+	var pools := {"party": state.party_characters(), "held": state.held_items() + state.held_equipment(),
 		"seen": state.seen_items.duplicate()}
+	if state.card_pool_set:
+		pools["card_pool"] = state.card_pool  # spec card-collection 2.5; absent when the run has no pool
+	return pools
 
 
 func _active() -> bool:
@@ -2209,8 +2215,8 @@ func snapshot() -> Dictionary:
 
 ## Spec server-authority 2.4: continues the run from `saved` (a RunSnapshot). Emits nothing; announce_resumed() tells
 ## the screens once whoever loads it is ready. "" or the error.
-func load_snapshot(content_index: ContentIndex, saved: Dictionary) -> String:
-	var error := RunSnapshot.restore(self, content_index, saved)
+func load_snapshot(content_index: ContentIndex, saved: Dictionary, card_pool: Variant = null) -> String:
+	var error := RunSnapshot.restore(self, content_index, saved, card_pool)
 	if error != "":
 		return _stop("resume: " + error)
 	return ""

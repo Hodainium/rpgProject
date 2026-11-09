@@ -17,6 +17,6 @@ script = ExtResource("6_6h8cc")
 id = &"demo.item.corrupted_bounty_mark"
 display_name = "Corrupted Bounty"
 description = "On a kill: +40 ult charge and heal 120 HP. −15% healing received."
-tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 0
 grants = SubResource("Resource_5ct07")

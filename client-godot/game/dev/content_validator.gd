@@ -58,6 +58,7 @@ static func validate(content_index: ContentIndex, options: Dictionary = {}) -> A
 	for id in _sorted(content_index.runs):
 		validator._check_run(content_index.runs[id], int(options.get("generate_seeds", 0)))
 	validator._check_default_run()
+	validator._check_cards()
 	if options.get("tags", true):
 		validator._check_tags()
 	return validator._sorted_issues()
@@ -1098,6 +1099,17 @@ func _check_rarity_weights(structure: RunStructure) -> void:
 			_warning("rarity_unknown", where, "no item or piece has %s" % tag)
 	for id in unrated:
 		_warning("no_rarity", where, "%s is in a pool but has no %s* tag, so it keeps its own weight" % [id, RunStructure.RARITY_PREFIX])
+
+
+## Spec card-collection 3.6: card sets, rarities, the starter characters and the core set of every room pool. Only when the content
+## root has a CardRules resource (older content and the fixtures have none, so they get no card checks).
+func _check_cards() -> void:
+	for problem in CardCatalog.problems(content):
+		_error(problem[0], problem[1] if problem[1] != "" else content.root, problem[2])
+	var counts := CardCatalog.pool_counts(content)
+	for pool in counts:
+		if counts[pool][0] < counts[pool][1]:
+			_warning("core_pool_short", pool, "%s holds %d core cards, its target is %d" % [pool, counts[pool][0], counts[pool][1]])
 
 
 ## Spec playable-demo 2.2: with several runs, exactly one should be default_run (an empty run id starts it).

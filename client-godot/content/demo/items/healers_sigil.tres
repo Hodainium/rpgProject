@@ -14,6 +14,6 @@ script = ExtResource("4_item")
 id = &"demo.item.healers_sigil"
 display_name = "Healer's Sigil"
 description = "+30% healing given."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 6
 grants = SubResource("Resource_grants")

@@ -17,7 +17,6 @@ const EPIC := &"Item.Rarity.Epic"
 const LEGENDARY := &"Item.Rarity.Legendary"
 const CORRUPTED := &"Item.Corrupted"
 const VOID_POOL := &"Pool.Void"
-const VAULT_POOL := &"Pool.Vault"
 const CORE := {"crit_rate": 5, "crit_dmg": 50, "energy": 0, "weakness_dmg": 150}
 
 
@@ -435,34 +434,34 @@ func _themed_items() -> void:
 	# The Silent Cathedral (boss rewards and the Vault).
 	_save("effects/halo", _infinite({"heal_mult": 10}, false))
 	_passive("halo", "Ability.Passive.Halo", B.SELF, [["ward", "ward", D.USE_EFFECT, 0]], &"Event.Battle.Start")
-	_described("halo", "Halo", [b, VAULT_POOL, EPIC], 9, _ability_set(["halo"], ["halo"]), "Ward at the start of every battle; +10% healing given.")
+	_described("halo", "Halo", [b, EPIC], 9, _ability_set(["halo"], ["halo"]), "Ward at the start of every battle; +10% healing given.")
 	_passive("censer", "Ability.Passive.Censer", B.ALL_ALLIES, [["regen", "regen", D.USE_EFFECT, 0]], &"Event.Battle.Start")
-	_described("censer", "Censer", [b, VAULT_POOL, RARE], 7, _ability_set(["censer"], []), "The party starts every battle with Regen.")
+	_described("censer", "Censer", [b, RARE], 7, _ability_set(["censer"], []), "The party starts every battle with Regen.")
 	_save("effects/relic_shard", _infinite({"crit_rate": 12}, false))
-	_described("relic_shard", "Relic Shard", [b, VAULT_POOL, RARE], 7, _ability_set([], ["relic_shard"]), "+12% crit rate.")
+	_described("relic_shard", "Relic Shard", [b, RARE], 7, _ability_set([], ["relic_shard"]), "+12% crit rate.")
 	_save("effects/holy_heal", _percent_of_max(20))
 	_ability("holy_water", "Ability.Item.Holywater", B.ALL_ALLIES, [_row("clean", "cleanse", D.USE_EFFECT, 0, ExecutionRow.Targets.ALL),
 		_row("heal", "holy_heal", D.USE_EFFECT, 0, ExecutionRow.Targets.ALL)], _flash(0.6), [[0.3, "clean"], [0.35, "heal"]])
-	_usable("holy_water", "Holy Water", [s, VAULT_POOL, COMMON], 5, "holy_water", cooldown, 3, "The party: cleanse and heal 20% of max HP. Ready again after 3 won battles.")
+	_usable("holy_water", "Holy Water", [s, COMMON], 5, "holy_water", cooldown, 3, "The party: cleanse and heal 20% of max HP. Ready again after 3 won battles.")
 	_save("effects/vestment", _infinite({"def": 60, "max_mp": 40}, false))
-	_piece("vestment", "Vestment", "Body", [b, VAULT_POOL, EPIC], 9, _ability_set([], ["vestment"]), "+60 DEF, +40 max MP.")
+	_piece("vestment", "Vestment", "Body", [b, EPIC], 9, _ability_set([], ["vestment"]), "+60 DEF, +40 max MP.")
 	_save("effects/seraph_wing", _infinite({"spd": 12}, false))
-	_described("seraph_wing", "Seraph Wing", [b, VAULT_POOL, LEGENDARY], 12, _ability_set([], ["seraph_wing"]), "The whole party: +12 SPD.", party)
+	_described("seraph_wing", "Seraph Wing", [b, LEGENDARY], 12, _ability_set([], ["seraph_wing"]), "The whole party: +12 SPD.", party)
 	# The Vault.
-	_described("gilded_idol", "Gilded Idol", [VAULT_POOL, t, COMMON], 3, null, "Worth 25 coins the moment you pick it up.",
+	_described("gilded_idol", "Gilded Idol", [t, COMMON], 3, null, "Worth 25 coins the moment you pick it up.",
 		{"on_pickup": _outcomes([_coins(25)])})
-	_described("ledger", "Ledger", [VAULT_POOL, t, RARE], 6, null, "+2 coins for every room you clear.",
+	_described("ledger", "Ledger", [t, RARE], 6, null, "+2 coins for every room you clear.",
 		{"on_room_cleared": _outcomes([_coins(2)])})
 	_save("effects/golden_fleece", _infinite({"max_hp": 20}, true))
-	_described("golden_fleece", "Golden Fleece", [VAULT_POOL, t, EPIC], 9, _ability_set([], ["golden_fleece"]), "+20% max HP.")
+	_described("golden_fleece", "Golden Fleece", [t, EPIC], 9, _ability_set([], ["golden_fleece"]), "+20% max HP.")
 	_save("effects/appraisers_loupe", _infinite({"weakness_dmg": 20}, false))
-	_described("appraisers_loupe", "Appraiser's Loupe", [VAULT_POOL, t, RARE], 7, _ability_set([], ["appraisers_loupe"]), "+20% weakness damage.")
+	_described("appraisers_loupe", "Appraiser's Loupe", [t, RARE], 7, _ability_set([], ["appraisers_loupe"]), "+20% weakness damage.")
 	_save("effects/crown", _infinite({"atk": 10, "def": 10, "spd": 10}, true))
-	_piece("crown", "Crown", "Head", [VAULT_POOL, b, LEGENDARY], 12, _ability_set([], ["crown"]), "+10% ATK, DEF and SPD.")
+	_piece("crown", "Crown", "Head", [b, LEGENDARY], 12, _ability_set([], ["crown"]), "+10% ATK, DEF and SPD.")
 	_save("effects/mimic_mend", _instant({"hp": 30}))
 	_passive("mimic_tooth", "Ability.Passive.Mimictooth", B.SINGLE_ENEMY, [["bleed", "bleed", D.USE_EFFECT, 0]], &"Event.Damage.Dealt.Critical")
 	_passive("mimic_mend", "Ability.Passive.Mimicmend", B.SELF, [["mend", "mimic_mend", D.USE_EFFECT, 0]], &"Event.Damage.Dealt.Critical")
-	_described("mimic_tooth", "Mimic Tooth", [VAULT_POOL, t, EPIC], 9, _ability_set(["mimic_tooth", "mimic_mend"], []), "Critical hits make the target Bleed and heal you 30 HP.")
+	_described("mimic_tooth", "Mimic Tooth", [t, EPIC], 9, _ability_set(["mimic_tooth", "mimic_mend"], []), "Critical hits make the target Bleed and heal you 30 HP.")
 
 
 # --- Corrupted items (15) and Void Scar ----------------------------------------------------------------------------------
@@ -611,10 +610,10 @@ func _chapters() -> void:
 		pedestals.append(pedestal)
 	var all_doors := RoomDefinition.DOOR_N | RoomDefinition.DOOR_E | RoomDefinition.DOOR_S | RoomDefinition.DOOR_W
 	_room("altar", "Altar", [altar, &"Chapter.Void"], all_doors, RoomDefinition.ContentMode.NONE, players + pedestals)
-	# The Vault's treasure rooms draw from Pool.Vault too.
+	# The Vault's treasure rooms draw from the item room pool (Pool.Treasure); there is no Vault pool (2026-11-09).
 	var hoard := _placement(Vector2i(6, 3), P.ITEM_PEDESTAL, 1)
 	var hoard_query := GameplayTagQuery.new()
-	hoard_query.require_any_tags.assign([VAULT_POOL, &"Pool.Treasure"])
+	hoard_query.require_any_tags.assign([&"Pool.Treasure"])
 	hoard.item_query = hoard_query
 	_room("hoard", "Hoard", [treasure, &"Chapter.Vault"], all_doors, RoomDefinition.ContentMode.NONE, players + [hoard])
 	_chapter_def("forge", "The Ember Forge", &"Chapter.Forge", &"", _rules("forge", 7, 10, [treasure, shop]), true)

@@ -15,6 +15,6 @@ script = ExtResource("5_oxswc")
 id = &"demo.item.vampire_fang"
 display_name = "Vampire Fang"
 description = "Heal 15 HP whenever you deal damage."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Descent"])
 price = 8
 grants = SubResource("Resource_4nxgq")

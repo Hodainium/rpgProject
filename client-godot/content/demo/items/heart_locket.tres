@@ -15,6 +15,6 @@ script = ExtResource("5_gpju1")
 id = &"demo.item.heart_locket"
 display_name = "Heart Locket"
 description = "+250 max HP."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 6
 grants = SubResource("Resource_go50v")

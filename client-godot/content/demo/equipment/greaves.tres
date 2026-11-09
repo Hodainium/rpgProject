@@ -16,5 +16,5 @@ display_name = "Greaves"
 description = "+50 DEF, but −4 SPD."
 slot = &"Equipment.Slot.Legs"
 grants = SubResource("Resource_s3cvc")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 5

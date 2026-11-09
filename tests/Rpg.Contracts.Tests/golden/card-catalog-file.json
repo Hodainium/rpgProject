@@ -1,0 +1,1 @@
+{"catalogHash":"5e1f","cards":[{"id":"warrior","kind":"character","rarity":"mythic","setId":"core","core":true,"pools":[]},{"id":"item.silver_key","kind":"item","rarity":"common","setId":"descent","core":false,"pools":["Pool.Treasure","Pool.Shop"]}]}

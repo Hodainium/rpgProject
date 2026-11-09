@@ -1,0 +1,22 @@
+# Spec card-collection F15 and acceptance scenario 3 on the real stack: Redpanda is down while the player opens a pack and dusts a
+# card. Both commit anyway (their outbox rows are in the same transaction), the events wait in the outbox, and once Redpanda is back
+# they all drain: nothing lost, none stuck. A first run pays the gems while the broker is still up. Run it alone: the Redpanda
+# container is shared with the other scenarios.
+#! worker
+#! content real
+#! cards
+#! env Monitors__Interval=00:00:01
+server reward boss demo.enemy.rat_king 300
+server reward boss demo.enemy.golem 300
+new demo.character.warrior,demo.character.cleric run=demo.run.one_floor
+wait run
+autorun policy=smart
+wait ended 180
+wait verdict all 300
+wait gems 100 180
+e2e redpanda-stop 120
+packs open descent-pack
+dust first
+server wallet
+e2e redpanda-start 180
+e2e redpanda-check 90

@@ -13,6 +13,7 @@ func bind(_context: UIContext) -> void:
 ## Spec main-menu M9: Abandon run is local mode only (there is no server abandon yet).
 func refresh() -> void:
 	%Abandon.visible = ctx.main.server == null
+	%SaveQuit.disabled = ctx.main.leaving_blocked()  # spec card-collection 3.6: a won run waits for the server's verdict
 
 
 func _save_and_quit() -> void:

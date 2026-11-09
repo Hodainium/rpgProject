@@ -17,5 +17,16 @@ public static class ApiErrors
     public const int RewardRuleInvalid = 1301;        // 400: unknown kind or currency, amount out of range, bad id
     public const int AdminRequired = 1302;            // 403: the economy-admin role is missing
     public const int RewardTargetUnknown = 1303;      // 404: a cycle reset for a challenge with no rule, or a player that does not exist
+    // Spec card-collection 3.1: card economy (plain request errors, not verdicts).
+    public const int CardRuleInvalid = 1401;          // 400: bad odds sum, unknown rarity or set, craft cost not above dust value, amount out of range
+    public const int InsufficientCurrency = 1402;     // 409: not enough gems (pack) or dust (craft)
+    public const int CardLockedByRun = 1403;          // 409, extensions `runId`, `runStatus`: dust refused by the run lock
+    public const int CardNotCollectible = 1404;       // 400: unknown card, or a core card (cannot be dusted or crafted)
+    public const int CardAlreadyOwned = 1405;         // 409: craft of a card already held
+    public const int CardNotOwned = 1406;             // 409: dust of a card not held
+    public const int RequestKeyReused = 1407;         // 409: the key was used for a different action or body
+    public const int PackUnavailable = 1408;          // 404: unknown or retired pack type
+    public const int CharacterLocked = 1409;          // 400: run start with a character the account does not own
+    public const int RunVerifying = 1410;             // 409: abandon refused, a won run is waiting for its verdict
     public const int RateLimited = 1201;              // 429 + Retry-After
 }

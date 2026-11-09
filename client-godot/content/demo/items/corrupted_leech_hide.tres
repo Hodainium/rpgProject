@@ -15,6 +15,6 @@ script = ExtResource("5_3wqt1")
 id = &"demo.item.corrupted_leech_hide"
 display_name = "Corrupted Hide"
 description = "You drain Physical and Ice, but you become weak to Fire."
-tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary"])
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary", &"Card.Set.Core"])
 price = 0
 grants = SubResource("Resource_s6ixi")

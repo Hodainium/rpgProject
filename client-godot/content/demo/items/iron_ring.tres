@@ -15,6 +15,6 @@ script = ExtResource("5_f77uc")
 id = &"demo.item.iron_ring"
 display_name = "Iron Ring"
 description = "+40 DEF."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 5
 grants = SubResource("Resource_rwpra")

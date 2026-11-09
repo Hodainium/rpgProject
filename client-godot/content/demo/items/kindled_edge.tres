@@ -13,6 +13,6 @@ script = ExtResource("5_item")
 id = &"demo.item.kindled_edge"
 display_name = "Kindled Edge"
 description = "Your Physical hits trigger a follow-up: 35% ATK Fire."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 9
 grants = SubResource("Resource_grants")

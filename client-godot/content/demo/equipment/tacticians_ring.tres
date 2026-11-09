@@ -16,5 +16,5 @@ display_name = "Tactician's Ring"
 description = "Taunt at the start of every battle (enemies must target you)."
 slot = &"Equipment.Slot.Accessory"
 grants = SubResource("Resource_id2l1")
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Descent"])
 price = 8

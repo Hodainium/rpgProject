@@ -15,6 +15,6 @@ script = ExtResource("5_wxd5w")
 id = &"demo.item.battle_horn"
 display_name = "Battle Horn"
 description = "Start every battle with +30 ult charge."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 6
 grants = SubResource("Resource_j7n05")

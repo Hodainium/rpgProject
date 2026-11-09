@@ -16,5 +16,5 @@ display_name = "Headsman's Blade"
 description = "+60 ATK, +40% damage to Broken enemies."
 slot = &"Equipment.Slot.Weapon"
 grants = SubResource("Resource_grants")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Chest", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Chest", &"Item.Rarity.Epic", &"Card.Set.Descent"])
 price = 10

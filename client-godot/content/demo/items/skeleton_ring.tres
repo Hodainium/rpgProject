@@ -13,6 +13,6 @@ script = ExtResource("3_item")
 id = &"demo.item.skeleton_ring"
 display_name = "Skeleton Ring"
 description = "99 keys."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Legendary"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Legendary", &"Card.Set.Descent"])
 price = 12
 on_pickup = Array[ExtResource("1_out")]([SubResource("Resource_keys")])

@@ -7,5 +7,5 @@ script = ExtResource("1_item")
 id = &"demo.item.lockpick"
 display_name = "Lockpick"
 description = "Gilded Chests open without a key."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Run.Chest.NoKey"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Run.Chest.NoKey", &"Card.Set.Descent"])
 price = 7

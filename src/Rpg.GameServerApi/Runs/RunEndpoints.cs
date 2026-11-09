@@ -25,6 +25,7 @@ public static class RunEndpoints
         var runs = app.MapGroup("/api/v1/runs").RequireAuthorization();
         runs.MapPost("", StartRunAsync).RateLimited(RateLimitOptions.Runs);
         runs.MapPost("/{runId:guid}/floors/{floor:int}", FloorSeedAsync).RateLimited(RateLimitOptions.Floors);
+        runs.MapPost("/{runId:guid}/abandon", AbandonAsync);
         runs.MapGet("/current", GetCurrentAsync);
         runs.MapGet("/{runId:guid}", GetRunAsync);
         runs.MapRunActionEndpoints();
@@ -54,6 +55,13 @@ public static class RunEndpoints
                 $"Run {result.RunId:D} is waiting for its verdict and can't be abandoned.");
         }
 
+        if (result.Outcome == StartOutcome.CharacterLocked)
+        {
+            metrics.RunStart("character_locked");
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Character not unlocked",
+                detail: result.Detail, extensions: new Dictionary<string, object?> { ["errorCode"] = ApiErrors.CharacterLocked });
+        }
+
         var keys = new List<string> { RunSummaryCache.CurrentKey(player.Id) };
         if (result.AbandonedRunId is { } abandoned)
         {
@@ -65,8 +73,32 @@ public static class RunEndpoints
         metrics.StepCreated("genesis");
         Activity.Current?.SetTag("rpg.run_id", result.RunId.ToString("D"));
 
-        var response = new RunStartResponse(result.RunId.ToString("D"), 0, result.FloorSeed.ToString(), result.StartedAt);
+        var response = new RunStartResponse(result.RunId.ToString("D"), 0, result.FloorSeed.ToString(), result.StartedAt,
+            result.Pool?.UnlockedCharacterIds, result.Pool?.CardPool);
         return Results.Created($"/api/v1/runs/{response.RunId}", response);
+    }
+
+    /// <summary>Spec card-collection 2.3: cancels the Active run (abandoned, not a death). A Verifying run answers 409 1410.</summary>
+    private static async Task<IResult> AbandonAsync(HttpContext context, Guid runId, RunStore store, RunSummaryCache cache,
+        RpgMetrics metrics, TimeProvider clock, CancellationToken ct)
+    {
+        var player = context.User.Player();
+        switch (await store.AbandonAsync(player.Id, runId, clock.GetUtcNow(), ct))
+        {
+            case AbandonOutcome.NotFound:
+                return NotFound(runId);
+            case AbandonOutcome.Verifying:
+                return Conflict(ApiErrors.RunVerifying, "A run is being verified",
+                    $"Run {runId:D} is waiting for its verdict and can't be cancelled.");
+            case AbandonOutcome.NotActive:
+                return Conflict(ApiErrors.RunNotActive, "Run not active", $"Run {runId:D} has ended.");
+            case AbandonOutcome.AlreadyAbandoned:
+                return Results.NoContent();   // a retried cancel: nothing changed, nothing to count
+            default:
+                await cache.InvalidateAsync(RunSummaryCache.SummaryKey(runId), RunSummaryCache.CurrentKey(player.Id));
+                metrics.RunEnd(nameof(RunStatus.Abandoned));
+                return Results.NoContent();
+        }
     }
 
     /// <summary>The next floor needs <c>AfterSeq</c> = the run's last stored seq (Part B gate, 409 1106 otherwise).</summary>

@@ -14,6 +14,6 @@ script = ExtResource("4_item")
 id = &"demo.item.armor_breaker"
 display_name = "Armor Breaker"
 description = "Hits ignore 30% of the target's DEF."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Descent"])
 price = 8
 grants = SubResource("Resource_grants")

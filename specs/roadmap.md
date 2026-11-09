@@ -30,9 +30,10 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 4c. `economy-rewards` | ✅ Done (commit f501e4e; spec `specs/economy-rewards.md`): per-boss reward rules in a server-owned table, the economy boundary (Godot run inventory vs account economy), admin endpoint and console command, and trace continuity through the outbox | |
 | 4a. `run-verify` | ✅ Done (spec synced; steps cut at the claimed snapshots with a genesis anchor the server builds at run start, a worker pool replaying each step in headless Godot with a battle simulated once, the fan-in aggregator (verified prefix, links, floors, win, rollback with epoch, `MaxRollbacks`), the stairs gate 1107 and epoch gate 1108, pending gems claimed at release, the floor read model, run hash `run-v2` covering everything that decides play; the per-battle worker is removed; 416 .NET, 582 Godot, the e2e scenarios and the Linux golden check pass; open: routing by ruleset (9), retention (7b)) | 2026-11-08 |
 | 4b. `game-analytics` | ⬜ Not started | |
-| 5. `card-collection` | ⬜ Not started | |
+| 5. `card-collection` | ✅ Done (spec synced; the account's cards on the server: catalog, packs with Epic / Legendary / Mythic pity and a Rare guarantee, dust and craft, the run lock, the run's item pool as a verified input, `POST /runs/{id}/abandon`; Godot: the pool in the run hash and steps, card tags on all 160 demo cards, core-set proposal, console commands, run-end gate; no Vault pool; 535 .NET, 626 Godot, 5 card e2e scenarios; not built: the Grafana row; the screens are 5b, the numbers 5c) | 2026-11-09 |
 | 5b. `card-ui` | ⬜ Not started | |
 | 5c. `card-balance` | ⬜ Not started | |
+| 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |
 | 6. `observability` | ⬜ Not started | |
 | 7. `live-dashboard` | ⬜ Not started | |
 | 7b. `data-retention` | ⬜ Not started | |
@@ -167,6 +168,8 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   copy cap to decide); the run lock never expires and the player cancels the run from a pop-up to dust; the core set is
   sized like Isaac's starting item pools, with the existing room pool tags on each card. Market mentions in 4b, 7, the Redis plan and the other
   specs and docs are removed.
+- 2026-11-09: Slice 5 review answers: 6 core characters, characters are Mythic (above Legendary), Hearthstone-style pity timers for Legendary and Mythic, new Food items, new card fixtures, a Verifying run blocks leaving to the main menu. Numbers open for tuning. See `specs/card-collection.md` section 8.
+- 2026-11-09: Added slice 5d `unique-events` next to 5c: an event drawn from a query appears once per run, and a named item already seen falls back to the fallback item (gap found reviewing slice 5; at the user's request).
 - 2026-11-08: Added slice 7b `data-retention` before 8, at the user's request: outbox, step, voided and settled-session
   tables grow forever and slice 8 should measure it. Also dropped the per-battle verifier role (`verify.battle`) with 4a:
   a battle is verified inside its step, so legacy runs (started before 4a) are simply never verified.
@@ -493,21 +496,22 @@ speed) feeds a delayed review queue, not instant bans.
   pools). **A card is owned once** (decided 2026-11-09): there are no eidolons and duplicates add no power, so a copy
   of a card the player already owns is **auto-dusted on arrival** (from a pack; a card that is already owned can't be
   crafted). Ownership is therefore a set, not a count.
-- **Rarities:** characters are always Legendary; items are Common, Rare, Epic or Legendary.
+- **Rarities:** characters are always **Mythic**, a tier above Legendary (decided 2026-11-09); items are Common, Rare, Epic or Legendary.
 - **Core set (Hearthstone's Basic set; decided 2026-11-09):** a fixed set of cards every account owns from the start:
   the starter characters and a baseline of items. Core cards are always in the run's pools, can't be dusted, and are
   never crafted or found in packs. The item pool of a run is the core set plus the collected cards, so the pool is
   never tiny: a player can't strip a collection down to one strong card and get it every run. Collected cards are
   typically stronger items (and the remaining characters), which is why players want them. **Size and shape:** each
   item card already carries the room pool it spawns in (`Pool.Treasure`, `Pool.Shop`, `Pool.Boss`, `Pool.Void`,
-  `Pool.Vault`, `Pool.Food`, `Pool.Chest`). The core set gives the standard pools (item room and shop) **30 cards each**
-  and the special route pools (`Pool.Vault`, `Pool.Void`) **15 each** (decided 2026-11-09; no outside benchmark).
+  `Pool.Food`, `Pool.Chest`). The core set gives the standard pools (item room and shop) **30 cards each** and the Void pool
+  **15** (decided 2026-11-09; no outside benchmark). **There is no Vault pool** (decided 2026-11-09, after this section was first
+  written): the Vault floor's treasure rooms draw from `Pool.Treasure` like any item room, and `Pool.Vault` was removed from the
+  content and the tag registry, so there is no pool to size and no new Vault items to make.
   The existing demo items become the first cards: the core cards are picked from them, the rest are collectible, so
   a collected card adds to a pool the core set already fills. Only the room pools carry a size
   target; `Pool.Food` and `Pool.Chest` are plain tagged pools with no minimum. Today's demo pools hold 77 Treasure, 39
-  Shop, 21 Boss, 15 Void, 10 Vault and 4 Food items. Decided 2026-11-09: **Boss stays at 21** (all core, no 30 target for
-  now), **Void starts entirely core** (it already meets its 15) and **Vault must reach 15**, which needs **five new Vault
-  items** made in this slice (new content files; a list of paths and values is reported, nothing existing is changed).
+  Shop, 21 Boss, 15 Void and 4 Food items (and, before the Vault pool was removed, 10 Vault). Decided 2026-11-09: **Boss stays at 21**
+  (all core, no 30 target for now) and **Void starts entirely core** (it already meets its 15).
   **Which items are core:** by lowest rarity first (Common, then Rare, then Epic, then Legendary), so the collected
   cards are the stronger ones; an item counts in every pool it belongs to, so the picks are made against the 30 / 15
   targets jointly, with ties broken in the spec. Boss and Void are all core, so their Epic and Legendary items are core
@@ -516,6 +520,8 @@ speed) feeds a delayed review queue, not instant bans.
   set. Collected cards add to the pools. Which cards are core
   is content (a card set tag beside the pool tags); the balance gate is tuned on the core pool alone, the worst case for
   a new account (the retune is slice 5c, below).
+- **Pity timers (Hearthstone-style; decided 2026-11-09):** per pack type and rarity, for Epic, Legendary and Mythic: the Nth pack since that rarity last dropped contains one, and a player's first packs of a type guarantee an Epic within 5, a Legendary within 10 and a character (Mythic) within 15. Set 2026-11-09: Epic pity 10, Legendary pity 20, Mythic pity 30 (Hearthstone: Epic 10, Legendary 40, first set 10); fine-tuned in 5c.
+- **Core characters:** 6 starter characters are core. A won run that is still Verifying keeps its lock and the client cannot leave to the main menu until the run is accepted. In server mode all currency and ownership live on the server; local mode only has a configurable test pool.
 - **Two currencies:** **gems** (from completion marks) buy **packs**; **dust** comes only from dusting cards.
 - **Packs:** several pack types, each with its own card list and rarity odds. Opening is server-side, on a pack RNG
   separate from combat RNG, recorded for audit.
@@ -561,7 +567,14 @@ Local mode keeps working without cards (the core set only).
 ### 5c. `card-balance`
 Added 2026-11-09, after 5b. The game balancing pass for cards: retune the win-rate gate on the core pool alone (30 / 30 / 21
 / 15 / 15 per room pool; the 31.8% figure was measured on the full item pool), then pack odds and prices in gems, dust
-and craft costs and refunds, and the gem income per run against them. Design break 3 (card feel) belongs here.
+and craft costs and refunds, and the gem income per run against them. Also here (decided 2026-11-09): **four new Food items** (Food holds 4, all core, today; this takes it to 8). Also here (decided 2026-11-09): **more events** in the demo content, so slice 5d's one-event-per-run rule rarely runs a chapter dry. Design break 3 (card feel) belongs here.
+
+### 5d. `unique-events`
+Added 2026-11-09, next to 5c (the gate moves, so both are measured together). Spec `specs/unique-events.md`: an event picked
+from a chapter's event query appears at most once per run (seen = placed on a floor, so it holds inside a floor too; an exhausted
+pool gives an empty room; fixed room events and the rest stop stay repeatable), and a named item the run already saw becomes a
+food item (like Isaac's drops), so no route hands out a second copy (pool picks already did not). Decided 2026-11-09; implemented together with 5c. Client only; the run hash gains `events_seen=`
+when not empty, so the committed run goldens may change and the balance gate is re-measured.
 
 ### 6. `observability`
 End-to-end traces HTTP → RabbitMQ → worker → outbox → Redpanda. Metrics: verify latency, queue age,

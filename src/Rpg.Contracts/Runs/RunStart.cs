@@ -7,4 +7,8 @@ namespace Rpg.Contracts.Runs;
 public sealed record RunStartRequest(string RulesetVersion, string RunStructureId, IReadOnlyList<string> CharacterIds);
 
 /// <summary>201. Floor is 0; FloorSeed is a decimal string (int64 isn't safe as a JSON number in browsers).</summary>
-public sealed record RunStartResponse(string RunId, int Floor, string FloorSeed, DateTimeOffset StartedAt);
+/// <param name="UnlockedCharacterIds">Spec card-collection 2.5: core + owned characters; absent when the card system is off.</param>
+/// <param name="CardPool">Spec card-collection 2.5: the item pool of the run (core + owned item cards), a verified input; absent when off.</param>
+public sealed record RunStartResponse(string RunId, int Floor, string FloorSeed, DateTimeOffset StartedAt,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? UnlockedCharacterIds = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? CardPool = null);

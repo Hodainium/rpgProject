@@ -16,5 +16,5 @@ display_name = "Hexfang Dagger"
 description = "+50 ATK, +30% weakness damage."
 slot = &"Equipment.Slot.Weapon"
 grants = SubResource("Resource_grants")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Chest", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Chest", &"Item.Rarity.Epic", &"Card.Set.Descent"])
 price = 10

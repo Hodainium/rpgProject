@@ -15,6 +15,6 @@ script = ExtResource("5_6opwm")
 id = &"demo.item.mana_crystal"
 display_name = "Mana Crystal"
 description = "+37 max SP."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 5
 grants = SubResource("Resource_5luak")

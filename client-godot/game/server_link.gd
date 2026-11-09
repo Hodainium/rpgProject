@@ -221,6 +221,68 @@ func get_wallet() -> Dictionary:
 	return await _request("GetWallet", [])
 
 
+# --- Cards (spec card-collection): the account lives on the server; the client holds no currency or ownership. ------------
+
+## A fresh request key for an account action (open, dust, craft): a random UUID v4. Keep it until the action got an answer and
+## send the same key on a retry, so the server never charges twice.
+static func new_request_key() -> String:
+	var bytes := Crypto.new().generate_random_bytes(16)
+	bytes[6] = (bytes[6] & 0x0f) | 0x40
+	bytes[8] = (bytes[8] & 0x3f) | 0x80
+	var hex := bytes.hex_encode()
+	return "%s-%s-%s-%s-%s" % [hex.substr(0, 8), hex.substr(8, 4), hex.substr(12, 4), hex.substr(16, 4), hex.substr(20, 12)]
+
+
+## GET /api/v1/cards/catalog: data = CatalogResponse {catalogVersion, catalogHash, cards}.
+func get_card_catalog() -> Dictionary:
+	return await _request("GetCardCatalog", [])
+
+
+## GET /api/v1/packs: data = PackListResponse {packs}.
+func get_packs() -> Dictionary:
+	return await _request("GetPacks", [])
+
+
+## GET /api/v1/cards/collection: data = CollectionResponse {owned, gems, dust, version, activeRunId, activeRunStatus, pity}.
+func get_collection() -> Dictionary:
+	return await _request("GetCollection", [])
+
+
+## POST /api/v1/packs/{packId}/open: data = PackOpenResponse. Pass the same `key` again to retry.
+func open_pack(pack_id: String, key: String) -> Dictionary:
+	return await _request("OpenPack", [pack_id, WireJson.stringify({"requestKey": key})])
+
+
+## POST /api/v1/cards/{cardId}/dust: data = DustResponse; a 409 1403 names the run that holds the card (error.runId, error.runStatus).
+func dust_card(card_id: String, key: String) -> Dictionary:
+	return await _request("DustCard", [card_id, WireJson.stringify({"requestKey": key})])
+
+
+## POST /api/v1/cards/{cardId}/craft: data = CraftResponse.
+func craft_card(card_id: String, key: String) -> Dictionary:
+	return await _request("CraftCard", [card_id, WireJson.stringify({"requestKey": key})])
+
+
+## POST /api/v1/runs/{runId}/abandon: cancels the Active run (the dust pop-up's path); data null.
+func abandon_run(run_id: String) -> Dictionary:
+	return await _request("AbandonRun", [run_id])
+
+
+static func describe_collection(collection: Dictionary) -> String:
+	var lines := PackedStringArray(["gems %d, dust %d, %d collected card(s)%s" % [int(collection.get("gems", 0)),
+		int(collection.get("dust", 0)), collection.get("owned", []).size(),
+		" (run %s %s)" % [collection["activeRunId"], collection.get("activeRunStatus", "")] if collection.get("activeRunId") != null else ""]])
+	for entry in collection.get("owned", []):
+		lines.append("  %s%s" % [entry["cardId"], "  [locked by the run]" if entry.get("lockedByRunId") != null else ""])
+	for state in collection.get("pity", []):
+		var missed: Dictionary = state["missedPacks"]
+		var parts := PackedStringArray()
+		for rarity in missed:
+			parts.append("%s %d" % [rarity, int(missed[rarity])])
+		lines.append("  pity %s: packs since %s" % [state["packId"], ", ".join(parts)])
+	return "\n".join(lines)
+
+
 ## One bridge call with a signed-in token, for callers that name the method themselves. The dev console uses it for
 ## calls the player build does not have (the admin reward rules, compiled only into debug builds).
 func request(method: String, args: Array) -> Dictionary:
@@ -454,9 +516,13 @@ func save() -> void:
 	var floor_seeds := {}
 	for floor_index in _run.state.floor_seeds:
 		floor_seeds[str(floor_index)] = str(_run.state.floor_seeds[floor_index])
-	file.store_string(WireJson.stringify({"schemaVersion": 1, "runId": _run_id, "player": player,
+	var save_data := {"schemaVersion": 1, "runId": _run_id, "player": player,
 		"floorSeeds": floor_seeds, "snapshot": _snapshot, "queue": _queue, "lastAckedSeq": _last_acked,
-		"end": _end_request, "epoch": epoch}))
+		"end": _end_request, "epoch": epoch}
+	if _run.state.card_pool_set:
+		save_data["cardPool"] = _run.state.card_pool.map(func(id: StringName) -> String: return String(id))  # spec card-collection 2.5
+		save_data["cardPoolDigest"] = _run.state.card_pool_digest()  # a save that loses or changes it is noticed on load
+	file.store_string(WireJson.stringify(save_data))
 	file.close()
 
 
@@ -491,14 +557,18 @@ func resume_into(run: RunController, content_index: ContentIndex, summary: Dicti
 	var saved := load_save()
 	link(run, run_id)
 	if not saved.is_empty() and str(saved["runId"]) == run_id and save_seq(saved) >= int(summary["lastSeq"]):
-		return _load_save_into(run, content_index, saved)
+		if RunState.save_pool_problem(saved) == "":
+			return _load_save_into(run, content_index, saved)
+		# The save lost or changed the run's card pool: it would hash differently from the server on every action. The server
+		# has the real pool, so rebuild from its log instead of playing a run that can only be refused.
+		forget_save()
 	if str(summary["status"]) != "Active":
 		return "run %s is %s on the server" % [run_id, summary["status"]]
 	return await _resume_from_server(run, content_index)
 
 
 func _load_save_into(run: RunController, content_index: ContentIndex, saved: Dictionary) -> String:
-	var error := run.load_snapshot(content_index, saved["snapshot"])
+	var error := run.load_snapshot(content_index, saved["snapshot"], saved.get("cardPool"))
 	if error != "":
 		return error
 	var floor_seeds: Dictionary = saved.get("floorSeeds", {})
@@ -521,6 +591,9 @@ func resume_offline(run: RunController, content_index: ContentIndex) -> String:
 	var saved := load_save()
 	if saved.is_empty():
 		return "no saved run"
+	var damaged := RunState.save_pool_problem(saved)
+	if damaged != "":
+		return damaged + ", and the server can't be asked offline; continue it once the server answers"
 	link(run, str(saved["runId"]))
 	return _load_save_into(run, content_index, saved)
 
@@ -543,7 +616,8 @@ func _resume_from_server(run: RunController, content_index: ContentIndex) -> Str
 	var replay := RunController.new()
 	replay.name = "ResumeReplay"
 	add_child(replay)
-	var error := replay.load_snapshot(content_index, data["snapshot"])
+	var card_pool: Variant = data.get("cardPool")  # spec card-collection 2.5: the server's own pool for this run, or null
+	var error := replay.load_snapshot(content_index, data["snapshot"], card_pool)
 	var seeds := {}
 	for floor_seed in data["floorSeeds"]:
 		seeds[int(floor_seed["floor"])] = str(floor_seed["floorSeed"]).to_int()
@@ -575,7 +649,7 @@ func _resume_from_server(run: RunController, content_index: ContentIndex) -> Str
 	replay.free()
 	if error != "":
 		return error
-	error = run.load_snapshot(content_index, snapshot)
+	error = run.load_snapshot(content_index, snapshot, card_pool)
 	if error != "":
 		return error
 	_queue.clear()
@@ -700,6 +774,21 @@ func heartbeat() -> void:
 	if _linked() and _run.state.status == RunState.ACTIVE:
 		activity = "Battle" if not _run.pending_battle.is_empty() else "Map"
 	await _request("Heartbeat", [WireJson.stringify({"activity": activity})])
+
+
+## Spec card-collection 2.3: the server cancelled this run (the player abandoned it): drop its queue and save and stop
+## uploading for it. The run on screen is the caller's to close.
+func release_cancelled(run_id: String) -> void:
+	if run_id != _run_id:
+		return
+	_queue.clear()
+	_end_request = {}
+	_snapshot = {}
+	forget_save()
+	_end_run_waits()
+	if _run != null and is_instance_valid(_run):
+		_run.journal = false
+		_run.verify_wins = false
 
 
 func _linked() -> bool:

@@ -50,8 +50,8 @@ validate() {  # <scenario>
 	[[ $name =~ ^[a-z0-9_]+$ ]] || { echo "e2e.sh: $name: scenario names are lower case, digits and _"; problems=$((problems + 1)); }
 	while IFS= read -r line || [[ -n $line ]]; do
 		line=${line%$'\r'}
-		if [[ $line == "#! "* && ! $line =~ ^#!\ (worker-)?env\ [A-Za-z_][A-Za-z0-9_]*=.*$ && $line != "#! worker" && $line != "#! worker-stub" && $line != "#! content real" ]]; then
-			echo "e2e.sh: $name: bad directive '$line' (only '#! env KEY=VALUE', '#! worker', '#! worker-stub', '#! worker-env KEY=VALUE' and '#! content real')"; problems=$((problems + 1))
+		if [[ $line == "#! "* && ! $line =~ ^#!\ (worker-)?env\ [A-Za-z_][A-Za-z0-9_]*=.*$ && $line != "#! worker" && $line != "#! worker-stub" && $line != "#! content real" && $line != "#! cards" ]]; then
+			echo "e2e.sh: $name: bad directive '$line' (only '#! env KEY=VALUE', '#! worker', '#! worker-stub', '#! worker-env KEY=VALUE' , '#! content real' and '#! cards')"; problems=$((problems + 1))
 		fi
 	done < "$file"
 	if [[ -f $scenarios_dir/$name.sql ]]; then
@@ -67,8 +67,11 @@ validate() {  # <scenario>
 	fi
 }
 for name in "${picked[@]}"; do validate "$name"; done
-if (( ! check )) && [[ " ${picked[*]} " == *" outbox_redpanda_down "* ]] && (( ${#picked[@]} > 1 )); then
-	echo "e2e.sh: outbox_redpanda_down stops the shared Redpanda: run it alone"; problems=$((problems + 1))
+if (( ! check )) && (( ${#picked[@]} > 1 )); then
+	for name in "${picked[@]}"; do  # a scenario that stops the shared Redpanda (`e2e redpanda-stop`) runs alone
+		grep -qE '^e2e redpanda-stop' "$scenarios_dir/$name.txt" 2>/dev/null \
+			&& { echo "e2e.sh: $name stops the shared Redpanda: run it alone"; problems=$((problems + 1)); }
+	done
 fi
 for tool in "$godot" dotnet docker curl; do
 	command -v "$tool" > /dev/null 2>&1 || [[ -x $tool ]] || { echo "e2e.sh: $tool not found"; problems=$((problems + 1)); }
@@ -135,14 +138,15 @@ run_scenario() {  # <name> <index 1-15>
 	local wport=$((5200 + $2)) worker_pid_file="$dir/worker.pid" vhost="e2e_${stamp}_$1" want_worker=0 stub_worker=0
 	local -a worker_extra=()
 	local manual_worker=0
-	local content_root="res://tests/fixtures/"
+	local content_root="res://tests/fixtures/" cards=0
 	mkdir -p "$control"
 	local -a env=(ASPNETCORE_ENVIRONMENT=Development "ASPNETCORE_URLS=http://127.0.0.1:$port"
 		"ConnectionStrings__Postgres=Host=127.0.0.1;Port=5432;Database=$db;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD"
 		"ConnectionStrings__Redis=127.0.0.1:6379,abortConnect=false,defaultDatabase=$index"
 		"RabbitMq__Uri=amqp://$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS@127.0.0.1:5672/$vhost"
 		"Seeds__Secret=$seed_secret" "Auth__SigningKey=$signing_key" Ruleset__AcceptAny=false
-		"Ruleset__Accepted__0=$ruleset" "Auth__DevAdmins__0=e2e-$name")
+		"Ruleset__Accepted__0=$ruleset" "Auth__DevAdmins__0=e2e-$name"
+		"Cards__Enabled=${CARDS_ENABLED:-false}")   # spec card-collection: existing scenarios run on fixture content with no catalog
 	# Spec economy-rewards: what a boss pays is a server-owned rule. Every scenario starts with the fixtures' three bosses at
 	# 10 gems (the old flat amount); a scenario changes them through the admin path (the console's `server reward boss <boss> <amounts>`).
 	local boss_n=0 boss
@@ -160,7 +164,13 @@ run_scenario() {  # <name> <index 1-15>
 		[[ $line == "#! worker-stub" ]] && { want_worker=1; stub_worker=1; }
 		[[ $line == "#! worker-env "* ]] && worker_extra+=("${line#\#! worker-env }")
 		[[ $line == "#! content real" ]] && content_root=""
+		[[ $line == "#! cards" ]] && cards=1
 	done < "$scenarios_dir/$name.txt"
+	# Spec card-collection: "#! cards" turns the card system on with the real catalog and seed files (use it with "#! content real":
+	# the catalog is the demo content's). The later entries win over the Cards__Enabled=false default above.
+	if (( cards )); then
+		env+=(Cards__Enabled=true "Cards__CatalogFile=$(win "$root/infra/economy/card_catalog.json")" "Cards__SeedFile=$(win "$root/infra/economy/card_economy.json")")
+	fi
 	# Spec run-verify 2.6: the stairs wait for the floor just played to be verified, so a run past floor 0 needs the verifier.
 	# Every scenario starts the worker with the server, unless its script controls the worker itself (`e2e worker-start`).
 	(( manual_worker )) || want_worker=1
@@ -198,6 +208,17 @@ run_scenario() {  # <name> <index 1-15>
 		for tries in $(seq 1 120); do
 			n=$(psql -d "$db" -c "SELECT count(*) FROM reward_rules" 2> /dev/null | tr -d '')
 			[[ $n == "$boss_n" ]] && return 0
+			sleep 0.5
+		done
+		return 1
+	}
+
+	# Spec card-collection: with "#! cards" the catalog and the pack are seeded in the background too.
+	wait_seed_cards() {
+		local tries n
+		for tries in $(seq 1 120); do
+			n=$(psql -d "$db" -c "SELECT (SELECT count(*) FROM cards) > 0 AND (SELECT count(*) FROM pack_types) > 0" 2> /dev/null | tr -d '\r')
+			[[ $n == t ]] && return 0
 			sleep 0.5
 		done
 		return 1
@@ -271,7 +292,10 @@ run_scenario() {  # <name> <index 1-15>
 						[[ $(psql -d "$db" -c "UPDATE battle_sessions SET conditions = jsonb_set(conditions, '{depth}', to_jsonb(coalesce((conditions->>'depth')::int, 0) + 7), true) WHERE run_seq = (SELECT min(run_seq) FROM battle_sessions) RETURNING 1" 2>&1 | head -1 | tr -d '') == 1 ]] 							|| answer="no battle to tamper with" ;;
 					tamper-genesis)  # the claimed hash of the run's start (seq 1) is replaced, as a client with a richer start would send it
 						[[ $(psql -d "$db" -c "UPDATE run_actions SET state_hash = repeat('f', 64) WHERE seq = 1 RETURNING 1" 2>&1 | head -1 | tr -d '') == 1 ]] 							|| answer="no start to tamper with" ;;
-					*) answer="unknown action $action" ;;
+					tamper-pool)  # the run's stored item pool is narrowed, as a client playing with another pool would look to the verifier
+							[[ $(psql -d "$db" -c "UPDATE runs SET card_pool = (SELECT jsonb_agg(v) FROM (SELECT v FROM jsonb_array_elements(card_pool) AS e(v) LIMIT 5) t) WHERE card_pool IS NOT NULL RETURNING 1" 2>&1 | head -1 | tr -d '\r') == 1 ]] \
+								|| answer="no run with a card pool to tamper with" ;;
+						*) answer="unknown action $action" ;;
 				esac
 				echo "[e2e] $action: $answer" >> "$dir/control.log"
 				printf '%s' "$answer" > "$control/done"
@@ -289,6 +313,8 @@ run_scenario() {  # <name> <index 1-15>
 			echo "server never ready: $(tail -40 "$dir/server.log" | tr '\n' ' ')" > "$result"
 		elif ! wait_seed_rules; then
 			echo "the seed reward rules never appeared (the server's RewardRuleSeeder runs in the background)" > "$result"
+		elif (( cards )) && ! wait_seed_cards; then
+			echo "the card catalog and packs never appeared (the server's CardSeeder runs in the background)" > "$result"
 		elif (( want_worker )) && ! start_worker; then
 			echo "worker never ready: $(tail -40 "$dir/worker.log" | tr '\n' ' ')" > "$result"
 		else

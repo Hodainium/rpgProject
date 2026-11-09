@@ -14,6 +14,6 @@ script = ExtResource("5_item")
 id = &"demo.item.metronome"
 display_name = "Metronome"
 description = "+23% SP gain."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 4
 grants = SubResource("Resource_grants")

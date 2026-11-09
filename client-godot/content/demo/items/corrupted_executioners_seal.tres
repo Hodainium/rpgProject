@@ -17,6 +17,6 @@ script = ExtResource("6_j3vjc")
 id = &"demo.item.corrupted_executioners_seal"
 display_name = "Corrupted Seal"
 description = "Critical hits trigger a follow-up: 90% ATK Physical. You take 10% more damage."
-tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary"])
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary", &"Card.Set.Core"])
 price = 0
 grants = SubResource("Resource_1eq04")

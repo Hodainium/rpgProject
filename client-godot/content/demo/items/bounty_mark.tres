@@ -15,6 +15,6 @@ script = ExtResource("5_xmkpo")
 id = &"demo.item.bounty_mark"
 display_name = "Bounty Mark"
 description = "On a kill: +20 ult charge and heal 50 HP."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Epic", &"Card.Set.Core"])
 price = 9
 grants = SubResource("Resource_7onhj")

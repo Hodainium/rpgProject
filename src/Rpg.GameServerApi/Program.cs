@@ -10,6 +10,7 @@ using Rpg.Contracts.Api.V1;
 using Rpg.Contracts.Serialization;
 using Rpg.GameServerApi.Auth;
 using Rpg.GameServerApi.Battle;
+using Rpg.GameServerApi.Cards;
 using Rpg.GameServerApi.Economy;
 using Rpg.GameServerApi.Health;
 using Rpg.GameServerApi.Infrastructure;
@@ -99,6 +100,12 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<OutboxMonitor>());
 builder.Services.AddOptions<EconomyOptions>().BindConfiguration(EconomyOptions.Section);
 builder.Services.AddHostedService<RewardRuleSeeder>();
 builder.Services.AddSingleton<WalletStore>();
+// Spec card-collection: the card catalog, the account's cards, pack opening, dust and craft.
+builder.Services.AddOptions<CardOptions>().BindConfiguration(CardOptions.Section);
+builder.Services.AddSingleton<Rpg.Economy.Cards.CardStore>();
+builder.Services.AddSingleton<CatalogCache>();
+builder.Services.AddHostedService<CardSeeder>();
+builder.Services.AddHostedService<CardsOwnedMonitor>();
 builder.Services.AddSingleton<WalletCache>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddHostedService<PresenceMonitor>();
@@ -166,6 +173,7 @@ app.MapAuthEndpoints();
 app.MapRunEndpoints();
 app.MapWalletEndpoints();
 app.MapRewardRuleEndpoints();
+app.MapCardEndpoints();
 app.MapPresenceEndpoints();
 
 app.Run();

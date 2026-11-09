@@ -18,5 +18,5 @@ display_name = "Corrupted Band"
 description = "Critical hits trigger a follow-up: 60% ATK Physical. −10% max HP."
 slot = &"Equipment.Slot.Accessory"
 grants = SubResource("Resource_c7uph")
-tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary"])
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary", &"Card.Set.Core"])
 price = 0

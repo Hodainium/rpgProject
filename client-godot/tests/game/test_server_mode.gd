@@ -46,6 +46,39 @@ class FakeBridge:
 	func GetSteps(run_id: String) -> int:
 		return _answer("GetSteps", [run_id])
 
+	func GetCardCatalog() -> int:
+		return _answer("GetCardCatalog", [])
+
+	func GetPacks() -> int:
+		return _answer("GetPacks", [])
+
+	func GetCollection() -> int:
+		return _answer("GetCollection", [])
+
+	func OpenPack(pack_id: String, json: String) -> int:
+		return _answer("OpenPack", [pack_id, json])
+
+	func DustCard(card_id: String, json: String) -> int:
+		return _answer("DustCard", [card_id, json])
+
+	func CraftCard(card_id: String, json: String) -> int:
+		return _answer("CraftCard", [card_id, json])
+
+	func AbandonRun(run_id: String) -> int:
+		return _answer("AbandonRun", [run_id])
+
+	func PutPackType(json: String) -> int:
+		return _answer("PutPackType", [json])
+
+	func ListPackTypes() -> int:
+		return _answer("ListPackTypes", [])
+
+	func PutCardRate(json: String) -> int:
+		return _answer("PutCardRate", [json])
+
+	func ListCardRates() -> int:
+		return _answer("ListCardRates", [])
+
 	func PutRewardRule(json: String) -> int:
 		return _answer("PutRewardRule", [json])
 

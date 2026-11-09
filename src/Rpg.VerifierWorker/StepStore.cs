@@ -11,7 +11,7 @@ namespace Rpg.VerifierWorker;
 /// <summary>A step and the run it belongs to, as the worker needs them.</summary>
 public sealed record StepRow(Guid RunId, int Epoch, int StepNo, int FromSeq, int ToSeq, string Kind, string Status, int Attempts,
     Guid PlayerId, string RunStatus, int RunEpoch, string Ruleset, string StructureId, string[] CharacterIds, int LastSeq,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt, string? CardPoolJson = null);   // CardPoolJson: runs.card_pool, fixed at run start (spec card-collection 2.5)
 
 /// <summary>
 /// What a step needs to run: the request JSON and the battle sessions it contains (for their verdicts). <see cref="StepStore.BuildAsync"/>
@@ -37,7 +37,7 @@ public sealed class StepStore(NpgsqlDataSource dataSource)
         await using var command = dataSource.CreateCommand(
             """
             SELECT s.run_id, s.epoch, s.step_no, s.from_seq, s.to_seq, s.kind, s.status, s.attempts, r.player_id, r.status,
-                   r.epoch, r.ruleset_version, r.run_structure_id, r.character_ids, r.last_seq, s.created_at
+                   r.epoch, r.ruleset_version, r.run_structure_id, r.character_ids, r.last_seq, s.created_at, r.card_pool::text
             FROM run_steps s JOIN runs r ON r.run_id = s.run_id
             WHERE s.run_id = $1 AND s.epoch = $2 AND s.step_no = $3
             """);
@@ -49,7 +49,7 @@ public sealed class StepStore(NpgsqlDataSource dataSource)
             ? new StepRow(reader.GetGuid(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetInt32(3), reader.GetInt32(4),
                 reader.GetString(5), reader.GetString(6), reader.GetInt32(7), reader.GetGuid(8), reader.GetString(9),
                 reader.GetInt32(10), reader.GetString(11), reader.GetString(12), reader.GetFieldValue<string[]>(13),
-                reader.GetInt32(14), reader.GetFieldValue<DateTimeOffset>(15))
+                reader.GetInt32(14), reader.GetFieldValue<DateTimeOffset>(15), reader.IsDBNull(16) ? null : reader.GetString(16))
             : null;
     }
 
@@ -70,6 +70,10 @@ public sealed class StepStore(NpgsqlDataSource dataSource)
                 seeds[reader.GetInt32(0)] = reader.GetInt64(1).ToString();
             }
         }
+
+        // Spec card-collection 2.5: the run's item pool was fixed at run start and comes from `runs` (with the step's own row, no
+        // second query), never from the client.
+        IReadOnlyList<string>? cardPool = step.CardPoolJson is { } pool ? JsonSerializer.Deserialize<List<string>>(pool, RpgJson.Options) : null;
 
         var kind = Enum.Parse<StepKind>(step.Kind, ignoreCase: true);
         JsonElement? startSnapshot = null;
@@ -149,7 +153,7 @@ public sealed class StepStore(NpgsqlDataSource dataSource)
         }
 
         var request = new StepRequest(1, step.RunId.ToString("D"), step.StructureId, step.CharacterIds, seeds, step.FromSeq,
-            step.ToSeq, kind, startSnapshot, startHash, actions, endRunHash);
+            step.ToSeq, kind, startSnapshot, startHash, actions, endRunHash, cardPool);
         return new StepInput(JsonSerializer.Serialize(request, RpgJson.Options), battles);
     }
 

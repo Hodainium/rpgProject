@@ -1,0 +1,1 @@
+{"catalogVersion":3,"catalogHash":"5e1f","cards":[{"id":"warrior","kind":"character","rarity":"mythic","setId":"core","core":true,"pools":[],"retired":false,"dustValue":800,"craftCost":3200},{"id":"item.silver_key","kind":"item","rarity":"common","setId":"descent","core":false,"pools":["Pool.Treasure","Pool.Shop"],"retired":true,"dustValue":5,"craftCost":40}]}

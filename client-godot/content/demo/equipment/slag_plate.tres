@@ -16,5 +16,5 @@ display_name = "Slag Plate"
 description = "+80 DEF, resist Fire, −6 SPD."
 slot = &"Equipment.Slot.Body"
 grants = SubResource("Resource_wjvga")
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Descent"])
 price = 7

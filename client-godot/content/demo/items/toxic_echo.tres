@@ -15,6 +15,6 @@ script = ExtResource("5_2dpd0")
 id = &"demo.item.toxic_echo"
 display_name = "Toxic Echo"
 description = "Hitting a weakness of a Poisoned enemy triggers a follow-up: 30% ATK Physical."
-tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic"])
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Descent"])
 price = 8
 grants = SubResource("Resource_q0nj8")

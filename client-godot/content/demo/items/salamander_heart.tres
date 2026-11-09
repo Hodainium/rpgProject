@@ -15,6 +15,6 @@ script = ExtResource("5_3fn8b")
 id = &"demo.item.salamander_heart"
 display_name = "Salamander Heart"
 description = "You drain Fire (Fire hits heal you), but you become weak to Ice."
-tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Legendary"])
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Core"])
 price = 10
 grants = SubResource("Resource_av8gj")
