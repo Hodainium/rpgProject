@@ -3,7 +3,8 @@
 # download). Builds infra/verifier/Dockerfile and, inside the Linux container:
 #   1. the ruleset version must equal the one the Windows build computes for the same source;
 #   2. every committed combat golden (recorded on Windows) must replay to Verified (exit 0) and every tampered copy to
-#      Rejected 2002 (exit 2), each with the SAME final state hash as its committed .result.json.
+#      Rejected 2002 (exit 2), each with the SAME final state hash as its committed .result.json;
+#   3. the Godot golden tests (runs, floors, seeds, combat), which compare this platform with files recorded on Windows.
 # This is what the fixed-point rules in client-godot/CLAUDE.md section 3 exist for: a hash that differs here is a false
 # 2002 for every honest player on the other platform.
 #   tools/verifier_image_check.sh [--no-build] [--image NAME]
@@ -82,5 +83,26 @@ while read -r _ name exit_code hash_field facts_field; do
 	fi
 done < <(grep '^RESULT ' "$out/replay.log" | tr -d '\r')
 (( checked >= 10 )) || { echo "FAIL only $checked golden(s) replayed, see $out/replay.log"; failures=$((failures + 1)); }
+# --- 3. The run and generation goldens (spec run-verify 6, open item 5) ---------------------------------------------
+# The Godot tests that compare what THIS platform computes with files recorded on Windows: the scripted and keyed runs (log and
+# run hash: run_scripted.json, run_keyed.json), the floor and seed goldens (test_generation) and the combat goldens. They run
+# inside the image, which holds client-godot/tests. A difference in the run code between Windows and Linux (canonical text,
+# float printing, key order, the generators) shows up here as a failing golden. The step tests (test_step_*) are NOT used: they
+# play a run on the machine they run on, so they only prove that machine agrees with itself.
+for filter in golden test_run_scripted; do
+	log="$out/tests-$filter.log"
+	MSYS_NO_PATHCONV=1 "$root/tools/watch.sh" --name "image-tests-$filter" --idle 600 --timeout 3600 --log "$log" -- \
+		docker run --rm --entrypoint godot "$image" --headless --path /srv/client-godot --quit-after 600000 \
+		res://tests/run_tests.tscn -- --filter "$filter"
+	code=$?
+	summary=$(grep -oE "[0-9]+ passed, [0-9]+ failed" "$log" | tail -1)
+	if (( code == 0 )) && [[ $summary == *" 0 failed" && $summary != "0 passed"* ]]; then
+		echo "ok   Linux tests matching '$filter' ($summary)"
+	else
+		echo "FAIL Linux tests matching '$filter' (exit $code, ${summary:-no summary}), see $log"; tail -15 "$log"
+		failures=$((failures + 1))
+	fi
+done
+
 echo "verifier_image_check.sh: $checked golden(s), $failures failure(s) (logs in $out)"
 (( failures == 0 ))
