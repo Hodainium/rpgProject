@@ -20,6 +20,11 @@ extends GameplayCueNotify
 static var service_override: FxService
 
 var _handle: FxHandle
+## A persistent cue is "on" from execute_cue until it ends; while on, raising the quality tier starts its effect if it did
+## not play (it played while effects were off).
+var _on: bool = false
+var _target: Node
+var _payload: Dictionary = {}
 ## Counts plays of this (pooled) node, so a timer from an earlier play cannot end a later one.
 var _play_id: int = 0
 
@@ -29,6 +34,18 @@ func execute_cue(target: Node, payload: Dictionary = {}) -> void:
 	if service == null or fx == null or not service.enabled:
 		_end_when_free()  # headless (the verifier): nothing to draw, and no work per hit
 		return
+	_target = target
+	_payload = payload
+	if not auto_destroy:
+		_on = true
+		if not service.quality_changed.is_connected(_on_quality_changed):
+			service.quality_changed.connect(_on_quality_changed)
+	_play(service)
+
+
+func _play(service: FxService) -> void:
+	var target := _target
+	var payload := _payload
 	var params := {}
 	for binding in bindings:
 		var resolved: Variant = binding.resolve(target, payload)
@@ -51,6 +68,7 @@ func execute_cue(target: Node, payload: Dictionary = {}) -> void:
 
 ## A persistent cue ends: fade a looping effect out, then hand the node back.
 func end_cue() -> void:
+	_on = false
 	if _handle != null and _handle.is_playing():
 		if not _handle.finished.is_connected(finish_cue):
 			_handle.finished.connect(finish_cue, CONNECT_ONE_SHOT)
@@ -60,9 +78,20 @@ func end_cue() -> void:
 
 
 func finish_cue() -> void:
+	_on = false
 	_handle = null
+	var service := _service()
+	if service != null and service.quality_changed.is_connected(_on_quality_changed):
+		service.quality_changed.disconnect(_on_quality_changed)
 	_play_id += 1
 	super()
+
+
+## The tier was raised while this persistent cue is on and its effect is not playing (it played at off): start it now.
+func _on_quality_changed(_tier: int) -> void:
+	var service := _service()
+	if _on and service != null and is_instance_valid(_target) and (_handle == null or not _handle.is_playing()):
+		_play(service)
 
 
 func _anchor_for(target: Node) -> FxAnchor:
