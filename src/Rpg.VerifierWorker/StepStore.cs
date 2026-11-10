@@ -237,6 +237,23 @@ public sealed class StepStore(NpgsqlDataSource dataSource)
     }
 
     /// <summary>Counts one runner error; returns the attempts so far.</summary>
+    /// <summary>
+    /// Whether step 1 should keep waiting for the start snapshot: the genesis step is Pending and not dead-lettered, or
+    /// the snapshot has arrived since step 1 looked (genesis committed in between: retry at once). False when genesis is
+    /// dead-lettered, or done (Verified, Rejected or Voided) without the snapshot being there.
+    /// </summary>
+    public async Task<bool> GenesisCanStillCompleteAsync(Guid runId, CancellationToken ct)
+    {
+        await using var command = dataSource.CreateCommand(
+            """
+            SELECT EXISTS (SELECT 1 FROM run_steps
+                           WHERE run_id = $1 AND kind = 'genesis' AND status = 'Pending' AND dead_lettered_at IS NULL)
+                OR EXISTS (SELECT 1 FROM runs WHERE run_id = $1 AND genesis_snapshot IS NOT NULL)
+            """);
+        command.Parameters.Add(new NpgsqlParameter { Value = runId });
+        return await command.ExecuteScalarAsync(ct) is true;
+    }
+
     public async Task<int> RecordAttemptAsync(Guid runId, int epoch, int stepNo, CancellationToken ct)
     {
         await using var command = dataSource.CreateCommand(

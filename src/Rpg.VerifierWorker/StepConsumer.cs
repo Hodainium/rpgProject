@@ -213,11 +213,12 @@ public sealed class StepConsumer(IConfiguration configuration, StepProcessor pro
             {
                 case JobAction.Retry:
                     await PublishAsync(publishChannel, VerifyTopology.Exchange, decision.Tier!.RoutingKey, job,
-                        decision.Attempt, null, ct);
+                        decision.Attempt, null, delivery.BasicProperties.MessageId, ct);
                     break;
                 case JobAction.DeadLetter:
                     await PublishAsync(publishChannel, VerifyTopology.DeadLetterExchange, VerifyTopology.SegmentDeadRoutingKey, job,
-                        VerifyMessaging.Attempt(delivery.BasicProperties), decision.Reason ?? "unknown", ct);
+                        VerifyMessaging.Attempt(delivery.BasicProperties), decision.Reason ?? "unknown",
+                        delivery.BasicProperties.MessageId, ct);
                     break;
             }
 
@@ -244,12 +245,12 @@ public sealed class StepConsumer(IConfiguration configuration, StepProcessor pro
     }
 
     private async Task PublishAsync(IChannel publishChannel, string exchange, string routingKey, VerifyStepJob job, int attempt,
-        string? reason, CancellationToken ct)
+        string? reason, string? messageId, CancellationToken ct)
     {
         await _publishGate.WaitAsync(ct);
         try
         {
-            await VerifyMessaging.PublishAsync(publishChannel, exchange, routingKey, job, attempt, reason, ct);
+            await VerifyMessaging.PublishAsync(publishChannel, exchange, routingKey, job, attempt, reason, ct, messageId);
         }
         finally
         {
@@ -266,6 +267,7 @@ public sealed class StepConsumer(IConfiguration configuration, StepProcessor pro
             {
                 Persistent = true,
                 Headers = new Dictionary<string, object?> { [VerifyTopology.ReasonHeader] = reason },
+                MessageId = delivery.BasicProperties.MessageId,
             };
             await publishChannel.BasicPublishAsync(VerifyTopology.DeadLetterExchange, VerifyTopology.SegmentDeadRoutingKey, false,
                 properties, delivery.Body, ct);

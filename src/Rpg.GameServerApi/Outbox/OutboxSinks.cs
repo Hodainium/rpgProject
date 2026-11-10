@@ -60,12 +60,12 @@ public sealed class RabbitOutboxSink(RabbitMqConnection rabbit) : IOutboxSink
                 if (stepJob is not null)
                 {
                     await VerifyMessaging.PublishAsync(channel, VerifyTopology.Exchange, VerifyTopology.SegmentRoutingKey,
-                        stepJob, 0, null, limit.Token);
+                        stepJob, 0, null, limit.Token, row.Id.ToString("D"));
                 }
                 else
                 {
                     await VerifyMessaging.PublishAsync(channel, VerifyTopology.Exchange, VerifyTopology.RoutingKey, job!, 0,
-                        null, limit.Token);
+                        null, limit.Token, row.Id.ToString("D"));
                 }
             }
             catch

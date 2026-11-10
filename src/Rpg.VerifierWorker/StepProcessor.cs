@@ -77,16 +77,18 @@ public sealed class StepProcessor(StepStore store, VerifierRedis redis, IStepRun
         var input = await store.BuildAsync(step, ct);
         if (input is null)
         {
-            // Step 1 waits for the genesis job's start snapshot. Normally seconds; counted as an attempt each time, so a genesis
-            // that never comes (dead-lettered, lost) ends in the DLQ like any other stuck job instead of cycling for ever.
-            var waited = await store.RecordAttemptAsync(step.RunId, step.Epoch, step.StepNo, ct);
-            if (waited >= options.Value.MaxAttempts * 4)
+            // Step 1 waits for the genesis job's start snapshot. Normally seconds. A wait is not an attempt: the step's own
+            // attempts count only its Godot runs, so a slow genesis cannot use them up and send step 1's first real error
+            // to the DLQ. It waits while the genesis step can still finish; once genesis is dead-lettered (or finished
+            // without writing a snapshot) nothing will come, and step 1 goes to the DLQ beside it.
+            if (await store.GenesisCanStillCompleteAsync(step.RunId, ct))
             {
-                await store.DeadLetterAsync(step.RunId, step.Epoch, step.StepNo, "genesis_missing", clock.GetUtcNow(), ct);
-                return Decide(new JobDecision(JobAction.DeadLetter, "dead_letter", Reason: "genesis_missing", Attempt: waited));
+                return Decide(new JobDecision(JobAction.Retry, "postponed", VerifyTopology.SegmentRetryTiers[0],
+                    Attempt: step.Attempts));
             }
 
-            return Decide(new JobDecision(JobAction.Retry, "postponed", VerifyTopology.SegmentRetryTiers[0], Attempt: waited));
+            await store.DeadLetterAsync(step.RunId, step.Epoch, step.StepNo, "genesis_missing", clock.GetUtcNow(), ct);
+            return Decide(new JobDecision(JobAction.DeadLetter, "dead_letter", Reason: "genesis_missing", Attempt: step.Attempts));
         }
 
         var started = Stopwatch.GetTimestamp();
@@ -210,7 +212,15 @@ public sealed class StepProcessor(StepStore store, VerifierRedis redis, IStepRun
                 }
             }
 
-            foreach (var row in commit.Battles)
+            // A rollback in this commit voided every battle past its checkpoint (spec run-verify 2.4), including battles of
+            // this very step: never cache a verdict for one, and drop what is cached for the voided seqs.
+            var rolledBackTo = commit.Aggregate is { Result: "rolled_back" or "rejected" } rolled ? rolled.VerifiedSeq : int.MaxValue;
+            if (commit.Aggregate?.VoidedBattleSeqs is { Count: > 0 } voided && !await redis.InvalidateBattlesAsync(step.RunId, voided))
+            {
+                metrics.CacheError("delete");
+            }
+
+            foreach (var row in commit.Battles.Where(b => b.RunSeq <= rolledBackTo))
             {
                 var session = verdict.Battles.First(b => b.BattleId == row.BattleId);
                 var rejected = session.Verdict == ReplayVerdict.Rejected;

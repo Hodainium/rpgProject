@@ -24,8 +24,12 @@ public sealed class RunVerifyOptions
 
 /// <summary>What one aggregation changed, for the caller's cache invalidation and metrics.</summary>
 /// <param name="Result">advanced | waiting | rolled_back | rejected | won | noop (the <c>rpg_fanin_total</c> label).</param>
+/// <param name="VoidedBattleSeqs">On a rollback: the run seqs of the battle sessions it moved to <c>battle_sessions_voided</c>.
+/// Their cached session and verdict (<c>battle:session</c>, <c>battle:verdict</c>) must go, or a voided battle keeps
+/// reading as Verified and hides the new epoch's battle at the same seq.</param>
 public sealed record AggregateResult(string Result, int VerifiedSeq, int FloorsVerified, int GemsReleased, int GemsVoided,
-    bool StatusChanged, StepMismatchReason? Reason = null, int RejectedStepNo = -1, int MarksClaimed = 0, int AlreadyPaid = 0)
+    bool StatusChanged, StepMismatchReason? Reason = null, int RejectedStepNo = -1, int MarksClaimed = 0, int AlreadyPaid = 0,
+    IReadOnlyList<int>? VoidedBattleSeqs = null)
 {
     public static AggregateResult NoOp(int verifiedSeq = 0) => new("noop", verifiedSeq, 0, 0, 0, false);
 
@@ -200,6 +204,19 @@ public static class RunAggregator
         // Gems first: it reads the battle sessions the next statements delete.
         var voidedGems = await PendingGems.VoidAsync(connection, transaction, runId, rollbackTo, reason.ToString(), now, ct);
 
+        var voidedSeqs = new List<int>();
+        await using (var select = new NpgsqlCommand(
+            "SELECT run_seq FROM battle_sessions WHERE run_id = $1 AND run_seq > $2 ORDER BY run_seq", connection, transaction))
+        {
+            select.Parameters.Add(new NpgsqlParameter { Value = runId });
+            select.Parameters.Add(new NpgsqlParameter { Value = rollbackTo });
+            await using var reader = await select.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                voidedSeqs.Add(reader.GetInt32(0));
+            }
+        }
+
         var voidedBattles = await ExecuteCountAsync(connection, transaction,
             """
             INSERT INTO battle_sessions_voided (battle_id, run_id, run_seq, seed, ruleset_version, conditions, action_log, status,
@@ -251,7 +268,8 @@ public static class RunAggregator
             new RunRolledBackPayload(runId.ToString("D"), epoch, rollbackTo, stepNo, reason, voidedActions, voidedBattles, terminal), ct);
         await WriteAsync(connection, transaction, run, runId, EventTypes.AntiCheatAlert, EventTopics.Security, now,
             new AntiCheatAlertPayload(runId.ToString("D"), CategoryOf(reason), reason.ToString(), seq), ct);
-        return new AggregateResult(terminal ? "rejected" : "rolled_back", rollbackTo, 0, 0, voidedGems, true, reason, stepNo);
+        return new AggregateResult(terminal ? "rejected" : "rolled_back", rollbackTo, 0, 0, voidedGems, true, reason, stepNo,
+            VoidedBattleSeqs: voidedSeqs);
     }
 
     /// <summary>The coarse reason a client is told (1108's <c>reason</c>) and the anti-cheat <c>kind</c>: a small fixed set.</summary>

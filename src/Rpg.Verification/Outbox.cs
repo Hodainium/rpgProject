@@ -22,6 +22,14 @@ public sealed record OutboxMessage(Guid Id, string Destination, string Topic, st
 /// <summary>
 /// Writes outbox rows inside the caller's transaction, so a row exists exactly when the change it announces committed
 /// (spec settlement-outbox 2.1, 2.2). Nothing is ever published from request or worker code.
+/// <para>
+/// Order: the relay publishes a key's rows in <c>seq</c> order and never leases a row while an earlier row of its key is
+/// unpublished. But <c>seq</c> is drawn at insert and the relay sees only committed rows, so two transactions writing one
+/// key could commit in the other order. The insert therefore takes a SHARED transaction-scoped advisory lock on
+/// (destination, key) before it draws <c>seq</c>, held until the transaction ends; the relay leases a key's rows only when
+/// it gets the EXCLUSIVE lock with a try (<c>OutboxStore.LeaseAsync</c>), i.e. when no writer of the key is still open.
+/// Writers never wait for each other (shared locks), and the relay never waits at all, so this adds no deadlock.
+/// </para>
 /// </summary>
 public static class OutboxWriter
 {
@@ -30,8 +38,10 @@ public static class OutboxWriter
     {
         await using var command = new NpgsqlCommand(
             """
+            WITH key_lock AS (
+              SELECT pg_advisory_xact_lock_shared(hashtextextended('outbox:' || $2::text || ':' || $4::text, 0)))
             INSERT INTO outbox (id, destination, topic, key, type, payload, traceparent)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            SELECT $1, $2, $3, $4, $5, $6, $7 FROM key_lock
             """, connection, transaction);
         command.Parameters.Add(new NpgsqlParameter { Value = message.Id });
         command.Parameters.Add(new NpgsqlParameter { Value = message.Destination });
