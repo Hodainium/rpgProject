@@ -583,7 +583,6 @@ func refuse(text: String, instigator: StringName = &"", data: Dictionary = {}) -
 		VerbMessage.make(&"Verb.Refuse", instigator, &"", 0, [], extras))
 
 
-## A runner error stopped the run (its text went out as a Notification): show the end screen.
 ## Spec vfx-content-pass 2.2: the battle effect rules listen on the message bus for as long as the game shell lives.
 func _attach_fx_rules() -> void:
 	var service := get_node_or_null("/root/FxManager") as FxService
@@ -597,6 +596,7 @@ func _attach_fx_rules() -> void:
 		rules.attach(self)
 
 
+## A runner error stopped the run (its text went out as a Notification): show the end screen.
 func _on_run_stopped(_error: String) -> void:
 	delete_local_save()
 	if mode == "run":
@@ -607,6 +607,9 @@ func _on_battle_started(battle: Battle) -> void:
 	battle_messages = BattleMessages.new()
 	battle_messages.attach(battle, StringName(str(run.pending_battle.get("encounter", ""))), GameplayMessages)
 	var service := get_node_or_null("/root/FxManager") as FxService
+	if battle_tag_cues != null:
+		battle_tag_cues.detach()  # the last battle's watchers and looks go before this battle's start
+		battle_tag_cues = null
 	if service != null and service.enabled and ResourceLoader.exists(FX_REGISTRY):
 		battle_tag_cues = FxTagCues.new()
 		battle_tag_cues.attach(battle, (load(FX_REGISTRY) as FxRegistry).all_tag_cues())

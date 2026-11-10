@@ -31,15 +31,22 @@ static func sync_problems(fx_dir: String, cue_dir: String, registry: FxRegistry,
 	var issues: Array[ValidationIssue] = []
 	var effects := registry.all()
 	var rule_sets := registry.all_rule_sets()
-	for file in DirAccess.get_files_at(fx_dir):
-		if not file.ends_with(".tres"):
-			continue
-		var resource := load(fx_dir.path_join(file))
-		if resource is FxDefinition and not effects.has(resource.id):
-			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "fx_unregistered", fx_dir.path_join(file),
-				"%s is not in the effect registry: add it to fx_registry.tres" % resource.id))
+	# Review fix: subfolders too, matched by path (an id says nothing about which file is listed): an effect with no id can
+	# never be played, and a second file with a listed effect's id would replace it.
+	for path in fx_files(fx_dir):
+		var resource := load(path)
+		if resource is FxDefinition:
+			var listed: FxDefinition = effects.get(resource.id)
+			if resource.id == &"":
+				issues.append(ValidationIssue.new(ValidationIssue.ERROR, "fx_id_missing", path, "this effect has no id"))
+			elif listed == null:
+				issues.append(ValidationIssue.new(ValidationIssue.ERROR, "fx_unregistered", path,
+					"%s is not in the effect registry: add it to fx_registry.tres" % resource.id))
+			elif listed.resource_path != path:
+				issues.append(ValidationIssue.new(ValidationIssue.ERROR, "fx_id_taken", path,
+					"its id %s belongs to %s, which the registry lists: give this effect its own id" % [resource.id, listed.resource_path]))
 		elif resource is FxRuleSet and not rule_sets.has(resource):
-			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "fx_rule_set_unregistered", fx_dir.path_join(file),
+			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "fx_rule_set_unregistered", path,
 				"this rule set is not in the registry's rule_sets, so nothing attaches it"))
 	var registered_scenes := {}
 	var registered_tags := {}
@@ -63,6 +70,21 @@ static func sync_problems(fx_dir: String, cue_dir: String, registry: FxRegistry,
 			if tag != &"" and not registered_tags.has(tag):
 				issues.append(ValidationIssue.new(ValidationIssue.ERROR, "cue_unknown", "fx_registry (tag cue %s)" % rule.tag, "it names %s, which the cue registry does not have" % tag))
 	return issues
+
+
+## Every .tres under `fx_dir` and its subfolders, sorted.
+static func fx_files(fx_dir: String) -> Array[String]:
+	var found: Array[String] = []
+	var queue: Array[String] = [fx_dir.trim_suffix("/")]
+	while not queue.is_empty():
+		var dir: String = queue.pop_front()
+		for file in DirAccess.get_files_at(dir):
+			if file.ends_with(".tres"):
+				found.append(dir.path_join(file))
+		for sub in DirAccess.get_directories_at(dir):
+			queue.append(dir.path_join(sub))
+	found.sort()
+	return found
 
 
 ## Every definition in the registry and the ones it includes, overridden or not.

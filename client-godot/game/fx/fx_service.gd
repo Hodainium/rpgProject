@@ -63,6 +63,8 @@ var _live: Array[FxHandle] = []
 var _warned: Dictionary = {}
 var _stats: Dictionary = {"plays": 0, "skipped": 0, "unknown": 0, "recycled": 0, "built": 0, "pool_hits": 0, "finished": 0}
 var _plays_by_id: Dictionary = {}
+## True while the service leaves the tree: handles still end, but announce nothing.
+var _closing: bool = false
 
 
 func _ready() -> void:
@@ -78,7 +80,9 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
-	# Pooled instances are not in the tree; free them so nothing leaks at shutdown.
+	# Pooled instances are not in the tree; free them so nothing leaks at shutdown. No `finished` signals while the tree goes
+	# (review fix): a listener (a cue notify handing itself back to GodotGAS's pool) would re-parent nodes mid-teardown.
+	_closing = true
 	for handle in _live.duplicate():
 		_finish(handle)
 	for pool in _pools.values():
@@ -238,11 +242,10 @@ func _requalify(handle: FxHandle) -> void:
 		match handle.states[index]:
 			FxHandle.LayerState.SKIPPED:
 				if handle.quality_skipped[index] == 1 and allowed:
-					layer.apply(node, handle.params, handle.anchor, quality, def)
-					handle.starts[index] = handle.elapsed + layer.start_delay
-					handle.ends[index] = handle.starts[index] + layer.length(node, handle.params)
-					handle.states[index] = FxHandle.LayerState.PENDING
 					handle.quality_skipped[index] = 0
+					# The same setup as a play (review fix: a revived layer skipped it, so a sub-effect layer had no service and
+					# a 3D layer with no host on this anchor ran outside the tree).
+					_ready_layer(handle, index, handle.elapsed)
 			FxHandle.LayerState.PENDING, FxHandle.LayerState.RUNNING:
 				if not allowed:
 					if handle.states[index] == FxHandle.LayerState.RUNNING:
@@ -509,15 +512,23 @@ func _prepare_layers(handle: FxHandle) -> void:
 			continue
 		if layer == null or node == null:
 			continue
-		var holder: Node = instance.holder_of(index)
-		if holder == null or holder.get_parent() == null:
-			continue  # no host for this space on this anchor (a 3D layer on a Control)
-		node.set_meta(META_SERVICE, self)
-		node.set_meta(META_DEPTH, handle.depth)
-		layer.apply(node, handle.params, handle.anchor, quality, def)
-		handle.starts[index] = layer.start_delay
-		handle.ends[index] = layer.start_delay + layer.length(node, handle.params)
-		handle.states[index] = FxHandle.LayerState.PENDING
+		_ready_layer(handle, index, 0.0)
+
+
+## Sets one layer up to run from `at` (the effect's own time): it needs a host for its space on this anchor (a 3D layer on a
+## Control has none and stays SKIPPED), then its service and depth, its parameters, and its start and end.
+func _ready_layer(handle: FxHandle, index: int, at: float) -> void:
+	var layer := handle.definition.layers[index]
+	var node := handle.instance.nodes[index]
+	var holder: Node = handle.instance.holder_of(index)
+	if holder == null or holder.get_parent() == null:
+		return  # no host for this space on this anchor (a 3D layer on a Control)
+	node.set_meta(META_SERVICE, self)
+	node.set_meta(META_DEPTH, handle.depth)
+	layer.apply(node, handle.params, handle.anchor, quality, handle.definition)
+	handle.starts[index] = at + layer.start_delay
+	handle.ends[index] = handle.starts[index] + layer.length(node, handle.params)
+	handle.states[index] = FxHandle.LayerState.PENDING
 
 
 func _tick_layers(handle: FxHandle) -> void:
@@ -612,6 +623,8 @@ func _finish(handle: FxHandle) -> void:
 	_live.erase(handle)
 	_stats["finished"] += 1
 	handle.service = null
+	if _closing:
+		return
 	_dev_message(&"Verb.Stop", handle)
 	handle.finished.emit()
 	finished.emit(handle)

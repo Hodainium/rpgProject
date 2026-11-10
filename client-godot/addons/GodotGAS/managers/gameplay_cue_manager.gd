@@ -23,6 +23,12 @@ var _cue_scenes: Dictionary = {}
 ## rpgProject patch: the registry's entries by tag. An entry only names its scene; the scene loads when the cue first runs.
 var _entries: Dictionary = {}
 
+## rpgProject patch (review fix 2026-11-09): tag -> how many times register_cue / unregister_cue changed it. Each cue node
+## carries the generation it was made in, so a node still playing when its cue was replaced or removed is freed when it
+## finishes instead of going back into the pool (where the next execute_cue would reuse the old scene).
+var _generations: Dictionary = {}
+const _GENERATION_META: StringName = &"rpg_cue_generation"
+
 ## rpgProject patch (Unreal's ShouldSuppressGameplayCues): when true, execute_cue does nothing and add_persistent_cue
 ## returns null. A process that draws and plays nothing (the headless verifier) sets it, so no cue scene is ever loaded
 ## and no cue node is made per hit.
@@ -71,6 +77,7 @@ func register_cue(tag: StringName, scene: PackedScene) -> void:
 
 ## rpgProject patch: removes a cue; pooled instances are freed.
 func unregister_cue(tag: StringName) -> void:
+	_generations[tag] = int(_generations.get(tag, 0)) + 1  # rpgProject patch: live nodes of this cue are now stale
 	_cue_scenes.erase(tag)
 	_entries.erase(tag)
 	for pooled in _pool.get(tag, []):
@@ -180,6 +187,7 @@ func _get_or_create_cue(tag: StringName) -> GameplayCueNotify:
 	
 	var new_cue: GameplayCueNotify = raw_instance
 	new_cue.gameplay_cue_tag = tag
+	new_cue.set_meta(_GENERATION_META, int(_generations.get(tag, 0)))  # rpgProject patch
 	new_cue.cue_finished.connect(_on_cue_finished)
 	
 	set_cue_state(new_cue, true) # Initialize as Active
@@ -190,6 +198,10 @@ func _get_or_create_cue(tag: StringName) -> GameplayCueNotify:
 func _on_cue_finished(cue_node: GameplayCueNotify, tag: StringName) -> void:
 	if cue_node.get_parent():
 		cue_node.get_parent().remove_child(cue_node)
+	# rpgProject patch: a node made before its cue was replaced or removed never returns to the pool.
+	if not has_cue(tag) or int(cue_node.get_meta(_GENERATION_META, 0)) != int(_generations.get(tag, 0)):
+		cue_node.queue_free()
+		return
 	
 	set_cue_state(cue_node, false) # Put to sleep
 	add_child(cue_node)

@@ -7,6 +7,8 @@ extends RefCounted
 var _rules: Array = []
 ## "unit_id|tag" -> the persistent cue node playing for it.
 var _live: Dictionary = {}
+## [asc, added Callable, removed Callable] per watched unit, so detach() can let go.
+var _connections: Array = []
 
 
 ## Watches every unit of `battle`.
@@ -15,28 +17,64 @@ func attach(battle: Battle, rules: Array) -> void:
 		attach_unit(unit.asc, unit.unit_id, rules)
 
 
-## Watches one ability system whose unit is `unit_id` (the unit's view is found through the effects service).
+## Watches one ability system whose unit is `unit_id` (the unit's view is found through the effects service). A tag the unit
+## already has (a member carried over dead, a status from the battle's start) starts its present cue now; its added cue is a
+## moment that already passed and does not play (review fix).
 func attach_unit(asc: AbilitySystemComponent, unit_id: StringName, rules: Array) -> void:
 	_rules = rules
-	asc.tag_added.connect(_on_added.bind(unit_id))
-	asc.tag_removed.connect(_on_removed.bind(unit_id))
+	var added := _on_added.bind(unit_id, asc)
+	var removed := _on_removed.bind(unit_id, asc)
+	asc.tag_added.connect(added)
+	asc.tag_removed.connect(removed)
+	_connections.append([asc, added, removed])
+	for rule in _rules:
+		if rule is FxTagCue and rule.present_cue != &"" and asc.has_tag_exact(rule.tag):
+			_start_present(rule, rule.tag, unit_id, asc)
 
 
-func _on_added(tag: StringName, unit_id: StringName) -> void:
+## Stops watching and ends every look still playing (the battle is over, another one starts).
+func detach() -> void:
+	for entry in _connections:
+		if is_instance_valid(entry[0]):
+			if entry[0].tag_added.is_connected(entry[1]):
+				entry[0].tag_added.disconnect(entry[1])
+			if entry[0].tag_removed.is_connected(entry[2]):
+				entry[0].tag_removed.disconnect(entry[2])
+	_connections.clear()
+	for key in _live:
+		if is_instance_valid(_live[key]):
+			GameplayCueManager.remove_persistent_cue(_live[key])
+	_live.clear()
+
+
+func _on_added(tag: StringName, unit_id: StringName, asc: AbilitySystemComponent) -> void:
 	for rule in _rules:
 		if rule is FxTagCue and rule.tag == tag:
 			var view := _view(unit_id)
 			if view == null:
 				continue
 			if rule.added_cue != &"":
-				GameplayCueManager.execute_cue(rule.added_cue, view, {"tag": tag, "unit": unit_id})
+				GameplayCueManager.execute_cue(rule.added_cue, view, _payload(tag, unit_id, asc))
 			if rule.present_cue != &"":
-				var cue := GameplayCueManager.add_persistent_cue(rule.present_cue, view, {"tag": tag, "unit": unit_id})
-				if cue != null:
-					_live["%s|%s" % [unit_id, tag]] = cue
+				_start_present(rule, tag, unit_id, asc)
 
 
-func _on_removed(tag: StringName, unit_id: StringName) -> void:
+func _start_present(rule: FxTagCue, tag: StringName, unit_id: StringName, asc: AbilitySystemComponent) -> void:
+	var key := "%s|%s" % [unit_id, tag]
+	var view := _view(unit_id)
+	if view == null or (_live.has(key) and is_instance_valid(_live[key])):
+		return
+	var cue := GameplayCueManager.add_persistent_cue(rule.present_cue, view, _payload(tag, unit_id, asc))
+	if cue != null:
+		_live[key] = cue
+
+
+## A tag cue's payload: the tag, the unit, and its ability system (so FxCueBinding's TARGET_TAGS can read the unit's tags).
+static func _payload(tag: StringName, unit_id: StringName, asc: AbilitySystemComponent) -> Dictionary:
+	return {"tag": tag, "unit": unit_id, "asc": asc}
+
+
+func _on_removed(tag: StringName, unit_id: StringName, asc: AbilitySystemComponent) -> void:
 	var key := "%s|%s" % [unit_id, tag]
 	if _live.has(key):
 		var cue: GameplayCueNotify = _live[key]
@@ -47,7 +85,7 @@ func _on_removed(tag: StringName, unit_id: StringName) -> void:
 		if rule is FxTagCue and rule.tag == tag and rule.removed_cue != &"":
 			var view := _view(unit_id)
 			if view != null:
-				GameplayCueManager.execute_cue(rule.removed_cue, view, {"tag": tag, "unit": unit_id})
+				GameplayCueManager.execute_cue(rule.removed_cue, view, _payload(tag, unit_id, asc))
 
 
 func _view(unit_id: StringName) -> Node3D:

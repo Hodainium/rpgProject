@@ -1302,6 +1302,33 @@ func test_changing_the_tier_re_applies_a_running_loop() -> void:
 	service.stop_all()
 
 
+## Review fix: a layer skipped for quality at play time and brought back by a tier raise gets the same setup as at a play
+## (its service and depth), so a sub-effect layer revived this way really plays its child.
+func test_a_sub_effect_layer_revived_by_a_tier_raise_plays_its_child() -> void:
+	var service := _service()
+	var light := FxLightLayer.new()
+	light.id = &"light"
+	light.seconds = 5.0
+	var child := _def(&"fx.revived_child", [light])
+	var sub := FxSubFxLayer.new()
+	sub.id = &"child"
+	sub.effect = child
+	sub.min_quality = FxLayer.Quality.HIGH
+	var base := _particles(&"base", 0.5, 10)
+	base.loop = true
+	var parent := _def(&"fx.revived_parent", [base, sub])
+	service.register(parent)
+	service.quality = FxQuality.LOW
+	var handle := service.play(parent, FxAnchor.node3d(_keep(Node3D.new())))
+	service.advance(0.1)
+	eq(service.live_count(&"fx.revived_child"), 0, "at low the sub-effect layer is skipped")
+	service.quality = FxQuality.HIGH
+	service.advance(0.1)
+	eq(handle.states[1], FxHandle.LayerState.RUNNING, "high brings the sub-effect layer back")
+	eq(service.live_count(&"fx.revived_child"), 1, "and it plays its child")
+	service.stop_all()
+
+
 func test_a_loop_with_every_layer_above_the_tier_stays_alive() -> void:
 	var service := _service()
 	var only_high := _particles(&"high", 0.5, 10)
