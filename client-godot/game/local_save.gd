@@ -25,6 +25,7 @@ static func write(path: String, run: RunController, content: ContentIndex) -> bo
 		"savedAt": Time.get_datetime_string_from_system(true) + "Z",
 		"summary": {"runName": structure_name, "floor": run.state.floor_index + 1, "party": party},
 		"snapshot": run.snapshot(),
+		"cardPoolSet": run.state.card_pool_set,  # so a save that loses both the pool and its digest is noticed too
 	}
 	if run.state.card_pool_set:
 		data["cardPool"] = run.state.card_pool.map(func(id: StringName) -> String: return String(id))  # a local test pool, spec card-collection 3.6

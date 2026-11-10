@@ -46,6 +46,10 @@ internal static class CardSql
     public static Task LockNamedAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, string name, CancellationToken ct) =>
         ExecAsync(connection, transaction, "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", ct, name);
 
+    /// <summary>The shared form of <see cref="LockNamedAsync"/>: readers that must see one version of what the named lock guards.</summary>
+    public static Task LockNamedSharedAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, string name, CancellationToken ct) =>
+        ExecAsync(connection, transaction, "SELECT pg_advisory_xact_lock_shared(hashtextextended($1, 0))", ct, name);
+
     public static Task EnsurePlayerAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid playerId, string name,
         DateTimeOffset now, CancellationToken ct) =>
         ExecAsync(connection, transaction,

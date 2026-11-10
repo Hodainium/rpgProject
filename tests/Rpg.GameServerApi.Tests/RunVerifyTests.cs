@@ -151,6 +151,74 @@ public class RunVerifyTests(StackFixture stack)
         await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Room(2), RunLog.Room(3), RunLog.NextFloor(4)), Ct);   // three is fine
     }
 
+    /// <summary>
+    /// Review fix: the limit holds for actions without a snapshot too, so no number of plain actions can build an unbounded
+    /// step for the next checkpoint or the end. A plain action is refused once only the checkpoint's place is left.
+    /// </summary>
+    [Fact]
+    public async Task Upload_PlainActionsPastTheLimit_Are400_TheCheckpointsPlaceStaysFree()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(Quiet)
+        {
+            ["Verify:MaxStepActions"] = "3",
+        });
+        var client = await ClientAsync(factory, "alice");
+        var run = await client.StartRunAsync(Start, Ct);
+        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2), RunLog.Room(3)), Ct);
+
+        var ex = await Assert.ThrowsAsync<GameServerApiException>(() =>
+            client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Room(4)), Ct));   // a third plain action: no room for the checkpoint
+
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Equal(3, (await client.GetRunAsync(run.RunId, Ct)).LastSeq);
+        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.NextFloor(4)), Ct);   // the checkpoint still fits
+        Assert.Equal(4, (await client.GetRunAsync(run.RunId, Ct)).LastSeq);
+    }
+
+    /// <summary>Review fix: the end step obeys the same limit (only a log stored before the upload rule can reach it).</summary>
+    [Fact]
+    public async Task End_PastTheLimitFromTheLastCheckpoint_Is400_AndNoStepIsMade()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(Quiet)
+        {
+            ["Verify:MaxStepActions"] = "3",
+        });
+        var client = await ClientAsync(factory, "alice");
+        var run = await client.StartRunAsync(Start, Ct);
+        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2), RunLog.Room(3)), Ct);
+        // A plain action stored the way an older server let it in: the end at seq 5 would be four past the checkpoint.
+        await using (var insert = factory.Services.GetRequiredService<Npgsql.NpgsqlDataSource>().CreateCommand(
+            $$"""
+            INSERT INTO run_actions (run_id, seq, floor, type, action, state_hash, played_at, received_at)
+            VALUES ('{{run.RunId}}', 4, 0, 'enter_room', '{"type":"enter_room","floor":0}', 'h4', now(), now());
+            UPDATE runs SET last_seq = 4 WHERE run_id = '{{run.RunId}}';
+            """))
+        {
+            await insert.ExecuteNonQueryAsync(Ct);
+        }
+
+        var ex = await Assert.ThrowsAsync<GameServerApiException>(() =>
+            client.EndRunAsync(run.RunId, RunLog.End(5, RunEndStatus.Won), Ct));
+
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Equal(1L, await ScalarAsync(factory, $"SELECT count(*) FROM run_steps WHERE run_id = '{run.RunId}'"));   // genesis only
+    }
+
+    /// <summary>Review fix: seq 1 must be the start_run checkpoint, so every action lies inside a step.</summary>
+    [Fact]
+    public async Task Upload_ASeqOneThatIsNotTheStart_Is400()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: Quiet);
+        var client = await ClientAsync(factory, "alice");
+        var run = await client.StartRunAsync(Start, Ct);
+
+        var ex = await Assert.ThrowsAsync<GameServerApiException>(() =>
+            client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Room(1), RunLog.NextFloor(2)), Ct));
+
+        Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Equal(0, (await client.GetRunAsync(run.RunId, Ct)).LastSeq);
+    }
+
     [Fact]
     public async Task Upload_AClientWithoutAPendingBattleCheckpoint_MakesOneLongerBattleStep()
     {
@@ -412,6 +480,21 @@ public class RunVerifyTests(StackFixture stack)
         Assert.True(resumed.Snapshot.GetProperty("server").GetBoolean());   // not the client's {"marker":1,…}
         Assert.Equal([2], resumed.Tail.Select(a => a.Seq));
         Assert.Equal(1, resumed.VerifiedSeq);
+    }
+
+    /// <summary>Review fix: before the genesis job has written the server's start, resume serves no snapshot (the client
+    /// retries), never the client's own seq 1 claim.</summary>
+    [Fact]
+    public async Task Resume_AtSeqOne_BeforeGenesis_ServesNoSnapshot_NotTheClients()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: Quiet);
+        var client = await ClientAsync(factory, "alice");
+        var run = await client.StartRunAsync(Start, Ct);
+        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2)), Ct);
+
+        var resumed = await client.ResumeAsync(run.RunId, Ct);
+
+        Assert.Equal(JsonValueKind.Null, resumed.Snapshot.ValueKind);   // not the client's {"marker":1,…}
     }
 
     [Fact]

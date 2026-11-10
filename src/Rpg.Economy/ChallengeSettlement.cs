@@ -67,7 +67,7 @@ public static class ChallengeSettlement
         var characters = facts.PartyCharacterIds.Distinct().ToList();
         foreach (var challengeId in reached)
         {
-            var rule = await RewardRules.LookupAsync(connection, transaction, challengeId, ct);
+            var rule = await RewardRules.LookupAsync(connection, transaction, challengeId, context.CycleAt, ct);
             if (rule is null)
             {
                 missing++;

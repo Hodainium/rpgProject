@@ -139,10 +139,11 @@ public sealed class WorkerHarness : IAsyncDisposable
         {
             await new MigrationRunner(data, NullLogger<MigrationRunner>.Instance).EnsureMigratedAsync(CancellationToken.None);
             // Spec economy-rewards: what a boss pays is a rule in the table. These tests' bosses pay 10 unless a test says otherwise.
+            // In force long before any seeded battle: settlement reads the rule as it stood at the battle (C10).
             await using var rules = data.CreateCommand(
-                """
-                INSERT INTO reward_rules (challenge_id, currency, amount, version, created_by)
-                SELECT 'boss/' || id, 'gems', 10, 1, 'test' FROM unnest(ARRAY['boss.lich','boss.golem','boss.a','boss.b']) AS id
+                $"""
+                INSERT INTO reward_rules (challenge_id, currency, amount, version, effective_from, created_by)
+                SELECT 'boss/' || id, 'gems', 10, 1, '{LongAgo:O}', 'test' FROM unnest(ARRAY['boss.lich','boss.golem','boss.a','boss.b']) AS id
                 """);
             await rules.ExecuteNonQueryAsync();
         }
@@ -217,16 +218,29 @@ public sealed class WorkerHarness : IAsyncDisposable
         return new SeededBattle(battleId, runId, playerId, 2, ruleset);
     }
 
+    /// <summary>
+    /// When the harness's rule versions take effect unless a test says otherwise: long before any battle a test seeds, so a
+    /// version is in force for the battles that follow it in the test. Settlement reads the rule as it stood at the battle's
+    /// submit time (spec economy-challenges C10), so a test about the order of a rule and a battle passes its own time.
+    /// </summary>
+    public static readonly DateTimeOffset LongAgo = new(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
     /// <summary>A new version of a boss's rule (retired for 0), as the API would write it.</summary>
-    public Task PutRuleAsync(string boss, int amount, int version) => PutChallengeAsync("boss/" + boss, version, amount);
+    public Task PutRuleAsync(string boss, int amount, int version, DateTimeOffset? effectiveFrom = null) =>
+        PutChallengeAsync("boss/" + boss, version, amount, Rpg.Contracts.Economy.RewardCycles.Once, null, effectiveFrom);
 
     /// <summary>A new version of a challenge's reward (an amount of 0 retires it).</summary>
     public Task PutChallengeAsync(string challengeId, int version, int amount) =>
         PutChallengeAsync(challengeId, version, amount, Rpg.Contracts.Economy.RewardCycles.Once, null);
 
-    public Task PutChallengeAsync(string challengeId, int version, int amount, string cycle, DateTimeOffset? endsAt) => ExecuteAsync(
-        "INSERT INTO reward_rules (challenge_id, currency, amount, cycle, ends_at, version, created_by) VALUES ($1, 'gems', $2, $3, $4, $5, 'test')",
-        challengeId, amount, cycle, endsAt?.ToUniversalTime() ?? (object)DBNull.Value, version);
+    public Task PutChallengeAsync(string challengeId, int version, int amount, string cycle, DateTimeOffset? endsAt,
+        DateTimeOffset? effectiveFrom = null) => ExecuteAsync(
+        """
+        INSERT INTO reward_rules (challenge_id, currency, amount, cycle, ends_at, version, effective_from, created_by)
+        VALUES ($1, 'gems', $2, $3, $4, $5, $6, 'test')
+        """,
+        challengeId, amount, cycle, endsAt?.ToUniversalTime() ?? (object)DBNull.Value, version,
+        (effectiveFrom ?? LongAgo).ToUniversalTime());
 
     public static VerifyBattleJob JobOf(SeededBattle battle) =>
         new(battle.BattleId, battle.RunId, battle.Seq, battle.Ruleset, DateTimeOffset.UtcNow);

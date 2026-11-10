@@ -248,7 +248,11 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
         return new CollectionResponse(owned, gems, dust, version, active?.RunId.ToString("D"), active?.Status, pity);
     }
 
-    /// <summary>The player's pity counters for a pack type; a rarity with no row yet starts at its first-open value (spec 3.4a).</summary>
+    /// <summary>
+    /// The player's pity counters for a pack type (spec 3.4a). A rarity with no row starts at its first-open value only when
+    /// the player has never opened this pack type; otherwise at 0. (Review fix: "no pity rows" used to count as a first open,
+    /// so when a pack type gained pity later, players who had opened it many times got the first-open head start.)
+    /// </summary>
     private static async Task<Dictionary<string, int>> MissedAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction,
         Guid playerId, PackType pack, bool forUpdate, CancellationToken ct)
     {
@@ -266,11 +270,20 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
             }
         }
 
+        bool openedBefore;
+        await using (var opened = new NpgsqlCommand(
+            "SELECT EXISTS (SELECT 1 FROM pack_openings WHERE player_id = $1 AND pack_id = $2)", connection, transaction))
+        {
+            opened.Parameters.Add(new NpgsqlParameter { Value = playerId });
+            opened.Parameters.Add(new NpgsqlParameter { Value = pack.PackId });
+            openedBefore = await opened.ExecuteScalarAsync(ct) is true;
+        }
+
         var initial = PackDrawer.InitialMissed(pack.Pity, pack.FirstGuarantees);
         var missed = new Dictionary<string, int>();
         foreach (var rarity in pack.Pity.Where(p => p.Value > 0).Select(p => p.Key))
         {
-            missed[rarity] = rows.TryGetValue(rarity, out var value) ? value : rows.Count == 0 ? initial[rarity] : 0;
+            missed[rarity] = rows.TryGetValue(rarity, out var value) ? value : openedBefore ? 0 : initial[rarity];
         }
 
         return missed;

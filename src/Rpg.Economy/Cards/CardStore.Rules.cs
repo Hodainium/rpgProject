@@ -75,6 +75,15 @@ public sealed partial class CardStore
                 "No rarity with odds above 0 has an eligible card (non-core, not retired) in the pack's sets.");
         }
 
+        // Review fix: every rarity the pack can draw needs a card rate (a duplicate is dusted at it), or every open would fail.
+        var rates = await LatestRatesAsync(connection, transaction, ct);
+        if (!request.Retired && request.OddsPer10000.Where(o => o.Value > 0).Select(o => o.Key).FirstOrDefault(r => !rates.ContainsKey(r))
+                is { } unrated)
+        {
+            return CardResult<PackType>.Fail(CardFailure.RuleInvalid,
+                $"Rarity '{unrated}' has odds in this pack but no card rate: put its rate first.");
+        }
+
         int version;
         await using (var latest = Cmd(connection, transaction, "SELECT COALESCE(max(version), 0) FROM pack_types WHERE pack_id = $1", request.PackId))
         {
