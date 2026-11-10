@@ -32,7 +32,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 4b. `game-analytics` | ⬜ Not started | |
 | 5. `card-collection` | ✅ Done (spec synced; the account's cards on the server: catalog, packs with Epic / Legendary / Mythic pity and a Rare guarantee, dust and craft, the run lock, the run's item pool as a verified input, `POST /runs/{id}/abandon`; Godot: the pool in the run hash and steps, card tags on all 160 demo cards, core-set proposal, console commands, run-end gate; no Vault pool; 535 .NET, 626 Godot, 5 card e2e scenarios; not built: the Grafana row; the screens are 5b, the numbers 5c) | 2026-11-09 |
 | 5a. `vfx-framework` | 🔨 Built, awaiting the user's review (`specs/vfx-framework.md`; data-driven FX in 2D, 3D and hybrid, the GodotGAS cue bridge, the hybrid stage, a shader library, a proof set of 12 effects, dev tools, the gallery; 696 Godot tests; every hit in a battle now sparks; spec to sync after tuning) | 2026-11-09 |
-| 5a2. `vfx-content-pass` | ⬜ Not started (after 5a's proof set works: FX for the existing abilities, statuses, items and events, by a proposal pass the user approves; may fold into 5a on request) | |
+| 5a2. `vfx-content-pass` | ✅ Built 2026-11-09 (effects for hits, DoTs, controls, stat statuses, heals, revives, 24 ultimates, battle moments and damage numbers; open for playtest fixes) | `specs/vfx-content-pass.md` |
 | 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |
