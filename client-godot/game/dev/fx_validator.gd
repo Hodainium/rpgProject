@@ -45,8 +45,10 @@ static func sync_problems(fx_dir: String, cue_dir: String, registry: FxRegistry,
 	var registered_tags := {}
 	for entry in cue_registry.entries:
 		registered_tags[entry.tag] = true
-		registered_scenes[String(entry.scene_ref)] = true
-		if not ResourceLoader.exists(String(entry.scene_ref)):
+		# scene_ref is a uid:// (what the inspector and the dashboard save, GodotGAS patch 3) or a res:// path: compare paths.
+		var path := entry.scene_path()
+		registered_scenes[path] = true
+		if path == "" or not ResourceLoader.exists(path):
 			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "cue_scene_missing", "cue_registry", "%s: its scene %s does not exist" % [entry.tag, entry.scene_ref]))
 	for file in DirAccess.get_files_at(cue_dir):
 		if file.ends_with(".tscn") and not registered_scenes.has(cue_dir.path_join(file)):

@@ -114,7 +114,7 @@ modifier from `CombatASC.turn_start`) and a heal are plain HP changes that emit 
 spirit of D2-A: `hp_changed(unit_id, delta_x100, cause_tags)`, emitted from `Battle._on_attribute_changed` for `hp`. A row hit's own HP loss is
 excluded (`_row_hit_depth`), so a hit makes exactly one number (from `Message.Battle.Damage`); a DoT's stacks are grouped into one report per tick through
 `CombatASC.tick_started/tick_finished`. `BattleMessages` bridges it as `Message.Battle.HpChanged`. None of these signals is read by the action log, the trace or the state hash
-(pinned by `test_a_battle_with_every_effect_attached_is_identical` and the unchanged goldens). Several numbers on one unit are not staggered or capped yet (cut list).
+(pinned by `test_a_battle_with_every_effect_attached_is_identical`, by `test_gas_cues_on_battle_units_change_no_log_and_no_hash` (review fix 2026-11-09: every fixture ability casts a test cue and every effect it applies lists it as an application, persistent and periodic cue, so real cue nodes run under the BattleUnits; the log and final hash equal those of the same battle with cues suppressed, as in the verifier) and the unchanged goldens). Several numbers on one unit are not staggered or capped yet (cut list).
 
 ### 2.6 Tag cues for loose state tags (added in the build)
 Break, Downed and Dead are loose tags, not effects, so they have no cue tags of their own. `FxTagCue` (in the registry's `tag_cues`) maps a unit's
@@ -244,7 +244,7 @@ ruleset-version consequence below).
 | Looping status aura outlives the status (death, battle end, cleanse) | `end_cue` fades it; `stop_all` at battle end; unit freed releases it | `test_a_persistent_look_ends_when_its_unit_dies`, `test_looks_are_released_when_their_views_are_freed`, `test_status_cues_play_through_the_real_cue_manager` |
 | Effects mutate state | impossible by construction (5a); hash, trace and run hash are identical with rules attached or not | `test_a_battle_with_every_effect_attached_is_identical` (scripted battle played twice) |
 | Headless / verifier | cues suppressed, listeners inert (no `FxManager`), result identical | existing suite + `verifier_image_check` unchanged |
-| A registry lacks a file (builders append, a hand edit can forget one) | `FxValidator.sync_problems` reports `fx_unregistered`, `fx_rule_set_unregistered`, `cue_scene_unregistered`, `cue_scene_missing`, `cue_unknown` as errors in `validate_content.tscn` | `test_registries_list_every_effect_rule_set_and_cue_scene`, `test_the_registry_patch_only_appends` |
+| A registry lacks a file (builders append, a hand edit can forget one) | `FxValidator.sync_problems` reports `fx_unregistered`, `fx_rule_set_unregistered`, `cue_scene_unregistered`, `cue_scene_missing`, `cue_unknown` as errors in `validate_content.tscn`; a cue entry's scene is compared by its resolved path, so an entry the inspector or the dashboard saved as a `uid://` (GodotGAS patch 3) counts (review fix 2026-11-09) | `test_registries_list_every_effect_rule_set_and_cue_scene`, `test_the_registry_patch_only_appends` |
 | Cue/FX edit changes ruleset version | expected: re-export the full build so the worker's version matches | noted in the PR; `tools/dev_stack.sh` doc line |
 | Proposal applied to a file the user changed since | `--apply` refuses a file whose hash differs from the report's | no proposal tool was built: the content was made by create-only builders and by approved `Edit`s |
 

@@ -980,6 +980,59 @@ func test_a_battle_with_every_effect_attached_is_identical() -> void:
 	GameplayCueManager.suppress_cues = setup["was_suppressed"]
 
 
+## Review fix (the test gap of the proof above: the fixtures list no cue tags). The window client runs GAS cues the verifier suppresses:
+## cue nodes are added under the BattleUnits, a cast cue fires on every activation, and persistent and periodic cues run with the
+## statuses. Here every ability casts a test cue and every effect the abilities apply lists it as an application, persistent and periodic
+## cue; the battle played with cues suppressed (the verifier) and with them running (the client) must keep the same log and final hash.
+func test_gas_cues_on_battle_units_change_no_log_and_no_hash() -> void:
+	if skip_in_export():
+		return
+	var setup := _moments_setup()
+	var service: FxService = setup["service"]
+	var tag := &"Cue.Test.EveryCast"
+	var cue := FxCueNotify.new()
+	cue.fx = _socket_effect(FxSocket.CENTER)
+	cue.target_fx = _socket_effect(FxSocket.CENTER)
+	var scene := PackedScene.new()
+	scene.pack(cue)
+	cue.free()
+	GameplayCueManager.register_cue(tag, scene)
+	var snap := squad_snapshot("42")
+	var saved := {}  # GameplayEffect -> [application, persistent, periodic]: the fixture resources are shared, so they are put back
+	var played: Array[Battle] = []
+	var logs: Array = []
+	for suppressed in [true, false]:
+		GameplayCueManager.suppress_cues = suppressed
+		var battle := new_battle(snap)
+		for unit in battle.units():
+			for ability in unit.abilities():
+				ability.cast_cue_tags = [tag]
+				for row in ability.executions:
+					if row != null and row.effect != null and not saved.has(row.effect):
+						saved[row.effect] = [row.effect.application_cue_tags.duplicate(), row.effect.persistent_cue_tags.duplicate(),
+							row.effect.periodic_cue_tags.duplicate()]
+						row.effect.application_cue_tags.append(tag)
+						row.effect.persistent_cue_tags.append(tag)
+						row.effect.periodic_cue_tags.append(tag)
+		var controller := ScriptedController.new()
+		await battle.run(controller)
+		played.append(battle)
+		logs.append(controller.entries)
+	var cued_plays: int = service.stats()["plays"]
+	for effect in saved:
+		effect.application_cue_tags = saved[effect][0]
+		effect.persistent_cue_tags = saved[effect][1]
+		effect.periodic_cue_tags = saved[effect][2]
+	GameplayCueManager.unregister_cue(tag)
+	GameplayCueManager.suppress_cues = setup["was_suppressed"]
+	check(not saved.is_empty(), "the abilities apply effects that now carry the cue")
+	check(not (logs[0] as Array).is_empty(), "the battle was played")
+	eq(logs[1], logs[0], "the same log with cues running as with cues suppressed")
+	eq(played[1].final_hash, played[0].final_hash, "the same final hash")
+	eq(played[1].outcome, played[0].outcome, "the same outcome")
+	check(cued_plays > 0, "and the cues really played on the battle units (%d plays)" % cued_plays)
+
+
 ## The registries are edited by hand, so a forgotten line must fail loudly (user, 2026-11-09).
 func test_registries_list_every_effect_rule_set_and_cue_scene() -> void:
 	if skip_in_export():
@@ -995,6 +1048,26 @@ func test_registries_list_every_effect_rule_set_and_cue_scene() -> void:
 	check(codes.has("fx_unregistered"), "an effect missing from the registry is reported")
 	check(codes.has("fx_rule_set_unregistered"), "a rule set missing from the registry is reported")
 	check(codes.has("cue_scene_unregistered"), "a cue scene without an entry is reported")
+	# Review fix: the inspector and the dashboard save an entry's scene as a uid:// (GodotGAS patch 3); such an entry still counts.
+	# The shipped cue scenes carry no uid yet (the builders saved them without one), so one is registered for the first scene here.
+	var by_uid := GameplayCueRegistry.new()
+	var uid := ResourceUID.create_id()
+	ResourceUID.add_id(uid, cues.entries[0].scene_path())
+	for entry in cues.entries:
+		var copy := GameplayCueEntry.new()
+		copy.tag = entry.tag
+		copy.scene_ref = entry.scene_ref
+		by_uid.entries.append(copy)
+	by_uid.entries[0].scene_ref = ResourceUID.id_to_text(uid)
+	var uid_problems := FxValidator.sync_problems("res://presentation/demo/fx/", "res://presentation/demo/cues/", registry, by_uid)
+	eq(uid_problems.map(func(i): return i.message), [], "a registry that names its scenes by uid is in sync too")
+	var gone := GameplayCueEntry.new()
+	gone.tag = &"Cue.Test.Gone"
+	gone.scene_ref = "uid://doesnotexist00"
+	by_uid.entries.append(gone)
+	var gone_codes := FxValidator.sync_problems("res://presentation/demo/fx/", "res://presentation/demo/cues/", registry, by_uid).map(func(i): return i.code)
+	check(gone_codes.has("cue_scene_missing"), "a uid that resolves to nothing is a missing scene")
+	ResourceUID.remove_id(uid)
 
 
 ## A builder's registry write is additive text: new entries appended, every existing line byte for byte, nothing listed twice.
