@@ -18,3 +18,5 @@ policy = 3
 max_stacks = 1
 modifiers = Array[ExtResource("2_hrdsy")]([SubResource("Resource_isf7p")])
 granted_tags = Array[StringName]([&"Status.Buff.AttackUp"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.AttackUp"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff"])

@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_o8moq"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/burning.tres" id="2_4vdvo"]
+
+[node name="StatusBurnCue" type="Node" unique_id=685480758]
+script = ExtResource("1_o8moq")
+fx = ExtResource("2_4vdvo")
+stop_fade = 0.4
+auto_destroy = false

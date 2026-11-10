@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_lha5i"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="2_ja0ka"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_o4c8f"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/systole_strike.tres" id="4_gg4rb"]
+
+[sub_resource type="Resource" id="Resource_yrtnx"]
+script = ExtResource("3_o4c8f")
+param = &"color"
+value = Color(1, 0.25, 0.3, 1)
+
+[sub_resource type="Resource" id="Resource_ubt1w"]
+script = ExtResource("3_o4c8f")
+param = &"ray_count"
+value = 10.0
+
+[sub_resource type="Resource" id="Resource_qna2t"]
+script = ExtResource("3_o4c8f")
+param = &"spin"
+value = 0.1
+
+[sub_resource type="Resource" id="Resource_8yy05"]
+script = ExtResource("3_o4c8f")
+param = &"intensity"
+value = 1.0
+
+[sub_resource type="Resource" id="Resource_xj2ob"]
+script = ExtResource("3_o4c8f")
+param = &"color"
+value = Color(1, 0.25, 0.3, 1)
+
+[node name="CueUltSystole" type="Node" unique_id=338327238]
+script = ExtResource("1_lha5i")
+fx = ExtResource("2_ja0ka")
+bindings = Array[ExtResource("3_o4c8f")]([SubResource("Resource_yrtnx"), SubResource("Resource_ubt1w"), SubResource("Resource_qna2t"), SubResource("Resource_8yy05")])
+target_fx = ExtResource("4_gg4rb")
+target_bindings = Array[ExtResource("3_o4c8f")]([SubResource("Resource_xj2ob")])
+target_stagger = 0.12

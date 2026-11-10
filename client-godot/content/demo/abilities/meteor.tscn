@@ -23,6 +23,7 @@ asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage"
 executions = Array[ExtResource("2_2evxd")]([SubResource("Resource_dep4x")])
 animation = ExtResource("4_lq85k")
 ability_tag = &"Ability.Ult.Meteor"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Meteor"])
 activation_query = ExtResource("5_i7ldu")
 cost_effect = ExtResource("6_dugp6")
 description = "Fire damage to every enemy."

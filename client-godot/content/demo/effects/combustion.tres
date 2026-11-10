@@ -26,3 +26,5 @@ policy = 3
 duration_turns = 3
 modifiers = Array[ExtResource("2_lf3xr")]([SubResource("Resource_i3mk8"), SubResource("Resource_cub4x"), SubResource("Resource_8b0my")])
 granted_tags = Array[StringName]([&"Status.Buff.Combustion", &"State.Combustion"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.Combustion"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff"])

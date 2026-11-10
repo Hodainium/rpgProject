@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_rvsk3"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/stat_apply.tres" id="2_rxqku"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_1cdvf"]
+
+[sub_resource type="Resource" id="Resource_04k7l"]
+script = ExtResource("3_1cdvf")
+param = &"color"
+value = Color(0.7, 0.4, 0.9, 1)
+
+[sub_resource type="Resource" id="Resource_478vr"]
+script = ExtResource("3_1cdvf")
+param = &"drift"
+value = Vector3(0, -1.1, 0)
+
+[sub_resource type="Resource" id="Resource_nnte6"]
+script = ExtResource("3_1cdvf")
+param = &"start"
+value = Vector3(0, 0.5, 0)
+
+[sub_resource type="Resource" id="Resource_snae3"]
+script = ExtResource("3_1cdvf")
+param = &"angle"
+value = 180.0
+
+[node name="CueApplyDebuff" type="Node" unique_id=1595282180]
+script = ExtResource("1_rvsk3")
+fx = ExtResource("2_rxqku")
+bindings = Array[ExtResource("3_1cdvf")]([SubResource("Resource_04k7l"), SubResource("Resource_478vr"), SubResource("Resource_nnte6"), SubResource("Resource_snae3")])

@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_6a2ef"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/poison_tick.tres" id="2_n73lv"]
+
+[node name="TickPoisonCue" type="Node" unique_id=1928695437]
+script = ExtResource("1_6a2ef")
+fx = ExtResource("2_n73lv")

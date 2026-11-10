@@ -14,3 +14,4 @@ target_bonus = "heal_taken"
 [resource]
 script = ExtResource("4_f7in4")
 executions = Array[ExtResource("1_yd0uu")]([SubResource("Resource_px863")])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Heal"])

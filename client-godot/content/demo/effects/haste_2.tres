@@ -18,3 +18,5 @@ max_stacks = 1
 duration_turns = 2
 modifiers = Array[ExtResource("2_hpcif")]([SubResource("Resource_spd")])
 granted_tags = Array[StringName]([&"Status.Buff.Haste"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.Haste"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff"])

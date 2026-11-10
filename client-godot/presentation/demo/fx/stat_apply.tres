@@ -1,0 +1,151 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_1ujcx"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_tuwg6"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_ckovk"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/arrow_sheet.png" id="4_almrj"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_nygpp"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="6_ijx5c"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="7_f6l18"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_fresnel_layer.gd" id="8_2vvcq"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="9_o0gvk"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="10_prvd8"]
+
+[sub_resource type="Resource" id="Resource_82ayx"]
+script = ExtResource("2_tuwg6")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_028tl"]
+script = ExtResource("2_tuwg6")
+property = "process_material:gravity"
+param = &"drift"
+
+[sub_resource type="Resource" id="Resource_em46o"]
+script = ExtResource("2_tuwg6")
+property = "process_material:emission_shape_offset"
+param = &"start"
+
+[sub_resource type="Resource" id="Resource_wxxg8"]
+script = ExtResource("2_tuwg6")
+property = "process_material:angle_min"
+param = &"angle"
+
+[sub_resource type="Resource" id="Resource_imtlx"]
+script = ExtResource("2_tuwg6")
+property = "process_material:angle_max"
+param = &"angle"
+
+[sub_resource type="Resource" id="Resource_c6ir4"]
+script = ExtResource("2_tuwg6")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_646hq"]
+offsets = PackedFloat32Array(0, 0.2, 0.75, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_oo4lh"]
+script = ExtResource("3_ckovk")
+size_min = 0.42
+size_max = 0.48
+speed_min = 0.0
+speed_max = 0.0
+emit_from_mesh = true
+emission_min_normal_y = -0.2
+amount = 8
+explosiveness = 0.9
+color_ramp = SubResource("Gradient_646hq")
+texture = ExtResource("4_almrj")
+additive = false
+id = &"arrows"
+bindings = Array[ExtResource("2_tuwg6")]([SubResource("Resource_82ayx"), SubResource("Resource_028tl"), SubResource("Resource_em46o"), SubResource("Resource_wxxg8"), SubResource("Resource_imtlx"), SubResource("Resource_c6ir4")])
+
+[sub_resource type="Resource" id="Resource_fsetm"]
+script = ExtResource("2_tuwg6")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_j813a"]
+script = ExtResource("2_tuwg6")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.4
+
+[sub_resource type="Resource" id="Resource_3o5up"]
+script = ExtResource("2_tuwg6")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_nr7sb"]
+script = ExtResource("6_ijx5c")
+shader = ExtResource("7_f6l18")
+size = Vector2(2, 2)
+id = &"glow"
+space = 2
+duration = 0.35
+bindings = Array[ExtResource("2_tuwg6")]([SubResource("Resource_fsetm"), SubResource("Resource_j813a"), SubResource("Resource_3o5up")])
+
+[sub_resource type="Resource" id="Resource_geci1"]
+script = ExtResource("2_tuwg6")
+property = "color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_m6uti"]
+script = ExtResource("8_2vvcq")
+power = 2.0
+fill = 0.25
+intensity = 1.2
+seconds = 0.45
+id = &"flash"
+bindings = Array[ExtResource("2_tuwg6")]([SubResource("Resource_geci1")])
+
+[sub_resource type="Resource" id="Resource_fwvni"]
+script = ExtResource("9_o0gvk")
+name = &"color"
+kind = 3
+default_value = Color(1, 1, 1, 1)
+description = "The stat's colour."
+
+[sub_resource type="Resource" id="Resource_arxns"]
+script = ExtResource("9_o0gvk")
+name = &"drift"
+kind = 5
+default_value = Vector3(0, 1.1, 0)
+description = "Which way the chevrons move: up for a buff, down for a debuff."
+
+[sub_resource type="Resource" id="Resource_w3xck"]
+script = ExtResource("9_o0gvk")
+name = &"start"
+kind = 5
+default_value = Vector3(0, 0, 0)
+description = "Where they start, relative to the unit (a debuff starts above)."
+
+[sub_resource type="Resource" id="Resource_e0db2"]
+script = ExtResource("9_o0gvk")
+name = &"angle"
+max_value = 360.0
+description = "Turns the chevrons over (180 for a debuff)."
+
+[sub_resource type="Resource" id="Resource_8yqcb"]
+script = ExtResource("9_o0gvk")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Flash brightness."
+
+[sub_resource type="Resource" id="Resource_sp3p0"]
+script = ExtResource("9_o0gvk")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("10_prvd8")
+id = &"fx.stat_apply"
+display_name = "Stat apply"
+params = Array[ExtResource("9_o0gvk")]([SubResource("Resource_fwvni"), SubResource("Resource_arxns"), SubResource("Resource_w3xck"), SubResource("Resource_e0db2"), SubResource("Resource_8yqcb"), SubResource("Resource_sp3p0")])
+layers = Array[ExtResource("1_1ujcx")]([SubResource("Resource_oo4lh"), SubResource("Resource_nr7sb"), SubResource("Resource_m6uti")])
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "A burst of chevrons and a flash when a stat buff or debuff lands."

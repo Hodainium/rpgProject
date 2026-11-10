@@ -1,0 +1,149 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_ky2e5"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_kdl2y"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_j55cf"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/coin_sheet.png" id="4_x3opg"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_els58"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="6_betkk"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="7_fu02y"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="8_y1dge"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="9_pcged"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="10_6bykp"]
+
+[sub_resource type="Resource" id="Resource_bg6eo"]
+script = ExtResource("2_kdl2y")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_qvude"]
+offsets = PackedFloat32Array(0, 0.75, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_aqldk"]
+script = ExtResource("3_j55cf")
+size_min = 0.3
+size_max = 0.42
+spread = 55.0
+speed_min = 4.0
+speed_max = 8.0
+gravity = Vector3(0, -11, 0)
+spin_min = 200.0
+spin_max = 600.0
+emission_radius = 0.3
+lifetime = 1.2
+explosiveness = 0.8
+color_ramp = SubResource("Gradient_qvude")
+texture = ExtResource("4_x3opg")
+additive = false
+id = &"coins"
+bindings = Array[ExtResource("2_kdl2y")]([SubResource("Resource_bg6eo")])
+
+[sub_resource type="Resource" id="Resource_h342f"]
+script = ExtResource("2_kdl2y")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_2px6n"]
+script = ExtResource("2_kdl2y")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_aw7vk"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_8ue43"]
+script = ExtResource("3_j55cf")
+size_min = 0.06
+size_max = 0.13
+speed_max = 4.0
+gravity = Vector3(0, 0, 0)
+emission_radius = 0.4
+amount = 36
+color_ramp = SubResource("Gradient_aw7vk")
+id = &"glints"
+bindings = Array[ExtResource("2_kdl2y")]([SubResource("Resource_h342f"), SubResource("Resource_2px6n")])
+
+[sub_resource type="Resource" id="Resource_qvrwg"]
+script = ExtResource("2_kdl2y")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_rtg6g"]
+script = ExtResource("2_kdl2y")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.6
+
+[sub_resource type="Resource" id="Resource_tkeap"]
+script = ExtResource("2_kdl2y")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_kasgx"]
+script = ExtResource("6_betkk")
+shader = ExtResource("7_fu02y")
+shader_params = {
+"fade_out": 0.7,
+"falloff": 3.0
+}
+size = Vector2(2.4, 2.4)
+id = &"glow"
+space = 2
+duration = 0.4
+bindings = Array[ExtResource("2_kdl2y")]([SubResource("Resource_qvrwg"), SubResource("Resource_rtg6g"), SubResource("Resource_tkeap")])
+
+[sub_resource type="Resource" id="Resource_khgv8"]
+script = ExtResource("2_kdl2y")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_v4oxm"]
+script = ExtResource("2_kdl2y")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_f2kwv"]
+script = ExtResource("6_betkk")
+shader = ExtResource("8_y1dge")
+shader_params = {
+"end_radius": 0.95,
+"intensity": 1.6,
+"ring_width": 0.07,
+"start_radius": 0.15
+}
+size = Vector2(2.6, 2.6)
+id = &"ring"
+space = 2
+duration = 0.45
+bindings = Array[ExtResource("2_kdl2y")]([SubResource("Resource_khgv8"), SubResource("Resource_v4oxm")])
+
+[sub_resource type="Resource" id="Resource_8i70b"]
+script = ExtResource("9_pcged")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.85, 0.3, 1)
+description = "Glint colour."
+
+[sub_resource type="Resource" id="Resource_jtocf"]
+script = ExtResource("9_pcged")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Glow brightness."
+
+[sub_resource type="Resource" id="Resource_b5t4r"]
+script = ExtResource("9_pcged")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("10_6bykp")
+id = &"fx.liquidate_strike"
+display_name = "Liquidate strike"
+params = Array[ExtResource("9_pcged")]([SubResource("Resource_8i70b"), SubResource("Resource_jtocf"), SubResource("Resource_b5t4r")])
+layers = Array[ExtResource("1_ky2e5")]([SubResource("Resource_aqldk"), SubResource("Resource_8ue43"), SubResource("Resource_kasgx"), SubResource("Resource_f2kwv")])
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "Gold coins burst off the target in a fountain."

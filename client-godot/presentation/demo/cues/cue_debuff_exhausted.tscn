@@ -1,0 +1,32 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_jj7x2"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/stat_arrows.tres" id="2_gi8pg"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_r2rxv"]
+
+[sub_resource type="Resource" id="Resource_p80j3"]
+script = ExtResource("3_r2rxv")
+param = &"color"
+value = Color(0.6, 0.55, 0.65, 1)
+
+[sub_resource type="Resource" id="Resource_sf86x"]
+script = ExtResource("3_r2rxv")
+param = &"drift"
+value = Vector3(0, -1.1, 0)
+
+[sub_resource type="Resource" id="Resource_fkgoj"]
+script = ExtResource("3_r2rxv")
+param = &"start"
+value = Vector3(0, 0.5, 0)
+
+[sub_resource type="Resource" id="Resource_7qrrd"]
+script = ExtResource("3_r2rxv")
+param = &"angle"
+value = 180.0
+
+[node name="CueDebuffExhausted" type="Node" unique_id=40080866]
+script = ExtResource("1_jj7x2")
+fx = ExtResource("2_gi8pg")
+bindings = Array[ExtResource("3_r2rxv")]([SubResource("Resource_p80j3"), SubResource("Resource_sf86x"), SubResource("Resource_fkgoj"), SubResource("Resource_7qrrd")])
+stop_fade = 0.4
+auto_destroy = false

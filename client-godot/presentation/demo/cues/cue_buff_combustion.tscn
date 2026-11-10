@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_0b7cx"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/status_skin.tres" id="2_2fqco"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_uxxr6"]
+
+[sub_resource type="Resource" id="Resource_734w7"]
+script = ExtResource("3_uxxr6")
+param = &"color"
+value = Color(1, 0.5, 0.15, 1)
+
+[sub_resource type="Resource" id="Resource_5vo7v"]
+script = ExtResource("3_uxxr6")
+param = &"power"
+value = 1.8
+
+[sub_resource type="Resource" id="Resource_s6ir7"]
+script = ExtResource("3_uxxr6")
+param = &"fill"
+value = 0.2
+
+[sub_resource type="Resource" id="Resource_akcrj"]
+script = ExtResource("3_uxxr6")
+param = &"grow"
+value = 0.015
+
+[sub_resource type="Resource" id="Resource_ppovv"]
+script = ExtResource("3_uxxr6")
+param = &"erosion"
+value = 0.3
+
+[sub_resource type="Resource" id="Resource_f73l2"]
+script = ExtResource("3_uxxr6")
+param = &"scroll"
+value = 1.8
+
+[node name="CueBuffCombustion" type="Node" unique_id=1564754763]
+script = ExtResource("1_0b7cx")
+fx = ExtResource("2_2fqco")
+bindings = Array[ExtResource("3_uxxr6")]([SubResource("Resource_734w7"), SubResource("Resource_5vo7v"), SubResource("Resource_s6ir7"), SubResource("Resource_akcrj"), SubResource("Resource_ppovv"), SubResource("Resource_f73l2")])
+stop_fade = 0.4
+auto_destroy = false

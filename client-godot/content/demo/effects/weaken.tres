@@ -25,3 +25,5 @@ max_stacks = 1
 duration_turns = 2
 modifiers = Array[ExtResource("2_75oe5")]([SubResource("Resource_5p3eg")])
 granted_tags = Array[StringName]([&"Status.Debuff.Weaken"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Debuff.Weaken"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Debuff"])

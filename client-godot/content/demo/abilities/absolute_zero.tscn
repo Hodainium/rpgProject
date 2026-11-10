@@ -29,6 +29,7 @@ asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage"
 executions = Array[ExtResource("2_u4res")]([SubResource("Resource_0ktad"), SubResource("Resource_qrhx7")])
 animation = ExtResource("5_ooq1e")
 ability_tag = &"Ability.Ult.Absolutezero"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Absolutezero"])
 activation_query = ExtResource("6_a8aux")
 cost_effect = ExtResource("7_syfv5")
 description = "Ice damage to every enemy. Weakens every enemy."

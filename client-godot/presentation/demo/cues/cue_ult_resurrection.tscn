@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_v3eh5"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="2_7p3wl"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_jhb38"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/resurrection_strike.tres" id="4_5qgbo"]
+
+[sub_resource type="Resource" id="Resource_l8265"]
+script = ExtResource("3_jhb38")
+param = &"color"
+value = Color(1, 0.95, 0.7, 1)
+
+[sub_resource type="Resource" id="Resource_bgw0n"]
+script = ExtResource("3_jhb38")
+param = &"ray_count"
+value = 22.0
+
+[sub_resource type="Resource" id="Resource_1wd2g"]
+script = ExtResource("3_jhb38")
+param = &"spin"
+value = 0.04
+
+[sub_resource type="Resource" id="Resource_cnpsb"]
+script = ExtResource("3_jhb38")
+param = &"intensity"
+value = 1.3
+
+[sub_resource type="Resource" id="Resource_7ac3h"]
+script = ExtResource("3_jhb38")
+param = &"color"
+value = Color(1, 0.95, 0.7, 1)
+
+[node name="CueUltResurrection" type="Node" unique_id=237027170]
+script = ExtResource("1_v3eh5")
+fx = ExtResource("2_7p3wl")
+bindings = Array[ExtResource("3_jhb38")]([SubResource("Resource_l8265"), SubResource("Resource_bgw0n"), SubResource("Resource_1wd2g"), SubResource("Resource_cnpsb")])
+target_fx = ExtResource("4_5qgbo")
+target_bindings = Array[ExtResource("3_jhb38")]([SubResource("Resource_7ac3h")])

@@ -1,0 +1,128 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_ul24n"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_4rk2m"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_fresnel_layer.gd" id="3_663hj"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_bmp1g"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="5_gl75e"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="6_a7bwi"]
+
+[sub_resource type="Resource" id="Resource_h1hjn"]
+script = ExtResource("2_4rk2m")
+property = "color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_hoijf"]
+script = ExtResource("2_4rk2m")
+property = "intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_huwfg"]
+script = ExtResource("2_4rk2m")
+property = "power"
+param = &"power"
+
+[sub_resource type="Resource" id="Resource_5lw6e"]
+script = ExtResource("2_4rk2m")
+property = "fill"
+param = &"fill"
+
+[sub_resource type="Resource" id="Resource_utxr1"]
+script = ExtResource("2_4rk2m")
+property = "grow"
+param = &"grow"
+
+[sub_resource type="Resource" id="Resource_1ms7l"]
+script = ExtResource("2_4rk2m")
+property = "erosion"
+param = &"erosion"
+
+[sub_resource type="Resource" id="Resource_dhv23"]
+script = ExtResource("2_4rk2m")
+property = "noise_scale"
+param = &"noise_scale"
+
+[sub_resource type="Resource" id="Resource_aa3lx"]
+script = ExtResource("2_4rk2m")
+property = "scroll"
+param = &"scroll"
+
+[sub_resource type="Curve" id="Curve_ak6ea"]
+_data = [Vector2(0, 0.85), 0.0, 0.0, 0, 0, Vector2(0.5, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.85), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Resource" id="Resource_p513p"]
+script = ExtResource("3_663hj")
+curve = SubResource("Curve_ak6ea")
+id = &"skin"
+loop = true
+loop_period = 1.6
+bindings = Array[ExtResource("2_4rk2m")]([SubResource("Resource_h1hjn"), SubResource("Resource_hoijf"), SubResource("Resource_huwfg"), SubResource("Resource_5lw6e"), SubResource("Resource_utxr1"), SubResource("Resource_1ms7l"), SubResource("Resource_dhv23"), SubResource("Resource_aa3lx")])
+
+[sub_resource type="Resource" id="Resource_t4x15"]
+script = ExtResource("5_gl75e")
+name = &"color"
+kind = 3
+default_value = Color(0.55, 0.95, 0.35, 1)
+description = "Shell colour."
+
+[sub_resource type="Resource" id="Resource_taevv"]
+script = ExtResource("5_gl75e")
+name = &"intensity"
+default_value = 0.9
+max_value = 4.0
+description = "Brightness."
+
+[sub_resource type="Resource" id="Resource_byx1h"]
+script = ExtResource("5_gl75e")
+name = &"power"
+default_value = 2.0
+min_value = 0.5
+max_value = 8.0
+description = "How thin the rim is."
+
+[sub_resource type="Resource" id="Resource_oojqw"]
+script = ExtResource("5_gl75e")
+name = &"fill"
+default_value = 0.08
+max_value = 1.0
+description = "How much of the body glows besides the rim."
+
+[sub_resource type="Resource" id="Resource_mhwwx"]
+script = ExtResource("5_gl75e")
+name = &"grow"
+default_value = 0.01
+max_value = 0.2
+description = "World units the shell is pushed out."
+
+[sub_resource type="Resource" id="Resource_nkoth"]
+script = ExtResource("5_gl75e")
+name = &"erosion"
+default_value = 0.4
+max_value = 1.0
+description = "How much of the shell the noise eats."
+
+[sub_resource type="Resource" id="Resource_tkums"]
+script = ExtResource("5_gl75e")
+name = &"noise_scale"
+default_value = 5.0
+min_value = 0.5
+max_value = 20.0
+description = "Size of the noise pattern."
+
+[sub_resource type="Resource" id="Resource_b5awy"]
+script = ExtResource("5_gl75e")
+name = &"scroll"
+default_value = 0.5
+min_value = -4.0
+max_value = 4.0
+description = "Noise speed up the body (negative = down)."
+
+[resource]
+script = ExtResource("6_a7bwi")
+id = &"fx.status_skin"
+display_name = "Status skin"
+params = Array[ExtResource("5_gl75e")]([SubResource("Resource_t4x15"), SubResource("Resource_taevv"), SubResource("Resource_byx1h"), SubResource("Resource_oojqw"), SubResource("Resource_mhwwx"), SubResource("Resource_nkoth"), SubResource("Resource_tkums"), SubResource("Resource_b5awy")])
+layers = Array[ExtResource("1_ul24n")]([SubResource("Resource_p513p")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "A looping glowing shell on the unit: ooze, bleeding, vines, sluggishness by colour and shell settings."

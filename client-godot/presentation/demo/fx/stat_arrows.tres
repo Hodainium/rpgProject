@@ -1,0 +1,104 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_vq4fo"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_gtrum"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_hyhxc"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/arrow_sheet.png" id="4_yw3ys"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_i4ddq"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="6_xjmpu"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="7_3i87s"]
+
+[sub_resource type="Resource" id="Resource_7ernd"]
+script = ExtResource("2_gtrum")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_jbjj1"]
+script = ExtResource("2_gtrum")
+property = "process_material:gravity"
+param = &"drift"
+
+[sub_resource type="Resource" id="Resource_gf7pf"]
+script = ExtResource("2_gtrum")
+property = "process_material:emission_shape_offset"
+param = &"start"
+
+[sub_resource type="Resource" id="Resource_5leg6"]
+script = ExtResource("2_gtrum")
+property = "process_material:angle_min"
+param = &"angle"
+
+[sub_resource type="Resource" id="Resource_7oryp"]
+script = ExtResource("2_gtrum")
+property = "process_material:angle_max"
+param = &"angle"
+
+[sub_resource type="Resource" id="Resource_eu8xi"]
+script = ExtResource("2_gtrum")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_i21ki"]
+offsets = PackedFloat32Array(0, 0.2, 0.75, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_cq3jx"]
+script = ExtResource("3_hyhxc")
+size_min = 0.42
+size_max = 0.48
+speed_min = 0.0
+speed_max = 0.0
+emit_from_mesh = true
+emission_min_normal_y = -0.2
+amount = 6
+lifetime = 1.3
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_i21ki")
+texture = ExtResource("4_yw3ys")
+additive = false
+id = &"arrows"
+loop = true
+bindings = Array[ExtResource("2_gtrum")]([SubResource("Resource_7ernd"), SubResource("Resource_jbjj1"), SubResource("Resource_gf7pf"), SubResource("Resource_5leg6"), SubResource("Resource_7oryp"), SubResource("Resource_eu8xi")])
+
+[sub_resource type="Resource" id="Resource_ywvs0"]
+script = ExtResource("6_xjmpu")
+name = &"color"
+kind = 3
+default_value = Color(1, 1, 1, 1)
+description = "The stat's colour."
+
+[sub_resource type="Resource" id="Resource_oq52o"]
+script = ExtResource("6_xjmpu")
+name = &"drift"
+kind = 5
+default_value = Vector3(0, 1.1, 0)
+description = "Which way the chevrons move: up for a buff, down for a debuff."
+
+[sub_resource type="Resource" id="Resource_uttvo"]
+script = ExtResource("6_xjmpu")
+name = &"start"
+kind = 5
+default_value = Vector3(0, 0, 0)
+description = "Where they start, relative to the unit (a debuff starts above)."
+
+[sub_resource type="Resource" id="Resource_efn26"]
+script = ExtResource("6_xjmpu")
+name = &"angle"
+max_value = 360.0
+description = "Turns the chevrons over (180 for a debuff)."
+
+[sub_resource type="Resource" id="Resource_ttyii"]
+script = ExtResource("6_xjmpu")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("7_3i87s")
+id = &"fx.stat_arrows"
+display_name = "Stat arrows"
+params = Array[ExtResource("6_xjmpu")]([SubResource("Resource_ywvs0"), SubResource("Resource_oq52o"), SubResource("Resource_uttvo"), SubResource("Resource_efn26"), SubResource("Resource_ttyii")])
+layers = Array[ExtResource("1_vq4fo")]([SubResource("Resource_cq3jx")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "Chevrons rising or sinking around a unit with a stat buff or debuff."

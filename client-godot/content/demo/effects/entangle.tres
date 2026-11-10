@@ -25,3 +25,4 @@ max_stacks = 1
 duration_turns = 2
 modifiers = Array[ExtResource("2_sixat")]([SubResource("Resource_kgpee")])
 granted_tags = Array[StringName]([&"Status.Debuff.Entangle"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Status.Entangle"])

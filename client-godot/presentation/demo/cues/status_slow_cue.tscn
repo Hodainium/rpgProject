@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_k4t8o"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/status_skin.tres" id="2_l46g4"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_hhvc1"]
+
+[sub_resource type="Resource" id="Resource_cy6jc"]
+script = ExtResource("3_hhvc1")
+param = &"color"
+value = Color(0.55, 0.5, 1, 1)
+
+[sub_resource type="Resource" id="Resource_8wivd"]
+script = ExtResource("3_hhvc1")
+param = &"power"
+value = 2.0
+
+[sub_resource type="Resource" id="Resource_3p0qm"]
+script = ExtResource("3_hhvc1")
+param = &"fill"
+value = 0.1
+
+[sub_resource type="Resource" id="Resource_4cn5x"]
+script = ExtResource("3_hhvc1")
+param = &"grow"
+value = 0.008
+
+[sub_resource type="Resource" id="Resource_eor1q"]
+script = ExtResource("3_hhvc1")
+param = &"erosion"
+value = 0.3
+
+[sub_resource type="Resource" id="Resource_11f5v"]
+script = ExtResource("3_hhvc1")
+param = &"scroll"
+value = -0.3
+
+[node name="StatusSlowCue" type="Node" unique_id=1962069392]
+script = ExtResource("1_k4t8o")
+fx = ExtResource("2_l46g4")
+bindings = Array[ExtResource("3_hhvc1")]([SubResource("Resource_cy6jc"), SubResource("Resource_8wivd"), SubResource("Resource_3p0qm"), SubResource("Resource_4cn5x"), SubResource("Resource_eor1q"), SubResource("Resource_11f5v")])
+stop_fade = 0.4
+auto_destroy = false

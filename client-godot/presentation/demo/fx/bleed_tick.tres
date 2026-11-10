@@ -1,0 +1,95 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_a2tky"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_4t0gb"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_jipg6"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_i6kdw"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="5_xek8j"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="6_aday7"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="7_054cv"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="8_afqvf"]
+
+[sub_resource type="Resource" id="Resource_54abj"]
+script = ExtResource("2_4t0gb")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_4osk2"]
+script = ExtResource("2_4t0gb")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_lpt4t"]
+offsets = PackedFloat32Array(0, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_hirrh"]
+script = ExtResource("3_jipg6")
+size_min = 0.14
+size_max = 0.24
+spread = 110.0
+speed_min = 0.4
+speed_max = 1.4
+gravity = Vector3(0, -7, 0)
+emit_from_mesh = true
+emission_min_normal_y = -0.2
+amount = 14
+color_ramp = SubResource("Gradient_lpt4t")
+additive = false
+id = &"drops"
+bindings = Array[ExtResource("2_4t0gb")]([SubResource("Resource_54abj"), SubResource("Resource_4osk2")])
+
+[sub_resource type="Resource" id="Resource_iqcgh"]
+script = ExtResource("2_4t0gb")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_idkn1"]
+script = ExtResource("2_4t0gb")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.2
+
+[sub_resource type="Resource" id="Resource_xoupr"]
+script = ExtResource("2_4t0gb")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_w8qfk"]
+script = ExtResource("5_xek8j")
+shader = ExtResource("6_aday7")
+size = Vector2(1.3, 1.3)
+id = &"splat"
+space = 2
+duration = 0.25
+bindings = Array[ExtResource("2_4t0gb")]([SubResource("Resource_iqcgh"), SubResource("Resource_idkn1"), SubResource("Resource_xoupr")])
+
+[sub_resource type="Resource" id="Resource_q8sr4"]
+script = ExtResource("7_054cv")
+name = &"color"
+kind = 3
+default_value = Color(0.78, 0.1, 0.14, 1)
+description = "Blood colour."
+
+[sub_resource type="Resource" id="Resource_06740"]
+script = ExtResource("7_054cv")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Splat brightness."
+
+[sub_resource type="Resource" id="Resource_6nq1o"]
+script = ExtResource("7_054cv")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("8_afqvf")
+id = &"fx.bleed_tick"
+display_name = "Bleed tick"
+params = Array[ExtResource("7_054cv")]([SubResource("Resource_q8sr4"), SubResource("Resource_06740"), SubResource("Resource_6nq1o")])
+layers = Array[ExtResource("1_a2tky")]([SubResource("Resource_hirrh"), SubResource("Resource_w8qfk")])
+tags = Array[StringName]([&"Fx.Kind.Hit"])
+description = "Red drops falling off a unit that is bleeding."

@@ -1,0 +1,145 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_e2jj5"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_3kcpy"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_t7iah"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/flame_sheet.png" id="4_8ehe3"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_h7rd6"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_fresnel_layer.gd" id="6_1qysa"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="7_d2o54"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="8_jigdr"]
+
+[sub_resource type="Resource" id="Resource_0djyg"]
+script = ExtResource("2_3kcpy")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_5n7fo"]
+script = ExtResource("2_3kcpy")
+property = "process_material:scale_min"
+param = &"size"
+scale = 1.2
+
+[sub_resource type="Resource" id="Resource_efqm2"]
+script = ExtResource("2_3kcpy")
+property = "process_material:scale_max"
+param = &"size"
+scale = 1.7
+
+[sub_resource type="Resource" id="Resource_apohw"]
+script = ExtResource("2_3kcpy")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_x0xsy"]
+offsets = PackedFloat32Array(0, 0.2, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_6ifpp"]
+script = ExtResource("3_t7iah")
+size_min = 1.2
+size_max = 1.7
+spread = 14.0
+speed_min = 0.3
+speed_max = 0.7
+gravity = Vector3(0, 0.8, 0)
+soft_distance = 0.3
+emit_from_mesh = true
+emission_min_normal_y = 0.5
+amount = 8
+lifetime = 0.9
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_x0xsy")
+texture = ExtResource("4_8ehe3")
+h_frames = 8
+v_frames = 4
+id = &"flames"
+loop = true
+bindings = Array[ExtResource("2_3kcpy")]([SubResource("Resource_0djyg"), SubResource("Resource_5n7fo"), SubResource("Resource_efqm2"), SubResource("Resource_apohw")])
+
+[sub_resource type="Resource" id="Resource_wq723"]
+script = ExtResource("2_3kcpy")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_rjmie"]
+script = ExtResource("2_3kcpy")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_c8f76"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_ey8iy"]
+script = ExtResource("3_t7iah")
+size_min = 0.05
+size_max = 0.1
+spread = 40.0
+speed_min = 0.6
+speed_max = 1.6
+gravity = Vector3(0, 0.4, 0)
+emit_from_mesh = true
+emission_min_normal_y = -0.2
+amount = 8
+lifetime = 1.1
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_c8f76")
+id = &"embers"
+loop = true
+min_quality = 2
+bindings = Array[ExtResource("2_3kcpy")]([SubResource("Resource_wq723"), SubResource("Resource_rjmie")])
+
+[sub_resource type="Resource" id="Resource_1hm5f"]
+script = ExtResource("2_3kcpy")
+property = "color"
+param = &"color"
+
+[sub_resource type="Curve" id="Curve_6qnlr"]
+_data = [Vector2(0, 0.8), 0.0, 0.0, 0, 0, Vector2(0.5, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.8), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Resource" id="Resource_3bjiq"]
+script = ExtResource("6_1qysa")
+power = 2.0
+fill = 0.22
+grow = 0.015
+erosion = 0.3
+noise_scale = 5.0
+scroll = 1.6
+intensity = 1.4
+curve = SubResource("Curve_6qnlr")
+id = &"skin"
+loop = true
+loop_period = 1.2
+bindings = Array[ExtResource("2_3kcpy")]([SubResource("Resource_1hm5f")])
+
+[sub_resource type="Resource" id="Resource_r7oam"]
+script = ExtResource("7_d2o54")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.45, 0.16, 1)
+description = "Fire colour."
+
+[sub_resource type="Resource" id="Resource_1s4xb"]
+script = ExtResource("7_d2o54")
+name = &"size"
+default_value = 1.0
+min_value = 0.3
+max_value = 3.0
+description = "Flame size multiplier."
+
+[sub_resource type="Resource" id="Resource_fs68l"]
+script = ExtResource("7_d2o54")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("8_jigdr")
+id = &"fx.burning"
+display_name = "Burning"
+params = Array[ExtResource("7_d2o54")]([SubResource("Resource_r7oam"), SubResource("Resource_1s4xb"), SubResource("Resource_fs68l")])
+layers = Array[ExtResource("1_e2jj5")]([SubResource("Resource_6ifpp"), SubResource("Resource_ey8iy"), SubResource("Resource_3bjiq")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "A unit on fire: flames licking up from its top, embers and a fire skin."

@@ -16,3 +16,4 @@ policy = 3
 duration_turns = 99
 modifiers = Array[ExtResource("1_mod")]([SubResource("Resource_atk")])
 granted_tags = Array[StringName]([&"Status.Buff.Enrage"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.Enrage"])

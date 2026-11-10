@@ -1,0 +1,164 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_nrxcx"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_vuel7"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_f1w3k"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/shard_sheet.png" id="4_4148k"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_tolva"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/smoke_sheet.png" id="6_7hs6f"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="7_bygc6"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="8_s1rpp"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_light_layer.gd" id="9_akx5m"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_fresnel_layer.gd" id="10_wl4vk"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="11_0hda0"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="12_j2twx"]
+
+[sub_resource type="Resource" id="Resource_n7xel"]
+script = ExtResource("2_vuel7")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_i85tv"]
+script = ExtResource("2_vuel7")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_htaue"]
+offsets = PackedFloat32Array(0, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_6hk7t"]
+script = ExtResource("3_f1w3k")
+size_min = 0.4
+size_max = 0.7
+spread = 120.0
+speed_min = 2.5
+speed_max = 5.5
+gravity = Vector3(0, -6, 0)
+damping = 1.5
+amount = 10
+color_ramp = SubResource("Gradient_htaue")
+texture = ExtResource("4_4148k")
+h_frames = 4
+v_frames = 2
+anim_cycles = 0.0
+random_frame = true
+additive = false
+id = &"shards"
+bindings = Array[ExtResource("2_vuel7")]([SubResource("Resource_n7xel"), SubResource("Resource_i85tv")])
+
+[sub_resource type="Resource" id="Resource_jfne7"]
+script = ExtResource("2_vuel7")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_71c4x"]
+script = ExtResource("2_vuel7")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_4hcub"]
+offsets = PackedFloat32Array(0, 0.2, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.55, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_ttnl6"]
+script = ExtResource("3_f1w3k")
+size_min = 1.2
+size_max = 1.9
+speed_min = 0.3
+speed_max = 0.9
+gravity = Vector3(0, 0.3, 0)
+soft_distance = 0.5
+amount = 5
+lifetime = 1.0
+explosiveness = 0.5
+color_ramp = SubResource("Gradient_4hcub")
+texture = ExtResource("6_7hs6f")
+h_frames = 4
+v_frames = 4
+id = &"mist"
+bindings = Array[ExtResource("2_vuel7")]([SubResource("Resource_jfne7"), SubResource("Resource_71c4x")])
+
+[sub_resource type="Resource" id="Resource_1lv4l"]
+script = ExtResource("2_vuel7")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_yjiqf"]
+script = ExtResource("2_vuel7")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.4
+
+[sub_resource type="Resource" id="Resource_b1kfb"]
+script = ExtResource("2_vuel7")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_3yymn"]
+script = ExtResource("7_bygc6")
+shader = ExtResource("8_s1rpp")
+size = Vector2(2.6, 2.6)
+id = &"ring"
+space = 2
+duration = 0.4
+bindings = Array[ExtResource("2_vuel7")]([SubResource("Resource_1lv4l"), SubResource("Resource_yjiqf"), SubResource("Resource_b1kfb")])
+
+[sub_resource type="Resource" id="Resource_kjv8c"]
+script = ExtResource("2_vuel7")
+property = "light_color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_qs8g4"]
+script = ExtResource("9_akx5m")
+energy = 1.8
+light_range = 3.5
+id = &"light"
+min_quality = 2
+bindings = Array[ExtResource("2_vuel7")]([SubResource("Resource_kjv8c")])
+
+[sub_resource type="Resource" id="Resource_kpklx"]
+script = ExtResource("2_vuel7")
+property = "color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_lvot7"]
+script = ExtResource("10_wl4vk")
+fill = 0.18
+grow = 0.012
+noise_scale = 5.0
+intensity = 1.6
+seconds = 0.7
+id = &"rim"
+bindings = Array[ExtResource("2_vuel7")]([SubResource("Resource_kpklx")])
+
+[sub_resource type="Resource" id="Resource_ehrbk"]
+script = ExtResource("11_0hda0")
+name = &"color"
+kind = 3
+default_value = Color(0.45, 0.88, 1, 1)
+description = "Ice colour."
+
+[sub_resource type="Resource" id="Resource_mnylw"]
+script = ExtResource("11_0hda0")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Ring brightness."
+
+[sub_resource type="Resource" id="Resource_q3kfx"]
+script = ExtResource("11_0hda0")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "World units the depth test sees the effect closer to the camera. Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("12_j2twx")
+id = &"fx.ice_hit"
+display_name = "Ice hit"
+params = Array[ExtResource("11_0hda0")]([SubResource("Resource_ehrbk"), SubResource("Resource_mnylw"), SubResource("Resource_q3kfx")])
+layers = Array[ExtResource("1_nrxcx")]([SubResource("Resource_6hk7t"), SubResource("Resource_ttnl6"), SubResource("Resource_3yymn"), SubResource("Resource_qs8g4"), SubResource("Resource_lvot7")])
+socket = &"Hit"
+tags = Array[StringName]([&"Fx.Kind.Hit"])
+description = "Crystal shards, frost mist and a ring on a unit hit by ice."

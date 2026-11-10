@@ -22,6 +22,7 @@ asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage"
 executions = Array[ExtResource("2_ue1ur")]([SubResource("Resource_8mmii")])
 animation = ExtResource("4_0qwp2")
 ability_tag = &"Ability.Ult.Rainofarrows"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Rainofarrows"])
 activation_query = ExtResource("5_4qhso")
 cost_effect = ExtResource("6_02g3a")
 description = "Physical damage to every enemy."

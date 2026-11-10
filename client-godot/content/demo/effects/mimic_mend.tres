@@ -13,3 +13,4 @@ attribute_name = "hp"
 [resource]
 script = ExtResource("4_linm6")
 modifiers = Array[ExtResource("2_yqli6")]([SubResource("Resource_cffnr")])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Heal"])

@@ -14,7 +14,78 @@
 [ext_resource type="Resource" path="res://presentation/demo/fx/break_shatter.tres" id="12_piysv"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/status_aura.tres" id="13_ah3ia"]
 [ext_resource type="Script" path="res://game/fx/fx_registry.gd" id="14_c5ydg"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/damage_number.tres" id="14_vet82"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/fire_hit.tres" id="15_apjif"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ice_hit.tres" id="16_r8t60"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/explosion.tres" id="17_swktv"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/poison_tick.tres" id="18_yyeem"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/status_skin.tres" id="19_rgtxd"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/burning.tres" id="20_piysv"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/bleed_tick.tres" id="21_ah3ia"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/frozen.tres" id="22_c5ydg"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/stun_stars.tres" id="23_3tnl4"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/stat_arrows.tres" id="24_4g411"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/stat_apply.tres" id="25_cd2jo"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/revive_rise.tres" id="26_7s37l"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/cleanse_sparkle.tres" id="27_vx7i1"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/cast_ring.tres" id="28_036s3"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="29_7s37l"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/battle_fx_rules.tres" id="29_ddrkv"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/support_fx_rules.tres" id="30_t6mbj"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/slash_hit.tres" id="30_vx7i1"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/meteor_strike.tres" id="31_t6mbj"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/absolute_zero_strike.tres" id="32_b8so7"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/execute_strike.tres" id="33_vx7cf"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/supernova_strike.tres" id="34_8r7lp"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/overheat_strike.tres" id="35_eqntj"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/crucible_strike.tres" id="36_n0vup"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/pandemic_strike.tres" id="37_idnfl"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/blackmass_strike.tres" id="38_xd6rp"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/deathray_strike.tres" id="39_cekxa"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/cleave_strike.tres" id="40_n0mjs"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/judgement_strike.tres" id="41_cng36"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/liquidate_strike.tres" id="42_fi2e1"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/oblivion_strike.tres" id="43_e0m6e"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ossuary_strike.tres" id="44_oh4ha"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/quake_strike.tres" id="45_s11ob"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/rainofarrows_strike.tres" id="46_h1iws"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/shatterchorus_strike.tres" id="47_yhiv8"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/systole_strike.tres" id="48_xkgdi"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/twinbeat_strike.tres" id="49_1mn4g"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/bastion_strike.tres" id="50_fhef7"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/combustion_strike.tres" id="51_5swfx"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/finale_strike.tres" id="52_ch3do"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/resurrection_strike.tres" id="53_voppy"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/sanctuary_strike.tres" id="54_gtjkm"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/death_fade.tres" id="55_fi2e1"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/broken_state.tres" id="56_e0m6e"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/recover_flash.tres" id="57_oh4ha"]
+[ext_resource type="Script" path="res://game/fx/fx_tag_cue.gd" id="58_eqntj"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/phase_shift.tres" id="58_s11ob"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/one_more.tres" id="59_h1iws"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/proc_pulse.tres" id="60_yhiv8"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/drain_absorb.tres" id="61_e0m6e"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/moment_fx_rules.tres" id="63_xkgdi"]
+
+[sub_resource type="Resource" id="Resource_n0vup"]
+script = ExtResource("58_eqntj")
+tag = &"State.Broken"
+added_cue = &"Cue.Fx.Break"
+present_cue = &"Cue.Fx.State.Broken"
+removed_cue = &"Cue.Fx.Recovered"
+
+[sub_resource type="Resource" id="Resource_idnfl"]
+script = ExtResource("58_eqntj")
+tag = &"State.Downed"
+present_cue = &"Cue.Fx.State.Downed"
+
+[sub_resource type="Resource" id="Resource_xd6rp"]
+script = ExtResource("58_eqntj")
+tag = &"State.Dead"
+added_cue = &"Cue.Fx.Death"
 
 [resource]
 script = ExtResource("14_c5ydg")
-definitions = Array[ExtResource("1_75jrm")]([ExtResource("2_f4u27"), ExtResource("3_v2704"), ExtResource("4_8ygbl"), ExtResource("5_xb7bh"), ExtResource("6_vet82"), ExtResource("7_apjif"), ExtResource("8_r8t60"), ExtResource("9_swktv"), ExtResource("10_yyeem"), ExtResource("11_rgtxd"), ExtResource("12_piysv"), ExtResource("13_ah3ia")])
+definitions = Array[ExtResource("1_75jrm")]([ExtResource("2_f4u27"), ExtResource("3_v2704"), ExtResource("4_8ygbl"), ExtResource("5_xb7bh"), ExtResource("6_vet82"), ExtResource("7_apjif"), ExtResource("8_r8t60"), ExtResource("9_swktv"), ExtResource("10_yyeem"), ExtResource("11_rgtxd"), ExtResource("12_piysv"), ExtResource("13_ah3ia"), ExtResource("14_vet82"), ExtResource("15_apjif"), ExtResource("16_r8t60"), ExtResource("17_swktv"), ExtResource("18_yyeem"), ExtResource("19_rgtxd"), ExtResource("20_piysv"), ExtResource("21_ah3ia"), ExtResource("22_c5ydg"), ExtResource("23_3tnl4"), ExtResource("24_4g411"), ExtResource("25_cd2jo"), ExtResource("26_7s37l"), ExtResource("27_vx7i1"), ExtResource("28_036s3"), ExtResource("29_7s37l"), ExtResource("30_vx7i1"), ExtResource("31_t6mbj"), ExtResource("32_b8so7"), ExtResource("33_vx7cf"), ExtResource("34_8r7lp"), ExtResource("35_eqntj"), ExtResource("36_n0vup"), ExtResource("37_idnfl"), ExtResource("38_xd6rp"), ExtResource("39_cekxa"), ExtResource("40_n0mjs"), ExtResource("41_cng36"), ExtResource("42_fi2e1"), ExtResource("43_e0m6e"), ExtResource("44_oh4ha"), ExtResource("45_s11ob"), ExtResource("46_h1iws"), ExtResource("47_yhiv8"), ExtResource("48_xkgdi"), ExtResource("49_1mn4g"), ExtResource("50_fhef7"), ExtResource("51_5swfx"), ExtResource("52_ch3do"), ExtResource("53_voppy"), ExtResource("54_gtjkm"), ExtResource("55_fi2e1"), ExtResource("56_e0m6e"), ExtResource("57_oh4ha"), ExtResource("58_s11ob"), ExtResource("59_h1iws"), ExtResource("60_yhiv8"), ExtResource("61_e0m6e")])
+rule_sets = Array[Resource]([ExtResource("29_ddrkv"), ExtResource("30_t6mbj"), ExtResource("63_xkgdi")])
+tag_cues = Array[Resource]([SubResource("Resource_n0vup"), SubResource("Resource_idnfl"), SubResource("Resource_xd6rp")])

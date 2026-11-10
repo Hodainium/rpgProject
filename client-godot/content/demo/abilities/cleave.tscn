@@ -24,5 +24,6 @@ activation_query = ExtResource("6_ctrl")
 executions = Array[ExtResource("2_cdaos")]([SubResource("Resource_oygwf")])
 animation = ExtResource("4_iak2l")
 ability_tag = &"Ability.Ult.Cleave"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Cleave"])
 cost_effect = ExtResource("5_cdjsw")
 description = "Physical damage to every enemy."

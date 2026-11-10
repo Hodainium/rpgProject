@@ -1,0 +1,100 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_kauif"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_dbbgm"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_othcj"]
+[ext_resource type="Shader" path="res://game/fx/shaders/rays_3d.gdshader" id="4_eyhja"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_8krdf"]
+[ext_resource type="FontFile" path="res://presentation/demo/ui/fonts/ChakraPetch-Bold.ttf" id="6_fhhxh"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_text_layer.gd" id="7_ytep1"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="8_hx65d"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="9_7tqqt"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="10_cxdcb"]
+
+[sub_resource type="Resource" id="Resource_a16i8"]
+script = ExtResource("2_dbbgm")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_3lnm6"]
+script = ExtResource("2_dbbgm")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.2
+
+[sub_resource type="Resource" id="Resource_qyobr"]
+script = ExtResource("3_othcj")
+shader = ExtResource("4_eyhja")
+shader_params = {
+"fade_out": 0.7,
+"ray_count": 16.0,
+"spin": 0.15
+}
+size = Vector2(4.4, 4.4)
+id = &"rays"
+space = 2
+duration = 0.55
+bindings = Array[ExtResource("2_dbbgm")]([SubResource("Resource_a16i8"), SubResource("Resource_3lnm6")])
+
+[sub_resource type="Resource" id="Resource_ayuuk"]
+script = ExtResource("7_ytep1")
+text = "ONE MORE!"
+font = ExtResource("6_fhhxh")
+font_size = 64
+outline_size = 15
+color = Color(1, 0.22, 0.3, 1)
+outline_color = Color(1, 1, 1, 1)
+height = 0.5
+rise = 0.4
+scatter = 0.0
+scatter_y = 0.0
+seconds = 1.2
+pop_share = 0.14
+pop_scale = 2.6
+id = &"text"
+
+[sub_resource type="Resource" id="Resource_eef1k"]
+script = ExtResource("2_dbbgm")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_ufg4p"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_hnbs1"]
+script = ExtResource("8_hx65d")
+size_min = 0.07
+size_max = 0.14
+speed_min = 2.5
+speed_max = 6.0
+gravity = Vector3(0, 0, 0)
+damping = 1.5
+amount = 30
+lifetime = 0.7
+color_ramp = SubResource("Gradient_ufg4p")
+id = &"sparks"
+bindings = Array[ExtResource("2_dbbgm")]([SubResource("Resource_eef1k")])
+
+[sub_resource type="Resource" id="Resource_u43ew"]
+script = ExtResource("9_7tqqt")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.45, 0.35, 1)
+description = "Ray and spark colour."
+
+[sub_resource type="Resource" id="Resource_tyad6"]
+script = ExtResource("9_7tqqt")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Ray brightness."
+
+[resource]
+script = ExtResource("10_cxdcb")
+id = &"fx.one_more"
+display_name = "One More"
+params = Array[ExtResource("9_7tqqt")]([SubResource("Resource_u43ew"), SubResource("Resource_tyad6")])
+layers = Array[ExtResource("1_kauif")]([SubResource("Resource_qyobr"), SubResource("Resource_ayuuk"), SubResource("Resource_hnbs1")])
+socket = &"Top"
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "ONE MORE! pops over the unit with a burst of rays and sparks."

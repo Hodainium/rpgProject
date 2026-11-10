@@ -23,5 +23,6 @@ activation_query = ExtResource("6_ctrl")
 executions = Array[ExtResource("2_d7vrq")]([SubResource("Resource_twiu6")])
 animation = ExtResource("4_2rfya")
 ability_tag = &"Ability.Ult.Execute"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Execute"])
 cost_effect = ExtResource("5_w7ljm")
 description = "Physical damage to one enemy."

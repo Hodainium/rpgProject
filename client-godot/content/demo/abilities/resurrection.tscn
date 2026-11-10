@@ -20,5 +20,6 @@ activation_query = ExtResource("6_ctrl")
 executions = Array[ExtResource("2_fxvht")]([SubResource("Resource_a6b14")])
 animation = ExtResource("4_4wsk3")
 ability_tag = &"Ability.Ult.Resurrection"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Resurrection"])
 cost_effect = ExtResource("5_tjt13")
 description = "Brings one fallen ally back."

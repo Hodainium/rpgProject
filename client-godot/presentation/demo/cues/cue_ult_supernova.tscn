@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_88b6y"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="2_1hel8"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_gujdp"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/supernova_strike.tres" id="4_jraq0"]
+
+[sub_resource type="Resource" id="Resource_ri8dh"]
+script = ExtResource("3_gujdp")
+param = &"color"
+value = Color(1, 0.65, 0.2, 1)
+
+[sub_resource type="Resource" id="Resource_n3awu"]
+script = ExtResource("3_gujdp")
+param = &"ray_count"
+value = 26.0
+
+[sub_resource type="Resource" id="Resource_hurgf"]
+script = ExtResource("3_gujdp")
+param = &"spin"
+value = 0.09
+
+[sub_resource type="Resource" id="Resource_2l2yg"]
+script = ExtResource("3_gujdp")
+param = &"intensity"
+value = 1.5
+
+[sub_resource type="Resource" id="Resource_xvi11"]
+script = ExtResource("3_gujdp")
+param = &"color"
+value = Color(1, 0.65, 0.2, 1)
+
+[node name="CueUltSupernova" type="Node" unique_id=1242173995]
+script = ExtResource("1_88b6y")
+fx = ExtResource("2_1hel8")
+bindings = Array[ExtResource("3_gujdp")]([SubResource("Resource_ri8dh"), SubResource("Resource_n3awu"), SubResource("Resource_hurgf"), SubResource("Resource_2l2yg")])
+target_fx = ExtResource("4_jraq0")
+target_bindings = Array[ExtResource("3_gujdp")]([SubResource("Resource_xvi11")])
+target_stagger = 0.12

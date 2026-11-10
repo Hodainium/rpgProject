@@ -73,6 +73,12 @@ channel = &"Message.Battle.Resisted"
 title = "{target} resisted {status}"
 seconds = 3.0
 
+[sub_resource type="Resource" id="rule_drained"]
+script = ExtResource("2_rule")
+channel = &"Message.Battle.Drained"
+title = "{target} absorbed {instigator}'s attack"
+seconds = 3.0
+
 [sub_resource type="Resource" id="rule_skipped"]
 script = ExtResource("2_rule")
 channel = &"Message.Battle.TurnSkipped"
@@ -81,7 +87,7 @@ seconds = 3.0
 
 [resource]
 script = ExtResource("1_set")
-rules = Array[ExtResource("2_rule")]([SubResource("rule_used"), SubResource("rule_ult"), SubResource("rule_critical"), SubResource("rule_damage"), SubResource("rule_broken"), SubResource("rule_downed"), SubResource("rule_died"), SubResource("rule_one_more"), SubResource("rule_phase"), SubResource("rule_resisted"), SubResource("rule_skipped")])
+rules = Array[ExtResource("2_rule")]([SubResource("rule_used"), SubResource("rule_ult"), SubResource("rule_critical"), SubResource("rule_damage"), SubResource("rule_broken"), SubResource("rule_downed"), SubResource("rule_died"), SubResource("rule_one_more"), SubResource("rule_phase"), SubResource("rule_resisted"), SubResource("rule_drained"), SubResource("rule_skipped")])
 stack = 1
 max_visible = 4
 entry_scene = ExtResource("3_line")

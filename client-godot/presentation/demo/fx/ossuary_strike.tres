@@ -1,0 +1,645 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_kfx0c"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_hkqb8"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_mesh_layer.gd" id="3_4e86d"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_wws0u"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="5_rbm3a"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/smoke_sheet.png" id="6_5avo0"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="7_pdbm1"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="8_5ymi1"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shake_layer.gd" id="9_1mfb6"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="10_nn8ba"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="11_3km1w"]
+
+[sub_resource type="Resource" id="Resource_mjees"]
+script = ExtResource("2_hkqb8")
+property = "material_override:emission"
+param = &"color"
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tf7mx"]
+albedo_color = Color(0.9, 0.87, 0.76, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.9, 0.85, 0.6, 1)
+emission_energy_multiplier = 0.25
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_xqy3q"]
+top_radius = 0.0
+bottom_radius = 0.2
+height = 2.3
+
+[sub_resource type="Curve" id="Curve_7ermr"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0.5254351), 0.0, 0.0, 0, 0, Vector2(1, 0.5254351), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_ghrww"]
+script = ExtResource("4_wws0u")
+property = "position:x"
+curve = SubResource("Curve_7ermr")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_obw7e"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0.16253611), 0.0, 0.0, 0, 0, Vector2(1, 0.16253611), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_ah6vk"]
+script = ExtResource("4_wws0u")
+property = "position:z"
+curve = SubResource("Curve_obw7e")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_xerr8"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, -13.374711), 0.0, 0.0, 0, 0, Vector2(1, -13.374711), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_slciy"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:z"
+curve = SubResource("Curve_xerr8")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_e6h1v"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, 4.137283), 0.0, 0.0, 0, 0, Vector2(1, 4.137283), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_hvxap"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_e6h1v")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_oa32i"]
+_limits = [-4.0, 4.0, 0.0, 1.0]
+_data = [Vector2(0, -1.9), 0.0, 0.0, 0, 0, Vector2(0.18, 0.55), 0.0, 0.0, 0, 0, Vector2(0.3, 0.55), 0.0, 0.0, 0, 0, Vector2(0.72, 0.55), 0.0, 0.0, 0, 0, Vector2(1, -1.9), 0.0, 0.0, 0, 0]
+point_count = 5
+
+[sub_resource type="Resource" id="Resource_jcutr"]
+script = ExtResource("4_wws0u")
+property = "position:y"
+curve = SubResource("Curve_oa32i")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_b3ru7"]
+script = ExtResource("3_4e86d")
+mesh = SubResource("CylinderMesh_xqy3q")
+material = SubResource("StandardMaterial3D_tf7mx")
+seconds = 1.1
+id = &"spike0"
+bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_mjees")])
+tracks = Array[ExtResource("4_wws0u")]([SubResource("Resource_ghrww"), SubResource("Resource_ah6vk"), SubResource("Resource_slciy"), SubResource("Resource_hvxap"), SubResource("Resource_jcutr")])
+
+[sub_resource type="Resource" id="Resource_tnarh"]
+script = ExtResource("2_hkqb8")
+property = "material_override:emission"
+param = &"color"
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_sg4mp"]
+top_radius = 0.0
+bottom_radius = 0.15
+height = 1.7
+
+[sub_resource type="Curve" id="Curve_ctqt7"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0.3099062), 0.0, 0.0, 0, 0, Vector2(1, 0.3099062), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_vmev4"]
+script = ExtResource("4_wws0u")
+property = "position:x"
+curve = SubResource("Curve_ctqt7")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_xrnqv"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0.7914911), 0.0, 0.0, 0, 0, Vector2(1, 0.7914911), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_xnun5"]
+script = ExtResource("4_wws0u")
+property = "position:z"
+curve = SubResource("Curve_xrnqv")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_f0c2d"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, -5.1043377), 0.0, 0.0, 0, 0, Vector2(1, -5.1043377), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_v236j"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:z"
+curve = SubResource("Curve_f0c2d")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_ss5iw"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, 13.036324), 0.0, 0.0, 0, 0, Vector2(1, 13.036324), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_mtthp"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_ss5iw")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_d7c3c"]
+_limits = [-4.0, 4.0, 0.0, 1.0]
+_data = [Vector2(0, -1.6), 0.0, 0.0, 0, 0, Vector2(0.18, 0.4), 0.0, 0.0, 0, 0, Vector2(0.3, 0.4), 0.0, 0.0, 0, 0, Vector2(0.72, 0.4), 0.0, 0.0, 0, 0, Vector2(1, -1.6), 0.0, 0.0, 0, 0]
+point_count = 5
+
+[sub_resource type="Resource" id="Resource_3cau8"]
+script = ExtResource("4_wws0u")
+property = "position:y"
+curve = SubResource("Curve_d7c3c")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_vd81d"]
+script = ExtResource("3_4e86d")
+mesh = SubResource("CylinderMesh_sg4mp")
+material = SubResource("StandardMaterial3D_tf7mx")
+seconds = 1.1
+id = &"spike1"
+start_delay = 0.04
+bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_tnarh")])
+tracks = Array[ExtResource("4_wws0u")]([SubResource("Resource_vmev4"), SubResource("Resource_xnun5"), SubResource("Resource_v236j"), SubResource("Resource_mtthp"), SubResource("Resource_3cau8")])
+
+[sub_resource type="Resource" id="Resource_6tc7c"]
+script = ExtResource("2_hkqb8")
+property = "material_override:emission"
+param = &"color"
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_p3xee"]
+top_radius = 0.0
+bottom_radius = 0.2
+height = 2.3
+
+[sub_resource type="Curve" id="Curve_7ktgu"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, -0.2753813), 0.0, 0.0, 0, 0, Vector2(1, -0.2753813), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_0ra82"]
+script = ExtResource("4_wws0u")
+property = "position:x"
+curve = SubResource("Curve_7ktgu")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_htcva"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0.47609362), 0.0, 0.0, 0, 0, Vector2(1, 0.47609362), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_4haoa"]
+script = ExtResource("4_wws0u")
+property = "position:z"
+curve = SubResource("Curve_htcva")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_5m88x"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, 7.0097055), 0.0, 0.0, 0, 0, Vector2(1, 7.0097055), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_1a1l6"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:z"
+curve = SubResource("Curve_5m88x")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_ybxt6"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, 12.118747), 0.0, 0.0, 0, 0, Vector2(1, 12.118747), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_wi7g0"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_ybxt6")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_hhvba"]
+_limits = [-4.0, 4.0, 0.0, 1.0]
+_data = [Vector2(0, -1.9), 0.0, 0.0, 0, 0, Vector2(0.18, 0.55), 0.0, 0.0, 0, 0, Vector2(0.3, 0.55), 0.0, 0.0, 0, 0, Vector2(0.72, 0.55), 0.0, 0.0, 0, 0, Vector2(1, -1.9), 0.0, 0.0, 0, 0]
+point_count = 5
+
+[sub_resource type="Resource" id="Resource_mh3dn"]
+script = ExtResource("4_wws0u")
+property = "position:y"
+curve = SubResource("Curve_hhvba")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_nidnk"]
+script = ExtResource("3_4e86d")
+mesh = SubResource("CylinderMesh_p3xee")
+material = SubResource("StandardMaterial3D_tf7mx")
+seconds = 1.1
+id = &"spike2"
+start_delay = 0.08
+bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_6tc7c")])
+tracks = Array[ExtResource("4_wws0u")]([SubResource("Resource_0ra82"), SubResource("Resource_4haoa"), SubResource("Resource_1a1l6"), SubResource("Resource_wi7g0"), SubResource("Resource_mh3dn")])
+
+[sub_resource type="Resource" id="Resource_2tevv"]
+script = ExtResource("2_hkqb8")
+property = "material_override:emission"
+param = &"color"
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_73uc1"]
+top_radius = 0.0
+bottom_radius = 0.15
+height = 1.7
+
+[sub_resource type="Curve" id="Curve_33qsq"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, -0.84060735), 0.0, 0.0, 0, 0, Vector2(1, -0.84060735), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_aqiqa"]
+script = ExtResource("4_wws0u")
+property = "position:x"
+curve = SubResource("Curve_33qsq")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_kjfpq"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0.12601289), 0.0, 0.0, 0, 0, Vector2(1, 0.12601289), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_aijye"]
+script = ExtResource("4_wws0u")
+property = "position:z"
+curve = SubResource("Curve_kjfpq")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_cusnd"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, 13.845298), 0.0, 0.0, 0, 0, Vector2(1, 13.845298), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_ou8vo"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:z"
+curve = SubResource("Curve_cusnd")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_x5g8i"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, 2.0755064), 0.0, 0.0, 0, 0, Vector2(1, 2.0755064), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_rjswc"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_x5g8i")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_7lspu"]
+_limits = [-4.0, 4.0, 0.0, 1.0]
+_data = [Vector2(0, -1.6), 0.0, 0.0, 0, 0, Vector2(0.18, 0.4), 0.0, 0.0, 0, 0, Vector2(0.3, 0.4), 0.0, 0.0, 0, 0, Vector2(0.72, 0.4), 0.0, 0.0, 0, 0, Vector2(1, -1.6), 0.0, 0.0, 0, 0]
+point_count = 5
+
+[sub_resource type="Resource" id="Resource_wvsld"]
+script = ExtResource("4_wws0u")
+property = "position:y"
+curve = SubResource("Curve_7lspu")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_d1fgx"]
+script = ExtResource("3_4e86d")
+mesh = SubResource("CylinderMesh_73uc1")
+material = SubResource("StandardMaterial3D_tf7mx")
+seconds = 1.1
+id = &"spike3"
+start_delay = 0.12
+bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_2tevv")])
+tracks = Array[ExtResource("4_wws0u")]([SubResource("Resource_aqiqa"), SubResource("Resource_aijye"), SubResource("Resource_ou8vo"), SubResource("Resource_rjswc"), SubResource("Resource_wvsld")])
+
+[sub_resource type="Resource" id="Resource_4pudo"]
+script = ExtResource("2_hkqb8")
+property = "material_override:emission"
+param = &"color"
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_w6qds"]
+top_radius = 0.0
+bottom_radius = 0.2
+height = 2.3
+
+[sub_resource type="Curve" id="Curve_u6a45"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, -0.40287885), 0.0, 0.0, 0, 0, Vector2(1, -0.40287885), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_v7qgt"]
+script = ExtResource("4_wws0u")
+property = "position:x"
+curve = SubResource("Curve_u6a45")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_vv8yx"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, -0.37441772), 0.0, 0.0, 0, 0, Vector2(1, -0.37441772), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_snwfc"]
+script = ExtResource("4_wws0u")
+property = "position:z"
+curve = SubResource("Curve_vv8yx")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_n0bga"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, 10.255098), 0.0, 0.0, 0, 0, Vector2(1, 10.255098), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_47xlm"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:z"
+curve = SubResource("Curve_n0bga")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_vlirh"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, -9.530633), 0.0, 0.0, 0, 0, Vector2(1, -9.530633), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_gbgaq"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_vlirh")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_28m1o"]
+_limits = [-4.0, 4.0, 0.0, 1.0]
+_data = [Vector2(0, -1.9), 0.0, 0.0, 0, 0, Vector2(0.18, 0.55), 0.0, 0.0, 0, 0, Vector2(0.3, 0.55), 0.0, 0.0, 0, 0, Vector2(0.72, 0.55), 0.0, 0.0, 0, 0, Vector2(1, -1.9), 0.0, 0.0, 0, 0]
+point_count = 5
+
+[sub_resource type="Resource" id="Resource_ry5xu"]
+script = ExtResource("4_wws0u")
+property = "position:y"
+curve = SubResource("Curve_28m1o")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_nkso6"]
+script = ExtResource("3_4e86d")
+mesh = SubResource("CylinderMesh_w6qds")
+material = SubResource("StandardMaterial3D_tf7mx")
+seconds = 1.1
+id = &"spike4"
+start_delay = 0.16
+bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_4pudo")])
+tracks = Array[ExtResource("4_wws0u")]([SubResource("Resource_v7qgt"), SubResource("Resource_snwfc"), SubResource("Resource_47xlm"), SubResource("Resource_gbgaq"), SubResource("Resource_ry5xu")])
+
+[sub_resource type="Resource" id="Resource_4b1fk"]
+script = ExtResource("2_hkqb8")
+property = "material_override:emission"
+param = &"color"
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_blf3p"]
+top_radius = 0.0
+bottom_radius = 0.15
+height = 1.7
+
+[sub_resource type="Curve" id="Curve_kkrgk"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0.064199254), 0.0, 0.0, 0, 0, Vector2(1, 0.064199254), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_uyug6"]
+script = ExtResource("4_wws0u")
+property = "position:x"
+curve = SubResource("Curve_kkrgk")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_ssp5y"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, -0.8475721), 0.0, 0.0, 0, 0, Vector2(1, -0.8475721), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_q87eb"]
+script = ExtResource("4_wws0u")
+property = "position:z"
+curve = SubResource("Curve_ssp5y")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_3mvpn"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, -1.0573994), 0.0, 0.0, 0, 0, Vector2(1, -1.0573994), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_h2vmu"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:z"
+curve = SubResource("Curve_3mvpn")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_utuyt"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, -13.960011), 0.0, 0.0, 0, 0, Vector2(1, -13.960011), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_7awcr"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_utuyt")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_6rr4b"]
+_limits = [-4.0, 4.0, 0.0, 1.0]
+_data = [Vector2(0, -1.6), 0.0, 0.0, 0, 0, Vector2(0.18, 0.4), 0.0, 0.0, 0, 0, Vector2(0.3, 0.4), 0.0, 0.0, 0, 0, Vector2(0.72, 0.4), 0.0, 0.0, 0, 0, Vector2(1, -1.6), 0.0, 0.0, 0, 0]
+point_count = 5
+
+[sub_resource type="Resource" id="Resource_82ydm"]
+script = ExtResource("4_wws0u")
+property = "position:y"
+curve = SubResource("Curve_6rr4b")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_d1jkg"]
+script = ExtResource("3_4e86d")
+mesh = SubResource("CylinderMesh_blf3p")
+material = SubResource("StandardMaterial3D_tf7mx")
+seconds = 1.1
+id = &"spike5"
+start_delay = 0.2
+bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_4b1fk")])
+tracks = Array[ExtResource("4_wws0u")]([SubResource("Resource_uyug6"), SubResource("Resource_q87eb"), SubResource("Resource_h2vmu"), SubResource("Resource_7awcr"), SubResource("Resource_82ydm")])
+
+[sub_resource type="Resource" id="Resource_mvauf"]
+script = ExtResource("2_hkqb8")
+property = "material_override:emission"
+param = &"color"
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_xrgeu"]
+top_radius = 0.0
+bottom_radius = 0.2
+height = 2.3
+
+[sub_resource type="Curve" id="Curve_35nre"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0.45467925), 0.0, 0.0, 0, 0, Vector2(1, 0.45467925), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_733to"]
+script = ExtResource("4_wws0u")
+property = "position:x"
+curve = SubResource("Curve_35nre")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_tgige"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, -0.30946207), 0.0, 0.0, 0, 0, Vector2(1, -0.30946207), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_jq2l5"]
+script = ExtResource("4_wws0u")
+property = "position:z"
+curve = SubResource("Curve_tgige")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_bvyvw"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, -11.573654), 0.0, 0.0, 0, 0, Vector2(1, -11.573654), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_uk170"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:z"
+curve = SubResource("Curve_bvyvw")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_ea3uk"]
+_limits = [-90.0, 90.0, 0.0, 1.0]
+_data = [Vector2(0, -7.8772163), 0.0, 0.0, 0, 0, Vector2(1, -7.8772163), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_425w6"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_ea3uk")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_d1rxr"]
+_limits = [-4.0, 4.0, 0.0, 1.0]
+_data = [Vector2(0, -1.9), 0.0, 0.0, 0, 0, Vector2(0.18, 0.55), 0.0, 0.0, 0, 0, Vector2(0.3, 0.55), 0.0, 0.0, 0, 0, Vector2(0.72, 0.55), 0.0, 0.0, 0, 0, Vector2(1, -1.9), 0.0, 0.0, 0, 0]
+point_count = 5
+
+[sub_resource type="Resource" id="Resource_s2wr5"]
+script = ExtResource("4_wws0u")
+property = "position:y"
+curve = SubResource("Curve_d1rxr")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_ytkmk"]
+script = ExtResource("3_4e86d")
+mesh = SubResource("CylinderMesh_xrgeu")
+material = SubResource("StandardMaterial3D_tf7mx")
+seconds = 1.1
+id = &"spike6"
+start_delay = 0.24
+bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_mvauf")])
+tracks = Array[ExtResource("4_wws0u")]([SubResource("Resource_733to"), SubResource("Resource_jq2l5"), SubResource("Resource_uk170"), SubResource("Resource_425w6"), SubResource("Resource_s2wr5")])
+
+[sub_resource type="Resource" id="Resource_c6pdf"]
+script = ExtResource("2_hkqb8")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_llnox"]
+offsets = PackedFloat32Array(0, 0.15, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.6, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_eau0c"]
+script = ExtResource("5_rbm3a")
+size_min = 0.9
+size_max = 1.5
+spread = 70.0
+speed_min = 0.8
+speed_max = 1.8
+gravity = Vector3(0, 0, 0)
+emission_ring_radius = 0.7
+soft_distance = 0.4
+amount = 10
+lifetime = 1.2
+explosiveness = 0.7
+color = Color(0.7, 0.66, 0.58, 1)
+color_ramp = SubResource("Gradient_llnox")
+texture = ExtResource("6_5avo0")
+h_frames = 4
+v_frames = 4
+additive = false
+id = &"dust"
+bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_c6pdf")])
+
+[sub_resource type="Resource" id="Resource_8vlgh"]
+script = ExtResource("2_hkqb8")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_do3t7"]
+script = ExtResource("2_hkqb8")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Curve" id="Curve_hrlcv"]
+_limits = [-360.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_gh8el"]
+script = ExtResource("4_wws0u")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_hrlcv")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_apuvu"]
+script = ExtResource("7_pdbm1")
+shader = ExtResource("8_5ymi1")
+shader_params = {
+"end_radius": 0.95,
+"intensity": 1.6,
+"ring_width": 0.07,
+"start_radius": 0.2
+}
+size = Vector2(3, 3)
+face_camera = false
+id = &"rings"
+space = 2
+socket = &"Base"
+duration = 0.5
+bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_8vlgh"), SubResource("Resource_do3t7")])
+tracks = Array[ExtResource("4_wws0u")]([SubResource("Resource_gh8el")])
+
+[sub_resource type="Resource" id="Resource_syjwr"]
+script = ExtResource("9_1mfb6")
+strength_world = 0.06
+seconds = 0.25
+id = &"shake0"
+min_quality = 2
+
+[sub_resource type="Resource" id="Resource_w8xfc"]
+script = ExtResource("10_nn8ba")
+name = &"color"
+kind = 3
+default_value = Color(0.9, 0.88, 0.75, 1)
+description = "Ring colour."
+
+[sub_resource type="Resource" id="Resource_wn63y"]
+script = ExtResource("10_nn8ba")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("11_3km1w")
+id = &"fx.ossuary_strike"
+display_name = "Ossuary strike"
+params = Array[ExtResource("10_nn8ba")]([SubResource("Resource_w8xfc"), SubResource("Resource_wn63y")])
+layers = Array[ExtResource("1_kfx0c")]([SubResource("Resource_b3ru7"), SubResource("Resource_vd81d"), SubResource("Resource_nidnk"), SubResource("Resource_d1fgx"), SubResource("Resource_nkso6"), SubResource("Resource_d1jkg"), SubResource("Resource_ytkmk"), SubResource("Resource_eau0c"), SubResource("Resource_apuvu"), SubResource("Resource_syjwr")])
+socket = &"Base"
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "Bone spikes erupt from the ground around the target, hold, and sink back."

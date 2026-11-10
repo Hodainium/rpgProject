@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_cmtl4"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="2_ut62j"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_84efw"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/oblivion_strike.tres" id="4_s12ci"]
+
+[sub_resource type="Resource" id="Resource_kev2b"]
+script = ExtResource("3_84efw")
+param = &"color"
+value = Color(0.45, 0.25, 0.7, 1)
+
+[sub_resource type="Resource" id="Resource_ub1ax"]
+script = ExtResource("3_84efw")
+param = &"ray_count"
+value = 14.0
+
+[sub_resource type="Resource" id="Resource_l5dlt"]
+script = ExtResource("3_84efw")
+param = &"spin"
+value = -0.06
+
+[sub_resource type="Resource" id="Resource_m2kkh"]
+script = ExtResource("3_84efw")
+param = &"intensity"
+value = 1.0
+
+[sub_resource type="Resource" id="Resource_ipa3t"]
+script = ExtResource("3_84efw")
+param = &"color"
+value = Color(0.45, 0.25, 0.7, 1)
+
+[node name="CueUltOblivion" type="Node" unique_id=670553676]
+script = ExtResource("1_cmtl4")
+fx = ExtResource("2_ut62j")
+bindings = Array[ExtResource("3_84efw")]([SubResource("Resource_kev2b"), SubResource("Resource_ub1ax"), SubResource("Resource_l5dlt"), SubResource("Resource_m2kkh")])
+target_fx = ExtResource("4_s12ci")
+target_bindings = Array[ExtResource("3_84efw")]([SubResource("Resource_ipa3t")])
+target_stagger = 0.12

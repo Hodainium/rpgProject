@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_t0yhw"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ice_hit.tres" id="2_ysbj8"]
+
+[node name="CueHitIce" type="Node" unique_id=1347489625]
+script = ExtResource("1_t0yhw")
+fx = ExtResource("2_ysbj8")

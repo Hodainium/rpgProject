@@ -11,3 +11,5 @@ policy = 3
 max_stacks = 1
 duration_turns = 2
 granted_tags = Array[StringName]([&"Status.Buff.Taunt", &"State.Taunting"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.Taunt"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff"])

@@ -1,0 +1,189 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_o8rne"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_r7jk4"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_mesh_layer.gd" id="3_ttsno"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_j1lqw"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="5_eap1f"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="6_26waq"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="7_q05sr"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/smoke_sheet.png" id="8_pmj2t"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_fresnel_layer.gd" id="9_qc6pu"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="10_veunb"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="11_y1s7w"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_s14v3"]
+albedo_color = Color(0.01, 0, 0.03, 1)
+emission_enabled = true
+emission = Color(0.35, 0.15, 0.6, 1)
+emission_energy_multiplier = 0.6
+rim_enabled = true
+rim_tint = 0.1
+
+[sub_resource type="SphereMesh" id="SphereMesh_uijd4"]
+radial_segments = 32
+rings = 16
+
+[sub_resource type="Curve" id="Curve_nwig8"]
+_limits = [0.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0.1), 0.0, 0.0, 0, 0, Vector2(0.3, 2.3), 0.0, 0.0, 0, 0, Vector2(0.7, 2.4), 0.0, 0.0, 0, 0, Vector2(1, 0.2), 0.0, 0.0, 0, 0]
+point_count = 4
+
+[sub_resource type="Resource" id="Resource_ix8cg"]
+script = ExtResource("4_j1lqw")
+property = "scale"
+curve = SubResource("Curve_nwig8")
+mode = 2
+
+[sub_resource type="Resource" id="Resource_2r46y"]
+script = ExtResource("3_ttsno")
+mesh = SubResource("SphereMesh_uijd4")
+material = SubResource("StandardMaterial3D_s14v3")
+seconds = 1.1
+id = &"bubble"
+tracks = Array[ExtResource("4_j1lqw")]([SubResource("Resource_ix8cg")])
+
+[sub_resource type="Resource" id="Resource_6aj2p"]
+script = ExtResource("2_r7jk4")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_whdqi"]
+script = ExtResource("2_r7jk4")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_v4su3"]
+script = ExtResource("5_eap1f")
+shader = ExtResource("6_26waq")
+shader_params = {
+"end_radius": 0.12,
+"intensity": 1.6,
+"ring_width": 0.06,
+"start_radius": 0.95
+}
+size = Vector2(4.4, 4.4)
+id = &"close0"
+space = 2
+duration = 0.6
+bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_6aj2p"), SubResource("Resource_whdqi")])
+
+[sub_resource type="Resource" id="Resource_ssx4a"]
+script = ExtResource("2_r7jk4")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_2p0xa"]
+script = ExtResource("2_r7jk4")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_d7x0e"]
+script = ExtResource("5_eap1f")
+shader = ExtResource("6_26waq")
+shader_params = {
+"end_radius": 0.12,
+"intensity": 1.6,
+"ring_width": 0.06,
+"start_radius": 0.95
+}
+size = Vector2(4.4, 4.4)
+id = &"close1"
+space = 2
+start_delay = 0.12
+duration = 0.6
+bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_ssx4a"), SubResource("Resource_2p0xa")])
+
+[sub_resource type="Resource" id="Resource_vytn3"]
+script = ExtResource("2_r7jk4")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_6adhk"]
+script = ExtResource("2_r7jk4")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_c56ob"]
+script = ExtResource("5_eap1f")
+shader = ExtResource("6_26waq")
+shader_params = {
+"end_radius": 0.12,
+"intensity": 1.6,
+"ring_width": 0.06,
+"start_radius": 0.95
+}
+size = Vector2(4.4, 4.4)
+id = &"close2"
+space = 2
+start_delay = 0.24
+duration = 0.6
+bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_vytn3"), SubResource("Resource_6adhk")])
+
+[sub_resource type="Resource" id="Resource_xg8rx"]
+script = ExtResource("2_r7jk4")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_yo1b4"]
+offsets = PackedFloat32Array(0, 0.3, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.8, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_q2cb0"]
+script = ExtResource("7_q05sr")
+size_min = 0.9
+size_max = 1.5
+speed_min = 0.0
+speed_max = 0.0
+gravity = Vector3(0, 0, 0)
+radial_accel = -5.0
+emission_radius = 1.5
+soft_distance = 0.4
+amount = 14
+lifetime = 1.0
+explosiveness = 0.0
+color = Color(0.2, 0.08, 0.35, 1)
+color_ramp = SubResource("Gradient_yo1b4")
+texture = ExtResource("8_pmj2t")
+h_frames = 4
+v_frames = 4
+additive = false
+id = &"smoke"
+bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_xg8rx")])
+
+[sub_resource type="Resource" id="Resource_4vkmk"]
+script = ExtResource("2_r7jk4")
+property = "color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_isxb6"]
+script = ExtResource("9_qc6pu")
+power = 2.0
+noise_scale = 5.0
+intensity = 1.3
+seconds = 1.0
+id = &"edge"
+bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_4vkmk")])
+
+[sub_resource type="Resource" id="Resource_kql04"]
+script = ExtResource("10_veunb")
+name = &"color"
+kind = 3
+default_value = Color(0.45, 0.25, 0.7, 1)
+description = "Ring colour."
+
+[sub_resource type="Resource" id="Resource_8exsk"]
+script = ExtResource("10_veunb")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("11_y1s7w")
+id = &"fx.oblivion_strike"
+display_name = "Oblivion strike"
+params = Array[ExtResource("10_veunb")]([SubResource("Resource_kql04"), SubResource("Resource_8exsk")])
+layers = Array[ExtResource("1_o8rne")]([SubResource("Resource_2r46y"), SubResource("Resource_v4su3"), SubResource("Resource_d7x0e"), SubResource("Resource_c56ob"), SubResource("Resource_q2cb0"), SubResource("Resource_isxb6")])
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "A black void bubble swallows the target while rings close in on it."

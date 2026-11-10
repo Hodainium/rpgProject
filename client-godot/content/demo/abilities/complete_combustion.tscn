@@ -19,6 +19,7 @@ asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Buff", 
 executions = Array[ExtResource("2_c5wtu")]([SubResource("Resource_fwdla")])
 animation = ExtResource("4_e805r")
 ability_tag = &"Ability.Ult.Combustion"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Combustion"])
 activation_query = ExtResource("5_d8a24")
 cost_effect = ExtResource("6_6l1c5")
 description = "Strengthens yourself."

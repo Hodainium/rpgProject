@@ -1,0 +1,165 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_yxyuc"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_646wk"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_rlg65"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_7317y"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="5_58622"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="6_vtwlx"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="7_vw05r"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_fresnel_layer.gd" id="8_7n6io"]
+[ext_resource type="FontFile" path="res://presentation/demo/ui/fonts/ChakraPetch-Bold.ttf" id="9_ln27u"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_text_layer.gd" id="10_podno"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="11_o3lhh"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="12_jjfst"]
+
+[sub_resource type="Resource" id="Resource_iwth7"]
+script = ExtResource("2_646wk")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_nxmwj"]
+script = ExtResource("2_646wk")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_2cj1x"]
+offsets = PackedFloat32Array(0, 0.3, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.9)
+
+[sub_resource type="Resource" id="Resource_t3cd5"]
+script = ExtResource("3_rlg65")
+size_min = 0.08
+size_max = 0.17
+speed_min = 0.0
+speed_max = 0.0
+gravity = Vector3(0, 0, 0)
+radial_accel = -13.0
+emission_radius = 1.6
+amount = 36
+lifetime = 0.7
+explosiveness = 0.15
+color_ramp = SubResource("Gradient_2cj1x")
+id = &"pull"
+bindings = Array[ExtResource("2_646wk")]([SubResource("Resource_iwth7"), SubResource("Resource_nxmwj")])
+
+[sub_resource type="Resource" id="Resource_wqt6o"]
+script = ExtResource("2_646wk")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_qyqet"]
+script = ExtResource("2_646wk")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_541qb"]
+script = ExtResource("5_58622")
+shader = ExtResource("6_vtwlx")
+shader_params = {
+"end_radius": 0.15,
+"intensity": 1.5,
+"ring_width": 0.08,
+"start_radius": 0.95
+}
+size = Vector2(3.6, 3.6)
+id = &"closing"
+space = 2
+duration = 0.5
+bindings = Array[ExtResource("2_646wk")]([SubResource("Resource_wqt6o"), SubResource("Resource_qyqet")])
+
+[sub_resource type="Resource" id="Resource_l2mrr"]
+script = ExtResource("2_646wk")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_tib75"]
+script = ExtResource("2_646wk")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.5
+
+[sub_resource type="Resource" id="Resource_jxu2p"]
+script = ExtResource("2_646wk")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_ggwqk"]
+script = ExtResource("5_58622")
+shader = ExtResource("7_vw05r")
+shader_params = {
+"fade_out": 0.7,
+"falloff": 3.0
+}
+size = Vector2(2.2, 2.2)
+id = &"pulse"
+space = 2
+start_delay = 0.3
+duration = 0.45
+bindings = Array[ExtResource("2_646wk")]([SubResource("Resource_l2mrr"), SubResource("Resource_tib75"), SubResource("Resource_jxu2p")])
+
+[sub_resource type="Resource" id="Resource_5ce84"]
+script = ExtResource("2_646wk")
+property = "color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_13vn5"]
+script = ExtResource("8_7n6io")
+power = 2.0
+fill = 0.25
+grow = 0.015
+noise_scale = 5.0
+intensity = 1.3
+seconds = 0.7
+id = &"glow"
+start_delay = 0.2
+bindings = Array[ExtResource("2_646wk")]([SubResource("Resource_5ce84")])
+
+[sub_resource type="Resource" id="Resource_ft8lj"]
+script = ExtResource("2_646wk")
+property = "modulate"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_uqbat"]
+script = ExtResource("10_podno")
+text = "ABSORB"
+font = ExtResource("9_ln27u")
+font_size = 40
+outline_size = 9
+height = 0.45
+rise = 0.35
+scatter = 0.0
+scatter_y = 0.0
+seconds = 1.0
+id = &"label"
+bindings = Array[ExtResource("2_646wk")]([SubResource("Resource_ft8lj")])
+
+[sub_resource type="Resource" id="Resource_wes5v"]
+script = ExtResource("11_o3lhh")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.45, 0.14, 1)
+description = "The absorbed element's colour."
+
+[sub_resource type="Resource" id="Resource_34a7c"]
+script = ExtResource("11_o3lhh")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Pulse brightness."
+
+[sub_resource type="Resource" id="Resource_grto3"]
+script = ExtResource("11_o3lhh")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("12_jjfst")
+id = &"fx.drain_absorb"
+display_name = "Drain absorb"
+params = Array[ExtResource("11_o3lhh")]([SubResource("Resource_wes5v"), SubResource("Resource_34a7c"), SubResource("Resource_grto3")])
+layers = Array[ExtResource("1_yxyuc")]([SubResource("Resource_t3cd5"), SubResource("Resource_541qb"), SubResource("Resource_ggwqk"), SubResource("Resource_13vn5"), SubResource("Resource_uqbat")])
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "The element streams into a unit that absorbs it, a ring closes in, and ABSORB floats up."

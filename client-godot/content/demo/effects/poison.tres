@@ -25,3 +25,5 @@ max_stacks = 5
 duration_turns = 3
 modifiers = Array[ExtResource("2_ajy4t")]([SubResource("Resource_p3fly")])
 granted_tags = Array[StringName]([&"Status.Debuff.Poison"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Status.Poison"])
+periodic_cue_tags = Array[StringName]([&"Cue.Fx.Tick.Poison"])

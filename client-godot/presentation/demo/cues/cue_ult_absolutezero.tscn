@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_d4jwv"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="2_lsqin"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_hr2lx"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/absolute_zero_strike.tres" id="4_4vpof"]
+
+[sub_resource type="Resource" id="Resource_bxi64"]
+script = ExtResource("3_hr2lx")
+param = &"color"
+value = Color(0.5, 0.9, 1, 1)
+
+[sub_resource type="Resource" id="Resource_hi7up"]
+script = ExtResource("3_hr2lx")
+param = &"ray_count"
+value = 10.0
+
+[sub_resource type="Resource" id="Resource_n0luw"]
+script = ExtResource("3_hr2lx")
+param = &"spin"
+value = 0.05
+
+[sub_resource type="Resource" id="Resource_csapb"]
+script = ExtResource("3_hr2lx")
+param = &"intensity"
+value = 1.0
+
+[sub_resource type="Resource" id="Resource_a3o4f"]
+script = ExtResource("3_hr2lx")
+param = &"color"
+value = Color(0.5, 0.9, 1, 1)
+
+[node name="CueUltAbsolutezero" type="Node" unique_id=864277637]
+script = ExtResource("1_d4jwv")
+fx = ExtResource("2_lsqin")
+bindings = Array[ExtResource("3_hr2lx")]([SubResource("Resource_bxi64"), SubResource("Resource_hi7up"), SubResource("Resource_n0luw"), SubResource("Resource_csapb")])
+target_fx = ExtResource("4_4vpof")
+target_bindings = Array[ExtResource("3_hr2lx")]([SubResource("Resource_a3o4f")])
+target_stagger = 0.1

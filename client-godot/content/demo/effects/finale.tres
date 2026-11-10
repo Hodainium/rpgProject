@@ -17,3 +17,5 @@ policy = 3
 duration_turns = 2
 modifiers = Array[ExtResource("2_4tgnf")]([SubResource("Resource_ltfug")])
 granted_tags = Array[StringName]([&"Status.Buff.Finale"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.Finale"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff"])

@@ -1,0 +1,102 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_1kgof"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_uglr7"]
+[ext_resource type="FontFile" path="res://presentation/demo/ui/fonts/ChakraPetch-Bold.ttf" id="3_rnb42"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_text_layer.gd" id="4_3uwa6"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_kgyxh"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="6_d12lj"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="7_1rfcw"]
+
+[sub_resource type="Resource" id="Resource_3kucc"]
+script = ExtResource("2_uglr7")
+property = "text"
+param = &"text"
+
+[sub_resource type="Resource" id="Resource_xfjap"]
+script = ExtResource("2_uglr7")
+property = "modulate"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_xup0x"]
+script = ExtResource("2_uglr7")
+property = "outline_modulate"
+param = &"outline_color"
+
+[sub_resource type="Resource" id="Resource_dftrl"]
+script = ExtResource("2_uglr7")
+property = "outline_size"
+param = &"outline_size"
+
+[sub_resource type="Resource" id="Resource_kdto8"]
+script = ExtResource("2_uglr7")
+property = "font_size"
+param = &"font_size"
+
+[sub_resource type="Resource" id="Resource_qspvt"]
+script = ExtResource("4_3uwa6")
+font = ExtResource("3_rnb42")
+id = &"number"
+bindings = Array[ExtResource("2_uglr7")]([SubResource("Resource_3kucc"), SubResource("Resource_xfjap"), SubResource("Resource_xup0x"), SubResource("Resource_dftrl"), SubResource("Resource_kdto8")])
+
+[sub_resource type="Resource" id="Resource_h6uiv"]
+script = ExtResource("6_d12lj")
+name = &"text"
+kind = 9
+default_value = "0"
+description = "The number (or any short text)."
+
+[sub_resource type="Resource" id="Resource_f010s"]
+script = ExtResource("6_d12lj")
+name = &"color"
+kind = 3
+default_value = Color(0.93, 0.93, 0.96, 1)
+description = "Fill colour: the element."
+
+[sub_resource type="Resource" id="Resource_u6gsk"]
+script = ExtResource("6_d12lj")
+name = &"outline_color"
+kind = 3
+default_value = Color(0.05, 0.05, 0.08, 1)
+description = "Outline colour; a crit uses an accent."
+
+[sub_resource type="Resource" id="Resource_jpdyb"]
+script = ExtResource("6_d12lj")
+name = &"outline_size"
+kind = 1
+default_value = 12
+max_value = 64.0
+description = "Outline thickness in pixels; bold for a crit."
+
+[sub_resource type="Resource" id="Resource_1x3ar"]
+script = ExtResource("6_d12lj")
+name = &"font_size"
+kind = 1
+default_value = 64
+min_value = 16.0
+max_value = 200.0
+description = "Text size in pixels; a crit is bigger, a resisted hit smaller."
+
+[sub_resource type="Resource" id="Resource_4532h"]
+script = ExtResource("6_d12lj")
+name = &"label"
+kind = 9
+default_value = ""
+description = "A small line above the number (Crit!, Weak!, Break). Empty = none."
+
+[sub_resource type="Resource" id="Resource_ebd1c"]
+script = ExtResource("6_d12lj")
+name = &"label_color"
+kind = 3
+default_value = Color(1, 0.82, 0.25, 1)
+description = "Colour of that line."
+
+[resource]
+script = ExtResource("7_1rfcw")
+id = &"fx.damage_number"
+display_name = "Damage number"
+params = Array[ExtResource("6_d12lj")]([SubResource("Resource_h6uiv"), SubResource("Resource_f010s"), SubResource("Resource_u6gsk"), SubResource("Resource_jpdyb"), SubResource("Resource_1x3ar"), SubResource("Resource_4532h"), SubResource("Resource_ebd1c")])
+layers = Array[ExtResource("1_1kgof")]([SubResource("Resource_qspvt")])
+socket = &"Top"
+tags = Array[StringName]([&"Fx.Kind.Hit"])
+description = "A number that pops in, rises and fades away, Honkai style."

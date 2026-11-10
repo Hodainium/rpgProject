@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_xenlh"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="2_dtrir"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_q8lgc"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/liquidate_strike.tres" id="4_hifv5"]
+
+[sub_resource type="Resource" id="Resource_pj6kd"]
+script = ExtResource("3_q8lgc")
+param = &"color"
+value = Color(0.4, 0.9, 0.5, 1)
+
+[sub_resource type="Resource" id="Resource_voasd"]
+script = ExtResource("3_q8lgc")
+param = &"ray_count"
+value = 10.0
+
+[sub_resource type="Resource" id="Resource_ko03d"]
+script = ExtResource("3_q8lgc")
+param = &"spin"
+value = 0.1
+
+[sub_resource type="Resource" id="Resource_hs4he"]
+script = ExtResource("3_q8lgc")
+param = &"intensity"
+value = 1.0
+
+[sub_resource type="Resource" id="Resource_2lowl"]
+script = ExtResource("3_q8lgc")
+param = &"color"
+value = Color(0.4, 0.9, 0.5, 1)
+
+[node name="CueUltLiquidate" type="Node" unique_id=1366469438]
+script = ExtResource("1_xenlh")
+fx = ExtResource("2_dtrir")
+bindings = Array[ExtResource("3_q8lgc")]([SubResource("Resource_pj6kd"), SubResource("Resource_voasd"), SubResource("Resource_ko03d"), SubResource("Resource_hs4he")])
+target_fx = ExtResource("4_hifv5")
+target_bindings = Array[ExtResource("3_q8lgc")]([SubResource("Resource_2lowl")])

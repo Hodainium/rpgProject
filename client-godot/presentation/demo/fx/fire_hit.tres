@@ -1,0 +1,187 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_nkx7y"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_3w2xw"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_smaci"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/flame_sheet.png" id="4_ex8q7"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_506qv"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="6_wb0vg"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="7_ta2xa"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_light_layer.gd" id="8_uckok"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_fresnel_layer.gd" id="9_8j6ew"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="10_wj7vj"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="11_pqpld"]
+
+[sub_resource type="Resource" id="Resource_4g2xs"]
+script = ExtResource("2_3w2xw")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_1lgq4"]
+script = ExtResource("2_3w2xw")
+property = "process_material:scale_min"
+param = &"size"
+scale = 1.4
+
+[sub_resource type="Resource" id="Resource_u05rs"]
+script = ExtResource("2_3w2xw")
+property = "process_material:scale_max"
+param = &"size"
+scale = 2.0
+
+[sub_resource type="Resource" id="Resource_8ifcl"]
+script = ExtResource("2_3w2xw")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_qb23t"]
+offsets = PackedFloat32Array(0, 0.18, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_g0dqo"]
+script = ExtResource("3_smaci")
+size_min = 1.4
+size_max = 2.0
+spread = 22.0
+speed_min = 0.3
+speed_max = 0.9
+gravity = Vector3(0, 1.2, 0)
+emission_radius = 0.22
+soft_distance = 0.3
+emit_from_mesh = true
+emission_min_normal_y = 0.5
+amount = 12
+lifetime = 0.75
+explosiveness = 0.35
+color_ramp = SubResource("Gradient_qb23t")
+texture = ExtResource("4_ex8q7")
+h_frames = 8
+v_frames = 4
+id = &"flames"
+bindings = Array[ExtResource("2_3w2xw")]([SubResource("Resource_4g2xs"), SubResource("Resource_1lgq4"), SubResource("Resource_u05rs"), SubResource("Resource_8ifcl")])
+
+[sub_resource type="Resource" id="Resource_37f3u"]
+script = ExtResource("2_3w2xw")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_4cf2i"]
+script = ExtResource("2_3w2xw")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_bx3q1"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_mpwsl"]
+script = ExtResource("3_smaci")
+size_min = 0.06
+size_max = 0.13
+spread = 70.0
+speed_min = 1.5
+speed_max = 4.0
+gravity = Vector3(0, -1.5, 0)
+damping = 1.0
+emit_from_mesh = true
+emission_min_normal_y = -0.2
+amount = 16
+lifetime = 0.9
+color_ramp = SubResource("Gradient_bx3q1")
+id = &"embers"
+min_quality = 2
+bindings = Array[ExtResource("2_3w2xw")]([SubResource("Resource_37f3u"), SubResource("Resource_4cf2i")])
+
+[sub_resource type="Resource" id="Resource_4rivk"]
+script = ExtResource("2_3w2xw")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_f3kg6"]
+script = ExtResource("2_3w2xw")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.6
+
+[sub_resource type="Resource" id="Resource_l3afd"]
+script = ExtResource("2_3w2xw")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_ga4ft"]
+script = ExtResource("6_wb0vg")
+shader = ExtResource("7_ta2xa")
+size = Vector2(2.4, 2.4)
+id = &"glow"
+space = 2
+duration = 0.3
+bindings = Array[ExtResource("2_3w2xw")]([SubResource("Resource_4rivk"), SubResource("Resource_f3kg6"), SubResource("Resource_l3afd")])
+
+[sub_resource type="Resource" id="Resource_ohp8c"]
+script = ExtResource("2_3w2xw")
+property = "light_color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_k6jj4"]
+script = ExtResource("8_uckok")
+energy = 2.4
+seconds = 0.5
+id = &"light"
+min_quality = 2
+bindings = Array[ExtResource("2_3w2xw")]([SubResource("Resource_ohp8c")])
+
+[sub_resource type="Resource" id="Resource_w453b"]
+script = ExtResource("2_3w2xw")
+property = "color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_s8oj3"]
+script = ExtResource("9_8j6ew")
+power = 2.0
+fill = 0.3
+grow = 0.02
+erosion = 0.3
+noise_scale = 5.0
+scroll = 1.6
+intensity = 1.6
+seconds = 0.7
+id = &"rim"
+bindings = Array[ExtResource("2_3w2xw")]([SubResource("Resource_w453b")])
+
+[sub_resource type="Resource" id="Resource_ejqct"]
+script = ExtResource("10_wj7vj")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.45, 0.16, 1)
+description = "Fire colour (orange; set green or blue for another fire)."
+
+[sub_resource type="Resource" id="Resource_nlq8p"]
+script = ExtResource("10_wj7vj")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Glow brightness."
+
+[sub_resource type="Resource" id="Resource_kg0no"]
+script = ExtResource("10_wj7vj")
+name = &"size"
+default_value = 1.0
+min_value = 0.3
+max_value = 3.0
+description = "Flame size multiplier."
+
+[sub_resource type="Resource" id="Resource_w3dnn"]
+script = ExtResource("10_wj7vj")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "World units the depth test sees the effect closer to the camera. Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("11_pqpld")
+id = &"fx.fire_hit"
+display_name = "Fire hit"
+params = Array[ExtResource("10_wj7vj")]([SubResource("Resource_ejqct"), SubResource("Resource_nlq8p"), SubResource("Resource_kg0no"), SubResource("Resource_w3dnn")])
+layers = Array[ExtResource("1_nkx7y")]([SubResource("Resource_g0dqo"), SubResource("Resource_mpwsl"), SubResource("Resource_ga4ft"), SubResource("Resource_k6jj4"), SubResource("Resource_s8oj3")])
+socket = &"Hit"
+tags = Array[StringName]([&"Fx.Kind.Hit"])
+description = "Flames and embers on a unit hit by fire."
