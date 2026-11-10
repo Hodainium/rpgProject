@@ -16,3 +16,4 @@ policy = 3
 max_stacks = 1
 application_query = SubResource("Resource_n54r7")
 granted_tags = Array[StringName]([&"Status.Debuff.Stun", &"State.Controlled"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Status.Stun"])

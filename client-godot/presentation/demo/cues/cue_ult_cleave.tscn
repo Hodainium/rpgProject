@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_pu6hq"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="2_6vkk0"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_qn164"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/cleave_strike.tres" id="4_stj2r"]
+
+[sub_resource type="Resource" id="Resource_2rb0v"]
+script = ExtResource("3_qn164")
+param = &"color"
+value = Color(1, 0.45, 0.35, 1)
+
+[sub_resource type="Resource" id="Resource_sm5ni"]
+script = ExtResource("3_qn164")
+param = &"ray_count"
+value = 6.0
+
+[sub_resource type="Resource" id="Resource_d125i"]
+script = ExtResource("3_qn164")
+param = &"spin"
+value = 0.2
+
+[sub_resource type="Resource" id="Resource_mc5kt"]
+script = ExtResource("3_qn164")
+param = &"intensity"
+value = 1.0
+
+[sub_resource type="Resource" id="Resource_m6ieu"]
+script = ExtResource("3_qn164")
+param = &"color"
+value = Color(1, 0.45, 0.35, 1)
+
+[node name="CueUltCleave" type="Node" unique_id=1354073227]
+script = ExtResource("1_pu6hq")
+fx = ExtResource("2_6vkk0")
+bindings = Array[ExtResource("3_qn164")]([SubResource("Resource_2rb0v"), SubResource("Resource_sm5ni"), SubResource("Resource_d125i"), SubResource("Resource_mc5kt")])
+target_fx = ExtResource("4_stj2r")
+target_bindings = Array[ExtResource("3_qn164")]([SubResource("Resource_m6ieu")])
+target_stagger = 0.1

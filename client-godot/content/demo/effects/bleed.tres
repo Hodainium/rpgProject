@@ -24,3 +24,5 @@ max_stacks = 1
 duration_turns = 2
 executions = Array[ExtResource("1_dpmgn")]([SubResource("Resource_tubtd")])
 granted_tags = Array[StringName]([&"Status.Debuff.Bleed"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Status.Bleed"])
+periodic_cue_tags = Array[StringName]([&"Cue.Fx.Tick.Bleed"])

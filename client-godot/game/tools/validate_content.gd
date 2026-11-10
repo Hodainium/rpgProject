@@ -21,6 +21,9 @@ func _ready() -> void:
 	FxManager.reload()  # the registry loads on first use
 	if root == "res://content/" and FxManager.registry != null:
 		issues.append_array(FxValidator.validate(FxManager.registry))
+		# Registries are edited by hand (builders never rewrite them): this catches a forgotten line.
+		issues.append_array(FxValidator.sync_problems("res://presentation/demo/fx/", "res://presentation/demo/cues/",
+			FxManager.registry, load("res://godot_gas/cue_registry.tres") as GameplayCueRegistry))
 	print("validate_content: ", root)
 	print(ContentValidator.report(issues))
 	get_tree().quit(3 if ContentValidator.error_count(issues) > 0 else 0)

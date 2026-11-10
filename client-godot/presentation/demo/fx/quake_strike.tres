@@ -1,0 +1,202 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_qcajm"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_47tjq"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_uwk5f"]
+[ext_resource type="Shader" path="res://game/fx/shaders/crack_ground.gdshader" id="4_tjdnm"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_3a3fh"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="6_qhs2j"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/smoke_sheet.png" id="7_xvfsh"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="8_si2nl"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_light_layer.gd" id="9_2ypy2"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shake_layer.gd" id="10_8a40k"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="11_my2b2"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="12_lp56o"]
+
+[sub_resource type="Resource" id="Resource_27oiq"]
+script = ExtResource("2_47tjq")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_y4jko"]
+script = ExtResource("2_47tjq")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 2.0
+
+[sub_resource type="Resource" id="Resource_ikg6c"]
+script = ExtResource("2_47tjq")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Curve" id="Curve_lvdms"]
+_limits = [-360.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_six1c"]
+script = ExtResource("5_3a3fh")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_lvdms")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_ou4o6"]
+script = ExtResource("3_uwk5f")
+shader = ExtResource("4_tjdnm")
+size = Vector2(4.4, 4.4)
+face_camera = false
+id = &"cracks"
+space = 2
+socket = &"Base"
+duration = 1.0
+bindings = Array[ExtResource("2_47tjq")]([SubResource("Resource_27oiq"), SubResource("Resource_y4jko"), SubResource("Resource_ikg6c")])
+tracks = Array[ExtResource("5_3a3fh")]([SubResource("Resource_six1c")])
+
+[sub_resource type="Resource" id="Resource_gb2e5"]
+script = ExtResource("2_47tjq")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_4q4fk"]
+offsets = PackedFloat32Array(0, 0.8, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_op5f6"]
+script = ExtResource("6_qhs2j")
+size_min = 0.12
+size_max = 0.26
+spread = 40.0
+speed_min = 3.5
+speed_max = 8.0
+gravity = Vector3(0, -14, 0)
+spin_min = -300.0
+spin_max = 300.0
+emission_ring_radius = 0.6
+amount = 36
+lifetime = 1.0
+explosiveness = 0.9
+color = Color(0.32, 0.26, 0.22, 1)
+color_ramp = SubResource("Gradient_4q4fk")
+additive = false
+id = &"rocks"
+bindings = Array[ExtResource("2_47tjq")]([SubResource("Resource_gb2e5")])
+
+[sub_resource type="Resource" id="Resource_e6imd"]
+script = ExtResource("2_47tjq")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_lp8f0"]
+offsets = PackedFloat32Array(0, 0.12, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.55, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_pnsq6"]
+script = ExtResource("6_qhs2j")
+size_min = 1.0
+size_max = 1.8
+spread = 80.0
+speed_max = 2.4
+gravity = Vector3(0, 0, 0)
+emission_ring_radius = 1.0
+soft_distance = 0.4
+amount = 12
+lifetime = 1.4
+explosiveness = 0.6
+color = Color(0.62, 0.55, 0.46, 1)
+color_ramp = SubResource("Gradient_lp8f0")
+texture = ExtResource("7_xvfsh")
+h_frames = 4
+v_frames = 4
+additive = false
+id = &"dust"
+bindings = Array[ExtResource("2_47tjq")]([SubResource("Resource_e6imd")])
+
+[sub_resource type="Resource" id="Resource_n5g4j"]
+script = ExtResource("2_47tjq")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_asir0"]
+script = ExtResource("2_47tjq")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Curve" id="Curve_kxngs"]
+_limits = [-360.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_e73hq"]
+script = ExtResource("5_3a3fh")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_kxngs")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_d5t3s"]
+script = ExtResource("3_uwk5f")
+shader = ExtResource("8_si2nl")
+shader_params = {
+"end_radius": 0.95,
+"intensity": 1.6,
+"ring_width": 0.07,
+"start_radius": 0.2
+}
+size = Vector2(3.8, 3.8)
+face_camera = false
+id = &"wave"
+space = 2
+socket = &"Base"
+duration = 0.5
+bindings = Array[ExtResource("2_47tjq")]([SubResource("Resource_n5g4j"), SubResource("Resource_asir0")])
+tracks = Array[ExtResource("5_3a3fh")]([SubResource("Resource_e73hq")])
+
+[sub_resource type="Resource" id="Resource_2swcs"]
+script = ExtResource("2_47tjq")
+property = "light_color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_80kay"]
+script = ExtResource("9_2ypy2")
+light_range = 6.0
+seconds = 0.6
+id = &"light"
+min_quality = 2
+bindings = Array[ExtResource("2_47tjq")]([SubResource("Resource_2swcs")])
+
+[sub_resource type="Resource" id="Resource_u735o"]
+script = ExtResource("10_8a40k")
+strength_world = 0.14
+seconds = 0.5
+id = &"shake0"
+min_quality = 2
+
+[sub_resource type="Resource" id="Resource_6gbte"]
+script = ExtResource("11_my2b2")
+name = &"color"
+kind = 3
+default_value = Color(0.95, 0.6, 0.3, 1)
+description = "Crack glow."
+
+[sub_resource type="Resource" id="Resource_bw6jn"]
+script = ExtResource("11_my2b2")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[sub_resource type="Resource" id="Resource_rag1h"]
+script = ExtResource("11_my2b2")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("12_lp56o")
+id = &"fx.quake_strike"
+display_name = "Quake strike"
+params = Array[ExtResource("11_my2b2")]([SubResource("Resource_6gbte"), SubResource("Resource_bw6jn"), SubResource("Resource_rag1h")])
+layers = Array[ExtResource("1_qcajm")]([SubResource("Resource_ou4o6"), SubResource("Resource_op5f6"), SubResource("Resource_pnsq6"), SubResource("Resource_d5t3s"), SubResource("Resource_80kay"), SubResource("Resource_u735o")])
+socket = &"Base"
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "The ground cracks open in glowing seams, debris flies and the screen shakes."

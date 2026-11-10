@@ -1,0 +1,310 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_bmp52"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_neo7m"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_xx53g"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/star_sheet.png" id="4_kd34j"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_mrvan"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="6_ws5au"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="7_d51bv"]
+
+[sub_resource type="Resource" id="Resource_t7q3i"]
+script = ExtResource("2_neo7m")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_821ss"]
+script = ExtResource("2_neo7m")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_j8pna"]
+offsets = PackedFloat32Array(0, 0.06, 0.94, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Curve" id="Curve_hg86t"]
+_limits = [0.0, 1080.0, 0.0, 1.0]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 360), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_bi4qq"]
+script = ExtResource("5_mrvan")
+property = "rotation_degrees:y"
+curve = SubResource("Curve_hg86t")
+
+[sub_resource type="Curve" id="Curve_fax31"]
+_limits = [0.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, 14), 0.0, 0.0, 0, 0, Vector2(1, 14), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_148sm"]
+script = ExtResource("5_mrvan")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_fax31")
+
+[sub_resource type="Resource" id="Resource_14ysh"]
+script = ExtResource("3_xx53g")
+size_min = 0.34
+size_max = 0.34
+speed_min = 0.0
+speed_max = 0.0
+gravity = Vector3(0, 0, 0)
+emission_offset = Vector3(0.5, 0.45, 0)
+amount = 2
+lifetime = 2.0
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_j8pna")
+texture = ExtResource("4_kd34j")
+additive = false
+local_coords = true
+id = &"star0"
+loop = true
+loop_period = 1.5
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_t7q3i"), SubResource("Resource_821ss")])
+tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_bi4qq"), SubResource("Resource_148sm")])
+
+[sub_resource type="Resource" id="Resource_7pegu"]
+script = ExtResource("2_neo7m")
+property = "process_material:color"
+param = &"trail_color"
+
+[sub_resource type="Resource" id="Resource_6d6b0"]
+script = ExtResource("2_neo7m")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_56uru"]
+colors = PackedColorArray(1, 1, 1, 0.95, 1, 1, 1, 0)
+
+[sub_resource type="Curve" id="Curve_h0q0m"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_qrod4"]
+script = ExtResource("3_xx53g")
+size_min = 0.2
+size_max = 0.2
+speed_min = 0.0
+speed_max = 0.0
+gravity = Vector3(0, 0, 0)
+emission_offset = Vector3(0.5, 0.45, 0)
+lifetime = 0.34
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_56uru")
+size_curve = SubResource("Curve_h0q0m")
+id = &"trail0"
+loop = true
+loop_period = 1.5
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_7pegu"), SubResource("Resource_6d6b0")])
+tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_bi4qq"), SubResource("Resource_148sm")])
+
+[sub_resource type="Resource" id="Resource_bn0n1"]
+script = ExtResource("2_neo7m")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_7ugdh"]
+script = ExtResource("2_neo7m")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_oryrf"]
+offsets = PackedFloat32Array(0, 0.06, 0.94, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Curve" id="Curve_ikmkk"]
+_limits = [0.0, 1080.0, 0.0, 1.0]
+_data = [Vector2(0, 120), 0.0, 0.0, 0, 0, Vector2(1, 480), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_iwl1c"]
+script = ExtResource("5_mrvan")
+property = "rotation_degrees:y"
+curve = SubResource("Curve_ikmkk")
+
+[sub_resource type="Curve" id="Curve_eo0bb"]
+_limits = [0.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, 14), 0.0, 0.0, 0, 0, Vector2(1, 14), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_7vpwu"]
+script = ExtResource("5_mrvan")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_eo0bb")
+
+[sub_resource type="Resource" id="Resource_fovs6"]
+script = ExtResource("3_xx53g")
+size_min = 0.34
+size_max = 0.34
+speed_min = 0.0
+speed_max = 0.0
+gravity = Vector3(0, 0, 0)
+emission_offset = Vector3(0.5, 0.45, 0)
+amount = 2
+lifetime = 2.0
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_oryrf")
+texture = ExtResource("4_kd34j")
+additive = false
+local_coords = true
+id = &"star1"
+loop = true
+loop_period = 1.5
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_bn0n1"), SubResource("Resource_7ugdh")])
+tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_iwl1c"), SubResource("Resource_7vpwu")])
+
+[sub_resource type="Resource" id="Resource_xkrik"]
+script = ExtResource("2_neo7m")
+property = "process_material:color"
+param = &"trail_color"
+
+[sub_resource type="Resource" id="Resource_6uo4u"]
+script = ExtResource("2_neo7m")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_87mqi"]
+colors = PackedColorArray(1, 1, 1, 0.95, 1, 1, 1, 0)
+
+[sub_resource type="Curve" id="Curve_o2ryf"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_tx0m6"]
+script = ExtResource("3_xx53g")
+size_min = 0.2
+size_max = 0.2
+speed_min = 0.0
+speed_max = 0.0
+gravity = Vector3(0, 0, 0)
+emission_offset = Vector3(0.5, 0.45, 0)
+lifetime = 0.34
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_87mqi")
+size_curve = SubResource("Curve_o2ryf")
+id = &"trail1"
+loop = true
+loop_period = 1.5
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_xkrik"), SubResource("Resource_6uo4u")])
+tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_iwl1c"), SubResource("Resource_7vpwu")])
+
+[sub_resource type="Resource" id="Resource_yxs4s"]
+script = ExtResource("2_neo7m")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_e4o0q"]
+script = ExtResource("2_neo7m")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_fb3lx"]
+offsets = PackedFloat32Array(0, 0.06, 0.94, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Curve" id="Curve_3di8s"]
+_limits = [0.0, 1080.0, 0.0, 1.0]
+_data = [Vector2(0, 240), 0.0, 0.0, 0, 0, Vector2(1, 600), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_7eq5l"]
+script = ExtResource("5_mrvan")
+property = "rotation_degrees:y"
+curve = SubResource("Curve_3di8s")
+
+[sub_resource type="Curve" id="Curve_moknm"]
+_limits = [0.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, 14), 0.0, 0.0, 0, 0, Vector2(1, 14), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_tpx5k"]
+script = ExtResource("5_mrvan")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_moknm")
+
+[sub_resource type="Resource" id="Resource_i06mn"]
+script = ExtResource("3_xx53g")
+size_min = 0.34
+size_max = 0.34
+speed_min = 0.0
+speed_max = 0.0
+gravity = Vector3(0, 0, 0)
+emission_offset = Vector3(0.5, 0.45, 0)
+amount = 2
+lifetime = 2.0
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_fb3lx")
+texture = ExtResource("4_kd34j")
+additive = false
+local_coords = true
+id = &"star2"
+loop = true
+loop_period = 1.5
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_yxs4s"), SubResource("Resource_e4o0q")])
+tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_7eq5l"), SubResource("Resource_tpx5k")])
+
+[sub_resource type="Resource" id="Resource_dlsrp"]
+script = ExtResource("2_neo7m")
+property = "process_material:color"
+param = &"trail_color"
+
+[sub_resource type="Resource" id="Resource_7dfsm"]
+script = ExtResource("2_neo7m")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_60yks"]
+colors = PackedColorArray(1, 1, 1, 0.95, 1, 1, 1, 0)
+
+[sub_resource type="Curve" id="Curve_j3uw1"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_jmmy2"]
+script = ExtResource("3_xx53g")
+size_min = 0.2
+size_max = 0.2
+speed_min = 0.0
+speed_max = 0.0
+gravity = Vector3(0, 0, 0)
+emission_offset = Vector3(0.5, 0.45, 0)
+lifetime = 0.34
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_60yks")
+size_curve = SubResource("Curve_j3uw1")
+id = &"trail2"
+loop = true
+loop_period = 1.5
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_dlsrp"), SubResource("Resource_7dfsm")])
+tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_7eq5l"), SubResource("Resource_tpx5k")])
+
+[sub_resource type="Resource" id="Resource_0qnrh"]
+script = ExtResource("6_ws5au")
+name = &"color"
+kind = 3
+default_value = Color(1, 1, 1, 1)
+description = "Tint of the stars (white keeps the sprite's own yellow)."
+
+[sub_resource type="Resource" id="Resource_rd6uy"]
+script = ExtResource("6_ws5au")
+name = &"trail_color"
+kind = 3
+default_value = Color(1, 1, 1, 1)
+description = "Colour of the chaser trail."
+
+[sub_resource type="Resource" id="Resource_qm8b1"]
+script = ExtResource("6_ws5au")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("7_d51bv")
+id = &"fx.stun_stars"
+display_name = "Stun stars"
+params = Array[ExtResource("6_ws5au")]([SubResource("Resource_0qnrh"), SubResource("Resource_rd6uy"), SubResource("Resource_qm8b1")])
+layers = Array[ExtResource("1_bmp52")]([SubResource("Resource_14ysh"), SubResource("Resource_qrod4"), SubResource("Resource_fovs6"), SubResource("Resource_tx0m6"), SubResource("Resource_i06mn"), SubResource("Resource_jmmy2")])
+socket = &"Top"
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "Stars circling above a stunned unit, each chased by a white trail."

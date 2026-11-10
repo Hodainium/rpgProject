@@ -34,6 +34,7 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
   - Reason: small tuning changes cause hard-to-find bugs and need extensive playtesting. Never replace a whole file with `Write`, and never
   remove values, functions, nodes or cues you didn't add in this task. **Never change these folders through shell
   commands** (sed, mv, rm, redirection, or scripts), which would bypass the permission prompt.
+- **Builders only create new files (user, 2026-11-09), with one additive exception:** a builder never re-saves or rewrites an existing design file. The one exception, approved by the user the same day ("change files and their dependent registries in the same stroke"), is the effect registry through `game/tools/registry_patch.gd` (`RegistryPatch.add_missing_effects()`): a text patch that only appends an `ext_resource` line and the new entry to `definitions` / `rule_sets`, never touches or removes an existing line, and prints what it added. It is not for anything else (tag cues, the cue registry and every other existing design file still go through `Edit`). `FxValidator.sync_problems` (in `validate_content.tscn` and `test_vfx_content`) fails when a registry is missing a file, whoever forgot it.
 - **One approved exception:** `game/tools/build_demo.tscn` (spec `game-skeleton` 3.8) writes the example set through
   `ResourceSaver` into `content/demo/` and `presentation/demo/` only, and never overwrites an existing file. Run it
   only with the user's go-ahead. `game/tools/build_animation_sets.tscn` (spec `animation-sets` 3.3) works the same way
@@ -150,7 +151,7 @@ from C#.**
   (`BattleGoldenTests` cross-checks the same files).
 - **Tag checkpoint:** `res://game/tools/sync_tags.tscn` checks every `gas::tag` field under `res://content/` plus the
   code's system tags against the registry, and regenerates `gameplay_tags.gd` with GodotGAS's own generator. It writes
-  the registry only with `-- --add-missing` (through the registry's `add_tag()`). Run it after adding content or tags.
+  the registry only with `-- --add-missing` (adds the missing tags) or `-- --remove Tag,Tag` / `-- --remove-unused` (removes exactly those tags, and refuses any that the code or content still uses). Run it after adding or retiring content or tags.
 - **Attribute checkpoint:** `res://game/tools/generate_attributes.tscn [-- --check] [--set Unit]` regenerates each
   AttributeSet script from `attributes_draft.cfg`; `--check` writes nothing and exits 1 while one is out of date.
   After a GodotGAS upgrade, Generate once in the dashboard and copy draft + output into
@@ -238,7 +239,7 @@ from C#.**
   kind is one small script extending `FxLayer` (override `build`, `apply`, `start`, `update`, `stop`, `ended`); a new look is a
   shader in `game/fx/shaders/` with a documented header (`// @uniform name text`, checked by `test_fx`).
 - **From GodotGAS:** an `FxCueNotify` scene (set `fx`, `bindings`) registered under a `Cue.*` tag in `godot_gas/cue_registry.tres`,
-  then any effect, ability or item lists that tag in `application_cue_tags` / `persistent_cue_tags` / `removal_cue_tags`.
+  then any effect lists that tag in `application_cue_tags` / `persistent_cue_tags` / `periodic_cue_tags` / `removal_cue_tags`, and an ability lists it in `BattleAbility.cast_cue_tags` (executed on its caster when it activates; plain GAS cue tags, never in a log or hash).
   From a screen: an `FxListener` (message channel → effect) or `FxManager.play` directly. Hybrid card screens put an `FxStage`
   in the screen and anchor with `FxAnchor.on_stage`.
 - **Presentation only:** never touch combat or run state, never draw from a run or battle RNG (the sound layer has its own),

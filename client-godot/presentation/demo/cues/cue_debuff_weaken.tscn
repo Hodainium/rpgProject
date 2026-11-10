@@ -1,0 +1,32 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_ydu43"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/stat_arrows.tres" id="2_id14s"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_opgqu"]
+
+[sub_resource type="Resource" id="Resource_xtesl"]
+script = ExtResource("3_opgqu")
+param = &"color"
+value = Color(0.65, 0.4, 0.85, 1)
+
+[sub_resource type="Resource" id="Resource_6xrcg"]
+script = ExtResource("3_opgqu")
+param = &"drift"
+value = Vector3(0, -1.1, 0)
+
+[sub_resource type="Resource" id="Resource_5s1ux"]
+script = ExtResource("3_opgqu")
+param = &"start"
+value = Vector3(0, 0.5, 0)
+
+[sub_resource type="Resource" id="Resource_6casj"]
+script = ExtResource("3_opgqu")
+param = &"angle"
+value = 180.0
+
+[node name="CueDebuffWeaken" type="Node" unique_id=1955762189]
+script = ExtResource("1_ydu43")
+fx = ExtResource("2_id14s")
+bindings = Array[ExtResource("3_opgqu")]([SubResource("Resource_xtesl"), SubResource("Resource_6xrcg"), SubResource("Resource_5s1ux"), SubResource("Resource_6casj")])
+stop_fade = 0.4
+auto_destroy = false

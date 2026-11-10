@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_mdku4"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="2_lw3kf"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_ujq55"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/bastion_strike.tres" id="4_7jbdu"]
+
+[sub_resource type="Resource" id="Resource_gfxm1"]
+script = ExtResource("3_ujq55")
+param = &"color"
+value = Color(0.4, 0.7, 1, 1)
+
+[sub_resource type="Resource" id="Resource_awrua"]
+script = ExtResource("3_ujq55")
+param = &"ray_count"
+value = 8.0
+
+[sub_resource type="Resource" id="Resource_nida2"]
+script = ExtResource("3_ujq55")
+param = &"spin"
+value = 0.04
+
+[sub_resource type="Resource" id="Resource_hchg6"]
+script = ExtResource("3_ujq55")
+param = &"intensity"
+value = 1.0
+
+[sub_resource type="Resource" id="Resource_k70dr"]
+script = ExtResource("3_ujq55")
+param = &"color"
+value = Color(0.4, 0.7, 1, 1)
+
+[node name="CueUltBastion" type="Node" unique_id=2136032938]
+script = ExtResource("1_mdku4")
+fx = ExtResource("2_lw3kf")
+bindings = Array[ExtResource("3_ujq55")]([SubResource("Resource_gfxm1"), SubResource("Resource_awrua"), SubResource("Resource_nida2"), SubResource("Resource_hchg6")])
+target_fx = ExtResource("4_7jbdu")
+target_bindings = Array[ExtResource("3_ujq55")]([SubResource("Resource_k70dr")])
+target_stagger = 0.08

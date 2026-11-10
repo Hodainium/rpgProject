@@ -23,4 +23,5 @@ activation_query = ExtResource("6_ctrl")
 executions = Array[ExtResource("2_l1qbm")]([SubResource("Resource_a1i6c")])
 animation = ExtResource("4_pyu8i")
 ability_tag = &"Ability.Ult.Quake"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Quake"])
 cost_effect = ExtResource("5_insjy")

@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_da136"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/stat_apply.tres" id="2_ecv6r"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_resjx"]
+
+[sub_resource type="Resource" id="Resource_j1iyv"]
+script = ExtResource("3_resjx")
+param = &"color"
+value = Color(1, 0.95, 0.7, 1)
+
+[node name="CueApplyBuff" type="Node" unique_id=1153659679]
+script = ExtResource("1_da136")
+fx = ExtResource("2_ecv6r")
+bindings = Array[ExtResource("3_resjx")]([SubResource("Resource_j1iyv")])

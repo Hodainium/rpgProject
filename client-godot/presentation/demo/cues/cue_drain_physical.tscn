@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_ofk8k"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/drain_absorb.tres" id="2_ljl27"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_cl7uw"]
+
+[sub_resource type="Resource" id="Resource_02nf5"]
+script = ExtResource("3_cl7uw")
+param = &"color"
+value = Color(0.93, 0.93, 0.96, 1)
+
+[node name="CueDrainPhysical" type="Node" unique_id=1641051228]
+script = ExtResource("1_ofk8k")
+fx = ExtResource("2_ljl27")
+bindings = Array[ExtResource("3_cl7uw")]([SubResource("Resource_02nf5")])

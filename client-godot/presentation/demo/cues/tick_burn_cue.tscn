@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_blm8e"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/fire_hit.tres" id="2_r3v4l"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_2ybdm"]
+
+[sub_resource type="Resource" id="Resource_fkys2"]
+script = ExtResource("3_2ybdm")
+param = &"size"
+value = 0.5
+
+[sub_resource type="Resource" id="Resource_7rt4x"]
+script = ExtResource("3_2ybdm")
+param = &"intensity"
+value = 0.6
+
+[node name="TickBurnCue" type="Node" unique_id=983682517]
+script = ExtResource("1_blm8e")
+fx = ExtResource("2_r3v4l")
+bindings = Array[ExtResource("3_2ybdm")]([SubResource("Resource_fkys2"), SubResource("Resource_7rt4x")])

@@ -14,3 +14,5 @@ script = ExtResource("3_lb1r2")
 application_query = SubResource("Resource_immune")
 policy = 3
 granted_tags = Array[StringName]([&"Weakness.Fire", &"Status.Debuff.Exposed"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Debuff.Exposed"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Debuff"])

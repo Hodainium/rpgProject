@@ -25,3 +25,5 @@ max_stacks = 1
 duration_turns = 2
 modifiers = Array[ExtResource("2_n48i1")]([SubResource("Resource_1te2q")])
 granted_tags = Array[StringName]([&"Status.Debuff.DefenseDown"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Debuff.DefenseDown"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Debuff"])

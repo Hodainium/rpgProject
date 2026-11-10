@@ -13,3 +13,4 @@ attribute_name = "hp"
 [resource]
 script = ExtResource("4_o6ivl")
 modifiers = Array[ExtResource("2_nd4ph")]([SubResource("Resource_621wf")])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Revive"])

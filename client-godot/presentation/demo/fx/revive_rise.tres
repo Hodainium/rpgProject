@@ -1,0 +1,154 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_oydxa"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_3ik85"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_5kw8l"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="4_b7sh7"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_d7t26"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="6_0ghd4"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="7_hcy62"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_light_layer.gd" id="8_ehmo3"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="9_1jdxf"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="10_giyg0"]
+
+[sub_resource type="Resource" id="Resource_8jrb4"]
+script = ExtResource("2_3ik85")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_nrhck"]
+script = ExtResource("2_3ik85")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.4
+
+[sub_resource type="Resource" id="Resource_bou1m"]
+script = ExtResource("2_3ik85")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_8vt8w"]
+script = ExtResource("3_5kw8l")
+shader = ExtResource("4_b7sh7")
+shader_params = {
+"fade_out": 0.7,
+"falloff": 5.0
+}
+size = Vector2(1.3, 3.6)
+id = &"beam"
+space = 2
+duration = 1.1
+bindings = Array[ExtResource("2_3ik85")]([SubResource("Resource_8jrb4"), SubResource("Resource_nrhck"), SubResource("Resource_bou1m")])
+
+[sub_resource type="Resource" id="Resource_b080c"]
+script = ExtResource("2_3ik85")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_j8hdh"]
+script = ExtResource("2_3ik85")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_xskg0"]
+offsets = PackedFloat32Array(0, 0.2, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_f8s3g"]
+script = ExtResource("6_0ghd4")
+size_max = 0.2
+spread = 25.0
+speed_min = 0.8
+speed_max = 2.0
+gravity = Vector3(0, 0.6, 0)
+emission_radius = 0.4
+soft_distance = 0.3
+amount = 30
+lifetime = 1.3
+explosiveness = 0.2
+color_ramp = SubResource("Gradient_xskg0")
+id = &"motes"
+bindings = Array[ExtResource("2_3ik85")]([SubResource("Resource_b080c"), SubResource("Resource_j8hdh")])
+
+[sub_resource type="Resource" id="Resource_xemeu"]
+script = ExtResource("2_3ik85")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_ar1rv"]
+script = ExtResource("2_3ik85")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Curve" id="Curve_jdchr"]
+_limits = [-360.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_i7830"]
+script = ExtResource("5_d7t26")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_jdchr")
+
+[sub_resource type="Resource" id="Resource_a4pbg"]
+script = ExtResource("3_5kw8l")
+shader = ExtResource("7_hcy62")
+shader_params = {
+"end_radius": 0.95,
+"intensity": 1.4,
+"ring_width": 0.07,
+"start_radius": 0.2
+}
+size = Vector2(2.4, 2.4)
+face_camera = false
+id = &"ring"
+space = 2
+socket = &"Base"
+duration = 0.7
+bindings = Array[ExtResource("2_3ik85")]([SubResource("Resource_xemeu"), SubResource("Resource_ar1rv")])
+tracks = Array[ExtResource("5_d7t26")]([SubResource("Resource_i7830")])
+
+[sub_resource type="Resource" id="Resource_10xku"]
+script = ExtResource("2_3ik85")
+property = "light_color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_5iald"]
+script = ExtResource("8_ehmo3")
+energy = 3.0
+light_range = 5.0
+seconds = 0.9
+id = &"light"
+min_quality = 2
+bindings = Array[ExtResource("2_3ik85")]([SubResource("Resource_10xku")])
+
+[sub_resource type="Resource" id="Resource_tder3"]
+script = ExtResource("9_1jdxf")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.95, 0.7, 1)
+description = "Light colour."
+
+[sub_resource type="Resource" id="Resource_0hlbk"]
+script = ExtResource("9_1jdxf")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Beam brightness."
+
+[sub_resource type="Resource" id="Resource_v85e6"]
+script = ExtResource("9_1jdxf")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("10_giyg0")
+id = &"fx.revive_rise"
+display_name = "Revive"
+params = Array[ExtResource("9_1jdxf")]([SubResource("Resource_tder3"), SubResource("Resource_0hlbk"), SubResource("Resource_v85e6")])
+layers = Array[ExtResource("1_oydxa")]([SubResource("Resource_8vt8w"), SubResource("Resource_f8s3g"), SubResource("Resource_a4pbg"), SubResource("Resource_5iald")])
+socket = &"Base"
+tags = Array[StringName]([&"Fx.Kind.Heal"])
+description = "A column of light with rising motes and a ring on the floor: a unit brought back."

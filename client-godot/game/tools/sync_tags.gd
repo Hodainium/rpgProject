@@ -4,11 +4,12 @@
 ## Checked: every field marked "gas::tag" (GodotGAS's and ours) in every resource and scene under res://content/ and
 ## res://presentation/ (the UI policy, layers and slots, spec ui-framework), plus the tags the code itself uses
 ## (SYSTEM_TAGS, the Auto roles, the UI state tags, and the gameplay message channels, verbs and notification tags). Reported: tags in
-## use but not registered (with where), tags with a bad format, and registered tags nothing uses (info only; nothing
-## is ever removed).
-## Writes only gameplay_tags.gd. With --add-missing it also adds the missing tags through the registry's own
-## add_tag() (which validates the format, sorts, saves and regenerates). Exit code 1 while anything is missing.
-##   godot --headless --path client-godot --quit-after 600 res://game/tools/sync_tags.tscn [-- --add-missing]
+## use but not registered (with where), tags with a bad format, and registered tags nothing uses.
+## Writes only gameplay_tags.gd. With --add-missing it also adds the missing tags (it validates the format, sorts, saves and
+## regenerates). With --remove <Tag>[,<Tag>...] it removes exactly those registered tags, and refuses any that something still uses (it
+## names where) or that does not exist; --remove-unused removes every tag reported as unused. A tag with children is only removed
+## itself, and a tag the code or content uses is never removed. Exit code 1 while anything is missing or a removal was refused.
+##   godot --headless --path client-godot --quit-after 600 res://game/tools/sync_tags.tscn [-- --add-missing] [--remove Tag,Tag | --remove-unused]
 extends Node
 
 const SETTINGS := preload("res://addons/GodotGAS/utilities/project_settings.gd")
@@ -98,8 +99,55 @@ func _ready() -> void:
 			ResourceSaver.set_uid(registry_path, uid)
 		print("sync_tags: added %d tag(s) to %s" % [missing.size(), registry_path])
 		missing.clear()
+	var refused := _remove(registry, registry_path, unused)
 	GameplayTagGenerator.generate_tags_file(registry.tags)
-	get_tree().quit(1 if not missing.is_empty() or not malformed.is_empty() else 0)
+	get_tree().quit(1 if not missing.is_empty() or not malformed.is_empty() or refused else 0)
+
+
+## --remove / --remove-unused: takes tags out of the registry (a tag in use, or not registered, is refused and named). Returns whether
+## anything was refused.
+func _remove(registry: GameplayTagRegistry, registry_path: String, unused: Array) -> bool:
+	var args := OS.get_cmdline_user_args()
+	var wanted: Array = []
+	if args.has("--remove-unused"):
+		wanted.append_array(unused)
+	if args.has("--remove") and args.find("--remove") + 1 < args.size():
+		for tag in args[args.find("--remove") + 1].split(",", false):
+			wanted.append(StringName(tag.strip_edges()))
+	if wanted.is_empty():
+		return false
+	var plan := removal_plan(registry.tags, _used, wanted)
+	for entry in plan["refused"]:
+		print("  %-15s %s  (%s)" % [entry["reason"], entry["tag"], entry["where"]])
+	var refused: bool = not (plan["refused"] as Array).is_empty()
+	var removed: int = (plan["remove"] as Array).size()
+	for tag in plan["remove"]:
+		registry.tags.erase(tag)
+		print("  removed         %s" % tag)
+	if removed > 0:
+		var uid := ResourceLoader.get_resource_uid(registry_path)
+		ResourceSaver.save(registry, registry_path)
+		if uid != ResourceUID.INVALID_ID:
+			ResourceSaver.set_uid(registry_path, uid)
+		print("sync_tags: removed %d tag(s) from %s" % [removed, registry_path])
+	return refused
+
+
+## Which of `wanted` may leave a registry holding `tags`, given the tags in use (`used`: tag -> where): {remove: [tag], refused:
+## [{tag, reason, where}]}. A tag in use or with a used descendant stays; so does a tag that is not registered (nothing to remove).
+static func removal_plan(tags: Array, used: Dictionary, wanted: Array) -> Dictionary:
+	var remove: Array = []
+	var refused: Array = []
+	for tag in wanted:
+		if not tags.has(tag):
+			refused.append({"tag": tag, "reason": "NOT REGISTERED", "where": "nothing to remove"})
+		elif used.has(tag):
+			refused.append({"tag": tag, "reason": "STILL USED", "where": ", ".join(used[tag])})
+		elif used.keys().any(func(other): return String(other).begins_with(String(tag) + ".")):
+			refused.append({"tag": tag, "reason": "STILL USED", "where": "a tag under it is used"})
+		elif not remove.has(tag):
+			remove.append(tag)
+	return {"remove": remove, "refused": refused}
 
 
 ## A parent tag counts as registered when it is in the registry, like GodotGAS's hierarchy (Event.Damage.Dealt.Ice

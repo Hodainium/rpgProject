@@ -15,13 +15,19 @@ var unit_id: StringName = &""
 var stage: FxStage
 ## Shifts the effect's 3D holder from the anchor (local to the node, or in the world for POSITION3D).
 var offset: Vector3 = Vector3.ZERO
+## Spec vfx-content-pass 3.6: which socket role the effect attaches to (FxSocket.ROLES); empty = the effect's own default.
+var socket: StringName = &""
+## Set by FxService when it places the effect: where the socket is in the node's local space, and the unit's radius.
+var socket_offset: Vector3 = Vector3.ZERO
+var radius: float = 0.0
 
 
-static func node3d(target: Node3D, shift: Vector3 = Vector3.ZERO) -> FxAnchor:
+static func node3d(target: Node3D, shift: Vector3 = Vector3.ZERO, socket_role: StringName = &"") -> FxAnchor:
 	var anchor := FxAnchor.new()
 	anchor.kind = Kind.NODE3D
 	anchor.node = target
 	anchor.offset = shift
+	anchor.socket = socket_role
 	return anchor
 
 
@@ -44,11 +50,12 @@ static func screen() -> FxAnchor:
 
 
 ## A battle unit's view by its unit id ("P1", "E2"); the service finds the view (UnitAnimator.unit_id).
-static func unit(id: StringName, shift: Vector3 = Vector3.ZERO) -> FxAnchor:
+static func unit(id: StringName, shift: Vector3 = Vector3.ZERO, socket_role: StringName = &"") -> FxAnchor:
 	var anchor := FxAnchor.new()
 	anchor.kind = Kind.UNIT
 	anchor.unit_id = id
 	anchor.offset = shift
+	anchor.socket = socket_role
 	return anchor
 
 
@@ -90,10 +97,27 @@ func world_position() -> Variant:
 		Kind.NODE3D, Kind.UNIT, Kind.STAGE:
 			var target := node as Node3D
 			if target != null and is_instance_valid(target) and target.is_inside_tree():
-				return target.global_position + target.global_transform.basis * offset
+				return target.global_position + target.global_transform.basis * (socket_offset + offset)
 			if kind == Kind.STAGE and target == null:
 				return offset
 	return null
+
+
+## A copy for one play with the socket placed (the caller's anchor is left alone, so it can be reused for another play).
+func placed(default_socket: StringName) -> FxAnchor:
+	var copy := FxAnchor.new()
+	copy.kind = kind
+	copy.node = node
+	copy.position = position
+	copy.unit_id = unit_id
+	copy.stage = stage
+	copy.offset = offset
+	copy.socket = socket
+	var target := world_node()
+	if target != null and is_instance_valid(target):
+		copy.socket_offset = FxAttach.socket_position(target, socket if socket != &"" else default_socket)
+		copy.radius = FxAttach.radius(target)
+	return copy
 
 
 func describe() -> String:

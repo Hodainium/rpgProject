@@ -12,3 +12,4 @@ percent_x100 = 1500
 [resource]
 script = ExtResource("4_l0fwg")
 executions = Array[ExtResource("1_n40vd")]([SubResource("Resource_5ox63")])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Heal"])

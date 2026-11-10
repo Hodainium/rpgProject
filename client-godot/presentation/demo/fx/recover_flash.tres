@@ -1,0 +1,133 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_jycqy"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_1m7yc"]
+[ext_resource type="Shader" path="res://game/fx/shaders/material/hex_shield.gdshader" id="3_5pafw"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_mesh_layer.gd" id="4_r5h5k"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_b1qg2"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="6_f4250"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="7_brshj"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="8_pedg5"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="9_f0xu5"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="10_y8dxx"]
+
+[sub_resource type="Resource" id="Resource_lkbvi"]
+script = ExtResource("2_1m7yc")
+property = "material_override:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_w2v5f"]
+render_priority = 0
+shader = ExtResource("3_5pafw")
+shader_parameter/color = null
+shader_parameter/intensity = null
+shader_parameter/hex_scale = null
+shader_parameter/strength = null
+shader_parameter/sweep_speed = null
+
+[sub_resource type="SphereMesh" id="SphereMesh_4tyre"]
+radius = 0.9
+height = 1.8
+
+[sub_resource type="Curve" id="Curve_38m5w"]
+_limits = [0.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 1.3), 0.0, 0.0, 0, 0, Vector2(0.3, 1), 0.0, 0.0, 0, 0, Vector2(1, 1.05), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Resource" id="Resource_r7m47"]
+script = ExtResource("5_b1qg2")
+property = "scale"
+curve = SubResource("Curve_38m5w")
+mode = 2
+
+[sub_resource type="Curve" id="Curve_unuk2"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.25, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Resource" id="Resource_rsemq"]
+script = ExtResource("5_b1qg2")
+property = "material_override:shader_parameter/strength"
+curve = SubResource("Curve_unuk2")
+
+[sub_resource type="Resource" id="Resource_hwxlk"]
+script = ExtResource("4_r5h5k")
+mesh = SubResource("SphereMesh_4tyre")
+material = SubResource("ShaderMaterial_w2v5f")
+seconds = 0.6
+id = &"dome"
+bindings = Array[ExtResource("2_1m7yc")]([SubResource("Resource_lkbvi")])
+tracks = Array[ExtResource("5_b1qg2")]([SubResource("Resource_r7m47"), SubResource("Resource_rsemq")])
+
+[sub_resource type="Resource" id="Resource_ggn7n"]
+script = ExtResource("2_1m7yc")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_ub3ll"]
+script = ExtResource("2_1m7yc")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_iepv8"]
+script = ExtResource("6_f4250")
+shader = ExtResource("7_brshj")
+shader_params = {
+"end_radius": 0.95,
+"intensity": 1.6,
+"ring_width": 0.07,
+"start_radius": 0.15
+}
+size = Vector2(2.6, 2.6)
+id = &"ring"
+space = 2
+duration = 0.45
+bindings = Array[ExtResource("2_1m7yc")]([SubResource("Resource_ggn7n"), SubResource("Resource_ub3ll")])
+
+[sub_resource type="Resource" id="Resource_i4i3u"]
+script = ExtResource("2_1m7yc")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_kp1ft"]
+script = ExtResource("2_1m7yc")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_o2275"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_ffhlk"]
+script = ExtResource("8_pedg5")
+size_min = 0.06
+size_max = 0.12
+gravity = Vector3(0, 0, 0)
+damping = 2.0
+emit_from_mesh = true
+amount = 22
+lifetime = 0.6
+color_ramp = SubResource("Gradient_o2275")
+id = &"sparks"
+bindings = Array[ExtResource("2_1m7yc")]([SubResource("Resource_i4i3u"), SubResource("Resource_kp1ft")])
+
+[sub_resource type="Resource" id="Resource_jyyv0"]
+script = ExtResource("9_f0xu5")
+name = &"color"
+kind = 3
+default_value = Color(0.7, 0.9, 1, 1)
+description = "Shield colour."
+
+[sub_resource type="Resource" id="Resource_1ijx8"]
+script = ExtResource("9_f0xu5")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("10_y8dxx")
+id = &"fx.recover_flash"
+display_name = "Recovery"
+params = Array[ExtResource("9_f0xu5")]([SubResource("Resource_jyyv0"), SubResource("Resource_1ijx8")])
+layers = Array[ExtResource("1_jycqy")]([SubResource("Resource_hwxlk"), SubResource("Resource_iepv8"), SubResource("Resource_ffhlk")])
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "A hex shield snaps back on for a moment, with a ring and sparks."

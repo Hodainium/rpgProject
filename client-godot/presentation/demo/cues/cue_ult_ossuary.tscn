@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_a2kbu"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="2_oxnin"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_kylmn"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ossuary_strike.tres" id="4_x50ca"]
+
+[sub_resource type="Resource" id="Resource_bxr4g"]
+script = ExtResource("3_kylmn")
+param = &"color"
+value = Color(0.9, 0.88, 0.75, 1)
+
+[sub_resource type="Resource" id="Resource_m7ipn"]
+script = ExtResource("3_kylmn")
+param = &"ray_count"
+value = 12.0
+
+[sub_resource type="Resource" id="Resource_l70st"]
+script = ExtResource("3_kylmn")
+param = &"spin"
+value = 0.05
+
+[sub_resource type="Resource" id="Resource_47qpo"]
+script = ExtResource("3_kylmn")
+param = &"intensity"
+value = 1.0
+
+[sub_resource type="Resource" id="Resource_ole5o"]
+script = ExtResource("3_kylmn")
+param = &"color"
+value = Color(0.9, 0.88, 0.75, 1)
+
+[node name="CueUltOssuary" type="Node" unique_id=993107543]
+script = ExtResource("1_a2kbu")
+fx = ExtResource("2_oxnin")
+bindings = Array[ExtResource("3_kylmn")]([SubResource("Resource_bxr4g"), SubResource("Resource_m7ipn"), SubResource("Resource_l70st"), SubResource("Resource_47qpo")])
+target_fx = ExtResource("4_x50ca")
+target_bindings = Array[ExtResource("3_kylmn")]([SubResource("Resource_ole5o")])
+target_stagger = 0.12

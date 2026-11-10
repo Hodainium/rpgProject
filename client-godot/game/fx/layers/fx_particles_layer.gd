@@ -14,6 +14,14 @@ extends FxLayer
 ## Size over life (x 0..1, y multiplier).
 @export var size_curve: Curve
 @export var texture: Texture2D
+## Flipbook (spec vfx-content-pass 3.5): when the texture is a sprite sheet, its grid (columns x rows) and the number of
+## times the whole sheet plays during a particle's life (0 = the sheet is not animated, the first frame shows). The grid
+## belongs to the sheet: a different texture comes with its own columns and rows.
+@export var h_frames: int = 1
+@export var v_frames: int = 1
+@export var anim_cycles: float = 1.0
+## Each particle starts on a random frame (a sheet of different shards or bubbles rather than an animation).
+@export var random_frame: bool = false
 @export var additive: bool = true
 @export var local_coords: bool = false
 ## Fewer particles on low quality (low 40 %, medium 70 %).
@@ -68,6 +76,12 @@ func _binds_amount() -> bool:
 ## Sets the colour ramp and size curve on a generated process material.
 func _style(material: ParticleProcessMaterial) -> void:
 	material.color = color
+	if h_frames * v_frames > 1:
+		material.anim_speed_min = anim_cycles
+		material.anim_speed_max = anim_cycles
+		if random_frame:
+			material.anim_offset_min = 0.0
+			material.anim_offset_max = 1.0
 	if color_ramp != null:
 		var ramp := GradientTexture1D.new()
 		ramp.gradient = color_ramp
@@ -76,3 +90,8 @@ func _style(material: ParticleProcessMaterial) -> void:
 		var curve := CurveTexture.new()
 		curve.curve = size_curve
 		material.scale_curve = curve
+
+
+## True when the texture is a sprite sheet.
+func _is_flipbook() -> bool:
+	return h_frames * v_frames > 1

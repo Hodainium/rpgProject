@@ -19,3 +19,5 @@ max_stacks = 1
 duration_turns = 2
 modifiers = Array[ExtResource("2_beibf")]([SubResource("Resource_0weoc")])
 granted_tags = Array[StringName]([&"Status.Buff.DefenseUp"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.DefenseUp"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff"])

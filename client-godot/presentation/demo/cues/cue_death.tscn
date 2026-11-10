@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_0w7q5"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/death_fade.tres" id="2_gsa7l"]
+
+[node name="CueDeath" type="Node" unique_id=2059248964]
+script = ExtResource("1_0w7q5")
+fx = ExtResource("2_gsa7l")

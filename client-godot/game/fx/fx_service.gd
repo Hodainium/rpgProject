@@ -170,6 +170,7 @@ func play_nested(effect: Variant, anchor: FxAnchor, params: Dictionary, depth: i
 	if anchor == null or not anchor.is_valid():
 		_stats["skipped"] += 1
 		return FxHandle.make_inert(def)
+	anchor = anchor.placed(def.socket)  # the socket's place and the unit's radius, for this play
 	_enforce_max_instances(def)
 	var handle := FxHandle.new()
 	handle.service = self
@@ -177,6 +178,10 @@ func play_nested(effect: Variant, anchor: FxAnchor, params: Dictionary, depth: i
 	handle.anchor = anchor
 	handle.depth = depth
 	handle.params = _resolve_params(def, params)
+	# Spec vfx-content-pass 3.6: an effect with a depth_bias parameter that the caller did not set gets the unit's radius, so the
+	# unit's own mesh does not cut it and no caller passes numbers per unit.
+	if anchor.radius > 0.0 and def.param(&"depth_bias") != null and not given_has(params, &"depth_bias"):
+		handle.params[&"depth_bias"] = anchor.radius
 	handle.instance = _acquire(def)
 	_attach(handle)
 	_prepare_layers(handle)
@@ -373,21 +378,28 @@ func _ensure_hosts() -> void:
 func _resolve_anchor(anchor: FxAnchor) -> FxAnchor:
 	if anchor.kind != FxAnchor.Kind.UNIT:
 		return anchor
-	var view: Node3D = null
 	if anchor.unit_id == &"":
 		_warn_once("fx: a unit anchor needs a unit id")
 		return null
-	if unit_resolver.is_valid():
-		view = unit_resolver.call(anchor.unit_id) as Node3D
-	else:
-		for candidate in get_tree().get_nodes_in_group(UnitAnimator.GROUP):
-			if candidate.unit_id == anchor.unit_id and not candidate.is_queued_for_deletion():
-				view = candidate  # a view queued for deletion (the last battle's) is not the unit's view
-				break
+	var view := unit_view(anchor.unit_id)
 	if view == null:
 		_warn_once("fx: no view for unit '%s'" % anchor.unit_id)
 		return null
 	return FxAnchor.node3d(view, anchor.offset)
+
+
+## The 3D view of a battle unit by its unit id ("P1", "E2"), or null. A GameplayCue's target is an actor; for a unit that is this view.
+func unit_view(unit_id: StringName) -> Node3D:
+	if unit_resolver.is_valid():
+		return unit_resolver.call(unit_id) as Node3D
+	for candidate in get_tree().get_nodes_in_group(UnitAnimator.GROUP):
+		if candidate.unit_id == unit_id and not candidate.is_queued_for_deletion():
+			return candidate  # a view queued for deletion (the last battle's) is not the unit's view
+	return null
+
+
+static func given_has(params: Dictionary, key: StringName) -> bool:
+	return params.has(key) or params.has(String(key))
 
 
 func _resolve_params(def: FxDefinition, given: Dictionary) -> Dictionary:
@@ -435,7 +447,7 @@ func _attach(handle: FxHandle) -> void:
 		add_child(instance.holder_state)  # state-only layers are not tied to the anchor
 	if instance.uses_3d():
 		var host: Node3D = null
-		var local := anchor.offset
+		var local := anchor.offset + anchor.socket_offset
 		match anchor.kind:
 			FxAnchor.Kind.NODE3D:
 				host = anchor.node as Node3D

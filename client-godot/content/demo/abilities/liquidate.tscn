@@ -21,5 +21,6 @@ asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
 executions = Array[ExtResource("2_35wuk")]([SubResource("Resource_trlv7")])
 animation = ExtResource("4_6j0cl")
 ability_tag = &"Ability.Ult.Liquidate"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Liquidate"])
 activation_query = ExtResource("5_6d2ak")
 cost_effect = ExtResource("6_hqhxk")

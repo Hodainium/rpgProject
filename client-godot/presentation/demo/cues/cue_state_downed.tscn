@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_3mxa3"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/status_skin.tres" id="2_yr5fq"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_6aksh"]
+
+[sub_resource type="Resource" id="Resource_numj7"]
+script = ExtResource("3_6aksh")
+param = &"color"
+value = Color(0.8, 0.15, 0.2, 1)
+
+[sub_resource type="Resource" id="Resource_a3vbi"]
+script = ExtResource("3_6aksh")
+param = &"power"
+value = 1.8
+
+[sub_resource type="Resource" id="Resource_fq7jb"]
+script = ExtResource("3_6aksh")
+param = &"fill"
+value = 0.1
+
+[sub_resource type="Resource" id="Resource_tl3gb"]
+script = ExtResource("3_6aksh")
+param = &"grow"
+value = 0.01
+
+[sub_resource type="Resource" id="Resource_g3ou0"]
+script = ExtResource("3_6aksh")
+param = &"erosion"
+value = 0.5
+
+[sub_resource type="Resource" id="Resource_e2xfq"]
+script = ExtResource("3_6aksh")
+param = &"scroll"
+value = -0.9
+
+[node name="CueStateDowned" type="Node" unique_id=1753395061]
+script = ExtResource("1_3mxa3")
+fx = ExtResource("2_yr5fq")
+bindings = Array[ExtResource("3_6aksh")]([SubResource("Resource_numj7"), SubResource("Resource_a3vbi"), SubResource("Resource_fq7jb"), SubResource("Resource_tl3gb"), SubResource("Resource_g3ou0"), SubResource("Resource_e2xfq")])
+stop_fade = 0.4
+auto_destroy = false

@@ -7,3 +7,4 @@
 [resource]
 script = ExtResource("3_qcplx")
 remove_effects_with_tags = Array[StringName]([&"Status.Buff"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Cleanse"])

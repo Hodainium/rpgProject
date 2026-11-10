@@ -44,6 +44,7 @@ asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage"
 executions = Array[ExtResource("2_ypy7e")]([SubResource("Resource_ttyol"), SubResource("Resource_48qdb"), SubResource("Resource_fx8u0"), SubResource("Resource_sgsvm")])
 animation = ExtResource("7_nrvo7")
 ability_tag = &"Ability.Ult.Pandemic"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Pandemic"])
 activation_query = ExtResource("8_rjln5")
 cost_effect = ExtResource("9_rilfj")
 description = "Fire damage to every enemy. Weakens every enemy."

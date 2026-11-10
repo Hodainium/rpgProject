@@ -1,0 +1,135 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_ho4lo"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_1f4v2"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_bhjb2"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/smoke_sheet.png" id="4_w06n3"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_y4dma"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_fresnel_layer.gd" id="6_pliqw"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="7_2u0bf"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="8_0escg"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="9_xrie8"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="10_ilfyq"]
+
+[sub_resource type="Resource" id="Resource_p57no"]
+script = ExtResource("2_1f4v2")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_xpqot"]
+script = ExtResource("2_1f4v2")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_h7rgn"]
+offsets = PackedFloat32Array(0, 0.2, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.75, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_xg6pw"]
+script = ExtResource("3_bhjb2")
+size_min = 1.6
+size_max = 2.8
+speed_min = 0.3
+speed_max = 1.0
+gravity = Vector3(0, 0.2, 0)
+emission_radius = 0.7
+soft_distance = 0.5
+amount = 14
+lifetime = 1.8
+explosiveness = 0.35
+color_ramp = SubResource("Gradient_h7rgn")
+texture = ExtResource("4_w06n3")
+h_frames = 4
+v_frames = 4
+additive = false
+id = &"cloud"
+bindings = Array[ExtResource("2_1f4v2")]([SubResource("Resource_p57no"), SubResource("Resource_xpqot")])
+
+[sub_resource type="Resource" id="Resource_etoyu"]
+script = ExtResource("2_1f4v2")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_vw2iu"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_mwup3"]
+script = ExtResource("3_bhjb2")
+size_min = 0.06
+size_max = 0.12
+speed_min = 0.6
+speed_max = 1.8
+gravity = Vector3(0, 0.3, 0)
+emission_radius = 0.8
+amount = 26
+lifetime = 1.2
+color = Color(1, 0.5, 0.15, 1)
+color_ramp = SubResource("Gradient_vw2iu")
+id = &"flecks"
+bindings = Array[ExtResource("2_1f4v2")]([SubResource("Resource_etoyu")])
+
+[sub_resource type="Resource" id="Resource_gyrh1"]
+script = ExtResource("2_1f4v2")
+property = "color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_fxffq"]
+script = ExtResource("6_pliqw")
+power = 2.0
+fill = 0.2
+grow = 0.012
+erosion = 0.4
+noise_scale = 5.0
+scroll = 0.8
+intensity = 1.3
+seconds = 1.4
+id = &"sheen"
+bindings = Array[ExtResource("2_1f4v2")]([SubResource("Resource_gyrh1")])
+
+[sub_resource type="Resource" id="Resource_5ntcl"]
+script = ExtResource("2_1f4v2")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_2egio"]
+script = ExtResource("2_1f4v2")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_8bf0k"]
+script = ExtResource("7_2u0bf")
+shader = ExtResource("8_0escg")
+shader_params = {
+"end_radius": 0.95,
+"intensity": 1.6,
+"ring_width": 0.07,
+"start_radius": 0.15
+}
+size = Vector2(3.4, 3.4)
+id = &"wave"
+space = 2
+duration = 0.8
+bindings = Array[ExtResource("2_1f4v2")]([SubResource("Resource_5ntcl"), SubResource("Resource_2egio")])
+
+[sub_resource type="Resource" id="Resource_6spf6"]
+script = ExtResource("9_xrie8")
+name = &"color"
+kind = 3
+default_value = Color(0.6, 0.9, 0.25, 1)
+description = "Plague colour."
+
+[sub_resource type="Resource" id="Resource_4hod3"]
+script = ExtResource("9_xrie8")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("10_ilfyq")
+id = &"fx.pandemic_strike"
+display_name = "Pandemic strike"
+params = Array[ExtResource("9_xrie8")]([SubResource("Resource_6spf6"), SubResource("Resource_4hod3")])
+layers = Array[ExtResource("1_ho4lo")]([SubResource("Resource_xg6pw"), SubResource("Resource_mwup3"), SubResource("Resource_fxffq"), SubResource("Resource_8bf0k")])
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "A sick green cloud rolls over the target, flecked with fire, and its skin turns to ooze."

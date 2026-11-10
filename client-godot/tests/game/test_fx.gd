@@ -692,28 +692,37 @@ func _scripts(directory: String) -> Array[String]:
 func test_shader_library_documents_its_uniforms() -> void:
 	if skip_in_export():
 		return
-	var directory := "res://game/fx/shaders/"
-	var files := DirAccess.get_files_at(directory)
-	check(files.size() >= 10, "the shader library is there (%d files)" % files.size())
+	var include_line := RegEx.create_from_string(r"(?m)^#include\s+\"([^\"]+)\"")
 	var uniform_line := RegEx.create_from_string(r"(?m)^uniform\s+\w+\s+(\w+)")
 	var doc_line := RegEx.create_from_string(r"(?m)^//\s*@uniform\s+(\w+)")
-	for file in files:
-		if not file.ends_with(".gdshader"):
-			continue
-		var text := FileAccess.get_file_as_string(directory + file)
-		var declared := {}
-		for found in uniform_line.search_all(text):
-			declared[found.get_string(1)] = true
-		var documented := {}
-		for found in doc_line.search_all(text):
-			documented[found.get_string(1)] = true
-		for name in declared:
-			check(documented.has(name), "%s declares '%s' but its header does not document it (// @uniform %s)" % [file, name, name])
-		for name in documented:
-			check(declared.has(name), "%s documents '%s' but declares no such uniform" % [file, name])
-		check(declared.has("progress") and declared.has("time"), "%s declares the driven uniforms progress and time" % file)
-		var shader := load(directory + file) as Shader
-		check(shader != null and shader.code.length() > 50, "%s loads as a shader" % file)
+	# The library: quad shaders in shaders/ (driven by a layer's clock: progress and time) and material shaders in
+	# shaders/material/ (the particle draw material, the fresnel overlay; they read what their layer sets).
+	for directory in ["res://game/fx/shaders/", "res://game/fx/shaders/material/"]:
+		var files := DirAccess.get_files_at(directory)
+		check(files.size() >= 3, "%s has shaders (%d files)" % [directory, files.size()])
+		for file in files:
+			if not file.ends_with(".gdshader"):
+				continue
+			var text := FileAccess.get_file_as_string(directory + file)
+			# An #include brings its uniforms in: read them as part of the shader.
+			var code := text
+			for found in include_line.search_all(text):
+				code += "
+" + FileAccess.get_file_as_string(found.get_string(1))
+			var declared := {}
+			for found in uniform_line.search_all(code):
+				declared[found.get_string(1)] = true
+			var documented := {}
+			for found in doc_line.search_all(text):
+				documented[found.get_string(1)] = true
+			for name in declared:
+				check(documented.has(name), "%s declares '%s' but its header does not document it (// @uniform %s)" % [file, name, name])
+			for name in documented:
+				check(declared.has(name), "%s documents '%s' but declares no such uniform" % [file, name])
+			if directory.ends_with("/shaders/"):
+				check(declared.has("progress") and declared.has("time"), "%s declares the driven uniforms progress and time" % file)
+			var shader := load(directory + file) as Shader
+			check(shader != null and shader.code.length() > 50, "%s loads as a shader" % file)
 
 
 func test_validator_names_registry_problems() -> void:

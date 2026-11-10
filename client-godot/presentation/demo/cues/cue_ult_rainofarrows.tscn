@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_yuki3"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="2_bdhyj"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_4nqd3"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/rainofarrows_strike.tres" id="4_gmf2p"]
+
+[sub_resource type="Resource" id="Resource_m85op"]
+script = ExtResource("3_4nqd3")
+param = &"color"
+value = Color(0.8, 1, 0.85, 1)
+
+[sub_resource type="Resource" id="Resource_o04va"]
+script = ExtResource("3_4nqd3")
+param = &"ray_count"
+value = 16.0
+
+[sub_resource type="Resource" id="Resource_w06bv"]
+script = ExtResource("3_4nqd3")
+param = &"spin"
+value = 0.12
+
+[sub_resource type="Resource" id="Resource_uvphd"]
+script = ExtResource("3_4nqd3")
+param = &"intensity"
+value = 1.0
+
+[sub_resource type="Resource" id="Resource_6y518"]
+script = ExtResource("3_4nqd3")
+param = &"color"
+value = Color(0.8, 1, 0.85, 1)
+
+[node name="CueUltRainofarrows" type="Node" unique_id=123373604]
+script = ExtResource("1_yuki3")
+fx = ExtResource("2_bdhyj")
+bindings = Array[ExtResource("3_4nqd3")]([SubResource("Resource_m85op"), SubResource("Resource_o04va"), SubResource("Resource_w06bv"), SubResource("Resource_uvphd")])
+target_fx = ExtResource("4_gmf2p")
+target_bindings = Array[ExtResource("3_4nqd3")]([SubResource("Resource_6y518")])
+target_stagger = 0.12

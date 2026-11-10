@@ -20,6 +20,7 @@ asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Buff", 
 executions = Array[ExtResource("2_ck5d1")]([SubResource("Resource_uicub")])
 animation = ExtResource("4_t7l5e")
 ability_tag = &"Ability.Ult.Finale"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Finale"])
 activation_query = ExtResource("5_wnhmk")
 cost_effect = ExtResource("6_sad68")
 description = "Strengthens the party."

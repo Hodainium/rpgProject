@@ -7,3 +7,4 @@
 [resource]
 script = ExtResource("3_kxw53")
 remove_effects_with_tags = Array[StringName]([&"Status.Debuff"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Cleanse"])

@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_42sjc"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/stun_stars.tres" id="2_utqbp"]
+
+[node name="StatusStunCue" type="Node" unique_id=1918113065]
+script = ExtResource("1_42sjc")
+fx = ExtResource("2_utqbp")
+stop_fade = 0.4
+auto_destroy = false

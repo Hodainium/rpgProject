@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_qv63u"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/status_skin.tres" id="2_ys624"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_1uqpf"]
+
+[sub_resource type="Resource" id="Resource_lrgqf"]
+script = ExtResource("3_1uqpf")
+param = &"color"
+value = Color(1, 0.9, 0.5, 1)
+
+[sub_resource type="Resource" id="Resource_mep8a"]
+script = ExtResource("3_1uqpf")
+param = &"power"
+value = 3.0
+
+[sub_resource type="Resource" id="Resource_037p3"]
+script = ExtResource("3_1uqpf")
+param = &"fill"
+value = 0.12
+
+[sub_resource type="Resource" id="Resource_svda1"]
+script = ExtResource("3_1uqpf")
+param = &"grow"
+value = 0.03
+
+[sub_resource type="Resource" id="Resource_pimc8"]
+script = ExtResource("3_1uqpf")
+param = &"erosion"
+value = 0.0
+
+[sub_resource type="Resource" id="Resource_k0roc"]
+script = ExtResource("3_1uqpf")
+param = &"scroll"
+value = 0.0
+
+[node name="CueBuffWard" type="Node" unique_id=816290943]
+script = ExtResource("1_qv63u")
+fx = ExtResource("2_ys624")
+bindings = Array[ExtResource("3_1uqpf")]([SubResource("Resource_lrgqf"), SubResource("Resource_mep8a"), SubResource("Resource_037p3"), SubResource("Resource_svda1"), SubResource("Resource_pimc8"), SubResource("Resource_k0roc")])
+stop_fade = 0.4
+auto_destroy = false

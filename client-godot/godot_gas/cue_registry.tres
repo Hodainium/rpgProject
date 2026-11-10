@@ -28,6 +28,391 @@ script = ExtResource("1_eumo4")
 tag = &"Cue.Fx.Aura"
 scene_ref = "res://presentation/demo/cues/status_aura_cue.tscn"
 
+[sub_resource type="Resource" id="Resource_st_poison"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Status.Poison"
+scene_ref = "res://presentation/demo/cues/status_poison_cue.tscn"
+
+[sub_resource type="Resource" id="Resource_st_bleed"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Status.Bleed"
+scene_ref = "res://presentation/demo/cues/status_bleed_cue.tscn"
+
+[sub_resource type="Resource" id="Resource_st_burn"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Status.Burn"
+scene_ref = "res://presentation/demo/cues/status_burn_cue.tscn"
+
+[sub_resource type="Resource" id="Resource_st_freeze"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Status.Freeze"
+scene_ref = "res://presentation/demo/cues/status_freeze_cue.tscn"
+
+[sub_resource type="Resource" id="Resource_st_stun"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Status.Stun"
+scene_ref = "res://presentation/demo/cues/status_stun_cue.tscn"
+
+[sub_resource type="Resource" id="Resource_st_entangle"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Status.Entangle"
+scene_ref = "res://presentation/demo/cues/status_entangle_cue.tscn"
+
+[sub_resource type="Resource" id="Resource_st_slow"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Status.Slow"
+scene_ref = "res://presentation/demo/cues/status_slow_cue.tscn"
+
+[sub_resource type="Resource" id="Resource_tick_poison"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Tick.Poison"
+scene_ref = "res://presentation/demo/cues/tick_poison_cue.tscn"
+
+[sub_resource type="Resource" id="Resource_tick_bleed"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Tick.Bleed"
+scene_ref = "res://presentation/demo/cues/tick_bleed_cue.tscn"
+
+[sub_resource type="Resource" id="Resource_tick_burn"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Tick.Burn"
+scene_ref = "res://presentation/demo/cues/tick_burn_cue.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_attack_up"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.AttackUp"
+scene_ref = "res://presentation/demo/cues/cue_buff_attack_up.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_defense_up"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.DefenseUp"
+scene_ref = "res://presentation/demo/cues/cue_buff_defense_up.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_haste"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.Haste"
+scene_ref = "res://presentation/demo/cues/cue_buff_haste.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_regen"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.Regen"
+scene_ref = "res://presentation/demo/cues/cue_buff_regen.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_ward"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.Ward"
+scene_ref = "res://presentation/demo/cues/cue_buff_ward.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_taunt"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.Taunt"
+scene_ref = "res://presentation/demo/cues/cue_buff_taunt.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_fury"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.Fury"
+scene_ref = "res://presentation/demo/cues/cue_buff_fury.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_enrage"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.Enrage"
+scene_ref = "res://presentation/demo/cues/cue_buff_enrage.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_finale"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.Finale"
+scene_ref = "res://presentation/demo/cues/cue_buff_finale.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_fracture"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.Fracture"
+scene_ref = "res://presentation/demo/cues/cue_buff_fracture.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_malady"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.Malady"
+scene_ref = "res://presentation/demo/cues/cue_buff_malady.tscn"
+
+[sub_resource type="Resource" id="Resource_buff_combustion"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Buff.Combustion"
+scene_ref = "res://presentation/demo/cues/cue_buff_combustion.tscn"
+
+[sub_resource type="Resource" id="Resource_debuff_attack_down"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Debuff.AttackDown"
+scene_ref = "res://presentation/demo/cues/cue_debuff_attack_down.tscn"
+
+[sub_resource type="Resource" id="Resource_debuff_defense_down"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Debuff.DefenseDown"
+scene_ref = "res://presentation/demo/cues/cue_debuff_defense_down.tscn"
+
+[sub_resource type="Resource" id="Resource_debuff_weaken"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Debuff.Weaken"
+scene_ref = "res://presentation/demo/cues/cue_debuff_weaken.tscn"
+
+[sub_resource type="Resource" id="Resource_debuff_vulnerable"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Debuff.Vulnerable"
+scene_ref = "res://presentation/demo/cues/cue_debuff_vulnerable.tscn"
+
+[sub_resource type="Resource" id="Resource_debuff_exhausted"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Debuff.Exhausted"
+scene_ref = "res://presentation/demo/cues/cue_debuff_exhausted.tscn"
+
+[sub_resource type="Resource" id="Resource_debuff_exposed"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Debuff.Exposed"
+scene_ref = "res://presentation/demo/cues/cue_debuff_exposed.tscn"
+
+[sub_resource type="Resource" id="Resource_apply_buff"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Apply.Buff"
+scene_ref = "res://presentation/demo/cues/cue_apply_buff.tscn"
+
+[sub_resource type="Resource" id="Resource_apply_debuff"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Apply.Debuff"
+scene_ref = "res://presentation/demo/cues/cue_apply_debuff.tscn"
+
+[sub_resource type="Resource" id="Resource_cleanse"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Cleanse"
+scene_ref = "res://presentation/demo/cues/cue_cleanse.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_absolutezero"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Absolutezero"
+scene_ref = "res://presentation/demo/cues/cue_ult_absolutezero.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_bastion"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Bastion"
+scene_ref = "res://presentation/demo/cues/cue_ult_bastion.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_blackmass"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Blackmass"
+scene_ref = "res://presentation/demo/cues/cue_ult_blackmass.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_cleave"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Cleave"
+scene_ref = "res://presentation/demo/cues/cue_ult_cleave.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_combustion"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Combustion"
+scene_ref = "res://presentation/demo/cues/cue_ult_combustion.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_crucible"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Crucible"
+scene_ref = "res://presentation/demo/cues/cue_ult_crucible.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_deathray"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Deathray"
+scene_ref = "res://presentation/demo/cues/cue_ult_deathray.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_execute"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Execute"
+scene_ref = "res://presentation/demo/cues/cue_ult_execute.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_finale"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Finale"
+scene_ref = "res://presentation/demo/cues/cue_ult_finale.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_judgement"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Judgement"
+scene_ref = "res://presentation/demo/cues/cue_ult_judgement.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_liquidate"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Liquidate"
+scene_ref = "res://presentation/demo/cues/cue_ult_liquidate.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_meteor"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Meteor"
+scene_ref = "res://presentation/demo/cues/cue_ult_meteor.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_oblivion"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Oblivion"
+scene_ref = "res://presentation/demo/cues/cue_ult_oblivion.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_ossuary"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Ossuary"
+scene_ref = "res://presentation/demo/cues/cue_ult_ossuary.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_overheat"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Overheat"
+scene_ref = "res://presentation/demo/cues/cue_ult_overheat.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_pandemic"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Pandemic"
+scene_ref = "res://presentation/demo/cues/cue_ult_pandemic.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_quake"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Quake"
+scene_ref = "res://presentation/demo/cues/cue_ult_quake.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_rainofarrows"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Rainofarrows"
+scene_ref = "res://presentation/demo/cues/cue_ult_rainofarrows.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_resurrection"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Resurrection"
+scene_ref = "res://presentation/demo/cues/cue_ult_resurrection.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_sanctuary"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Sanctuary"
+scene_ref = "res://presentation/demo/cues/cue_ult_sanctuary.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_shatterchorus"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Shatterchorus"
+scene_ref = "res://presentation/demo/cues/cue_ult_shatterchorus.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_supernova"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Supernova"
+scene_ref = "res://presentation/demo/cues/cue_ult_supernova.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_systole"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Systole"
+scene_ref = "res://presentation/demo/cues/cue_ult_systole.tscn"
+
+[sub_resource type="Resource" id="Resource_ult_twinbeat"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Ult.Twinbeat"
+scene_ref = "res://presentation/demo/cues/cue_ult_twinbeat.tscn"
+
+[sub_resource type="Resource" id="Resource_hit_fire"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Hit.Fire"
+scene_ref = "res://presentation/demo/cues/cue_hit_fire.tscn"
+
+[sub_resource type="Resource" id="Resource_hit_ice"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Hit.Ice"
+scene_ref = "res://presentation/demo/cues/cue_hit_ice.tscn"
+
+[sub_resource type="Resource" id="Resource_hit_physical"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Hit.Physical"
+scene_ref = "res://presentation/demo/cues/cue_hit_physical.tscn"
+
+[sub_resource type="Resource" id="Resource_revive"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Revive"
+scene_ref = "res://presentation/demo/cues/cue_revive.tscn"
+
+[sub_resource type="Resource" id="Resource_death"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Death"
+scene_ref = "res://presentation/demo/cues/cue_death.tscn"
+
+[sub_resource type="Resource" id="Resource_state_broken"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.State.Broken"
+scene_ref = "res://presentation/demo/cues/cue_state_broken.tscn"
+
+[sub_resource type="Resource" id="Resource_recovered"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Recovered"
+scene_ref = "res://presentation/demo/cues/cue_recovered.tscn"
+
+[sub_resource type="Resource" id="Resource_state_downed"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.State.Downed"
+scene_ref = "res://presentation/demo/cues/cue_state_downed.tscn"
+
+[sub_resource type="Resource" id="Resource_phase_shift"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.PhaseShift"
+scene_ref = "res://presentation/demo/cues/cue_phase_shift.tscn"
+
+[sub_resource type="Resource" id="Resource_one_more"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.OneMore"
+scene_ref = "res://presentation/demo/cues/cue_one_more.tscn"
+
+[sub_resource type="Resource" id="Resource_proc_crit"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Proc.Crit"
+scene_ref = "res://presentation/demo/cues/cue_proc_crit.tscn"
+
+[sub_resource type="Resource" id="Resource_proc_weakness"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Proc.Weakness"
+scene_ref = "res://presentation/demo/cues/cue_proc_weakness.tscn"
+
+[sub_resource type="Resource" id="Resource_proc_fire"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Proc.Fire"
+scene_ref = "res://presentation/demo/cues/cue_proc_fire.tscn"
+
+[sub_resource type="Resource" id="Resource_proc_ice"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Proc.Ice"
+scene_ref = "res://presentation/demo/cues/cue_proc_ice.tscn"
+
+[sub_resource type="Resource" id="Resource_proc_break"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Proc.Break"
+scene_ref = "res://presentation/demo/cues/cue_proc_break.tscn"
+
+[sub_resource type="Resource" id="Resource_proc_physical"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Proc.Physical"
+scene_ref = "res://presentation/demo/cues/cue_proc_physical.tscn"
+
+[sub_resource type="Resource" id="Resource_proc_taken"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Proc.Taken"
+scene_ref = "res://presentation/demo/cues/cue_proc_taken.tscn"
+
+[sub_resource type="Resource" id="Resource_proc_kill"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Proc.Kill"
+scene_ref = "res://presentation/demo/cues/cue_proc_kill.tscn"
+
+[sub_resource type="Resource" id="Resource_proc_ult"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Proc.Ult"
+scene_ref = "res://presentation/demo/cues/cue_proc_ult.tscn"
+
+[sub_resource type="Resource" id="Resource_drain_fire"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Drain.Fire"
+scene_ref = "res://presentation/demo/cues/cue_drain_fire.tscn"
+
+[sub_resource type="Resource" id="Resource_drain_ice"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Drain.Ice"
+scene_ref = "res://presentation/demo/cues/cue_drain_ice.tscn"
+
+[sub_resource type="Resource" id="Resource_drain_physical"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Fx.Drain.Physical"
+scene_ref = "res://presentation/demo/cues/cue_drain_physical.tscn"
+
 [resource]
 script = ExtResource("2_bcoe5")
-entries = Array[ExtResource("1_eumo4")]([SubResource("Resource_hit"), SubResource("Resource_spark"), SubResource("Resource_heal"), SubResource("Resource_break"), SubResource("Resource_aura")])
+entries = Array[ExtResource("1_eumo4")]([SubResource("Resource_hit"), SubResource("Resource_spark"), SubResource("Resource_heal"), SubResource("Resource_break"), SubResource("Resource_aura"), SubResource("Resource_st_poison"), SubResource("Resource_st_bleed"), SubResource("Resource_st_burn"), SubResource("Resource_st_freeze"), SubResource("Resource_st_stun"), SubResource("Resource_st_entangle"), SubResource("Resource_st_slow"), SubResource("Resource_tick_poison"), SubResource("Resource_tick_bleed"), SubResource("Resource_tick_burn"), SubResource("Resource_buff_attack_up"), SubResource("Resource_buff_defense_up"), SubResource("Resource_buff_haste"), SubResource("Resource_buff_regen"), SubResource("Resource_buff_ward"), SubResource("Resource_buff_taunt"), SubResource("Resource_buff_fury"), SubResource("Resource_buff_enrage"), SubResource("Resource_buff_finale"), SubResource("Resource_buff_fracture"), SubResource("Resource_buff_malady"), SubResource("Resource_buff_combustion"), SubResource("Resource_debuff_attack_down"), SubResource("Resource_debuff_defense_down"), SubResource("Resource_debuff_weaken"), SubResource("Resource_debuff_vulnerable"), SubResource("Resource_debuff_exhausted"), SubResource("Resource_debuff_exposed"), SubResource("Resource_apply_buff"), SubResource("Resource_apply_debuff"), SubResource("Resource_cleanse"), SubResource("Resource_ult_absolutezero"), SubResource("Resource_ult_bastion"), SubResource("Resource_ult_blackmass"), SubResource("Resource_ult_cleave"), SubResource("Resource_ult_combustion"), SubResource("Resource_ult_crucible"), SubResource("Resource_ult_deathray"), SubResource("Resource_ult_execute"), SubResource("Resource_ult_finale"), SubResource("Resource_ult_judgement"), SubResource("Resource_ult_liquidate"), SubResource("Resource_ult_meteor"), SubResource("Resource_ult_oblivion"), SubResource("Resource_ult_ossuary"), SubResource("Resource_ult_overheat"), SubResource("Resource_ult_pandemic"), SubResource("Resource_ult_quake"), SubResource("Resource_ult_rainofarrows"), SubResource("Resource_ult_resurrection"), SubResource("Resource_ult_sanctuary"), SubResource("Resource_ult_shatterchorus"), SubResource("Resource_ult_supernova"), SubResource("Resource_ult_systole"), SubResource("Resource_ult_twinbeat"), SubResource("Resource_hit_fire"), SubResource("Resource_hit_ice"), SubResource("Resource_hit_physical"), SubResource("Resource_revive"), SubResource("Resource_death"), SubResource("Resource_state_broken"), SubResource("Resource_recovered"), SubResource("Resource_state_downed"), SubResource("Resource_phase_shift"), SubResource("Resource_one_more"), SubResource("Resource_proc_crit"), SubResource("Resource_proc_weakness"), SubResource("Resource_proc_fire"), SubResource("Resource_proc_ice"), SubResource("Resource_proc_break"), SubResource("Resource_proc_physical"), SubResource("Resource_proc_taken"), SubResource("Resource_proc_kill"), SubResource("Resource_proc_ult"), SubResource("Resource_drain_fire"), SubResource("Resource_drain_ice"), SubResource("Resource_drain_physical")])

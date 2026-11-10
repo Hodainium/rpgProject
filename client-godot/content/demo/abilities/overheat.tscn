@@ -22,5 +22,6 @@ asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
 executions = Array[ExtResource("2_di02g")]([SubResource("Resource_maeq5")])
 animation = ExtResource("4_wv3w6")
 ability_tag = &"Ability.Ult.Overheat"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Overheat"])
 activation_query = ExtResource("5_m78bq")
 cost_effect = ExtResource("6_3r7qi")

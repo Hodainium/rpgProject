@@ -106,3 +106,10 @@ func _layout(rect: Control) -> void:
 	rect.size = wanted
 	rect.pivot_offset = wanted * 0.5
 	rect.position = area * 0.5 - wanted * 0.5
+
+
+## The layer's time is up: the quad goes away now, whether or not its shader fades itself out (a quad that holds full strength, like a
+## falling streak with no fade, must not linger until the rest of the effect ends).
+func ended(node: Node) -> void:
+	super(node)
+	FxLayer.set_node_visible(node, false)

@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_phr6o"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/status_skin.tres" id="2_lxr1x"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_oh1hd"]
+
+[sub_resource type="Resource" id="Resource_1np4v"]
+script = ExtResource("3_oh1hd")
+param = &"color"
+value = Color(0.65, 0.4, 1, 1)
+
+[sub_resource type="Resource" id="Resource_uwolr"]
+script = ExtResource("3_oh1hd")
+param = &"power"
+value = 2.0
+
+[sub_resource type="Resource" id="Resource_d0wc6"]
+script = ExtResource("3_oh1hd")
+param = &"fill"
+value = 0.1
+
+[sub_resource type="Resource" id="Resource_g7ubp"]
+script = ExtResource("3_oh1hd")
+param = &"grow"
+value = 0.01
+
+[sub_resource type="Resource" id="Resource_i28o4"]
+script = ExtResource("3_oh1hd")
+param = &"erosion"
+value = 0.4
+
+[sub_resource type="Resource" id="Resource_ro4gw"]
+script = ExtResource("3_oh1hd")
+param = &"scroll"
+value = 0.5
+
+[node name="CueBuffFracture" type="Node" unique_id=331488978]
+script = ExtResource("1_phr6o")
+fx = ExtResource("2_lxr1x")
+bindings = Array[ExtResource("3_oh1hd")]([SubResource("Resource_1np4v"), SubResource("Resource_uwolr"), SubResource("Resource_d0wc6"), SubResource("Resource_g7ubp"), SubResource("Resource_i28o4"), SubResource("Resource_ro4gw")])
+stop_fade = 0.4
+auto_destroy = false

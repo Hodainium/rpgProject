@@ -19,3 +19,6 @@ max_stacks = 1
 duration_turns = 2
 executions = Array[ExtResource("1_xsmqe")]([SubResource("Resource_64ngf")])
 granted_tags = Array[StringName]([&"Status.Buff.Regen"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.Regen"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff"])
+periodic_cue_tags = Array[StringName]([&"Cue.Fx.Heal"])

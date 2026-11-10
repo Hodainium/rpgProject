@@ -22,5 +22,6 @@ asset_tags = Array[StringName]([&"Ability.Type.Ultimate"])
 executions = Array[ExtResource("2_b48yg")]([SubResource("Resource_atl64")])
 animation = ExtResource("4_44t6v")
 ability_tag = &"Ability.Ult.Systole"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Systole"])
 activation_query = ExtResource("5_8ljyk")
 cost_effect = ExtResource("6_wm6yj")

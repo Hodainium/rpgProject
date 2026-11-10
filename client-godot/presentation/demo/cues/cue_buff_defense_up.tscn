@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_7jptj"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/stat_arrows.tres" id="2_ubibr"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_0i25f"]
+
+[sub_resource type="Resource" id="Resource_3r2tw"]
+script = ExtResource("3_0i25f")
+param = &"color"
+value = Color(0.3, 0.6, 1, 1)
+
+[node name="CueBuffDefenseUp" type="Node" unique_id=1916829300]
+script = ExtResource("1_7jptj")
+fx = ExtResource("2_ubibr")
+bindings = Array[ExtResource("3_0i25f")]([SubResource("Resource_3r2tw")])
+stop_fade = 0.4
+auto_destroy = false

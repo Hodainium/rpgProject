@@ -1,0 +1,43 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_hfksk"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/ult_flourish.tres" id="2_g8xil"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_fi1ni"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/execute_strike.tres" id="4_sm66d"]
+
+[sub_resource type="Resource" id="Resource_6rj3g"]
+script = ExtResource("3_fi1ni")
+param = &"color"
+value = Color(0.9, 0.1, 0.15, 1)
+
+[sub_resource type="Resource" id="Resource_lk82p"]
+script = ExtResource("3_fi1ni")
+param = &"ray_count"
+value = 6.0
+
+[sub_resource type="Resource" id="Resource_cn5cr"]
+script = ExtResource("3_fi1ni")
+param = &"spin"
+value = 0.12
+
+[sub_resource type="Resource" id="Resource_thpks"]
+script = ExtResource("3_fi1ni")
+param = &"intensity"
+value = 1.1
+
+[sub_resource type="Resource" id="Resource_7l3mp"]
+script = ExtResource("3_fi1ni")
+param = &"color"
+value = Color(0.95, 0.12, 0.14, 1)
+
+[sub_resource type="Resource" id="Resource_fpxrp"]
+script = ExtResource("3_fi1ni")
+param = &"intensity"
+value = 1.0
+
+[node name="CueUltExecute" type="Node" unique_id=870713983]
+script = ExtResource("1_hfksk")
+fx = ExtResource("2_g8xil")
+bindings = Array[ExtResource("3_fi1ni")]([SubResource("Resource_6rj3g"), SubResource("Resource_lk82p"), SubResource("Resource_cn5cr"), SubResource("Resource_thpks")])
+target_fx = ExtResource("4_sm66d")
+target_bindings = Array[ExtResource("3_fi1ni")]([SubResource("Resource_7l3mp"), SubResource("Resource_fpxrp")])

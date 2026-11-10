@@ -1,0 +1,172 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_j5025"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_hpkqg"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_a85xp"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="4_watgr"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/note_sheet.png" id="5_d01fg"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="6_rdsrt"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="7_43lvk"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/screen_flash.tres" id="8_2gaeb"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_sub_fx_layer.gd" id="9_8hwen"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="10_ghggm"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="11_lbrxo"]
+
+[sub_resource type="Resource" id="Resource_rox2l"]
+script = ExtResource("2_hpkqg")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_hxkxl"]
+script = ExtResource("2_hpkqg")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_k6vwb"]
+script = ExtResource("3_a85xp")
+size_min = 0.18
+size_max = 0.18
+spread = 0.0
+speed_min = 0.0
+speed_max = 0.0
+gravity = Vector3(0, 5, 0)
+amount = 1
+lifetime = 0.3
+id = &"rocket"
+bindings = Array[ExtResource("2_hpkqg")]([SubResource("Resource_rox2l"), SubResource("Resource_hxkxl")])
+
+[sub_resource type="Resource" id="Resource_xnwfu"]
+script = ExtResource("2_hpkqg")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_0g4fw"]
+offsets = PackedFloat32Array(0, 0.35, 0.65, 1)
+colors = PackedColorArray(1, 0.4, 0.4, 1, 1, 0.9, 0.3, 1, 0.4, 1, 0.5, 1, 0.4, 0.7, 1, 0)
+
+[sub_resource type="Resource" id="Resource_7obfr"]
+script = ExtResource("3_a85xp")
+size_max = 0.18
+speed_min = 2.5
+speed_max = 5.0
+gravity = Vector3(0, -2.5, 0)
+damping = 1.2
+emission_offset = Vector3(0, 1.7, 0)
+amount = 70
+lifetime = 1.2
+color_ramp = SubResource("Gradient_0g4fw")
+id = &"burst_a"
+start_delay = 0.3
+bindings = Array[ExtResource("2_hpkqg")]([SubResource("Resource_xnwfu")])
+
+[sub_resource type="Resource" id="Resource_tdy6a"]
+script = ExtResource("2_hpkqg")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_11g05"]
+script = ExtResource("3_a85xp")
+size_max = 0.17
+speed_min = 2.0
+speed_max = 4.5
+gravity = Vector3(0, -2.5, 0)
+damping = 1.2
+emission_offset = Vector3(0.9, 1.3, 0.2)
+amount = 60
+lifetime = 1.1
+color_ramp = SubResource("Gradient_0g4fw")
+id = &"burst_b"
+start_delay = 0.55
+bindings = Array[ExtResource("2_hpkqg")]([SubResource("Resource_tdy6a")])
+
+[sub_resource type="Resource" id="Resource_yi3e3"]
+script = ExtResource("2_hpkqg")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_eu1i2"]
+script = ExtResource("2_hpkqg")
+property = "draw_pass_1:material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Gradient" id="Gradient_bngba"]
+offsets = PackedFloat32Array(0, 0.2, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_ql3ca"]
+script = ExtResource("3_a85xp")
+size_min = 0.3
+size_max = 0.42
+spread = 20.0
+speed_min = 0.8
+speed_max = 1.6
+gravity = Vector3(0, 0.4, 0)
+spin_min = -50.0
+spin_max = 50.0
+emission_ring_radius = 0.7
+amount = 10
+lifetime = 1.6
+explosiveness = 0.2
+color_ramp = SubResource("Gradient_bngba")
+texture = ExtResource("5_d01fg")
+id = &"notes"
+bindings = Array[ExtResource("2_hpkqg")]([SubResource("Resource_yi3e3"), SubResource("Resource_eu1i2")])
+
+[sub_resource type="Resource" id="Resource_upfsg"]
+script = ExtResource("2_hpkqg")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_8wf8n"]
+script = ExtResource("2_hpkqg")
+property = "material:shader_parameter/depth_bias"
+param = &"depth_bias"
+
+[sub_resource type="Resource" id="Resource_baflb"]
+script = ExtResource("6_rdsrt")
+shader = ExtResource("7_43lvk")
+shader_params = {
+"end_radius": 0.95,
+"intensity": 1.6,
+"ring_width": 0.07,
+"start_radius": 0.15
+}
+size = Vector2(3, 3)
+id = &"sparkle"
+space = 2
+start_delay = 0.3
+duration = 0.5
+bindings = Array[ExtResource("2_hpkqg")]([SubResource("Resource_upfsg"), SubResource("Resource_8wf8n")])
+
+[sub_resource type="Resource" id="Resource_mgovv"]
+script = ExtResource("9_8hwen")
+effect = ExtResource("8_2gaeb")
+param_map = {
+"color": "$color",
+"intensity": 0.4
+}
+id = &"flash"
+start_delay = 0.3
+
+[sub_resource type="Resource" id="Resource_qqukb"]
+script = ExtResource("10_ghggm")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.85, 0.35, 1)
+description = "Notes and flash colour."
+
+[sub_resource type="Resource" id="Resource_fce1q"]
+script = ExtResource("10_ghggm")
+name = &"depth_bias"
+default_value = 0.7
+max_value = 4.0
+description = "Filled with the unit's radius unless the caller passes one."
+
+[resource]
+script = ExtResource("11_lbrxo")
+id = &"fx.finale_strike"
+display_name = "Finale strike"
+params = Array[ExtResource("10_ghggm")]([SubResource("Resource_qqukb"), SubResource("Resource_fce1q")])
+layers = Array[ExtResource("1_j5025")]([SubResource("Resource_k6vwb"), SubResource("Resource_7obfr"), SubResource("Resource_11g05"), SubResource("Resource_ql3ca"), SubResource("Resource_baflb"), SubResource("Resource_mgovv")])
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "Two fireworks burst above the unit in rainbow colours and music notes float up."

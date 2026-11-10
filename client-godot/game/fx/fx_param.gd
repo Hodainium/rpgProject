@@ -4,7 +4,7 @@
 class_name FxParam
 extends Resource
 
-enum Kind { FLOAT, INT, BOOL, COLOR, VECTOR2, VECTOR3, TEXTURE, CURVE, GRADIENT }
+enum Kind { FLOAT, INT, BOOL, COLOR, VECTOR2, VECTOR3, TEXTURE, CURVE, GRADIENT, STRING }
 
 @export var name: StringName
 @export var kind: Kind = Kind.FLOAT
@@ -39,6 +39,8 @@ func accepts(value: Variant) -> bool:
 			return value == null or value is Curve
 		Kind.GRADIENT:
 			return value == null or value is Gradient
+		Kind.STRING:
+			return typeof(value) == TYPE_STRING or typeof(value) == TYPE_STRING_NAME
 	return false
 
 
@@ -52,6 +54,8 @@ func clamp_value(value: Variant) -> Variant:
 			return clampi(int(roundf(float(value))), int(min_value), int(max_value)) if ranged else int(roundf(float(value)))
 		Kind.COLOR:
 			return value if value is Color else _color_of(String(value))
+		Kind.STRING:
+			return String(value)
 		Kind.VECTOR2:
 			if ranged:
 				return Vector2(clampf(value.x, min_value, max_value), clampf(value.y, min_value, max_value))
@@ -94,6 +98,8 @@ func parse_text(text: String) -> Dictionary:
 					return {"ok": false}
 			value = Vector2(parts[0].to_float(), parts[1].to_float()) if size == 2 \
 				else Vector3(parts[0].to_float(), parts[1].to_float(), parts[2].to_float())
+		Kind.STRING:
+			value = text
 		_:
 			if text == "" or text == "none":
 				value = null
@@ -122,6 +128,8 @@ func _zero() -> Variant:
 			return false
 		Kind.COLOR:
 			return Color.WHITE
+		Kind.STRING:
+			return ""
 		Kind.VECTOR2:
 			return Vector2.ZERO
 		Kind.VECTOR3:

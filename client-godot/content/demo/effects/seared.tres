@@ -15,3 +15,5 @@ policy = 3
 duration_turns = 2
 application_query = SubResource("Resource_tcbnf")
 granted_tags = Array[StringName]([&"Weakness.Fire", &"Status.Debuff.Exposed"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Debuff.Exposed"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Debuff"])

@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_cqu1k"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/proc_pulse.tres" id="2_7w7y0"]
+[ext_resource type="Script" path="res://game/fx/fx_cue_binding.gd" id="3_j3sfh"]
+
+[sub_resource type="Resource" id="Resource_icu3t"]
+script = ExtResource("3_j3sfh")
+param = &"color"
+value = Color(0.7, 0.4, 0.9, 1)
+
+[node name="CueProcKill" type="Node" unique_id=1496048873]
+script = ExtResource("1_cqu1k")
+fx = ExtResource("2_7w7y0")
+bindings = Array[ExtResource("3_j3sfh")]([SubResource("Resource_icu3t")])

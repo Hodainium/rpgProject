@@ -14,6 +14,9 @@ enum Space { WORLD_3D, UI, SCREEN, HYBRID }
 @export var params: Array[FxParam] = []
 @export var layers: Array[FxLayer] = []
 @export var space: Space = Space.WORLD_3D
+## Spec vfx-content-pass 3.6: where on a unit the effect attaches by default (an FxSocket role: Center, Hit, Top, Base). A play's
+## anchor can name another; a layer can move itself to another (FxLayer.socket).
+@export var socket: StringName = &"Center"
 ## Instances kept ready in the pool.
 @export var pool_size: int = 4
 ## Playing at once; beyond it the oldest is recycled (a spam guard).

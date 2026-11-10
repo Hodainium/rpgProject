@@ -50,7 +50,7 @@ func test_hit_tag_events() -> void:
 	eq(_tags(taken, "Event.Damage.Taken"), ["Event.Damage.Taken", "Event.Damage.Taken.Fire", "Event.Damage.Taken.Break",
 		"Event.Damage.Taken.Weakness", "Event.Damage.Taken.Break.Fire"], "the target gets the Taken versions")
 	# ATK 500 × 50% = 250, DEF 0, weakness damage taken 200% → 500.
-	eq(hits, [[&"E1", 50000, [&"Hit.Break", &"Hit.Weakness"]]], "damage_dealt carries the amount and hit tags")
+	eq(hits, [[&"E1", 50000, [&"Hit.Break", &"Hit.Weakness", &"Damage.Type.Fire"]]], "damage_dealt carries the amount, the hit tags and the damage type")
 	var payload: Dictionary = dealt.filter(func(event): return event[0] == &"Event.Damage.Dealt")[0][1]
 	eq(payload["hit_tags"], [&"Hit.Break", &"Hit.Weakness"], "the event payload carries the hit tags")
 
@@ -63,6 +63,21 @@ func test_hit_tag_events() -> void:
 	eq(hits, [[&"E2", 75000, [&"Hit.Critical"]]], "the ExecCalc's crit (×150%) is reported as Hit.Critical")
 
 
+## Spec vfx-content-pass 3.3: damage_dealt's tags are the hit's Hit.* tags then the row's Damage.Type tags, and a row hit's
+## damage is not reported again as hp_changed.
+func test_damage_dealt_carries_the_damage_type() -> void:
+	var battle := new_battle(break_snapshot())
+	var duelist := battle.unit_by_id(&"P1")
+	var first := battle.unit_by_id(&"E1")
+	var hits := []
+	var changed := []
+	battle.damage_dealt.connect(func(_source, target, amount, tags): hits.append([target, amount, tags]))
+	battle.hp_changed.connect(func(unit, delta, _cause): changed.append([unit, delta]))
+	await battle._activate(duelist, _ability(duelist, "FireSlash"), first)
+	eq(hits, [[&"E1", 50000, [&"Hit.Break", &"Hit.Weakness", &"Damage.Type.Fire"]]], "the hit tags, then the damage type")
+	eq(changed, [], "the row's own damage is no hp_changed")
+
+
 func test_weakness_from_effect() -> void:
 	var battle := new_battle(break_snapshot())
 	var duelist := battle.unit_by_id(&"P1")
@@ -71,16 +86,16 @@ func test_weakness_from_effect() -> void:
 	var hits := []
 	battle.damage_dealt.connect(func(_source, _target, amount, hit_tags): hits.append([amount, hit_tags]))
 	await battle._activate(duelist, _ability(duelist, "FireSlash"), target)
-	eq(hits[-1], [25000, []], "no weakness: a plain hit")
+	eq(hits[-1], [25000, [&"Damage.Type.Fire"]], "no weakness: a plain hit (just its damage type)")
 	await battle._activate(duelist, _ability(duelist, "Expose"), target)
 	check(target.asc.has_tag_exact(&"Weakness.Fire"), "Exposed grants Weakness.Fire through its granted tags")
 	await battle._activate(duelist, _ability(duelist, "FireSlash"), target)
-	eq(hits[-1][1], [&"Hit.Break", &"Hit.Weakness"], "a timed weakness counts like a definition one")
+	eq(hits[-1][1], [&"Hit.Break", &"Hit.Weakness", &"Damage.Type.Fire"], "a timed weakness counts like a definition one")
 	target.asc.turn_end()
 	target.asc.turn_end()
 	check(not target.asc.has_tag_exact(&"Weakness.Fire"), "the weakness ends with the effect")
 	await battle._activate(duelist, _ability(duelist, "FireSlash"), target)
-	eq(hits[-1][1], [], "later hits are normal again")
+	eq(hits[-1][1], [&"Damage.Type.Fire"], "later hits are normal again")
 
 
 ## The third GAS path (spec item-pass 3.3): a variant's AbilitySet.tags. A private content index, so the fixtures stay as built.
@@ -108,7 +123,7 @@ func test_weakness_from_ability_set() -> void:
 	battle.damage_dealt.connect(func(_source, target, _amount, hit_tags): hits[target] = hit_tags)
 	await battle._activate(duelist, _ability(duelist, "FireSlash"), battle.unit_by_id(&"E1"))
 	await battle._activate(duelist, _ability(duelist, "FireSlash"), battle.unit_by_id(&"E2"))
-	eq(hits[&"E1"], [], "no tags, no variant: a plain hit")
+	eq(hits[&"E1"], [&"Damage.Type.Fire"], "no tags, no variant: a plain hit")
 	check(battle.unit_by_id(&"E2").asc.has_tag_exact(&"Weakness.Fire"), "the variant's AbilitySet.tags reach the ASC")
 	check(hits[&"E2"].has(&"Hit.Weakness"), "and count as a weakness")
 	battle.queue_free()
@@ -162,7 +177,7 @@ func test_break_delay_and_recovery() -> void:
 	var hits := []
 	battle.damage_dealt.connect(func(_source, _target, _amount, hit_tags): hits.append(hit_tags))
 	await battle._activate(duelist, _ability(duelist, "FireSlash"), enemy)
-	eq(hits, [[&"Hit.Weakness"]], "while Broken: weakness damage, no toughness damage, no second break")
+	eq(hits, [[&"Hit.Weakness", &"Damage.Type.Fire"]], "while Broken: weakness damage, no toughness damage, no second break")
 	eq(battle.one_more_queue.size(), 1, "no second One More")
 	battle._recover(enemy)
 	eq(enemy.stat("toughness"), 3000, "recovery refills toughness")
@@ -247,7 +262,7 @@ func test_break_by_follow_up() -> void:
 	duelist.asc.initialize_attribute_overrides({"crit_rate": 0.0})
 	eq(battle.one_more_queue, [], "the crit itself (no weakness) breaks nothing")
 	await battle._drain_triggers()
-	eq(hits, [[&"Hit.Critical"], [&"Hit.Break", &"Hit.FollowUp", &"Hit.Weakness"]],
+	eq(hits, [[&"Hit.Critical"], [&"Hit.Break", &"Hit.FollowUp", &"Hit.Weakness", &"Damage.Type.Fire"]],
 		"the crit triggers the Fire follow-up, whose hits carry Hit.FollowUp and break the enemy")
 	eq(battle.one_more_queue, [duelist], "a break by a follow-up earns its owner the One More")
 
