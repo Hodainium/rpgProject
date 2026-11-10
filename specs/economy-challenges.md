@@ -108,7 +108,7 @@ completions = facts.BossIds mapped by ChallengeIds.ForBoss         (an invalid b
             → merged by challenge id
 at = submitted_at + Settlement:CycleClockOffset (Development only, otherwise zero)
 for each challenge id:
-  rule = latest version in force, read inside the transaction
+  rule = latest version with effective_from <= the battle's submitted_at (battle time, C10), read inside the transaction
   if none or retired:     count missing/retired, no mark, carry on
   if rule.ends_at ≤ at:   count expired, no mark, carry on
   global/player generation = max(generation) of the resets for (challenge, everyone) and (challenge, this player), 0 if none
@@ -119,9 +119,13 @@ for each challenge id:
                           idempotency_key = 'mark:{battleId}:{characterId}:{challengeId}') ON CONFLICT DO NOTHING
     UPSERT wallets (gems += amount, version += 1); INSERT outbox RewardGranted { …, challengeId, cycleKey }
 ```
-The three exactly-once gates of slice 4 hold: the session guard, the mark row, and the ledger key. Amount and `rule_version`
-come from the rule version in force **when the verdict commits** (4c F3, unchanged); the cycle and end time come from the
-battle's `submitted_at`; both generations are read in the same transaction.
+The three exactly-once gates of slice 4 hold: the session guard, the mark row, and the ledger key. The whole rule (amount,
+`rule_version`, retirement, cycle and end time) is the version that was in force at the battle's `submitted_at`
+(battle time; the user, 2026-11-09, closing a review finding: the amount, the retirement and the cycle used to be read at
+the verdict while the end time was read at the battle, so a challenge retired or re-cycled between a battle and its verdict
+paid nothing or paid under the new cycle, and a rule created after a battle paid it). A rule put by mistake and corrected
+later therefore still pays its amount for battles fought before the correction. Both generations are read in the same
+transaction.
 
 ### 2.4 Reading
 `GET /api/v1/wallet` is unchanged apart from two optional ledger fields (`challengeId`, `cycleKey`). `GET /api/v1/admin/reward-rules`
@@ -224,7 +228,7 @@ API: `Economy:MaxRewardAmount` (unchanged). `Economy:SeedRules` / `infra/economy
 | C7 | A new week starts (ISO week changes) | the `cycle_key` differs, so no mark exists and it pays again; last week's rows are untouched | `WeeklyChallenge_PaysOncePerWeek_AndAgainInTheNext` |
 | C8 | The week boundary | a battle submitted Sunday 23:59:59 UTC counts for that week even if verified on Monday | `WeekBoundary_UsesSubmissionTime` |
 | C9 | ISO year edge | the key uses the ISO year and week, never the calendar year | `IsoWeekKey_AtYearEnd` |
-| C10 | The event has ended (`ends_at ≤ submitted_at`) | nothing is paid, no mark; counted `expired`. A battle submitted before the end but verified after still pays | `EndedEvent_PaysNothing…`, `BattleSubmittedBeforeTheEnd_StillPays…` |
+| C10 | The event has ended (`ends_at ≤ submitted_at`) | nothing is paid, no mark; counted `expired`. A battle submitted before the end but verified after still pays. The same holds for every field of the rule: a retirement, a cycle change or a new rule put after the battle was submitted does not change what it pays | `EndedEvent_PaysNothing…`, `BattleSubmittedBeforeTheEnd_StillPays…`, `TheRuleAtTheBattlesTime_Pays_NotOneChangedBeforeTheVerdict` |
 | C11 | The designer edits a rule (amount, cycle) | a new version; marks already written stay; switching `once` → `weekly` pays again on the next clear (new key); switching back reuses the old `once` mark | `RuleEdit_PaysTheNewAmount_OnlyWhereNothingWasPaid`, `CycleSwitch_UsesTheNewKey…` |
 | C13 | Two battles of one player and character settled at once | the mark's primary key serialises them; nothing is paid twice | `ConcurrentBattles_NeverPayTheSameChallengeTwice` |
 | C14 | One battle reports the same challenge twice | merged by challenge id, one pass | `DuplicateFacts_AreMerged…` |

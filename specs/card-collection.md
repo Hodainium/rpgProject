@@ -85,7 +85,10 @@ Godot client ── POST /api/v1/packs/{packId}/open  { requestKey }
   API, ONE transaction:
     1. pg_advisory_xact_lock(player)                      (serialises every account action and the run start)
     2. account_requests (player, requestKey): found → same kind and hash → return the stored response (200); different → 409 1407
-    3. read the pack type's latest version and the card rates FROM POSTGRES (never the cache); retired / unknown → 404 1408
+    3. read the pack type's latest version and the card rates FROM POSTGRES (never the cache); retired / unknown → 404 1408;
+       take the shared advisory lock "card_catalog" before reading the eligible cards and the catalog version, so both come
+       from one catalog (a re-seed holds it exclusively; review fix 2026-11-09). A drawn rarity with no card rate → 404 1408,
+       nothing charged (a dust or craft of such a card → 400 1404); a pack-type put with odds on an unrated rarity → 400 1401
     4. wallet: gems >= price else 409 1402; debit (wallet_ledger -price, reason 'pack_open')
     5. draw_seed = 64 random bits (RandomNumberGenerator.GetBytes); read this player's pity counters for the pack (pack_pity,
        FOR UPDATE); draw N cards with the pack RNG and the pity rules (3.4, 3.4a); update the counters
@@ -366,6 +369,9 @@ What we build, the same shape with our own rarities:
   the counter for each such rarity starts at `pity - within` misses (Mythic: 30 - 15 = 15; Legendary: 20 - 10 = 10; Epic: 10 - 5 = 5), so the
   guarantee lands by the `within`-th pack, exactly Hearthstone's "set the timer to 10". A rarity needs a `PityPacks` entry
   to have a first guarantee, and `within <= pity`. Nothing changes afterwards: the next guarantee is the normal timer.
+  "First open" means the player has no `pack_openings` row for the pack type (review fix 2026-11-09: it used to mean "no
+  `pack_pity` row", so a pack type that gained pity later gave its veterans the head start); a rarity with no row on a
+  pack type the player has opened before starts at 0.
 - **Counters** live in `pack_pity`, per (player, pack type, rarity): `missed` = packs opened without that rarity. Hearthstone
   keeps them per set; our pack types are per set, so the pack type is the scope.
 - **Resolution** (inside the draw, deterministic): draw the N slots as in 3.4. Then for each tracked rarity from the highest

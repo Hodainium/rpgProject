@@ -47,6 +47,8 @@ public sealed class DevTokenIssuer(IOptions<AuthOptions> options, TimeProvider c
     public const string NameClaim = "name";
     public const string RoleClaim = "role";
     public const string EconomyAdminRole = "economy-admin";
+    /// <summary>Operations (review fix 2026-11-09): re-driving dead-lettered outbox rows and verification steps.</summary>
+    public const string OpsAdminRole = "ops-admin";
 
     public static bool IsValidName(string? name) =>
         name is { Length: > 0 and <= MaxNameLength } && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
@@ -63,7 +65,7 @@ public sealed class DevTokenIssuer(IOptions<AuthOptions> options, TimeProvider c
         };
         if (environment?.IsDevelopment() == true && options.Value.DevAdmins.Contains(name))
         {
-            claims[RoleClaim] = EconomyAdminRole;
+            claims[RoleClaim] = new[] { EconomyAdminRole, OpsAdminRole };
         }
 
         var token = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
@@ -121,6 +123,10 @@ public static class AuthEndpoints
     /// <summary>True when the token carries the economy-admin role (only Development dev tokens can).</summary>
     public static bool IsEconomyAdmin(this ClaimsPrincipal user) =>
         user.FindAll(DevTokenIssuer.RoleClaim).Any(c => c.Value == DevTokenIssuer.EconomyAdminRole);
+
+    /// <summary>True when the token carries the ops-admin role (only Development dev tokens can).</summary>
+    public static bool IsOpsAdmin(this ClaimsPrincipal user) =>
+        user.FindAll(DevTokenIssuer.RoleClaim).Any(c => c.Value == DevTokenIssuer.OpsAdminRole);
 
     /// <summary>The caller's player id, or null for an anonymous request.</summary>
     public static Guid? PlayerIdOrNull(this ClaimsPrincipal user) =>

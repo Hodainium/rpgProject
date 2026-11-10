@@ -24,7 +24,7 @@ public sealed record AppendResult(AppendOutcome Outcome, int LastSeq, IReadOnlyL
     int ExpectedSeq = 0, int Battles = 0, bool Ended = false, int Epoch = 0, int VerifiedSeq = 0, string? Reason = null,
     IReadOnlyList<string>? StepKinds = null, AggregateResult? Aggregate = null);
 
-public enum EndOutcome { Ended, Repeated, NotFound, NotActive, UploadIncomplete, Conflict, RolledBack, NoCheckpoint }
+public enum EndOutcome { Ended, Repeated, NotFound, NotActive, UploadIncomplete, Conflict, RolledBack, NoCheckpoint, StepTooLong }
 
 public sealed record EndResult(EndOutcome Outcome, RunStatus Status = RunStatus.Active, int LastSeq = 0, int Epoch = 0,
     int VerifiedSeq = 0, string? Reason = null);
@@ -135,6 +135,16 @@ public sealed partial class RunStore
                         "UPDATE run_floors SET end_seq = $3 WHERE run_id = $1 AND floor = $2", ct, runId, run.CurrentFloor, action.Seq);
                 }
 
+                // A step is at most MaxStepActions actions, its closing checkpoint included (review fix 2026-11-09: the limit
+                // used to be checked only when a snapshot arrived, so a client could store any number of actions without one
+                // and make an unbounded step at the next checkpoint or at the end). An action without a snapshot is refused
+                // once only the checkpoint's own place is left; the end, which carries a snapshot, is checked in EndAsync.
+                if (lastCheckpoint > 0 && action.Seq - lastCheckpoint >= verify.Value.MaxStepActions
+                    + (action.Snapshot is not null ? 1 : 0))
+                {
+                    return new AppendResult(AppendOutcome.StepTooLong, run.LastSeq, [.. counted, (type, "too_long")]);
+                }
+
                 if (action.Snapshot is not null)
                 {
                     if (lastCheckpoint == 0)
@@ -143,11 +153,6 @@ public sealed partial class RunStore
                     }
                     else
                     {
-                        if (action.Seq - lastCheckpoint > verify.Value.MaxStepActions)
-                        {
-                            return new AppendResult(AppendOutcome.StepTooLong, run.LastSeq, [.. counted, (type, "too_long")]);
-                        }
-
                         // A queued end is a death (Lost): its step replays the run like any other and has nothing to prove "won".
                         stepKinds.Add(await InsertStepAsync(connection, transaction, runId, run, lastCheckpoint, action.Seq,
                             type == RunActionTypes.Battle ? "battle" : "segment", now, ct));
@@ -281,6 +286,13 @@ public sealed partial class RunStore
             : run.Legacy ? RunStatus.Won
             : RunStatus.Verifying;
         var previousCheckpoint = run.Legacy ? 0 : await LastCheckpointAsync(connection, transaction, runId, ct);
+        if (!run.Legacy && previousCheckpoint > 0 && request.Seq - previousCheckpoint > verify.Value.MaxStepActions)
+        {
+            // The end step is a step like the others (MaxStepActions). Uploads keep room for it, so only a log stored before
+            // that rule can reach this.
+            return new EndResult(EndOutcome.StepTooLong, status, run.LastSeq, run.Epoch, run.VerifiedSeq);
+        }
+
         if (!run.Legacy && request.Status == RunEndStatus.Won && previousCheckpoint == 0)
         {
             // Without a checkpoint there is no end step to verify the win with: the start must be uploaded first. (Otherwise a
@@ -381,9 +393,11 @@ public sealed partial class RunStore
             }
         }
 
-        if (!legacy && checkpointSeq <= 1 && genesis is { } own)
+        if (!legacy && checkpointSeq <= 1)
         {
-            snapshot = own;
+            // Never the client's own seq 1 claim (review fix 2026-11-09): until the genesis job has written the server's start,
+            // there is no snapshot to serve, and the client waits and asks again (ServerLink retries a null snapshot).
+            snapshot = genesis ?? JsonDocument.Parse("null").RootElement;
         }
 
         var tail = new List<RunActionRequest>();

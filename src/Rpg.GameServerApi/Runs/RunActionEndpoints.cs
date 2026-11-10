@@ -148,7 +148,8 @@ public static class RunActionEndpoints
     }
 
     private static async Task<IResult> EndRunAsync(HttpContext context, Guid runId, RunEndRequest? request,
-        RunStore store, RunSummaryCache cache, RpgMetrics metrics, TimeProvider clock, CancellationToken ct)
+        RunStore store, RunSummaryCache cache, RpgMetrics metrics, IOptions<RunVerifyOptions> options, TimeProvider clock,
+        CancellationToken ct)
     {
         var player = context.User.Player();
         Activity.Current?.SetTag("rpg.run_id", runId.ToString("D"));
@@ -168,6 +169,9 @@ public static class RunActionEndpoints
                 return RunEndpoints.NotFound(runId);
             case EndOutcome.RolledBack:
                 return RunEndpoints.RolledBack(result.Epoch, result.VerifiedSeq, result.Reason);
+            case EndOutcome.StepTooLong:
+                return RunEndpoints.BadRequest(
+                    $"No more than {options.Value.MaxStepActions} actions may pass between the last snapshot and the end.");
             case EndOutcome.NoCheckpoint:
                 return RunEndpoints.UploadIncomplete(result.LastSeq,
                     "A win needs the run's start (a snapshot) uploaded first: upload the rest of the log.");
@@ -311,6 +315,13 @@ public static class RunActionEndpoints
             if (request.Snapshot is { } snapshot && InvalidSnapshot(snapshot) is { } bad)
             {
                 return $"seq {request.Seq}: {bad}";
+            }
+
+            if (request.Seq == 1 && action.Type != RunActionTypes.StartRun)
+            {
+                // Review fix: the first step starts at seq 1's snapshot, so a log whose first checkpoint comes later has a
+                // stretch no step covers and the run could never be verified.
+                return "seq 1 is the run's start: a start_run action with a snapshot.";
             }
 
             if (request.Snapshot is null && RunActionTypes.Checkpoints.Contains(action.Type))

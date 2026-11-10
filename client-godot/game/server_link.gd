@@ -518,7 +518,7 @@ func save() -> void:
 		floor_seeds[str(floor_index)] = str(_run.state.floor_seeds[floor_index])
 	var save_data := {"schemaVersion": 1, "runId": _run_id, "player": player,
 		"floorSeeds": floor_seeds, "snapshot": _snapshot, "queue": _queue, "lastAckedSeq": _last_acked,
-		"end": _end_request, "epoch": epoch}
+		"end": _end_request, "epoch": epoch, "cardPoolSet": _run.state.card_pool_set}
 	if _run.state.card_pool_set:
 		save_data["cardPool"] = _run.state.card_pool.map(func(id: StringName) -> String: return String(id))  # spec card-collection 2.5
 		save_data["cardPoolDigest"] = _run.state.card_pool_digest()  # a save that loses or changes it is noticed on load

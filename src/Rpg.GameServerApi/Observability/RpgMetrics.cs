@@ -33,6 +33,7 @@ public sealed class RpgMetrics
     private readonly Counter<long> _walletReads;
     private readonly Counter<long> _ruleChanges;
     private readonly Counter<long> _cycleResets;
+    private readonly Counter<long> _redrives;
     private readonly ConcurrentDictionary<string, (long Pending, double OldestAge, long Dead)> _outbox = new();
     private long _battlesUnverified = -1;
     private double _oldestUnverifiedAge;
@@ -127,6 +128,7 @@ public sealed class RpgMetrics
             description: "Time to publish one outbox row (to the confirm), by destination.",
             advice: new InstrumentAdvice<double> { HistogramBucketBoundaries = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10] });
         _ruleChanges = meter.CreateCounter<long>("rpg.reward_rule_changes", description: "Reward-rule admin writes, by result.");
+        _redrives = meter.CreateCounter<long>("rpg.redrives", description: "Dead-lettered rows put back to work by an operator, by target (review fix 2026-11-09).");
         _cycleResets = meter.CreateCounter<long>("rpg.reward_cycle_resets", description: "Reward cycle resets, by result (spec economy-challenges 5).");
         _walletReads = meter.CreateCounter<long>("rpg.wallet_reads", description: "Wallet reads by where the answer came from.");
         // Spec card-collection 5. Labels are small fixed sets: never a card or character id; `pack` is a configured pack type.
@@ -272,6 +274,9 @@ public sealed class RpgMetrics
     public void RewardRuleChange(string result) => _ruleChanges.Add(1, new KeyValuePair<string, object?>("result", result));
 
     /// <summary>result: ok | unknown | forbidden | invalid.</summary>
+    /// <summary>target: outbox | steps; the count is the rows re-driven.</summary>
+    public void Redriven(string target, long rows) => _redrives.Add(rows, new KeyValuePair<string, object?>("target", target));
+
     public void RewardCycleReset(string result) => _cycleResets.Add(1, new KeyValuePair<string, object?>("result", result));
 
     /// <summary>source: redis | postgres.</summary>

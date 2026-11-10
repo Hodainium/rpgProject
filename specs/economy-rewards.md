@@ -77,7 +77,8 @@ Rules are **append-only**: a change is a new version, never an update. "Retire" 
 5c. if Verified and Outcome = Victory and facts.bossIds is non-empty:
       for each distinct bossId in facts.bossIds:
         rule = SELECT … FROM reward_rules
-               WHERE source_kind='boss' AND source_id=$bossId AND effective_from <= now()
+               WHERE source_kind='boss' AND source_id=$bossId AND effective_from <= battle.submitted_at
+               (battle time, economy-challenges C10; it was now(), the verdict's time, until 2026-11-09)
                ORDER BY version DESC LIMIT 1                              (inside the verdict transaction)
         if rule is missing or rule.amount = 0:  no mark, no grant, count it (metric), carry on
         else for each distinct characterId in facts.partyCharacterIds:
@@ -199,7 +200,7 @@ from that header. A missing, empty or malformed value is ignored: the span simpl
 |---|---|---|---|
 | F1 | A boss was beaten but has **no rule** | nothing is granted **and no completion mark is written**, so adding the rule later still pays that character's first win. The verdict still commits; `rpg_reward_rule_lookups_total{result="missing"}` counts it | `NoRule_GrantsNothing_WritesNoMark_AndALaterRulePaysTheNextWin` |
 | F2 | The latest rule has amount 0 (retired) | treated like F1 | `RetiredRule_PaysNothing` |
-| F3 | A rule is changed while a battle is being settled | the worker reads the rule inside its transaction, so it pays exactly one version and records it in the ledger; the next grant uses the new one | `RuleChangedBetweenTwoBattles_EachLedgerRowRecordsItsVersion` |
+| F3 | A rule is changed while a battle is being settled | the worker reads the rule inside its transaction, so it pays exactly one version and records it in the ledger: the version in force at the battle's submit time (economy-challenges C10); battles submitted after the change use the new one | `RuleChangedBetweenTwoBattles_EachLedgerRowRecordsItsVersion` |
 | F4 | Two admins PUT the same source at once | the advisory lock on (kind, id) serialises them; versions are consecutive, no gap, no duplicate (also protected by `UNIQUE`) | `ConcurrentPuts_ProduceConsecutiveVersions` |
 | F5 | Invalid request (unknown kind or currency, amount < 0 or over the cap, id with ':' or spaces) | 400 1301, nothing written | `InvalidRule_Is400_1301` |
 | F6 | Caller is not `economy-admin` or not authenticated | 403 1302 / 401, nothing written | `Admin_RequiresTheRole`, `DevAdmins_HasNoEffectOutsideDevelopment` |

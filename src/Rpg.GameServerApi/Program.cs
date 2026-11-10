@@ -16,6 +16,7 @@ using Rpg.GameServerApi.Health;
 using Rpg.GameServerApi.Infrastructure;
 using Rpg.GameServerApi.Migrations;
 using Rpg.GameServerApi.Observability;
+using Rpg.GameServerApi.Ops;
 using Rpg.GameServerApi.Outbox;
 using Rpg.GameServerApi.Presence;
 using Rpg.GameServerApi.RateLimiting;
@@ -175,6 +176,7 @@ app.MapWalletEndpoints();
 app.MapRewardRuleEndpoints();
 app.MapCardEndpoints();
 app.MapPresenceEndpoints();
+app.MapRedriveEndpoints();
 
 app.Run();
 

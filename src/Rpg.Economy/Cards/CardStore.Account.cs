@@ -38,6 +38,9 @@ public sealed partial class CardStore
         }
 
         var rates = await LatestRatesAsync(connection, transaction, ct);
+        // Review fix: the drawn-from cards and the stored catalog_version must be one catalog (an audit re-derives the opening
+        // from catalog_versions). A re-seed holds "card_catalog" exclusively while it rewrites `cards`; this waits for it.
+        await LockNamedSharedAsync(connection, transaction, "card_catalog", ct);
         var eligible = await EligibleAsync(connection, transaction, pack.SetIds, ct);
         if (!PackDrawer.CanDraw(pack.Odds, eligible))
         {
@@ -71,7 +74,9 @@ public sealed partial class CardStore
             var drawn = draw.Cards[i];
             if (!rates.TryGetValue(drawn.Rarity, out var rate))
             {
-                throw new InvalidOperationException($"No card rate for rarity '{drawn.Rarity}'.");
+                // Review fix: a rules gap, not a server error. Nothing is committed, so nothing is charged.
+                return CardResult<PackOpenResponse>.Fail(CardFailure.PackUnavailable,
+                    $"Pack '{packId}' cannot be opened right now: rarity '{drawn.Rarity}' has no card rate.");
             }
 
             if (owned.Add(drawn.CardId))
@@ -177,7 +182,8 @@ public sealed partial class CardStore
         var rates = await LatestRatesAsync(connection, transaction, ct);
         if (!rates.TryGetValue(card.Rarity, out var rate))
         {
-            throw new InvalidOperationException($"No card rate for rarity '{card.Rarity}'.");
+            return CardResult<DustResponse>.Fail(CardFailure.CardNotCollectible,
+                $"'{cardId}' cannot be dusted right now: rarity '{card.Rarity}' has no card rate.");
         }
 
         await ExecAsync(connection, transaction, "DELETE FROM card_holdings WHERE player_id = $1 AND card_id = $2", ct, playerId, cardId);
@@ -230,7 +236,8 @@ public sealed partial class CardStore
         var rates = await LatestRatesAsync(connection, transaction, ct);
         if (!rates.TryGetValue(card.Rarity, out var rate))
         {
-            throw new InvalidOperationException($"No card rate for rarity '{card.Rarity}'.");
+            return CardResult<CraftResponse>.Fail(CardFailure.CardNotCollectible,
+                $"'{cardId}' cannot be crafted right now: rarity '{card.Rarity}' has no card rate.");
         }
 
         var (_, dust) = await LockWalletAsync(connection, transaction, playerId, ct);

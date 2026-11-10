@@ -681,7 +681,7 @@ public class StepProcessorTests(Stack stack)
     }
 
     [Fact]
-    public async Task PastTheRollbackLimit_TheRunIsRejected_AndNothingPays()
+    public async Task PastTheRollbackLimit_TheRunIsRejected_TheVerifiedPrefixStaysPaid_TheTailNeverPays()
     {
         await using var worker = await CreateAsync(stack);
         worker.StepRunner.Facts = BossFacts;
@@ -690,7 +690,7 @@ public class StepProcessorTests(Stack stack)
         await worker.UploadAsync(run, 2, RunActionTypes.Battle, snapshot: true);
         await worker.Steps.ProcessAsync(StepJobOf(run, 1), Ct);
         worker.StepRunner.Handler = (_, _) => Task.FromResult(FakeStepRunner.Rejected(StepMismatchReason.ActionRefused, seq: 3));
-        await worker.UploadAsync(run, 3, RunActionTypes.NextFloor, snapshot: true, floor: 1);
+        await worker.UploadAsync(run, 3, RunActionTypes.Battle, snapshot: true, floor: 1);   // a boss win inside the cheated step
 
         await worker.Steps.ProcessAsync(StepJobOf(run, 2), Ct);   // F20
 
@@ -699,8 +699,11 @@ public class StepProcessorTests(Stack stack)
         Assert.NotNull(await worker.ScalarAsync<DateTime?>("SELECT ended_at FROM runs WHERE run_id = $1", run.RunId));
         var payload = JsonDocument.Parse((await worker.OutboxPayloadsAsync("RunRolledBack")).Single()).RootElement.GetProperty("payload");
         Assert.True(payload.GetProperty("terminal").GetBoolean());
-        // The battle was inside the verified prefix before the rejection, so its gems stay released: only the unverified tail is lost.
+        // F20 (the user, 2026-11-09): everything valid up to the invalidation pays, nothing after it ever does. The first battle
+        // was inside the verified prefix, so its gems stay released; the battle of the rejected step pays nothing.
         Assert.Equal(10, await WalletAsync(worker, run));
+        Assert.Equal(0L, await worker.ScalarAsync<long>(
+            "SELECT count(*) FROM wallet_ledger WHERE ref_battle_id = $1 AND status <> 'voided'", $"{run.RunId:D}/f1/c3"));
     }
 
     [Fact]

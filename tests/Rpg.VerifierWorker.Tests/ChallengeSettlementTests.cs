@@ -303,6 +303,32 @@ public class ChallengeSettlementTests(Stack stack)
         Assert.Equal(10, await GemsAsync(worker, early.PlayerId));
     }
 
+    /// <summary>
+    /// C10, battle time (the user, 2026-11-09): what a battle pays is the rule as it stood when the battle was submitted.
+    /// A retirement or a cycle change put after the fight but before its verdict changes nothing, and a rule created after
+    /// the fight does not pay it.
+    /// </summary>
+    [Fact]
+    public async Task TheRuleAtTheBattlesTime_Pays_NotOneChangedBeforeTheVerdict()  // C10
+    {
+        await using var worker = await CreateAsync(stack);
+        var fought = DateTimeOffset.UtcNow.AddMinutes(-10);
+        await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, null);
+        await worker.PutChallengeAsync(Win, 2, 0, RewardCycles.Weekly, null, fought.AddMinutes(5));   // retired after the fight
+        await worker.PutChallengeAsync("event.late", 1, 7, RewardCycles.Once, null, fought.AddMinutes(5));   // created after it
+        Completes(worker, ["warrior"], Win, "event.late");
+        var battle = await worker.SeedAsync(submittedAt: fought);
+        var after = await worker.SeedAsync(submittedAt: fought.AddMinutes(6));
+
+        await worker.Processor.ProcessAsync(JobOf(battle), Ct);
+        await worker.Processor.ProcessAsync(JobOf(after), Ct);
+
+        Assert.Equal(10, await GemsAsync(worker, battle.PlayerId));   // the weekly 10 in force when it was fought; not the late rule
+        Assert.Equal(1, await worker.ScalarAsync<int>(
+            "SELECT rule_version FROM wallet_ledger WHERE player_id = $1", battle.PlayerId));
+        Assert.Equal(7, await GemsAsync(worker, after.PlayerId));     // a later fight: the retirement and the late rule apply
+    }
+
     [Fact]
     public async Task RuleEdit_PaysTheNewAmount_OnlyWhereNothingWasPaid()  // C11
     {
@@ -314,7 +340,7 @@ public class ChallengeSettlementTests(Stack stack)
         Completes(worker, ["warrior"], Win);
         await worker.Processor.ProcessAsync(JobOf(first), Ct);
 
-        await worker.PutChallengeAsync(Win, 2, 99, RewardCycles.Weekly, null);  // retuned
+        await worker.PutChallengeAsync(Win, 2, 99, RewardCycles.Weekly, null, Wednesday.AddMinutes(30));  // retuned before the second win
         await worker.Processor.ProcessAsync(JobOf(second), Ct);                  // same week: the mark is held, nothing repaid
         Assert.Equal(10, await GemsAsync(worker, first.PlayerId));
         await worker.Processor.ProcessAsync(JobOf(third), Ct);                   // a new week pays under the new version
@@ -407,7 +433,7 @@ public class ChallengeSettlementTests(Stack stack)
         Assert.Equal(1, worker.Metrics.Count("rpg.reward_rule_lookups", "result=retired"));
         Assert.Equal(1, worker.Metrics.Count("rpg.settlements", "result=no_rule"));
 
-        await worker.PutChallengeAsync("event.unruled", 1, 7);
+        await worker.PutChallengeAsync("event.unruled", 1, 7, RewardCycles.Once, null, Wednesday.AddMinutes(30));   // before the second win
         await worker.Processor.ProcessAsync(JobOf(second), Ct);
 
         Assert.Equal(7, await GemsAsync(worker, first.PlayerId));

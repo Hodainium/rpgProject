@@ -296,8 +296,8 @@ public class RewardRuleTests(StackFixture stack)
         var data = factory.Services.GetRequiredService<NpgsqlDataSource>();
         await using var connection = await data.OpenConnectionAsync(Ct);
         await using var transaction = await connection.BeginTransactionAsync(Ct);
-        var rule = await RewardRules.LookupAsync(connection, transaction, "boss/enemy.lich", Ct);
-        var none = await RewardRules.LookupAsync(connection, transaction, "boss/enemy.nobody", Ct);
+        var rule = await RewardRules.LookupAsync(connection, transaction, "boss/enemy.lich", DateTimeOffset.UtcNow, Ct);
+        var none = await RewardRules.LookupAsync(connection, transaction, "boss/enemy.nobody", DateTimeOffset.UtcNow, Ct);
 
         Assert.Equal((2, 25), (rule!.Version, rule.Amount));  // the version dated in the future is ignored
         Assert.Null(none);

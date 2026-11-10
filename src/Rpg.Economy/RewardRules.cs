@@ -68,19 +68,23 @@ public static class RewardRules
     }
 
     /// <summary>
-    /// The latest version in force for a challenge, read inside the caller's transaction so a grant and the rule it used
-    /// can never disagree. A version whose <c>effective_from</c> is in the future is ignored. Time is the database's.
+    /// The version that was in force for a challenge at <paramref name="at"/>, the battle's time (its <c>submitted_at</c>,
+    /// spec economy-challenges C10; the user, 2026-11-09): a rule put, retired or re-cycled after the fight changes nothing
+    /// it pays, exactly like the event's end and the week of the cycle. Read inside the caller's transaction so a grant and
+    /// the rule it used can never disagree. (It used to read the rule in force at the verdict, so a challenge retired
+    /// between a battle and its verdict paid nothing, and a rule created after a battle paid it.)
     /// </summary>
     public static async Task<RewardRule?> LookupAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
-        string challengeId, CancellationToken ct)
+        string challengeId, DateTimeOffset at, CancellationToken ct)
     {
         await using var command = new NpgsqlCommand(
             """
             SELECT challenge_id, currency, amount, cycle, ends_at, version, effective_from, created_by FROM reward_rules
-            WHERE challenge_id = $1 AND effective_from <= clock_timestamp()  -- not now(): a rule committed after this transaction began is still in force
+            WHERE challenge_id = $1 AND effective_from <= $2
             ORDER BY version DESC LIMIT 1
             """, connection, transaction);
         command.Parameters.Add(new NpgsqlParameter { Value = challengeId });
+        command.Parameters.Add(new NpgsqlParameter { Value = at.ToUniversalTime() });
         await using var reader = await command.ExecuteReaderAsync(ct);
         return await reader.ReadAsync(ct) ? Read(reader) : null;
     }

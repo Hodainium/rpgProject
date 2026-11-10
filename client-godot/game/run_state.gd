@@ -100,6 +100,10 @@ static func digest_of(ids: Array) -> String:
 ## "" when `saved` (a local save or ServerLink save) kept the pool it was written with, else why not. A save of a run without a
 ## pool has no digest and is fine. A missing or changed pool would make every hash of the run differ from the server's.
 static func save_pool_problem(saved: Dictionary) -> String:
+	# Review fix: a save says whether its run has a pool (`cardPoolSet`), so one that lost both the pool and its digest is
+	# noticed too. A save without the flag predates it and keeps the old rule (no digest, nothing to check).
+	if saved.get("cardPoolSet") == true and not saved.has("cardPoolDigest"):
+		return "the save lost its card pool"
 	if not saved.has("cardPoolDigest"):
 		return ""
 	if not saved.get("cardPool") is Array:

@@ -379,6 +379,10 @@ func test_a_save_that_loses_or_changes_its_pool_is_noticed() -> void:
 	var lost := saved.duplicate(true)
 	lost.erase("cardPool")
 	check(RunState.save_pool_problem(lost).contains("lost"), "a save without its pool: %s" % RunState.save_pool_problem(lost))
+	var stripped := saved.duplicate(true)  # review fix: the pool and its digest both gone
+	stripped.erase("cardPool")
+	stripped.erase("cardPoolDigest")
+	check(RunState.save_pool_problem(stripped).contains("lost"), "a save that lost the pool and its digest: %s" % RunState.save_pool_problem(stripped))
 	var widened := saved.duplicate(true)
 	widened["cardPool"].append("fixture.item.banner")
 	check(RunState.save_pool_problem(widened).contains("changed"), "a save with another pool")

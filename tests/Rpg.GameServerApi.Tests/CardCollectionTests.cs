@@ -437,6 +437,61 @@ public class CardCollectionTests(StackFixture stack)
         Assert.Equal((2, 0), (counters["pa"], counters["pb"]));
     }
 
+    /// <summary>
+    /// Review fix (spec 3.4a): the first-open head start is for a player's first open of a pack type. A pack type that gains
+    /// pity later gives players who already opened it counters at 0, not the head start.
+    /// </summary>
+    [Fact]
+    public async Task Pity_APackTypeThatGainsPityLater_GivesItsVeteransNoFirstOpenHeadStart()
+    {
+        await using var factory = await FactoryAsync();
+        var (veteran, veteranId) = await PlayerAsync(factory, Name() + "v");
+        var (newcomer, _) = await PlayerAsync(factory, Name() + "n");
+        await GrantAsync(factory, veteranId, gems: 1000);
+        await AddPackAsync(factory, Pack("late", 10, 1, new Dictionary<string, int> { [CardRarities.Common] = 10_000 }));
+        await OpenAsync(veteran, "late");
+        await OpenAsync(veteran, "late");
+        await AddPackAsync(factory, Pack("late", 10, 1, new Dictionary<string, int> { [CardRarities.Common] = 10_000 },
+            pity: new Dictionary<string, int> { [CardRarities.Legendary] = 20 },
+            first: new Dictionary<string, int> { [CardRarities.Legendary] = 10 }));
+
+        var veterans = (await veteran.GetCollectionAsync(Ct)).Pity.Single(p => p.PackId == "late").MissedPacks[CardRarities.Legendary];
+        var newcomers = (await newcomer.GetCollectionAsync(Ct)).Pity.Single(p => p.PackId == "late").MissedPacks[CardRarities.Legendary];
+
+        Assert.Equal(0, veterans);
+        Assert.Equal(10, newcomers);   // a player who never opened it still gets the head start: 20 - 10
+    }
+
+    /// <summary>
+    /// Review fix: a rarity with no card rate is a rules gap, never a 500. A pack that can draw it is unavailable (nothing
+    /// charged), a card of it cannot be dusted or crafted, and a pack type with odds on it is refused.
+    /// </summary>
+    [Fact]
+    public async Task ARarityWithNoCardRate_RefusesTheAction_NeverA500()
+    {
+        await using var factory = await FactoryAsync();
+        var (admin, _) = await PlayerAsync(factory, "designer");
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 100, dust: 10_000);
+        await OwnAsync(factory, player, "item.e1");
+        await AddPackAsync(factory, Pack("epics", 10, 1, new Dictionary<string, int> { [CardRarities.Epic] = 10_000 }));
+        await using (var delete = factory.Services.GetRequiredService<NpgsqlDataSource>().CreateCommand(
+                         "DELETE FROM card_rates WHERE rarity = 'epic'"))
+        {
+            await delete.ExecuteNonQueryAsync(Ct);
+        }
+
+        var open = await RefusedAsync(() => OpenAsync(client, "epics"));
+        var dust = await RefusedAsync(() => client.DustCardAsync("item.e1", Guid.NewGuid(), Ct));
+        var put = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("epics2", 10, 1,
+            new Dictionary<string, int> { [CardRarities.Epic] = 10_000 }), Ct));
+
+        Assert.Equal((HttpStatusCode.NotFound, ApiErrors.PackUnavailable), (open.StatusCode, open.ErrorCode));
+        Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardNotCollectible), (dust.StatusCode, dust.ErrorCode));
+        Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardRuleInvalid), (put.StatusCode, put.ErrorCode));
+        Assert.Equal(100, (await client.GetCollectionAsync(Ct)).Gems);   // nothing charged
+    }
+
     [Fact]
     public async Task OpenPack_NeverReturnsAPackWithoutARareOrBetter_WhenTheGuaranteeIsOn()
     {
