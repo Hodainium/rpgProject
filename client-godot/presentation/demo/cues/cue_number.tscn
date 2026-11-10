@@ -1,0 +1,142 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_number_pop_cue.gd" id="1_numcue"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/damage_number.tres" id="2_numfx"]
+[ext_resource type="Script" path="res://game/fx/fx_number_style.gd" id="3_numsty"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="4_numqry"]
+
+[sub_resource type="Resource" id="Query_crit"]
+script = ExtResource("4_numqry")
+require_all_tags = Array[StringName]([&"Hit.Critical"])
+
+[sub_resource type="Resource" id="Style_crit"]
+script = ExtResource("3_numsty")
+match = SubResource("Query_crit")
+params = {
+"font_size": 64,
+"label": "Crit!",
+"label_color": Color(1, 0.82, 0.25, 1),
+"outline_color": Color(1, 0.95, 0.6, 1),
+"outline_size": 15
+}
+
+[sub_resource type="Resource" id="Query_break"]
+script = ExtResource("4_numqry")
+require_all_tags = Array[StringName]([&"Hit.Break"])
+
+[sub_resource type="Resource" id="Style_break"]
+script = ExtResource("3_numsty")
+match = SubResource("Query_break")
+params = {
+"font_size": 76,
+"label": "Break",
+"label_color": Color(1, 1, 1, 1)
+}
+
+[sub_resource type="Resource" id="Query_weak"]
+script = ExtResource("4_numqry")
+require_all_tags = Array[StringName]([&"Hit.Weakness"])
+
+[sub_resource type="Resource" id="Style_weak"]
+script = ExtResource("3_numsty")
+match = SubResource("Query_weak")
+params = {
+"font_size": 64,
+"label": "Weak!",
+"label_color": Color(1, 1, 1, 1)
+}
+
+[sub_resource type="Resource" id="Query_resist"]
+script = ExtResource("4_numqry")
+require_all_tags = Array[StringName]([&"Hit.Resisted"])
+
+[sub_resource type="Resource" id="Style_resist"]
+script = ExtResource("3_numsty")
+match = SubResource("Query_resist")
+params = {
+"color": Color(0.7, 0.7, 0.75, 1),
+"font_size": 64
+}
+
+[sub_resource type="Resource" id="Query_fire"]
+script = ExtResource("4_numqry")
+require_all_tags = Array[StringName]([&"Damage.Type.Fire"])
+
+[sub_resource type="Resource" id="Style_fire"]
+script = ExtResource("3_numsty")
+match = SubResource("Query_fire")
+params = {
+"color": Color(1, 0.45, 0.16, 1)
+}
+
+[sub_resource type="Resource" id="Query_ice"]
+script = ExtResource("4_numqry")
+require_all_tags = Array[StringName]([&"Damage.Type.Ice"])
+
+[sub_resource type="Resource" id="Style_ice"]
+script = ExtResource("3_numsty")
+match = SubResource("Query_ice")
+params = {
+"color": Color(0.45, 0.88, 1, 1)
+}
+
+[sub_resource type="Resource" id="Query_physical"]
+script = ExtResource("4_numqry")
+require_all_tags = Array[StringName]([&"Damage.Type.Physical"])
+
+[sub_resource type="Resource" id="Style_physical"]
+script = ExtResource("3_numsty")
+match = SubResource("Query_physical")
+params = {
+"color": Color(0.93, 0.93, 0.96, 1)
+}
+
+[sub_resource type="Resource" id="Style_heal"]
+script = ExtResource("3_numsty")
+verb = &"Verb.Heal"
+params = {
+"color": Color(0.45, 1, 0.55, 1),
+"font_size": 64
+}
+prefix = "+"
+
+[sub_resource type="Resource" id="Query_bleed"]
+script = ExtResource("4_numqry")
+require_all_tags = Array[StringName]([&"Status.Debuff.Bleed"])
+
+[sub_resource type="Resource" id="Style_bleed"]
+script = ExtResource("3_numsty")
+match = SubResource("Query_bleed")
+verb = &"Verb.Damage"
+params = {
+"color": Color(0.9, 0.18, 0.2, 1)
+}
+
+[sub_resource type="Resource" id="Query_burn"]
+script = ExtResource("4_numqry")
+require_all_tags = Array[StringName]([&"Status.Debuff.Burn"])
+
+[sub_resource type="Resource" id="Style_burn"]
+script = ExtResource("3_numsty")
+match = SubResource("Query_burn")
+verb = &"Verb.Damage"
+params = {
+"color": Color(1, 0.45, 0.16, 1)
+}
+
+[sub_resource type="Resource" id="Query_poison"]
+script = ExtResource("4_numqry")
+require_all_tags = Array[StringName]([&"Status.Debuff.Poison"])
+
+[sub_resource type="Resource" id="Style_poison"]
+script = ExtResource("3_numsty")
+match = SubResource("Query_poison")
+verb = &"Verb.Damage"
+params = {
+"color": Color(0.55, 0.95, 0.35, 1)
+}
+
+[node name="CueNumber" type="Node"]
+script = ExtResource("1_numcue")
+styles = Array[ExtResource("3_numsty")]([SubResource("Style_crit"), SubResource("Style_break"), SubResource("Style_weak"), SubResource("Style_resist"), SubResource("Style_fire"), SubResource("Style_ice"), SubResource("Style_physical"), SubResource("Style_heal"), SubResource("Style_bleed"), SubResource("Style_burn"), SubResource("Style_poison")])
+fx = ExtResource("2_numfx")
