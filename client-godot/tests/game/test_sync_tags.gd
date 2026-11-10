@@ -23,3 +23,32 @@ func test_a_tag_is_removed_once_and_children_are_not_taken_with_it() -> void:
 	var plan: Dictionary = SyncTags.removal_plan([&"A.B", &"A.B.C"], {}, [&"A.B", &"A.B"])
 	eq(plan["remove"], [&"A.B"], "listed twice, removed once")
 	check(not (plan["remove"] as Array).has(&"A.B.C"), "its child is a different tag and stays unless named")
+
+
+## Review fix: the effect listeners' tag fields are gas::tag fields, so the cues and channels a rule set names count as used
+## (a cue only a listener executes was "unused" before, and --remove-unused would have taken it out of the registry).
+func test_an_effect_listeners_tags_count_as_used() -> void:
+	var checker: Node = SyncTags.new()
+	var listener := FxListener.new()
+	listener.channel = &"Message.Battle.Damage"
+	listener.cue = &"Cue.Fx.Proc.Crit"
+	listener.require_tags = [&"Hit.Critical"]
+	listener.require_verb = &"Verb.Damage"
+	checker._walk(listener, "res://x/rules.tres")
+	for tag in [&"Message.Battle.Damage", &"Cue.Fx.Proc.Crit", &"Hit.Critical", &"Verb.Damage"]:
+		check(checker._used.has(tag), "%s counts as used" % tag)
+	checker.free()
+
+
+## Review fix: a tag only the test fixtures use is protected: never reported unused, never removed.
+func test_a_fixture_only_tag_is_protected_from_removal() -> void:
+	var checker: Node = SyncTags.new()
+	checker._into_protected = true
+	checker._note(&"Fixture.Only", "res://tests/fixtures/x.tres: tag")
+	checker._into_protected = false
+	check(not checker._used.has(&"Fixture.Only") and checker._protected.has(&"Fixture.Only"), "noted as protected, not as used")
+	var in_use: Dictionary = checker._used.duplicate()
+	in_use.merge(checker._protected)
+	var plan: Dictionary = SyncTags.removal_plan([&"Fixture.Only"], in_use, [&"Fixture.Only"])
+	eq(plan["remove"], [], "a fixture-only tag is never removed")
+	checker.free()

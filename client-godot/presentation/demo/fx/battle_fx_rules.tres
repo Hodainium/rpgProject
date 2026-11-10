@@ -1,84 +1,19 @@
 [gd_resource type="Resource" script_class="FxRuleSet" format=3]
 
 [ext_resource type="Script" path="res://game/fx/fx_listener.gd" id="1_hxbql"]
-[ext_resource type="Resource" path="res://presentation/demo/fx/damage_number.tres" id="2_pq37k"]
 [ext_resource type="Script" path="res://game/fx/fx_rule_set.gd" id="6_8myab"]
 
 [sub_resource type="Resource" id="Resource_c6p3t"]
 script = ExtResource("1_hxbql")
 channel = &"Message.Battle.Damage"
-effect = ExtResource("2_pq37k")
+cue = &"Cue.Fx.Number"
 anchor_rule = 2
-tag_params = {
-"Damage.Type.Fire": {
-"color": Color(1, 0.45, 0.16, 1)
-},
-"Damage.Type.Ice": {
-"color": Color(0.45, 0.88, 1, 1)
-},
-"Damage.Type.Physical": {
-"color": Color(0.93, 0.93, 0.96, 1)
-},
-"Hit.Break": {
-"font_size": 76,
-"label": "Break",
-"label_color": Color(1, 1, 1, 1)
-},
-"Hit.Critical": {
-"font_size": 64,
-"label": "Crit!",
-"label_color": Color(1, 0.82, 0.25, 1),
-"outline_color": Color(1, 0.95, 0.6, 1),
-"outline_size": 15
-},
-"Hit.Resisted": {
-"color": Color(0.7, 0.7, 0.75, 1),
-"font_size": 64
-},
-"Hit.Weakness": {
-"font_size": 64,
-"label": "Weak!",
-"label_color": Color(1, 1, 1, 1)
-}
-}
-tag_order = Array[StringName]([&"Hit.Resisted", &"Hit.Weakness", &"Hit.Break", &"Hit.Critical"])
-text_param = &"text"
 
 [sub_resource type="Resource" id="Resource_anecu"]
 script = ExtResource("1_hxbql")
 channel = &"Message.Battle.HpChanged"
-effect = ExtResource("2_pq37k")
+cue = &"Cue.Fx.Number"
 anchor_rule = 2
-params = {
-"color": Color(0.45, 1, 0.55, 1),
-"font_size": 64
-}
-require_verb = &"Verb.Heal"
-text_param = &"text"
-text_prefix = "+"
-
-[sub_resource type="Resource" id="Resource_mcp4k"]
-script = ExtResource("1_hxbql")
-channel = &"Message.Battle.HpChanged"
-effect = ExtResource("2_pq37k")
-anchor_rule = 2
-params = {
-"color": Color(0.93, 0.93, 0.96, 1),
-"font_size": 64
-}
-require_verb = &"Verb.Damage"
-tag_params = {
-"Status.Debuff.Bleed": {
-"color": Color(0.9, 0.18, 0.2, 1)
-},
-"Status.Debuff.Burn": {
-"color": Color(1, 0.45, 0.16, 1)
-},
-"Status.Debuff.Poison": {
-"color": Color(0.55, 0.95, 0.35, 1)
-}
-}
-text_param = &"text"
 
 [sub_resource type="Resource" id="Resource_oytrp"]
 script = ExtResource("1_hxbql")
@@ -96,4 +31,4 @@ require_tags = Array[StringName]([&"Damage.Type.Ice"])
 
 [resource]
 script = ExtResource("6_8myab")
-rules = Array[ExtResource("1_hxbql")]([SubResource("Resource_c6p3t"), SubResource("Resource_anecu"), SubResource("Resource_mcp4k"), SubResource("Resource_oytrp"), SubResource("Resource_0nnrv")])
+rules = Array[ExtResource("1_hxbql")]([SubResource("Resource_c6p3t"), SubResource("Resource_anecu"), SubResource("Resource_oytrp"), SubResource("Resource_0nnrv")])

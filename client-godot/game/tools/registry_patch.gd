@@ -8,34 +8,53 @@ const REGISTRY := "res://presentation/demo/fx/fx_registry.tres"
 const FX_DIR := "res://presentation/demo/fx/"
 
 
-## Adds every FxDefinition and FxRuleSet in `FX_DIR` that the registry does not list. Returns the lines it added.
+## Adds every FxDefinition and FxRuleSet under `fx_dir` (subfolders too) that the registry does not list. Returns the lines
+## it added. A file is "listed" by its path. An effect with no id, or with the id of another listed effect, is never added
+## (it would never be playable, or would replace that effect): it is reported, and FxValidator.sync_problems fails on it.
 static func add_missing_effects(registry_path: String = REGISTRY, fx_dir: String = FX_DIR) -> PackedStringArray:
 	var registry := ResourceLoader.load(registry_path, "", ResourceLoader.CACHE_MODE_IGNORE) as FxRegistry
-	var effects := registry.all()
-	var listed_rule_sets := {}
+	var listed := {}  # resource path -> true, for every definition and rule set the registry (and its includes) lists
+	var ids := {}     # effect id -> the path of the listed effect that has it
+	for id in registry.all():
+		var listed_effect: FxDefinition = registry.all()[id]
+		listed[listed_effect.resource_path] = true
+		ids[id] = listed_effect.resource_path
+	for definition in FxValidator._every_definition(registry):
+		listed[definition.resource_path] = true
 	for rules in registry.all_rule_sets():
-		listed_rule_sets[rules.resource_path] = true
+		listed[rules.resource_path] = true
 	var new_definitions: Array[String] = []
 	var new_rule_sets: Array[String] = []
-	for file in DirAccess.get_files_at(fx_dir):
-		if not file.ends_with(".tres") or file == registry_path.get_file():
+	for path in FxValidator.fx_files(fx_dir):
+		if path == registry_path or listed.has(path):
 			continue
-		var resource := ResourceLoader.load(fx_dir + file, "", ResourceLoader.CACHE_MODE_IGNORE)
-		if resource is FxDefinition and not effects.has(resource.id):
-			new_definitions.append(fx_dir + file)
-		elif resource is FxRuleSet and not listed_rule_sets.has(fx_dir + file):
-			new_rule_sets.append(fx_dir + file)
+		var resource := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE)
+		if resource is FxDefinition:
+			if resource.id == &"":
+				push_error("RegistryPatch: %s has no id; not added (give it one)" % path)
+			elif ids.has(resource.id):
+				push_error("RegistryPatch: %s has the id %s of %s; not added (give it its own id)" % [path, resource.id, ids[resource.id]])
+			else:
+				ids[resource.id] = path
+				new_definitions.append(path)
+		elif resource is FxRuleSet:
+			new_rule_sets.append(path)
 	new_definitions.sort()
 	new_rule_sets.sort()
 	var added := PackedStringArray()
 	if new_definitions.is_empty() and new_rule_sets.is_empty():
 		return added
-	var text := FileAccess.get_file_as_string(registry_path)
+	var raw := FileAccess.get_file_as_string(registry_path)
+	var newline := "\r\n" if raw.contains("\r\n") else "\n"   # a file is patched in its own line endings
+	var text := raw.replace("\r\n", "\n")
 	var serial := 0
 	for kind in [["definitions", new_definitions], ["rule_sets", new_rule_sets]]:
 		for path in kind[1]:
 			serial += 1
 			var ext_id := "add_%d_%s" % [serial, path.get_file().get_basename()]
+			while text.contains('id="%s"' % ext_id):   # unique in the file (an earlier run, or one basename in two folders)
+				serial += 1
+				ext_id = "add_%d_%s" % [serial, path.get_file().get_basename()]
 			var patched := _append_to_array(text, kind[0], ext_id)
 			if patched == "":
 				push_error("RegistryPatch: no '%s = ' line in the registry; %s not added (add it by hand)" % [kind[0], path])
@@ -43,7 +62,7 @@ static func add_missing_effects(registry_path: String = REGISTRY, fx_dir: String
 			text = _insert_ext_resource(patched, path, ext_id)
 			added.append("%s += %s" % [kind[0], path.get_file()])
 	var file := FileAccess.open(registry_path, FileAccess.WRITE)
-	file.store_string(text)
+	file.store_string(text.replace("\n", newline))
 	file.close()
 	return added
 

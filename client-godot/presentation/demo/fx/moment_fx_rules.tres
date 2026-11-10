@@ -19,17 +19,17 @@ anchor_rule = 2
 
 [sub_resource type="Resource" id="Resource_oo5n4"]
 script = ExtResource("1_m8oa5")
-channel = &"Message.Battle.Trigger"
+channel = &"Message.Battle.Damage"
 cue = &"Cue.Fx.Proc.Crit"
 anchor_rule = 2
-require_tags = Array[StringName]([&"Event.Damage.Dealt.Critical"])
+require_tags = Array[StringName]([&"Hit.Critical"])
 
 [sub_resource type="Resource" id="Resource_3n4d8"]
 script = ExtResource("1_m8oa5")
-channel = &"Message.Battle.Trigger"
+channel = &"Message.Battle.Damage"
 cue = &"Cue.Fx.Proc.Weakness"
 anchor_rule = 2
-require_tags = Array[StringName]([&"Event.Damage.Dealt.Weakness"])
+require_tags = Array[StringName]([&"Hit.Weakness"])
 
 [sub_resource type="Resource" id="Resource_6f1x3"]
 script = ExtResource("1_m8oa5")
@@ -47,10 +47,10 @@ require_tags = Array[StringName]([&"Event.Damage.Dealt.Ice"])
 
 [sub_resource type="Resource" id="Resource_5ephd"]
 script = ExtResource("1_m8oa5")
-channel = &"Message.Battle.Trigger"
+channel = &"Message.Battle.Damage"
 cue = &"Cue.Fx.Proc.Break"
 anchor_rule = 2
-require_tags = Array[StringName]([&"Event.Damage.Dealt.Break"])
+require_tags = Array[StringName]([&"Hit.Break"])
 
 [sub_resource type="Resource" id="Resource_tnlfq"]
 script = ExtResource("1_m8oa5")

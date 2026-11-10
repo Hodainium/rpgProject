@@ -80,7 +80,8 @@ func _scripts(directory: String) -> PackedStringArray:
 
 # --- Patch 3 and 4: lazy cue scenes and suppression (spec vfx-framework; GameplayCueEntry, GameplayCueManager) -------------
 
-const PROBE_SCENE: String = "user://gas_patch_probe_cue.tscn"
+## One file per process: the suite runs in parallel shards that share user://, and two shards writing one file read it torn.
+var PROBE_SCENE: String = "user://gas_patch_probe_cue_%d.tscn" % OS.get_process_id()
 const PROBE_REGISTRY: String = "user://gas_patch_probe_registry.tres"
 
 
@@ -173,6 +174,44 @@ func test_cue_manager_loads_lazily_and_can_suppress() -> void:
 	manager.unregister_cue(entry.tag)
 	manager.suppress_cues = was_suppressed
 	target.free()
+
+
+## Patch 4 (review fix 2026-11-09): a cue node still playing when its cue is replaced or removed is freed when it finishes,
+## never pooled, so the next execute_cue makes a node of the new scene and an unregistered cue leaves no pool behind.
+func test_cue_nodes_of_a_replaced_or_removed_cue_are_never_pooled() -> void:
+	var manager := GameplayCueManager
+	var was_suppressed: bool = manager.suppress_cues
+	manager.suppress_cues = false
+	var tag := &"Cue.Test.Replaced"
+	var old_scene := _notify_scene("Old")
+	var new_scene := _notify_scene("New")
+	var target := Node.new()
+	host.add_child(target)
+	manager.register_cue(tag, old_scene)
+	var live := manager.add_persistent_cue(tag, target)
+	check(live != null and live.name == "Old", "a live node of the first scene")
+	manager.register_cue(tag, new_scene)   # replaced while that node still plays
+	live.end_cue()
+	eq((manager._pool.get(tag, []) as Array).size(), 0, "the old scene's node does not enter the new pool")
+	var next := manager.add_persistent_cue(tag, target)
+	check(next != null and next.name == "New", "the next use makes a node of the new scene")
+	manager.unregister_cue(tag)            # removed while that node still plays
+	next.end_cue()
+	check(not manager._pool.has(tag), "a removed cue's late node leaves no pool behind")
+	await host.get_tree().process_frame
+	check(not is_instance_valid(live) and not is_instance_valid(next), "both stale nodes were freed")
+	manager.suppress_cues = was_suppressed
+	target.free()
+
+
+func _notify_scene(node_name: String) -> PackedScene:
+	var notify := GameplayCueNotify.new()
+	notify.name = node_name
+	notify.auto_destroy = false
+	var scene := PackedScene.new()
+	scene.pack(notify)
+	notify.free()
+	return scene
 
 
 ## The project keeps cues off in headless processes (the verifier): FxManager's _ready sets it.

@@ -21,7 +21,11 @@ func resolve(target: Node, payload: Dictionary) -> Variant:
 		Source.PAYLOAD:
 			return payload.get(payload_key, value)
 		Source.TARGET_TAGS:
-			var asc: Object = target.get("asc") if target != null and "asc" in target else null
+			# The target's own ability system, else the payload's "asc" (review fix: a tag cue runs on the unit's view, which has
+			# none, and FxTagCues passes the unit's ability system in the payload).
+			var asc: Object = target.get("asc") if target != null and "asc" in target else payload.get("asc")
+			if asc != null and not is_instance_valid(asc):
+				asc = null
 			if asc != null:
 				for tag in tag_values:
 					if asc.has_tag(StringName(tag)):

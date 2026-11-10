@@ -8,13 +8,13 @@ extends Resource
 
 enum AnchorRule { SCREEN, OWNER, TARGET_UNIT, INSTIGATOR_UNIT }
 
-@export var channel: StringName
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var channel: StringName
 ## Hear child channels too (Message.Battle hears Message.Battle.Broken).
 @export var partial: bool = false
 @export var effect: FxDefinition
 ## A GameplayCue tag to execute instead of playing `effect` directly (Lyra's way: a message becomes cue parameters, and the cue notify decides
 ## what plays). The cue runs on the anchor's unit view with the message as its payload (MessageCueParams). Set one of `effect` and `cue`.
-@export var cue: StringName = &""
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var cue: StringName = &""
 @export var anchor_rule: AnchorRule = AnchorRule.SCREEN
 @export var params: Dictionary = {}
 ## A float parameter filled from a VerbMessage's magnitude (e.g. damage → intensity).
@@ -24,16 +24,16 @@ enum AnchorRule { SCREEN, OWNER, TARGET_UNIT, INSTIGATOR_UNIT }
 @export var magnitude_scale: float = 1.0
 ## Spec vfx-content-pass 3.2. Only messages whose tags include ALL of require_tags and NONE of exclude_tags play (a tag
 ## matches itself and its children: "Damage.Type" hears Damage.Type.Fire). Empty = no filter.
-@export var require_tags: Array[StringName] = []
-@export var exclude_tags: Array[StringName] = []
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var require_tags: Array[StringName] = []
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var exclude_tags: Array[StringName] = []
 ## Only a VerbMessage with this verb plays (Verb.Heal vs Verb.Damage on one channel). Empty = any.
-@export var require_verb: StringName
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var require_verb: StringName
 ## Parameters that depend on the message's tags: {tag: {param: value}}. Every tag the message carries adds its parameters
 ## on top of `params` (later entries win), so one effect serves every element: {"Damage.Type.Fire": {"color": orange}}.
 @export var tag_params: Dictionary = {}
 ## Which tag wins when two set the same parameter: tags listed here apply last, in this order (later = stronger), after the
 ## ones not listed. A saved Dictionary does not keep its order, so anything that must override (a crit over a weakness) is listed.
-@export var tag_order: Array[StringName] = []
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var tag_order: Array[StringName] = []
 ## A STRING parameter filled with the message's magnitude as a whole number (magnitude / text_divisor), between the
 ## prefix and suffix: 2345 with divisor 100 and prefix "+" gives "+23". Battle numbers are x100.
 @export var text_param: StringName

@@ -269,7 +269,11 @@ func test_shipped_slice_validates() -> void:
 		return
 	check(ResourceLoader.exists("res://presentation/demo/fx/battle_fx_rules.tres"), "the rule set exists (build_vfx_slice.tscn)")
 	var rules := load("res://presentation/demo/fx/battle_fx_rules.tres") as FxRuleSet
-	check(rules != null and rules.rules.size() >= 5, "the battle rules load")
+	check(rules != null and rules.rules.size() >= 4, "the battle rules load")
+	# Lyra's way (the user, 2026-11-09): the numbers are a cue, Cue.Fx.Number, styled by its FxNumberStyles.
+	var number_rules := rules.rules.filter(func(rule) -> bool: return rule != null and rule.cue == &"Cue.Fx.Number")
+	eq(number_rules.map(func(rule): return rule.channel), [&"Message.Battle.Damage", &"Message.Battle.HpChanged"],
+		"hits and HP changes both pop the number cue")
 	for rule in rules.rules:
 		check((rule.effect != null and rule.effect.id != &"") or rule.cue != &"", "every rule names an effect or a cue")
 		if rule.cue != &"":
@@ -840,12 +844,13 @@ func test_moment_messages_become_cues_and_run_events_flash() -> void:
 	eq(service.live_count(&"fx.phase_shift"), 1, "a boss entering a phase shakes the field")
 	GameplayMessages.broadcast(&"Message.Battle.OneMore", VerbMessage.make(&"Verb.OneMore", &"P1", &"P1"))
 	eq(service.live_count(&"fx.one_more"), 1, "One More shows its callout")
-	GameplayMessages.broadcast(&"Message.Battle.Trigger", VerbMessage.make(&"Verb.Use", &"P1", &"P1", 0, [&"Ability.Passive.Test", &"Event.Damage.Dealt.Critical"]))
-	eq(service.live_count(&"fx.proc_pulse"), 1, "a passive that triggers on a crit pulses")
+	# Lyra's way (the user, 2026-11-09): a crit, a weakness and a break accent every such hit, not only a passive that triggers on it.
+	GameplayMessages.broadcast(&"Message.Battle.Damage", VerbMessage.make(&"Verb.Damage", &"P1", &"E1", 1200, [&"Hit.Critical", &"Damage.Type.Physical"]))
+	eq(service.live_count(&"fx.proc_pulse"), 1, "a critical hit pulses")
 	var colour: Color = service.live()[service.live().size() - 1].params[&"color"]
 	check(colour.r > 0.9 and colour.g > 0.7 and colour.b < 0.5, "gold for a crit (%s)" % colour)
 	GameplayMessages.broadcast(&"Message.Battle.Trigger", VerbMessage.make(&"Verb.Use", &"P1", &"P1", 0, [&"Ability.Passive.Test", &"Event.Damage.Dealt.Ice"]))
-	eq(service.live_count(&"fx.proc_pulse"), 2, "an ice trigger pulses too, in its own colour")
+	eq(service.live_count(&"fx.proc_pulse"), 2, "a passive that triggers on an ice hit pulses, in its own colour")
 	GameplayMessages.broadcast(&"Message.Battle.Trigger", VerbMessage.make(&"Verb.Use", &"P1", &"P1", 0, [&"Ability.Passive.Test", &"Event.Battle.Start"]))
 	eq(service.live_count(&"fx.proc_pulse"), 2, "the battle-start passives (a dozen at once) stay quiet")
 	GameplayMessages.broadcast(&"Message.Battle.Resisted", VerbMessage.make(&"Verb.Resist", &"E1", &"P1"))
@@ -854,6 +859,39 @@ func test_moment_messages_become_cues_and_run_events_flash() -> void:
 	GameplayMessages.broadcast(&"Message.Run.LevelUp", VerbMessage.make(&"Verb.LevelUp", &"", &"slot:1", 2))
 	eq(service.live_count(&"fx.screen_flash"), 1, "a level-up flashes the screen (the phase shift's own flash starts a beat later)")
 	GameplayCueManager.suppress_cues = setup["was_suppressed"]
+
+
+## Lyra's number pops (the user, 2026-11-09): the number is a cue whose styles decide its look by the hit's tags, the first
+## matching style per parameter (a crit's outline and label, the element's colour); a heal is green with a "+", a burn tick orange.
+func test_the_number_cue_styles_each_number_by_its_tags() -> void:
+	if skip_in_export():
+		return
+	var setup := _moments_setup()
+	var service: FxService = setup["service"]
+	var owner_node := _owner()
+	for rules in (load("res://presentation/demo/fx/fx_registry.tres") as FxRegistry).all_rule_sets():
+		rules.attach(owner_node)
+	GameplayMessages.broadcast(&"Message.Battle.Damage", VerbMessage.make(&"Verb.Damage", &"P1", &"E1", 4285, [&"Hit.Critical", &"Hit.Weakness", &"Damage.Type.Fire"]))
+	var crit: Dictionary = _last(service, &"fx.damage_number").params
+	eq(crit[&"text"], "42", "the number is the damage, x100 divided")
+	eq(crit[&"label"], "Crit!", "the crit style comes first and names it")
+	eq(crit[&"outline_size"], 15, "with its outline")
+	eq(crit[&"color"], Color(1, 0.45, 0.16, 1), "while the element still gives the colour")
+	GameplayMessages.broadcast(&"Message.Battle.HpChanged", VerbMessage.make(&"Verb.Heal", &"", &"P1", 1500, [&"Status.Buff.Regen"]))
+	var heal: Dictionary = _last(service, &"fx.damage_number").params
+	eq([heal[&"text"], heal[&"color"]], ["+15", Color(0.45, 1, 0.55, 1)], "a heal is green with a plus")
+	GameplayMessages.broadcast(&"Message.Battle.HpChanged", VerbMessage.make(&"Verb.Damage", &"", &"P1", 700, [&"Status.Debuff.Burn"]))
+	var burn: Dictionary = _last(service, &"fx.damage_number").params
+	eq([burn[&"text"], burn[&"color"]], ["7", Color(1, 0.45, 0.16, 1)], "a burn tick is orange, with no plus")
+	GameplayCueManager.suppress_cues = setup["was_suppressed"]
+
+
+func _last(service: FxService, id: StringName) -> FxHandle:
+	var found: FxHandle = null
+	for handle in service.live():
+		if handle.definition.id == id:
+			found = handle
+	return found
 
 
 func test_every_moment_cue_is_registered_and_plays_an_effect() -> void:
@@ -933,6 +971,97 @@ func test_a_persistent_look_ends_when_its_unit_dies() -> void:
 	eq(service.live_count(&"fx.test_look"), 0, "and ends with the unit")
 	GameplayCueManager.unregister_cue(tag)
 	GameplayCueManager.suppress_cues = setup["was_suppressed"]
+
+
+## Review fix: a tag a unit already has when the watcher attaches (a member carried over Broken or dead) starts its lasting look,
+## without replaying the moment it was added; detach() ends the look and stops listening.
+func test_tag_cues_start_looks_for_tags_already_there_and_detach_ends_them() -> void:
+	if skip_in_export():
+		return
+	var setup := _moments_setup()
+	var service: FxService = setup["service"]
+	var asc := AbilitySystemComponent.new()
+	(setup["view"] as Node3D).add_child(asc)
+	asc.add_tag(&"State.Broken")   # before anyone watches
+	var binder := FxTagCues.new()
+	binder.attach_unit(asc, &"P1", (load("res://presentation/demo/fx/fx_registry.tres") as FxRegistry).all_tag_cues())
+	eq(service.live_count(&"fx.broken_state"), 1, "the lasting Broken look starts at attach")
+	eq(service.live_count(&"fx.break_shatter"), 0, "but the break moment, long past, does not replay")
+	binder.detach()
+	service.advance(5.0)
+	eq(service.live_count(&"fx.broken_state"), 0, "detach ends the look")
+	asc.clear_tag(&"State.Broken")
+	eq(service.live_count(&"fx.recover_flash"), 0, "and nothing listens any more")
+	GameplayCueManager.suppress_cues = setup["was_suppressed"]
+
+
+## Review fix: GAS pauses a persistent cue whose effect is suppressed (set_cue_state); the look, which lives in the effects
+## service, fades out while paused and comes back when the cue is enabled again.
+func test_a_suppressed_persistent_cue_hides_its_look_until_enabled() -> void:
+	var setup := _moments_setup()
+	var service: FxService = setup["service"]
+	var cue := FxCueNotify.new()
+	var looping := _socket_effect(FxSocket.CENTER)
+	looping.id = &"fx.test_suppressed_look"
+	(looping.layers[0] as FxParticles3DLayer).loop = true
+	cue.fx = looping
+	cue.stop_fade = 0.0
+	var scene := PackedScene.new()
+	scene.pack(cue)
+	cue.free()
+	var tag := &"Cue.Test.Suppressed"
+	GameplayCueManager.register_cue(tag, scene)
+	var live := GameplayCueManager.add_persistent_cue(tag, setup["view"])
+	eq(service.live_count(&"fx.test_suppressed_look"), 1, "the look plays")
+	GameplayCueManager.set_cue_state(live, false)
+	service.advance(5.0)   # the last particles fade out
+	eq(service.live_count(&"fx.test_suppressed_look"), 0, "suppressed: the look is gone")
+	GameplayCueManager.set_cue_state(live, true)
+	eq(service.live_count(&"fx.test_suppressed_look"), 1, "enabled again: it is back")
+	live.end_cue()
+	GameplayCueManager.unregister_cue(tag)
+	GameplayCueManager.suppress_cues = setup["was_suppressed"]
+
+
+## Review fix: a persistent cue whose look is a one-shot plays once; a tier change does not play it (or its targets' looks) again.
+func test_a_one_shot_persistent_cue_does_not_replay_on_a_tier_change() -> void:
+	var setup := _moments_setup()
+	var service: FxService = setup["service"]
+	var cue := FxCueNotify.new()
+	var once := _socket_effect(FxSocket.CENTER)
+	once.id = &"fx.test_once_look"
+	cue.fx = once
+	var scene := PackedScene.new()
+	scene.pack(cue)
+	cue.free()
+	var tag := &"Cue.Test.OnceLook"
+	GameplayCueManager.register_cue(tag, scene)
+	var live := GameplayCueManager.add_persistent_cue(tag, setup["view"])
+	eq(service.stats()["plays"], 1, "played once")
+	service.advance(10.0)   # the one-shot is over
+	service.quality = FxQuality.LOW
+	service.quality = FxQuality.HIGH
+	eq(service.stats()["plays"], 1, "a tier change does not play it again")
+	live.end_cue()
+	GameplayCueManager.unregister_cue(tag)
+	GameplayCueManager.suppress_cues = setup["was_suppressed"]
+
+
+## Review fix: TARGET_TAGS reads the payload's ability system when the cue's target (a unit view) has none (tag cues pass it).
+func test_a_target_tags_binding_reads_the_payloads_ability_system() -> void:
+	var asc := AbilitySystemComponent.new()
+	host.add_child(asc)
+	asc.add_tag(&"Status.Debuff.Burn")
+	var binding := FxCueBinding.new()
+	binding.param = &"color"
+	binding.source = FxCueBinding.Source.TARGET_TAGS
+	binding.tag_values = {"Status.Debuff.Burn": Color.ORANGE}
+	var view := Node3D.new()
+	host.add_child(view)
+	eq(binding.resolve(view, {"asc": asc}), Color.ORANGE, "the payload's ability system answers")
+	eq(binding.resolve(view, {}), null, "no ability system anywhere: the default")
+	view.free()
+	asc.free()
 
 
 ## The battle scene is torn down (the battle ends, a new floor loads): looks on its unit views go with them, with no leak and no error.
@@ -1100,5 +1229,27 @@ func test_the_registry_patch_only_appends() -> void:
 	check(patched.all().has(&"fx.test.old") and patched.all().has(&"fx.test.new"), "both effects are listed")
 	eq(patched.all_rule_sets().size(), 1, "the rule set is listed")
 	eq(RegistryPatch.add_missing_effects(dir + "fx_registry.tres", dir).size(), 0, "a second run adds nothing")
+	# Review fix: subfolders are found, an effect with no id or with a listed effect's id is never added (and a second run
+	# still adds nothing), and the sync check names both.
+	DirAccess.make_dir_recursive_absolute(dir + "sub")
+	var nested := FxDefinition.new()
+	nested.id = &"fx.test.nested"
+	ResourceSaver.save(nested, dir + "sub/nested.tres")
+	var nameless := FxDefinition.new()
+	ResourceSaver.save(nameless, dir + "nameless.tres")
+	var copy := FxDefinition.new()
+	copy.id = &"fx.test.old"
+	ResourceSaver.save(copy, dir + "copy_of_old.tres")
+	eq(RegistryPatch.add_missing_effects(dir + "fx_registry.tres", dir), PackedStringArray(["definitions += nested.tres"]),
+		"only the effect in the subfolder is added")
+	eq(RegistryPatch.add_missing_effects(dir + "fx_registry.tres", dir).size(), 0, "and a second run still adds nothing")
+	var synced := ResourceLoader.load(dir + "fx_registry.tres", "", ResourceLoader.CACHE_MODE_IGNORE) as FxRegistry
+	check(synced.all().has(&"fx.test.nested"), "the nested effect is listed")
+	var codes := FxValidator.sync_problems(dir, "res://presentation/demo/cues/", synced, GameplayCueRegistry.new()).map(func(i): return i.code)
+	check(codes.has("fx_id_missing"), "an effect with no id is reported")
+	check(codes.has("fx_id_taken"), "an effect with another effect's id is reported")
+	check(not codes.has("fx_unregistered"), "nothing else is missing")
+	DirAccess.remove_absolute(dir + "sub/nested.tres")
+	DirAccess.remove_absolute(dir + "sub")
 	for file in DirAccess.get_files_at(dir):
 		DirAccess.remove_absolute(dir + file)

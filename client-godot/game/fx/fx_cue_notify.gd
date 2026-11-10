@@ -49,7 +49,9 @@ func execute_cue(target: Node, payload: Dictionary = {}) -> void:
 	_play(service)
 
 
-func _play(service: FxService) -> void:
+## `with_targets` false: a replay of the cue's own look (a tier raise, a suppression lifted), not a new cast, so the effects on
+## the payload's targets are not played again.
+func _play(service: FxService, with_targets: bool = true) -> void:
 	var target := _target
 	var payload := _payload
 	var params := {}
@@ -57,7 +59,9 @@ func _play(service: FxService) -> void:
 		var resolved: Variant = binding.resolve(target, payload)
 		if resolved != null:
 			params[binding.param] = resolved
-	_play_on_targets(service, target, payload)
+	params.merge(_extra_params(target, payload), true)
+	if with_targets:
+		_play_on_targets(service, target, payload)
 	if fx == null:
 		_end_when_free()
 		return
@@ -92,8 +96,12 @@ func _play_on_targets(service: FxService, target: Node, payload: Dictionary) -> 
 			service.play(target_fx, anchor, params)
 		else:
 			var effect := target_fx
+			# Review fix: the unit is found again when the timer fires, so it must still be the same view: after the battle
+			# (or with fast Auto, in the next one) "P1" is another unit, and nothing is played on it.
+			var unit_id: StringName = ids[index]
+			var view := service.unit_view(unit_id)
 			get_tree().create_timer(target_stagger * index).timeout.connect(func() -> void:
-				if is_instance_valid(service):
+				if is_instance_valid(service) and view != null and is_instance_valid(view) and service.unit_view(unit_id) == view:
 					service.play(effect, anchor, params))
 
 
@@ -119,10 +127,33 @@ func finish_cue() -> void:
 
 
 ## The tier was raised while this persistent cue is on and its effect is not playing (it played at off): start it now.
+## Review fix: only a looping look comes back (a one-shot that already played is over, not "off"), as a replay of its own
+## look, not a new cast on the targets; and a cue GAS has paused (its effect is suppressed) stays dark.
 func _on_quality_changed(_tier: int) -> void:
 	var service := _service()
-	if _on and service != null and is_instance_valid(_target) and (_handle == null or not _handle.is_playing()):
-		_play(service)
+	if _on and service != null and is_instance_valid(_target) and fx != null and fx.is_looping() and can_process() \
+			and (_handle == null or not _handle.is_playing()):
+		_play(service, false)
+
+
+## GAS pauses a persistent cue whose effect is suppressed (GameplayCueManager.set_cue_state sets the node's process mode),
+## but the look lives in the effects service, not in this node's children: fade it out while paused, back in when enabled.
+func _notification(what: int) -> void:
+	if not _on:
+		return
+	if what == NOTIFICATION_DISABLED and _handle != null and _handle.is_playing():
+		_handle.stop(stop_fade)
+		_handle = null
+	elif what == NOTIFICATION_ENABLED and (_handle == null or not _handle.is_playing()):
+		var service := _service()
+		if service != null and service.enabled and is_instance_valid(_target) and fx != null:
+			_play(service, false)
+
+
+## Parameters a kind of cue computes itself from the payload (FxNumberPopCue: the number's text and style), applied over the
+## bindings. None by default.
+func _extra_params(_target: Node, _payload: Dictionary) -> Dictionary:
+	return {}
 
 
 func _anchor_for(target: Node) -> FxAnchor:

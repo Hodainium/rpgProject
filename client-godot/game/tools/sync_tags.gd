@@ -42,6 +42,11 @@ const SYSTEM_TAGS: Array[StringName] = [
 const FORMAT: String = "^([A-Z][a-zA-Z0-9]*)(\\.[A-Z][a-zA-Z0-9]*)*$"
 
 var _used: Dictionary = {}  # tag -> Array of "file: field"
+## Review fix: tags only the test fixtures use. Never reported missing (fixtures may use their own tags), but never removed
+## by --remove / --remove-unused either.
+var _protected: Dictionary = {}
+var _into_protected: bool = false
+const FIXTURES_ROOT: String = "res://tests/fixtures/"
 var _visited: Dictionary = {}
 
 
@@ -56,6 +61,15 @@ func _ready() -> void:
 		_note(tag, "code (system tag)")
 	_scan(CONTENT_ROOT)
 	_scan(PRESENTATION_ROOT)
+	# Review fix: the cue registry's tags are in use (GameplayCueEntry.tag is not a gas::tag field, the dashboard names it).
+	var cue_registry := load(SETTINGS.get_registry_cue_path()) as GameplayCueRegistry
+	if cue_registry != null:
+		for entry in cue_registry.entries:
+			if entry != null:
+				_note(entry.tag, "godot_gas/cue_registry.tres")
+	_into_protected = true
+	_scan(FIXTURES_ROOT)
+	_into_protected = false
 
 	var registered := {}
 	for tag in registry.tags:
@@ -72,7 +86,7 @@ func _ready() -> void:
 			missing.append(tag)
 	var unused: Array = []
 	for tag in registry.tags:
-		if not _used.has(tag) and not names.any(func(t): return String(t).begins_with(String(tag) + ".")):
+		if not _used.has(tag) and not _protected.has(tag) and not names.any(func(t): return String(t).begins_with(String(tag) + ".")):
 			unused.append(tag)
 
 	print("sync_tags: %d tags in use, %d registered" % [names.size(), registry.tags.size()])
@@ -116,7 +130,9 @@ func _remove(registry: GameplayTagRegistry, registry_path: String, unused: Array
 			wanted.append(StringName(tag.strip_edges()))
 	if wanted.is_empty():
 		return false
-	var plan := removal_plan(registry.tags, _used, wanted)
+	var in_use := _used.duplicate()
+	in_use.merge(_protected)   # a tag only the fixtures use is never removed
+	var plan := removal_plan(registry.tags, in_use, wanted)
 	for entry in plan["refused"]:
 		print("  %-15s %s  (%s)" % [entry["reason"], entry["tag"], entry["where"]])
 	var refused: bool = not (plan["refused"] as Array).is_empty()
@@ -224,7 +240,8 @@ func _followable(value: Variant) -> bool:
 func _note(tag: StringName, where: String) -> void:
 	if tag == &"":
 		return
-	if not _used.has(tag):
-		_used[tag] = []
-	if not _used[tag].has(where):
-		_used[tag].append(where)
+	var into: Dictionary = _protected if _into_protected else _used
+	if not into.has(tag):
+		into[tag] = []
+	if not into[tag].has(where):
+		into[tag].append(where)
