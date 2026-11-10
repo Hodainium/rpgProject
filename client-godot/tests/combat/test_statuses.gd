@@ -77,6 +77,40 @@ func test_poison_ticks_per_stack() -> void:
 	eq(before - hexer.stat("hp"), 2000, "a single stack ticks once, as before")
 
 
+## Spec vfx-content-pass 2.5: a DoT tick and a drain's heal are HP changes with no damage_dealt; hp_changed reports them
+## (negative for a loss, with the status tags of the cause), and a row hit's own damage is not repeated there.
+func test_hp_changed_reports_dots_and_heals() -> void:
+	var battle := new_battle(status_snapshot())
+	var hexer := battle.unit_by_id(&"P1")
+	var toad := battle.unit_by_id(&"E2")
+	var changes := []
+	battle.hp_changed.connect(func(unit, delta, cause): changes.append([unit, delta, cause]))
+	await battle._activate(hexer, ability(hexer, "ToxicCloud"), null)
+	var after_cast := changes.filter(func(change): return change[1] < 0)
+	check(after_cast.is_empty(), "applying a DoT is no HP change and no row damage is repeated: %s" % [changes])
+	toad.asc.turn_start()
+	var ticks := changes.filter(func(change): return change[0] == &"E2")
+	eq(ticks.size(), 1, "two stacks are one tick: one report")
+	eq(ticks[0][1], -4000, "the stacks' damage summed: 2 x 20 HP is -40.00 (x100)")
+	check(ticks[0][2].has(&"Status.Debuff.Poison"), "the cause is the poison status")
+
+
+## Spec vfx-content-pass 2.5: a different DoT on the same unit is its own tick and its own report.
+func test_two_dots_report_separately() -> void:
+	var battle := new_battle(status_snapshot())
+	var hexer := battle.unit_by_id(&"P1")
+	var toad := battle.unit_by_id(&"E2")
+	var changes := []
+	battle.hp_changed.connect(func(unit, delta, cause): changes.append([unit, delta, cause]))
+	apply(hexer, toad, "st_poison")
+	apply(hexer, toad, "st_burn", 3000, [&"Damage.Type.Fire"])
+	toad.asc.turn_start()
+	var mine := changes.filter(func(change): return change[0] == &"E2")
+	eq(mine.size(), 2, "poison and burn each report once")
+	var causes := mine.map(func(change): return change[2][0] if not change[2].is_empty() else &"")
+	check(causes.has(&"Status.Debuff.Poison") and causes.has(&"Status.Debuff.Burn"), "each with its own status: %s" % [causes])
+
+
 func test_refresh_vs_stack() -> void:
 	var battle := new_battle(status_snapshot())
 	var hexer := battle.unit_by_id(&"P1")
@@ -256,7 +290,7 @@ func test_drain_heals_and_events() -> void:
 	var taken := listen(guard)
 	var dealt := listen(imp)
 	var drained := []
-	battle.damage_drained.connect(func(source, target, amount): drained.append([source, target, amount]))
+	battle.damage_drained.connect(func(source, target, amount, tags): drained.append([source, target, amount, tags]))
 	var damaged := []
 	battle.damage_dealt.connect(func(_s, target, amount, _t): damaged.append([target, amount]))
 	var state := battle.rng.state
@@ -264,7 +298,7 @@ func test_drain_heals_and_events() -> void:
 	# FLAT 60 × DEF multiplier (DEF 400: 100% − 400/1400 = 71.43%) = 42.85, healed instead of dealt.
 	eq(guard.stat("hp"), 104285, "the drained Fire hit heals the guard")
 	eq(battle.rng.state, state, "a drained hit takes no crit roll")
-	eq(drained, [[&"E3", &"P2", 4285]], "damage_drained reports the heal")
+	eq(drained, [[&"E3", &"P2", 4285, [&"Hit.Drained", &"Damage.Type.Fire"]]], "damage_drained reports the heal and what was absorbed (the hit and its damage type)")
 	eq(damaged, [], "no damage_dealt")
 	eq(names(taken, "Event.Damage.Taken"), ["Event.Damage.Taken.Drained"], "only the Drained event: Taken triggers stay silent")
 	eq(names(dealt, "Event.Damage.Dealt"), ["Event.Damage.Dealt.Drained"], "the attacker hears Dealt.Drained")
@@ -282,7 +316,7 @@ func test_drain_beats_weakness_and_resist() -> void:
 	var hp := guard.stat("hp")
 	guard.asc.initialize_attribute_overrides({"hp": 100000.0})
 	var drained := []
-	battle.damage_drained.connect(func(_s, _t, amount): drained.append(amount))
+	battle.damage_drained.connect(func(_s, _t, amount, _tags): drained.append(amount))
 	await battle._activate(imp, ability(imp, "FireBolt"), guard)
 	eq(drained, [4285], "Drain > Weak > Resist: drained, at the plain amount")
 	check(hp > 0, "setup")
@@ -298,14 +332,14 @@ func test_weakness_beats_resist() -> void:
 	battle.damage_dealt.connect(func(_s, target, amount, hit_tags): hits.append([target, amount, hit_tags]))
 	await battle._activate(wisp, ability(wisp, "FrostTouch"), guard)
 	# FLAT 50 × 71.43% = 35.71, × 150% weakness damage = 53.56.
-	eq(hits[0], [&"P2", 5356, [&"Hit.Weakness"]], "the implant's weakness wins over Frostguard's resist (D4)")
+	eq(hits[0], [&"P2", 5356, [&"Hit.Weakness", &"Damage.Type.Ice"]], "the implant's weakness wins over Frostguard's resist (D4)")
 	var resisted := status_snapshot(["hexer"], "status_trial", "3", {1: ["frostguard"]})
 	var second := new_battle(resisted)
 	var plain_hits := []
 	second.damage_dealt.connect(func(_s, target, amount, hit_tags): plain_hits.append([target, amount, hit_tags]))
 	await second._activate(second.unit_by_id(&"E1"), ability(second.unit_by_id(&"E1"), "FrostTouch"), second.unit_by_id(&"P1"))
 	# DEF 200: 100% − 200/1200 = 83.34%; 50 × 83.34% = 41.67, × 50% resist = 20.83.
-	eq(plain_hits[0], [&"P1", 2083, [&"Hit.Resisted"]], "a resisted hit: × resist_dmg and Hit.Resisted")
+	eq(plain_hits[0], [&"P1", 2083, [&"Hit.Resisted", &"Damage.Type.Ice"]], "a resisted hit: × resist_dmg and Hit.Resisted")
 	check(hexer != null, "setup")
 
 

@@ -25,11 +25,15 @@ signal server_changed(link: ServerLink)
 
 const VIEW_DIR: String = "res://presentation/demo/"
 const UI_POLICY: String = "res://presentation/demo/ui/ui_policy.tres"
+const FX_REGISTRY: String = "res://presentation/demo/fx/fx_registry.tres"
 const SETTINGS_PATH: String = "user://game_main.cfg"
 const CONTENT_ROOTS: Array[String] = ["res://content/", "res://tests/fixtures/"]
 
 ## Spec ui-framework: every screen and panel, as data. Empty: res://presentation/demo/ui/ui_policy.tres.
 @export var ui_policy: UIPolicy
+## Spec vfx-content-pass 2.2: "when this happens in a battle, play that effect" as data (damage numbers, per-type hits, heal glows,
+## cast rings). Empty: the rule sets of res://presentation/demo/fx/fx_registry.tres. Not attached headless (no effects to play).
+@export var fx_rules: Array[FxRuleSet] = []
 ## Spec playtest-fixes B9: what the connecting pop-up says while a server run starts or resumes.
 @export var wait_start_text: String = "Starting the run…"
 @export var wait_resume_text: String = "Resuming your run…"
@@ -63,6 +67,8 @@ var skip_animations: bool = false
 var ui: UIManager
 ## Spec gameplay-messages: the current battle's bridge to Message.Battle.* (null between battles).
 var battle_messages: BattleMessages
+## Spec vfx-content-pass: the registry's tag cues (State.Broken, State.Dead...) watching this battle's units.
+var battle_tag_cues: FxTagCues
 ## Spec auto-battle (A1): Auto plays the party's decisions for the rest of this run (the battle panel's Auto, the
 ## console's `auto`). Presentation state: never in RunState, a log or a hash. Each new run starts from the Settings
 ## default `auto_battle` (headless runs always start with Auto off, so a saved setting can't change tests or reports).
@@ -108,6 +114,7 @@ func _ready() -> void:
 	var room := _view(room_view, "room_view_3d", missing)
 	if room != null:
 		_add_view(room.instantiate(), world)
+	_attach_fx_rules()
 	var sounds := _view(sound_board, "sound_board", missing)
 	if sounds != null:
 		_add_view(sounds.instantiate(), canvas)
@@ -577,6 +584,19 @@ func refuse(text: String, instigator: StringName = &"", data: Dictionary = {}) -
 
 
 ## A runner error stopped the run (its text went out as a Notification): show the end screen.
+## Spec vfx-content-pass 2.2: the battle effect rules listen on the message bus for as long as the game shell lives.
+func _attach_fx_rules() -> void:
+	var service := get_node_or_null("/root/FxManager") as FxService
+	if service == null or not service.enabled:
+		return
+	if fx_rules.is_empty() and ResourceLoader.exists(FX_REGISTRY):
+		var registry := load(FX_REGISTRY) as FxRegistry
+		if registry != null:
+			fx_rules.append_array(registry.all_rule_sets())
+	for rules in fx_rules:
+		rules.attach(self)
+
+
 func _on_run_stopped(_error: String) -> void:
 	delete_local_save()
 	if mode == "run":
@@ -586,6 +606,10 @@ func _on_run_stopped(_error: String) -> void:
 func _on_battle_started(battle: Battle) -> void:
 	battle_messages = BattleMessages.new()
 	battle_messages.attach(battle, StringName(str(run.pending_battle.get("encounter", ""))), GameplayMessages)
+	var service := get_node_or_null("/root/FxManager") as FxService
+	if service != null and service.enabled and ResourceLoader.exists(FX_REGISTRY):
+		battle_tag_cues = FxTagCues.new()
+		battle_tag_cues.attach(battle, (load(FX_REGISTRY) as FxRegistry).all_tag_cues())
 
 
 func _on_battle_requested(_snapshot: Dictionary) -> void:

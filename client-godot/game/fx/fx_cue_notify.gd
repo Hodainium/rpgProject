@@ -11,6 +11,12 @@ extends GameplayCueNotify
 
 @export var fx: FxDefinition
 @export var bindings: Array[FxCueBinding] = []
+## Spec vfx-content-pass: an effect this cue plays once on EACH unit named in the cue payload's `target_ids` (an ability passes the
+## units it reaches when it executes the cue), `target_stagger` seconds apart, with its own parameter bindings. `fx` plays on the cue's
+## own target (the caster); either may be empty.
+@export var target_fx: FxDefinition
+@export var target_bindings: Array[FxCueBinding] = []
+@export var target_stagger: float = 0.0
 ## Seconds a looping effect takes to fade out when the cue ends.
 @export var stop_fade: float = 0.25
 ## Shifts the effect from its target (world units).
@@ -31,7 +37,7 @@ var _play_id: int = 0
 
 func execute_cue(target: Node, payload: Dictionary = {}) -> void:
 	var service := _service()
-	if service == null or fx == null or not service.enabled:
+	if service == null or (fx == null and target_fx == null) or not service.enabled:
 		_end_when_free()  # headless (the verifier): nothing to draw, and no work per hit
 		return
 	_target = target
@@ -51,6 +57,10 @@ func _play(service: FxService) -> void:
 		var resolved: Variant = binding.resolve(target, payload)
 		if resolved != null:
 			params[binding.param] = resolved
+	_play_on_targets(service, target, payload)
+	if fx == null:
+		_end_when_free()
+		return
 	_handle = service.play(fx, _anchor_for(target), params)
 	if _handle.is_playing():
 		if auto_destroy and not fx.is_looping():
@@ -64,6 +74,27 @@ func _play(service: FxService) -> void:
 					end_cue(), CONNECT_ONE_SHOT)
 	else:
 		_end_when_free()
+
+
+## Plays `target_fx` on every unit in the payload's `target_ids`, staggered. Each play is its own handle, so the cue need not wait for it.
+func _play_on_targets(service: FxService, target: Node, payload: Dictionary) -> void:
+	if target_fx == null:
+		return
+	var params := {}
+	for binding in target_bindings:
+		var resolved: Variant = binding.resolve(target, payload)
+		if resolved != null:
+			params[binding.param] = resolved
+	var ids: Array = payload.get("target_ids", [])
+	for index in ids.size():
+		var anchor := FxAnchor.unit(ids[index])
+		if index == 0 or target_stagger <= 0.0 or not is_inside_tree():
+			service.play(target_fx, anchor, params)
+		else:
+			var effect := target_fx
+			get_tree().create_timer(target_stagger * index).timeout.connect(func() -> void:
+				if is_instance_valid(service):
+					service.play(effect, anchor, params))
 
 
 ## A persistent cue ends: fade a looping effect out, then hand the node back.

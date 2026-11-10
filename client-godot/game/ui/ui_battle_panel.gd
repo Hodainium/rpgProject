@@ -7,7 +7,7 @@ extends UIScreen
 
 ## The battle signals after which a panel may look different, with their argument counts.
 const REDRAW_SIGNALS := {&"turn_started": 2, &"execution_resolved": 3, &"unit_broken": 2, &"unit_recovered": 1,
-	&"interrupt_started": 2, &"damage_drained": 3, &"action_delayed": 2, &"unit_downed": 2, &"unit_died": 1,
+	&"interrupt_started": 2, &"damage_drained": 4, &"action_delayed": 2, &"unit_downed": 2, &"unit_died": 1,
 	&"unit_revived": 1, &"one_more_started": 1, &"phase_changed": 2, &"damage_dealt": 4}
 
 var battle: Battle

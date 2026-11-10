@@ -12,6 +12,7 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 // @uniform fade_out   fraction of the layer spent fading out
 // @uniform pulse_speed pulses per second (0 = steady)
 // @uniform pulse_amount how much the brightness swings
+// @uniform depth_bias world units the depth test sees the effect closer to the camera (keeps it from being cut by the unit it sits on)
 uniform float progress = 0.0;
 uniform float time = 0.0;
 uniform float fade = 1.0;
@@ -22,7 +23,12 @@ uniform float fade_out = 0.6;
 uniform float pulse_speed = 0.0;
 uniform float pulse_amount = 0.2;
 
+#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+
 void fragment() {
+	if (depth_bias != 0.0) {
+		DEPTH = fx_biased_depth(VERTEX, PROJECTION_MATRIX);
+	}
 	vec2 p = (UV - vec2(0.5)) * 2.0;
 	float r = length(p);
 	float blob = exp(-r * r * falloff) * (1.0 - smoothstep(0.9, 1.0, r));

@@ -30,11 +30,16 @@ func _ready() -> void:
 		FxManager.register(preview)
 	_build_world()
 	_build_hud()
+	# P1..P3 are the three cubes (a cue's `target_ids`, a rule's units).
+	FxManager.unit_resolver = func(unit_id: StringName) -> Node3D:
+		return _cubes[clampi(String(unit_id).trim_prefix("E").trim_prefix("P").to_int() - 1, 0, _cubes.size() - 1)]
 	if preview != null:
 		get_tree().create_timer(0.5).timeout.connect(func() -> void: _play(preview.id))
 	var args := OS.get_cmdline_user_args()
 	if args.has("--play"):
 		_run_shots(args)
+	elif args.has("--rules"):
+		_run_rules(args)
 
 
 func _process(delta: float) -> void:
@@ -173,6 +178,9 @@ func _anchor_for(definition: FxDefinition) -> FxAnchor:
 
 
 func _play(id: StringName) -> FxHandle:
+	# `cue:<Cue.Fx.Tag>` plays what a cue plays: its effect with the cue scene's literal parameters (a status look as the game shows it).
+	if String(id).begins_with("cue:"):
+		return _play_cue(StringName(String(id).trim_prefix("cue:")))
 	var definition := FxManager.definition(id)
 	if definition == null:
 		return null
@@ -189,6 +197,25 @@ func _play(id: StringName) -> FxHandle:
 		_loops[id] = handle
 	_status.text = "%s -> %s" % [id, "playing" if handle.is_playing() else "did not play"]
 	return handle
+
+
+## `cue:<Cue.Fx.Tag>` executes a cue through the real GodotGAS cue manager on the first cube (the caster P1), with the payload an ability would
+## pass: `target_ids` P2 and P3 (the other two cubes). A status look is a persistent cue, a tick or an ultimate a one-shot.
+func _play_cue(tag: StringName) -> FxHandle:
+	var scene := GameplayCueManager._scene_for(tag) as PackedScene
+	var probe := scene.instantiate() as FxCueNotify if scene != null else null
+	if probe == null:
+		_status.text = "no cue " + String(tag)
+		return null
+	var persistent := not probe.auto_destroy
+	probe.free()
+	var payload := {"target_ids": [&"P2", &"P3"]}
+	if persistent:
+		GameplayCueManager.add_persistent_cue(tag, _cubes[0], payload)
+	else:
+		GameplayCueManager.execute_cue(tag, _cubes[0], payload)
+	_status.text = "%s -> executed" % tag
+	return null
 
 
 # --- Screenshots ------------------------------------------------------------------------------------------------------
@@ -227,7 +254,7 @@ func _run_shots(args: PackedStringArray) -> void:
 				await RenderingServer.frame_post_draw
 				frames.append(get_viewport().get_texture().get_image())
 		if dir != "" and not frames.is_empty():
-			_save_sheet(frames, FxManager.definition(StringName(id)), "%s/%s.png" % [dir, id])
+			_save_sheet(frames, FxManager.definition(StringName(id)), "%s/%s.png" % [dir, id.replace(":", "_")])
 		if handle != null:
 			handle.stop(0.0)
 		FxManager.stop_all()
@@ -236,14 +263,53 @@ func _run_shots(args: PackedStringArray) -> void:
 	get_tree().quit()
 
 
+## `--rules --shots <dir>` (spec vfx-content-pass): attaches the battle FX rule set, maps P1..P3 to the three cubes and broadcasts
+## sample battle messages (a fire crit, a resisted ice hit, a plain physical hit, a poison tick, a heal), taking a contact sheet
+## of each, so the damage numbers and per-type effects are seen through the real message bus.
+func _run_rules(args: PackedStringArray) -> void:
+	var dir := _arg(args, "--shots", "")
+	if dir != "":
+		DirAccess.make_dir_recursive_absolute(dir)
+	for rules in (load("res://presentation/demo/fx/fx_registry.tres") as FxRegistry).all_rule_sets():
+		rules.attach(self)
+	FxManager.unit_resolver = func(unit_id: StringName) -> Node3D:
+		return _cubes[clampi(String(unit_id).trim_prefix("E").trim_prefix("P").to_int() - 1, 0, _cubes.size() - 1)]
+	var scenarios := [
+		["fire_crit", GameplayMessageRouter.BATTLE_DAMAGE, &"Verb.Damage", 245600, [&"Damage.Type.Fire", &"Hit.Critical", &"Hit.Weakness"]],
+		["ice_resisted", GameplayMessageRouter.BATTLE_DAMAGE, &"Verb.Damage", 31200, [&"Damage.Type.Ice", &"Hit.Resisted"]],
+		["physical", GameplayMessageRouter.BATTLE_DAMAGE, &"Verb.Damage", 87400, [&"Damage.Type.Physical"]],
+		["break", GameplayMessageRouter.BATTLE_DAMAGE, &"Verb.Damage", 150000, [&"Damage.Type.Physical", &"Hit.Break"]],
+		["poison_tick", GameplayMessageRouter.BATTLE_HP_CHANGED, &"Verb.Damage", 4000, [&"Status.Debuff.Poison"]],
+		["heal", GameplayMessageRouter.BATTLE_HP_CHANGED, &"Verb.Heal", 56000, []]]
+	var only := _arg(args, "--rules-only", "")
+	await get_tree().create_timer(0.4).timeout
+	for scenario in scenarios:
+		if only != "" and not only.split(",").has(scenario[0]):
+			continue
+		var message := VerbMessage.make(scenario[2], scenario[6] if scenario.size() > 6 else &"", &"P2", scenario[3], scenario[4],
+			scenario[5] if scenario.size() > 5 else {})
+		GameplayMessages.broadcast(scenario[1], message)
+		var frames: Array[Image] = []
+		var last := 0.0
+		for time in (scenario[7] if scenario.size() > 7 else [0.12, 0.4, 0.8]):
+			await get_tree().create_timer(time - last).timeout
+			last = time
+			await RenderingServer.frame_post_draw
+			frames.append(get_viewport().get_texture().get_image())
+		_save_sheet(frames, null, "%s/%s.png" % [dir, scenario[0]])
+		FxManager.stop_all()
+		await get_tree().create_timer(0.2).timeout
+	get_tree().quit()
+
+
 ## One PNG per effect: the frames side by side, cropped to where the effect plays.
 func _save_sheet(frames: Array[Image], definition: FxDefinition, path: String) -> void:
 	var crop := Rect2i(0, 0, 1920, 1080)
-	match definition.space if definition != null else FxDefinition.Space.SCREEN:
+	match definition.space if definition != null else FxDefinition.Space.WORLD_3D:
 		FxDefinition.Space.UI:
 			crop = Rect2i(470, 660, 560, 420)
 		FxDefinition.Space.WORLD_3D:
-			crop = Rect2i(560, 380, 440, 300)
+			crop = Rect2i(560, 300, 440, 380)
 		FxDefinition.Space.HYBRID:
 			crop = Rect2i(1100, 20, 800, 600)
 	var size := crop.size

@@ -776,7 +776,7 @@ func _record_battle(battle: Battle) -> void:
 	battle.turn_skipped.connect(func(unit): battle_log.append({"event": "skip", "unit": String(unit)}))
 	battle.status_resisted.connect(func(source, target, effect):
 		battle_log.append({"event": "statusResisted", "source": String(source), "target": String(target), "effect": effect}))
-	battle.damage_drained.connect(func(source, target, amount):
+	battle.damage_drained.connect(func(source, target, amount, _tags):
 		battle_log.append({"event": "drain", "source": String(source), "target": String(target), "amount": amount}))
 	battle.phase_changed.connect(func(unit, phase): battle_log.append({"event": "phase", "unit": String(unit), "phase": phase}))
 	battle.action_delayed.connect(func(unit, percent):

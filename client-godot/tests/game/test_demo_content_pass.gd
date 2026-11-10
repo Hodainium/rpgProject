@@ -135,7 +135,7 @@ func test_affinity_items() -> void:
 	var warrior := court.unit_by_id(&"P1")
 	warrior.asc.initialize_attribute_overrides({"hp": 50000.0})
 	var drained := []
-	court.damage_drained.connect(func(_s, target, amount): drained.append([target, amount]))
+	court.damage_drained.connect(func(_s, target, amount, _tags): drained.append([target, amount]))
 	var energy := warrior.stat(BattleUnit.ENERGY)
 	await _act(court, &"E1", &"Ability.Firebolt", &"P1")
 	check(not drained.is_empty() and drained[0][0] == &"P1", "Salamander Heart drains the Fire bolt")
@@ -151,7 +151,7 @@ func test_affinity_items() -> void:
 		"the implant's Ice weakness wins over Frostguard (Drain > Weak > Resist)")
 	var leech := _battle("bog", ["demo.item.leech_hide"])
 	var leeched := []
-	leech.damage_drained.connect(func(_s, target, _a): leeched.append(target))
+	leech.damage_drained.connect(func(_s, target, _a, _tags): leeched.append(target))
 	await _act(leech, &"E1", &"Ability.Spit", &"P1")
 	eq(leeched, [&"P1"], "Leech Hide drains Physical")
 	var tactical := TacticalBrain.new()

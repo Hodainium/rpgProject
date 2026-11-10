@@ -15,6 +15,11 @@
 class_name CombatASC
 extends AbilitySystemComponent
 
+## Spec vfx-content-pass 2.5: one periodic effect's tick (all its stacks) begins and ends. The battle groups the HP changes inside
+## it into one report, so a 5-stack poison is one number and one cue. Presentation only: nothing in the kernel reads it.
+signal tick_started(effect: GameplayEffect)
+signal tick_finished(effect: GameplayEffect)
+
 ## Effects applied while this unit is taking its own turn skip that turn's countdown (HSR rule), so a 2-turn
 ## self-buff covers the unit's next two turns.
 var _skip_countdown: Dictionary = {}  # ActiveGameplayEffect -> true
@@ -59,10 +64,12 @@ func turn_start() -> void:
 		if spec.effect_def.tick_on_turn_start and not active_effect.is_suppressed:
 			for cue_tag in spec.effect_def.periodic_cue_tags:
 				execute_cue(cue_tag, {"target": get_parent()})
+			tick_started.emit(spec.effect_def)
 			for stack_spec in active_effect.stack_specs:
 				_trigger_effect_events(stack_spec)
 				_evaluate_spec(stack_spec)
 				_commit_spec_math(stack_spec)
+			tick_finished.emit(spec.effect_def)
 		spec.remaining_turns -= 1
 		if spec.remaining_turns <= 0:
 			remove_active_effect(active_effect)

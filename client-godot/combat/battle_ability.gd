@@ -34,6 +34,10 @@ const USAGE_BOTH: int = 3
 ## Tags describing the ability itself (UE GAS's AbilityTags, which GodotGAS lacks), e.g. Ability.Type.FollowUp.
 ## Unlike activation_owned_tags they are never added to the unit.
 @export_custom(PROPERTY_HINT_NONE, "gas::tag") var asset_tags: Array[StringName] = []
+## Spec vfx-content-pass: GameplayCue tags the ability executes on its caster the moment it activates (a cast flourish, an ult's
+## signature look). Plain GAS cue tags (the kernel names no effect and a headless run suppresses cues), so a cue entry decides what
+## plays; never read by the log, the trace or the hash. The cue's payload carries `target_ids`: every unit the ability reaches.
+@export_custom(PROPERTY_HINT_NONE, "gas::tag") var cast_cue_tags: Array[StringName] = []
 ## What each hit does. The animation decides which rows run, how often and when.
 @export var executions: Array[ExecutionRow] = []
 ## Required. Its `execute(&"<row id>")` method-track keys are the source of truth for the execution sequence.
@@ -110,6 +114,13 @@ func _activate_ability() -> bool:
 	var battle: Battle = action["battle"]
 	var unit: BattleUnit = action["unit"]
 	commit_ability()
+	if not cast_cue_tags.is_empty() and owner_asc != null:
+		# The cue's payload says which units the ability reaches (GameplayCue parameters, as in Unreal), so a cue can play an effect on each.
+		var reached: Array[StringName] = []
+		for reached_unit in action.get("targets", []):
+			reached.append(reached_unit.unit_id)
+		for cue_tag in cast_cue_tags:
+			owner_asc.execute_cue(cue_tag, {"target_ids": reached})
 	var sequence := ExecutionReader.sequence_for(animation)
 	battle.gate.begin_ability(unit.unit_id, self, sequence)
 	for row_id in sequence:

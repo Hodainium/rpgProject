@@ -16,8 +16,12 @@ func attach(battle: Battle, encounter_id: StringName, router: GameplayMessageRou
 	_battle = battle
 	_encounter = encounter_id
 	_router = router
+	# Spec vfx-content-pass: the tags are the hit's Hit.* tags plus its Damage.Type.* tags.
 	battle.damage_dealt.connect(func(source, target, amount, hit_tags):
 		_send(GameplayMessageRouter.BATTLE_DAMAGE, &"Verb.Damage", source, target, amount, hit_tags))
+	battle.hp_changed.connect(func(unit, delta, cause_tags):
+		_send(GameplayMessageRouter.BATTLE_HP_CHANGED, &"Verb.Damage" if delta < 0 else &"Verb.Heal", &"", unit,
+			absi(delta), cause_tags))
 	battle.unit_broken.connect(func(unit, by):
 		_send(GameplayMessageRouter.BATTLE_BROKEN, &"Verb.Break", by, unit))
 	battle.unit_recovered.connect(func(unit):
@@ -35,8 +39,8 @@ func attach(battle: Battle, encounter_id: StringName, router: GameplayMessageRou
 	battle.status_resisted.connect(func(source, target, effect_path: String):
 		_send(GameplayMessageRouter.BATTLE_RESISTED, &"Verb.Resist", source, target, 0, [],
 			{"status": effect_path.get_file().get_basename().capitalize()}))
-	battle.damage_drained.connect(func(source, target, amount):
-		_send(GameplayMessageRouter.BATTLE_DRAINED, &"Verb.Drain", source, target, amount))
+	battle.damage_drained.connect(func(source, target, amount, tags):
+		_send(GameplayMessageRouter.BATTLE_DRAINED, &"Verb.Drain", source, target, amount, tags))
 	battle.turn_skipped.connect(func(unit):
 		_send(GameplayMessageRouter.BATTLE_TURN_SKIPPED, &"Verb.Skip", unit, unit))
 	# Spec ff7-ui 2.2: "X used Y" for the battle feed; tags are the ability's asset tags (an ult carries
@@ -46,6 +50,8 @@ func attach(battle: Battle, encounter_id: StringName, router: GameplayMessageRou
 		var ability := actor.ability_by_tag(ability_tag) if actor != null else null
 		_send(GameplayMessageRouter.BATTLE_ABILITY_USED, &"Verb.Use", unit, target, 0,
 			ability.asset_tags if ability != null else [], {"abilityName": AbilityName.of_tag(actor, ability_tag)}))
+	battle.trigger_activated.connect(func(unit, ability_tag, event_tag):
+		_send(GameplayMessageRouter.BATTLE_TRIGGER, &"Verb.Use", unit, unit, 0, [ability_tag, event_tag]))
 	battle.unit_died.connect(func(unit):
 		_send(GameplayMessageRouter.BATTLE_UNIT_DIED, &"Verb.Die", &"", unit))
 	battle.battle_ended.connect(func(outcome: String, _hash):

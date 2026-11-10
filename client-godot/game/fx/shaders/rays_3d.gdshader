@@ -12,6 +12,7 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 // @uniform sharpness  how thin the rays are
 // @uniform falloff    how fast the rays die away from the middle
 // @uniform fade_out   fraction of the layer spent fading out
+// @uniform depth_bias world units the depth test sees the effect closer to the camera (keeps it from being cut by the unit it sits on)
 uniform float progress = 0.0;
 uniform float time = 0.0;
 uniform float fade = 1.0;
@@ -23,7 +24,12 @@ uniform float sharpness = 3.0;
 uniform float falloff = 1.8;
 uniform float fade_out = 0.4;
 
+#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+
 void fragment() {
+	if (depth_bias != 0.0) {
+		DEPTH = fx_biased_depth(VERTEX, PROJECTION_MATRIX);
+	}
 	vec2 p = (UV - vec2(0.5)) * 2.0;
 	float r = length(p);
 	float angle = atan(p.y, p.x) + time * spin * 6.28318;

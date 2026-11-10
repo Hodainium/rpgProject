@@ -21,6 +21,9 @@ const META_QUALITY: StringName = &"fx_quality"
 
 @export var id: StringName
 @export var space: Space = Space.INHERIT
+## Spec vfx-content-pass 3.6: attach this layer to another socket than the effect's (a shockwave on Base, the fireball on Center);
+## empty = the effect's own.
+@export var socket: StringName = &""
 @export var start_delay: float = 0.0
 ## -1: the layer's natural length (particle lifetime, sound length…).
 @export var duration: float = -1.0
@@ -57,6 +60,8 @@ func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, defin
 	node.set_meta(META_PARAMS, params)
 	node.set_meta(META_QUALITY, quality)
 	rebind(node, params, definition)
+	if socket != &"" and node is Node3D and anchor.world_node() != null:
+		(node as Node3D).position = FxAttach.socket_position(anchor.world_node(), socket) - anchor.socket_offset
 
 
 ## Re-runs the bindings (a parameter changed on a live effect).

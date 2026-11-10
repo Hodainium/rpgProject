@@ -22,7 +22,13 @@ signal unit_died(unit_id: StringName)
 signal unit_revived(unit_id: StringName)
 signal battle_ended(outcome: String, final_hash: String)
 ## Spec item-pass: a damaging hit with its Hit.* tags (Critical, Weakness, Break, FollowUp…), for presentation.
+## `hit_tags` are the hit's Hit.* tags (sorted) followed by the row's Damage.Type.<X> tags (spec vfx-content-pass 3.3): the
+## presentation reads the type from here. The log, the trace and the hash never read this signal.
 signal damage_dealt(source_id: StringName, target_id: StringName, amount: int, hit_tags: Array[StringName])
+## Spec vfx-content-pass 2.5: an HP change that is not already a row hit's damage (a heal, a DoT / HoT tick, a cost, a dev
+## effect). `delta_x100` is negative for a loss; `cause_tags` are the Status.* tags the effect grants (empty for a plain
+## heal). Presentation only: nothing in the kernel listens.
+signal hp_changed(unit_id: StringName, delta_x100: int, cause_tags: Array[StringName])
 ## A triggered passive activated (logged by the dev report so a headless check can see it fire).
 signal trigger_activated(unit_id: StringName, ability_tag: StringName, event_tag: StringName)
 signal unit_broken(unit_id: StringName, breaker_id: StringName)
@@ -34,7 +40,8 @@ signal interrupt_started(unit_id: StringName, ability_tag: StringName)
 ## roll missed (H2); a hit was drained and healed its target (2.4); a boss entered a phase (H5); an action value moved (H6).
 signal turn_skipped(unit_id: StringName)
 signal status_resisted(source_id: StringName, target_id: StringName, effect_path: String)
-signal damage_drained(source_id: StringName, target_id: StringName, amount: int)
+## `tags`: Hit.Drained plus the row's Damage.Type.<X> tags (spec vfx-content-pass: the presentation shows what the target absorbed). Never read by the log, the trace or the hash.
+signal damage_drained(source_id: StringName, target_id: StringName, amount: int, tags: Array[StringName])
 signal phase_changed(unit_id: StringName, phase: int)
 signal action_delayed(unit_id: StringName, percent: int)
 ## Spec content-pass H7: an enemy hit a party unit's weakness (the attacker is owed a One More).
@@ -146,6 +153,10 @@ var in_interrupt: bool = false
 var trace: BattleTrace = null
 
 var _units: Array[BattleUnit] = []  # sorted by unit id
+## > 0 while a row's effect is applied: an HP loss then is the row's own hit (damage_dealt carries it), not an hp_changed.
+var _row_hit_depth: int = 0
+## unit_id -> {sum, cause}: the HP changes of the periodic effect that is ticking on that unit, reported as one hp_changed.
+var _tick_open: Dictionary = {}
 ## Instant effect that refills a recovering unit's toughness (amount by SetByCaller); built in code, never persisted.
 var _refill_effect: GameplayEffect
 var _started: bool = false
@@ -461,6 +472,8 @@ func _finish_setup() -> String:
 		if not field_mode:
 			turn_manager.add(unit)
 		unit.asc.attribute_changed.connect(_on_attribute_changed.bind(unit))
+		(unit.asc as CombatASC).tick_started.connect(_on_tick_started.bind(unit))
+		(unit.asc as CombatASC).tick_finished.connect(_on_tick_finished.bind(unit))
 	if schema_version >= 2:
 		for unit in _units:
 			if unit.stat(BattleUnit.HP) <= 0:
@@ -880,7 +893,9 @@ func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionR
 		if not _status_lands(unit, target, row):
 			continue
 		_extend_debuff(unit, row, spec)
+		_row_hit_depth += 1
 		var landed := unit.asc.apply_effect_spec_to_target(spec, target.asc)
+		_row_hit_depth -= 1
 		# Spec content-pass H6: a landed row with a delay moves the target's action value (negative = advance).
 		if landed != null and row.delay_x100 != 0 and not field_mode and target.is_up():
 			turn_manager.delay(target, row.delay_x100)
@@ -942,7 +957,10 @@ func _send_drain_events(source: BattleUnit, target: BattleUnit, amount: int, row
 		"hit_tags": Battle.hit_tags_of(spec)}
 	source.asc.send_gameplay_event(StringName("%s.Drained" % EVENT_DAMAGE_DEALT), payload)
 	target.asc.send_gameplay_event(StringName("%s.Drained" % EVENT_DAMAGE_TAKEN), payload)
-	damage_drained.emit(source.unit_id, target.unit_id, amount)
+	var tags: Array[StringName] = [HIT_DRAINED]
+	for damage_type in row.damage_types():
+		tags.append(StringName(DAMAGE_TYPE_PREFIX + damage_type))
+	damage_drained.emit(source.unit_id, target.unit_id, amount, tags)
 
 
 ## Event.Damage.Dealt (source) and Event.Damage.Taken (target), plus .<X> for each Damage.Type.<X> row tag, then
@@ -969,7 +987,11 @@ func _send_damage_events(source: BattleUnit, target: BattleUnit, damage: int, ro
 		for damage_type in row.damage_types():
 			source.asc.send_gameplay_event(StringName("%s.Break.%s" % [EVENT_DAMAGE_DEALT, damage_type]), payload)
 			target.asc.send_gameplay_event(StringName("%s.Break.%s" % [EVENT_DAMAGE_TAKEN, damage_type]), payload)
-	damage_dealt.emit(source.unit_id, target.unit_id, damage, hit_tags)
+	var signal_tags: Array[StringName] = []
+	signal_tags.assign(hit_tags)
+	for damage_type in row.damage_types():
+		signal_tags.append(StringName(DAMAGE_TYPE_PREFIX + damage_type))
+	damage_dealt.emit(source.unit_id, target.unit_id, damage, signal_tags)
 
 
 ## The spec's Hit.* tags in sorted order (the order their events are sent in).
@@ -1321,6 +1343,43 @@ func _on_attribute_changed(attribute_name: String, old_value: float, new_value: 
 	elif attribute_name == BattleUnit.HP and new_value < old_value and spec != null and spec.context != null:
 		# The unit itself counts too (a dev kill, an HP cost), so an earlier attacker isn't credited with that death.
 		unit.last_hit_by = spec.context.instigator as BattleUnit
+	if attribute_name == BattleUnit.HP and not field_mode and new_value != old_value 			and not (new_value < old_value and _row_hit_depth > 0):
+		var cause := _status_tags_of(spec)
+		if _tick_open.has(unit.unit_id):
+			# Inside a periodic tick: the stacks are one event, reported once when the tick ends.
+			_tick_open[unit.unit_id]["sum"] += int(new_value - old_value)
+			_tick_open[unit.unit_id]["cause"] = cause
+		else:
+			hp_changed.emit(unit.unit_id, int(new_value - old_value), cause)
+
+
+func _status_tags_of(spec: GameplayEffectSpec) -> Array[StringName]:
+	var cause: Array[StringName] = []
+	if spec != null and spec.effect_def != null:
+		for tag in spec.effect_def.granted_tags:
+			if String(tag).begins_with("Status."):
+				cause.append(tag)
+	return cause
+
+
+func _on_tick_started(effect: GameplayEffect, unit: BattleUnit) -> void:
+	_tick_open[unit.unit_id] = {"sum": 0, "cause": _status_tags_of_effect(effect)}
+
+
+func _on_tick_finished(_effect: GameplayEffect, unit: BattleUnit) -> void:
+	var tick: Dictionary = _tick_open.get(unit.unit_id, {})
+	_tick_open.erase(unit.unit_id)
+	if int(tick.get("sum", 0)) != 0 and not field_mode:
+		hp_changed.emit(unit.unit_id, int(tick["sum"]), tick["cause"])
+
+
+func _status_tags_of_effect(effect: GameplayEffect) -> Array[StringName]:
+	var cause: Array[StringName] = []
+	if effect != null:
+		for tag in effect.granted_tags:
+			if String(tag).begins_with("Status."):
+				cause.append(tag)
+	return cause
 
 
 func _fail(message: String) -> String:
