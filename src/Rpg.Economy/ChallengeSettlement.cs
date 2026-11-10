@@ -87,8 +87,8 @@ public static class ChallengeSettlement
             }
 
             found++;
-            var global = await RewardRules.GenerationAsync(connection, transaction, challengeId, null, ct);
-            var player = await RewardRules.GenerationAsync(connection, transaction, challengeId, context.PlayerId, ct);
+            var global = await RewardRules.GenerationAsync(connection, transaction, challengeId, null, ct, context.CycleAt);
+            var player = await RewardRules.GenerationAsync(connection, transaction, challengeId, context.PlayerId, ct, context.CycleAt);
             var cycleKey = RewardCycleKeys.Compute(rule.Cycle, context.CycleAt, global, player);
             foreach (var character in characters)
             {

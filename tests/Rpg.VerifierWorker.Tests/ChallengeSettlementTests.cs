@@ -463,12 +463,13 @@ public class ChallengeSettlementTests(Stack stack)
 
     // ---- Resets (C18, C21, C24) ----
 
-    private static Task ResetAsync(WorkerHarness worker, string challenge, Guid? player = null) => worker.ExecuteAsync(
+    /// <summary>A reset made at <paramref name="at"/>: settlement counts only the resets made by a battle's time (C21).</summary>
+    private static Task ResetAsync(WorkerHarness worker, string challenge, DateTimeOffset at, Guid? player = null) => worker.ExecuteAsync(
         """
-        INSERT INTO reward_cycle_resets (challenge_id, player_id, generation, reset_by)
+        INSERT INTO reward_cycle_resets (challenge_id, player_id, generation, reset_by, reset_at)
         VALUES ($1, $2::uuid, (SELECT COALESCE(max(generation), 0) + 1 FROM reward_cycle_resets
-                         WHERE challenge_id = $1 AND player_id IS NOT DISTINCT FROM $2::uuid), 'test')
-        """, challenge, player is null ? DBNull.Value : player);
+                         WHERE challenge_id = $1 AND player_id IS NOT DISTINCT FROM $2::uuid), 'test', $3)
+        """, challenge, player is null ? DBNull.Value : player, at.ToUniversalTime());
 
     [Fact]
     public async Task Reset_LetsTheNextClearPayAgain_AndKeepsHistory()  // C18
@@ -483,7 +484,7 @@ public class ChallengeSettlementTests(Stack stack)
         await worker.Processor.ProcessAsync(JobOf(b), Ct);
         Assert.Equal(10, await GemsAsync(worker, a.PlayerId));
 
-        await ResetAsync(worker, Win);
+        await ResetAsync(worker, Win, Wednesday.AddMinutes(90));   // between the second and the third clear
         await worker.Processor.ProcessAsync(JobOf(c), Ct);
 
         Assert.Equal(20, await GemsAsync(worker, a.PlayerId));
@@ -492,17 +493,21 @@ public class ChallengeSettlementTests(Stack stack)
     }
 
     [Fact]
-    public async Task BattleSettledAfterAReset_UsesTheNewGeneration()  // C21
+    public async Task BattlePlayedBeforeAReset_PaysInTheOldGeneration_EvenSettledAfterIt()  // C21
     {
         await using var worker = await CreateAsync(stack);
         await worker.PutChallengeAsync(Win, 1, 10, RewardCycles.Weekly, null);
         Completes(worker, ["warrior"], Win);
         var played = await worker.SeedAsync(submittedAt: Wednesday);  // played before the reset, settled after it
-        await ResetAsync(worker, Win);
+        var later = await worker.SeedAsync(submittedAt: Wednesday.AddHours(2));   // played after it
+        await ResetAsync(worker, Win, Wednesday.AddHours(1));
 
         await worker.Processor.ProcessAsync(JobOf(played), Ct);
+        await worker.Processor.ProcessAsync(JobOf(later), Ct);
 
-        Assert.Equal(["2026-W45.r1"], await worker.StringsAsync("SELECT cycle_key FROM completion_marks"));
+        // Battle time (the user, 2026-11-09): the reset is not in the first fight's past, so it pays in the old cycle.
+        Assert.Equal(["2026-W45"], await worker.StringsAsync("SELECT cycle_key FROM completion_marks WHERE player_id = $1", played.PlayerId));
+        Assert.Equal(["2026-W45.r1"], await worker.StringsAsync("SELECT cycle_key FROM completion_marks WHERE player_id = $1", later.PlayerId));
     }
 
     [Fact]
@@ -520,7 +525,7 @@ public class ChallengeSettlementTests(Stack stack)
             await worker.Processor.ProcessAsync(JobOf(battle), Ct);
         }
 
-        await ResetAsync(worker, Win, alice1.PlayerId);
+        await ResetAsync(worker, Win, Wednesday.AddMinutes(30), alice1.PlayerId);
         await worker.Processor.ProcessAsync(JobOf(alice2), Ct);
         await worker.Processor.ProcessAsync(JobOf(bob2), Ct);
 
@@ -541,10 +546,10 @@ public class ChallengeSettlementTests(Stack stack)
         var second = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(1));
         var third = await worker.SeedAsync(player: first.PlayerId, runStatus: "Won", submittedAt: Wednesday.AddHours(2));
         await worker.Processor.ProcessAsync(JobOf(first), Ct);
-        await ResetAsync(worker, Win, first.PlayerId);
+        await ResetAsync(worker, Win, Wednesday.AddMinutes(30), first.PlayerId);
         await worker.Processor.ProcessAsync(JobOf(second), Ct);
 
-        await ResetAsync(worker, Win);  // and now everyone, too
+        await ResetAsync(worker, Win, Wednesday.AddMinutes(90));  // and now everyone, too
         await worker.Processor.ProcessAsync(JobOf(third), Ct);
 
         Assert.Equal(30, await GemsAsync(worker, first.PlayerId));

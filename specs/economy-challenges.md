@@ -125,7 +125,7 @@ The three exactly-once gates of slice 4 hold: the session guard, the mark row, a
 the verdict while the end time was read at the battle, so a challenge retired or re-cycled between a battle and its verdict
 paid nothing or paid under the new cycle, and a rule created after a battle paid it). A rule put by mistake and corrected
 later therefore still pays its amount for battles fought before the correction. Both generations are read in the same
-transaction.
+transaction, and they too count only the resets made by the battle's submit time (C21).
 
 ### 2.4 Reading
 `GET /api/v1/wallet` is unchanged apart from two optional ledger fields (`challengeId`, `cycleKey`). `GET /api/v1/admin/reward-rules`
@@ -238,7 +238,7 @@ API: `Economy:MaxRewardAmount` (unchanged). `Economy:SeedRules` / `infra/economy
 | C18 | A manual reset for everyone | global generation +1; the next clear pays again under the new key; old marks and ledger rows stay | `Reset_LetsTheNextClearPayAgain_AndKeepsHistory` |
 | C19 | A reset of a challenge with no rule, an unknown player, or a bad id; a non-admin caller | 404 1303 / 404 1303 / 400 1301 / 403 1302; nothing written | `AResetOfUnknownTargets…`, `Admin_RequiresTheRole` |
 | C20 | Two resets at once in one scope | the advisory lock gives consecutive generations (also the unique index) | `ConcurrentResets_AreConsecutive…` |
-| C21 | A battle is settled after a reset but was played before it | pays under the **current** generations, like the rule version | `BattleSettledAfterAReset_UsesTheNewGeneration` |
+| C21 | A battle is settled after a reset but was played before it | pays under the generations **as of the battle's submit time**, like the rule (battle time; the user, 2026-11-09): a reset made after the fight does not move it to the new cycle, a fight after the reset pays in the new one | `BattlePlayedBeforeAReset_PaysInTheOldGeneration_EvenSettledAfterIt` |
 | C22 | `Settlement:CycleClockOffset` outside Development | ignored, with a warning; inside it, the cycle key and `ends_at` use `submitted_at + offset` | `ClockOffset_IsIgnoredOutsideDevelopment`, `ClockOffset_MovesTheWeekAndTheEnd` |
 | C23 | A boss id the rule cannot map | no challenge id, no grant, `bad_id` counted, the verdict commits | `ForBoss_IsDeterministicAndTotal`, `AnInvalidBossId_IsNeverGranted…` |
 | C24 | A reset for one player | only that player's key changes (`.p<n>`); a later global reset stacks (`.r1.p1`) | `PlayerReset_AffectsOnlyThatPlayer`, `PlayerAndGlobalReset_Stack` |
