@@ -54,23 +54,40 @@ Godot client ── POST /api/v1/runs/{id}/actions (a `battle` action)          
   ◀── 200 RunActionAck                                          (the upload never waits for a broker or a worker)
 
 Outbox relay (every Outbox:PollInterval, 250 ms; also woken by Postgres LISTEN/NOTIFY is a later optimisation):
-  1. lease:  UPDATE outbox SET leased_until = now() + @lease, attempts = attempts + 1
-             WHERE id IN (SELECT c.id FROM outbox c WHERE c.published_at IS NULL AND c.dead_lettered_at IS NULL
-                          AND (c.leased_until IS NULL OR c.leased_until < now())
-                          AND NOT EXISTS (an earlier unpublished, not dead-lettered row with the same destination and key)
-                          ORDER BY c.seq LIMIT @batch FOR UPDATE SKIP LOCKED)
-             RETURNING *                                          (short statement; no lock held while publishing)
-  2. publish each leased row to its destination with confirm (RabbitMQ publisher confirm, or Kafka idempotent
-     producer ack with acks=all), headers: event id, type, traceparent, x-attempt
-  3. success:  UPDATE outbox SET published_at = now(), leased_until = NULL WHERE id = @id      (a failure here only
-               means the row is published again later: at-least-once)
-     failure:  leave unpublished; leased_until = now() + backoff(attempts) (1 s … 60 s); rpg_outbox_publish_total{result=failed}
+  1. lease:  candidates = the earliest @batch rows (seq order) that are unpublished, not dead-lettered, not leased
+                          (leased_until < now()), with NOT EXISTS (an earlier unpublished, not dead-lettered row with
+                          the same destination and key), FOR UPDATE SKIP LOCKED
+             free       = the candidates whose key's advisory lock pg_try_advisory_xact_lock(hash(destination, key))
+                          succeeds (no transaction that wrote a row of the key is still open; a try, never a wait)
+             UPDATE outbox SET leased_until = now() + @lease, attempts = attempts + 1, lease_token = @token
+             WHERE id IN (free) RETURNING *                       (short statement; no lock held while publishing)
+  2. renew:  UPDATE ... SET leased_until = now() + @lease WHERE id = @id AND lease_token = @token AND unpublished;
+             no row = another relay holds it now (this lease ran out mid-batch): skip it
+     publish the row to its destination with confirm (RabbitMQ publisher confirm, mandatory, message-id = the row id;
+     or Kafka idempotent producer ack with acks=all), headers: event id, type, traceparent, x-attempt
+  3. success:  UPDATE outbox SET published_at = now(), leased_until = NULL WHERE id = @id AND lease_token = @token
+               (a failure here only means the row is published again later: at-least-once)
+     failure:  leave unpublished; leased_until = now() + backoff(attempts) (1 s … 60 s), also fenced by the token;
+               rpg_outbox_publish_total{result=failed}
 ```
 
 Per-key order: rows for one `key` (battleId for jobs, playerId for events) are published in `seq` order: the relay only
 leases a row when no earlier unpublished, not dead-lettered row has the same `(destination, key)` (`NOT EXISTS`, see 3.4),
 so a retry never overtakes an older event for the same player, and any number of relay instances can run. Only the
 earliest row of a key is leased per pass.
+
+Two more rules make that hold (review fix, 2026-11-09, migration `0009_outbox_fencing.sql`):
+- **Commit order.** `seq` is drawn at insert and the relay sees only committed rows, so two transactions writing one key
+  could commit in the other order and the later row would be published first. `OutboxWriter` takes a *shared*
+  transaction-scoped advisory lock on `(destination, key)` before it draws `seq`, held until its transaction ends; the
+  lease takes the *exclusive* lock with a try, so a key is leased only when none of its writers is still open. Writers
+  never wait for each other and the relay never waits, so this adds no deadlock (an exclusive per-key lock at insert
+  would: the worker writes `BattleVerified` before it locks the wallet, a card action locks the wallet first).
+- **Fencing.** Each lease stamps its rows with a token, and every later write (renew, published, retry, release, dead
+  letter) needs it. The relay renews a row's lease right before publishing it, so a relay whose lease ran out mid-batch
+  never publishes a row another relay may already have published (and followed with the key's next row), and its
+  release never undoes another relay's lease. A publish must finish within one lease (30 s; the publish timeouts are
+  5 s and 10 s).
 
 ### 2.2 Verdict + settlement in one transaction (the worker)
 
@@ -314,7 +331,9 @@ replaces `GemsPerBossMark` with per-boss rules. Removed:
 | F9 | **Redpanda down** | Rows stay unpublished with backoff; gauges grow; on recovery all drain in per-key order, none lost, none reordered for a player. **Scenario 3** | `RedpandaDown_RowsDrainInOrderWhenItReturns` (Testcontainers, stop/start), e2e `outbox_redpanda_down` |
 | F10 | RabbitMQ down at upload | The upload succeeds (the row is committed); the relay publishes the job when the broker returns; no sweeper needed | `Upload_BrokerDown_StillStores_AndTheRowWaitsInTheOutbox` (the relay publishing it later is the relay tests above) |
 | F11 | The API crashes between publish-ack and `published_at` | The row is published again: duplicate job (F1 handles it) or duplicate event (consumers dedupe on `EventId`) | `RelayCrashAfterPublish_PublishesAgain_WithTheSameEventId` |
-| F12 | Two relay instances | `FOR UPDATE SKIP LOCKED` plus the lease: never the same row at once; the per-key rule keeps order | `TwoRelays_NeverPublishTheSameRowAtOnce_AndKeepKeyOrder` |
+| F12 | Two relay instances | `FOR UPDATE SKIP LOCKED` plus the lease: never the same row at once; the per-key rule keeps order; a relay whose lease ran out can neither publish nor update the row (the token) | `TwoRelays_NeverPublishTheSameRowAtOnce_AndKeepKeyOrder`, `ARelayWhoseLeaseRanOut_CanNeitherPublishNorUpdateTheRow` |
+| F12a | Two writers of one key commit in the other order (review fix) | The later `seq` waits until the earlier row's transaction ends, then the two go out in `seq` order | `AKeysEarlierRow_CommittedAfterALaterOne_IsStillPublishedFirst` |
+| F12b | A job no queue is bound to (review fix) | Mandatory publish: the broker returns it, the publish fails (transient, retried), the row is never marked published; jobs carry the row id as message-id | `AnUnroutableJob_FailsThePublish_InsteadOfBeingConfirmed`, `ARabbitJob_CarriesItsOutboxIdAsTheMessageId` |
 | F13 | Poison row | A permanent error (cannot serialise, unknown topic) is dead-lettered on the first attempt; a transient one retries to `MaxAttempts` first (8.3). Counted; rows of other keys flow throughout | `APoisonRow_IsDeadLettered_AndOtherKeysKeepFlowing` |
 | F14 | Postgres down at verdict time | Nothing decided; retry tier 30 s without an attempt (as slice 3) | slice 3's `PostgresDown_PostponesWithoutCountingAnAttempt`, still green |
 | F15 | Redis flushed or down | Settlement unaffected (Postgres only); the wallet is read from Postgres. **Scenario 4** | `GetWallet_RedisFlushed_IsServedFromPostgres`, `RedisDown_StillSettles_AndCountsTheErrors` |
@@ -452,8 +471,8 @@ Not built, kept in this spec on purpose:
 3. **`LISTEN/NOTIFY` relay wake-up** (7.2): a later optimisation.
 4. **Outbox retention:** published and dead-lettered rows are never purged.
 5. **Known review items, accepted for now:** a reader can refill the wallet cache with a stale balance for up to 60 s after a
-   grant; Redpanda events go out at about one per player per pass (per-key order); the 30 s lease is shorter than a worst-case
-   slow batch (a duplicate publish, deduped on `EventId`); a dead-lettered RabbitMQ row leaves its session `Submitted`; the
+   grant; Redpanda events go out at about one per player per pass (per-key order); a batch can outlast the 30 s lease (each row's
+   lease is renewed right before its publish, so this costs at most a duplicate, deduped on `EventId`, never a reorder); a dead-lettered RabbitMQ row leaves its session `Submitted`; the
    relay polls every 250 ms when idle; a permanent SQL error inside a grant rolls the verdict back with it (deliberate: the
    verdict and the money are one transaction).
 6. **Per-boss rewards and the economy boundary:** slice 4c, `specs/economy-rewards.md`.

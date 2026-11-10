@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using Rpg.Contracts.Battle;
 using Rpg.Contracts.Events;
+using Rpg.Contracts.Runs;
 using Rpg.GameServerApi.Migrations;
 using Rpg.GameServerApi.Observability;
 using Rpg.GameServerApi.Outbox;
@@ -147,6 +148,100 @@ public class OutboxTests(StackFixture stack)
         Assert.Empty(during);
         Assert.Equal(leased[0].Id, Assert.Single(after).Id);
         Assert.Equal(2, after[0].Attempts);
+    }
+
+    /// <summary>
+    /// Review fix (migration 0009): `seq` is drawn at insert, so a transaction that wrote a key's earlier row can commit after
+    /// one that wrote its later row. The later row must wait until the earlier one is committed, then go out after it.
+    /// </summary>
+    [Fact]
+    public async Task AKeysEarlierRow_CommittedAfterALaterOne_IsStillPublishedFirst()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: Paused);
+        var sink = new FakeSink(OutboxDestination.Redpanda);
+        var relay = Relay(factory, sink);
+        await factory.Services.GetRequiredService<MigrationRunner>().EnsureMigratedAsync(Ct);
+        await using var connection = await factory.Services.GetRequiredService<NpgsqlDataSource>().OpenConnectionAsync(Ct);
+        await using var slow = await connection.BeginTransactionAsync(Ct);
+        await OutboxWriter.InsertAsync(connection, slow, new OutboxMessage(Guid.NewGuid(), OutboxDestination.Redpanda,
+            EventTopics.Economy, "p1", "RewardPending", "{}"), Ct);   // seq N, not committed yet
+        await InsertAsync(factory, "p1", "RewardVoided");            // seq N+1, committed at once
+
+        Assert.Equal(0, await relay.RunOnceAsync(Ct));               // N+1 waits: N may still commit
+        await slow.CommitAsync(Ct);
+        await relay.RunOnceAsync(Ct);
+        await relay.RunOnceAsync(Ct);
+
+        Assert.Equal(["RewardPending", "RewardVoided"], sink.Published.Select(r => r.Type));
+    }
+
+    /// <summary>
+    /// Review fix (lease fencing): once a lease ran out and another relay leased the row, the first relay's renew, mark,
+    /// retry, release and dead letter all touch nothing; only the current holder's do.
+    /// </summary>
+    [Fact]
+    public async Task ARelayWhoseLeaseRanOut_CanNeitherPublishNorUpdateTheRow()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: Paused);
+        var store = factory.Services.GetRequiredService<OutboxStore>();
+        await InsertAsync(factory, "a", "a1");
+        var now = DateTimeOffset.UtcNow;
+        var stale = Assert.Single(await store.LeaseAsync(10, TimeSpan.FromSeconds(30), now, Ct));
+        var current = Assert.Single(await store.LeaseAsync(10, TimeSpan.FromSeconds(30), now.AddSeconds(31), Ct));
+
+        Assert.NotEqual(stale.LeaseToken, current.LeaseToken);
+        Assert.False(await store.RenewAsync(stale, now.AddMinutes(1), Ct));
+        Assert.Equal(0, await store.MarkPublishedAsync(stale, now, Ct));
+        Assert.Equal(0, await store.ScheduleRetryAsync(stale, now.AddMinutes(5), Ct));
+        Assert.Equal(0, await store.ReleaseAsync([stale], Ct));
+        Assert.Equal(0, await store.DeadLetterAsync(stale, "stale", now, Ct));
+        Assert.Equal(2L, await ScalarAsync(factory, "SELECT attempts::bigint FROM outbox"));   // the stale release took nothing back
+
+        Assert.True(await store.RenewAsync(current, now.AddMinutes(1), Ct));
+        Assert.Equal(1, await store.MarkPublishedAsync(current, now, Ct));
+        Assert.False(await store.RenewAsync(current, now.AddMinutes(1), Ct));                // published: nothing left to hold
+    }
+
+    /// <summary>Review fix (spec settlement-outbox 3.2): the RabbitMQ message-id of a job is its outbox row's id.</summary>
+    [Fact]
+    public async Task ARabbitJob_CarriesItsOutboxIdAsTheMessageId()
+    {
+        await using var probe = await RabbitProbe.OpenAsync(stack.RabbitMqUri);
+        await probe.PurgeAsync();
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: Paused);
+        var job = new VerifyStepJob(Guid.NewGuid(), 0, 0, "test-ruleset", DateTimeOffset.UtcNow);
+        var id = await InsertAsync(factory, $"{job.RunId:D}/0/0", nameof(VerifyStepJob), OutboxDestination.Rabbit,
+            VerifyTopology.SegmentRoutingKey, System.Text.Json.JsonSerializer.Serialize(job, Rpg.Contracts.Serialization.RpgJson.Options));
+
+        // The API's RabbitMQ connection opens in the background: until it is up a pass fails and backs the row off.
+        var relay = factory.Services.GetRequiredService<OutboxRelay>();
+        var messages = new List<(VerifyStepJob Job, string? MessageId)>();
+        for (var pass = 0; pass < 30 && messages.Count == 0; pass++)
+        {
+            await relay.RunOnceAsync(Ct);
+            messages = await probe.TakeStepMessagesAsync(TimeSpan.FromMilliseconds(500));
+        }
+
+        var message = Assert.Single(messages);
+        Assert.Equal(job.RunId, message.Job.RunId);
+        Assert.Equal(id.ToString("D"), message.MessageId);
+    }
+
+    /// <summary>
+    /// Review fix: jobs are published mandatory, so a job no queue is bound to comes back as an error instead of a confirm
+    /// (it would otherwise be marked published and lost).
+    /// </summary>
+    [Fact]
+    public async Task AnUnroutableJob_FailsThePublish_InsteadOfBeingConfirmed()
+    {
+        var connection = await new RabbitMQ.Client.ConnectionFactory { Uri = new Uri(stack.RabbitMqUri) }.CreateConnectionAsync(Ct);
+        await using var _ = connection;
+        await using var channel = await connection.CreateChannelAsync(VerifyMessaging.ConfirmedChannel, Ct);
+        await VerifyMessaging.DeclareAsync(channel, Ct);
+        var job = new VerifyStepJob(Guid.NewGuid(), 0, 0, "test-ruleset", DateTimeOffset.UtcNow);
+
+        await Assert.ThrowsAnyAsync<RabbitMQ.Client.Exceptions.PublishException>(() =>
+            VerifyMessaging.PublishAsync(channel, VerifyTopology.Exchange, "nobody.is.bound.here", job, 0, null, Ct));
     }
 
     [Fact]

@@ -75,8 +75,18 @@ public sealed class OutboxRelay(OutboxStore store, IEnumerable<IOutboxSink> sink
             var row = rows[i];
             if (!_sinks.TryGetValue(row.Destination, out var sink))
             {
-                await store.DeadLetterAsync(row.Id, $"no sink for '{row.Destination}'", clock.GetUtcNow(), ct);
+                await store.DeadLetterAsync(row, $"no sink for '{row.Destination}'", clock.GetUtcNow(), ct);
                 metrics.OutboxPublished(row.Destination, row.Type, "failed");
+                continue;
+            }
+
+            // Fencing: publish only while this relay still holds the lease, and give the publish a whole lease to finish.
+            // A batch can take longer than one lease; a row whose lease ran out may already be with another relay, which
+            // may have published it and the next row of its key. Publishing it again now would put it after that row.
+            if (!await store.RenewAsync(row, clock.GetUtcNow() + options.Value.Lease, ct))
+            {
+                logger.LogWarning("Outbox row {Id} ({Type}): the lease ran out and another relay holds it; skipped", row.Id,
+                    row.Type);
                 continue;
             }
 
@@ -92,7 +102,7 @@ public sealed class OutboxRelay(OutboxStore store, IEnumerable<IOutboxSink> sink
                 failures = 0;
                 try
                 {
-                    await store.MarkPublishedAsync(row.Id, clock.GetUtcNow(), ct);
+                    await store.MarkPublishedAsync(row, clock.GetUtcNow(), ct);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -110,7 +120,7 @@ public sealed class OutboxRelay(OutboxStore store, IEnumerable<IOutboxSink> sink
             catch (OutboxPermanentException ex)
             {
                 logger.LogError("Outbox row {Id} ({Type}) dead-lettered: {Reason}", row.Id, row.Type, ex.Message);
-                await store.DeadLetterAsync(row.Id, ex.Message, clock.GetUtcNow(), CancellationToken.None);
+                await store.DeadLetterAsync(row, ex.Message, clock.GetUtcNow(), CancellationToken.None);
                 metrics.OutboxPublished(row.Destination, row.Type, "failed");
             }
             catch (Exception ex)
@@ -121,13 +131,13 @@ public sealed class OutboxRelay(OutboxStore store, IEnumerable<IOutboxSink> sink
                 {
                     logger.LogError("Outbox row {Id} ({Type}) dead-lettered after {Attempts} attempts: {Message}", row.Id,
                         row.Type, row.Attempts, ex.Message);
-                    await store.DeadLetterAsync(row.Id, "attempts", clock.GetUtcNow(), CancellationToken.None);
+                    await store.DeadLetterAsync(row, "attempts", clock.GetUtcNow(), CancellationToken.None);
                 }
                 else
                 {
                     logger.LogWarning("Outbox row {Id} ({Type}) not published (attempt {Attempts}): {Message}", row.Id,
                         row.Type, row.Attempts, ex.Message);
-                    await store.ScheduleRetryAsync(row.Id, clock.GetUtcNow() + options.Value.Backoff(row.Attempts),
+                    await store.ScheduleRetryAsync(row, clock.GetUtcNow() + options.Value.Backoff(row.Attempts),
                         CancellationToken.None);
                 }
 
@@ -142,10 +152,10 @@ public sealed class OutboxRelay(OutboxStore store, IEnumerable<IOutboxSink> sink
 
     private async Task ReleaseAsync(IEnumerable<OutboxRow> rest)
     {
-        var ids = rest.Select(r => r.Id).ToArray();
-        if (ids.Length > 0)
+        var rows = rest.ToArray();
+        if (rows.Length > 0)
         {
-            await store.ReleaseAsync(ids, CancellationToken.None);
+            await store.ReleaseAsync(rows, CancellationToken.None);
         }
     }
 }

@@ -170,6 +170,55 @@ public class StepProcessorTests(Stack stack)
         Assert.Equal(0, await worker.ScalarAsync<int>("SELECT verified_seq FROM runs WHERE run_id = $1", run.RunId));
     }
 
+    /// <summary>
+    /// Review fix: step 1 waiting for the genesis job's snapshot spends none of its attempts, so a slow genesis cannot make
+    /// step 1's first real runner error a dead letter.
+    /// </summary>
+    [Fact]
+    public async Task StepOne_WaitingForGenesis_SpendsNoAttempts_AndItsFirstRealErrorIsRetried()
+    {
+        await using var worker = await CreateAsync(stack);
+        var run = await worker.SeedRunAsync();
+        await worker.UploadAsync(run, 1, RunActionTypes.StartRun, snapshot: true, hash: FakeStepRunner.GenesisHash);
+        await worker.UploadAsync(run, 2, RunActionTypes.NextFloor, snapshot: true);   // step 1: 1 to 2
+
+        for (var i = 0; i < 25; i++)   // more waits than MaxAttempts * 4, the old limit
+        {
+            var waiting = await worker.Steps.ProcessAsync(StepJobOf(run, 1), Ct);
+            Assert.Equal((JobAction.Retry, "postponed"), (waiting.Action, waiting.Result));
+        }
+
+        Assert.Equal(0, await worker.ScalarAsync<int>("SELECT attempts FROM run_steps WHERE run_id = $1 AND step_no = 1", run.RunId));
+        Assert.Equal(0, worker.StepRunner.Calls);   // no Godot run while waiting
+
+        await worker.Steps.ProcessAsync(StepJobOf(run, 0), Ct);   // genesis lands
+        worker.StepRunner.Handler = (_, _) => Task.FromResult(FakeStepRunner.Error());
+        var first = await worker.Steps.ProcessAsync(StepJobOf(run, 1), Ct);
+
+        Assert.Equal(JobAction.Retry, first.Action);   // one attempt of five, not a dead letter
+        Assert.Equal(1, await worker.ScalarAsync<int>("SELECT attempts FROM run_steps WHERE run_id = $1 AND step_no = 1", run.RunId));
+    }
+
+    /// <summary>Review fix: once the genesis step is dead-lettered nothing will write the snapshot, and step 1 follows it.</summary>
+    [Fact]
+    public async Task StepOne_IsDeadLettered_OnlyOnceGenesisIs()
+    {
+        await using var worker = await CreateAsync(stack, new Dictionary<string, string?> { ["Verifier:MaxAttempts"] = "1" });
+        var run = await worker.SeedRunAsync();
+        await worker.UploadAsync(run, 1, RunActionTypes.StartRun, snapshot: true, hash: FakeStepRunner.GenesisHash);
+        await worker.UploadAsync(run, 2, RunActionTypes.NextFloor, snapshot: true);
+        Assert.Equal(JobAction.Retry, (await worker.Steps.ProcessAsync(StepJobOf(run, 1), Ct)).Action);
+
+        worker.StepRunner.Handler = (_, _) => Task.FromResult(FakeStepRunner.Error());
+        Assert.Equal(JobAction.DeadLetter, (await worker.Steps.ProcessAsync(StepJobOf(run, 0), Ct)).Action);
+        var decision = await worker.Steps.ProcessAsync(StepJobOf(run, 1), Ct);
+
+        Assert.Equal((JobAction.DeadLetter, "genesis_missing"), (decision.Action, decision.Reason));
+        Assert.Equal("Pending", await Status(worker, run, 1));
+        Assert.Equal("genesis_missing", await worker.ScalarAsync<string>(
+            "SELECT dead_letter_reason FROM run_steps WHERE run_id = $1 AND step_no = 1", run.RunId));
+    }
+
     // ---- the verified prefix, links and floors (2.3) -----------------------------------------------------------------
 
     [Fact]
@@ -216,6 +265,35 @@ public class StepProcessorTests(Stack stack)
         var payload = JsonDocument.Parse((await worker.OutboxPayloadsAsync("RunRolledBack")).Single()).RootElement.GetProperty("payload");
         Assert.Equal("LinkBroken", payload.GetProperty("reason").GetString());
         Assert.False(payload.GetProperty("terminal").GetBoolean());
+    }
+
+    /// <summary>
+    /// Review fix: a rollback voids the battles past its checkpoint, and their cached verdict goes with them, so the voided
+    /// battle stops reading as Verified (and cannot hide the next epoch's battle at that seq).
+    /// </summary>
+    [Fact]
+    public async Task ARollback_DeletesTheCachedVerdictOfEveryVoidedBattle()
+    {
+        await using var worker = await CreateAsync(stack);
+        var run = await VerifiedStartAsync(worker);
+        await worker.UploadAsync(run, 2, RunActionTypes.NextFloor, snapshot: true);          // step 1: 1 to 2
+        await worker.UploadAsync(run, 3, RunActionTypes.Battle, snapshot: true, floor: 1);   // step 2: 2 to 3, the battle
+        var redis = await worker.RedisAsync();
+        var verdictKey = VerifyPolicy.VerdictKey(run.RunId, 3);
+
+        await worker.Steps.ProcessAsync(StepJobOf(run, 2), Ct);
+        Assert.True(await redis.KeyExistsAsync(verdictKey));   // the battle's verdict is cached
+
+        worker.StepRunner.Handler = (request, _) => Task.FromResult(request.ToSeq == 2
+            ? FakeStepRunner.Ok(new StepVerdict(ReplayVerdict.Verified, null, null, null, "h1", "not-what-the-next-step-starts-from",
+                null, [], null, "", "fake", DateTimeOffset.UtcNow))
+            : worker.StepRunner.Honest(request));
+        await worker.Steps.ProcessAsync(StepJobOf(run, 1), Ct);   // the broken link rolls the run back to seq 1
+
+        Assert.Equal(1, (await worker.RunStateAsync(run)).VerifiedSeq);
+        Assert.Equal(0L, await worker.ScalarAsync<long>("SELECT count(*) FROM battle_sessions WHERE run_id = $1", run.RunId));
+        Assert.False(await redis.KeyExistsAsync(verdictKey));
+        Assert.False(await redis.KeyExistsAsync(VerifyPolicy.SessionKey(run.RunId, 3)));
     }
 
     [Fact]

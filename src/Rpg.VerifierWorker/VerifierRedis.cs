@@ -71,6 +71,31 @@ public sealed class VerifierRedis(IConfiguration configuration, ILogger<Verifier
         }
     }
 
+    /// <summary>
+    /// After a rollback (spec run-verify 2.4): the voided battles' cached session and verdict are deleted, so
+    /// <c>GET /runs/{id}/battles/{seq}</c> reads Postgres again. Returns false on a Redis error (the 30 min TTL bounds it).
+    /// </summary>
+    public async Task<bool> InvalidateBattlesAsync(Guid runId, IReadOnlyCollection<int> seqs)
+    {
+        if (seqs.Count == 0)
+        {
+            return true;
+        }
+
+        try
+        {
+            var database = await DatabaseAsync();
+            await database.KeyDeleteAsync(seqs.SelectMany(seq => new RedisKey[]
+                { VerifyPolicy.VerdictKey(runId, seq), VerifyPolicy.SessionKey(runId, seq) }).ToArray());
+            return true;
+        }
+        catch (Exception ex) when (IsRedisError(ex))
+        {
+            logger.LogDebug("Battle caches not cleared: {Message}", ex.Message);
+            return false;
+        }
+    }
+
     /// <summary>After the commit: the verdict cache is filled and the Submitted copy deleted. Returns false on a Redis error.</summary>
     public async Task<bool> PublishVerdictAsync(StoredBattle battle)
     {

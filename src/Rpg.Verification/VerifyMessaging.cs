@@ -96,8 +96,8 @@ public static class VerifyMessaging
         VerifyTopology.SegmentRetryTiers[Math.Clamp(attempt, 1, VerifyTopology.SegmentRetryTiers.Count) - 1];
 
     public static Task PublishAsync(IChannel channel, string exchange, string routingKey, VerifyStepJob job,
-        int attempt, string? reason, CancellationToken ct) =>
-        PublishBodyAsync(channel, exchange, routingKey, Body(job), attempt, reason, ct);
+        int attempt, string? reason, CancellationToken ct, string? messageId = null) =>
+        PublishBodyAsync(channel, exchange, routingKey, Body(job), attempt, reason, messageId, ct);
 
     public static byte[] Body(VerifyBattleJob job) => JsonSerializer.SerializeToUtf8Bytes(job, RpgJson.Options);
 
@@ -117,14 +117,17 @@ public static class VerifyMessaging
 
     /// <summary>
     /// Publishes a job and waits for the broker's confirm (the channel must have publisher confirmations on). Persistent;
-    /// carries the attempt count and the current trace context.
+    /// carries the attempt count and the current trace context. <paramref name="messageId"/> is the RabbitMQ message-id:
+    /// the outbox row's id for a job the relay publishes (spec settlement-outbox 3.2), kept on a worker's re-publish.
+    /// Mandatory: a job no queue is bound to comes back and the publish throws (<c>PublishReturnException</c>), so it is
+    /// never confirmed, marked published and lost.
     /// </summary>
     public static Task PublishAsync(IChannel channel, string exchange, string routingKey, VerifyBattleJob job,
-        int attempt, string? reason, CancellationToken ct) =>
-        PublishBodyAsync(channel, exchange, routingKey, Body(job), attempt, reason, ct);
+        int attempt, string? reason, CancellationToken ct, string? messageId = null) =>
+        PublishBodyAsync(channel, exchange, routingKey, Body(job), attempt, reason, messageId, ct);
 
     private static async Task PublishBodyAsync(IChannel channel, string exchange, string routingKey, byte[] body,
-        int attempt, string? reason, CancellationToken ct)
+        int attempt, string? reason, string? messageId, CancellationToken ct)
     {
         var headers = new Dictionary<string, object?> { [VerifyTopology.AttemptHeader] = attempt };
         if (reason is not null)
@@ -142,8 +145,9 @@ public static class VerifyMessaging
             Persistent = true,
             ContentType = "application/json",
             Headers = headers,
+            MessageId = messageId,
         };
-        await channel.BasicPublishAsync(exchange, routingKey, mandatory: false, properties, body, ct);
+        await channel.BasicPublishAsync(exchange, routingKey, mandatory: true, properties, body, ct);
     }
 
     /// <summary>The channel options for publishing: confirms on, tracked per publish.</summary>

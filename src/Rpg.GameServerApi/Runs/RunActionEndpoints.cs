@@ -113,6 +113,13 @@ public static class RunActionEndpoints
                 RunSummaryCache.CurrentKey(player.Id));
         }
 
+        if (result.Aggregate?.VoidedBattleSeqs is { Count: > 0 } voided)
+        {
+            // A rollback voided these battles (spec run-verify 2.4): their cached session or verdict must not outlive them.
+            await cache.InvalidateAsync(voided.SelectMany(seq => new[]
+                { VerifyPolicy.VerdictKey(runId, seq), VerifyPolicy.SessionKey(runId, seq) }).ToArray());
+        }
+
         if (result.Aggregate is { } aggregate)
         {
             // "waiting": the anchor job has not finished, so nothing was compared yet (the worker compares when it commits).

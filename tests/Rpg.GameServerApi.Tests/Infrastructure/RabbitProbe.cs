@@ -74,6 +74,31 @@ public sealed class RabbitProbe : IAsyncDisposable
         return jobs;
     }
 
+    /// <summary>Like <see cref="TakeStepsAsync"/>, with each message's RabbitMQ message-id.</summary>
+    public async Task<List<(VerifyStepJob Job, string? MessageId)>> TakeStepMessagesAsync(TimeSpan? wait = null)
+    {
+        var jobs = new List<(VerifyStepJob, string?)>();
+        var deadline = DateTime.UtcNow + (wait ?? TimeSpan.FromSeconds(3));
+        while (DateTime.UtcNow < deadline)
+        {
+            var message = await _channel.BasicGetAsync(VerifyTopology.SegmentQueue, autoAck: true);
+            if (message is null)
+            {
+                if (jobs.Count > 0)
+                {
+                    break;
+                }
+
+                await Task.Delay(100);
+                continue;
+            }
+
+            jobs.Add((JsonSerializer.Deserialize<VerifyStepJob>(message.Body.Span, RpgJson.Options)!, message.BasicProperties.MessageId));
+        }
+
+        return jobs;
+    }
+
     /// <summary>Takes (and acks) every job on <paramref name="queue"/> within a short wait.</summary>
     public async Task<List<(VerifyBattleJob Job, int Attempt)>> TakeAsync(string queue = VerifyTopology.Queue,
         TimeSpan? wait = null)
