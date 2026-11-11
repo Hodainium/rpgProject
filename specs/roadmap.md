@@ -33,7 +33,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5. `card-collection` | ✅ Done (spec synced; the account's cards on the server: catalog, packs with Epic / Legendary / Mythic pity and a Rare guarantee, dust and craft, the run lock, the run's item pool as a verified input, `POST /runs/{id}/abandon`; Godot: the pool in the run hash and steps, card tags on all 160 demo cards, core-set proposal, console commands, run-end gate; no Vault pool; 535 .NET, 626 Godot, 5 card e2e scenarios; not built: the Grafana row; the screens are 5b, the numbers 5c) | 2026-11-09 |
 | 5a. `vfx-framework` | 🔨 Built, awaiting the user's review (`specs/vfx-framework.md`; data-driven FX in 2D, 3D and hybrid, the GodotGAS cue bridge, the hybrid stage, a shader library, a proof set of 12 effects, dev tools, the gallery; 696 Godot tests; every hit in a battle now sparks; spec to sync after tuning) | 2026-11-09 |
 | 5a2. `vfx-content-pass` | ✅ Built 2026-11-09 (effects for hits, DoTs, controls, stat statuses, heals, revives, 24 ultimates, battle moments and damage numbers; open for playtest fixes) | `specs/vfx-content-pass.md` |
-| 5a3. `vfx-stencil` | ⬜ Next (stencil buffer support: per-unit stencil values, effects drawn over their own unit and hidden by everything else; see its section) | |
+| 5a3. `vfx-stencil` | ⬜ Next (stencil buffer support after Unreal's Custom Depth-Stencil as Lyra uses it: per-unit stencil values, effects drawn over their own unit and hidden by everything else; two implementations prototyped and compared; see its section) | |
 | 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |
@@ -583,17 +583,38 @@ carries the hit tags) with a tag filter, which `FxListener` does not have yet. D
 Added 2026-11-10 from the VFX playtest (`playtest-fixes` B14), as the user's next task. Stencil buffer support for the project,
 with effects as its first user. Today an effect on a unit is kept from being cut by that unit's own mesh by a depth bias (the
 unit's radius, Unreal's Pixel Depth Offset), so it still shows through a unit standing less than the bias in front of it. With
-stencils, each unit view writes its own value, and an effect on a unit draws in two passes: over pixels holding its unit's value
-whatever their depth, and everywhere else with the normal depth test and no bias. It then draws over its own unit and is hidden by
-every other unit, wall and the floor at any distance. Godot 4.7.2 has stencil support (`stencil_mode`).
+stencils, each unit view writes its own value, and an effect on a unit draws over pixels holding its unit's value whatever their
+depth, and everywhere else with the normal depth test and no bias. It then draws over its own unit and is hidden by every other
+unit, wall and the floor at any distance.
+
+**Reference design: Unreal's Custom Depth-Stencil, as Lyra uses it.** Lyra turns it on (`Config/DefaultEngine.ini`:
+`r.CustomDepth=3`, enabled with stencil) and marks its damage-number meshes with `SetRenderCustomDepth(true)` and
+`SetCustomDepthStencilValue(123)` so post-process materials can opt them out (`LyraNumberPopComponent_MeshText.cpp`). The model:
+a value 0–255 per object, set as data on the object; a buffer of those values that materials **read like a texture** and decide
+about in their own code (outlines, x-ray silhouettes, masks). We follow it: a value per unit view set as data, a named table of
+values (no magic numbers like Lyra's 123), and readers that decide in their own shader. Using it to draw an effect over its own
+unit is our own use: Unreal effects usually do that with Pixel Depth Offset (what we have), a camera offset or no depth test.
+
+**Two implementations, both prototyped and compared (user, 2026-11-10: test both):**
+- **(a) Godot's built-in stencil test** (`stencil_mode` in spatial shaders, present in 4.7.2): the units write their value; an
+  effect draws in two passes (its own unit's pixels with no depth test, everything else with the depth test). Simple and fast,
+  but the comparison is fixed render state, and the reference value may be baked into the shader code (per-slot shader variants).
+- **(b) An Unreal-style readable stencil texture:** the unit views' values rendered into a texture of their own (for example
+  through a `CompositorEffect` or an extra pass), which effect shaders sample next to the scene depth. One pass, the unit's value
+  an ordinary parameter, closest to Lyra; more to build. A Godot shader cannot read the stencil buffer as a texture as far as
+  we know (to confirm).
+
 The spec decides:
 - a system table of stencil values (units by battle slot, reserved ranges for later outlines, target highlights and silhouettes
   behind walls), so features never collide;
-- how a unit view writes its value (the cube material in `presentation/` changes with the user's OK; humanoid materials later);
-- the two passes on effect materials, how an effect knows its unit (its anchor), effects with no unit (bias as the fallback);
-- the depth fade in the second pass as classic soft particles;
-- whether Godot sets the stencil reference in shader code or per material (per-slot shader variants or not);
-- proof: a gallery prototype (two cubes close together, an effect on the back one) first, then battle shots and tests.
+- how a unit view carries and writes its value (as data on the view; the cube material in `presentation/` changes with the
+  user's OK; humanoid materials later);
+- how an effect knows its unit (its anchor), and effects with no unit (the depth bias stays as the fallback);
+- the depth fade away from its own unit as classic soft particles;
+- how Godot sets the stencil reference (in shader code or per material) and whether a shader can read stencil values;
+- proof: both prototypes in the gallery on the same scene (two cubes close together, an effect on the back one, a floor ring,
+  a big disc into the floor), compared on look, cost (passes, shader variants, frame time) and how well each serves later
+  outlines and silhouettes; the user picks one; then battle shots and tests.
 
 ### 5b. `card-ui`
 Added 2026-11-09, right after slice 5. The screens for the card system, built on the UI framework and the FF7 theme:
