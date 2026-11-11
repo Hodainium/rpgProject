@@ -89,15 +89,24 @@ public static class RewardRules
         return await reader.ReadAsync(ct) ? Read(reader) : null;
     }
 
-    /// <summary>The generation of the resets for everyone (<paramref name="playerId"/> null) or for one player; 0 if none.</summary>
+    /// <summary>
+    /// The generation of the resets for everyone (<paramref name="playerId"/> null) or for one player; 0 if none. With
+    /// <paramref name="at"/> (settlement: the battle's time), only the resets made by then count (spec economy-challenges C21,
+    /// battle time like the rule, the user, 2026-11-09): a reset made after a fight does not move that fight to a new cycle.
+    /// Without it, every reset counts (the next reset's number).
+    /// </summary>
     public static async Task<int> GenerationAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
-        string challengeId, Guid? playerId, CancellationToken ct)
+        string challengeId, Guid? playerId, CancellationToken ct, DateTimeOffset? at = null)
     {
         await using var command = new NpgsqlCommand(
-            "SELECT COALESCE(max(generation), 0) FROM reward_cycle_resets WHERE challenge_id = $1 AND player_id IS NOT DISTINCT FROM $2",
+            """
+            SELECT COALESCE(max(generation), 0) FROM reward_cycle_resets
+            WHERE challenge_id = $1 AND player_id IS NOT DISTINCT FROM $2 AND ($3::timestamptz IS NULL OR reset_at <= $3)
+            """,
             connection, transaction);
         command.Parameters.Add(new NpgsqlParameter { Value = challengeId });
         command.Parameters.Add(new NpgsqlParameter<Guid?> { TypedValue = playerId, NpgsqlDbType = NpgsqlDbType.Uuid });
+        command.Parameters.Add(new NpgsqlParameter<DateTimeOffset?> { TypedValue = at?.ToUniversalTime(), NpgsqlDbType = NpgsqlDbType.TimestampTz });
         return (int)(await command.ExecuteScalarAsync(ct))!;
     }
 
