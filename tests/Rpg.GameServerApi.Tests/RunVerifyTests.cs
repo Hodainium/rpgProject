@@ -309,6 +309,22 @@ public class RunVerifyTests(StackFixture stack)
         Assert.Equal("1", Sample(metrics, "rpg_stairs_gate_total", "result=\"open\""));
     }
 
+    /// <summary>F8: a dead-lettered step does not open the gate: the floor it ends is still unverified, so the stairs answer 1107.</summary>
+    [Fact]
+    public async Task Stairs_AfterTheFloorsStepIsDeadLettered_StillAnswer1107()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: Quiet);
+        var client = await ClientAsync(factory, "alice");
+        var run = await client.StartRunAsync(Start, Ct);
+        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2), RunLog.NextFloor(3)), Ct);
+        await ExecuteAsync(factory,
+            $"UPDATE run_steps SET dead_lettered_at = now(), dead_letter_reason = 'attempts' WHERE run_id = '{run.RunId}' AND kind <> 'genesis'");
+
+        var blocked = await Assert.ThrowsAsync<GameServerApiException>(() => client.GetFloorSeedAsync(run.RunId, 1, new FloorSeedRequest(3), Ct));
+
+        Assert.Equal((HttpStatusCode.Conflict, ApiErrors.PreviousFloorUnverified), (blocked.StatusCode, blocked.ErrorCode));
+    }
+
     [Fact]
     public async Task Stairs_TheChecksRunInOrder_1105_Then1106_Then1107()
     {

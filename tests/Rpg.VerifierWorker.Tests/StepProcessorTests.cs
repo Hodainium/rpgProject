@@ -555,6 +555,31 @@ public class StepProcessorTests(Stack stack)
         Assert.Equal(("Active", 0, 1), (state.Status, state.Epoch, state.VerifiedSeq));   // an infrastructure fault is not a cheat
         Assert.Equal("Pending", await Status(worker, run, 1));
         Assert.NotNull(await worker.ScalarAsync<DateTime?>("SELECT dead_lettered_at FROM run_steps WHERE run_id = $1 AND step_no = 1", run.RunId));
+        // F8: the floor that step ends stays unverified, so the stairs gate keeps answering 1107 until a human re-drives it.
+        Assert.Null(await worker.ScalarAsync<DateTime?>("SELECT verified_at FROM run_floors WHERE run_id = $1 AND floor = 0", run.RunId));
+    }
+
+    /// <summary>
+    /// F19: a client that sends no pending-battle checkpoint makes one longer step that contains the battle; it still verifies,
+    /// with its battle, and the prefix moves over all of it.
+    /// </summary>
+    [Fact]
+    public async Task AStepWithoutAPendingBattleCheckpoint_IsLonger_AndStillVerifies_WithItsBattle()
+    {
+        await using var worker = await CreateAsync(stack);
+        var run = await VerifiedStartAsync(worker);
+        await worker.UploadAsync(run, 2);                                          // plain actions, no checkpoint
+        await worker.UploadAsync(run, 3);
+        await worker.UploadAsync(run, 4, RunActionTypes.Battle, snapshot: true);   // the battle closes the step: 1 to 4
+
+        Assert.Equal(3, await worker.ScalarAsync<int>("SELECT to_seq - from_seq FROM run_steps WHERE run_id = $1 AND step_no = 1", run.RunId));
+        var decision = await worker.Steps.ProcessAsync(StepJobOf(run, 1), Ct);
+
+        Assert.Equal("verified", decision.Result);
+        Assert.Equal(4, (await worker.RunStateAsync(run)).VerifiedSeq);
+        Assert.Equal("Verified", await worker.ScalarAsync<string>(
+            "SELECT status FROM battle_sessions WHERE run_id = $1 AND run_seq = 4", run.RunId));
+        Assert.Equal(3, worker.StepRunner.Requests[^1].Actions.Count);   // one Godot run replays all three actions
     }
 
     [Fact]
