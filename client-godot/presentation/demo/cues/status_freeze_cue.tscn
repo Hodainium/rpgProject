@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://cnsiu5imfnygm"]
 
 [ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_042u6"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/frozen.tres" id="2_b40ns"]

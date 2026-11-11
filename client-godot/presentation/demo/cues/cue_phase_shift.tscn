@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://cl62tusi14i0p"]
 
 [ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_pn66f"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/phase_shift.tres" id="2_1tb12"]

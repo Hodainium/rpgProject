@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://c0o4fysdweeky"]
 
 [ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_qmk1w"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/bleed_tick.tres" id="2_k0h1d"]

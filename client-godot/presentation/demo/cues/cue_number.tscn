@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://bydgwys6j6t2v"]
 
 [ext_resource type="Script" path="res://game/fx/fx_number_pop_cue.gd" id="1_numcue"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/damage_number.tres" id="2_numfx"]

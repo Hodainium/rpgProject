@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://c6nrbto5np0bc"]
 
 [ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_h2v84"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/fire_hit.tres" id="2_cl57m"]
