@@ -88,7 +88,10 @@ Godot client ── POST /api/v1/packs/{packId}/open  { requestKey }
     3. read the pack type's latest version and the card rates FROM POSTGRES (never the cache); retired / unknown → 404 1408;
        take the shared advisory lock "card_catalog" before reading the eligible cards and the catalog version, so both come
        from one catalog (a re-seed holds it exclusively; review fix 2026-11-09). A drawn rarity with no card rate → 404 1408,
-       nothing charged (a dust or craft of such a card → 400 1404); a pack-type put with odds on an unrated rarity → 400 1401
+       nothing charged (a dust or craft of such a card → 400 1404); a pack-type put with odds on an unrated rarity → 400 1401.
+       The catalog caches are keyed per Postgres database and refilled only while the catalog generation (bumped by every
+       catalog write before its delete) is the one read before the Postgres read; a run start with cards on answers 503 with
+       Retry-After until the seeder's first pass is done (the client asks again)
     4. wallet: gems >= price else 409 1402; debit (wallet_ledger -price, reason 'pack_open')
     5. draw_seed = 64 random bits (RandomNumberGenerator.GetBytes); read this player's pity counters for the pack (pack_pity,
        FOR UPDATE); draw N cards with the pack RNG and the pity rules (3.4, 3.4a); update the counters
@@ -469,31 +472,31 @@ leaves a card that already has a set tag as it is, so a second run proposes noth
 
 | # | Failure | Behaviour | Test |
 |---|---|---|---|
-| F1 | Same `requestKey`, same action and body, again (client retry, timeout) | Returns the stored response, 200, nothing changes (scenario 1) | `OpenPack_Replayed_SpendsOnce`, `Dust_Replayed_PaysOnce`, `Craft_Replayed_ChargesOnce` |
-| F2 | Same key, different pack, card or kind | 409 1407, nothing changes | `RequestKey_ReusedForOtherAction_Rejected` |
+| F1 | Same `requestKey`, same action and body, again (client retry, timeout) | Returns the stored response, 200, nothing changes (scenario 1) | `OpenPack_Replayed_SpendsOnce_AndReturnsTheSameCards`, `Dust_RemovesTheCard_PaysTheFlatRate_AndReplayPaysOnce`, `Craft_SpendsDust_GrantsTheCard_AndReplayChargesOnce` |
+| F2 | Same key, different pack, card or kind | 409 1407, nothing changes | `RequestKey_ReusedForAnotherAction_IsRejected` |
 | F3 | API dies after the commit, before the response | The client retries with the same key → F1 (scenario 2) | `OpenPack_Replayed_SpendsOnce_AndReturnsTheSameCards` (the stored answer; a killed connection is the same path) |
 | F4 | Two opens at once with gems for one | The advisory lock serialises; the second gets 409 1402; wallet never negative | `OpenPack_Concurrent_NeverOverdraws` |
-| F5 | Dust or craft with too little currency | 409 1402, no change | `Craft_NotEnoughDust_Rejected` |
-| F6 | Dust a core card, an unknown card, a card not held | 400 1404 / 409 1406 | `Dust_Core_Refused`, `Dust_NotOwned_Refused` |
+| F5 | Dust or craft with too little currency | 409 1402, no change | `Craft_Refusals_NotEnoughDust_AlreadyOwned_Core_Unknown`, `OpenPack_WithTooFewGems_Is1402_AndNothingChanges` |
+| F6 | Dust a core card, an unknown card, a card not held | 400 1404 / 409 1406 | `Dust_ACoreCard_AnUnknownCard_AndACardNotHeld_AreRefused` |
 | F7 | Dust a card acquired before the run started | 409 1403 with the run id; nothing changes; passes after `abandon`, after Lost, after Won | `Dust_ACardOwnedWhenTheRunStarted_IsLockedUntilTheRunEnds`, `Dust_AVerifyingRunKeepsTheLock_UntilTheVerdict_AndCannotBeAbandoned`, `Dust_AfterTheRunIsAbandoned_Succeeds`, e2e `card_run_lock` |
-| F8 | Dust a card acquired after the run started | Allowed (never in that run's pool) | `Dust_AcquiredAfterRunStart_Allowed` |
-| F9 | Dust races a run start | The advisory lock orders them: either the run snapshots the card and it is then locked, or the dust wins and the card is not in the pool | `RunStart_ConcurrentWithDust_PoolMatchesHoldings` (the account lock, timestamps from the database clock) |
+| F8 | Dust a card acquired after the run started | Allowed (never in that run's pool) | `Dust_ACardAcquiredAfterTheRunStarted_IsNotLocked` |
+| F9 | Dust races a run start | The advisory lock orders them: either the run snapshots the card and it is then locked, or the dust wins and the card is not in the pool | `RunStart_ConcurrentWithDust_PoolMatchesTheHoldings` (the account lock, timestamps from the database clock) |
 | F10 | A duplicate in a pack, or two of the same card in one pack | Auto-dusted at the card's dust value, never a second holding; works during a run and never touches the locked copy | `OpenPack_ADuplicate_IsAutoDusted_NeverASecondHolding`, `OpenPack_ADuplicateDuringARun_NeverTouchesTheLockedCopy` |
-| F11 | Craft a card already held | 409 1405 | `Craft_Owned_Refused` |
-| F12 | Run start with a locked character | 400 1409, no run created | `RunStart_LockedCharacter_Refused` |
+| F11 | Craft a card already held | 409 1405 | `Craft_Refusals_NotEnoughDust_AlreadyOwned_Core_Unknown` |
+| F12 | Run start with a locked character | 400 1409, no run created | `RunStart_ACharacterTheAccountDoesNotOwn_Is400_1409_AndNoRunIsCreated` |
 | F13 | A client plays with a pool the server did not issue (tampered start) | The run hash differs → the step fails `WrongSetup`, verdict 2002, rollback as today (scenario 5) | `test_a_step_with_another_pool_than_the_runs_is_refused` (Godot), `verify_pool_tampered` (e2e: the genesis step rejects the run, nothing paid) |
 | F14 | Redis down or flushed | Catalog reads fall back to Postgres; opens never read the cache (scenario 4) | `Catalog_WithRedisUnreachable_StillReadsFromPostgres_AndPacksStillOpen` |
 | F15 | Redpanda down | Account actions still commit; their outbox rows drain after it is back, none lost (scenario 3) | `CardEvents_RedpandaDown_DrainAfterRestart` in `OutboxTests` (real Redpanda, `docker pause`), e2e `card_redpanda_down` |
 | F16 | Postgres unreachable | 503 ProblemDetails as every other endpoint | `AccountActions_WithPostgresUnreachable_Answer503`, `EveryOtherCardEndpoint_WithPostgresUnreachable_Answers503_NeverA500` (catalog, packs, dust, craft, abandon, the admin GETs and puts) |
 | F17 | Content and server catalog disagree (a new item not yet exported) | The item is not in any issued pool; `check_card_catalog.sh` reports it | script check, no test |
 | F18 | Seed demotes a core card | The API refuses to start, naming the card | `Seeder_ACoreCardThatWouldStopBeingCore_RefusesTheWholeFile` (the seeder rethrows it: the host stops) |
-| F19 | Admin puts invalid rules | 400 1401 (odds not 10000, `CraftCost <= DustValue`, unknown set); non-admin 403 1302 | `PackType_Put_Validates`, `CardRates_Put_RequiresAdmin` |
-| F20 | A pack is retired while a client holds its old listing | Open returns 404 1408 | `OpenPack_Retired_404` |
+| F19 | Admin puts invalid rules | 400 1401 (odds not 10000, `CraftCost <= DustValue`, unknown set); non-admin 403 1302 | `Admin_PackTypes_AreVersioned_AppendOnly_AndValidated`, `Admin_CardRates_MustKeepCraftAboveDust_AndNeedTheRole` |
+| F20 | A pack is retired while a client holds its old listing | Open returns 404 1408 | `OpenPack_UnknownOrRetired_Is404_1408` |
 | F22 | Pity timer reaches N | The Nth pack since the last drop holds that rarity, forced into the lowest slot; counters reset; a replayed open does not move the counters twice | `Pity_TheNthPackHoldsTheRarity_FlaggedAndTheCounterResets`, `Pity_CountersArePerPackType_AndAReplayCountsOnce`, `Pity_FirstGuarantee_LandsWithinTheFirstNPacks`, the `PackDrawerTests` pity cases (incl. a forced card never dropped), e2e `card_pity` |
 | F25 | A pack with no Rare or better | The last unforced slot is redrawn among Rare and above; a pack is never all Common; the redraw is deterministic from the seed | `OpenPack_NeverReturnsAPackWithoutARareOrBetter_WhenTheGuaranteeIsOn`, `RareGuarantee_*` in `PackDrawerTests` |
 | F23 | Abandon a Verifying run | 409 1410; the lock stays until the verdict | `Dust_AVerifyingRunKeepsTheLock_…` (abandon refused 1410), `Abandon_ARetriedCancel_IsASuccess` |
 | F24 | Client tries to leave the main menu while its run is Verifying | The UI offers no way out; restart returns to the same screen | `test_a_won_server_run_blocks_leaving_until_the_server_accepts_it` (Godot); `test_continue_offers_a_verifying_run_only_from_a_save_that_holds_its_end` |
-| F21 | An open pack's price changes between the listing and the open | Price in force at the transaction is charged and returned in `GemsSpent` | `OpenPack_PriceChanged_ChargesCurrent` |
+| F21 | An open pack's price changes between the listing and the open | Price in force at the transaction is charged and returned in `GemsSpent` | `OpenPack_PriceChangedAfterTheListing_ChargesTheCurrentPrice` |
 
 No dead-letter handling: no queue. Redelivery does not exist here; retries are the client's, made safe by the request key.
 

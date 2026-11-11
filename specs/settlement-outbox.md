@@ -276,6 +276,8 @@ live in `outbox.attempts`.
 | `rpg.battle.events` | `playerId` | 3 | `BattleVerified`, `BattleRejected` | 7 days (dev) |
 | `rpg.economy.events` | `playerId` | 3 | `RewardGranted` | 7 days (dev) |
 
+Wallet balances (`gems`, `dust`) are `bigint` (migration 0010, review fix: an int balance near 2^31 made the credit overflow and the
+verdict transaction fail on every retry); a Kafka event's `traceparent` is the relay's publish span, a child of the writer's.
 Created on API startup if missing (idempotent). Producer: idempotent, `acks=all`, `linger` 5 ms, message timeout 10 s.
 Headers: `event-id`, `type`, `schema-version`, `traceparent`. Message value = the `DomainEvent<T>` JSON. Package:
 `Confluent.Kafka` (pinned in `Directory.Packages.props`).
@@ -283,8 +285,8 @@ Headers: `event-id`, `type`, `schema-version`, `traceparent`. Message value = th
 **Relay ordering rule:** a row is leased only if no earlier row with the same `(destination, key)` is still unpublished
 and not dead-lettered. This keeps one player's events ordered across retries at the cost of head-of-line blocking per
 key (acceptable: keys are per player). `Outbox:BatchSize` (50), `Outbox:Lease` (30 s), backoff 1 s × 2^n capped at 60 s.
-A permanent error dead-letters a row at once; after `Outbox:MaxAttempts` (20 for Redpanda, 0 = unlimited for rabbit) a transiently failing row is dead-lettered with a reason and an alert
-metric; a human requeues with `UPDATE outbox SET dead_lettered_at = NULL, attempts = 0`.
+A permanent error dead-letters a row at once; after `Outbox:MaxAttempts` (0 = unlimited, the default for both since 2026-11-09; RabbitMQ rows ignore it) a transiently failing row is dead-lettered with a reason and an alert
+metric; an operator re-drives it with `POST /api/v1/admin/outbox/redrive` (role `ops-admin`).
 
 Also built: a destination's pass ends after **3 consecutive transient failures** (a breaker, so one broken destination or
 key cannot hold the others up); the Kafka producer is rebuilt after a fatal error; a failure to write `published_at` after
@@ -309,7 +311,7 @@ No new `ApiErrors`. Settlement is invisible to the upload path.
 
 ### 3.7 Configuration
 
-API: `Outbox:PollInterval` (250 ms), `BatchSize` (50), `Lease` (30 s), `MaxAttempts` (20), `BackoffBase` (1 s), `BackoffCap` (60 s),
+API: `Outbox:PollInterval` (250 ms), `BatchSize` (50), `Lease` (30 s), `MaxAttempts` (0 = unlimited; was 20, which dead-lettered every pending Redpanda event after about 15 minutes of outage), `BackoffBase` (1 s), `BackoffCap` (60 s),
 `KafkaMessageTimeout` (10 s), `Enabled` (tests can pause the relay), `Kafka:BootstrapServers` (`localhost:19092`). Worker:
 `Settlement:Enabled` (default true) and `Settlement:GemsPerBossMark` (default 10; an economy number, not a combat number, so
 a plain whole number and **not** ×100), both on the **worker** because only the worker grants. `specs/economy-rewards.md`
