@@ -63,7 +63,7 @@ public sealed record BattleRejectedPayload(string BattleId, int RunSeq, int Erro
 /// <param name="ChallengeId">What was completed (spec economy-challenges 3.1).</param>
 /// <param name="CycleKey">"once", "2026-W45", plus ".r&lt;n&gt;" / ".p&lt;n&gt;" after a reset.</param>
 public sealed record RewardGrantedPayload(string Source, string BattleId, string CharacterId, [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? BossId,
-    string Currency, int Amount, int BalanceAfter, int RuleVersion, string ChallengeId, string CycleKey);
+    string Currency, int Amount, long BalanceAfter, int RuleVersion, string ChallengeId, string CycleKey);
 
 /// <summary>Economy topic, key <c>rule:{challengeId}</c> (spec economy-challenges 3.1).</summary>
 public sealed record RewardRuleChangedPayload(string ChallengeId, string Currency, int Amount, string Cycle,

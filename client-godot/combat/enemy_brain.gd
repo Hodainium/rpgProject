@@ -35,7 +35,8 @@ func level_skill_choice(unit: BattleUnit, battle: Battle) -> Dictionary:
 		if row == null or row.ability == null or row.level > unit.level:
 			continue
 		var ability := unit.ability_by_tag(SkillTags.tag_of(row.ability))
-		if ability != null and not ability.is_triggered() and not ability.is_ultimate() 				and unit.asc.can_activate_ability(ability):
+		if ability != null and not ability.is_triggered() and not ability.is_ultimate() \
+				and unit.asc.can_activate_ability(ability):
 			var choice := choice_for(unit, battle, ability)
 			if not choice.is_empty():
 				return choice

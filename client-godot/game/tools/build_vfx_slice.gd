@@ -317,7 +317,7 @@ func _save_rules(effects: Array[FxDefinition]) -> void:
 	var ice := _rule(GameplayMessageRouter.BATTLE_DAMAGE, effects[2], {})
 	ice.require_tags = [&"Damage.Type.Ice"]
 	rules.rules.append(ice)
-	if ResourceSaver.save(rules, path) == OK:
+	if BuilderSave.save(rules, path) == OK:
 		_written.append(path)
 
 
@@ -423,7 +423,7 @@ func _save_definition(definition: FxDefinition) -> FxDefinition:
 	if FileAccess.file_exists(path) and not _force:
 		_kept.append(path)
 		return load(path)
-	if ResourceSaver.save(definition, path) != OK:
+	if BuilderSave.save(definition, path) != OK:
 		push_error("build_vfx_slice: cannot write %s" % path)
 		return definition
 	_written.append(path)

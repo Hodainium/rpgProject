@@ -40,8 +40,8 @@ public static class RunActionEndpoints
     }
 
     private static async Task<IResult> SendActionsAsync(HttpContext context, Guid runId, RunActionBatch? batch,
-        RunStore store, RunSummaryCache cache, RpgMetrics metrics, IOptions<RunVerifyOptions> options, TimeProvider clock,
-        CancellationToken ct)
+        RunStore store, RunSummaryCache cache, Rpg.GameServerApi.Battle.BattleSessionCache battles, RpgMetrics metrics,
+        IOptions<RunVerifyOptions> options, TimeProvider clock, CancellationToken ct)
     {
         var started = Stopwatch.GetTimestamp();
         var player = context.User.Player();
@@ -116,8 +116,7 @@ public static class RunActionEndpoints
         if (result.Aggregate?.VoidedBattleSeqs is { Count: > 0 } voided)
         {
             // A rollback voided these battles (spec run-verify 2.4): their cached session or verdict must not outlive them.
-            await cache.InvalidateAsync(voided.SelectMany(seq => new[]
-                { VerifyPolicy.VerdictKey(runId, seq), VerifyPolicy.SessionKey(runId, seq) }).ToArray());
+            await battles.VoidAsync(runId, voided);
         }
 
         if (result.Aggregate is { } aggregate)

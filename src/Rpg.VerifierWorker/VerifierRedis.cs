@@ -85,6 +85,12 @@ public sealed class VerifierRedis(IConfiguration configuration, ILogger<Verifier
         try
         {
             var database = await DatabaseAsync();
+            // Tombstones first: a reader's refill checks them, so once they are set no voided copy comes back.
+            foreach (var seq in seqs)
+            {
+                await database.StringSetAsync(VerifyPolicy.VoidedKey(runId, seq), "1", VerifyPolicy.VoidedTtl);
+            }
+
             await database.KeyDeleteAsync(seqs.SelectMany(seq => new RedisKey[]
                 { VerifyPolicy.VerdictKey(runId, seq), VerifyPolicy.SessionKey(runId, seq) }).ToArray());
             return true;

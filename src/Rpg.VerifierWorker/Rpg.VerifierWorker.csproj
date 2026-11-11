@@ -2,6 +2,7 @@
   <!-- Spec battle-verify 3.7: consumes verify jobs from RabbitMQ and runs headless Godot per job. No game logic here:
        Godot is the only combat implementation. Web SDK only for /metrics and the health endpoints. -->
   <ItemGroup>
+    <InternalsVisibleTo Include="Rpg.VerifierWorker.Tests" />
     <ProjectReference Include="..\Rpg.Contracts\Rpg.Contracts.csproj" />
     <ProjectReference Include="..\Rpg.Economy\Rpg.Economy.csproj" />
     <ProjectReference Include="..\Rpg.Verification\Rpg.Verification.csproj" />

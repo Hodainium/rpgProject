@@ -439,7 +439,7 @@ func _save_definition(definition: FxDefinition) -> FxDefinition:
 	if FileAccess.file_exists(path) and (not _force or _registry_only):
 		_kept.append(path)
 		return load(path)
-	var error := ResourceSaver.save(definition, path)
+	var error := BuilderSave.save(definition, path)
 	if error != OK:
 		push_error("build_fx_set: cannot write %s (%s)" % [path, error_string(error)])
 		return definition
@@ -462,6 +462,6 @@ func _save_cue(file: String, effect_id: String, offset: Vector3, one_shot: bool,
 	cue.stop_fade = fade
 	var scene := PackedScene.new()
 	scene.pack(cue)
-	if ResourceSaver.save(scene, path) == OK:
+	if BuilderSave.save(scene, path) == OK:
 		_written.append(path)
 	cue.free()

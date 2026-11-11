@@ -23,6 +23,25 @@ public sealed class BattleSessionCache(RedisConnection redis, RpgMetrics metrics
 
     public static string VerdictKey(Guid runId, int seq) => VerifyPolicy.VerdictKey(runId, seq);
 
+    /// <summary>A rollback voided these battles: tombstones first, then their session and verdict keys go (review fix).</summary>
+    public async Task VoidAsync(Guid runId, IReadOnlyCollection<int> seqs)
+    {
+        try
+        {
+            foreach (var seq in seqs)
+            {
+                await redis.Database().StringSetAsync(VerifyPolicy.VoidedKey(runId, seq), "1", VerifyPolicy.VoidedTtl);
+            }
+
+            await redis.Database().KeyDeleteAsync(seqs.SelectMany(seq => new RedisKey[] { VerdictKey(runId, seq), Key(runId, seq) }).ToArray());
+        }
+        catch (Exception ex) when (RedisConnection.IsError(ex))
+        {
+            metrics.CacheError("delete");
+            logger.LogDebug("Redis void of battle sessions failed: {Message}", ex.Message);
+        }
+    }
+
     /// <summary>The cached battle (verdict key first), and which key answered.</summary>
     public async Task<(StoredBattle? Battle, string Source)> GetAsync(Guid runId, int seq)
     {
@@ -49,18 +68,26 @@ public sealed class BattleSessionCache(RedisConnection redis, RpgMetrics metrics
         }
     }
 
+    /// <summary>
+    /// The refill, in one atomic step (review fix): nothing is written while the battle's tombstone exists (a rollback voided
+    /// it after this reader loaded it from Postgres), nor a Submitted copy once the verdict is cached.
+    /// </summary>
+    private const string RefillScript = """
+        if redis.call('EXISTS', KEYS[2]) == 1 then return 0 end
+        if ARGV[3] == '1' and redis.call('EXISTS', KEYS[3]) == 1 then return 0 end
+        redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2])
+        return 1
+        """;
+
     public async Task SetAsync(Guid runId, int seq, StoredBattle battle)
     {
         try
         {
             var submitted = battle.Session.Status == BattleSessionStatus.Submitted;
-            if (submitted && await redis.Database().KeyExistsAsync(VerdictKey(runId, seq)))
-            {
-                return;  // the verdict landed while this reader held a Submitted copy: do not bring it back
-            }
-
-            await redis.Database().StringSetAsync(submitted ? Key(runId, seq) : VerdictKey(runId, seq),
-                JsonSerializer.Serialize(battle, RpgJson.Options), submitted ? SubmittedTtl : RunSummaryCache.Ttl);
+            await redis.Database().ScriptEvaluateAsync(RefillScript,
+                [submitted ? Key(runId, seq) : VerdictKey(runId, seq), VerifyPolicy.VoidedKey(runId, seq), VerdictKey(runId, seq)],
+                [JsonSerializer.Serialize(battle, RpgJson.Options),
+                    (long)(submitted ? SubmittedTtl : RunSummaryCache.Ttl).TotalMilliseconds, submitted ? "1" : "0"]);
         }
         catch (Exception ex) when (RedisConnection.IsError(ex))
         {

@@ -30,9 +30,23 @@ public sealed class CardOptions
 /// Seeds the catalog and the placeholder economy once the schema exists (spec card-collection 2.1). A file that would take a
 /// core card away is a startup failure, not a retry: the host stops and the log names the card.
 /// </summary>
+/// <summary>
+/// Review fix (2026-11-09): whether the card seeder has finished its first pass. Until then a run start with the card checks on
+/// is refused with 503 (and a Retry-After): a run started before the catalog exists would hold no card pool and skip the
+/// character check for good. With no catalog or seed file configured there is nothing to wait for.
+/// </summary>
+public sealed class CardSeedState
+{
+    private volatile bool _ready;
+
+    public bool Ready => _ready;
+
+    public void MarkReady() => _ready = true;
+}
+
 public sealed class CardSeeder(CardStore store, MigrationRunner migrations, IOptions<CardOptions> options,
     IOptions<EconomyOptions> economy, CatalogCache cache, TimeProvider clock, IHostEnvironment environment,
-    ILogger<CardSeeder> logger) : BackgroundService
+    CardSeedState state, ILogger<CardSeeder> logger) : BackgroundService
 {
     private static readonly TimeSpan RetryInterval = TimeSpan.FromSeconds(5);
 
@@ -40,6 +54,7 @@ public sealed class CardSeeder(CardStore store, MigrationRunner migrations, IOpt
     {
         if (string.IsNullOrWhiteSpace(options.Value.CatalogFile) && string.IsNullOrWhiteSpace(options.Value.SeedFile))
         {
+            state.MarkReady();
             return;
         }
 
@@ -49,6 +64,7 @@ public sealed class CardSeeder(CardStore store, MigrationRunner migrations, IOpt
             {
                 await migrations.EnsureMigratedAsync(stoppingToken);
                 await SeedAsync(stoppingToken);
+                state.MarkReady();
                 return;
             }
             catch (Exception ex) when (ex is not (OperationCanceledException or CatalogDemotionException or ArgumentException or JsonException))

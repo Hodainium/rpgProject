@@ -747,7 +747,7 @@ func _save(definition: FxDefinition) -> FxDefinition:
 	if (_only != "" and _only != String(definition.id).trim_prefix("fx.")) or (FileAccess.file_exists(path) and not _force):
 		_kept.append(path)
 		return load(path)
-	if ResourceSaver.save(definition, path) != OK:
+	if BuilderSave.save(definition, path) != OK:
 		push_error("build_vfx_signatures2: cannot write %s" % path)
 		return definition
 	_written.append(path)

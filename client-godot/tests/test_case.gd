@@ -81,6 +81,12 @@ func after_each() -> void:
 		if is_instance_valid(battle):
 			battle.free()
 	_battles.clear()
+	# A test that switches GodotGAS cues on (or off) for itself never leaks it into the next test of its shard, even when it
+	# stops halfway on a failed check: the process default comes back here (FxManager's rule: off headless).
+	var cues: Node = (Engine.get_main_loop() as SceneTree).root.get_node_or_null("GameplayCueManager") \
+			if Engine.get_main_loop() is SceneTree else null
+	if cues != null:
+		cues.suppress_cues = DisplayServer.get_name() == "headless"
 
 
 static func fixtures() -> ContentIndex:

@@ -32,7 +32,8 @@ public static class RunEndpoints
     }
 
     private static async Task<IResult> StartRunAsync(HttpContext context, RunStartRequest? request, RunStore store,
-        RunSummaryCache cache, RulesetPolicy ruleset, RpgMetrics metrics, TimeProvider clock, CancellationToken ct)
+        RunSummaryCache cache, RulesetPolicy ruleset, RpgMetrics metrics, TimeProvider clock,
+        Rpg.GameServerApi.Cards.CardSeedState cardSeed, IOptions<Rpg.GameServerApi.Cards.CardOptions> cards, CancellationToken ct)
     {
         var player = context.User.Player();
         if (Invalid(request) is { } problem)
@@ -45,6 +46,16 @@ public static class RunEndpoints
             metrics.RunStart("rejected");
             return Conflict(ApiErrors.RulesetMismatch, "Ruleset not accepted",
                 $"Ruleset version '{request.RulesetVersion}' is not accepted by this server.");
+        }
+
+        if (cards.Value.Enabled && !cardSeed.Ready)
+        {
+            // Review fix: the card catalog is still being seeded (a few seconds after startup): a run started now would hold
+            // no card pool and skip the character check for good.
+            metrics.RunStart("catalog_seeding");
+            context.Response.Headers.RetryAfter = "5";
+            return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Card catalog loading",
+                detail: "The server is still loading the card catalog; try again in a few seconds.");
         }
 
         var result = await store.StartAsync(player, request, clock.GetUtcNow(), ct);

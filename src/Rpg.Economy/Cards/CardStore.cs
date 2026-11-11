@@ -226,7 +226,7 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
             }
         }
 
-        int gems = 0, dust = 0;
+        long gems = 0, dust = 0;
         long version = 0;
         await using (var wallet = new NpgsqlCommand("SELECT gems, dust, version FROM wallets WHERE player_id = $1", connection))
         {
@@ -234,7 +234,7 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
             await using var reader = await wallet.ExecuteReaderAsync(ct);
             if (await reader.ReadAsync(ct))
             {
-                (gems, dust, version) = (reader.GetInt32(0), reader.GetInt32(1), reader.GetInt64(2));
+                (gems, dust, version) = (reader.GetInt64(0), reader.GetInt64(1), reader.GetInt64(2));
             }
         }
 
@@ -317,18 +317,18 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
     private static Task WalletRowAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid playerId, CancellationToken ct) =>
         ExecAsync(connection, transaction, "INSERT INTO wallets (player_id) VALUES ($1) ON CONFLICT DO NOTHING", ct, playerId);
 
-    private static async Task<(int Gems, int Dust)> LockWalletAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
+    private static async Task<(long Gems, long Dust)> LockWalletAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
         Guid playerId, CancellationToken ct)
     {
         await WalletRowAsync(connection, transaction, playerId, ct);
         await using var select = Cmd(connection, transaction, "SELECT gems, dust FROM wallets WHERE player_id = $1 FOR UPDATE", playerId);
         await using var reader = await select.ExecuteReaderAsync(ct);
         await reader.ReadAsync(ct);
-        return (reader.GetInt32(0), reader.GetInt32(1));
+        return (reader.GetInt64(0), reader.GetInt64(1));
     }
 
     /// <summary>Adds to the wallet (negative = spend); the CHECK constraints are the last guard. Returns the new balances.</summary>
-    private static async Task<(int Gems, int Dust)> MoveWalletAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
+    private static async Task<(long Gems, long Dust)> MoveWalletAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
         Guid playerId, int gems, int dust, DateTimeOffset now, CancellationToken ct)
     {
         await using var update = Cmd(connection, transaction,
@@ -336,7 +336,7 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
             playerId, gems, dust, now.ToUniversalTime());
         await using var reader = await update.ExecuteReaderAsync(ct);
         await reader.ReadAsync(ct);
-        return (reader.GetInt32(0), reader.GetInt32(1));
+        return (reader.GetInt64(0), reader.GetInt64(1));
     }
 
     private static Task LedgerAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid playerId, string currency,

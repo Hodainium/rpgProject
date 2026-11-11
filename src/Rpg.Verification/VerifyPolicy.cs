@@ -13,6 +13,16 @@ public static class VerifyPolicy
 
     public static string VerdictKey(Guid runId, int seq) => $"battle:verdict:{runId:D}:{seq}";
 
+    /// <summary>
+    /// Review fix: a rollback voided this battle (spec run-verify 2.4). Set with the deletion of its session and verdict keys
+    /// and kept for <see cref="VoidedTtl"/>, it stops a reader that loaded the voided row from Postgres just before the
+    /// rollback from caching it again afterwards (the cache refill writes only while no tombstone exists).
+    /// </summary>
+    public static string VoidedKey(Guid runId, int seq) => $"battle:voided:{runId:D}:{seq}";
+
+    /// <summary>How long a tombstone lasts: far longer than one API read of a battle takes.</summary>
+    public static readonly TimeSpan VoidedTtl = TimeSpan.FromMinutes(2);
+
     /// <summary>Spec settlement-outbox 3.5: the cached wallet; the worker deletes it after a settlement commits.</summary>
     public static string WalletKey(Guid playerId) => $"wallet:{playerId:D}";
 }

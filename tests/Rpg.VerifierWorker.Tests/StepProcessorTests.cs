@@ -38,7 +38,7 @@ public class StepProcessorTests(Stack stack)
         worker.ScalarAsync<string>("SELECT status FROM run_steps WHERE run_id = $1 AND step_no = $2", run.RunId, stepNo);
 
     private static async Task<long> WalletAsync(WorkerHarness worker, SeededRun run) =>
-        await worker.ScalarAsync<int?>("SELECT gems FROM wallets WHERE player_id = $1", run.PlayerId) ?? 0;
+        await worker.ScalarAsync<int?>("SELECT gems::int FROM wallets WHERE player_id = $1", run.PlayerId) ?? 0;
 
     // ---- the genesis anchor (2.0, F23, F24) -------------------------------------------------------------------------
 
@@ -294,6 +294,7 @@ public class StepProcessorTests(Stack stack)
         Assert.Equal(0L, await worker.ScalarAsync<long>("SELECT count(*) FROM battle_sessions WHERE run_id = $1", run.RunId));
         Assert.False(await redis.KeyExistsAsync(verdictKey));
         Assert.False(await redis.KeyExistsAsync(VerifyPolicy.SessionKey(run.RunId, 3)));
+        Assert.True(await redis.KeyExistsAsync(VerifyPolicy.VoidedKey(run.RunId, 3)));   // the tombstone stops a late refill
     }
 
     [Fact]
@@ -834,7 +835,7 @@ public class StepProcessorTests(Stack stack)
         Assert.Equal(1, types.Count(t => t == "RewardGranted"));
         var voided = JsonDocument.Parse((await worker.OutboxPayloadsAsync("RewardVoided")).Single()).RootElement.GetProperty("payload");
         Assert.Equal("AlreadyPaid", voided.GetProperty("reason").GetString());
-        Assert.Equal(10, await worker.ScalarAsync<long>("SELECT COALESCE(sum(gems), 0) FROM wallets WHERE player_id = $1", player));
+        Assert.Equal(10, await worker.ScalarAsync<long>("SELECT COALESCE(sum(gems), 0)::bigint FROM wallets WHERE player_id = $1", player));
     }
 
     [Fact]

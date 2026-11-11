@@ -35,7 +35,9 @@ func met(battle: Battle, _tally: ChallengeTally) -> bool:
 			passing += 1
 	match quantifier:
 		Quantifier.ALL:
-			return passing == total
+			# Review fix: "every unit of the side passes" over a side with no units is false, not vacuously true: a star must
+			# be earned by units that exist.
+			return total > 0 and passing == total
 		Quantifier.ANY:
 			return passing > 0
 		_:

@@ -322,6 +322,51 @@ public class OutboxTests(StackFixture stack)
         Assert.All(received, m => Assert.Equal(player, m.Key));
     }
 
+    /// <summary>
+    /// Review fix: a Kafka event carries the relay's publish span as its traceparent (the writer's trace, one span deeper),
+    /// like a RabbitMQ job, so a consumer's span hangs under outbox.publish.
+    /// </summary>
+    [Fact]
+    public async Task AKafkaEvent_CarriesThePublishSpanAsItsTraceParent()
+    {
+        var started = new ConcurrentQueue<System.Diagnostics.Activity>();
+        using var listener = new System.Diagnostics.ActivityListener
+        {
+            ShouldListenTo = source => source.Name == OutboxRelay.Source.Name,
+            Sample = (ref System.Diagnostics.ActivityCreationOptions<System.Diagnostics.ActivityContext> _) =>
+                System.Diagnostics.ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStarted = started.Enqueue,
+        };
+        System.Diagnostics.ActivitySource.AddActivityListener(listener);
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: Paused);
+        var player = Guid.NewGuid().ToString("D");
+        await InsertAsync(factory, player, EventTypes.BattleVerified, topic: EventTopics.Battle,
+            traceParent: "00-1af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01");
+
+        await RealRelay(factory).RunOnceAsync(Ct);
+
+        var publish = Assert.Single(started, a => a.OperationName == "outbox.publish");
+        using var consumer = new ConsumerBuilder<string, string>(new ConsumerConfig
+        {
+            BootstrapServers = stack.RedpandaBootstrap, GroupId = "test-" + Guid.NewGuid().ToString("N"),
+            AutoOffsetReset = AutoOffsetReset.Earliest, EnableAutoCommit = false,
+        }).Build();
+        consumer.Subscribe(EventTopics.Battle);
+        string? header = null;
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (header is null && DateTime.UtcNow < deadline)
+        {
+            var result = consumer.Consume(TimeSpan.FromMilliseconds(500));
+            if (result?.Message.Key == player)
+            {
+                header = System.Text.Encoding.UTF8.GetString(result.Message.Headers.GetLastBytes("traceparent"));
+            }
+        }
+
+        Assert.Equal(publish.Id, header);   // the publish span, in the writer's trace
+        Assert.StartsWith("00-1af7651916cd43dd8448eb211c80319c-", header);
+    }
+
     [Fact]
     public async Task RedpandaDown_RowsDrainInOrderWhenItReturns()
     {

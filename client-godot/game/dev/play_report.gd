@@ -666,7 +666,9 @@ static func text(report: Dictionary) -> String:
 		if not parts.is_empty():
 			lines.append("  won/runs by %s: %s" % ["party size" if key == "bySize" else "class", ", ".join(parts)])
 	var parties: Array = report["byParty"].keys()
-	parties.sort_custom(func(a, b) -> bool: return report["byParty"][a]["won"] * 1000 / maxi(report["byParty"][a]["runs"], 1) 		> report["byParty"][b]["won"] * 1000 / maxi(report["byParty"][b]["runs"], 1) or (report["byParty"][a]["won"] * 1000 		/ maxi(report["byParty"][a]["runs"], 1) == report["byParty"][b]["won"] * 1000 / maxi(report["byParty"][b]["runs"], 1) and a < b))
+	parties.sort_custom(func(a, b) -> bool: return report["byParty"][a]["won"] * 1000 / maxi(report["byParty"][a]["runs"], 1) \
+		> report["byParty"][b]["won"] * 1000 / maxi(report["byParty"][b]["runs"], 1) or (report["byParty"][a]["won"] * 1000 \
+		/ maxi(report["byParty"][a]["runs"], 1) == report["byParty"][b]["won"] * 1000 / maxi(report["byParty"][b]["runs"], 1) and a < b))
 	for id in parties.slice(0, 5):
 		lines.append("  party %s: %d/%d" % [String(id).replace("demo.character.", ""), report["byParty"][id]["won"],
 			report["byParty"][id]["runs"]])
@@ -741,7 +743,8 @@ static func analysis_text(analysis: Dictionary) -> PackedStringArray:
 	lines.append("    losses/entered by floor: %s" % ", ".join(floors))
 	lines.append("    losses by chapter: %s" % _pairs(death["byChapter"], true))
 	var ranked: Array = death["byEncounter"].keys()
-	ranked.sort_custom(func(a, b) -> bool: return death["byEncounter"][a]["losses"] > death["byEncounter"][b]["losses"] 		or (death["byEncounter"][a]["losses"] == death["byEncounter"][b]["losses"] and a < b))
+	ranked.sort_custom(func(a, b) -> bool: return death["byEncounter"][a]["losses"] > death["byEncounter"][b]["losses"] \
+		or (death["byEncounter"][a]["losses"] == death["byEncounter"][b]["losses"] and a < b))
 	for name in ranked.slice(0, 10):
 		var entry: Dictionary = death["byEncounter"][name]
 		lines.append("    %s: %d losses (%s of losses), %d battles, %s lost per attempt" % [name, entry["losses"],
@@ -766,7 +769,8 @@ static func analysis_text(analysis: Dictionary) -> PackedStringArray:
 		features.append("%s %d/%d" % [label, tally["won"], tally["runs"]])
 	lines.append("  won/runs by feature: %s" % ", ".join(features))
 	var pairs: Array = analysis["byPair"].keys()
-	pairs.sort_custom(func(a, b) -> bool: return analysis["byPair"][a]["liftX100"] > analysis["byPair"][b]["liftX100"] 		or (analysis["byPair"][a]["liftX100"] == analysis["byPair"][b]["liftX100"] and a < b))
+	pairs.sort_custom(func(a, b) -> bool: return analysis["byPair"][a]["liftX100"] > analysis["byPair"][b]["liftX100"] \
+		or (analysis["byPair"][a]["liftX100"] == analysis["byPair"][b]["liftX100"] and a < b))
 	var best := PackedStringArray()
 	for key in pairs.slice(0, 5):
 		best.append("%s %s (%+.1f)" % [key, _pct(analysis["byPair"][key]["winX100"]), analysis["byPair"][key]["liftX100"] / 100.0])

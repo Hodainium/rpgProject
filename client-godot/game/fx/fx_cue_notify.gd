@@ -66,6 +66,7 @@ func _play(service: FxService, with_targets: bool = true) -> void:
 		_end_when_free()
 		return
 	_handle = service.play(fx, _anchor_for(target), params)
+	_played(target, _handle)
 	if _handle.is_playing():
 		if auto_destroy and not fx.is_looping():
 			_handle.finished.connect(finish_cue, CONNECT_ONE_SHOT)
@@ -154,6 +155,11 @@ func _notification(what: int) -> void:
 ## bindings. None by default.
 func _extra_params(_target: Node, _payload: Dictionary) -> Dictionary:
 	return {}
+
+
+## Called with the handle of each play of `fx` (FxNumberPopCue keeps a unit's numbers stacked and capped). Nothing by default.
+func _played(_target: Node, _handle_played: FxHandle) -> void:
+	pass
 
 
 func _anchor_for(target: Node) -> FxAnchor:

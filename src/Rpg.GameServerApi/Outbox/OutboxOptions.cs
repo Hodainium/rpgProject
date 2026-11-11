@@ -18,9 +18,12 @@ public sealed class OutboxOptions
 
     /// <summary>
     /// Transient failures after which a Redpanda row is dead-lettered. RabbitMQ rows are never dead-lettered for
-    /// transient failures: a verify job must not be lost to a long broker outage. 0 = unlimited.
+    /// transient failures: a verify job must not be lost to a long broker outage. 0 = unlimited, the default since the review
+    /// fix of 2026-11-09: with 20 the backoff dead-lettered every pending event after about 15 minutes of Redpanda being down,
+    /// against acceptance scenario 3 ("no lost events once it's back"). A row still never overtakes an earlier one of its key,
+    /// a permanent error still dead-letters at once, and POST /api/v1/admin/outbox/redrive brings dead-lettered rows back.
     /// </summary>
-    public int MaxAttempts { get; set; } = 20;
+    public int MaxAttempts { get; set; }
 
     public TimeSpan BackoffBase { get; set; } = TimeSpan.FromSeconds(1);
 

@@ -105,6 +105,30 @@ public class BattleVerifyTests(StackFixture stack)
         Assert.False(await redis.GetDatabase().KeyExistsAsync(BattleSessionCache.Key(runId, 3)));
     }
 
+    /// <summary>
+    /// Review fix: a reader that loaded a battle from Postgres just before a rollback voided it must not cache it again
+    /// afterwards. The rollback leaves a tombstone, and the refill writes nothing while one exists.
+    /// </summary>
+    [Fact]
+    public async Task GetBattle_AVoidedBattlesTombstone_StopsTheRefill()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: QuietBackground);
+        await ReadyProbe.WaitUntilAsync(factory.CreateClient(), r => r.StatusOf("redis") == "Healthy");
+        var (client, run) = await StartedAsync(factory);
+        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2, cell: 1)), Ct);
+        await SetVerdictAsync(factory, $"{run.RunId}/f0/c1", Verdict(ReplayVerdict.Verified));
+        var redis = (await ConnectionMultiplexer.ConnectAsync(stack.RedisConnectionString)).GetDatabase();
+        var runId = Guid.Parse(run.RunId);
+        await redis.StringSetAsync(Rpg.Verification.VerifyPolicy.VoidedKey(runId, 2), "1", TimeSpan.FromMinutes(1));   // a rollback just voided it
+
+        await client.GetBattleAsync(run.RunId, 2, Ct);   // read from Postgres, as just before the rollback
+
+        Assert.False(await redis.KeyExistsAsync(BattleSessionCache.VerdictKey(runId, 2)));
+        await redis.KeyDeleteAsync(Rpg.Verification.VerifyPolicy.VoidedKey(runId, 2));
+        await client.GetBattleAsync(run.RunId, 2, Ct);
+        Assert.True(await redis.KeyExistsAsync(BattleSessionCache.VerdictKey(runId, 2)));   // without one, the refill works
+    }
+
     [Fact]
     public async Task GetBattle_RedisFlushed_IsServedFromPostgres()
     {

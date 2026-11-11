@@ -114,7 +114,9 @@ func _make_draw_material() -> ShaderMaterial:
 
 
 const EMIT_MESH: StringName = &"fx_emit_mesh"
-## mesh -> its sampled points as a texture (the points are the mesh's, whoever plays the effect).
+## "mesh id:count:normal" -> [WeakRef to the mesh, its sampled points as a texture] (the points are the mesh's, whoever plays the
+## effect). An entry whose mesh is gone is dropped (review fix: freed meshes' textures were kept for the whole session, and a
+## recycled instance id could have answered with another mesh's points).
 static var _points: Dictionary = {}
 
 
@@ -152,8 +154,10 @@ func _follow_mesh(node: Node) -> void:
 ## same points.
 static func points_for(mesh: Mesh, count: int, min_normal_y: float = -1.0) -> ImageTexture:
 	var key := "%d:%d:%s" % [mesh.get_instance_id(), count, min_normal_y]
-	if _points.has(key):
-		return _points[key]
+	if _points.has(key) and (_points[key][0] as WeakRef).get_ref() == mesh:
+		return _points[key][1]
+	for stale in _points.keys().filter(func(k) -> bool: return (_points[k][0] as WeakRef).get_ref() == null):
+		_points.erase(stale)
 	var faces := mesh.get_faces()
 	var image := Image.create(count, 1, false, Image.FORMAT_RGBF)
 	var triangles := faces.size() / 3
@@ -184,5 +188,5 @@ static func points_for(mesh: Mesh, count: int, min_normal_y: float = -1.0) -> Im
 			var point := a + (faces[triangle * 3 + 1] - a) * u + (faces[triangle * 3 + 2] - a) * v
 			image.set_pixel(slot, 0, Color(point.x, point.y, point.z))
 	var texture := ImageTexture.create_from_image(image)
-	_points[key] = texture
+	_points[key] = [weakref(mesh), texture]
 	return texture

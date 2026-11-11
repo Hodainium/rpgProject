@@ -10,7 +10,7 @@ namespace Rpg.Economy;
 public sealed record SettlementContext(Guid PlayerId, Guid RunId, string BattleId, string Ruleset, DateTimeOffset CycleAt);
 
 /// <summary>One payment.</summary>
-public sealed record Grant(string CharacterId, string ChallengeId, int Gems, int BalanceAfter, int RuleVersion);
+public sealed record Grant(string CharacterId, string ChallengeId, int Gems, long BalanceAfter, int RuleVersion);
 
 /// <summary>What one settlement did (spec economy-challenges 2.3). Callers map it to metrics.</summary>
 /// <param name="Claimed">Marks the settlement looked at (a challenge and a character).</param>
@@ -192,7 +192,7 @@ public static class ChallengeSettlement
             return new Grant(character, rule.ChallengeId, rule.Amount, 0, rule.Version);
         }
 
-        int balance;
+        long balance;
         await using (var wallet = new NpgsqlCommand(
             """
             INSERT INTO wallets (player_id, gems, version, updated_at) VALUES ($1, $2, 1, $3)
@@ -204,7 +204,7 @@ public static class ChallengeSettlement
             wallet.Parameters.Add(new NpgsqlParameter { Value = context.PlayerId });
             wallet.Parameters.Add(new NpgsqlParameter { Value = rule.Amount });
             wallet.Parameters.Add(new NpgsqlParameter { Value = now.ToUniversalTime() });
-            balance = (int)(await wallet.ExecuteScalarAsync(ct))!;
+            balance = Convert.ToInt64(await wallet.ExecuteScalarAsync(ct));
         }
 
         var bossId = ChallengeIds.IsBossChallenge(rule.ChallengeId) ? rule.ChallengeId[ChallengeIds.BossPrefix.Length..] : null;

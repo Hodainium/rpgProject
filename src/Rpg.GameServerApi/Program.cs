@@ -105,6 +105,7 @@ builder.Services.AddSingleton<WalletStore>();
 builder.Services.AddOptions<CardOptions>().BindConfiguration(CardOptions.Section);
 builder.Services.AddSingleton<Rpg.Economy.Cards.CardStore>();
 builder.Services.AddSingleton<CatalogCache>();
+builder.Services.AddSingleton<CardSeedState>();
 builder.Services.AddHostedService<CardSeeder>();
 builder.Services.AddHostedService<CardsOwnedMonitor>();
 builder.Services.AddSingleton<WalletCache>();

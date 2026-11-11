@@ -148,6 +148,31 @@ public class CardCollectionTests(StackFixture stack)
         Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM catalog_versions"));
     }
 
+    /// <summary>
+    /// Review fix: a reader that read the catalog before an admin's change cannot cache it after the change (the writer bumps
+    /// the generation the refill is conditional on); and the keys are per database, so another database's catalog is never served.
+    /// </summary>
+    [Fact]
+    public async Task Catalog_ARefillAfterAWrite_CachesNothing_AndEachDatabaseHasItsOwnKeys()
+    {
+        await using var factory = await FactoryAsync();
+        await using var other = await FactoryAsync();
+        var cache = factory.Services.GetRequiredService<Rpg.GameServerApi.Cards.CatalogCache>();
+        var otherCache = other.Services.GetRequiredService<Rpg.GameServerApi.Cards.CatalogCache>();
+        var stale = new PackListResponse([]);
+
+        var generation = await cache.GenerationAsync();                         // a reader starts, reads the old catalog...
+        await cache.InvalidateAsync(Rpg.GameServerApi.Cards.CatalogCache.PacksKey);   // ...an admin's change commits
+        await cache.SetAsync(Rpg.GameServerApi.Cards.CatalogCache.PacksKey, stale, generation);
+
+        Assert.Null(await cache.GetAsync<PackListResponse>(Rpg.GameServerApi.Cards.CatalogCache.PacksKey));
+        await cache.SetAsync(Rpg.GameServerApi.Cards.CatalogCache.PacksKey, stale, await cache.GenerationAsync());
+        Assert.NotNull(await cache.GetAsync<PackListResponse>(Rpg.GameServerApi.Cards.CatalogCache.PacksKey));   // a fresh refill caches
+        Assert.Null(await otherCache.GetAsync<PackListResponse>(Rpg.GameServerApi.Cards.CatalogCache.PacksKey));   // not another database's
+        Assert.NotEqual(cache.Scoped(Rpg.GameServerApi.Cards.CatalogCache.PacksKey),
+            otherCache.Scoped(Rpg.GameServerApi.Cards.CatalogCache.PacksKey));
+    }
+
     [Fact]
     public async Task Catalog_WithRedisUnreachable_StillReadsFromPostgres_AndPacksStillOpen()
     {
@@ -883,6 +908,26 @@ public class CardCollectionTests(StackFixture stack)
 
         Assert.Null(run.CardPool);
         Assert.Null(run.UnlockedCharacterIds);
+    }
+
+    /// <summary>
+    /// Review fix: a server configured with a catalog file refuses run starts (503, Retry-After) until its seeder has loaded the
+    /// catalog, so no run starts without the card checks it would have had a few seconds later.
+    /// </summary>
+    [Fact]
+    public async Task RunStart_BeforeTheConfiguredCatalogIsLoaded_Is503_WithRetryAfter()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(Cards)
+        {
+            ["Cards:CatalogFile"] = "no-such-catalog.json",   // never loads: the seeder keeps retrying
+        });
+        var (client, _) = await PlayerAsync(factory, Name());
+
+        var error = await RefusedAsync(() => client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct));
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, error.StatusCode);
+        Assert.NotNull(error.RetryAfter);
+        Assert.Equal(0L, await CountAsync(factory, "SELECT count(*) FROM runs"));
     }
 
     [Fact]

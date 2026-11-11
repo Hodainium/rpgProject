@@ -78,6 +78,27 @@ func test_damage_dealt_carries_the_damage_type() -> void:
 	eq(changed, [], "the row's own damage is no hp_changed")
 
 
+## Review fix: only the row's own target's HP loss is its hit; another unit losing HP while the row is applied (a side effect
+## of the row) is still reported as hp_changed.
+func test_a_side_hp_loss_during_a_row_is_still_reported() -> void:
+	var battle := new_battle(break_snapshot())
+	var changed := []
+	battle.hp_changed.connect(func(unit, delta, _cause): changed.append([unit, delta]))
+	var loss := GameplayEffect.new()
+	loss.policy = GameplayEffect.DurationPolicy.INSTANT
+	var modifier := CombatModifier.new()
+	modifier.attribute_name = BattleUnit.HP
+	modifier.operation = GameplayEffectModifier.Operation.ADD
+	modifier.value_x100 = -500
+	loss.modifiers.append(modifier)
+	battle._row_targets[&"E1"] = 1   # a row is applying its effect to E1
+	for id in [&"E1", &"P1"]:
+		var unit := battle.unit_by_id(id)
+		unit.asc.apply_effect_spec(GameplayEffectSpec.new(loss, GameplayEffectContext.new(unit, unit), 1))
+	battle._row_targets.clear()
+	eq(changed, [[&"P1", -500]], "E1's loss is the row's hit; P1's, in the same moment, is reported")
+
+
 func test_weakness_from_effect() -> void:
 	var battle := new_battle(break_snapshot())
 	var duelist := battle.unit_by_id(&"P1")

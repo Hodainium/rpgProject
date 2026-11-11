@@ -153,8 +153,9 @@ var in_interrupt: bool = false
 var trace: BattleTrace = null
 
 var _units: Array[BattleUnit] = []  # sorted by unit id
-## > 0 while a row's effect is applied: an HP loss then is the row's own hit (damage_dealt carries it), not an hp_changed.
-var _row_hit_depth: int = 0
+## unit_id -> how many rows are applying their effect to it right now: an HP loss of THAT unit then is the row's own hit
+## (damage_dealt carries it), not an hp_changed. Any other unit's loss in that moment (a side effect of the row) is reported.
+var _row_targets: Dictionary = {}
 ## unit_id -> {sum, cause}: the HP changes of the periodic effect that is ticking on that unit, reported as one hp_changed.
 var _tick_open: Dictionary = {}
 ## Instant effect that refills a recovering unit's toughness (amount by SetByCaller); built in code, never persisted.
@@ -843,7 +844,8 @@ func _apply_dev(actor: BattleUnit, choice: Dictionary, controller: Object) -> vo
 	for unit in _units:
 		if not unit.alive:
 			continue
-		if (targets == "enemies" and not unit.is_party()) or (targets == "party" and unit.is_party()) 				or (targets.is_valid_int() and unit.unit_id == StringName("P" + targets)):
+		if (targets == "enemies" and not unit.is_party()) or (targets == "party" and unit.is_party()) \
+				or (targets.is_valid_int() and unit.unit_id == StringName("P" + targets)):
 			ids.append(unit.unit_id)
 	if choice.get("effect") is GameplayEffect:
 		apply_to_units(choice["effect"], ids)
@@ -893,9 +895,11 @@ func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionR
 		if not _status_lands(unit, target, row):
 			continue
 		_extend_debuff(unit, row, spec)
-		_row_hit_depth += 1
+		_row_targets[target.unit_id] = int(_row_targets.get(target.unit_id, 0)) + 1
 		var landed := unit.asc.apply_effect_spec_to_target(spec, target.asc)
-		_row_hit_depth -= 1
+		_row_targets[target.unit_id] -= 1
+		if _row_targets[target.unit_id] <= 0:
+			_row_targets.erase(target.unit_id)
 		# Spec content-pass H6: a landed row with a delay moves the target's action value (negative = advance).
 		if landed != null and row.delay_x100 != 0 and not field_mode and target.is_up():
 			turn_manager.delay(target, row.delay_x100)
@@ -1343,7 +1347,8 @@ func _on_attribute_changed(attribute_name: String, old_value: float, new_value: 
 	elif attribute_name == BattleUnit.HP and new_value < old_value and spec != null and spec.context != null:
 		# The unit itself counts too (a dev kill, an HP cost), so an earlier attacker isn't credited with that death.
 		unit.last_hit_by = spec.context.instigator as BattleUnit
-	if attribute_name == BattleUnit.HP and not field_mode and new_value != old_value 			and not (new_value < old_value and _row_hit_depth > 0):
+	if attribute_name == BattleUnit.HP and not field_mode and new_value != old_value \
+			and not (new_value < old_value and _row_targets.has(unit.unit_id)):
 		var cause := _status_tags_of(spec)
 		if _tick_open.has(unit.unit_id):
 			# Inside a periodic tick: the stacks are one event, reported once when the tick ends.

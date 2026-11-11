@@ -79,7 +79,7 @@ public static class PendingGems
                 continue;
             }
 
-            int balance;
+            long balance;
             await using (var wallet = new NpgsqlCommand(
                 """
                 INSERT INTO wallets (player_id, gems, version, updated_at) VALUES ($1, $2, 1, $3)
@@ -91,7 +91,7 @@ public static class PendingGems
                 wallet.Parameters.Add(new NpgsqlParameter { Value = row.PlayerId });
                 wallet.Parameters.Add(new NpgsqlParameter { Value = row.Delta });
                 wallet.Parameters.Add(new NpgsqlParameter { Value = now.ToUniversalTime() });
-                balance = (int)(await wallet.ExecuteScalarAsync(ct))!;
+                balance = Convert.ToInt64(await wallet.ExecuteScalarAsync(ct));
             }
 
             var bossId = row.ChallengeId is not null && ChallengeIds.IsBossChallenge(row.ChallengeId)

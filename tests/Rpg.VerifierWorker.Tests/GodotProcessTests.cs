@@ -37,6 +37,34 @@ public class GodotProcessTests : IDisposable
         Assert.Contains("could not start", run.Detail);
     }
 
+    /// <summary>
+    /// Review fix: the process tree keeps only children that started after their parent, so a process whose (long gone)
+    /// parent's id now belongs to the worker is never counted. A real child is.
+    /// </summary>
+    [Fact]
+    public void TheProcessTree_HasRealChildren_AndNoProcessOlderThanItsParent()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;   // Linux godot does not fork: the tree is the process alone
+        }
+
+        using var child = Process.Start(new ProcessStartInfo("ping", "-n 5 127.0.0.1") { CreateNoWindow = true, UseShellExecute = false })!;
+        try
+        {
+            var self = Environment.ProcessId;
+            var tree = ProcessTree.Ids(self);
+            Assert.Contains(child.Id, tree);
+            var older = Process.GetProcesses().Where(p => { try { return p.StartTime < Process.GetCurrentProcess().StartTime; } catch { return false; } })
+                .Select(p => p.Id).ToHashSet();
+            Assert.DoesNotContain(tree.Skip(1), older.Contains);   // no descendant started before the root
+        }
+        finally
+        {
+            child.Kill(entireProcessTree: true);
+        }
+    }
+
     [Fact]
     public async Task AHangingProcess_IsKilledWithItsProcessTree_AtTheTimeout()
     {

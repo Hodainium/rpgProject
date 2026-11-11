@@ -46,10 +46,11 @@ public static class CardEndpoints
             return Results.Ok(cached);
         }
 
+        var generation = await cache.GenerationAsync();   // before Postgres: a write after it makes this refill a no-op
         await migrations.EnsureMigratedAsync(ct);
         var catalog = await store.GetCatalogAsync(ct);
         metrics.CardCatalogRead("postgres");
-        await cache.SetAsync(CatalogCache.CardsKey, catalog);
+        await cache.SetAsync(CatalogCache.CardsKey, catalog, generation);
         return Results.Ok(catalog);
     }
 
@@ -62,10 +63,11 @@ public static class CardEndpoints
             return Results.Ok(cached);
         }
 
+        var generation = await cache.GenerationAsync();
         await migrations.EnsureMigratedAsync(ct);
         var packs = await store.ListPacksAsync(ct);
         metrics.CardCatalogRead("postgres");
-        await cache.SetAsync(CatalogCache.PacksKey, packs);
+        await cache.SetAsync(CatalogCache.PacksKey, packs, generation);
         return Results.Ok(packs);
     }
 
