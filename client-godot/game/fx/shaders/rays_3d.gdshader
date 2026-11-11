@@ -13,6 +13,8 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 // @uniform falloff    how fast the rays die away from the middle
 // @uniform fade_out   fraction of the layer spent fading out
 // @uniform depth_bias world units the depth test sees the effect closer to the camera (keeps it from being cut by the unit it sits on)
+// @uniform depth_fade world units past the bias over which the effect fades out where it passes into the scene, instead of a hard cut
+// @uniform fx_scene_depth the scene depth buffer, read for the depth fade (filled by the engine)
 uniform float progress = 0.0;
 uniform float time = 0.0;
 uniform float fade = 1.0;
@@ -27,7 +29,7 @@ uniform float fade_out = 0.4;
 #include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
 
 void fragment() {
-	if (depth_bias != 0.0) {
+	if (fx_depth_moved()) {
 		DEPTH = fx_biased_depth(VERTEX, PROJECTION_MATRIX);
 	}
 	vec2 p = (UV - vec2(0.5)) * 2.0;
@@ -38,4 +40,5 @@ void fragment() {
 	float envelope = smoothstep(0.0, 0.08, progress) * (fade_out > 0.0 ? 1.0 - smoothstep(1.0 - fade_out, 1.0, progress) : 1.0);
 	ALBEDO = color.rgb * intensity;
 	ALPHA = clamp(rays * radial * envelope, 0.0, 1.0) * fade;
+	ALPHA *= fx_depth_fade(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX);
 }
