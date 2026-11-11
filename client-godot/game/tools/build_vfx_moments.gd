@@ -245,7 +245,7 @@ func _save_rules() -> void:
 		flash.anchor_rule = FxListener.AnchorRule.SCREEN
 		flash.params = {"color": entry[1], "intensity": entry[2]}
 		rules.rules.append(flash)
-	if ResourceSaver.save(rules, path) == OK:
+	if BuilderSave.save(rules, path) == OK:
 		_written.append(path)
 
 
@@ -299,7 +299,7 @@ func _cue(file: String, fx: FxDefinition, literals: Dictionary, persistent: bool
 	cue.bindings = bindings
 	var scene := PackedScene.new()
 	scene.pack(cue)
-	if ResourceSaver.save(scene, path) == OK:
+	if BuilderSave.save(scene, path) == OK:
 		_written.append(path)
 
 
@@ -491,7 +491,7 @@ func _save(definition: FxDefinition) -> FxDefinition:
 	if (_only != "" and _only != String(definition.id).trim_prefix("fx.")) or (FileAccess.file_exists(path) and not _force):
 		_kept.append(path)
 		return load(path)
-	if ResourceSaver.save(definition, path) != OK:
+	if BuilderSave.save(definition, path) != OK:
 		push_error("build_vfx_moments: cannot write %s" % path)
 		return definition
 	_written.append(path)

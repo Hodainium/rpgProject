@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://c45ki657iwaqe"]
 
 [ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_ofk8k"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/drain_absorb.tres" id="2_ljl27"]

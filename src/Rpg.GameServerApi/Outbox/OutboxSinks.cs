@@ -155,7 +155,9 @@ public sealed class KafkaOutboxSink(IOptions<KafkaOptions> kafka, IOptions<Outbo
                 { "schema-version", Encoding.UTF8.GetBytes("1") },
             },
         };
-        if (row.TraceParent is { } traceParent)
+        // The relay's publish span (a child of the writer's trace, OutboxRelay), like the RabbitMQ publish: a consumer's span
+        // then hangs under outbox.publish instead of skipping it (review fix). Without a span (no listener), the writer's.
+        if ((System.Diagnostics.Activity.Current?.Id ?? row.TraceParent) is { } traceParent)
         {
             message.Headers.Add("traceparent", Encoding.UTF8.GetBytes(traceParent));
         }

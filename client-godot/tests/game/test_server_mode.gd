@@ -269,6 +269,31 @@ func test_stairs_wait_for_the_floor_seed() -> void:
 	eq(early.state.canonical_lines(), run.state.canonical_lines(), "the floor is the seed's, not the timing's")
 
 
+## Review fix: a run start refused with 503 (the server is still loading its card catalog) is asked again; other errors are not.
+func test_a_run_start_refused_while_the_catalog_loads_is_asked_again() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers = {
+		"StartRun": [_error(503, null, "Card catalog loading"), [true, {"runId": RUN_ID, "floor": 0, "floorSeed": "5150",
+			"startedAt": "2026-10-27T12:00:00+00:00"}]],
+	}
+	var link := _link(bridge)
+	var started: Dictionary = await link.start_run("4.7.2.stable.mono+0123456789abcdef", "fixture.run.two_floors", PARTY)
+	check(started["ok"], "the run starts once the server is ready")
+	eq(bridge.count("StartRun"), 2, "after one refused attempt")
+	await host.get_tree().process_frame  # the fake bridge's Completed emission ends before the link is freed
+
+
+## A start with no answer is not repeated: it is not idempotent (only a 503, which started nothing, is).
+func test_a_run_start_with_no_answer_is_not_repeated() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers = {"StartRun": [_error(0, null, "HttpRequestException")]}
+	var link := _link(bridge)
+	var failed: Dictionary = await link.start_run("4.7.2.stable.mono+0123456789abcdef", "fixture.run.two_floors", PARTY)
+	check(not failed["ok"], "no answer is an error")
+	eq(bridge.count("StartRun"), 1, "and is not repeated")
+	await host.get_tree().process_frame  # the fake bridge's Completed emission ends before the link is freed
+
+
 func test_server_link_starts_and_retries_the_stairs() -> void:
 	var bridge := FakeBridge.new()
 	bridge.answers = {

@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://dm716g28s32yc"]
 
 [ext_resource type="Script" path="res://presentation/demo/cues/sound_cue.gd" id="1_cue"]
 [ext_resource type="AudioStream" path="res://presentation/audio/rtp/Damage2.wav" id="2_hit"]

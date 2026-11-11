@@ -22,9 +22,14 @@ internal static class ProcessTree
         try
         {
             var parents = Snapshot();
+            var starts = new Dictionary<int, DateTime?>();
             for (var i = 0; i < ids.Count; i++)
             {
-                ids.AddRange(parents.Where(p => p.Value == ids[i] && !ids.Contains(p.Key)).Select(p => p.Key));
+                var parent = ids[i];
+                // Windows reuses process ids, and a snapshot's parent id is only a number: a process whose real parent ended
+                // long ago names whoever has that id now. A true child started after its parent (review fix).
+                ids.AddRange(parents.Where(p => p.Value == parent && !ids.Contains(p.Key)
+                                               && StartedAfter(p.Key, parent, starts)).Select(p => p.Key));
             }
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or DllNotFoundException or EntryPointNotFoundException)
@@ -55,6 +60,34 @@ internal static class ProcessTree
         }
 
         return (cpu, memory);
+    }
+
+    /// <summary>Whether <paramref name="child"/> started no earlier than <paramref name="parent"/>; false when either cannot be read.</summary>
+    private static bool StartedAfter(int child, int parent, Dictionary<int, DateTime?> starts)
+    {
+        var childStart = StartOf(child, starts);
+        var parentStart = StartOf(parent, starts);
+        return childStart is { } c && parentStart is { } p && c >= p;
+    }
+
+    private static DateTime? StartOf(int id, Dictionary<int, DateTime?> starts)
+    {
+        if (!starts.TryGetValue(id, out var start))
+        {
+            try
+            {
+                using var process = Process.GetProcessById(id);
+                start = process.StartTime;
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
+            {
+                start = null;
+            }
+
+            starts[id] = start;
+        }
+
+        return start;
     }
 
     private static Dictionary<int, int> Snapshot()

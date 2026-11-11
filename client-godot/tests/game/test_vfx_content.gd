@@ -886,6 +886,35 @@ func test_the_number_cue_styles_each_number_by_its_tags() -> void:
 	GameplayCueManager.suppress_cues = setup["was_suppressed"]
 
 
+class _UnitStub:
+	extends Node3D
+	var unit_id: StringName = &""
+
+
+## Lyra's pop component, cap and stagger (review fix): a unit's numbers stack upward instead of on one spot, and past the cap the
+## oldest fades out quickly while the newest stay.
+func test_a_units_numbers_stack_and_the_oldest_fade_past_the_cap() -> void:
+	if skip_in_export():
+		return
+	var setup := _moments_setup()
+	var service: FxService = setup["service"]
+	var view := _UnitStub.new()
+	view.unit_id = &"E1"
+	host.add_child(view)
+	_nodes.append(view)
+	var payload := {"verb": &"Verb.Damage", "magnitude": 1000, "tags": [&"Damage.Type.Physical"]}
+	for hit in 6:
+		GameplayCueManager.execute_cue(&"Cue.Fx.Number", view, payload)
+	var numbers := service.live().filter(func(handle: FxHandle) -> bool: return handle.definition.id == &"fx.damage_number")
+	eq(numbers.size(), 6, "six numbers were popped")
+	check(numbers[1].anchor.offset.y > numbers[0].anchor.offset.y and numbers[3].anchor.offset.y > numbers[2].anchor.offset.y,
+		"each starts above the ones still showing")
+	service.advance(0.3)   # the capped ones finish fading
+	eq(service.live().filter(func(handle: FxHandle) -> bool: return handle.definition.id == &"fx.damage_number").size(), 4,
+		"only the cap's four newest are left")
+	GameplayCueManager.suppress_cues = setup["was_suppressed"]
+
+
 func _last(service: FxService, id: StringName) -> FxHandle:
 	var found: FxHandle = null
 	for handle in service.live():
@@ -1197,6 +1226,18 @@ func test_registries_list_every_effect_rule_set_and_cue_scene() -> void:
 	var gone_codes := FxValidator.sync_problems("res://presentation/demo/fx/", "res://presentation/demo/cues/", registry, by_uid).map(func(i): return i.code)
 	check(gone_codes.has("cue_scene_missing"), "a uid that resolves to nothing is a missing scene")
 	ResourceUID.remove_id(uid)
+
+
+## Review fix: a builder's new file gets a UID (the inspector and the dashboard refer to a cue scene by it).
+func test_a_builders_new_file_gets_a_uid() -> void:
+	if skip_in_export():
+		return
+	var path := "user://builder_save_test_%d.tres" % Time.get_ticks_usec()
+	var effect := FxDefinition.new()
+	effect.id = &"fx.test.builder_saved"
+	eq(BuilderSave.save(effect, path), OK, "saved")
+	check(ResourceLoader.get_resource_uid(path) != ResourceUID.INVALID_ID, "with a UID")
+	DirAccess.remove_absolute(path)
 
 
 ## A builder's registry write is additive text: new entries appended, every existing line byte for byte, nothing listed twice.

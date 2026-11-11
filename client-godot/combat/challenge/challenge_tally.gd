@@ -7,6 +7,8 @@ extends RefCounted
 var _counts: Dictionary = {}  # "<side>|<tag>" -> int
 
 
+## Every unit a battle will ever have exists when it is set up (the kernel has no mid-battle spawn), so attaching once before
+## the battle runs counts every event. A kernel change that adds units mid-battle must attach them here too.
 func attach(battle: Battle) -> void:
 	for unit in battle.units():
 		var side := ChallengeCondition.side_of(unit)

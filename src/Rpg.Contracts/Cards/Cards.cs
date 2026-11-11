@@ -39,7 +39,7 @@ public sealed record CardEconomySeed(IReadOnlyList<CardRateRequest> Rates, IRead
 public sealed record OwnedCardDto(string CardId, DateTimeOffset AcquiredAt, string Source, string? LockedByRunId);
 
 /// <summary>Core cards are implied (everyone owns them) and not listed in Owned. ActiveRunStatus: Active | Verifying.</summary>
-public sealed record CollectionResponse(IReadOnlyList<OwnedCardDto> Owned, int Gems, int Dust, long Version, string? ActiveRunId,
+public sealed record CollectionResponse(IReadOnlyList<OwnedCardDto> Owned, long Gems, long Dust, long Version, string? ActiveRunId,
     string? ActiveRunStatus, IReadOnlyList<PityStateDto> Pity);
 
 /// <summary>The caller's counters for one pack type: packs opened since each tracked rarity last dropped.</summary>
@@ -59,11 +59,11 @@ public sealed record PackCardDto(string CardId, string Rarity, bool Duplicate, i
 
 /// <param name="DrawSeed">A decimal string (int64 is not safe as a JSON number in browsers).</param>
 public sealed record PackOpenResponse(string OpeningId, string PackId, int PackVersion, int GemsSpent,
-    IReadOnlyList<PackCardDto> Cards, int Gems, int Dust, string DrawSeed);
+    IReadOnlyList<PackCardDto> Cards, long Gems, long Dust, string DrawSeed);
 
-public sealed record DustResponse(string CardId, int DustGained, int RateVersion, int Dust);
+public sealed record DustResponse(string CardId, int DustGained, int RateVersion, long Dust);
 
-public sealed record CraftResponse(string CardId, int DustSpent, int RateVersion, int Dust);
+public sealed record CraftResponse(string CardId, int DustSpent, int RateVersion, long Dust);
 
 // Admin (economy-admin role).
 public sealed record PackTypeRequest(string PackId, string Name, int PriceGems, int CardCount,

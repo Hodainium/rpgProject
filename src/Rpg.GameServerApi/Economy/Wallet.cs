@@ -18,7 +18,7 @@ public sealed class WalletStore(NpgsqlDataSource dataSource, MigrationRunner mig
     public async Task<WalletResponse> GetAsync(Guid playerId, CancellationToken ct)
     {
         await migrations.EnsureMigratedAsync(ct);
-        int gems = 0;
+        long gems = 0;
         long version = 0;
         await using (var wallet = dataSource.CreateCommand("SELECT gems, version FROM wallets WHERE player_id = $1"))
         {
@@ -26,7 +26,7 @@ public sealed class WalletStore(NpgsqlDataSource dataSource, MigrationRunner mig
             await using var reader = await wallet.ExecuteReaderAsync(ct);
             if (await reader.ReadAsync(ct))
             {
-                gems = reader.GetInt32(0);
+                gems = reader.GetInt64(0);
                 version = reader.GetInt64(1);
             }
         }

@@ -122,6 +122,21 @@ func test_turn_and_unit_conditions_read_the_final_state() -> void:
 	eq(any_party_dead.met(battle, null), not party_alive, "ANY party unit dead")
 
 
+## Review fix: ALL over a side with no units is false (not vacuously true), so no star is earned by units that do not exist.
+## A field battle has a party and no enemies.
+func test_all_over_a_side_with_no_units_is_false() -> void:
+	var battle := Battle.new()
+	host.add_child(battle)
+	var snap := squad_snapshot("3")
+	eq(battle.setup_field({"schemaVersion": 2, "battleId": "field-test", "seed": "0", "encounterId": "", "party": snap["party"]},
+		fixtures()), "", "a party-only battle")
+	check(not _units(ChallengeCondition.Side.ENEMY, ChallengeUnitsCondition.Quantifier.ALL).met(battle, null),
+		"ALL enemies, with no enemy at all, is false")
+	check(_units(ChallengeCondition.Side.ENEMY, ChallengeUnitsCondition.Quantifier.NONE).met(battle, null), "NONE of them still holds")
+	check(_units(ChallengeCondition.Side.PARTY, ChallengeUnitsCondition.Quantifier.ALL).met(battle, null), "ALL of a real side still holds")
+	battle.free()
+
+
 func test_attribute_conditions_compare_the_current_value_or_a_percentage() -> void:
 	var played := await _played("7")
 	var battle: Battle = played[0]

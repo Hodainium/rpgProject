@@ -154,11 +154,23 @@ static func bridge_available() -> bool:
 	return Array(DirAccess.get_directories_at(folder)).any(func(name: String) -> bool: return name.begins_with("data_"))
 
 
-## POST /api/v1/runs: data = RunStartResponse {runId, floor, floorSeed, startedAt}.
+## How many times a run start answered 503 (the server is still loading its card catalog) is asked again.
+@export var start_unavailable_attempts: int = 5
+
+
+## POST /api/v1/runs: data = RunStartResponse {runId, floor, floorSeed, startedAt}. A 503 (review fix: the server refuses run starts
+## for a few seconds after startup, until its card catalog is loaded) is asked again after its Retry-After; nothing was started by
+## it. Any other failure returns at once: a start is not idempotent, so one with no answer is not repeated blindly.
 func start_run(ruleset_version: String, run_structure_id: String, character_ids: Array) -> Dictionary:
 	var request := {"rulesetVersion": ruleset_version, "runStructureId": run_structure_id,
 		"characterIds": character_ids.map(func(id) -> String: return str(id))}
-	return await _request("StartRun", [WireJson.stringify(request)])
+	var result := {}
+	for attempt in maxi(start_unavailable_attempts, 1):
+		result = await _request("StartRun", [WireJson.stringify(request)])
+		if result["ok"] or int(result["error"].get("status", 0)) != 503 or attempt == start_unavailable_attempts - 1:
+			return result
+		await _backoff(result["error"], retry_base_seconds)
+	return result
 
 
 ## POST /api/v1/runs/{runId}/floors/{floor}, once: data = FloorSeedResponse {runId, floor, floorSeed}. `after_seq`:

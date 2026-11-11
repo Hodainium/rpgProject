@@ -13,7 +13,7 @@ params = {
 "color": Color(0.45, 1, 0.55, 1)
 }
 require_tags = Array[StringName]([&"Ability.Role.Heal"])
-exclude_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+exclude_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Revive"])
 
 [sub_resource type="Resource" id="Resource_ikqo8"]
 script = ExtResource("1_avyhs")
@@ -24,7 +24,7 @@ params = {
 "color": Color(1, 0.85, 0.35, 1)
 }
 require_tags = Array[StringName]([&"Ability.Role.Buff"])
-exclude_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+exclude_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Revive", &"Ability.Role.Heal", &"Ability.Role.Cleanse"])
 
 [sub_resource type="Resource" id="Resource_0n5n7"]
 script = ExtResource("1_avyhs")
@@ -35,7 +35,7 @@ params = {
 "color": Color(0.7, 0.4, 0.9, 1)
 }
 require_tags = Array[StringName]([&"Ability.Role.Debuff"])
-exclude_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+exclude_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Revive", &"Ability.Role.Heal", &"Ability.Role.Cleanse", &"Ability.Role.Buff"])
 
 [sub_resource type="Resource" id="Resource_l5aa5"]
 script = ExtResource("1_avyhs")
@@ -57,7 +57,7 @@ params = {
 "color": Color(1, 1, 1, 1)
 }
 require_tags = Array[StringName]([&"Ability.Role.Cleanse"])
-exclude_tags = Array[StringName]([&"Ability.Type.Ultimate"])
+exclude_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Revive", &"Ability.Role.Heal"])
 
 [sub_resource type="Resource" id="Resource_ou2kn"]
 script = ExtResource("1_avyhs")

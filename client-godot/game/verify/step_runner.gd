@@ -133,7 +133,9 @@ static func validate(request: Dictionary) -> String:
 				or not (item.get("seq") is float or item.get("seq") is int) or not item["action"].get("type") is String:
 			return "action %d needs seq, stateHash and an action with a type" % index
 		if item["action"]["type"] == "battle" and (not item["action"].get("battle") is Dictionary \
-				or not item["action"]["battle"].get("conditions") is Dictionary or not item["action"]["battle"].get("actionLog") is Dictionary 				or not item["action"]["battle"]["actionLog"].get("actions") is Array 				or not item["action"]["battle"].get("battleId") is String):
+				or not item["action"]["battle"].get("conditions") is Dictionary or not item["action"]["battle"].get("actionLog") is Dictionary \
+				or not item["action"]["battle"]["actionLog"].get("actions") is Array \
+				or not item["action"]["battle"].get("battleId") is String):
 			return "action %d is a battle without its conditions, id and action log" % index
 	if str(request["kind"]) == "End" and not request.get("endRunHash") is String:
 		return "an End step needs endRunHash"

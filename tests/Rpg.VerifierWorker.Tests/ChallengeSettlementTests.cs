@@ -58,7 +58,7 @@ public class ChallengeSettlementTests(Stack stack)
             .Select(json => JsonSerializer.Deserialize<DomainEvent<RewardGrantedPayload>>(json, RpgJson.Options)!)];
 
     private static Task<int> GemsAsync(WorkerHarness worker, Guid player) =>
-        worker.ScalarAsync<int?>("SELECT gems FROM wallets WHERE player_id = $1", player).ContinueWith(t => t.Result ?? 0, Ct);
+        worker.ScalarAsync<int?>("SELECT gems::int FROM wallets WHERE player_id = $1", player).ContinueWith(t => t.Result ?? 0, Ct);
 
     [Fact]
     public async Task RedeliveredBattle_PaysEachChallengeOnce()  // C1

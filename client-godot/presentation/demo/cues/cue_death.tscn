@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://spne2px1wky0"]
 
 [ext_resource type="Script" path="res://game/fx/fx_cue_notify.gd" id="1_0w7q5"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/death_fade.tres" id="2_gsa7l"]

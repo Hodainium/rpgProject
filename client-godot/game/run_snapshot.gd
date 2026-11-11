@@ -166,7 +166,8 @@ static func shape_problem(saved: Variant) -> String:
 	for key in RUN_KEYS:
 		if not saved["run"].has(key):
 			return "snapshot.run has no \"%s\"" % key
-	if not saved["run"]["party"] is Array or not saved["run"]["floorSeeds"] is Dictionary or not saved["log"] is Array 			or not saved["requestedFloors"] is Array or not saved["tally"] is Dictionary:
+	if not saved["run"]["party"] is Array or not saved["run"]["floorSeeds"] is Dictionary or not saved["log"] is Array \
+			or not saved["requestedFloors"] is Array or not saved["tally"] is Dictionary:
 		return "a snapshot field has the wrong type"
 	for member in saved["run"]["party"]:
 		if not member is Dictionary:
