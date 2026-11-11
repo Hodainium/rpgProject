@@ -33,6 +33,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5. `card-collection` | ✅ Done (spec synced; the account's cards on the server: catalog, packs with Epic / Legendary / Mythic pity and a Rare guarantee, dust and craft, the run lock, the run's item pool as a verified input, `POST /runs/{id}/abandon`; Godot: the pool in the run hash and steps, card tags on all 160 demo cards, core-set proposal, console commands, run-end gate; no Vault pool; 535 .NET, 626 Godot, 5 card e2e scenarios; not built: the Grafana row; the screens are 5b, the numbers 5c) | 2026-11-09 |
 | 5a. `vfx-framework` | 🔨 Built, awaiting the user's review (`specs/vfx-framework.md`; data-driven FX in 2D, 3D and hybrid, the GodotGAS cue bridge, the hybrid stage, a shader library, a proof set of 12 effects, dev tools, the gallery; 696 Godot tests; every hit in a battle now sparks; spec to sync after tuning) | 2026-11-09 |
 | 5a2. `vfx-content-pass` | ✅ Built 2026-11-09 (effects for hits, DoTs, controls, stat statuses, heals, revives, 24 ultimates, battle moments and damage numbers; open for playtest fixes) | `specs/vfx-content-pass.md` |
+| 5a3. `vfx-stencil` | ⬜ Next (stencil buffer support: per-unit stencil values, effects drawn over their own unit and hidden by everything else; see its section) | |
 | 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |
@@ -570,6 +571,22 @@ be **tuned in this slice**. There must be no one generic effect on every damage 
 their own effects, and hits differ by damage type (and crit, weakness, break). A cue only receives its target, so per-hit
 variants need either separate damage effect variants with their own cue tags, or a listener on `Message.Battle.Damage` (it
 carries the hit tags) with a tag filter, which `FxListener` does not have yet. Decide the approach in this slice's spec.
+
+### 5a3. `vfx-stencil`
+Added 2026-11-10 from the VFX playtest (`playtest-fixes` B14), as the user's next task. Stencil buffer support for the project,
+with effects as its first user. Today an effect on a unit is kept from being cut by that unit's own mesh by a depth bias (the
+unit's radius, Unreal's Pixel Depth Offset), so it still shows through a unit standing less than the bias in front of it. With
+stencils, each unit view writes its own value, and an effect on a unit draws in two passes: over pixels holding its unit's value
+whatever their depth, and everywhere else with the normal depth test and no bias. It then draws over its own unit and is hidden by
+every other unit, wall and the floor at any distance. Godot 4.7.2 has stencil support (`stencil_mode`).
+The spec decides:
+- a system table of stencil values (units by battle slot, reserved ranges for later outlines, target highlights and silhouettes
+  behind walls), so features never collide;
+- how a unit view writes its value (the cube material in `presentation/` changes with the user's OK; humanoid materials later);
+- the two passes on effect materials, how an effect knows its unit (its anchor), effects with no unit (bias as the fallback);
+- the depth fade in the second pass as classic soft particles;
+- whether Godot sets the stencil reference in shader code or per material (per-slot shader variants or not);
+- proof: a gallery prototype (two cubes close together, an effect on the back one) first, then battle shots and tests.
 
 ### 5b. `card-ui`
 Added 2026-11-09, right after slice 5. The screens for the card system, built on the UI framework and the FF7 theme:
