@@ -3,7 +3,7 @@
 A data-driven roguelike (Isaac-style floors and items × Honkai: Star Rail turn-based combat, built on GodotGAS) that
 plays offline-first and submits battles and runs to a distributed .NET backend for verification, settlement,
 player analytics and live monitoring. The game is the frontend and the traffic generator; the backend mirrors enterprise infrastructure.
-Game design: `specs/design/game-design.md`. Enterprise mapping: `README.md`.
+Game design: `specs/design/game-design.md`. Enterprise mapping (internal, kept off the README): `specs/design/enterprise-mapping.md`.
 Pitch: every battle and every run is a versioned distributed workflow with server-issued floor seeds, an ordered idempotent
 command log, at-least-once replay verification, exactly-once reward effects, outbox-based event publication, player
 analytics, and end-to-end observability.
