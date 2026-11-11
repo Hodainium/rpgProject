@@ -181,6 +181,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   ruleset version; and the economy boundary is recorded: the run's inventory stays in Godot, the account economy
   (currencies, the ledger and, from slice 5, card ownership) lives in Postgres in one module, with Godot reporting facts
   and never value. Replaces slice 4's flat `Settlement:GemsPerBossMark`.
+- 2026-11-10: Added an open question to 4b `game-analytics`: where the analytics tables live (main Postgres, a separate
+  analytics database or schema, or a column store such as ClickHouse), to decide when the 4b spec is written. Added by an
+  external chat (resume write-up discussion), at the user's request.
 
 
 ## Design tuning: any time, not just in breaks
@@ -491,6 +494,10 @@ Redis: **live analytics counters** (`HINCRBY` / sorted sets fed from Redpanda, f
 history) and **leaderboards** (sorted sets, fastest clear and deepest floor per character, **verified runs only**,
 rebuildable from Postgres). A Redpanda consumer for **anomaly flags** (too-perfect play, abandon rate, inhuman action
 speed) feeds a delayed review queue, not instant bans.
+**Open question (spec time):** analytics tables in the main Postgres, a separate analytics database or schema, or a
+column store (ClickHouse)? A separate store isolates analytics queries from gameplay writes and is the textbook reason
+for streaming through Kafka; the main Postgres is simpler for a demo. A separate database or schema on the same
+Postgres server is the cheap middle ground.
 
 ### 5. `card-collection` (replaces `gacha`, 2026-10-26)
 **Purpose:** Hearthstone-style collecting instead of gacha pulls. Every playable character and every item is a
