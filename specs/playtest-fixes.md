@@ -178,13 +178,14 @@ to `2` gives the list a third. It is one inspector value.
 ### Fix for B14 (system code)
 | File | Change |
 |---|---|
-| `game/fx/shaders/fx_depth_bias.gdshaderinc` | New uniforms `depth_fade` (world units, default 0.8) and `fx_scene_depth` (the engine's depth texture). The depth test now sees the effect `depth_bias + depth_fade` closer to the camera, and `fx_depth_fade()` multiplies the alpha: 1 while the scene is less than `depth_bias` in front of the fragment (exactly what showed before, so a unit under its own effect is never dimmed), falling to 0 over the next `depth_fade` units, where the test now cuts. `fx_depth_moved()` and `fx_scene_gap()` helpers. |
+| `game/fx/shaders/fx_depth_bias.gdshaderinc` | New uniforms `depth_fade` (world units, default 0.3) and `fx_scene_depth` (the engine's depth texture). `fx_depth_fade()` multiplies the alpha: 0 at the depth cut (the scene `depth_bias` in front of the fragment), rising to 1 over `min(depth_fade, depth_bias / 2)` toward the fragment. The fade is inside the bias and never moves the cut, so nothing shows through more than before; a unit's front face sits about 0.3 inside its 0.7 bias and keeps its effect at full strength. `fx_depth_moved()` and `fx_scene_gap()` helpers. (A first version extended the cut by `depth_fade` 0.8 past the bias and faded there; every effect then showed through units up to 1.5 in front of it. Replaced the same day.) |
+| `game/fx/layers/fx_shader_quad_layer.gd` | `flat_depth_bias` (0.05): a 3D quad that does not face the camera (a ring laid on the floor) takes at most this bias, whatever the effect's `depth_bias` parameter says (`rebind`). The unit-radius bias is for camera-facing quads centred in a unit; with it, floor rings showed through the lower part of units standing in front of them. Now a floor ring behaves like a decal: hidden by what stands on it. |
 | `slash_3d`, `burst_3d`, `rays_3d`, `glow_3d`, `beam_3d`, `rune_circle`, `crack_ground` (`.gdshader`) | Write `DEPTH` when `fx_depth_moved()` (was: `depth_bias != 0`) and multiply `ALPHA` by `fx_depth_fade(...)`; headers document the two uniforms. |
 | `material/particle_3d.gdshader` | The same depth fade; its own sampler `depth_texture` is replaced by the include's `fx_scene_depth` (the soft-particle fade, `soft_distance`, is unchanged and uses `fx_scene_gap`). |
 
-No effect file changes: the default applies to every effect. A layer can set its own through `shader_params` (`"depth_fade": 0`
-turns it off). Trade-off: anything up to `depth_fade` further in front than the bias (a unit or a wall edge just before a big
-effect) now lets it show through faintly instead of hiding it.
+No effect file changes: the defaults apply to every effect. A layer can set its own through `shader_params` (`"depth_fade": 0`
+turns the fade off). What stays: an effect still shows through a unit less than its bias (about 0.7) in front of it, as before
+(units overlapping in formation).
 
 ## 5. Observability
 N/A: no server metrics.
@@ -234,9 +235,12 @@ N/A: no server metrics.
   after, `after/fx.slash_hit.png`, `after/strips/s_1.png` and `s_cleave.png` show it across the cube and across the Lich (all in
   `H:\claudeOutShots\2026-11-10 vfx playtest\`). The battle shots come from window runs with animations on (a throwaway scratchpad
   command that turns the view gate back on and screenshots at set times after an action).
-- **B14, seen** (`test_fx` checks the new uniforms are documented in every shader; no test reads a picture): the Lich fight with four
-  ults, before `battle/u_supernova_1_0.40s.png` (the Lich's disc cut flat at the floor), after `after_fade/u_supernova_1_0.40s.png`
-  (the whole ring, fading into the floor); `after_fade/u_cleave_*` shows the units under their effects at full strength.
+- **B14:** `test_vfx_content::test_flat_quads_cap_the_depth_bias`: with a 0.7 bias, a camera-facing quad keeps 0.7 and a floor
+  quad gets 0.05, also after a parameter change. `test_fx` checks the new uniforms are documented in every shader.
+- **B14, seen** (no test reads a picture): the Lich fight with four ults. Before, `battle/u_supernova_1_0.40s.png` (the Lich's
+  disc cut flat at the floor) and `battle/u_sanct_3_1.00s.png`; the first version in `after_fade/` (the ring fades, but every
+  effect shows through the cubes); the fix in `after_fade2/`: the disc fades into the floor, the cubes in front of the
+  Pyromancer's burst and of Sanctuary's circles hide them.
 - **Unchanged:** `test_demo_ui_policy`, the existing explore HUD and gear tests, and `validate_content.tscn`
   (`UIPolicyCheck`) still pass.
 - **Visual check:** the window run from section 1 again, with new screenshots of Use Item (Potion hovered), Use Ability,

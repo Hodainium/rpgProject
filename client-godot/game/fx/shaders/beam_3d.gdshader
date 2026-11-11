@@ -12,7 +12,7 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 // @uniform sharpness  how thin the core is (higher = thinner)
 // @uniform ripple     how much the edges ripple (0 = smooth)
 // @uniform depth_bias world units the depth test sees the effect closer to the camera (keeps it from being cut by the unit it sits on)
-// @uniform depth_fade world units past the bias over which the effect fades out where it passes into the scene, instead of a hard cut
+// @uniform depth_fade world units before the depth cut over which the effect fades out where it passes into the scene (at most half the bias), instead of a hard line
 // @uniform fx_scene_depth the scene depth buffer, read for the depth fade (filled by the engine)
 uniform float progress = 0.0;
 uniform float time = 0.0;

@@ -9,7 +9,7 @@ render_mode unshaded, blend_premul_alpha, depth_draw_never, cull_disabled, shado
 // @uniform v_frames       rows of the sheet
 // @uniform additive       1 = adds light (fire, sparks, glows), 0 = normal alpha blending (smoke, shards)
 // @uniform depth_bias     world units the depth test sees the particle closer to the camera
-// @uniform depth_fade     world units past the bias over which a particle fades out where it passes into the scene, instead of a hard cut
+// @uniform depth_fade     world units before the depth cut over which a particle fades out where it passes into the scene (at most half the bias)
 // @uniform fx_scene_depth the scene depth buffer, read for the soft and depth fades (filled by the engine)
 // @uniform soft_distance  world units over which a particle fades out where it nears scene geometry (0 = off)
 uniform sampler2D albedo_texture : source_color, filter_linear_mipmap, repeat_disable;

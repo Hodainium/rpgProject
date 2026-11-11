@@ -12,7 +12,7 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 // @uniform angle      degrees the cut is turned (0 sweeps left to right along an arc bulging upward through the centre)
 // @uniform thickness  how thick the crescent is at its middle (0..1); it tapers to points at both tips
 // @uniform depth_bias world units the depth test sees the effect closer to the camera (keeps it from being cut by the unit it sits on)
-// @uniform depth_fade world units past the bias over which the effect fades out where it passes into the scene, instead of a hard cut
+// @uniform depth_fade world units before the depth cut over which the effect fades out where it passes into the scene (at most half the bias), instead of a hard line
 // @uniform fx_scene_depth the scene depth buffer, read for the depth fade (filled by the engine)
 uniform float progress = 0.0;
 uniform float time = 0.0;
