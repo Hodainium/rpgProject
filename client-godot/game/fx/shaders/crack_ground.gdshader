@@ -11,6 +11,8 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 // @uniform crack_count how many cracks run out from the middle
 // @uniform width      thickness of a crack
 // @uniform depth_bias world units the depth test sees the effect closer to the camera (keeps it from being cut by the unit it sits on)
+// @uniform depth_fade world units before the depth cut over which the effect fades out where it passes into the scene (at most half the bias), instead of a hard line
+// @uniform fx_scene_depth the scene depth buffer, read for the depth fade (filled by the engine)
 uniform float progress = 0.0;
 uniform float time = 0.0;
 uniform float fade = 1.0;
@@ -26,7 +28,7 @@ float hash11(float n) {
 }
 
 void fragment() {
-	if (depth_bias != 0.0) {
+	if (fx_depth_moved()) {
 		DEPTH = fx_biased_depth(VERTEX, PROJECTION_MATRIX);
 	}
 	vec2 p = (UV - vec2(0.5)) * 2.0;
@@ -52,4 +54,5 @@ void fragment() {
 	float centre = (1.0 - smoothstep(0.0, 0.18, r)) * heat;
 	ALBEDO = color.rgb * intensity;
 	ALPHA = clamp((best * (0.35 + 0.65 * heat) + centre * 0.6), 0.0, 1.0) * (1.0 - smoothstep(0.92, 1.0, r)) * fade;
+	ALPHA *= fx_depth_fade(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX);
 }

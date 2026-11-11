@@ -217,6 +217,32 @@ func test_bias_binds_to_an_effect_parameter() -> void:
 	eq(((particles.draw_pass_1 as QuadMesh).material as ShaderMaterial).get_shader_parameter("depth_bias"), 0.9, "a play sets the bias")
 
 
+## playtest-fixes B14: a quad laid on the floor takes at most its small flat bias (a unit in front of a floor ring hides it); a
+## camera-facing quad keeps the unit-radius bias.
+func test_flat_quads_cap_the_depth_bias() -> void:
+	var service := _service()
+	var biases := {}
+	for facing in [true, false]:
+		var layer := FxShaderQuadLayer.new()
+		layer.id = &"q"
+		layer.space = FxLayer.Space.WORLD_3D
+		layer.shader = load("res://game/fx/shaders/burst_3d.gdshader")
+		layer.face_camera = facing
+		layer.bindings = [_bind("material:shader_parameter/depth_bias", &"depth_bias")]
+		var definition := FxDefinition.new()
+		definition.id = StringName("fx.test_flat_%s" % facing)
+		definition.space = FxDefinition.Space.WORLD_3D
+		definition.layers.assign([layer])
+		definition.params.assign([_param(&"depth_bias", FxParam.Kind.FLOAT, 0.0)])
+		var handle := service.play(definition, FxAnchor.position3d(Vector3.ZERO), {"depth_bias": 0.7})
+		biases[facing] = (handle.instance.nodes[0] as FxQuad3D).material.get_shader_parameter("depth_bias")
+		handle.set_param(&"depth_bias", 0.9)
+		if not facing:
+			eq((handle.instance.nodes[0] as FxQuad3D).material.get_shader_parameter("depth_bias"), 0.05, "a changed parameter is capped again")
+	eq(biases[true], 0.7, "a camera-facing quad keeps the unit-radius bias")
+	eq(biases[false], 0.05, "a floor quad takes its flat bias")
+
+
 func test_fresnel_overlay_sets_and_restores() -> void:
 	var service := _service()
 	var layer := FxFresnelLayer.new()

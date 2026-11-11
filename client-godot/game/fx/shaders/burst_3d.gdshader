@@ -11,6 +11,8 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 // @uniform start_radius where the ring begins (0..1 of the quad radius)
 // @uniform end_radius   where the ring ends
 // @uniform depth_bias world units the depth test sees the effect closer to the camera (keeps it from being cut by the unit it sits on)
+// @uniform depth_fade world units before the depth cut over which the effect fades out where it passes into the scene (at most half the bias), instead of a hard line
+// @uniform fx_scene_depth the scene depth buffer, read for the depth fade (filled by the engine)
 uniform float progress = 0.0;
 uniform float time = 0.0;
 uniform float fade = 1.0;
@@ -23,7 +25,7 @@ uniform float end_radius = 0.95;
 #include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
 
 void fragment() {
-	if (depth_bias != 0.0) {
+	if (fx_depth_moved()) {
 		DEPTH = fx_biased_depth(VERTEX, PROJECTION_MATRIX);
 	}
 	vec2 p = (UV - vec2(0.5)) * 2.0;
@@ -33,4 +35,5 @@ void fragment() {
 	float ring = exp(-pow((r - radius) / ring_width, 2.0)) * (1.0 - progress);
 	ALBEDO = color.rgb * intensity;
 	ALPHA = clamp(ring * (1.0 - smoothstep(0.92, 1.0, r)), 0.0, 1.0) * fade;
+	ALPHA *= fx_depth_fade(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX);
 }

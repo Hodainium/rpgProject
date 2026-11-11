@@ -9,14 +9,14 @@ render_mode unshaded, blend_premul_alpha, depth_draw_never, cull_disabled, shado
 // @uniform v_frames       rows of the sheet
 // @uniform additive       1 = adds light (fire, sparks, glows), 0 = normal alpha blending (smoke, shards)
 // @uniform depth_bias     world units the depth test sees the particle closer to the camera
-// @uniform depth_texture  the scene depth buffer, read for the soft fade (filled by the engine)
+// @uniform depth_fade     world units before the depth cut over which a particle fades out where it passes into the scene (at most half the bias)
+// @uniform fx_scene_depth the scene depth buffer, read for the soft and depth fades (filled by the engine)
 // @uniform soft_distance  world units over which a particle fades out where it nears scene geometry (0 = off)
 uniform sampler2D albedo_texture : source_color, filter_linear_mipmap, repeat_disable;
 uniform int h_frames = 1;
 uniform int v_frames = 1;
 uniform float additive = 1.0;
 uniform float soft_distance = 0.0;
-uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;
 
 #include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
 
@@ -49,16 +49,14 @@ void fragment() {
 	float alpha = texel.a * particle_color.a;
 	if (soft_distance > 0.0) {
 		// Soft particles: how far the scene is behind this particle (its depth with the bias applied), faded to 0 at contact.
-		float scene_depth = texture(depth_texture, SCREEN_UV).x;
-		vec4 scene_view = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, scene_depth, 1.0);
-		scene_view.xyz /= scene_view.w;
-		float gap = (-scene_view.z) - (-VERTEX.z - depth_bias);
+		float gap = fx_scene_gap(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX) + depth_bias;
 		alpha *= clamp(gap / soft_distance, 0.0, 1.0);
 	}
+	alpha *= fx_depth_fade(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX);
 	// Premultiplied output: normal blending keeps its alpha, additive sets it to 0 so the light only adds.
 	ALBEDO = texel.rgb * particle_color.rgb * alpha;
 	ALPHA = alpha * (1.0 - additive);
-	if (depth_bias != 0.0) {
+	if (fx_depth_moved()) {
 		DEPTH = fx_biased_depth(VERTEX, PROJECTION_MATRIX);
 	}
 }

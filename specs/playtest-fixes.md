@@ -76,6 +76,22 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   resume that got no answer (or a 5xx) is tried again at the server's first answer, if the player is still on the
   title with no run playing; starting a new run, or local mode, drops the retry. While the server isn't answering, the
   heartbeat runs every 5 s (`offline_heartbeat_seconds`) instead of 30, so its return is seen soon.
+- **B13. The slash effect lands beside the unit** (reported 2026-11-10, VFX playtest of slice 5a2 `vfx-content-pass`; findings in
+  `H:\claudeOutShots\2026-11-10 vfx playtest\findings.md`). In real battles a physical hit's crescent sat about one cube width to the
+  right of its target, and Cleave's signature arc far to the right of the Lich. Not the sockets, `FxAttach` or the layer's offset: the
+  quad sits on the unit's `Hit` socket (the cube's origin). The shader `slash_3d` drew the crescent on the rim of a radius-0.9 circle
+  inside its quad, so the cut never crossed the quad's centre: its centroid was at (0.21, 0.44) half-widths, and at x +0.65..0.78 while
+  it showed (the sweep left only its last stretch lit), about 1 world unit off on a 2.8-unit quad. It affects `fx.slash_hit`,
+  `fx.cleave_strike` and `fx.execute_strike` (all three use the shader).
+- **B14. Big camera-facing effects are cut off by the floor** (reported 2026-11-10, same playtest). Supernova's discs showed a hard
+  horizontal edge where they met the floor. A camera-facing quad on a unit's `Hit` or `Center` socket (0.4 above the floor on the
+  cube) leans its lower half toward the high battle camera and into the floor; the depth bias (the unit's radius, about 0.7) only
+  covers the unit's own mesh, not a quad 3–7 units wide. It affects every standing quad wider than about 2.5–3 units: the
+  expanding rings (Supernova, Shatterchorus, Oblivion, Explosion, Systole, Blackmass, Drain, Break, Pandemic, Finale), the
+  sunbursts (Phase change, Judgement, Supernova, Ult flourish) and Cleave. Effects that lie flat on the floor are not affected.
+  Taller units (humanoids, later) raise the sockets and shrink it, but don't remove it for the biggest ones. Options weighed with
+  the user: a size-aware bias (paints over units in front), lifting the quads (they float), laying shockwave rings flat
+  (`presentation/` per effect); the user chose the soft fade, Unreal's DepthFade, in the shared include.
 
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved. B9 and B10 only show the state of the client's existing calls (no new request, field or header); they are the
@@ -154,6 +170,23 @@ to `2` gives the list a third. It is one inspector value.
 | `connecting_popup.tscn` / `.gd` (new) | `Popup` (hidden): a 50% black dim that stops clicks, and a centred theme window (360 px min) with a 36 px `UISpinner` and the wait's text. It follows `GameMain.server_changed` and `ServerLink.waiting_changed`, and shows after `show_after_seconds` (0.3, real time). |
 | `server_status.tscn` / `.gd` (new) | A 16 px label with a black outline, bottom left (x 8, y −54 to −32, above the footer). `connected_format` "Connected: %s (%s)" in `connected_color` (0.25, 1, 0.35); before the first answer `waiting_format`, after a lost answer `offline_format`, both in `offline_color` (1, 0.8, 0.25). Hidden with no link. |
 
+### Fix for B13 (system code)
+| File | Change |
+|---|---|
+| `game/fx/shaders/slash_3d.gdshader` | The blade is a band around an arc of radius 1.6 whose top passes through the quad's centre, widest in the middle (`0.04 + 0.32 × thickness` half-width) and tapering to points at x ±0.92, with a hot core along the arc. The sweep keeps the cut drawn behind its head (it used to show only a band near the head), then the whole cut fades from progress 0.55. Same uniforms, so no effect file changes; the header says why. Centroid of the finished cut: (0.21, 0.44) → (0.02, −0.06) half-widths. |
+
+### Fix for B14 (system code)
+| File | Change |
+|---|---|
+| `game/fx/shaders/fx_depth_bias.gdshaderinc` | New uniforms `depth_fade` (world units, default 0.3) and `fx_scene_depth` (the engine's depth texture). `fx_depth_fade()` multiplies the alpha: 0 at the depth cut (the scene `depth_bias` in front of the fragment), rising to 1 over `min(depth_fade, depth_bias / 2)` toward the fragment. The fade is inside the bias and never moves the cut, so nothing shows through more than before; a unit's front face sits about 0.3 inside its 0.7 bias and keeps its effect at full strength. `fx_depth_moved()` and `fx_scene_gap()` helpers. (A first version extended the cut by `depth_fade` 0.8 past the bias and faded there; every effect then showed through units up to 1.5 in front of it. Replaced the same day.) |
+| `game/fx/layers/fx_shader_quad_layer.gd` | `flat_depth_bias` (0.05): a 3D quad that does not face the camera (a ring laid on the floor) takes at most this bias, whatever the effect's `depth_bias` parameter says (`rebind`). The unit-radius bias is for camera-facing quads centred in a unit; with it, floor rings showed through the lower part of units standing in front of them. Now a floor ring behaves like a decal: hidden by what stands on it. |
+| `slash_3d`, `burst_3d`, `rays_3d`, `glow_3d`, `beam_3d`, `rune_circle`, `crack_ground` (`.gdshader`) | Write `DEPTH` when `fx_depth_moved()` (was: `depth_bias != 0`) and multiply `ALPHA` by `fx_depth_fade(...)`; headers document the two uniforms. |
+| `material/particle_3d.gdshader` | The same depth fade; its own sampler `depth_texture` is replaced by the include's `fx_scene_depth` (the soft-particle fade, `soft_distance`, is unchanged and uses `fx_scene_gap`). |
+
+No effect file changes: the defaults apply to every effect. A layer can set its own through `shader_params` (`"depth_fade": 0`
+turns the fade off). What stays: an effect still shows through a unit less than its bias (about 0.7) in front of it, as before
+(units overlapping in formation).
+
 ## 5. Observability
 N/A: no server metrics.
 
@@ -197,6 +230,17 @@ N/A: no server metrics.
   30 s, and a later drop and return doesn't retry again (the server had no run).
 - **B9, B10 visual check:** a window run with a throwaway command linking the fake bridge; screenshots in
   `H:\claudeOutShots\2026-11-01 server-overlay\` (title with the green line; the pop-up over the title menu).
+- **B13, seen** (no automated test reads a picture; `test_fx` still checks the shader's documented uniforms): before, the gallery
+  sheet `gallery/fx.slash_hit.png` and the battle frames `battle/strips/w_1.png` and `u_cleave.png` show the cut beside its target;
+  after, `after/fx.slash_hit.png`, `after/strips/s_1.png` and `s_cleave.png` show it across the cube and across the Lich (all in
+  `H:\claudeOutShots\2026-11-10 vfx playtest\`). The battle shots come from window runs with animations on (a throwaway scratchpad
+  command that turns the view gate back on and screenshots at set times after an action).
+- **B14:** `test_vfx_content::test_flat_quads_cap_the_depth_bias`: with a 0.7 bias, a camera-facing quad keeps 0.7 and a floor
+  quad gets 0.05, also after a parameter change. `test_fx` checks the new uniforms are documented in every shader.
+- **B14, seen** (no test reads a picture): the Lich fight with four ults. Before, `battle/u_supernova_1_0.40s.png` (the Lich's
+  disc cut flat at the floor) and `battle/u_sanct_3_1.00s.png`; the first version in `after_fade/` (the ring fades, but every
+  effect shows through the cubes); the fix in `after_fade2/`: the disc fades into the floor, the cubes in front of the
+  Pyromancer's burst and of Sanctuary's circles hide them.
 - **Unchanged:** `test_demo_ui_policy`, the existing explore HUD and gear tests, and `validate_content.tscn`
   (`UIPolicyCheck`) still pass.
 - **Visual check:** the window run from section 1 again, with new screenshots of Use Item (Potion hovered), Use Ability,
