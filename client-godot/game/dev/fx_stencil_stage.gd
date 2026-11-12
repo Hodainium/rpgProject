@@ -72,6 +72,8 @@ func _set_mode(mode: StringName, play_effects: bool = true) -> void:
 		(view as UnitAnimator).assign_stencil()
 	if not play_effects:
 		return
+	if FxStencilShaders.enabled():
+		await FxManager.prepare_stencil(_camera)  # what the room view does at battle start
 	for play in PLAYS:
 		_handles.append(FxManager.play(play[0], FxAnchor.unit(play[1])))
 	if _label != null:
@@ -122,7 +124,7 @@ func _compare(out_dir: String, frames: int) -> bool:
 	for mode in [FxStencilShaders.BIAS, FxStencilShaders.STENCIL]:
 		var made_before := FxStencilShaders.made
 		var switch_started := Time.get_ticks_usec()
-		_set_mode(mode)
+		await _set_mode(mode)
 		var first_frames: Array[float] = []
 		for i in 10:
 			var tick := Time.get_ticks_usec()
@@ -174,6 +176,8 @@ func _compare(out_dir: String, frames: int) -> bool:
 			"gpu_ms": snappedf(gpu / frames, 0.001), "cpu_render_ms": snappedf(cpu / frames, 0.001),
 			"first_frames_ms": first_frames.map(func(v: float) -> float: return snappedf(v, 0.1)),
 			"switch_ms": snappedf((Time.get_ticks_usec() - switch_started) / 1000.0, 0.1),
+			"prepare_ms": snappedf(FxStencilShaders.last_prepare_ms, 0.1) if mode == FxStencilShaders.STENCIL else 0.0,
+			"prepare_copies": FxStencilShaders.last_prepare_copies if mode == FxStencilShaders.STENCIL else 0,
 			"copies_made": FxStencilShaders.made - made_before, "copies_build_ms": snappedf(FxStencilShaders.build_ms, 0.01),
 			"own_point_stable": own_values.all(func(v: String) -> bool: return v == own_values[0]),
 			"live_effects": _handles.size(),
@@ -190,9 +194,9 @@ func _compare(out_dir: String, frames: int) -> bool:
 	return true
 
 
-## The switch is a static: leaving the page puts it back to the default, so nothing after it runs in stencil mode by accident.
+## The switch is a static: leaving the page puts it back to the default, so nothing after it runs in the page's last mode.
 func _exit_tree() -> void:
-	FxStencilShaders.mode = FxStencilShaders.BIAS
+	FxStencilShaders.mode = FxStencilShaders.DEFAULT_MODE
 
 
 ## H1 and friends as yes / no, from the points (a change above 0.05 is the effect's light).

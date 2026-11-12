@@ -109,3 +109,85 @@ static func check(definition: FxDefinition) -> Array[ValidationIssue]:
 
 static func _where(definition: FxDefinition) -> String:
 	return definition.resource_path if definition.resource_path != "" else String(definition.id)
+
+
+# --- Stencil (spec vfx-stencil, section 4) ---------------------------------------------------------------------------------
+
+const STENCIL_WORDS: Array[String] = ["read", "write", "write_depth_fail", "compare_always", "compare_less", "compare_equal",
+	"compare_less_or_equal", "compare_greater", "compare_not_equal", "compare_greater_or_equal"]
+
+
+## The stencil problems in the files under `dirs` (recursively):
+## - fx_stencil_mode_unknown: a `stencil_mode` word that is not exactly a mode or compare name, a number or an FX_STENCIL_* define.
+##   Godot accepts any word that only begins with a mode name (`write_foo` counts as `write`, the probe's K6), so a typo is silent.
+## - fx_stencil_value_taken: a material (.tres / .tscn) with stencil on, or a shader that writes stencil, using a value of the unit
+##   range (StencilIds 1-31): it would read as a battle position. Godot's Outline and X-Ray presets default to reference 1, which is P1.
+static func stencil_problems(dirs: Array[String]) -> Array[ValidationIssue]:
+	var issues: Array[ValidationIssue] = []
+	for dir in dirs:
+		for path in _files_under(dir, ["gdshader", "gdshaderinc", "tres", "tscn"]):
+			var text := FileAccess.get_file_as_string(path)
+			if not text.contains("stencil"):
+				continue
+			if path.get_extension() in ["gdshader", "gdshaderinc"]:
+				issues.append_array(_shader_stencil_problems(path, text))
+			else:
+				issues.append_array(_material_stencil_problems(path, text))
+	return issues
+
+
+static func _shader_stencil_problems(path: String, text: String) -> Array[ValidationIssue]:
+	var issues: Array[ValidationIssue] = []
+	for line in text.split("\n"):
+		var trimmed := line.strip_edges()
+		if not trimmed.begins_with("stencil_mode"):
+			continue
+		var words := trimmed.trim_prefix("stencil_mode").trim_suffix(";").split(",", false)
+		var writes := false
+		var reference := -1
+		for raw in words:
+			var word := raw.strip_edges()
+			if word.is_valid_int():
+				reference = word.to_int()
+			elif word.begins_with("FX_STENCIL_"):
+				continue
+			elif not word in STENCIL_WORDS:
+				issues.append(ValidationIssue.new(ValidationIssue.ERROR, "fx_stencil_mode_unknown", path,
+					"'%s' is not a stencil mode (Godot would read it as the mode it begins with)" % word))
+			elif word.begins_with("write"):
+				writes = true
+		if writes and StencilIds.is_unit(reference):
+			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "fx_stencil_value_taken", path,
+				"writes stencil %d, a battle position's value (StencilIds 1-31)" % reference))
+	return issues
+
+
+## Each [sub_resource] / [resource] block with stencil_mode on: its reference (1 when the file leaves the default) must not be a
+## unit value.
+static func _material_stencil_problems(path: String, text: String) -> Array[ValidationIssue]:
+	var issues: Array[ValidationIssue] = []
+	for block in text.split("\n["):
+		var mode := 0
+		var reference := 1
+		for line in block.split("\n"):
+			if line.begins_with("stencil_mode = "):
+				mode = line.trim_prefix("stencil_mode = ").to_int()
+			elif line.begins_with("stencil_reference = "):
+				reference = line.trim_prefix("stencil_reference = ").to_int()
+		if mode != 0 and StencilIds.is_unit(reference):
+			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "fx_stencil_value_taken", path,
+				"a material uses stencil reference %d, a battle position's value (StencilIds 1-31); take one from another range" % reference))
+	return issues
+
+
+static func _files_under(dir: String, extensions: Array) -> Array[String]:
+	var out: Array[String] = []
+	var access := DirAccess.open(dir)
+	if access == null:
+		return out
+	for file in access.get_files():
+		if file.get_extension() in extensions:
+			out.append(dir.path_join(file))
+	for sub in access.get_directories():
+		out.append_array(_files_under(dir.path_join(sub), extensions))
+	return out

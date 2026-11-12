@@ -23,6 +23,8 @@ var radius: float = 0.0
 ## Spec vfx-stencil 3.3: the stencil value of the unit the effect sits on (its view's effect_stencil_value()), set with the radius
 ## when the effect is placed; 0 = no unit, an unstamped unit or bias mode: the layer draws as before.
 var stencil_value: int = 0
+## True when the caller set the value (the effect's `stencil_unit` parameter, a beam marking its caster): it is never re-read.
+var stencil_forced: bool = false
 
 
 static func node3d(target: Node3D, shift: Vector3 = Vector3.ZERO, socket_role: StringName = &"") -> FxAnchor:
@@ -123,6 +125,14 @@ func placed(default_socket: StringName) -> FxAnchor:
 		if target is UnitAnimator and kind in [Kind.UNIT, Kind.NODE3D]:  # not a stage: its world is not stamped (spec 3.5)
 			copy.stencil_value = (target as UnitAnimator).effect_stencil_value()
 	return copy
+
+
+## The value now: a unit view's current effect_stencil_value() (its stamp may have changed since the effect was placed), else the
+## value set at placing (or by the caller).
+func live_stencil_value() -> int:
+	if not stencil_forced and kind in [Kind.UNIT, Kind.NODE3D] and is_instance_valid(node) and node is UnitAnimator:
+		return (node as UnitAnimator).effect_stencil_value()
+	return stencil_value
 
 
 func describe() -> String:

@@ -16,8 +16,11 @@ const INCLUDE := "fx_depth_bias.gdshaderinc"
 const ENGINE_UNIFORMS: Array[StringName] = [&"fx_scene_depth"]
 const STENCIL: StringName = &"stencil"
 
-## The experiment's switch. Step 1: a static switch (the gallery, the probe, tests); step 2 adds Settings and the console.
-static var mode: StringName = BIAS
+## The default (user, 2026-11-11: stencil is kept, on by default).
+const DEFAULT_MODE: StringName = STENCIL
+
+## The switch: dev only (console `fx stencil on|off`, the Stencil page, tests); no player Setting.
+static var mode: StringName = DEFAULT_MODE
 ## How many copies were made since the last clear(), and the time spent building the copy objects (ms). Building is cheap: the
 ## renderer compiles a copy the first time it draws it, which this cannot see (the stage measures it as first_frames_ms).
 static var made: int = 0
@@ -115,3 +118,73 @@ static func clear() -> void:
 	_names.clear()
 	made = 0
 	build_ms = 0.0
+
+
+# --- Prepare at battle start (spec vfx-stencil 3.4, the user's choice: the positions in that battle) --------------------------
+
+## How long the last prepare took (ms, the frames it drew included) and how many copies it drew, for `fx stencil dump`.
+static var last_prepare_ms: float = 0.0
+static var last_prepare_copies: int = 0
+
+
+## The shaders the effects in `definitions` draw over their unit with (each layer's stencil_shader()), once each.
+static func over_unit_shaders(definitions: Array) -> Array[Shader]:
+	var shaders: Array[Shader] = []
+	for definition in definitions:
+		if definition == null:
+			continue
+		for layer in (definition as FxDefinition).layers:
+			var shader := layer.stencil_shader() if layer != null else null
+			if shader != null and not shader in shaders:
+				shaders.append(shader)
+	return shaders
+
+
+## Has the renderer compile the copies of `shaders` for `values` (both passes) now, so no battle frame does: each copy is drawn once,
+## a speck in front of `camera` for two frames (a particle shader through a one-particle emitter, the way particles draw it), then
+## removed. Returns the number of copies drawn. Does nothing when stencil is off, headless, or with no camera.
+static func prepare(camera: Camera3D, shaders: Array[Shader], values: Array) -> int:
+	if not enabled() or camera == null or not camera.is_inside_tree() or DisplayServer.get_name() == "headless":
+		return 0
+	var started := Time.get_ticks_usec()
+	var holder := Node3D.new()
+	holder.name = "FxStencilPrepare"
+	camera.add_child(holder)
+	holder.position = Vector3(0, 0, -maxf(camera.near * 4.0, 0.2))
+	holder.scale = Vector3.ONE * 0.001
+	var count := 0
+	for shader in shaders:
+		for value in values:
+			if not StencilIds.is_unit(int(value)):
+				continue
+			for pass_kind in [Pass.OWN, Pass.OTHER]:
+				var material := ShaderMaterial.new()
+				material.shader = variant(shader, int(value), pass_kind)
+				holder.add_child(_speck(shader, material))
+				count += 1
+	for frame in 2:
+		await camera.get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	holder.queue_free()
+	last_prepare_ms = (Time.get_ticks_usec() - started) / 1000.0
+	last_prepare_copies = count
+	return count
+
+
+static func _speck(shader: Shader, material: ShaderMaterial) -> Node3D:
+	if shader == FxParticles3DLayer.PARTICLE_SHADER:
+		var particles := GPUParticles3D.new()
+		particles.amount = 1
+		particles.lifetime = 1.0
+		particles.process_material = ParticleProcessMaterial.new()
+		var quad := QuadMesh.new()
+		quad.material = material
+		particles.draw_pass_1 = quad
+		particles.emitting = true
+		return particles
+	var speck := MeshInstance3D.new()
+	var mesh := QuadMesh.new()
+	speck.mesh = mesh
+	speck.material_override = material
+	speck.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return speck

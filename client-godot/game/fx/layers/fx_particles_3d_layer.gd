@@ -41,6 +41,9 @@ const PARTICLE_SHADER: Shader = preload("res://game/fx/shaders/material/particle
 ## bubble is born on the body. The points are sampled once per mesh (area-weighted) and the emitter follows the mesh every tick, which
 ## is right for a unit that moves as a rigid whole; a skinned model emits from a bone-attached layer instead.
 @export var emit_from_mesh: bool = false
+## Spec vfx-stencil 3.3: do the particles draw over the unit they sit on? AUTO: yes (a flame on the body, sparks off a hit). Only the
+## generated draw material takes part; a custom `draw_mesh` keeps its own material and the plain depth test.
+@export var over_own_unit: FxLayer.OverOwnUnit = FxLayer.OverOwnUnit.AUTO
 @export var emission_point_count: int = 128
 ## Only faces whose outward normal points at least this far up (-1 = every face, 0 = not the underside, 0.5 = the top and gentle slopes). A flame
 ## should not be born under the unit and burn through the floor.
@@ -102,8 +105,8 @@ func _make_process_material() -> ParticleProcessMaterial:
 
 
 func _make_draw_material() -> ShaderMaterial:
-	var material := ShaderMaterial.new()
-	material.shader = PARTICLE_SHADER
+	var material := FxStencilMaterial.new()  # spec vfx-stencil 3.4: a shader material with a stencil setting
+	material.base_shader = PARTICLE_SHADER
 	material.set_shader_parameter("albedo_texture", texture if texture != null else FxQuality.soft_dot())
 	material.set_shader_parameter("h_frames", maxi(h_frames, 1))
 	material.set_shader_parameter("v_frames", maxi(v_frames, 1))
@@ -122,6 +125,9 @@ static var _points: Dictionary = {}
 
 func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, definition: FxDefinition) -> void:
 	super(node, params, anchor, quality, definition)
+	var draw := _stencil_material(node)
+	if draw != null:
+		draw.stencil_unit = stencil_value(anchor, PARTICLE_SHADER, over_own_unit)
 	node.set_meta(EMIT_MESH, null)
 	if not emit_from_mesh or process_material_override != null:
 		return
@@ -139,6 +145,22 @@ func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, defin
 func update(node: Node, local_time: float, length_seconds: float, params: Dictionary) -> void:
 	_follow_mesh(node)
 	super(node, local_time, length_seconds, params)
+	follow_stencil(node, _stencil_material(node), PARTICLE_SHADER, over_own_unit)
+
+
+func over_own_default() -> bool:
+	return true
+
+
+func stencil_shader() -> Shader:
+	return PARTICLE_SHADER if draw_mesh == null and draws_over_own_unit(over_own_unit) else null
+
+
+## The generated draw material (an FxStencilMaterial), or null for a custom draw mesh.
+func _stencil_material(node: Node) -> FxStencilMaterial:
+	var particles := node as GPUParticles3D
+	var mesh := particles.draw_pass_1 as PrimitiveMesh if particles != null else null
+	return mesh.material as FxStencilMaterial if mesh != null else null
 
 
 ## The emitter sits on the mesh it samples, so the points stay on its surface while the unit moves.
@@ -190,3 +212,10 @@ static func points_for(mesh: Mesh, count: int, min_normal_y: float = -1.0) -> Im
 	var texture := ImageTexture.create_from_image(image)
 	_points[key] = [weakref(mesh), texture]
 	return texture
+
+
+func extra_problems(_definition: FxDefinition, _probe: Node) -> PackedStringArray:
+	var out := PackedStringArray()
+	if over_own_unit == OverOwnUnit.ON and draw_mesh != null:
+		out.append("fx_stencil_include_missing: particles layer '%s' draws over its unit, but a custom draw_mesh keeps its own material" % id)
+	return out

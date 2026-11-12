@@ -11,7 +11,7 @@ var _services: Array[FxService] = []
 
 
 func after_each() -> void:
-	FxStencilShaders.mode = FxStencilShaders.BIAS  # the default: every other test runs in bias mode
+	FxStencilShaders.mode = FxStencilShaders.DEFAULT_MODE  # every other test runs in the default mode
 	FxStencilShaders.clear()
 	for service in _services:
 		if is_instance_valid(service):
@@ -266,10 +266,10 @@ func test_which_quads_draw_over_their_unit() -> void:
 	eq(_glow_layer(true).stencil_for(_anchor(4)), 4, "a camera-facing quad draws over its unit")
 	eq(_glow_layer(false).stencil_for(_anchor(4)), 0, "a flat floor quad keeps the plain depth test")
 	var forced := _glow_layer(false)
-	forced.over_own_unit = FxShaderQuadLayer.OverOwnUnit.ON
+	forced.over_own_unit = FxLayer.OverOwnUnit.ON
 	eq(forced.stencil_for(_anchor(4)), 4, "unless the layer says ON")
 	var never := _glow_layer(true)
-	never.over_own_unit = FxShaderQuadLayer.OverOwnUnit.OFF
+	never.over_own_unit = FxLayer.OverOwnUnit.OFF
 	eq(never.stencil_for(_anchor(4)), 0, "and OFF turns it off")
 	eq(_glow_layer(true).stencil_for(_anchor(0)), 0, "no unit value: none")
 	eq(_glow_layer(true).stencil_for(_anchor(StencilIds.DEV)), 0, "a value outside the unit range: none")
@@ -340,3 +340,147 @@ func test_the_stencil_material_swaps_on_its_setting_and_follows_an_edited_shader
 	eq(material.get_shader_parameter(&"intensity"), 3.0, "parameters survive the swap")
 	material.stencil_unit = 0
 	check(material.shader == base and material.next_pass == null, "back to 0: the base shader, one pass")
+
+
+# --- Step 2: particles, meshes, the caller's value, the validator, the console, prepare ------------------------------------
+
+func _particles_layer() -> FxParticles3DLayer:
+	var layer := FxParticles3DLayer.new()
+	layer.id = &"sparks"
+	return layer
+
+
+func test_particles_draw_over_their_unit_through_their_generated_material() -> void:
+	FxStencilShaders.mode = FxStencilShaders.STENCIL
+	var layer := _particles_layer()
+	var node := _keep(layer.build()) as GPUParticles3D
+	var material := (node.draw_pass_1 as PrimitiveMesh).material as FxStencilMaterial
+	check(material != null and material.base_shader == FxParticles3DLayer.PARTICLE_SHADER, "the generated draw material has a stencil setting")
+	layer.apply(node, {}, _anchor(7), 3, null)
+	eq(material.stencil_unit, 7, "AUTO: particles draw over their unit")
+	check(material.next_pass is ShaderMaterial, "with an OWN pass")
+	eq(layer.stencil_shader(), FxParticles3DLayer.PARTICLE_SHADER, "prepare() compiles the particle shader")
+	var custom := _particles_layer()
+	custom.draw_mesh = QuadMesh.new()
+	eq(custom.stencil_shader(), null, "a custom draw mesh keeps its own material: nothing to prepare")
+	custom.over_own_unit = FxLayer.OverOwnUnit.ON
+	check(custom.extra_problems(null, null).size() == 1 and custom.extra_problems(null, null)[0].begins_with("fx_stencil_include_missing"),
+		"and told to draw over its unit, it is reported")
+
+
+func test_a_mesh_layer_takes_part_only_when_asked_and_its_shader_can() -> void:
+	FxStencilShaders.mode = FxStencilShaders.STENCIL
+	var source := ShaderMaterial.new()
+	source.shader = load(GLOW)
+	source.set_shader_parameter(&"intensity", 4.0)
+	var layer := FxMeshLayer.new()
+	layer.id = &"shell"
+	layer.mesh = SphereMesh.new()
+	layer.material = source
+	var node := _keep(layer.build()) as MeshInstance3D
+	var material := node.material_override as FxStencilMaterial
+	check(material != null and material != source, "a stencil-capable shader material becomes the layer's own FxStencilMaterial")
+	eq(material.get_shader_parameter(&"intensity"), 4.0, "with every value carried over")
+	layer.apply(node, {}, _anchor(3), 3, null)
+	eq(material.stencil_unit, 0, "AUTO: a solid mesh keeps the plain depth test")
+	layer.over_own_unit = FxLayer.OverOwnUnit.ON
+	layer.apply(node, {}, _anchor(3), 3, null)
+	eq(material.stencil_unit, 3, "ON: a shell around the unit draws over it")
+	var plain := FxMeshLayer.new()
+	plain.id = &"rock"
+	plain.material = StandardMaterial3D.new()
+	plain.over_own_unit = FxLayer.OverOwnUnit.ON
+	check(plain.extra_problems(null, null).size() == 2, "ON with a material that cannot (and no mesh) is reported")
+
+
+func test_a_caller_can_mark_another_unit() -> void:
+	FxStencilShaders.mode = FxStencilShaders.STENCIL
+	var service := FxService.new()
+	service.enabled = true
+	service.manual_clock = true
+	host.add_child(service)
+	_services.append(service)
+	var target := _view(&"E1")
+	target.assign_stencil()
+	target.mark_stencil(StandardMaterial3D.new())
+	var def := FxDefinition.new()
+	def.id = &"fx.stencil_beam"
+	def.space = FxDefinition.Space.WORLD_3D
+	def.layers = [_glow_layer()]
+	service.register(def)
+	var handle := service.play(def, FxAnchor.unit(&"E1"), {&"stencil_unit": 2})
+	check(handle.anchor.stencil_value == 2 and handle.anchor.stencil_forced, "the caller's stencil_unit wins (a beam marks its caster)")
+	eq(handle.anchor.live_stencil_value(), 2, "and is never re-read from the anchor's view")
+	handle.stop(0.0)
+
+
+func test_the_registry_shaders_to_prepare() -> void:
+	var quad := _glow_layer(true)
+	var floor_quad := _glow_layer(false)
+	var def := FxDefinition.new()
+	def.layers = [quad, floor_quad, _particles_layer()]
+	var shaders := FxStencilShaders.over_unit_shaders([def, null, def])
+	eq(shaders, [load(GLOW), FxParticles3DLayer.PARTICLE_SHADER] as Array[Shader],
+		"the glow and the particles, once each; the floor quad never draws over its unit")
+	eq(await FxStencilShaders.prepare(null, shaders, [1, 2]), 0, "headless (or with no camera) prepare does nothing")
+
+
+func test_the_validator_reads_stencil_words_and_values() -> void:
+	var dir := "user://stencil_validator_test"
+	DirAccess.make_dir_recursive_absolute(dir)
+	_write(dir + "/typo.gdshader", "shader_type spatial;
+stencil_mode read, compare_equal, write_foo, 30;
+")
+	_write(dir + "/fine.gdshader", "shader_type spatial;
+stencil_mode read, FX_STENCIL_COMPARE, FX_STENCIL_REF;
+stencil_mode write, compare_always, 200;
+")
+	_write(dir + "/takes_p1.gdshader", "shader_type spatial;
+stencil_mode write, compare_always, 1;
+")
+	_write(dir + "/outline.tres", "[gd_resource type=\"StandardMaterial3D\" format=3]
+
+[resource]
+stencil_mode = 1
+")
+	_write(dir + "/high.tres", "[gd_resource type=\"StandardMaterial3D\" format=3]
+
+[resource]
+stencil_mode = 3
+stencil_reference = 64
+")
+	var found := {}
+	for issue in FxValidator.stencil_problems([dir]):
+		found[issue.path.get_file() + ":" + issue.code] = true
+	eq(found.keys().filter(func(k: String) -> bool: return k.begins_with("typo")), ["typo.gdshader:fx_stencil_mode_unknown"],
+		"a misspelt word is reported (30 is only read, not written)")
+	check(found.has("takes_p1.gdshader:fx_stencil_value_taken"), "a shader writing 1 takes P1's value")
+	check(found.has("outline.tres:fx_stencil_value_taken"), "an Outline preset with the default reference 1 takes P1's value")
+	check(not found.has("fine.gdshader:fx_stencil_mode_unknown") and not found.has("fine.gdshader:fx_stencil_value_taken"),
+		"defines and a value outside the unit range are fine")
+	check(not found.has("high.tres:fx_stencil_value_taken"), "a material on 64 (the target range) is fine")
+	for file in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir.path_join(file))
+	DirAccess.remove_absolute(dir)
+
+
+func _write(path: String, text: String) -> void:
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(text)
+	file.close()
+
+
+func test_the_fx_stencil_command() -> void:
+	var view := _view(&"P2")
+	var console := DevConsole.new(host.get_tree())
+	console.keep_history = false
+	console.load_commands(false)
+	var off: Dictionary = await console.execute("fx stencil off")
+	check(off["ok"] and off["text"].begins_with("fx stencil: off") and view.stencil_value == 0, "off: the views take no value")
+	var on: Dictionary = await console.execute("fx stencil on")
+	check(on["ok"] and on["text"].begins_with("fx stencil: on") and view.stencil_value == 2, "on: the views take their position's value")
+	var dump: Dictionary = await console.execute("fx stencil dump")
+	check(dump["ok"] and dump["text"].contains("P2") and dump["text"].contains("last prepare"), "dump lists the views: %s" % dump["text"])
+	var bad: Dictionary = await console.execute("fx stencil maybe")
+	check(not bad["ok"], "anything else is refused")
+	eq(FxStencilShaders.DEFAULT_MODE, FxStencilShaders.STENCIL, "stencil is on by default")

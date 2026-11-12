@@ -150,6 +150,64 @@ func progress(local_time: float, length_seconds: float) -> float:
 	return clampf(local_time / length_seconds, 0.0, 1.0)
 
 
+## Spec vfx-stencil 3.3: whether a 3D layer draws over the unit it sits on, for the layers that can (shader quads, particles,
+## meshes). AUTO: the layer kind decides (over_own_default).
+enum OverOwnUnit { AUTO, ON, OFF }
+
+
+## The kind's answer for AUTO: camera-facing quads and particles draw over their unit, flat quads and solid meshes do not.
+func over_own_default() -> bool:
+	return false
+
+
+## The stencil value this layer draws `shader` with for `anchor`: the unit's value when stencil is on, the layer draws over its own
+## unit and the shader has the stencil lines; else 0, the plain depth test.
+func stencil_value(anchor: FxAnchor, shader: Shader, layer_over: int) -> int:
+	if not FxStencilShaders.enabled() or anchor == null:
+		return StencilIds.NONE
+	var over := over_own_default() if layer_over == OverOwnUnit.AUTO else layer_over == OverOwnUnit.ON
+	if not over or not StencilIds.is_unit(anchor.stencil_value) or not FxStencilShaders.supports(shader):
+		return StencilIds.NONE  # (a shader without the stencil include would draw its whole effect twice)
+	return anchor.stencil_value
+
+
+## Spec vfx-stencil 3.4 (prepare): the shader this layer draws over its unit with, or null when it never does. The kinds that can
+## override it; prepare() compiles the copies of these shaders at battle start.
+func stencil_shader() -> Shader:
+	return null
+
+
+## True when the layer's own setting (AUTO by the kind's default, ON, OFF) has it draw over its unit.
+func draws_over_own_unit(layer_over: int) -> bool:
+	return over_own_default() if layer_over == OverOwnUnit.AUTO else layer_over == OverOwnUnit.ON
+
+
+## Every tick: a live effect follows its unit (the switch, or the unit's stamp, can change while it loops: a fade-out, a revive),
+## and the OWN pass mirrors what bindings and tracks wrote this tick.
+func follow_stencil(node: Node, material: FxStencilMaterial, shader: Shader, layer_over: int) -> void:
+	if material == null:
+		return
+	var anchor := FxLayer.meta_of(node, META_ANCHOR) as FxAnchor
+	var value := StencilIds.NONE
+	if anchor != null:
+		anchor.stencil_value = anchor.live_stencil_value()
+		value = stencil_value(anchor, shader, layer_over)
+	if value != material.stencil_unit:
+		material.stencil_unit = value
+	else:
+		material.sync_own_pass()
+
+
+## Spec vfx-stencil (validator): "" or the problem of a layer that draws over its unit (ON, or AUTO where the kind does) with a shader
+## that has no stencil lines: it could never draw over its unit, and would draw twice if it tried.
+func stencil_include_problem(shader: Shader, layer_over: int) -> String:
+	var over := over_own_default() if layer_over == OverOwnUnit.AUTO else layer_over == OverOwnUnit.ON
+	if not over or shader == null or FxStencilShaders.supports(shader):
+		return ""
+	return "fx_stencil_include_missing: layer '%s': %s draws over its unit but does not #include %s" % [id,
+		shader.resource_path.get_file() if shader.resource_path != "" else "its shader", FxStencilShaders.INCLUDE]
+
+
 ## A node's metadata value, or null when it has none (get_meta with a null default logs an error).
 static func meta_of(node: Object, key: StringName) -> Variant:
 	return node.get_meta(key) if node.has_meta(key) else null

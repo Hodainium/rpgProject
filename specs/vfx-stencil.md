@@ -199,6 +199,14 @@ so a unit hidden behind a wall never stamps the hidden pixels (K7, `behind_wall`
 prepass (Mobile, Compatibility), opaque draw order decides: a wall drawn after the unit leaves the unit's stamp under it, and the
 OWN pass would draw over the wall. H7 must test exactly this before stencil is turned on for those renderers.
 
+**The decision (user, 2026-11-11): stencil is kept; step 2 goes ahead, with three choices.**
+- **The switch is dev-only:** console `fx stencil on|off|dump`, and stencil is on by default. There is no player Setting. Off means
+  the plain depth test (after the bias is gone), for debugging and for a renderer without stencil.
+- **`prepare()` runs at battle start,** for the positions in that battle only (their values × the over-unit shaders × 2 passes).
+  It is not the whole set at run start: there is no loading screen today.
+- **The 45 effect files** in `presentation/demo/fx/` that bind `depth_bias` (327 lines) are stripped of it in a commit of their own
+  (`design:`). That commit comes before the system code removes the bias, so no file binds a uniform that does not exist.
+
 **Step 2, the finish, only if stencil is kept.**
 - The other over-unit layers: `FxParticles3DLayer`, `FxMeshLayer`.
 - The `stencil_unit` effect parameter.

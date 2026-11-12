@@ -22,10 +22,9 @@ extends FxLayer
 @export var flat_depth_bias: float = 0.05
 @export var default_size_when_empty: Vector2 = Vector2(160, 160)
 
-## Spec vfx-stencil 3.3 (stencil mode only): does this 3D quad draw over the unit it sits on? AUTO: a camera-facing quad does (a hit
-## glow), a flat one does not (a floor ring keeps the plain depth test, so its back half stays behind the unit's legs).
-enum OverOwnUnit { AUTO, ON, OFF }
-@export var over_own_unit: OverOwnUnit = OverOwnUnit.AUTO
+## Spec vfx-stencil 3.3: does this 3D quad draw over the unit it sits on? AUTO: a camera-facing quad does (a hit glow), a flat one
+## does not (a floor ring keeps the plain depth test, so its back half stays behind the unit's legs).
+@export var over_own_unit: FxLayer.OverOwnUnit = FxLayer.OverOwnUnit.AUTO
 
 const META_FADE: StringName = &"fx_quad_fade"
 const META_TIME: StringName = &"fx_quad_time"
@@ -68,15 +67,17 @@ func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, defin
 			material.stencil_unit = stencil_for(anchor)  # also re-checks a hot-reloaded shader and syncs the OWN pass
 
 
-## The stencil value this layer draws with for `anchor`: the unit's value in stencil mode when the layer draws over its own unit,
-## else 0 (today's shader, depth bias and all).
+## The stencil value this layer draws with for `anchor` (3D quads only; see FxLayer.stencil_value).
 func stencil_for(anchor: FxAnchor) -> int:
-	if not FxStencilShaders.enabled() or anchor == null or space != Space.WORLD_3D:
-		return StencilIds.NONE
-	var over := face_camera if over_own_unit == OverOwnUnit.AUTO else over_own_unit == OverOwnUnit.ON
-	if not over or not StencilIds.is_unit(anchor.stencil_value) or not FxStencilShaders.supports(shader):
-		return StencilIds.NONE  # (a shader without the stencil include would draw its whole effect twice)
-	return anchor.stencil_value
+	return stencil_value(anchor, shader, over_own_unit) if space == Space.WORLD_3D else StencilIds.NONE
+
+
+func over_own_default() -> bool:
+	return face_camera
+
+
+func stencil_shader() -> Shader:
+	return shader if space == Space.WORLD_3D and draws_over_own_unit(over_own_unit) and FxStencilShaders.supports(shader) else null
 
 
 func rebind(node: Node, params: Dictionary, definition: FxDefinition) -> void:
@@ -107,17 +108,8 @@ func update(node: Node, local_time: float, length_seconds: float, params: Dictio
 			node.material.set_shader_parameter(&"rect_size", (node as Control).size)
 			node.material.set_shader_parameter(&"margin", grow)
 	super(node, local_time, length_seconds, params)
-	if node is FxQuad3D and node.material is FxStencilMaterial:
-		var material := node.material as FxStencilMaterial
-		# A live effect follows its unit: the mode, or the unit's stamp, can change while it loops (a fade-out, a revive).
-		var anchor := FxLayer.meta_of(node, META_ANCHOR) as FxAnchor
-		if anchor != null and anchor.node is UnitAnimator and anchor.kind in [FxAnchor.Kind.UNIT, FxAnchor.Kind.NODE3D] 				and is_instance_valid(anchor.node):
-			anchor.stencil_value = (anchor.node as UnitAnimator).effect_stencil_value()
-		var value := stencil_for(anchor)
-		if value != material.stencil_unit:
-			material.stencil_unit = value
-		else:
-			material.sync_own_pass()
+	if node is FxQuad3D and space == Space.WORLD_3D:
+		follow_stencil(node, (node as FxQuad3D).material as FxStencilMaterial, shader, over_own_unit)
 
 
 ## Stopped: the shader's `fade` uniform runs from 1 to 0 over `fade_seconds` (see update).
@@ -145,6 +137,10 @@ func extra_problems(_definition: FxDefinition, _probe: Node) -> PackedStringArra
 		out.append("fx_shader_missing: layer '%s' has no shader" % id)
 	elif drive_progress and not shader.code.contains("uniform float progress"):
 		out.append("fx_shader_progress: layer '%s': %s declares no 'progress' uniform (drive_progress is on)" % [id, shader.resource_path.get_file()])
+	if space == Space.WORLD_3D:
+		var stencil := stencil_include_problem(shader, over_own_unit)
+		if stencil != "":
+			out.append(stencil)
 	return out
 
 
