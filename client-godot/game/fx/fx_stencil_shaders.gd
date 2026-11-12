@@ -3,13 +3,14 @@
 ## passes: OWN (only its unit's pixels, no depth test) and OTHER (everywhere else, the normal depth test). A copy is made in memory,
 ## never written to a file: a few #define lines in front of the original code. The stencil lines live once, in #ifdef blocks of
 ## fx_depth_bias.gdshaderinc, so without the defines every shader is exactly today's.
-## `mode` is the A/B switch of the experiment (spec 1.5): bias (today's look, the default) or stencil. Presentation only.
+## `mode` is the dev switch (console `fx stencil on|off`): stencil, the default, or off (every effect one pass with the plain depth
+## test, for debugging and for a renderer without stencil). Presentation only.
 class_name FxStencilShaders
 extends RefCounted
 
 enum Pass { OWN, OTHER }
 
-const BIAS: StringName = &"bias"
+const OFF: StringName = &"off"
 ## The include that carries the stencil lines; a shader without it has none, so it never goes two-pass.
 const INCLUDE := "fx_depth_bias.gdshaderinc"
 ## Shader-sampled textures the engine fills; a second pass never copies them.

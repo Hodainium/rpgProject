@@ -1,20 +1,17 @@
-// Depth bias (spec vfx-content-pass 3.6, Unreal's Pixel Depth Offset): the effect's depth, for the depth test only, is
-// moved toward the camera by `depth_bias` world units, so a quad centred on a unit is not cut in half by the unit's own
-// mesh, while a wall or a unit that really is in front still hides it. The picture on screen does not move.
-// Depth fade (Unreal's DepthFade, playtest-fixes B14): where the effect passes into the scene (a big camera-facing disc
-// leaning into the floor) it is not cut off at a hard line; it fades out over the last stretch before the cut. The fade
-// happens inside the bias and never moves the cut, so nothing shows through anything it did not show through without it.
-// Its width is `depth_fade`, at most half the bias, so the unit an effect sits on (well inside the bias) keeps it at full strength.
+// Depth and stencil for the 3D effect shaders (spec vfx-stencil; the depth bias of vfx-content-pass 3.6 is gone, 2026-11-11).
+// Stencil: an effect drawn over a battle unit is drawn in two passes, from in-memory copies FxStencilShaders makes by putting
+// #define lines in front of the shader's code (Godot takes the stencil reference only as a literal, the probe's K5):
+// FX_STENCIL_REF is the unit's stencil value, FX_STENCIL_COMPARE the pass's test, FX_STENCIL_OWN marks the OWN pass, which draws
+// over its own unit's stamped pixels with no depth test; the OTHER pass draws everywhere else with the normal depth test. The
+// shader file itself (no defines) is the plain one-pass shader with the normal depth test: an effect with no unit, a floor ring.
+// Depth fade (classic soft particles, Unreal's DepthFade): where the effect passes into the scene (a big disc leaning into the
+// floor, a glow touching a neighbouring unit) it fades out over `depth_fade` world units before the depth test cuts it, instead of
+// a hard line. Over its own unit (the OWN pass) it keeps full strength.
 // Use in fragment():
-//     if (fx_depth_moved()) { DEPTH = fx_biased_depth(VERTEX, PROJECTION_MATRIX); }
 //     ... ALPHA = ...;
 //     ALPHA *= fx_depth_fade(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX);
-// (VERTEX is the fragment's view-space position there.) Documented in each including shader's header as
-// `// @uniform depth_bias`, `// @uniform depth_fade` and `// @uniform fx_scene_depth`.
-// Stencil (spec vfx-stencil 3.4): only in the in-memory copies FxStencilShaders makes, which put #define lines in front of the
-// code. FX_STENCIL_REF is the unit's stencil value, FX_STENCIL_COMPARE the pass's test, FX_STENCIL_OWN marks the pass that draws
-// over its own unit's pixels with no depth test. In a copy the bias is off and the fade is the classic soft fade. Without the
-// defines (bias mode, the files on disk) these blocks are skipped and the shader is exactly as before.
+// (VERTEX is the fragment's view-space position there.) Documented in each including shader's header as `// @uniform depth_fade`
+// and `// @uniform fx_scene_depth`. A shader that draws over units must include this file (FxStencilShaders.supports).
 #ifdef FX_STENCIL_REF
 stencil_mode read, FX_STENCIL_COMPARE, FX_STENCIL_REF;
 #endif
@@ -22,22 +19,8 @@ stencil_mode read, FX_STENCIL_COMPARE, FX_STENCIL_REF;
 render_mode depth_test_disabled;
 #endif
 
-uniform float depth_bias = 0.0;
 uniform float depth_fade = 0.3;
 uniform sampler2D fx_scene_depth : hint_depth_texture, repeat_disable, filter_nearest;
-
-bool fx_depth_moved() {
-#ifdef FX_STENCIL_REF
-	return false;
-#else
-	return depth_bias != 0.0;
-#endif
-}
-
-float fx_biased_depth(vec3 view_position, mat4 projection) {
-	vec4 clip = projection * vec4(view_position + vec3(0.0, 0.0, depth_bias), 1.0);
-	return clip.z / clip.w;
-}
 
 // How far the scene lies behind this fragment, in world units along the view (negative: the scene is in front of it).
 float fx_scene_gap(vec3 view_position, vec2 screen_uv, mat4 inv_projection) {
@@ -47,22 +30,14 @@ float fx_scene_gap(vec3 view_position, vec2 screen_uv, mat4 inv_projection) {
 	return (-scene_view.z) - (-view_position.z);
 }
 
-// 0 at the cut (the scene `depth_bias` in front of the fragment), rising to 1 over the fade's width toward the fragment.
-// In a stencil copy (spec vfx-stencil 3.6): full strength over its own unit (OWN), else the classic soft fade over `depth_fade`.
+// 1 over its own unit (the OWN pass); else 0 where the scene is at the fragment, rising to 1 over `depth_fade` in front of it.
 float fx_depth_fade(vec3 view_position, vec2 screen_uv, mat4 inv_projection) {
-#if defined(FX_STENCIL_OWN)
+#ifdef FX_STENCIL_OWN
 	return 1.0;
-#elif defined(FX_STENCIL_REF)
+#else
 	if (depth_fade <= 0.0) {
 		return 1.0;
 	}
 	return clamp(fx_scene_gap(view_position, screen_uv, inv_projection) / depth_fade, 0.0, 1.0);
-#else
-	float fx_fade_width = min(depth_fade, 0.5 * depth_bias);
-	if (fx_fade_width <= 0.0) {
-		return 1.0;
-	}
-	float fx_gap = fx_scene_gap(view_position, screen_uv, inv_projection);
-	return clamp((fx_gap + depth_bias) / fx_fade_width, 0.0, 1.0);
 #endif
 }

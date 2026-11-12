@@ -88,7 +88,7 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 ## their value again) and every live effect on its next tick.
 func _stencil(ctx: DevContext, args: PackedStringArray) -> String:
 	if args.size() > 1 and args[1] in ["on", "off"]:
-		FxStencilShaders.mode = FxStencilShaders.STENCIL if args[1] == "on" else FxStencilShaders.BIAS
+		FxStencilShaders.mode = FxStencilShaders.STENCIL if args[1] == "on" else FxStencilShaders.OFF
 		for view in (Engine.get_main_loop() as SceneTree).get_nodes_in_group(UnitAnimator.GROUP):
 			if (view as UnitAnimator).unit_id != &"":
 				(view as UnitAnimator).assign_stencil()

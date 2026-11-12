@@ -188,10 +188,6 @@ func play_nested(effect: Variant, anchor: FxAnchor, params: Dictionary, depth: i
 	handle.anchor = anchor
 	handle.depth = depth
 	handle.params = _resolve_params(def, params)
-	# Spec vfx-content-pass 3.6: an effect with a depth_bias parameter that the caller did not set gets the unit's radius, so the
-	# unit's own mesh does not cut it and no caller passes numbers per unit.
-	if anchor.radius > 0.0 and def.param(&"depth_bias") != null and not given_has(params, &"depth_bias"):
-		handle.params[&"depth_bias"] = anchor.radius
 	handle.instance = _acquire(def)
 	_attach(handle)
 	_prepare_layers(handle)

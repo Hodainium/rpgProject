@@ -360,17 +360,7 @@ func _light(energy: float, light_range: float, seconds: float) -> FxLightLayer:
 
 
 func _define(effect_id: StringName, title: String, space: FxDefinition.Space, layers: Array, params: Array, note: String, tags: Array,
-		socket: StringName = &"Center", biased: bool = true) -> FxDefinition:
-	# Every particle and quad layer gets the depth-bias binding (spec 3.6): the play fills it with the unit's radius, so the unit's own
-	# mesh does not cut the effect; the parameter's default is the fallback for an anchor that has no radius.
-	if biased:
-		for layer in layers:
-			if layer is FxParticles3DLayer:
-				layer.bindings.append(_bind("draw_pass_1:material:shader_parameter/depth_bias", &"depth_bias"))
-			elif layer is FxShaderQuadLayer:
-				layer.bindings.append(_bind("material:shader_parameter/depth_bias", &"depth_bias"))
-		params.append(_param(&"depth_bias", FxParam.Kind.FLOAT, 0.7, 0.0, 4.0,
-			"World units the depth test sees the effect closer to the camera. Filled with the unit's radius unless the caller passes one."))
+		socket: StringName = &"Center", _biased: bool = true) -> FxDefinition:
 	var definition := FxDefinition.new()
 	definition.id = effect_id
 	definition.display_name = title

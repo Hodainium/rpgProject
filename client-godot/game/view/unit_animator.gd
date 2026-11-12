@@ -36,7 +36,7 @@ var definition_id: StringName = &""
 ## The battle unit this view shows ("P1", "E2"), set by the room view; the effects system finds a unit's view by it
 ## (spec vfx-framework: FxAnchor.unit). Empty outside a battle.
 var unit_id: StringName = &""
-## Spec vfx-stencil 3.2: the stencil value of the unit's battle position (StencilIds), set by the room view; 0 = none (bias mode,
+## Spec vfx-stencil 3.2: the stencil value of the unit's battle position (StencilIds), set by the room view; 0 = none (stencil off,
 ## outside a battle). A new value repaints the view, and _paint() stamps it through mark_stencil().
 var stencil_value: int = 0:
 	set(value):
@@ -48,7 +48,7 @@ var stencil_value: int = 0:
 			_paint()  # before ready, the view's own setup paints (its nodes are not there yet)
 
 ## Whether the latest mark_stencil() stamped its material (a view that never calls it, as the base _paint() does, stays false:
-## its effects keep the bias). The latest paint decides, so a unit that fades out and comes back solid is stamped again.
+## its effects use the plain depth test). The latest paint decides, so a unit that fades out and comes back solid is stamped again.
 var _stamped: bool = false
 var _warned_unstamped: bool = false
 
@@ -194,7 +194,7 @@ func _paint() -> void:
 ## draw over exactly these pixels. A copy, so a material shared by several views (an imported model's) never carries another
 ## view's value. A BaseMaterial3D drawn in the opaque pass (opaque, alpha scissor, alpha hash) gets Custom / Write / Always / the
 ## value and nothing else (it stays opaque: the probe's K1). Returned untouched, and the view counts as not stamped (its effects
-## keep today's depth bias, see effect_stencil_value):
+## use the plain depth test, see effect_stencil_value):
 ## - a blending material (alpha, depth pre-pass): it draws with the effects, so its stamp could land after they tested;
 ## - any other material (a ShaderMaterial; step 2 adds the unit include), with one warning.
 ## Value 0 returns the material untouched.
@@ -206,7 +206,7 @@ func mark_stencil(material: Material) -> Material:
 		_stamped = false
 		if base == null and material != null and not _warned_unstamped:
 			_warned_unstamped = true
-			push_warning("stencil: view '%s' has a %s, which takes no stamp; its effects keep the depth bias" % [unit_id, material.get_class()])
+			push_warning("stencil: view '%s' has a %s, which takes no stamp; its effects use the plain depth test" % [unit_id, material.get_class()])
 		return material
 	var stamped := base.duplicate() as BaseMaterial3D
 	stamped.stencil_mode = BaseMaterial3D.STENCIL_MODE_CUSTOM
@@ -218,12 +218,12 @@ func mark_stencil(material: Material) -> Material:
 
 
 ## Spec vfx-stencil 3.3: the value effects on this unit draw with: its stencil value while its materials carry the stamp, else 0
-## (an effect on an unstamped unit keeps today's depth bias instead of losing it to a stamp that is not there).
+## (an effect on an unstamped unit draws once with the plain depth test, not over a stamp that is not there).
 func effect_stencil_value() -> int:
 	return stencil_value if _stamped else StencilIds.NONE
 
 
-## Spec vfx-stencil 3.1: takes the stencil value of this view's battle position from its unit_id (0 in bias mode). The room view
+## Spec vfx-stencil 3.1: takes the stencil value of this view's battle position from its unit_id (0 with stencil off). The room view
 ## calls it after setting unit_id.
 func assign_stencil() -> void:
 	var value := StencilIds.for_unit_id(unit_id) if FxStencilShaders.enabled() else StencilIds.NONE

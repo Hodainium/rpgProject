@@ -21,7 +21,7 @@ var socket: StringName = &""
 var socket_offset: Vector3 = Vector3.ZERO
 var radius: float = 0.0
 ## Spec vfx-stencil 3.3: the stencil value of the unit the effect sits on (its view's effect_stencil_value()), set with the radius
-## when the effect is placed; 0 = no unit, an unstamped unit or bias mode: the layer draws as before.
+## when the effect is placed; 0 = no unit, an unstamped unit or stencil off: one pass, the plain depth test.
 var stencil_value: int = 0
 ## True when the caller set the value (the effect's `stencil_unit` parameter, a beam marking its caster): it is never re-read.
 var stencil_forced: bool = false

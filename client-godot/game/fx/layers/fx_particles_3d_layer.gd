@@ -1,7 +1,7 @@
 ## Particles in the 3D world (spec vfx-framework 3.1): a GPUParticles3D with a ParticleProcessMaterial built from the
 ## exports (or your own process material, including a custom `shader_type particles` ShaderMaterial). Billboarded
 ## quads, additive by default. Bind any property with "amount", "lifetime", "process_material:color",
-## "draw_pass_1:material:shader_parameter/depth_bias"… Quality scales the amount.
+## "draw_pass_1:material:shader_parameter/additive"… Quality scales the amount.
 class_name FxParticles3DLayer
 extends FxParticlesLayer
 
@@ -29,12 +29,8 @@ const PARTICLE_SHADER: Shader = preload("res://game/fx/shaders/material/particle
 ## Replaces the generated process material (a ParticleProcessMaterial or a ShaderMaterial with a particles shader).
 @export var process_material_override: Material
 @export var draw_mesh: Mesh
-## World units the depth test sees each particle closer to the camera (spec vfx-content-pass 3.6). A flame or glow is a flat
-## quad centred on the unit, and the unit's own mesh would cut it in half; the bias lifts it past the unit's surface, while a wall
-## or another unit that really is in front still hides it. About the target's radius; bind it to an effect parameter.
-@export var depth_bias: float = 0.0
 ## Soft particles (spec vfx-content-pass 3.6): a particle fades out over this many world units where it nears scene geometry
-## (its depth, with the bias applied, against the depth buffer), which removes the hard cut line against walls and other units.
+## (its depth against the depth buffer), which removes the hard cut line against walls and other units.
 ## 0 = off.
 @export var soft_distance: float = 0.0
 ## Surface emission (spec 3.6): particles start on the surface of the target's first mesh instead of at one point, so a flame or a
@@ -111,7 +107,6 @@ func _make_draw_material() -> ShaderMaterial:
 	material.set_shader_parameter("h_frames", maxi(h_frames, 1))
 	material.set_shader_parameter("v_frames", maxi(v_frames, 1))
 	material.set_shader_parameter("additive", 1.0 if additive else 0.0)
-	material.set_shader_parameter("depth_bias", depth_bias)
 	material.set_shader_parameter("soft_distance", soft_distance)
 	return material
 

@@ -16,10 +16,6 @@ extends FxLayer
 @export var grow: float = 0.0
 ## 3D only: turn to face the camera every frame.
 @export var face_camera: bool = true
-## 3D only, a quad that does not face the camera (a ring or circle laid on the floor): the most depth bias it takes. The
-## unit-radius bias is for camera-facing quads centred inside a unit; a floor decal needs only enough to beat the floor's
-## own depth, so a unit standing in front of it hides it (playtest-fixes B14).
-@export var flat_depth_bias: float = 0.05
 @export var default_size_when_empty: Vector2 = Vector2(160, 160)
 
 ## Spec vfx-stencil 3.3: does this 3D quad draw over the unit it sits on? AUTO: a camera-facing quad does (a hit glow), a flat one
@@ -78,14 +74,6 @@ func over_own_default() -> bool:
 
 func stencil_shader() -> Shader:
 	return shader if space == Space.WORLD_3D and draws_over_own_unit(over_own_unit) and FxStencilShaders.supports(shader) else null
-
-
-func rebind(node: Node, params: Dictionary, definition: FxDefinition) -> void:
-	super(node, params, definition)
-	if node is FxQuad3D and not face_camera and node.material != null:
-		var bias: Variant = node.material.get_shader_parameter(&"depth_bias")
-		if bias != null and float(bias) > flat_depth_bias:
-			node.material.set_shader_parameter(&"depth_bias", flat_depth_bias)
 
 
 func update(node: Node, local_time: float, length_seconds: float, params: Dictionary) -> void:

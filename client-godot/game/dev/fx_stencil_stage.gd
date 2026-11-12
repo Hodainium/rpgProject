@@ -1,6 +1,6 @@
 ## The Stencil page (spec vfx-stencil 3.7) and probe part 2. The experiment's scene, built from the real pieces: the demo cube unit
 ## view (presentation/demo/unit_view.tscn) with its stencil stamp, the real FxManager, FxAnchor.unit and FxShaderQuadLayer.
-##   godot --path client-godot res://game/dev/fx_stencil_stage.tscn                     (a window: B / S switch bias / stencil)
+##   godot --path client-godot res://game/dev/fx_stencil_stage.tscn                     (a window: O / S switch off / stencil)
 ##   ... -- --compare <dir> [--frames 300]                                              (probe part 2: both modes, shots, report, quit)
 ## The scene: a back unit E1 with a glow on it and a front unit P1 standing 0.3 in front of it (the leak of playtest-fixes B14),
 ## a floor ring under P1, a unit E2 half behind a wall with a glow, and a big glow disc on E3 leaning into the floor. Dev only.
@@ -12,8 +12,8 @@ const RING_SHADER := "res://game/fx/shaders/rune_circle.gdshader"
 ## Each unit: id, position, colour.
 const UNITS := [
 	[&"E1", Vector3(0.0, 0.0, 0.0), Color(0.85, 0.55, 0.25)],
-	# 0.05 in front of E1 (cubes are 0.8; the bias is their radius, about 0.69): units close in formation, where the bias leaks
-	# (playtest-fixes B14, "what stays"). Further back, the front cube's visible faces are already more than the bias closer to the
+	# 0.05 in front of E1 (cubes are 0.8): units close in formation, where the old depth bias (their radius, about 0.69) leaked
+	# (playtest-fixes B14, "what stays"; spec vfx-stencil step 1: 270 pixels). Further back, the front cube's visible faces were more than the bias closer to the
 	# camera than E1's centre and no leak shows.
 	[&"P1", Vector3(0.5, 0.0, 0.85), Color(0.25, 0.4, 0.9)],
 	[&"E2", Vector3(-2.6, 0.0, 0.0), Color(0.4, 0.75, 0.4)],
@@ -50,15 +50,15 @@ func _ready() -> void:
 	_label = Label.new()
 	_label.position = Vector2(16, 16)
 	add_child(_label)
-	_set_mode(FxStencilShaders.BIAS)
+	_set_mode(FxStencilShaders.DEFAULT_MODE)
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed:
 		return
-	if key.keycode == KEY_B:
-		_set_mode(FxStencilShaders.BIAS)
+	if key.keycode == KEY_O:
+		_set_mode(FxStencilShaders.OFF)
 	elif key.keycode == KEY_S:
 		_set_mode(FxStencilShaders.STENCIL)
 
@@ -77,7 +77,7 @@ func _set_mode(mode: StringName, play_effects: bool = true) -> void:
 	for play in PLAYS:
 		_handles.append(FxManager.play(play[0], FxAnchor.unit(play[1])))
 	if _label != null:
-		_label.text = "mode: %s   (B bias, S stencil)   copies made: %d" % [mode, FxStencilShaders.made]
+		_label.text = "mode: %s   (O off, S stencil)   copies made: %d" % [mode, FxStencilShaders.made]
 
 
 # --- Probe part 2 ------------------------------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ func _compare(out_dir: String, frames: int) -> bool:
 	stamped.save_png(out_dir.path_join("none_stamped.png"))
 	report["stamped_units_change"] = {"mean_pixel_change": snappedf(_mean_change(baseline, stamped), 0.0001),
 		"shadow_point_change": snappedf(_change(baseline, stamped, POINTS["shadow_on_floor"]), 0.001)}
-	for mode in [FxStencilShaders.BIAS, FxStencilShaders.STENCIL]:
+	for mode in [FxStencilShaders.OFF, FxStencilShaders.STENCIL]:
 		var made_before := FxStencilShaders.made
 		var switch_started := Time.get_ticks_usec()
 		await _set_mode(mode)
@@ -199,18 +199,17 @@ func _exit_tree() -> void:
 	FxStencilShaders.mode = FxStencilShaders.DEFAULT_MODE
 
 
-## H1 and friends as yes / no, from the points (a change above 0.05 is the effect's light).
+## The checks as yes / no, from the points (a change above 0.05 is the effect's light). Off is the plain depth test: the glow is cut
+## by its own unit; stencil draws it over its own unit and over no other.
 func _checks(report: Dictionary) -> Dictionary:
-	var bias: Dictionary = report["modes"][FxStencilShaders.BIAS]["points"]
+	var off: Dictionary = report["modes"][FxStencilShaders.OFF]["points"]
 	var stencil: Dictionary = report["modes"][FxStencilShaders.STENCIL]["points"]
 	var lit := func(points: Dictionary, key: String) -> bool: return float(points[key]["change"]) > 0.05
 	return {
-		# Edge pixels where the front unit's own floor ring meets its base light up in both modes (a handful), so the leak is the
-		# difference: removed when stencil lights under a tenth of what bias does.
-		"H1_leak_in_bias": int(report["modes"][FxStencilShaders.BIAS]["front_unit_pixels_lit"]) > 50,
-		"H1_leak_removed_in_stencil": int(report["modes"][FxStencilShaders.STENCIL]["front_unit_pixels_lit"]) * 10
-			< int(report["modes"][FxStencilShaders.BIAS]["front_unit_pixels_lit"]),
+		# A handful of edge pixels where the front unit's own floor ring meets its base light up in either mode.
+		"H1_front_unit_clean_in_stencil": int(report["modes"][FxStencilShaders.STENCIL]["front_unit_pixels_lit"]) < 30,
 		"H1_own_unit_lit_in_stencil": lit.call(stencil, "own_unit_visible"),
+		"own_unit_cut_when_off": not lit.call(off, "own_unit_visible"),
 		"behind_wall_lit_in_stencil": lit.call(stencil, "behind_wall"),
 		"ring_back_half_lit_in_stencil": lit.call(stencil, "ring_behind_front_unit"),
 		"H3_H6_stamping_changes_nothing": float(report["stamped_units_change"]["mean_pixel_change"]) < 0.002,
@@ -326,8 +325,7 @@ func _box(size: Vector3, at: Vector3, color: Color) -> void:
 
 
 ## Three effects made in code for the experiment (no files): a camera-facing glow bigger than a unit, a floor ring (a flat quad laid
-## on the floor at the unit's base), and a big disc that leans into the floor. Each takes the unit's radius as its depth bias, the way
-## the content's effects do.
+## on the floor at the unit's base), and a big disc that leans into the floor.
 func _register_effects() -> void:
 	FxManager.register(_effect(&"stencil.glow", &"Center", _quad(load(GLOW_SHADER), Vector2(2.4, 2.4), true,
 		{"color": Color(1.0, 0.2, 0.9), "intensity": 2.0, "falloff": 1.6, "fade_out": 0.0})))
@@ -341,15 +339,6 @@ func _effect(id: StringName, socket: StringName, layer: FxShaderQuadLayer) -> Fx
 	definition.id = id
 	definition.socket = socket
 	definition.space = FxDefinition.Space.WORLD_3D
-	var bias := FxParam.new()
-	bias.name = &"depth_bias"
-	bias.kind = FxParam.Kind.FLOAT
-	bias.default_value = 0.0
-	definition.params = [bias]
-	var binding := FxBinding.new()
-	binding.property = "material:shader_parameter/depth_bias"
-	binding.param = &"depth_bias"
-	layer.bindings = [binding]
 	if not layer.face_camera:
 		# Laid flat on the floor, the way the content's rings are (a rotation_degrees:x binding).
 		var tilt := FxParam.new()
@@ -358,11 +347,11 @@ func _effect(id: StringName, socket: StringName, layer: FxShaderQuadLayer) -> Fx
 		tilt.default_value = -90.0
 		tilt.min_value = -180.0
 		tilt.max_value = 180.0
-		definition.params.append(tilt)
+		definition.params = [tilt]
 		var lay := FxBinding.new()
 		lay.property = "rotation_degrees:x"
 		lay.param = &"tilt"
-		layer.bindings.append(lay)
+		layer.bindings = [lay]
 	definition.layers = [layer]
 	return definition
 

@@ -1,5 +1,5 @@
 ## Spec vfx-stencil, step 1: the stencil value table, stamping a unit view, the anchor carrying its unit's value, the shader copies
-## and the 3D shader quad drawing in two passes, and bias mode changing nothing. Built in memory, no presentation/ files. What the
+## and the 3D shader quad drawing in two passes, and stencil off drawing one pass. Built in memory, no presentation/ files. What the
 ## pixels look like needs a GPU: the windowed probe (game/tools/fx_stencil_probe.tscn, game/dev/fx_stencil_stage.tscn --compare).
 extends TestCase
 
@@ -110,15 +110,15 @@ func test_a_view_that_cannot_be_stamped_gives_its_effects_no_value() -> void:
 	see_through.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	check(view.mark_stencil(see_through) == see_through and see_through.stencil_mode == BaseMaterial3D.STENCIL_MODE_DISABLED,
 		"a blending material is not stamped (its stamp could land after the effects tested)")
-	eq(view.effect_stencil_value(), 0, "so its effects keep the depth bias instead of losing it")
+	eq(view.effect_stencil_value(), 0, "so its effects draw once with the plain depth test")
 	var other := _view(&"P4")
 	other.stencil_value = 4
 	var shader_material := ShaderMaterial.new()
 	check(other.mark_stencil(shader_material) == shader_material, "a shader material comes back untouched (step 2 adds the unit include)")
-	eq(other.effect_stencil_value(), 0, "and that view's effects keep the bias too")
+	eq(other.effect_stencil_value(), 0, "and that view's effects draw once too")
 	var bare := _view(&"E5")
 	bare.stencil_value = 9
-	eq(bare.effect_stencil_value(), 0, "a view whose paint never stamps (the base _paint) gives no value: its effects keep the bias")
+	eq(bare.effect_stencil_value(), 0, "a view whose paint never stamps (the base _paint) gives no value")
 
 
 func test_the_latest_paint_decides_whether_a_view_is_stamped() -> void:
@@ -129,16 +129,16 @@ func test_the_latest_paint_decides_whether_a_view_is_stamped() -> void:
 	var fading := StandardMaterial3D.new()
 	fading.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	view.mark_stencil(fading)
-	eq(view.effect_stencil_value(), 0, "fading out: not stamped, effects keep the bias")
+	eq(view.effect_stencil_value(), 0, "fading out: not stamped, effects draw once")
 	view.mark_stencil(StandardMaterial3D.new())
 	eq(view.effect_stencil_value(), 1, "solid again (revived): stamped again")
 
 
 func test_assign_stencil_follows_the_mode() -> void:
 	var view := _view(&"E2")
-	FxStencilShaders.mode = FxStencilShaders.BIAS
+	FxStencilShaders.mode = FxStencilShaders.OFF
 	view.assign_stencil()
-	eq(view.stencil_value, 0, "bias mode: no value")
+	eq(view.stencil_value, 0, "off: no value")
 	FxStencilShaders.mode = FxStencilShaders.STENCIL
 	view.assign_stencil()
 	eq(view.stencil_value, 6, "stencil mode: E2's position value")
@@ -255,9 +255,9 @@ func test_the_quad_switches_to_two_passes_and_back_keeping_its_parameters() -> v
 	material.set_shader_parameter(&"progress", 0.6)
 	layer.update(quad, 0.3, 1.0, {})
 	eq(own.get_shader_parameter(&"progress"), material.get_shader_parameter(&"progress"), "updates reach the OWN pass")
-	FxStencilShaders.mode = FxStencilShaders.BIAS
+	FxStencilShaders.mode = FxStencilShaders.OFF
 	layer.apply(quad, {}, _anchor(4), 3, null)
-	check(material.shader == layer.shader and material.next_pass == null, "bias mode: the layer's own shader, one pass")
+	check(material.shader == layer.shader and material.next_pass == null, "off: the layer's own shader, one pass")
 	eq(material.get_shader_parameter(&"color"), Color(0.1, 0.2, 0.3), "parameters survive the way back")
 
 
@@ -273,8 +273,8 @@ func test_which_quads_draw_over_their_unit() -> void:
 	eq(never.stencil_for(_anchor(4)), 0, "and OFF turns it off")
 	eq(_glow_layer(true).stencil_for(_anchor(0)), 0, "no unit value: none")
 	eq(_glow_layer(true).stencil_for(_anchor(StencilIds.DEV)), 0, "a value outside the unit range: none")
-	FxStencilShaders.mode = FxStencilShaders.BIAS
-	eq(_glow_layer(true).stencil_for(_anchor(4)), 0, "bias mode: never")
+	FxStencilShaders.mode = FxStencilShaders.OFF
+	eq(_glow_layer(true).stencil_for(_anchor(4)), 0, "off: never")
 
 
 func test_a_shader_without_the_stencil_include_stays_one_pass() -> void:
@@ -309,13 +309,13 @@ func test_a_live_effect_follows_its_unit_stamp_and_the_mode() -> void:
 	fading.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	view.mark_stencil(fading)
 	layer.update(quad, 0.1, 1.0, {})
-	check(material.stencil_unit == 0 and material.next_pass == null, "E2 fades out: the live effect goes back to one pass with the bias")
+	check(material.stencil_unit == 0 and material.next_pass == null, "E2 fades out: the live effect goes back to one pass")
 	view.mark_stencil(StandardMaterial3D.new())
 	layer.update(quad, 0.2, 1.0, {})
 	eq(material.stencil_unit, 6, "E2 solid again: over it again")
-	FxStencilShaders.mode = FxStencilShaders.BIAS
+	FxStencilShaders.mode = FxStencilShaders.OFF
 	layer.update(quad, 0.3, 1.0, {})
-	check(material.stencil_unit == 0 and material.shader == layer.shader, "the mode back to bias reaches a live effect")
+	check(material.stencil_unit == 0 and material.shader == layer.shader, "the switch turned off reaches a live effect")
 
 
 # --- The material with a stencil setting (3.4) --------------------------------------------------------------------------
