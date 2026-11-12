@@ -20,7 +20,7 @@ uniform float intensity = 1.6;
 uniform float spin = 0.12;
 uniform float segments = 16.0;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 float ring(float r, float centre, float width) {
 	return 1.0 - smoothstep(0.0, width, abs(r - centre));

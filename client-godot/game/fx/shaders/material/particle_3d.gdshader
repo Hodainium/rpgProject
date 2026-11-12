@@ -17,7 +17,7 @@ uniform int v_frames = 1;
 uniform float additive = 1.0;
 uniform float soft_distance = 0.0;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 varying vec4 particle_color;
 varying float particle_frame;

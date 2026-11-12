@@ -25,7 +25,7 @@ uniform float sharpness = 3.0;
 uniform float falloff = 1.8;
 uniform float fade_out = 0.4;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 void fragment() {
 	vec2 p = (UV - vec2(0.5)) * 2.0;

@@ -7,7 +7,7 @@ Builds on `vfx-framework` (5a) and `vfx-content-pass` (5a2). Presentation only.
 ## 1. Purpose & enterprise mapping
 
 ### 1.1 The problem
-Today a depth bias (Unreal's Pixel Depth Offset, set to the unit's radius, in `game/fx/shaders/fx_depth_bias.gdshaderinc`) keeps an
+Today a depth bias (Unreal's Pixel Depth Offset, set to the unit's radius, in `game/fx/shaders/fx_stencil_depth.gdshaderinc`) keeps an
 effect from being cut by its own unit's mesh. The cost is a leak: an effect on the back unit shows through any unit standing less
 than the bias in front of it. The bias also has to be tuned per effect.
 
@@ -174,7 +174,7 @@ engine source was read to explain it.
   `stencil_unit` setting, so using it feels like `stencil_reference` on `StandardMaterial3D`. It swaps in the cached copy, adds
   the OWN pass, keeps parameter values over the swap, gets fresh copies of an edited shader and keeps its uniform names per swap.
   Bindings write the material through the engine, so its owner calls `sync_own_pass()` after writing (the layer, every tick).
-  Only a shader that includes `fx_depth_bias.gdshaderinc` goes two-pass (`FxStencilShaders.supports`).
+  Only a shader that includes `fx_stencil_depth.gdshaderinc` goes two-pass (`FxStencilShaders.supports`).
 - **The probe freezes the units' idle animation** while it takes frames. The bob moved the cubes' edges a pixel between frames,
   and those edges read as leaks.
 
@@ -221,8 +221,9 @@ OWN pass would draw over the wall. H7 must test exactly this before stencil is t
   - the shaders write no `DEPTH`;
   - `FxService`, the quad layer's `flat_depth_bias`, the particle layer's `depth_bias` and the builders' bindings are gone;
   - the switch's off mode is the plain depth test.
-- **Not changed:** the include keeps its file name, `fx_depth_bias.gdshaderinc`. A rename touches every shader and would be a
-  separate cleanup.
+- **The include is renamed** (user, 2026-11-11): `fx_depth_bias.gdshaderinc` → `fx_stencil_depth.gdshaderinc`, because it holds the
+  stencil blocks and the depth fade and no bias. Every reference in this spec uses the new name; older specs (`playtest-fixes`,
+  `vfx-content-pass`) keep the old one as history.
 
 **Step 2 results** (`H:\claudeOutShots\2026-11-11 vfx-stencil\step2b-d3d12`, `h7-*`, `battle\`):
 - **The real battle** (Warrior, Cleric, Pyromancer, Cryomancer against the Golem, the game camera, `dev_run --local` in a window):
@@ -334,7 +335,7 @@ code. So an effect on P1 and the same effect on P2 need two compiled versions of
 OTHER).
 
 **No files are written.** The copies are made in memory, from the shader file that already exists.
-- The stencil lines live once, inside `#ifdef` blocks in the shared include `game/fx/shaders/fx_depth_bias.gdshaderinc`:
+- The stencil lines live once, inside `#ifdef` blocks in the shared include `game/fx/shaders/fx_stencil_depth.gdshaderinc`:
   ```glsl
   #ifdef FX_STENCIL_REF
   stencil_mode read, FX_STENCIL_COMPARE, FX_STENCIL_REF;
@@ -411,7 +412,7 @@ means the plain depth test, and the bias is gone (1.5). Value 0 happens:
 - **Changed system code:**
   - `UnitAnimator` (`stencil_value`, `mark_stencil`, `stencil_changed`);
   - `FxAnchor`, `FxService` and the three layers (`stencil_unit`, `over_own_unit`, `next_pass` parameters);
-  - the `#ifdef FX_STENCIL_*` blocks in `game/fx/shaders/fx_depth_bias.gdshaderinc` (no effect shader file changes);
+  - the `#ifdef FX_STENCIL_*` blocks in `game/fx/shaders/fx_stencil_depth.gdshaderinc` (no effect shader file changes);
   - the validator;
   - the gallery's Stencil page;
   - the console `fx stencil`;
@@ -439,7 +440,7 @@ Client-side failure modes:
 | A see-through unit (fading out, dissolving on death, made of glass) | A blending material is drawn in the transparent pass along with the effects, so its stamp may land after an effect has tested, and its stamp stays where its pixels are fully transparent. Effects on it and behind it could flicker or vanish. It uses the fallback: while any of its materials blends, `stencil_value` reads 0, nothing is stamped, and the view emits `stencil_changed`, so live effects on it switch to the bias and back once it is solid | `test_stencil_see_through_unit_falls_back` |
 | A misspelt stencil mode word (`write_foo` silently counts as `write`, K6) | Validator `fx_stencil_mode_unknown` (error): every word of a `stencil_mode` line in `game/fx/shaders/` and in the unit include must be exactly a mode name, a compare name, a number or an `FX_STENCIL_*` define | `test_fx_validator_stencil_mode` |
 | A content or presentation material uses a unit stencil value (Godot's Outline and X-Ray presets default to reference **1**, which is P1) | Validator `fx_stencil_value_taken` (error): a material under `content/` or `presentation/` with stencil on must use a value outside 1–31, from a range the table gives it | `test_fx_validator_stencil_value` |
-| An over-unit effect shader that does not include `fx_depth_bias.gdshaderinc` | It would never get the stencil blocks: validator `fx_stencil_include_missing` (error) for shaders used by over-unit layers | `test_fx_validator_stencil_include` |
+| An over-unit effect shader that does not include `fx_stencil_depth.gdshaderinc` | It would never get the stencil blocks: validator `fx_stencil_include_missing` (error) for shaders used by over-unit layers | `test_fx_validator_stencil_include` |
 | A shader copy compiled mid-battle | Every copy is compiled behind the run's loading screen (3.4); a copy missing from the cache is made at once and counted in `fx stats` | `test_stencil_variants_prepared` |
 | Parameters drift between the two passes | `apply` and bindings walk `next_pass` | `test_stencil_next_pass_params_in_sync` |
 | A view freed while an effect still plays on it | The effect keeps its value until it ends; the value is not reused in that battle | `test_stencil_value_not_reused_in_battle` |

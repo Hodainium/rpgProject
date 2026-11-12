@@ -21,7 +21,7 @@ uniform float ring_width = 0.1;
 uniform float start_radius = 0.1;
 uniform float end_radius = 0.95;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 void fragment() {
 	vec2 p = (UV - vec2(0.5)) * 2.0;

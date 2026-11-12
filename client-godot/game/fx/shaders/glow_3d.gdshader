@@ -24,7 +24,7 @@ uniform float fade_out = 0.6;
 uniform float pulse_speed = 0.0;
 uniform float pulse_amount = 0.2;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 void fragment() {
 	vec2 p = (UV - vec2(0.5)) * 2.0;

@@ -2,7 +2,7 @@
 ## (K5: it is a compile-time literal), so an effect drawn over P1 and over P2 needs two compiled versions of its shader, each in two
 ## passes: OWN (only its unit's pixels, no depth test) and OTHER (everywhere else, the normal depth test). A copy is made in memory,
 ## never written to a file: a few #define lines in front of the original code. The stencil lines live once, in #ifdef blocks of
-## fx_depth_bias.gdshaderinc, so without the defines every shader is exactly today's.
+## fx_stencil_depth.gdshaderinc, so without the defines every shader is exactly today's.
 ## `mode` is the dev switch (console `fx stencil on|off`): stencil, the default, or off (every effect one pass with the plain depth
 ## test, for debugging and for a renderer without stencil). Presentation only.
 class_name FxStencilShaders
@@ -12,7 +12,7 @@ enum Pass { OWN, OTHER }
 
 const OFF: StringName = &"off"
 ## The include that carries the stencil lines; a shader without it has none, so it never goes two-pass.
-const INCLUDE := "fx_depth_bias.gdshaderinc"
+const INCLUDE := "fx_stencil_depth.gdshaderinc"
 ## Shader-sampled textures the engine fills; a second pass never copies them.
 const ENGINE_UNIFORMS: Array[StringName] = [&"fx_scene_depth"]
 const STENCIL: StringName = &"stencil"
@@ -62,7 +62,7 @@ static func variant(shader: Shader, value: int, pass_kind: int) -> Shader:
 	return copy
 
 
-## True when `shader` can draw over a unit: it includes the stencil lines (fx_depth_bias.gdshaderinc). Any other shader would draw
+## True when `shader` can draw over a unit: it includes the stencil lines (fx_stencil_depth.gdshaderinc). Any other shader would draw
 ## its whole effect in both passes, twice as bright, with no stencil test.
 static func supports(shader: Shader) -> bool:
 	if shader == null:

@@ -22,7 +22,7 @@ uniform float intensity = 2.0;
 uniform float sharpness = 14.0;
 uniform float ripple = 0.35;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));

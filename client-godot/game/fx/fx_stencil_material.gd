@@ -4,7 +4,7 @@
 ## as its next_pass. 0 puts `base_shader` back, one pass, exactly today's material. Parameter values carry over every swap.
 ## The OWN pass mirrors this material's parameters through sync_own_pass(): effect bindings write the material through the engine
 ## (`material:shader_parameter/x`), which a script cannot intercept, so the owner calls it after writing (the layer, every tick).
-## A shader that does not include fx_depth_bias.gdshaderinc has no stencil lines, so it stays one pass whatever the setting.
+## A shader that does not include fx_stencil_depth.gdshaderinc has no stencil lines, so it stays one pass whatever the setting.
 ## Presentation only.
 class_name FxStencilMaterial
 extends ShaderMaterial

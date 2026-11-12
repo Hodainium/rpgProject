@@ -20,7 +20,7 @@ uniform float intensity = 2.0;
 uniform float crack_count = 9.0;
 uniform float width = 0.018;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 float hash11(float n) {
 	return fract(sin(n * 91.3458) * 47453.5453);

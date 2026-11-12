@@ -21,7 +21,7 @@ uniform float intensity = 2.0;
 uniform float angle = -25.0;
 uniform float thickness = 0.5;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 void fragment() {
 	// Quad space -1..1 with y up, turned by `angle` about the centre.

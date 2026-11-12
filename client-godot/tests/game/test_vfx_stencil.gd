@@ -4,7 +4,7 @@
 extends TestCase
 
 const GLOW := "res://game/fx/shaders/glow_3d.gdshader"
-const INCLUDE := "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+const INCLUDE := "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 var _nodes: Array[Node] = []
 var _services: Array[FxService] = []
@@ -290,7 +290,7 @@ void fragment() { ALBEDO = vec3(1.0); }
 	eq(layer.stencil_for(_anchor(4)), 0, "no include, no stencil lines: it would draw its whole effect twice")
 	check(not FxStencilShaders.supports(plain) and FxStencilShaders.supports(load(GLOW)), "supports() is the include")
 	var named_only := Shader.new()
-	named_only.code = "shader_type spatial;\n// works like fx_depth_bias.gdshaderinc, but does not include it\nvoid fragment() { ALBEDO = vec3(1.0); }\n"
+	named_only.code = "shader_type spatial;\n// works like fx_stencil_depth.gdshaderinc, but does not include it\nvoid fragment() { ALBEDO = vec3(1.0); }\n"
 	check(not FxStencilShaders.supports(named_only), "a comment naming the file is not the include")
 
 
@@ -518,6 +518,6 @@ func test_review_fixes_of_step_2() -> void:
 "
 	check(not FxStencilShaders.supports(shader), "no include")
 	shader.code = "shader_type spatial;
-#include \"res://game/fx/shaders/fx_depth_bias.gdshaderinc\"
+#include \"res://game/fx/shaders/fx_stencil_depth.gdshaderinc\"
 "
 	check(FxStencilShaders.supports(shader), "edited to include it: checked again")
