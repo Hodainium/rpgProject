@@ -13,11 +13,6 @@ script = ExtResource("2_neo7m")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_821ss"]
-script = ExtResource("2_neo7m")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_j8pna"]
 offsets = PackedFloat32Array(0, 0.06, 0.94, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -60,18 +55,13 @@ local_coords = true
 id = &"star0"
 loop = true
 loop_period = 1.5
-bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_t7q3i"), SubResource("Resource_821ss")])
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_t7q3i")])
 tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_bi4qq"), SubResource("Resource_148sm")])
 
 [sub_resource type="Resource" id="Resource_7pegu"]
 script = ExtResource("2_neo7m")
 property = "process_material:color"
 param = &"trail_color"
-
-[sub_resource type="Resource" id="Resource_6d6b0"]
-script = ExtResource("2_neo7m")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_56uru"]
 colors = PackedColorArray(1, 1, 1, 0.95, 1, 1, 1, 0)
@@ -95,18 +85,13 @@ size_curve = SubResource("Curve_h0q0m")
 id = &"trail0"
 loop = true
 loop_period = 1.5
-bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_7pegu"), SubResource("Resource_6d6b0")])
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_7pegu")])
 tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_bi4qq"), SubResource("Resource_148sm")])
 
 [sub_resource type="Resource" id="Resource_bn0n1"]
 script = ExtResource("2_neo7m")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_7ugdh"]
-script = ExtResource("2_neo7m")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_oryrf"]
 offsets = PackedFloat32Array(0, 0.06, 0.94, 1)
@@ -150,18 +135,13 @@ local_coords = true
 id = &"star1"
 loop = true
 loop_period = 1.5
-bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_bn0n1"), SubResource("Resource_7ugdh")])
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_bn0n1")])
 tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_iwl1c"), SubResource("Resource_7vpwu")])
 
 [sub_resource type="Resource" id="Resource_xkrik"]
 script = ExtResource("2_neo7m")
 property = "process_material:color"
 param = &"trail_color"
-
-[sub_resource type="Resource" id="Resource_6uo4u"]
-script = ExtResource("2_neo7m")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_87mqi"]
 colors = PackedColorArray(1, 1, 1, 0.95, 1, 1, 1, 0)
@@ -185,18 +165,13 @@ size_curve = SubResource("Curve_o2ryf")
 id = &"trail1"
 loop = true
 loop_period = 1.5
-bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_xkrik"), SubResource("Resource_6uo4u")])
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_xkrik")])
 tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_iwl1c"), SubResource("Resource_7vpwu")])
 
 [sub_resource type="Resource" id="Resource_yxs4s"]
 script = ExtResource("2_neo7m")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_e4o0q"]
-script = ExtResource("2_neo7m")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_fb3lx"]
 offsets = PackedFloat32Array(0, 0.06, 0.94, 1)
@@ -240,18 +215,13 @@ local_coords = true
 id = &"star2"
 loop = true
 loop_period = 1.5
-bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_yxs4s"), SubResource("Resource_e4o0q")])
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_yxs4s")])
 tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_7eq5l"), SubResource("Resource_tpx5k")])
 
 [sub_resource type="Resource" id="Resource_dlsrp"]
 script = ExtResource("2_neo7m")
 property = "process_material:color"
 param = &"trail_color"
-
-[sub_resource type="Resource" id="Resource_7dfsm"]
-script = ExtResource("2_neo7m")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_60yks"]
 colors = PackedColorArray(1, 1, 1, 0.95, 1, 1, 1, 0)
@@ -275,7 +245,7 @@ size_curve = SubResource("Curve_j3uw1")
 id = &"trail2"
 loop = true
 loop_period = 1.5
-bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_dlsrp"), SubResource("Resource_7dfsm")])
+bindings = Array[ExtResource("2_neo7m")]([SubResource("Resource_dlsrp")])
 tracks = Array[ExtResource("5_mrvan")]([SubResource("Resource_7eq5l"), SubResource("Resource_tpx5k")])
 
 [sub_resource type="Resource" id="Resource_0qnrh"]
@@ -292,18 +262,11 @@ kind = 3
 default_value = Color(1, 1, 1, 1)
 description = "Colour of the chaser trail."
 
-[sub_resource type="Resource" id="Resource_qm8b1"]
-script = ExtResource("6_ws5au")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("7_d51bv")
 id = &"fx.stun_stars"
 display_name = "Stun stars"
-params = Array[ExtResource("6_ws5au")]([SubResource("Resource_0qnrh"), SubResource("Resource_rd6uy"), SubResource("Resource_qm8b1")])
+params = Array[ExtResource("6_ws5au")]([SubResource("Resource_0qnrh"), SubResource("Resource_rd6uy")])
 layers = Array[ExtResource("1_bmp52")]([SubResource("Resource_14ysh"), SubResource("Resource_qrod4"), SubResource("Resource_fovs6"), SubResource("Resource_tx0m6"), SubResource("Resource_i06mn"), SubResource("Resource_jmmy2")])
 socket = &"Top"
 tags = Array[StringName]([&"Fx.Kind.Aura"])

@@ -18,11 +18,6 @@ script = ExtResource("2_vuel7")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_i85tv"]
-script = ExtResource("2_vuel7")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_htaue"]
 offsets = PackedFloat32Array(0, 0.7, 1)
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -45,17 +40,12 @@ anim_cycles = 0.0
 random_frame = true
 additive = false
 id = &"shards"
-bindings = Array[ExtResource("2_vuel7")]([SubResource("Resource_n7xel"), SubResource("Resource_i85tv")])
+bindings = Array[ExtResource("2_vuel7")]([SubResource("Resource_n7xel")])
 
 [sub_resource type="Resource" id="Resource_jfne7"]
 script = ExtResource("2_vuel7")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_71c4x"]
-script = ExtResource("2_vuel7")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_4hcub"]
 offsets = PackedFloat32Array(0, 0.2, 1)
@@ -77,7 +67,7 @@ texture = ExtResource("6_7hs6f")
 h_frames = 4
 v_frames = 4
 id = &"mist"
-bindings = Array[ExtResource("2_vuel7")]([SubResource("Resource_jfne7"), SubResource("Resource_71c4x")])
+bindings = Array[ExtResource("2_vuel7")]([SubResource("Resource_jfne7")])
 
 [sub_resource type="Resource" id="Resource_1lv4l"]
 script = ExtResource("2_vuel7")
@@ -90,11 +80,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 1.4
 
-[sub_resource type="Resource" id="Resource_b1kfb"]
-script = ExtResource("2_vuel7")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_3yymn"]
 script = ExtResource("7_bygc6")
 shader = ExtResource("8_s1rpp")
@@ -102,7 +87,7 @@ size = Vector2(2.6, 2.6)
 id = &"ring"
 space = 2
 duration = 0.4
-bindings = Array[ExtResource("2_vuel7")]([SubResource("Resource_1lv4l"), SubResource("Resource_yjiqf"), SubResource("Resource_b1kfb")])
+bindings = Array[ExtResource("2_vuel7")]([SubResource("Resource_1lv4l"), SubResource("Resource_yjiqf")])
 
 [sub_resource type="Resource" id="Resource_kjv8c"]
 script = ExtResource("2_vuel7")
@@ -146,18 +131,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Ring brightness."
 
-[sub_resource type="Resource" id="Resource_q3kfx"]
-script = ExtResource("11_0hda0")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "World units the depth test sees the effect closer to the camera. Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("12_j2twx")
 id = &"fx.ice_hit"
 display_name = "Ice hit"
-params = Array[ExtResource("11_0hda0")]([SubResource("Resource_ehrbk"), SubResource("Resource_mnylw"), SubResource("Resource_q3kfx")])
+params = Array[ExtResource("11_0hda0")]([SubResource("Resource_ehrbk"), SubResource("Resource_mnylw")])
 layers = Array[ExtResource("1_nrxcx")]([SubResource("Resource_6hk7t"), SubResource("Resource_ttnl6"), SubResource("Resource_3yymn"), SubResource("Resource_qs8g4"), SubResource("Resource_lvot7")])
 socket = &"Hit"
 tags = Array[StringName]([&"Fx.Kind.Hit"])

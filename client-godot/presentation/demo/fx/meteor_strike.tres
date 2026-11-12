@@ -107,11 +107,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 1.2
 
-[sub_resource type="Resource" id="Resource_mrhxm"]
-script = ExtResource("2_pmtkf")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_pvfjf"]
 script = ExtResource("6_twx76")
 shader = ExtResource("7_par7w")
@@ -123,18 +118,13 @@ size = Vector2(2.2, 2.2)
 id = &"halo"
 space = 2
 duration = 0.45
-bindings = Array[ExtResource("2_pmtkf")]([SubResource("Resource_yxhff"), SubResource("Resource_vjmb3"), SubResource("Resource_mrhxm")])
+bindings = Array[ExtResource("2_pmtkf")]([SubResource("Resource_yxhff"), SubResource("Resource_vjmb3")])
 tracks = Array[ExtResource("5_sqmsb")]([SubResource("Resource_mo8at"), SubResource("Resource_veiol")])
 
 [sub_resource type="Resource" id="Resource_hmiy7"]
 script = ExtResource("2_pmtkf")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_o0y1i"]
-script = ExtResource("2_pmtkf")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_mirt0"]
 offsets = PackedFloat32Array(0, 0.4, 1)
@@ -155,7 +145,7 @@ texture = ExtResource("9_vsf4c")
 h_frames = 8
 v_frames = 4
 id = &"trail"
-bindings = Array[ExtResource("2_pmtkf")]([SubResource("Resource_hmiy7"), SubResource("Resource_o0y1i")])
+bindings = Array[ExtResource("2_pmtkf")]([SubResource("Resource_hmiy7")])
 tracks = Array[ExtResource("5_sqmsb")]([SubResource("Resource_mo8at"), SubResource("Resource_veiol")])
 
 [sub_resource type="Resource" id="Resource_5asd7"]
@@ -172,11 +162,6 @@ start_delay = 0.42
 script = ExtResource("2_pmtkf")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_cdw7h"]
-script = ExtResource("2_pmtkf")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Curve" id="Curve_akxrm"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
@@ -204,7 +189,7 @@ space = 2
 socket = &"Base"
 start_delay = 0.42
 duration = 0.6
-bindings = Array[ExtResource("2_pmtkf")]([SubResource("Resource_kynqq"), SubResource("Resource_cdw7h")])
+bindings = Array[ExtResource("2_pmtkf")]([SubResource("Resource_kynqq")])
 tracks = Array[ExtResource("5_sqmsb")]([SubResource("Resource_r2ell")])
 
 [sub_resource type="Resource" id="Resource_r4nll"]
@@ -236,18 +221,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Glow brightness."
 
-[sub_resource type="Resource" id="Resource_jdq2p"]
-script = ExtResource("14_jeet0")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("15_nlnln")
 id = &"fx.meteor_strike"
 display_name = "Meteor strike"
-params = Array[ExtResource("14_jeet0")]([SubResource("Resource_6dj4t"), SubResource("Resource_2i8ef"), SubResource("Resource_jdq2p")])
+params = Array[ExtResource("14_jeet0")]([SubResource("Resource_6dj4t"), SubResource("Resource_2i8ef")])
 layers = Array[ExtResource("1_aoujf")]([SubResource("Resource_r28gp"), SubResource("Resource_pvfjf"), SubResource("Resource_1rx8j"), SubResource("Resource_5asd7"), SubResource("Resource_smkkt"), SubResource("Resource_48u5q")])
 socket = &"Base"
 tags = Array[StringName]([&"Fx.Kind.Burst"])

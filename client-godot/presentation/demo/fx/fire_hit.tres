@@ -29,11 +29,6 @@ property = "process_material:scale_max"
 param = &"size"
 scale = 2.0
 
-[sub_resource type="Resource" id="Resource_8ifcl"]
-script = ExtResource("2_3w2xw")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_qb23t"]
 offsets = PackedFloat32Array(0, 0.18, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -58,17 +53,12 @@ texture = ExtResource("4_ex8q7")
 h_frames = 8
 v_frames = 4
 id = &"flames"
-bindings = Array[ExtResource("2_3w2xw")]([SubResource("Resource_4g2xs"), SubResource("Resource_1lgq4"), SubResource("Resource_u05rs"), SubResource("Resource_8ifcl")])
+bindings = Array[ExtResource("2_3w2xw")]([SubResource("Resource_4g2xs"), SubResource("Resource_1lgq4"), SubResource("Resource_u05rs")])
 
 [sub_resource type="Resource" id="Resource_37f3u"]
 script = ExtResource("2_3w2xw")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_4cf2i"]
-script = ExtResource("2_3w2xw")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_bx3q1"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -89,7 +79,7 @@ lifetime = 0.9
 color_ramp = SubResource("Gradient_bx3q1")
 id = &"embers"
 min_quality = 2
-bindings = Array[ExtResource("2_3w2xw")]([SubResource("Resource_37f3u"), SubResource("Resource_4cf2i")])
+bindings = Array[ExtResource("2_3w2xw")]([SubResource("Resource_37f3u")])
 
 [sub_resource type="Resource" id="Resource_4rivk"]
 script = ExtResource("2_3w2xw")
@@ -102,11 +92,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 1.6
 
-[sub_resource type="Resource" id="Resource_l3afd"]
-script = ExtResource("2_3w2xw")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_ga4ft"]
 script = ExtResource("6_wb0vg")
 shader = ExtResource("7_ta2xa")
@@ -114,7 +99,7 @@ size = Vector2(2.4, 2.4)
 id = &"glow"
 space = 2
 duration = 0.3
-bindings = Array[ExtResource("2_3w2xw")]([SubResource("Resource_4rivk"), SubResource("Resource_f3kg6"), SubResource("Resource_l3afd")])
+bindings = Array[ExtResource("2_3w2xw")]([SubResource("Resource_4rivk"), SubResource("Resource_f3kg6")])
 
 [sub_resource type="Resource" id="Resource_ohp8c"]
 script = ExtResource("2_3w2xw")
@@ -169,18 +154,11 @@ min_value = 0.3
 max_value = 3.0
 description = "Flame size multiplier."
 
-[sub_resource type="Resource" id="Resource_w3dnn"]
-script = ExtResource("10_wj7vj")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "World units the depth test sees the effect closer to the camera. Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("11_pqpld")
 id = &"fx.fire_hit"
 display_name = "Fire hit"
-params = Array[ExtResource("10_wj7vj")]([SubResource("Resource_ejqct"), SubResource("Resource_nlq8p"), SubResource("Resource_kg0no"), SubResource("Resource_w3dnn")])
+params = Array[ExtResource("10_wj7vj")]([SubResource("Resource_ejqct"), SubResource("Resource_nlq8p"), SubResource("Resource_kg0no")])
 layers = Array[ExtResource("1_nkx7y")]([SubResource("Resource_g0dqo"), SubResource("Resource_mpwsl"), SubResource("Resource_ga4ft"), SubResource("Resource_k6jj4"), SubResource("Resource_s8oj3")])
 socket = &"Hit"
 tags = Array[StringName]([&"Fx.Kind.Hit"])

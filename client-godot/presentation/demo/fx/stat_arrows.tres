@@ -33,11 +33,6 @@ script = ExtResource("2_gtrum")
 property = "process_material:angle_max"
 param = &"angle"
 
-[sub_resource type="Resource" id="Resource_eu8xi"]
-script = ExtResource("2_gtrum")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_i21ki"]
 offsets = PackedFloat32Array(0, 0.2, 0.75, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -58,7 +53,7 @@ texture = ExtResource("4_yw3ys")
 additive = false
 id = &"arrows"
 loop = true
-bindings = Array[ExtResource("2_gtrum")]([SubResource("Resource_7ernd"), SubResource("Resource_jbjj1"), SubResource("Resource_gf7pf"), SubResource("Resource_5leg6"), SubResource("Resource_7oryp"), SubResource("Resource_eu8xi")])
+bindings = Array[ExtResource("2_gtrum")]([SubResource("Resource_7ernd"), SubResource("Resource_jbjj1"), SubResource("Resource_gf7pf"), SubResource("Resource_5leg6"), SubResource("Resource_7oryp")])
 
 [sub_resource type="Resource" id="Resource_ywvs0"]
 script = ExtResource("6_xjmpu")
@@ -87,18 +82,11 @@ name = &"angle"
 max_value = 360.0
 description = "Turns the chevrons over (180 for a debuff)."
 
-[sub_resource type="Resource" id="Resource_ttyii"]
-script = ExtResource("6_xjmpu")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("7_3i87s")
 id = &"fx.stat_arrows"
 display_name = "Stat arrows"
-params = Array[ExtResource("6_xjmpu")]([SubResource("Resource_ywvs0"), SubResource("Resource_oq52o"), SubResource("Resource_uttvo"), SubResource("Resource_efn26"), SubResource("Resource_ttyii")])
+params = Array[ExtResource("6_xjmpu")]([SubResource("Resource_ywvs0"), SubResource("Resource_oq52o"), SubResource("Resource_uttvo"), SubResource("Resource_efn26")])
 layers = Array[ExtResource("1_vq4fo")]([SubResource("Resource_cq3jx")])
 tags = Array[StringName]([&"Fx.Kind.Aura"])
 description = "Chevrons rising or sinking around a unit with a stat buff or debuff."

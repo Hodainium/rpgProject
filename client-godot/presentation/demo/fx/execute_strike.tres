@@ -26,11 +26,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 3.0
 
-[sub_resource type="Resource" id="Resource_axhyp"]
-script = ExtResource("2_igu3p")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Curve" id="Curve_458t0"]
 _limits = [-1.2, 5.6, 0.0, 1.0]
 _data = [Vector2(0, 4.6), 0.0, 0.0, 0, 0, Vector2(0.55, 1.24), 0.0, 0.0, 0, 0, Vector2(1, -0.2), 0.0, 0.0, 0, 0]
@@ -53,7 +48,7 @@ size = Vector2(0.5, 4.6)
 id = &"blade"
 space = 2
 duration = 0.18
-bindings = Array[ExtResource("2_igu3p")]([SubResource("Resource_vukac"), SubResource("Resource_msmn7"), SubResource("Resource_axhyp")])
+bindings = Array[ExtResource("2_igu3p")]([SubResource("Resource_vukac"), SubResource("Resource_msmn7")])
 tracks = Array[ExtResource("5_hy3kt")]([SubResource("Resource_frdtf")])
 
 [sub_resource type="Resource" id="Resource_s5t7i"]
@@ -67,11 +62,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 2.4
 
-[sub_resource type="Resource" id="Resource_u4m1a"]
-script = ExtResource("2_igu3p")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_mk40q"]
 script = ExtResource("3_wvoa0")
 shader = ExtResource("6_xe8tk")
@@ -84,17 +74,12 @@ id = &"cut"
 space = 2
 start_delay = 0.17
 duration = 0.26
-bindings = Array[ExtResource("2_igu3p")]([SubResource("Resource_s5t7i"), SubResource("Resource_2r4k6"), SubResource("Resource_u4m1a")])
+bindings = Array[ExtResource("2_igu3p")]([SubResource("Resource_s5t7i"), SubResource("Resource_2r4k6")])
 
 [sub_resource type="Resource" id="Resource_1q5gn"]
 script = ExtResource("2_igu3p")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_feefq"]
-script = ExtResource("2_igu3p")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_3sqc4"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -113,7 +98,7 @@ lifetime = 0.5
 color_ramp = SubResource("Gradient_3sqc4")
 id = &"sparks"
 start_delay = 0.17
-bindings = Array[ExtResource("2_igu3p")]([SubResource("Resource_1q5gn"), SubResource("Resource_feefq")])
+bindings = Array[ExtResource("2_igu3p")]([SubResource("Resource_1q5gn")])
 
 [sub_resource type="Resource" id="Resource_ovpve"]
 script = ExtResource("2_igu3p")
@@ -177,18 +162,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Brightness."
 
-[sub_resource type="Resource" id="Resource_p8bj7"]
-script = ExtResource("13_2enah")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("14_ly4kb")
 id = &"fx.execute_strike"
 display_name = "Execute strike"
-params = Array[ExtResource("13_2enah")]([SubResource("Resource_68ftn"), SubResource("Resource_4jtqt"), SubResource("Resource_p8bj7")])
+params = Array[ExtResource("13_2enah")]([SubResource("Resource_68ftn"), SubResource("Resource_4jtqt")])
 layers = Array[ExtResource("1_fporu")]([SubResource("Resource_wqcms"), SubResource("Resource_mk40q"), SubResource("Resource_ya3nr"), SubResource("Resource_qgvqg"), SubResource("Resource_uoq58"), SubResource("Resource_1ko0k"), SubResource("Resource_uu3h2")])
 socket = &"Hit"
 tags = Array[StringName]([&"Fx.Kind.Burst"])

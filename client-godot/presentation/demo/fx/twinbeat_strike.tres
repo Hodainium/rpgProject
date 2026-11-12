@@ -17,11 +17,6 @@ script = ExtResource("2_oyv4u")
 property = "material:shader_parameter/color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_ejgwn"]
-script = ExtResource("2_oyv4u")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Curve" id="Curve_gl50m"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
 _data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
@@ -48,7 +43,7 @@ id = &"thump0"
 space = 2
 socket = &"Base"
 duration = 0.5
-bindings = Array[ExtResource("2_oyv4u")]([SubResource("Resource_2lid6"), SubResource("Resource_ejgwn")])
+bindings = Array[ExtResource("2_oyv4u")]([SubResource("Resource_2lid6")])
 tracks = Array[ExtResource("5_fxrxp")]([SubResource("Resource_4oth0")])
 
 [sub_resource type="Resource" id="Resource_m272c"]
@@ -62,11 +57,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 2.4
 
-[sub_resource type="Resource" id="Resource_x7h6d"]
-script = ExtResource("2_oyv4u")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_wmxpo"]
 script = ExtResource("3_hd1ap")
 shader = ExtResource("6_r47s7")
@@ -78,7 +68,7 @@ size = Vector2(2.4, 2.4)
 id = &"flash0"
 space = 2
 duration = 0.16
-bindings = Array[ExtResource("2_oyv4u")]([SubResource("Resource_m272c"), SubResource("Resource_d1ay5"), SubResource("Resource_x7h6d")])
+bindings = Array[ExtResource("2_oyv4u")]([SubResource("Resource_m272c"), SubResource("Resource_d1ay5")])
 
 [sub_resource type="Resource" id="Resource_5hejq"]
 script = ExtResource("7_675q4")
@@ -86,11 +76,6 @@ strength_world = 0.08
 seconds = 0.14
 id = &"shake0"
 min_quality = 2
-
-[sub_resource type="Resource" id="Resource_5irgi"]
-script = ExtResource("2_oyv4u")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_vmumm"]
 colors = PackedColorArray(1, 1, 1, 0.6, 1, 1, 1, 0)
@@ -113,17 +98,12 @@ h_frames = 4
 v_frames = 4
 additive = false
 id = &"dust0"
-bindings = Array[ExtResource("2_oyv4u")]([SubResource("Resource_5irgi")])
+bindings = Array[ExtResource("2_oyv4u")]([])
 
 [sub_resource type="Resource" id="Resource_3r4ef"]
 script = ExtResource("2_oyv4u")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_icr72"]
-script = ExtResource("2_oyv4u")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Curve" id="Curve_136vx"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
@@ -152,7 +132,7 @@ space = 2
 socket = &"Base"
 start_delay = 0.24
 duration = 0.5
-bindings = Array[ExtResource("2_oyv4u")]([SubResource("Resource_3r4ef"), SubResource("Resource_icr72")])
+bindings = Array[ExtResource("2_oyv4u")]([SubResource("Resource_3r4ef")])
 tracks = Array[ExtResource("5_fxrxp")]([SubResource("Resource_ex2et")])
 
 [sub_resource type="Resource" id="Resource_7g2q6"]
@@ -166,11 +146,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 2.4
 
-[sub_resource type="Resource" id="Resource_lw30y"]
-script = ExtResource("2_oyv4u")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_2xyqn"]
 script = ExtResource("3_hd1ap")
 shader = ExtResource("6_r47s7")
@@ -183,7 +158,7 @@ id = &"flash1"
 space = 2
 start_delay = 0.24
 duration = 0.16
-bindings = Array[ExtResource("2_oyv4u")]([SubResource("Resource_7g2q6"), SubResource("Resource_jylkt"), SubResource("Resource_lw30y")])
+bindings = Array[ExtResource("2_oyv4u")]([SubResource("Resource_7g2q6"), SubResource("Resource_jylkt")])
 
 [sub_resource type="Resource" id="Resource_rgap4"]
 script = ExtResource("7_675q4")
@@ -192,11 +167,6 @@ seconds = 0.14
 id = &"shake24"
 start_delay = 0.24
 min_quality = 2
-
-[sub_resource type="Resource" id="Resource_q2pam"]
-script = ExtResource("2_oyv4u")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_20uyy"]
 colors = PackedColorArray(1, 1, 1, 0.6, 1, 1, 1, 0)
@@ -220,7 +190,7 @@ v_frames = 4
 additive = false
 id = &"dust1"
 start_delay = 0.24
-bindings = Array[ExtResource("2_oyv4u")]([SubResource("Resource_q2pam")])
+bindings = Array[ExtResource("2_oyv4u")]([])
 
 [sub_resource type="Resource" id="Resource_45alo"]
 script = ExtResource("10_2hq6e")
@@ -236,18 +206,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Flash brightness."
 
-[sub_resource type="Resource" id="Resource_i5ks2"]
-script = ExtResource("10_2hq6e")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("11_tduer")
 id = &"fx.twinbeat_strike"
 display_name = "Twin Beat strike"
-params = Array[ExtResource("10_2hq6e")]([SubResource("Resource_45alo"), SubResource("Resource_7pjkr"), SubResource("Resource_i5ks2")])
+params = Array[ExtResource("10_2hq6e")]([SubResource("Resource_45alo"), SubResource("Resource_7pjkr")])
 layers = Array[ExtResource("1_whl6s")]([SubResource("Resource_117wk"), SubResource("Resource_wmxpo"), SubResource("Resource_5hejq"), SubResource("Resource_lyj26"), SubResource("Resource_0fjgp"), SubResource("Resource_2xyqn"), SubResource("Resource_rgap4"), SubResource("Resource_x1s85")])
 socket = &"Base"
 tags = Array[StringName]([&"Fx.Kind.Burst"])

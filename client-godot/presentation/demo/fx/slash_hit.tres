@@ -26,11 +26,6 @@ script = ExtResource("2_wp1en")
 property = "material:shader_parameter/angle"
 param = &"angle"
 
-[sub_resource type="Resource" id="Resource_blagm"]
-script = ExtResource("2_wp1en")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_m7e12"]
 script = ExtResource("3_mnp2r")
 shader = ExtResource("4_ya1ec")
@@ -41,17 +36,12 @@ size = Vector2(2.8, 2.8)
 id = &"cut"
 space = 2
 duration = 0.32
-bindings = Array[ExtResource("2_wp1en")]([SubResource("Resource_eb2yi"), SubResource("Resource_anon2"), SubResource("Resource_qhgmk"), SubResource("Resource_blagm")])
+bindings = Array[ExtResource("2_wp1en")]([SubResource("Resource_eb2yi"), SubResource("Resource_anon2"), SubResource("Resource_qhgmk")])
 
 [sub_resource type="Resource" id="Resource_0odwt"]
 script = ExtResource("2_wp1en")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_yw5n5"]
-script = ExtResource("2_wp1en")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_v2ju4"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -68,7 +58,7 @@ amount = 14
 lifetime = 0.35
 color_ramp = SubResource("Gradient_v2ju4")
 id = &"sparks"
-bindings = Array[ExtResource("2_wp1en")]([SubResource("Resource_0odwt"), SubResource("Resource_yw5n5")])
+bindings = Array[ExtResource("2_wp1en")]([SubResource("Resource_0odwt")])
 
 [sub_resource type="Resource" id="Resource_nhp7g"]
 script = ExtResource("2_wp1en")
@@ -105,18 +95,11 @@ min_value = -180.0
 max_value = 180.0
 description = "Degrees the cut is turned."
 
-[sub_resource type="Resource" id="Resource_wt6fy"]
-script = ExtResource("8_c2ax4")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("9_ymqn6")
 id = &"fx.slash_hit"
 display_name = "Slash hit"
-params = Array[ExtResource("8_c2ax4")]([SubResource("Resource_feqoc"), SubResource("Resource_s4ygk"), SubResource("Resource_8m24o"), SubResource("Resource_wt6fy")])
+params = Array[ExtResource("8_c2ax4")]([SubResource("Resource_feqoc"), SubResource("Resource_s4ygk"), SubResource("Resource_8m24o")])
 layers = Array[ExtResource("1_8xorc")]([SubResource("Resource_m7e12"), SubResource("Resource_aov5t"), SubResource("Resource_jd6ym")])
 socket = &"Hit"
 tags = Array[StringName]([&"Fx.Kind.Hit"])

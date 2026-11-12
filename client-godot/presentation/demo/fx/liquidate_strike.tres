@@ -11,11 +11,6 @@
 [ext_resource type="Script" path="res://game/fx/fx_param.gd" id="9_pcged"]
 [ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="10_6bykp"]
 
-[sub_resource type="Resource" id="Resource_bg6eo"]
-script = ExtResource("2_kdl2y")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_qvude"]
 offsets = PackedFloat32Array(0, 0.75, 1)
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -37,17 +32,12 @@ color_ramp = SubResource("Gradient_qvude")
 texture = ExtResource("4_x3opg")
 additive = false
 id = &"coins"
-bindings = Array[ExtResource("2_kdl2y")]([SubResource("Resource_bg6eo")])
+bindings = Array[ExtResource("2_kdl2y")]([])
 
 [sub_resource type="Resource" id="Resource_h342f"]
 script = ExtResource("2_kdl2y")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_2px6n"]
-script = ExtResource("2_kdl2y")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_aw7vk"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -62,7 +52,7 @@ emission_radius = 0.4
 amount = 36
 color_ramp = SubResource("Gradient_aw7vk")
 id = &"glints"
-bindings = Array[ExtResource("2_kdl2y")]([SubResource("Resource_h342f"), SubResource("Resource_2px6n")])
+bindings = Array[ExtResource("2_kdl2y")]([SubResource("Resource_h342f")])
 
 [sub_resource type="Resource" id="Resource_qvrwg"]
 script = ExtResource("2_kdl2y")
@@ -75,11 +65,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 1.6
 
-[sub_resource type="Resource" id="Resource_tkeap"]
-script = ExtResource("2_kdl2y")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_kasgx"]
 script = ExtResource("6_betkk")
 shader = ExtResource("7_fu02y")
@@ -91,17 +76,12 @@ size = Vector2(2.4, 2.4)
 id = &"glow"
 space = 2
 duration = 0.4
-bindings = Array[ExtResource("2_kdl2y")]([SubResource("Resource_qvrwg"), SubResource("Resource_rtg6g"), SubResource("Resource_tkeap")])
+bindings = Array[ExtResource("2_kdl2y")]([SubResource("Resource_qvrwg"), SubResource("Resource_rtg6g")])
 
 [sub_resource type="Resource" id="Resource_khgv8"]
 script = ExtResource("2_kdl2y")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_v4oxm"]
-script = ExtResource("2_kdl2y")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_f2kwv"]
 script = ExtResource("6_betkk")
@@ -116,7 +96,7 @@ size = Vector2(2.6, 2.6)
 id = &"ring"
 space = 2
 duration = 0.45
-bindings = Array[ExtResource("2_kdl2y")]([SubResource("Resource_khgv8"), SubResource("Resource_v4oxm")])
+bindings = Array[ExtResource("2_kdl2y")]([SubResource("Resource_khgv8")])
 
 [sub_resource type="Resource" id="Resource_8i70b"]
 script = ExtResource("9_pcged")
@@ -132,18 +112,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Glow brightness."
 
-[sub_resource type="Resource" id="Resource_b5t4r"]
-script = ExtResource("9_pcged")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("10_6bykp")
 id = &"fx.liquidate_strike"
 display_name = "Liquidate strike"
-params = Array[ExtResource("9_pcged")]([SubResource("Resource_8i70b"), SubResource("Resource_jtocf"), SubResource("Resource_b5t4r")])
+params = Array[ExtResource("9_pcged")]([SubResource("Resource_8i70b"), SubResource("Resource_jtocf")])
 layers = Array[ExtResource("1_ky2e5")]([SubResource("Resource_aqldk"), SubResource("Resource_8ue43"), SubResource("Resource_kasgx"), SubResource("Resource_f2kwv")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "Gold coins burst off the target in a fountain."

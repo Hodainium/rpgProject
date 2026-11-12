@@ -58,11 +58,6 @@ script = ExtResource("2_gh706")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_jqmaw"]
-script = ExtResource("2_gh706")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_imhmg"]
 offsets = PackedFloat32Array(0, 0.3, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.8)
@@ -81,17 +76,12 @@ amount = 44
 explosiveness = 0.0
 color_ramp = SubResource("Gradient_imhmg")
 id = &"pull"
-bindings = Array[ExtResource("2_gh706")]([SubResource("Resource_nlg86"), SubResource("Resource_jqmaw")])
+bindings = Array[ExtResource("2_gh706")]([SubResource("Resource_nlg86")])
 
 [sub_resource type="Resource" id="Resource_h6j85"]
 script = ExtResource("2_gh706")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_8cjn8"]
-script = ExtResource("2_gh706")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_ijr0c"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -109,17 +99,12 @@ lifetime = 0.7
 color_ramp = SubResource("Gradient_ijr0c")
 id = &"pop"
 start_delay = 0.95
-bindings = Array[ExtResource("2_gh706")]([SubResource("Resource_h6j85"), SubResource("Resource_8cjn8")])
+bindings = Array[ExtResource("2_gh706")]([SubResource("Resource_h6j85")])
 
 [sub_resource type="Resource" id="Resource_vub8x"]
 script = ExtResource("2_gh706")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_g1fvf"]
-script = ExtResource("2_gh706")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_dr3hb"]
 script = ExtResource("6_8lend")
@@ -136,7 +121,7 @@ space = 2
 socket = &"Hit"
 start_delay = 0.95
 duration = 0.5
-bindings = Array[ExtResource("2_gh706")]([SubResource("Resource_vub8x"), SubResource("Resource_g1fvf")])
+bindings = Array[ExtResource("2_gh706")]([SubResource("Resource_vub8x")])
 
 [sub_resource type="Resource" id="Resource_xq4u4"]
 script = ExtResource("2_gh706")
@@ -169,18 +154,11 @@ kind = 3
 default_value = Color(0.55, 0.3, 0.9, 1)
 description = "Void colour."
 
-[sub_resource type="Resource" id="Resource_d06n8"]
-script = ExtResource("10_7ueip")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("11_opfe5")
 id = &"fx.blackmass_strike"
 display_name = "Black Mass strike"
-params = Array[ExtResource("10_7ueip")]([SubResource("Resource_2pwol"), SubResource("Resource_d06n8")])
+params = Array[ExtResource("10_7ueip")]([SubResource("Resource_2pwol")])
 layers = Array[ExtResource("1_jyr13")]([SubResource("Resource_0vhk2"), SubResource("Resource_qvmcd"), SubResource("Resource_mwwyt"), SubResource("Resource_dr3hb"), SubResource("Resource_md62y"), SubResource("Resource_e5d5r")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "A black sphere forms above the target and pulls everything in, then collapses and bursts."

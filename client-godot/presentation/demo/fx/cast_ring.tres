@@ -14,11 +14,6 @@ script = ExtResource("2_wb53t")
 property = "material:shader_parameter/color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_uvh2p"]
-script = ExtResource("2_wb53t")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Curve" id="Curve_5nbbq"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
 _data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
@@ -44,18 +39,13 @@ id = &"ring"
 space = 2
 socket = &"Base"
 duration = 0.6
-bindings = Array[ExtResource("2_wb53t")]([SubResource("Resource_0k5l7"), SubResource("Resource_uvh2p")])
+bindings = Array[ExtResource("2_wb53t")]([SubResource("Resource_0k5l7")])
 tracks = Array[ExtResource("5_f2rnh")]([SubResource("Resource_pg801")])
 
 [sub_resource type="Resource" id="Resource_q5s8u"]
 script = ExtResource("2_wb53t")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_mvqf7"]
-script = ExtResource("2_wb53t")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Curve" id="Curve_osbds"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
@@ -83,7 +73,7 @@ space = 2
 socket = &"Base"
 start_delay = 0.18
 duration = 0.6
-bindings = Array[ExtResource("2_wb53t")]([SubResource("Resource_q5s8u"), SubResource("Resource_mvqf7")])
+bindings = Array[ExtResource("2_wb53t")]([SubResource("Resource_q5s8u")])
 tracks = Array[ExtResource("5_f2rnh")]([SubResource("Resource_ohc31")])
 
 [sub_resource type="Resource" id="Resource_wbixi"]
@@ -107,18 +97,11 @@ kind = 3
 default_value = Color(1, 0.85, 0.35, 1)
 description = "Colour of the ring and the flash (the ability's role)."
 
-[sub_resource type="Resource" id="Resource_mye35"]
-script = ExtResource("7_cer2q")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("8_ow0hq")
 id = &"fx.cast_ring"
 display_name = "Cast ring"
-params = Array[ExtResource("7_cer2q")]([SubResource("Resource_w65e8"), SubResource("Resource_mye35")])
+params = Array[ExtResource("7_cer2q")]([SubResource("Resource_w65e8")])
 layers = Array[ExtResource("1_q8y7g")]([SubResource("Resource_8yms1"), SubResource("Resource_jqw2r"), SubResource("Resource_a4ti4")])
 socket = &"Base"
 tags = Array[StringName]([&"Fx.Kind.Burst"])

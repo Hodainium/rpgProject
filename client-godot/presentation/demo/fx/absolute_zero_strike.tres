@@ -18,11 +18,6 @@ script = ExtResource("2_isdb4")
 property = "material:shader_parameter/color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_sb420"]
-script = ExtResource("2_isdb4")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Curve" id="Curve_xul8v"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
 _data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
@@ -48,18 +43,13 @@ id = &"frostring"
 space = 2
 socket = &"Base"
 duration = 0.7
-bindings = Array[ExtResource("2_isdb4")]([SubResource("Resource_tbiug"), SubResource("Resource_sb420")])
+bindings = Array[ExtResource("2_isdb4")]([SubResource("Resource_tbiug")])
 tracks = Array[ExtResource("5_kboc1")]([SubResource("Resource_6tja0")])
 
 [sub_resource type="Resource" id="Resource_w3iv5"]
 script = ExtResource("2_isdb4")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_ery7d"]
-script = ExtResource("2_isdb4")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_kb8gm"]
 offsets = PackedFloat32Array(0, 0.5, 0.52)
@@ -88,7 +78,7 @@ random_frame = true
 additive = false
 local_coords = true
 id = &"spikes"
-bindings = Array[ExtResource("2_isdb4")]([SubResource("Resource_w3iv5"), SubResource("Resource_ery7d")])
+bindings = Array[ExtResource("2_isdb4")]([SubResource("Resource_w3iv5")])
 
 [sub_resource type="Resource" id="Resource_lqwib"]
 script = ExtResource("2_isdb4")
@@ -109,11 +99,6 @@ bindings = Array[ExtResource("2_isdb4")]([SubResource("Resource_lqwib")])
 script = ExtResource("2_isdb4")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_52ls7"]
-script = ExtResource("2_isdb4")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_i58pe"]
 offsets = PackedFloat32Array(0, 0.7, 1)
@@ -136,17 +121,12 @@ random_frame = true
 additive = false
 id = &"shatter"
 start_delay = 0.8
-bindings = Array[ExtResource("2_isdb4")]([SubResource("Resource_kb52y"), SubResource("Resource_52ls7")])
+bindings = Array[ExtResource("2_isdb4")]([SubResource("Resource_kb52y")])
 
 [sub_resource type="Resource" id="Resource_sg5hg"]
 script = ExtResource("2_isdb4")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_y1pec"]
-script = ExtResource("2_isdb4")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_3wwbi"]
 offsets = PackedFloat32Array(0, 0.2, 1)
@@ -171,7 +151,7 @@ v_frames = 4
 id = &"mist"
 start_delay = 0.75
 min_quality = 2
-bindings = Array[ExtResource("2_isdb4")]([SubResource("Resource_sg5hg"), SubResource("Resource_y1pec")])
+bindings = Array[ExtResource("2_isdb4")]([SubResource("Resource_sg5hg")])
 
 [sub_resource type="Resource" id="Resource_ktoy5"]
 script = ExtResource("10_60tno")
@@ -188,18 +168,11 @@ kind = 3
 default_value = Color(0.5, 0.9, 1, 1)
 description = "Ice colour."
 
-[sub_resource type="Resource" id="Resource_5pe0u"]
-script = ExtResource("11_3a5je")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("12_jpinl")
 id = &"fx.absolute_zero_strike"
 display_name = "Absolute Zero strike"
-params = Array[ExtResource("11_3a5je")]([SubResource("Resource_8nnsq"), SubResource("Resource_5pe0u")])
+params = Array[ExtResource("11_3a5je")]([SubResource("Resource_8nnsq")])
 layers = Array[ExtResource("1_75l7l")]([SubResource("Resource_qqtsp"), SubResource("Resource_q4b5h"), SubResource("Resource_s73j2"), SubResource("Resource_qckt3"), SubResource("Resource_82wd0"), SubResource("Resource_ktoy5")])
 socket = &"Base"
 tags = Array[StringName]([&"Fx.Kind.Burst"])

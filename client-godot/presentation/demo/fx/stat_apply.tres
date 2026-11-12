@@ -36,11 +36,6 @@ script = ExtResource("2_tuwg6")
 property = "process_material:angle_max"
 param = &"angle"
 
-[sub_resource type="Resource" id="Resource_c6ir4"]
-script = ExtResource("2_tuwg6")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_646hq"]
 offsets = PackedFloat32Array(0, 0.2, 0.75, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -59,7 +54,7 @@ color_ramp = SubResource("Gradient_646hq")
 texture = ExtResource("4_almrj")
 additive = false
 id = &"arrows"
-bindings = Array[ExtResource("2_tuwg6")]([SubResource("Resource_82ayx"), SubResource("Resource_028tl"), SubResource("Resource_em46o"), SubResource("Resource_wxxg8"), SubResource("Resource_imtlx"), SubResource("Resource_c6ir4")])
+bindings = Array[ExtResource("2_tuwg6")]([SubResource("Resource_82ayx"), SubResource("Resource_028tl"), SubResource("Resource_em46o"), SubResource("Resource_wxxg8"), SubResource("Resource_imtlx")])
 
 [sub_resource type="Resource" id="Resource_fsetm"]
 script = ExtResource("2_tuwg6")
@@ -72,11 +67,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 1.4
 
-[sub_resource type="Resource" id="Resource_3o5up"]
-script = ExtResource("2_tuwg6")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_nr7sb"]
 script = ExtResource("6_ijx5c")
 shader = ExtResource("7_f6l18")
@@ -84,7 +74,7 @@ size = Vector2(2, 2)
 id = &"glow"
 space = 2
 duration = 0.35
-bindings = Array[ExtResource("2_tuwg6")]([SubResource("Resource_fsetm"), SubResource("Resource_j813a"), SubResource("Resource_3o5up")])
+bindings = Array[ExtResource("2_tuwg6")]([SubResource("Resource_fsetm"), SubResource("Resource_j813a")])
 
 [sub_resource type="Resource" id="Resource_geci1"]
 script = ExtResource("2_tuwg6")
@@ -134,18 +124,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Flash brightness."
 
-[sub_resource type="Resource" id="Resource_sp3p0"]
-script = ExtResource("9_o0gvk")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("10_prvd8")
 id = &"fx.stat_apply"
 display_name = "Stat apply"
-params = Array[ExtResource("9_o0gvk")]([SubResource("Resource_fwvni"), SubResource("Resource_arxns"), SubResource("Resource_w3xck"), SubResource("Resource_e0db2"), SubResource("Resource_8yqcb"), SubResource("Resource_sp3p0")])
+params = Array[ExtResource("9_o0gvk")]([SubResource("Resource_fwvni"), SubResource("Resource_arxns"), SubResource("Resource_w3xck"), SubResource("Resource_e0db2"), SubResource("Resource_8yqcb")])
 layers = Array[ExtResource("1_1ujcx")]([SubResource("Resource_oo4lh"), SubResource("Resource_nr7sb"), SubResource("Resource_m6uti")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "A burst of chevrons and a flash when a stat buff or debuff lands."

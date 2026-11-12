@@ -38,11 +38,6 @@ script = ExtResource("2_uaa4i")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_thdo6"]
-script = ExtResource("2_uaa4i")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_wfs5y"]
 offsets = PackedFloat32Array(0, 0.1, 0.9, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -80,7 +75,7 @@ local_coords = true
 id = &"shards"
 loop = true
 loop_period = 3.0
-bindings = Array[ExtResource("2_uaa4i")]([SubResource("Resource_yurln"), SubResource("Resource_thdo6")])
+bindings = Array[ExtResource("2_uaa4i")]([SubResource("Resource_yurln")])
 tracks = Array[ExtResource("4_ttknt")]([SubResource("Resource_te5kx")])
 
 [sub_resource type="Resource" id="Resource_rjqwc"]
@@ -90,18 +85,11 @@ kind = 3
 default_value = Color(0.75, 0.92, 1, 1)
 description = "Crack and shard colour."
 
-[sub_resource type="Resource" id="Resource_qynmx"]
-script = ExtResource("7_vsprc")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("8_jxoh6")
 id = &"fx.broken_state"
 display_name = "Broken"
-params = Array[ExtResource("7_vsprc")]([SubResource("Resource_rjqwc"), SubResource("Resource_qynmx")])
+params = Array[ExtResource("7_vsprc")]([SubResource("Resource_rjqwc")])
 layers = Array[ExtResource("1_ooseb")]([SubResource("Resource_rgd1f"), SubResource("Resource_cjile")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "A cracked, shuddering shell and shards circling slowly, while a unit is Broken."

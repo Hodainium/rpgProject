@@ -48,11 +48,6 @@ script = ExtResource("2_r7jk4")
 property = "material:shader_parameter/color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_whdqi"]
-script = ExtResource("2_r7jk4")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_v4su3"]
 script = ExtResource("5_eap1f")
 shader = ExtResource("6_26waq")
@@ -66,17 +61,12 @@ size = Vector2(4.4, 4.4)
 id = &"close0"
 space = 2
 duration = 0.6
-bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_6aj2p"), SubResource("Resource_whdqi")])
+bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_6aj2p")])
 
 [sub_resource type="Resource" id="Resource_ssx4a"]
 script = ExtResource("2_r7jk4")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_2p0xa"]
-script = ExtResource("2_r7jk4")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_d7x0e"]
 script = ExtResource("5_eap1f")
@@ -92,17 +82,12 @@ id = &"close1"
 space = 2
 start_delay = 0.12
 duration = 0.6
-bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_ssx4a"), SubResource("Resource_2p0xa")])
+bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_ssx4a")])
 
 [sub_resource type="Resource" id="Resource_vytn3"]
 script = ExtResource("2_r7jk4")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_6adhk"]
-script = ExtResource("2_r7jk4")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_c56ob"]
 script = ExtResource("5_eap1f")
@@ -118,12 +103,7 @@ id = &"close2"
 space = 2
 start_delay = 0.24
 duration = 0.6
-bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_vytn3"), SubResource("Resource_6adhk")])
-
-[sub_resource type="Resource" id="Resource_xg8rx"]
-script = ExtResource("2_r7jk4")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
+bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_vytn3")])
 
 [sub_resource type="Gradient" id="Gradient_yo1b4"]
 offsets = PackedFloat32Array(0, 0.3, 1)
@@ -149,7 +129,7 @@ h_frames = 4
 v_frames = 4
 additive = false
 id = &"smoke"
-bindings = Array[ExtResource("2_r7jk4")]([SubResource("Resource_xg8rx")])
+bindings = Array[ExtResource("2_r7jk4")]([])
 
 [sub_resource type="Resource" id="Resource_4vkmk"]
 script = ExtResource("2_r7jk4")
@@ -172,18 +152,11 @@ kind = 3
 default_value = Color(0.45, 0.25, 0.7, 1)
 description = "Ring colour."
 
-[sub_resource type="Resource" id="Resource_8exsk"]
-script = ExtResource("10_veunb")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("11_y1s7w")
 id = &"fx.oblivion_strike"
 display_name = "Oblivion strike"
-params = Array[ExtResource("10_veunb")]([SubResource("Resource_kql04"), SubResource("Resource_8exsk")])
+params = Array[ExtResource("10_veunb")]([SubResource("Resource_kql04")])
 layers = Array[ExtResource("1_o8rne")]([SubResource("Resource_2r46y"), SubResource("Resource_v4su3"), SubResource("Resource_d7x0e"), SubResource("Resource_c56ob"), SubResource("Resource_q2cb0"), SubResource("Resource_isxb6")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "A black void bubble swallows the target while rings close in on it."

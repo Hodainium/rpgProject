@@ -64,11 +64,6 @@ script = ExtResource("2_qtko7")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_itsqt"]
-script = ExtResource("2_qtko7")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_tln1n"]
 offsets = PackedFloat32Array(0, 0.7, 1)
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -92,17 +87,12 @@ anim_cycles = 0.0
 random_frame = true
 id = &"geysers"
 start_delay = 0.2
-bindings = Array[ExtResource("2_qtko7")]([SubResource("Resource_tthem"), SubResource("Resource_itsqt")])
+bindings = Array[ExtResource("2_qtko7")]([SubResource("Resource_tthem")])
 
 [sub_resource type="Resource" id="Resource_l3sr5"]
 script = ExtResource("2_qtko7")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_bbw0t"]
-script = ExtResource("2_qtko7")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_o2dfa"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -121,17 +111,12 @@ lifetime = 0.9
 color_ramp = SubResource("Gradient_o2dfa")
 id = &"spit"
 start_delay = 0.2
-bindings = Array[ExtResource("2_qtko7")]([SubResource("Resource_l3sr5"), SubResource("Resource_bbw0t")])
+bindings = Array[ExtResource("2_qtko7")]([SubResource("Resource_l3sr5")])
 
 [sub_resource type="Resource" id="Resource_07gtb"]
 script = ExtResource("2_qtko7")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_dles8"]
-script = ExtResource("2_qtko7")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Curve" id="Curve_yo743"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
@@ -159,7 +144,7 @@ id = &"heat"
 space = 2
 socket = &"Base"
 duration = 0.6
-bindings = Array[ExtResource("2_qtko7")]([SubResource("Resource_07gtb"), SubResource("Resource_dles8")])
+bindings = Array[ExtResource("2_qtko7")]([SubResource("Resource_07gtb")])
 tracks = Array[ExtResource("5_fusqd")]([SubResource("Resource_of3ly")])
 
 [sub_resource type="Resource" id="Resource_0tcsu"]
@@ -190,18 +175,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Glow brightness."
 
-[sub_resource type="Resource" id="Resource_2elgg"]
-script = ExtResource("11_vrjc5")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("12_pdyk5")
 id = &"fx.crucible_strike"
 display_name = "Crucible strike"
-params = Array[ExtResource("11_vrjc5")]([SubResource("Resource_bpsmx"), SubResource("Resource_owk7y"), SubResource("Resource_2elgg")])
+params = Array[ExtResource("11_vrjc5")]([SubResource("Resource_bpsmx"), SubResource("Resource_owk7y")])
 layers = Array[ExtResource("1_4lasw")]([SubResource("Resource_usi7f"), SubResource("Resource_3g7y2"), SubResource("Resource_gejmh"), SubResource("Resource_3rrm4"), SubResource("Resource_fwb6v")])
 socket = &"Base"
 tags = Array[StringName]([&"Fx.Kind.Burst"])

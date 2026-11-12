@@ -14,11 +14,6 @@ script = ExtResource("2_ho0qo")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_6iskm"]
-script = ExtResource("2_ho0qo")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_7sygu"]
 offsets = PackedFloat32Array(0, 0.2, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.55, 1, 1, 1, 0)
@@ -42,17 +37,12 @@ h_frames = 4
 v_frames = 4
 additive = false
 id = &"wisps"
-bindings = Array[ExtResource("2_ho0qo")]([SubResource("Resource_a2s5f"), SubResource("Resource_6iskm")])
+bindings = Array[ExtResource("2_ho0qo")]([SubResource("Resource_a2s5f")])
 
 [sub_resource type="Resource" id="Resource_hd7ly"]
 script = ExtResource("2_ho0qo")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_s1x8f"]
-script = ExtResource("2_ho0qo")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_e6edk"]
 offsets = PackedFloat32Array(0, 0.2, 1)
@@ -71,7 +61,7 @@ lifetime = 1.6
 explosiveness = 0.2
 color_ramp = SubResource("Gradient_e6edk")
 id = &"souls"
-bindings = Array[ExtResource("2_ho0qo")]([SubResource("Resource_hd7ly"), SubResource("Resource_s1x8f")])
+bindings = Array[ExtResource("2_ho0qo")]([SubResource("Resource_hd7ly")])
 
 [sub_resource type="Resource" id="Resource_od1i3"]
 script = ExtResource("2_ho0qo")
@@ -97,18 +87,11 @@ kind = 3
 default_value = Color(0.8, 0.85, 1, 1)
 description = "Soul colour."
 
-[sub_resource type="Resource" id="Resource_178aq"]
-script = ExtResource("7_xus5m")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("8_30rrb")
 id = &"fx.death_fade"
 display_name = "Death fade"
-params = Array[ExtResource("7_xus5m")]([SubResource("Resource_xor4d"), SubResource("Resource_178aq")])
+params = Array[ExtResource("7_xus5m")]([SubResource("Resource_xor4d")])
 layers = Array[ExtResource("1_20l7a")]([SubResource("Resource_rf4c4"), SubResource("Resource_w7mal"), SubResource("Resource_0nuyu")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "Pale wisps and souls rise off a fallen unit while its skin dissolves."
