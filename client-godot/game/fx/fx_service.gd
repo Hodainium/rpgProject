@@ -89,6 +89,8 @@ func _exit_tree() -> void:
 		for instance in pool:
 			instance.free_nodes()
 	_pools.clear()
+	if get_tree().root.get_node_or_null(^"FxManager") == self:
+		FxStencilShaders.clear()  # spec vfx-stencil: the autoload's shutdown drops the cached copies (not a test's own service)
 
 
 func _process(delta: float) -> void:

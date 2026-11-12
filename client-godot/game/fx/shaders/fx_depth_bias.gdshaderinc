@@ -11,12 +11,27 @@
 //     ALPHA *= fx_depth_fade(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX);
 // (VERTEX is the fragment's view-space position there.) Documented in each including shader's header as
 // `// @uniform depth_bias`, `// @uniform depth_fade` and `// @uniform fx_scene_depth`.
+// Stencil (spec vfx-stencil 3.4): only in the in-memory copies FxStencilShaders makes, which put #define lines in front of the
+// code. FX_STENCIL_REF is the unit's stencil value, FX_STENCIL_COMPARE the pass's test, FX_STENCIL_OWN marks the pass that draws
+// over its own unit's pixels with no depth test. In a copy the bias is off and the fade is the classic soft fade. Without the
+// defines (bias mode, the files on disk) these blocks are skipped and the shader is exactly as before.
+#ifdef FX_STENCIL_REF
+stencil_mode read, FX_STENCIL_COMPARE, FX_STENCIL_REF;
+#endif
+#ifdef FX_STENCIL_OWN
+render_mode depth_test_disabled;
+#endif
+
 uniform float depth_bias = 0.0;
 uniform float depth_fade = 0.3;
 uniform sampler2D fx_scene_depth : hint_depth_texture, repeat_disable, filter_nearest;
 
 bool fx_depth_moved() {
+#ifdef FX_STENCIL_REF
+	return false;
+#else
 	return depth_bias != 0.0;
+#endif
 }
 
 float fx_biased_depth(vec3 view_position, mat4 projection) {
@@ -33,11 +48,21 @@ float fx_scene_gap(vec3 view_position, vec2 screen_uv, mat4 inv_projection) {
 }
 
 // 0 at the cut (the scene `depth_bias` in front of the fragment), rising to 1 over the fade's width toward the fragment.
+// In a stencil copy (spec vfx-stencil 3.6): full strength over its own unit (OWN), else the classic soft fade over `depth_fade`.
 float fx_depth_fade(vec3 view_position, vec2 screen_uv, mat4 inv_projection) {
+#if defined(FX_STENCIL_OWN)
+	return 1.0;
+#elif defined(FX_STENCIL_REF)
+	if (depth_fade <= 0.0) {
+		return 1.0;
+	}
+	return clamp(fx_scene_gap(view_position, screen_uv, inv_projection) / depth_fade, 0.0, 1.0);
+#else
 	float fx_fade_width = min(depth_fade, 0.5 * depth_bias);
 	if (fx_fade_width <= 0.0) {
 		return 1.0;
 	}
 	float fx_gap = fx_scene_gap(view_position, screen_uv, inv_projection);
 	return clamp((fx_gap + depth_bias) / fx_fade_width, 0.0, 1.0);
+#endif
 }

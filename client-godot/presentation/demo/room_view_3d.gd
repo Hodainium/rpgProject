@@ -114,6 +114,7 @@ func _on_battle_started(battle: Battle) -> void:
 		_views[unit.unit_id] = view
 		if view is UnitAnimator:
 			view.unit_id = unit.unit_id  # spec vfx-framework: effects find a unit's view by this id
+			view.assign_stencil()  # spec vfx-stencil 3.1: the stencil value of its battle position (0 in bias mode)
 		view.set_dead(not unit.alive)
 	battle.execution_resolved.connect(_on_execution)
 	battle.unit_died.connect(_set_dead.bind(true))
