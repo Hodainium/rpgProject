@@ -209,7 +209,8 @@ OWN pass would draw over the wall. H7 must test exactly this before stencil is t
 
 **Step 2 as built (2026-11-11), in four commits on `feat/vfx-stencil`:**
 - **2a, stencil on by default:**
-  - particles (their generated draw material; AUTO = over the unit) and mesh layers (a shader material whose shader includes the
+  - particles (their generated draw material; AUTO = over the unit only when born on its mesh surface, `emit_from_mesh`: the
+    user's choice (a), 2026-11-11, so rings, orbits like stun stars and sparks flying behind keep the plain depth test) and mesh layers (a shader material whose shader includes the
     stencil lines; AUTO = not over the unit, ON for a shell) on `FxStencilMaterial`, through shared helpers on `FxLayer`;
   - the reserved `stencil_unit` effect parameter (no declaration needed);
   - `FxService.prepare_stencil(camera)` called by `RoomView3D` at battle start;
@@ -240,8 +241,33 @@ OWN pass would draw over the wall. H7 must test exactly this before stencil is t
   - floor rings on units that stand **on** the floor (humanoids later) need a small lift: the old `flat_depth_bias` kept them out
     of the floor, and the cubes' Base socket is 0.1 above it;
   - a view with several materials (the last paint decides whether it counts as stamped);
-  - the OWN pass copies every parameter each tick;
+  - the OWN pass copies every parameter each tick (the options are below; not fixed yet, user 2026-11-11);
   - the AMD and Intel GPUs.
+
+**Open: the per-tick parameter copy, possible solutions (user, 2026-11-11: list them, do not fix yet).**
+
+*The problem.* An effect drawn over its unit has two materials: the OTHER pass, which is the layer's material, and the OWN pass,
+its `next_pass`. Bindings and curve tracks write only the first, through the engine (`material:shader_parameter/x`), and a script
+cannot intercept that write. So `FxStencilMaterial.sync_own_pass()` copies every uniform, read and write, from the first to the
+second on every tick of every live over-unit layer. Most of those values do not change. Step 2 measured no frame-time cost with a
+handful of effects (0.22 ms GPU), but the cost grows with live effects × uniforms (about 10–15 per shader). The CPU and
+render-thread work is the concern, not the GPU.
+
+| # | Option | How it works | For | Against |
+|---|---|---|---|---|
+| A | **Copy only the animated uniforms** | Each layer works out, once, which uniforms its bindings and tracks write (their property paths), plus the ones the layer drives itself (`progress`, `time`, `fade`). The tick copies only those; a full copy runs on `apply`, `rebind`, `set_param`, a quality change and `reset`. | Small and local: `FxStencilMaterial` keeps a "per tick" name list beside its full one. Usually 3–5 uniforms a tick instead of 10–15. | Still a copy every tick, so any new way of writing a uniform must be added to the list or it is missed for a tick. |
+| B | **Copy only what changed** | Keep the last value written to the OWN pass; each tick read the first pass and write only the differences. | Exact; nothing to declare. | Still reads every uniform each tick (half the calls), and comparing Variants costs too. The smallest gain. |
+| C | **Write through at the source** | `FxBinding.apply_to` and the curve tracks see that the target material is an `FxStencilMaterial` and write the same value to its `next_pass` as well; the layer's own driven uniforms do the same. Nothing is copied per tick. | Exact and event-driven: work happens only when something writes. No list to keep. | Touches the binding and track code, the heart of the effects framework. Every writer (`set_param`, quality, a future layer kind) must go through the helper, or the OWN pass goes stale. |
+| D | **Instance uniforms** | Declare the animated uniforms as `instance uniform` in the effect shaders, and set them on the node (`set_instance_shader_parameter`, binding path `instance_shader_parameters/<name>`). Godot applies a node's instance uniforms to every material and pass it draws, so both passes share the values: there is nothing to copy. | The engine does the sharing; the cleanest at runtime. It also makes per-instance values cheaper for pooled effects. | A large change: every effect shader, every binding path in the 45+ effect files (a design commit) and the builders. Godot limits instance uniforms (16 per shader, no samplers, scalar and vector types only), and the probe would have to confirm they reach a `next_pass` and the particles' draw pass. |
+| E | **One pass, no OWN material** | Use the readable stencil texture the probe showed is possible (K4: a compositor copies the stamp into a texture of its own). The effect shader samples it and decides per pixel: over its own unit at full strength, else its own depth test. One material, so nothing to copy. | Removes the second pass entirely: half the draws, no copies; the base for later outlines and silhouettes too. | The most work: the compositor pass, a global texture, a per-pixel depth test in every effect shader. It runs only on the RenderingDevice renderers (Forward+, Mobile), not Compatibility. A slice of its own, not a fix. |
+
+*Leaning (not decided):*
+- A is the cheap first step, if the cost ever shows in a profile.
+- C is the exact fix, if the framework is being touched anyway.
+- D or E are worth it only as part of a bigger change: per-instance values for pooling (D), or outlines and silhouettes (E).
+
+*How to decide:* measure first. A battle with many live auras and DoTs (say 8 units × 3 looping effects), comparing the CPU frame
+time with stencil on and off (`fx stencil off` draws one pass and copies nothing).
 
 **Step 2, the finish, only if stencil is kept.**
 - The other over-unit layers: `FxParticles3DLayer`, `FxMeshLayer`.

@@ -60,11 +60,26 @@ func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, defin
 	if node is FxQuad3D:
 		var material := (node as FxQuad3D).material as FxStencilMaterial
 		if material != null:
-			if not face_camera and not shader_params.has("depth_fade"):
-				# A flat quad lies on the floor (a ring, a crack): fading it against the floor it lies on would dim it, so it keeps the
-				# plain depth test with no fade (spec vfx-stencil step 2 review; what the old flat bias did).
-				material.set_shader_parameter(&"depth_fade", 0.0)
 			material.stencil_unit = stencil_for(anchor)  # also re-checks a hot-reloaded shader and syncs the OWN pass
+
+
+func rebind(node: Node, params: Dictionary, definition: FxDefinition) -> void:
+	super(node, params, definition)
+	if node is FxQuad3D and not face_camera and _fades_by_default():
+		# A flat quad lies on the floor (a ring, a crack): fading it against the floor it lies on would dim it, so it keeps the plain
+		# depth test with no fade (spec vfx-stencil step 2 review; what the old flat bias did). Here, with the bindings, so a live
+		# parameter change keeps it.
+		(node as FxQuad3D).material.set_shader_parameter(&"depth_fade", 0.0)
+
+
+## True unless the layer sets or binds depth_fade itself.
+func _fades_by_default() -> bool:
+	if shader_params.has("depth_fade"):
+		return false
+	for binding in bindings:
+		if binding != null and binding.property.ends_with("/depth_fade"):
+			return false
+	return true
 
 
 ## The stencil value this layer draws with for `anchor` (3D quads only; see FxLayer.stencil_value).

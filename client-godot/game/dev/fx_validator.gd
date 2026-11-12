@@ -145,12 +145,17 @@ static func stencil_problems(dirs: Array[String]) -> Array[ValidationIssue]:
 
 static func _shader_stencil_problems(path: String, text: String) -> Array[ValidationIssue]:
 	var issues: Array[ValidationIssue] = []
+	# Statements, not lines: comments removed, then split at ';', so a stencil_mode after a render_mode on one line, or one spread
+	# over several lines, is read too.
+	var code := ""
 	for line in text.split("\n"):
-		var trimmed := line.strip_edges()
-		if not trimmed.begins_with("stencil_mode"):
+		code += line.split("//")[0] + " "
+	for raw_statement in code.split(";"):
+		var statement := raw_statement.strip_edges()
+		var at := statement.find("stencil_mode")
+		if at < 0 or (at > 0 and statement[at - 1] != " " and statement[at - 1] != "\t"):
 			continue
-		var statement := trimmed.split("//")[0].split(";")[0]  # the statement, without a trailing comment or a second statement
-		var words := statement.trim_prefix("stencil_mode").split(",", false)
+		var words := statement.substr(at).trim_prefix("stencil_mode").split(",", false)
 		var writes := false
 		var reference := -1
 		for raw in words:

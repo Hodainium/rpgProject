@@ -165,8 +165,7 @@ func over_own_default() -> bool:
 func stencil_value(anchor: FxAnchor, shader: Shader, layer_over: int) -> int:
 	if not FxStencilShaders.enabled() or anchor == null:
 		return StencilIds.NONE
-	var over := over_own_default() if layer_over == OverOwnUnit.AUTO else layer_over == OverOwnUnit.ON
-	if not over or not StencilIds.is_unit(anchor.stencil_value) or not FxStencilShaders.supports(shader):
+	if not draws_over_own_unit(layer_over) or not StencilIds.is_unit(anchor.stencil_value) or not FxStencilShaders.supports(shader):
 		return StencilIds.NONE  # (a shader without the stencil include would draw its whole effect twice)
 	return anchor.stencil_value
 
@@ -201,8 +200,7 @@ func follow_stencil(node: Node, material: FxStencilMaterial, shader: Shader, lay
 ## Spec vfx-stencil (validator): "" or the problem of a layer that draws over its unit (ON, or AUTO where the kind does) with a shader
 ## that has no stencil lines: it could never draw over its unit, and would draw twice if it tried.
 func stencil_include_problem(shader: Shader, layer_over: int) -> String:
-	var over := over_own_default() if layer_over == OverOwnUnit.AUTO else layer_over == OverOwnUnit.ON
-	if not over or shader == null or FxStencilShaders.supports(shader):
+	if not draws_over_own_unit(layer_over) or shader == null or FxStencilShaders.supports(shader):
 		return ""
 	return "fx_stencil_include_missing: layer '%s': %s draws over its unit but does not #include %s" % [id,
 		shader.resource_path.get_file() if shader.resource_path != "" else "its shader", FxStencilShaders.INCLUDE]

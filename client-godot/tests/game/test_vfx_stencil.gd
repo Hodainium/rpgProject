@@ -198,7 +198,9 @@ func test_a_copy_is_the_defines_in_front_of_the_unchanged_code() -> void:
 		"OTHER: the value and compare_not_equal")
 	eq(glow.code, original, "the shader file's own code is untouched")
 	check(FxStencilShaders.variant(glow, 7, FxStencilShaders.Pass.OWN) == own, "the same key returns the same copy")
-	eq(FxStencilShaders.prepare_values([glow], [1, 2, 7]), 4, "preparing 1, 2 and 7 makes only the 4 copies not made yet")
+	for value in [1, 2, 7]:
+		for pass_kind in [FxStencilShaders.Pass.OWN, FxStencilShaders.Pass.OTHER]:
+			FxStencilShaders.variant(glow, value, pass_kind)
 	eq(FxStencilShaders.cached_count(), 6, "3 values x 2 passes cached")
 
 
@@ -357,7 +359,11 @@ func test_particles_draw_over_their_unit_through_their_generated_material() -> v
 	var material := (node.draw_pass_1 as PrimitiveMesh).material as FxStencilMaterial
 	check(material != null and material.base_shader == FxParticles3DLayer.PARTICLE_SHADER, "the generated draw material has a stencil setting")
 	layer.apply(node, {}, _anchor(7), 3, null)
-	eq(material.stencil_unit, 7, "AUTO: particles draw over their unit")
+	eq(material.stencil_unit, 0, "AUTO: particles not born on the body (rings, orbits, sparks behind) keep the plain depth test")
+	eq(layer.stencil_shader(), null, "so prepare() has nothing to compile for them")
+	layer.emit_from_mesh = true
+	layer.apply(node, {}, _anchor(7), 3, null)
+	eq(material.stencil_unit, 7, "AUTO: particles born on the unit's mesh (a flame on the body) draw over it")
 	check(material.next_pass is ShaderMaterial, "with an OWN pass")
 	eq(layer.stencil_shader(), FxParticles3DLayer.PARTICLE_SHADER, "prepare() compiles the particle shader")
 	var custom := _particles_layer()
@@ -377,15 +383,16 @@ func test_a_mesh_layer_takes_part_only_when_asked_and_its_shader_can() -> void:
 	layer.id = &"shell"
 	layer.mesh = SphereMesh.new()
 	layer.material = source
+	var solid := _keep(layer.build()) as MeshInstance3D
+	check(not solid.material_override is FxStencilMaterial and solid.material_override != source,
+		"AUTO: a solid mesh keeps a plain copy of its material (next_pass and all)")
+	layer.over_own_unit = FxLayer.OverOwnUnit.ON
 	var node := _keep(layer.build()) as MeshInstance3D
 	var material := node.material_override as FxStencilMaterial
-	check(material != null and material != source, "a stencil-capable shader material becomes the layer's own FxStencilMaterial")
+	check(material != null and material != source, "ON: a stencil-capable shader material becomes the layer's own FxStencilMaterial")
 	eq(material.get_shader_parameter(&"intensity"), 4.0, "with every value carried over")
 	layer.apply(node, {}, _anchor(3), 3, null)
-	eq(material.stencil_unit, 0, "AUTO: a solid mesh keeps the plain depth test")
-	layer.over_own_unit = FxLayer.OverOwnUnit.ON
-	layer.apply(node, {}, _anchor(3), 3, null)
-	eq(material.stencil_unit, 3, "ON: a shell around the unit draws over it")
+	eq(material.stencil_unit, 3, "and a shell around the unit draws over it")
 	var plain := FxMeshLayer.new()
 	plain.id = &"rock"
 	plain.material = StandardMaterial3D.new()
@@ -418,10 +425,12 @@ func test_the_registry_shaders_to_prepare() -> void:
 	var quad := _glow_layer(true)
 	var floor_quad := _glow_layer(false)
 	var def := FxDefinition.new()
-	def.layers = [quad, floor_quad, _particles_layer()]
+	var on_body := _particles_layer()
+	on_body.emit_from_mesh = true
+	def.layers = [quad, floor_quad, on_body, _particles_layer()]
 	var shaders := FxStencilShaders.over_unit_shaders([def, null, def])
 	eq(shaders, [load(GLOW), FxParticles3DLayer.PARTICLE_SHADER] as Array[Shader],
-		"the glow and the particles, once each; the floor quad never draws over its unit")
+		"the glow and the particles born on the body, once each; the floor quad and the other particles never draw over their unit")
 	eq(await FxStencilShaders.prepare(null, shaders, [1, 2]), 0, "headless (or with no camera) prepare does nothing")
 
 
@@ -521,3 +530,27 @@ func test_review_fixes_of_step_2() -> void:
 #include \"res://game/fx/shaders/fx_stencil_depth.gdshaderinc\"
 "
 	check(FxStencilShaders.supports(shader), "edited to include it: checked again")
+
+
+func test_review_fixes_of_step_2_second_round() -> void:
+	# A forced value survives placing a position anchor (no world node).
+	var at := FxAnchor.position3d(Vector3.ONE)
+	at.stencil_value = 3
+	at.stencil_forced = true
+	var placed := at.placed(&"Center")
+	check(placed.stencil_value == 3 and placed.stencil_forced, "a position anchor keeps the caller's value")
+	# The validator reads stencil_mode mid-line and across lines.
+	var found := FxValidator._shader_stencil_problems("x.gdshader",
+		"shader_type spatial;
+render_mode unshaded; stencil_mode write, compare_always, 1;
+stencil_mode read,
+  write_foo, 9;
+")
+	var codes := found.map(func(issue: ValidationIssue) -> String: return issue.code)
+	check(codes.has("fx_stencil_value_taken") and codes.has("fx_stencil_mode_unknown"), "both read: %s" % [codes])
+	# A flat quad keeps no fade after a live parameter change (the rule lives with the bindings).
+	var flat := _glow_layer(false)
+	var quad := _keep(flat.build()) as FxQuad3D
+	(quad.material as ShaderMaterial).set_shader_parameter(&"depth_fade", 0.3)
+	flat.rebind(quad, {}, FxDefinition.new())
+	eq((quad.material as ShaderMaterial).get_shader_parameter(&"depth_fade"), 0.0, "rebind keeps a floor quad unfaded")

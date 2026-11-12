@@ -13,7 +13,7 @@ extends FxLayer
 @export var cast_shadow: bool = false
 ## Spec vfx-stencil 3.3: does the mesh draw over the unit it sits on? AUTO: no, a solid mesh (a rock, a spike) keeps the plain depth
 ## test; set ON for a see-through shell around the unit (a shield). Only a ShaderMaterial whose shader includes the stencil lines
-## (fx_stencil_depth.gdshaderinc) can.
+## (fx_stencil_depth.gdshaderinc) can. Its OWN pass takes the material's next_pass slot, so a next_pass of its own is not kept.
 @export var over_own_unit: FxLayer.OverOwnUnit = FxLayer.OverOwnUnit.AUTO
 
 
@@ -28,7 +28,9 @@ func native_space() -> int:
 func build() -> Node:
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
-	if material is ShaderMaterial and FxStencilShaders.supports((material as ShaderMaterial).shader):
+	if stencil_shader() != null:
+		# Only a mesh that draws over its unit gets the stencil material (its OWN pass takes the next_pass slot); any other keeps a
+		# plain copy of its material, next_pass and all.
 		instance.material_override = _stencil_copy(material as ShaderMaterial)
 	elif material != null:
 		instance.material_override = material.duplicate()

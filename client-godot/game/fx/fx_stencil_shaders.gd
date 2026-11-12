@@ -35,7 +35,7 @@ static var _source: Dictionary = {}
 ## get_shader_uniform_list goes through the RenderingServer and allocates).
 static var _names: Dictionary = {}
 static var _include_line: RegEx
-static var _supports: Dictionary = {}  # Shader -> whether it includes the stencil lines
+static var _supports: Dictionary = {}  # Shader -> [its code, whether it includes the stencil lines]
 
 
 static func enabled() -> bool:
@@ -68,14 +68,12 @@ static func supports(shader: Shader) -> bool:
 	if shader == null:
 		return false
 	var cached: Variant = _supports.get(shader)
-	if cached != null:
-		return cached
-	# An edited shader is checked again (one shot: the next check connects anew).
-	shader.changed.connect(func() -> void: _supports.erase(shader), CONNECT_ONE_SHOT)
+	if cached != null and cached[0] == shader.code:
+		return cached[1]  # (an edited shader, a hot reload, is checked again)
 	if _include_line == null:
 		_include_line = RegEx.create_from_string(r'(?m)^\s*#include\s+"[^"]*' + INCLUDE.replace(".", "\\.") + '"')
 	var found := _include_line.search(shader.code) != null  # the #include line itself, not a comment naming the file
-	_supports[shader] = found
+	_supports[shader] = [shader.code, found]
 	return found
 
 
@@ -86,17 +84,6 @@ static func defines(value: int, pass_kind: int) -> String:
 	if pass_kind == Pass.OWN:
 		lines += "#define FX_STENCIL_OWN\n"
 	return lines
-
-
-## Makes the copies of every shader for every value and both passes. Returns the number made. (The renderer compiles a copy the
-## first time it draws; step 2's prepare() behind the loading screen also draws them once.)
-static func prepare_values(shaders: Array, values: Array) -> int:
-	var before := made
-	for shader in shaders:
-		for value in values:
-			for pass_kind in [Pass.OWN, Pass.OTHER]:
-				variant(shader, int(value), pass_kind)
-	return made - before
 
 
 ## The uniforms of `shader` a second pass mirrors (all but `skip`), read once per shader code.
@@ -166,6 +153,7 @@ static func prepare(camera: Camera3D, shaders: Array[Shader], values: Array) -> 
 	holder.position = Vector3(0, 0, -maxf(camera.near * 4.0, 0.2))
 	holder.scale = Vector3.ONE * 0.001
 	var count := 0
+	var drawn: Array[Shader] = []
 	for shader in shaders:
 		for value in values:
 			if not StencilIds.is_unit(int(value)):
@@ -174,7 +162,7 @@ static func prepare(camera: Camera3D, shaders: Array[Shader], values: Array) -> 
 				var copy := variant(shader, int(value), pass_kind)
 				if _prepared.has(copy):
 					continue
-				_prepared[copy] = true
+				drawn.append(copy)
 				var material := ShaderMaterial.new()
 				material.shader = copy
 				holder.add_child(_speck(shader, material))
@@ -183,8 +171,11 @@ static func prepare(camera: Camera3D, shaders: Array[Shader], values: Array) -> 
 	for frame in 2:
 		await tree.process_frame
 	await RenderingServer.frame_post_draw
-	if is_instance_valid(holder):
-		holder.queue_free()  # (gone already when the battle's scene closed during these frames)
+	if not is_instance_valid(holder) or not is_instance_valid(camera) or not camera.is_inside_tree():
+		return 0  # the battle's scene closed during these frames: nothing counts as drawn, the next battle tries again
+	holder.queue_free()
+	for copy in drawn:
+		_prepared[copy] = true
 	last_prepare_ms = (Time.get_ticks_usec() - started) / 1000.0
 	last_prepare_copies = count
 	return count
