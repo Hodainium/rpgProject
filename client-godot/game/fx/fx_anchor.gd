@@ -122,7 +122,10 @@ func placed(default_socket: StringName) -> FxAnchor:
 	if target != null and is_instance_valid(target):
 		copy.socket_offset = FxAttach.socket_position(target, socket if socket != &"" else default_socket)
 		copy.radius = FxAttach.radius(target)
-		if target is UnitAnimator and kind in [Kind.UNIT, Kind.NODE3D]:  # not a stage: its world is not stamped (spec 3.5)
+		if stencil_forced:
+			copy.stencil_value = stencil_value  # the caller's value (a sub-effect of a beam that marks its caster keeps it)
+			copy.stencil_forced = true
+		elif target is UnitAnimator and kind in [Kind.UNIT, Kind.NODE3D]:  # not a stage: its world is not stamped (spec 3.5)
 			copy.stencil_value = (target as UnitAnimator).effect_stencil_value()
 	return copy
 

@@ -433,7 +433,7 @@ stencil_mode read, compare_equal, write_foo, 30;
 ")
 	_write(dir + "/fine.gdshader", "shader_type spatial;
 stencil_mode read, FX_STENCIL_COMPARE, FX_STENCIL_REF;
-stencil_mode write, compare_always, 200;
+stencil_mode write, compare_always, 200; // outline
 ")
 	_write(dir + "/takes_p1.gdshader", "shader_type spatial;
 stencil_mode write, compare_always, 1;
@@ -484,3 +484,40 @@ func test_the_fx_stencil_command() -> void:
 	var bad: Dictionary = await console.execute("fx stencil maybe")
 	check(not bad["ok"], "anything else is refused")
 	eq(FxStencilShaders.DEFAULT_MODE, FxStencilShaders.STENCIL, "stencil is on by default")
+
+
+# --- Step 2 review fixes -------------------------------------------------------------------------------------------------
+
+func test_review_fixes_of_step_2() -> void:
+	FxStencilShaders.mode = FxStencilShaders.STENCIL
+	# Soft particles keep full strength over their own unit.
+	var particle_code := FxParticles3DLayer.PARTICLE_SHADER.code
+	var guard := particle_code.find("#ifndef FX_STENCIL_OWN")
+	check(guard >= 0 and guard < particle_code.find("if (soft_distance > 0.0)"), "the soft fade is skipped in the OWN pass")
+	# A flat quad lies on the floor: no fade against it.
+	var flat := _glow_layer(false)
+	var quad := _keep(flat.build()) as FxQuad3D
+	flat.apply(quad, {}, _anchor(4), 3, null)
+	eq((quad.material as ShaderMaterial).get_shader_parameter(&"depth_fade"), 0.0, "a floor quad does not fade against the floor")
+	# A caller's forced value survives placing (a sub-effect re-places the parent's anchor).
+	var view := _view(&"E1")
+	view.stencil_value = 5
+	view.mark_stencil(StandardMaterial3D.new())
+	var forced := FxAnchor.node3d(view)
+	forced.stencil_value = 2
+	forced.stencil_forced = true
+	var placed := forced.placed(&"Center")
+	check(placed.stencil_value == 2 and placed.stencil_forced, "the forced value is kept, not E1's 5")
+	# Particles on a ring around the feet stay around the unit.
+	var ring := _particles_layer()
+	ring.emission_ring_radius = 1.0
+	eq(ring.stencil_value(_anchor(4), FxParticles3DLayer.PARTICLE_SHADER, FxLayer.OverOwnUnit.AUTO), 0, "AUTO: ring particles keep the plain depth test")
+	# supports() is cached and follows an edited shader.
+	var shader := Shader.new()
+	shader.code = "shader_type spatial;
+"
+	check(not FxStencilShaders.supports(shader), "no include")
+	shader.code = "shader_type spatial;
+#include \"res://game/fx/shaders/fx_depth_bias.gdshaderinc\"
+"
+	check(FxStencilShaders.supports(shader), "edited to include it: checked again")

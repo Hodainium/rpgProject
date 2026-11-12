@@ -74,15 +74,22 @@ static func sync_problems(fx_dir: String, cue_dir: String, registry: FxRegistry,
 
 ## Every .tres under `fx_dir` and its subfolders, sorted.
 static func fx_files(fx_dir: String) -> Array[String]:
+	return files_under(fx_dir, ["tres"])
+
+
+## Every file with one of `extensions` under `dir` (recursively), sorted.
+static func files_under(dir: String, extensions: Array) -> Array[String]:
 	var found: Array[String] = []
-	var queue: Array[String] = [fx_dir.trim_suffix("/")]
+	var queue: Array[String] = [dir.trim_suffix("/")]
 	while not queue.is_empty():
-		var dir: String = queue.pop_front()
-		for file in DirAccess.get_files_at(dir):
-			if file.ends_with(".tres"):
-				found.append(dir.path_join(file))
-		for sub in DirAccess.get_directories_at(dir):
-			queue.append(dir.path_join(sub))
+		var at: String = queue.pop_front()
+		if not DirAccess.dir_exists_absolute(at):
+			continue
+		for file in DirAccess.get_files_at(at):
+			if file.get_extension() in extensions:
+				found.append(at.path_join(file))
+		for sub in DirAccess.get_directories_at(at):
+			queue.append(at.path_join(sub))
 	found.sort()
 	return found
 
@@ -125,7 +132,7 @@ const STENCIL_WORDS: Array[String] = ["read", "write", "write_depth_fail", "comp
 static func stencil_problems(dirs: Array[String]) -> Array[ValidationIssue]:
 	var issues: Array[ValidationIssue] = []
 	for dir in dirs:
-		for path in _files_under(dir, ["gdshader", "gdshaderinc", "tres", "tscn"]):
+		for path in files_under(dir, ["gdshader", "gdshaderinc", "tres", "tscn"]):
 			var text := FileAccess.get_file_as_string(path)
 			if not text.contains("stencil"):
 				continue
@@ -142,7 +149,8 @@ static func _shader_stencil_problems(path: String, text: String) -> Array[Valida
 		var trimmed := line.strip_edges()
 		if not trimmed.begins_with("stencil_mode"):
 			continue
-		var words := trimmed.trim_prefix("stencil_mode").trim_suffix(";").split(",", false)
+		var statement := trimmed.split("//")[0].split(";")[0]  # the statement, without a trailing comment or a second statement
+		var words := statement.trim_prefix("stencil_mode").split(",", false)
 		var writes := false
 		var reference := -1
 		for raw in words:
@@ -179,15 +187,3 @@ static func _material_stencil_problems(path: String, text: String) -> Array[Vali
 				"a material uses stencil reference %d, a battle position's value (StencilIds 1-31); take one from another range" % reference))
 	return issues
 
-
-static func _files_under(dir: String, extensions: Array) -> Array[String]:
-	var out: Array[String] = []
-	var access := DirAccess.open(dir)
-	if access == null:
-		return out
-	for file in access.get_files():
-		if file.get_extension() in extensions:
-			out.append(dir.path_join(file))
-	for sub in access.get_directories():
-		out.append_array(_files_under(dir.path_join(sub), extensions))
-	return out

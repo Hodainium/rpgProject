@@ -207,6 +207,41 @@ OWN pass would draw over the wall. H7 must test exactly this before stencil is t
 - **The 45 effect files** in `presentation/demo/fx/` that bind `depth_bias` (327 lines) are stripped of it in a commit of their own
   (`design:`). That commit comes before the system code removes the bias, so no file binds a uniform that does not exist.
 
+**Step 2 as built (2026-11-11), in four commits on `feat/vfx-stencil`:**
+- **2a, stencil on by default:**
+  - particles (their generated draw material; AUTO = over the unit) and mesh layers (a shader material whose shader includes the
+    stencil lines; AUTO = not over the unit, ON for a shell) on `FxStencilMaterial`, through shared helpers on `FxLayer`;
+  - the reserved `stencil_unit` effect parameter (no declaration needed);
+  - `FxService.prepare_stencil(camera)` called by `RoomView3D` at battle start;
+  - the three validator rules;
+  - console `fx stencil on|off|dump`.
+- **Design commit:** the 186 `depth_bias` blocks stripped from the 45 effect files (a one-off text patch with the user's OK).
+- **2b, the bias removed:**
+  - the include keeps only the stencil blocks and the classic soft fade;
+  - the shaders write no `DEPTH`;
+  - `FxService`, the quad layer's `flat_depth_bias`, the particle layer's `depth_bias` and the builders' bindings are gone;
+  - the switch's off mode is the plain depth test.
+- **Not changed:** the include keeps its file name, `fx_depth_bias.gdshaderinc`. A rename touches every shader and would be a
+  separate cleanup.
+
+**Step 2 results** (`H:\claudeOutShots\2026-11-11 vfx-stencil\step2b-d3d12`, `h7-*`, `battle\`):
+- **The real battle** (Warrior, Cleric, Pyromancer, Cryomancer against the Golem, the game camera, `dev_run --local` in a window):
+  - all five units are stamped;
+  - prepare drew 60 copies in 117 ms on a warm driver cache;
+  - `on_*` / `off_*` shot pairs: a heal glow fills its cube with stencil on and is cut by the cube when off; Judgement's rays show
+    over the Golem and fade into the floor.
+- **Prepare in the Stencil page:** 48 copies in 830–880 ms on a cold Godot shader cache and a warm one alike (about 18 ms a
+  copy). Godot's cache does not change it; the driver's pipeline cache does (the real battle above: 2 ms a copy).
+- **H7:** every check passes on Forward+ (D3D12, Vulkan), Mobile (D3D12) and Compatibility (OpenGL 3.3): the glow over its own
+  unit, the front unit clean, nothing behind the wall, the ring behind the front unit. Not covered: a wall drawn *after* the unit
+  it hides (opaque order by object centre) on Mobile or Compatibility, which have no depth prepass. Forward+ cannot hit it.
+- **Open:**
+  - floor rings on units that stand **on** the floor (humanoids later) need a small lift: the old `flat_depth_bias` kept them out
+    of the floor, and the cubes' Base socket is 0.1 above it;
+  - a view with several materials (the last paint decides whether it counts as stamped);
+  - the OWN pass copies every parameter each tick;
+  - the AMD and Intel GPUs.
+
 **Step 2, the finish, only if stencil is kept.**
 - The other over-unit layers: `FxParticles3DLayer`, `FxMeshLayer`.
 - The `stencil_unit` effect parameter.

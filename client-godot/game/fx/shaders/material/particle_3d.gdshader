@@ -46,11 +46,14 @@ void fragment() {
 	vec2 uv = (UV + vec2(column, row)) / vec2(float(h_frames), float(v_frames));
 	vec4 texel = texture(albedo_texture, uv);
 	float alpha = texel.a * particle_color.a;
+#ifndef FX_STENCIL_OWN
 	if (soft_distance > 0.0) {
-		// Soft particles: how far the scene is behind this particle, faded to 0 at contact.
+		// Soft particles: how far the scene is behind this particle, faded to 0 at contact (not over its own unit, the OWN pass,
+		// where the scene is the unit's own surface in front of a particle inside the body).
 		float gap = fx_scene_gap(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX);
 		alpha *= clamp(gap / soft_distance, 0.0, 1.0);
 	}
+#endif
 	alpha *= fx_depth_fade(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX);
 	// Premultiplied output: normal blending keeps its alpha, additive sets it to 0 so the light only adds.
 	ALBEDO = texel.rgb * particle_color.rgb * alpha;

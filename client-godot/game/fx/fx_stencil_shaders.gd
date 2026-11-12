@@ -35,6 +35,7 @@ static var _source: Dictionary = {}
 ## get_shader_uniform_list goes through the RenderingServer and allocates).
 static var _names: Dictionary = {}
 static var _include_line: RegEx
+static var _supports: Dictionary = {}  # Shader -> whether it includes the stencil lines
 
 
 static func enabled() -> bool:
@@ -66,9 +67,16 @@ static func variant(shader: Shader, value: int, pass_kind: int) -> Shader:
 static func supports(shader: Shader) -> bool:
 	if shader == null:
 		return false
+	var cached: Variant = _supports.get(shader)
+	if cached != null:
+		return cached
+	# An edited shader is checked again (one shot: the next check connects anew).
+	shader.changed.connect(func() -> void: _supports.erase(shader), CONNECT_ONE_SHOT)
 	if _include_line == null:
 		_include_line = RegEx.create_from_string(r'(?m)^\s*#include\s+"[^"]*' + INCLUDE.replace(".", "\\.") + '"')
-	return _include_line.search(shader.code) != null  # the #include line itself, not a comment naming the file
+	var found := _include_line.search(shader.code) != null  # the #include line itself, not a comment naming the file
+	_supports[shader] = found
+	return found
 
 
 ## The lines put in front of a shader's code (the probe showed defines before shader_type reach an #include).
@@ -117,6 +125,8 @@ static func clear() -> void:
 	_cache.clear()
 	_source.clear()
 	_names.clear()
+	_prepared.clear()
+	_supports.clear()
 	made = 0
 	build_ms = 0.0
 
@@ -126,6 +136,8 @@ static func clear() -> void:
 ## How long the last prepare took (ms, the frames it drew included) and how many copies it drew, for `fx stencil dump`.
 static var last_prepare_ms: float = 0.0
 static var last_prepare_copies: int = 0
+## The copies already drawn once this session (the renderer keeps their pipelines): a later battle skips them.
+static var _prepared: Dictionary = {}
 
 
 ## The shaders the effects in `definitions` draw over their unit with (each layer's stencil_shader()), once each.
@@ -159,14 +171,20 @@ static func prepare(camera: Camera3D, shaders: Array[Shader], values: Array) -> 
 			if not StencilIds.is_unit(int(value)):
 				continue
 			for pass_kind in [Pass.OWN, Pass.OTHER]:
+				var copy := variant(shader, int(value), pass_kind)
+				if _prepared.has(copy):
+					continue
+				_prepared[copy] = true
 				var material := ShaderMaterial.new()
-				material.shader = variant(shader, int(value), pass_kind)
+				material.shader = copy
 				holder.add_child(_speck(shader, material))
 				count += 1
+	var tree := camera.get_tree()
 	for frame in 2:
-		await camera.get_tree().process_frame
+		await tree.process_frame
 	await RenderingServer.frame_post_draw
-	holder.queue_free()
+	if is_instance_valid(holder):
+		holder.queue_free()  # (gone already when the battle's scene closed during these frames)
 	last_prepare_ms = (Time.get_ticks_usec() - started) / 1000.0
 	last_prepare_copies = count
 	return count

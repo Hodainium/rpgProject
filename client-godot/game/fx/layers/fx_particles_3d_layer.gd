@@ -37,7 +37,8 @@ const PARTICLE_SHADER: Shader = preload("res://game/fx/shaders/material/particle
 ## bubble is born on the body. The points are sampled once per mesh (area-weighted) and the emitter follows the mesh every tick, which
 ## is right for a unit that moves as a rigid whole; a skinned model emits from a bone-attached layer instead.
 @export var emit_from_mesh: bool = false
-## Spec vfx-stencil 3.3: do the particles draw over the unit they sit on? AUTO: yes (a flame on the body, sparks off a hit). Only the
+## Spec vfx-stencil 3.3: do the particles draw over the unit they sit on? AUTO: yes (a flame on the body, sparks off a hit), except
+## particles emitted on a ring around the unit (`emission_ring_radius`), whose back half would show over the body. Only the
 ## generated draw material takes part; a custom `draw_mesh` keeps its own material and the plain depth test.
 @export var over_own_unit: FxLayer.OverOwnUnit = FxLayer.OverOwnUnit.AUTO
 @export var emission_point_count: int = 128
@@ -144,7 +145,7 @@ func update(node: Node, local_time: float, length_seconds: float, params: Dictio
 
 
 func over_own_default() -> bool:
-	return true
+	return emission_ring_radius <= 0.0  # a ring around the feet would show its back half over the body
 
 
 func stencil_shader() -> Shader:

@@ -60,6 +60,10 @@ func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, defin
 	if node is FxQuad3D:
 		var material := (node as FxQuad3D).material as FxStencilMaterial
 		if material != null:
+			if not face_camera and not shader_params.has("depth_fade"):
+				# A flat quad lies on the floor (a ring, a crack): fading it against the floor it lies on would dim it, so it keeps the
+				# plain depth test with no fade (spec vfx-stencil step 2 review; what the old flat bias did).
+				material.set_shader_parameter(&"depth_fade", 0.0)
 			material.stencil_unit = stencil_for(anchor)  # also re-checks a hot-reloaded shader and syncs the OWN pass
 
 
