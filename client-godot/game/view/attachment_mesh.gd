@@ -199,3 +199,134 @@ static func extrude(outline: PackedVector2Array, depth: float) -> ArrayMesh:
 		_tri(st, Vector3(p.x, p.y, half), Vector3(q.x, q.y, half), Vector3(p.x, p.y, -half), out)
 		_tri(st, Vector3(q.x, q.y, half), Vector3(q.x, q.y, -half), Vector3(p.x, p.y, -half), out)
 	return st.commit()
+
+
+## Spec cube-style 3.6: a box of `size` with chamfered edges and corners, `bevel` deep (flat-shaded, centred on the origin, UVs
+## projected per face); the room walls' block (`StageMood.wall_bevel`). A bevel of 0 or less is a plain `BoxMesh`; a bevel is held
+## below half the shortest side. Cached by size and bevel: every wall of a room shares one mesh.
+static func bevel_box(size: Vector3, bevel: float) -> Mesh:
+	var key := "bevel_box:%s:%s" % [size, bevel]
+	if _cache.has(key):
+		return _cache[key]
+	var mesh: Mesh
+	if bevel <= 0.0:
+		var box := BoxMesh.new()
+		box.size = size
+		mesh = box
+	else:
+		mesh = _bevel_box(size, minf(bevel, minf(size.x, minf(size.y, size.z)) * 0.5 - 0.001))
+	_cache[key] = mesh
+	return mesh
+
+
+static func _bevel_box(size: Vector3, bevel: float) -> ArrayMesh:
+	var h := size * 0.5
+	var a := h - Vector3(bevel, bevel, bevel)
+	var faces: Array = []
+	for k in 3:  # the six faces, inset by the bevel
+		var i := (k + 1) % 3
+		var j := (k + 2) % 3
+		for s in [-1, 1]:
+			var quad: Array[Vector3] = []
+			for corner in [[-1, -1], [-1, 1], [1, 1], [1, -1]]:
+				var p := Vector3()
+				p[k] = s * h[k]
+				p[i] = corner[0] * a[i]
+				p[j] = corner[1] * a[j]
+				quad.append(p)
+			faces.append(quad)
+	for k in 3:  # the twelve edge strips along axis k
+		var i := (k + 1) % 3
+		var j := (k + 2) % 3
+		for si in [-1, 1]:
+			for sj in [-1, 1]:
+				var quad: Array[Vector3] = []
+				for sk in [-1, 1]:
+					var p := Vector3()
+					p[i] = si * h[i]
+					p[j] = sj * a[j]
+					p[k] = sk * a[k]
+					quad.append(p)
+				for sk in [1, -1]:
+					var p := Vector3()
+					p[i] = si * a[i]
+					p[j] = sj * h[j]
+					p[k] = sk * a[k]
+					quad.append(p)
+				faces.append(quad)
+	for sx in [-1, 1]:  # the eight corner triangles
+		for sy in [-1, 1]:
+			for sz in [-1, 1]:
+				var corner: Array[Vector3] = [Vector3(sx * h.x, sy * a.y, sz * a.z), Vector3(sx * a.x, sy * h.y, sz * a.z),
+					Vector3(sx * a.x, sy * a.y, sz * h.z)]
+				faces.append(corner)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for face in faces:
+		var centre := Vector3()
+		for p in face:
+			centre += p
+		centre /= face.size()
+		for t in range(1, face.size() - 1):
+			_tri(st, face[0], face[t], face[t + 1], centre)
+	return _with_box_uvs(st.commit(), size)
+
+
+## Adds UVs to a flat-shaded mesh by projecting each vertex on the plane its normal faces most (a texture tiles once per metre).
+static func _with_box_uvs(mesh: ArrayMesh, size: Vector3) -> ArrayMesh:
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var uvs := PackedVector2Array()
+	uvs.resize(vertices.size())
+	for v in vertices.size():
+		var p := vertices[v] + size * 0.5
+		var n := normals[v].abs()
+		if n.x >= n.y and n.x >= n.z:
+			uvs[v] = Vector2(p.z, p.y)
+		elif n.y >= n.z:
+			uvs[v] = Vector2(p.x, p.z)
+		else:
+			uvs[v] = Vector2(p.x, p.y)
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	var out := ArrayMesh.new()
+	out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return out
+
+
+## Spec cube-style 3.6: a slab of `size` whose four vertical corner edges are chamfered `bevel` deep (the long edges stay sharp):
+## the room floor, so its corners match the bevelled wall blocks standing on them. Flat-shaded, centred, UVs per face like
+## `bevel_box`; 0 or less is a plain `BoxMesh`. Cached by size and bevel.
+static func corner_slab(size: Vector3, bevel: float) -> Mesh:
+	var key := "corner_slab:%s:%s" % [size, bevel]
+	if _cache.has(key):
+		return _cache[key]
+	var mesh: Mesh
+	if bevel <= 0.0:
+		var box := BoxMesh.new()
+		box.size = size
+		mesh = box
+	else:
+		var b := minf(bevel, minf(size.x, size.z) * 0.5 - 0.001)
+		var hx := size.x * 0.5
+		var hy := size.y * 0.5
+		var hz := size.z * 0.5
+		var outline: Array[Vector2] = [Vector2(-hx + b, -hz), Vector2(hx - b, -hz), Vector2(hx, -hz + b), Vector2(hx, hz - b),
+			Vector2(hx - b, hz), Vector2(-hx + b, hz), Vector2(-hx, hz - b), Vector2(-hx, -hz + b)]
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for y in [hy, -hy]:  # top and bottom: a fan over the convex octagon
+			var up := Vector3(0, y, 0)
+			for i in range(1, outline.size() - 1):
+				_tri(st, Vector3(outline[0].x, y, outline[0].y), Vector3(outline[i].x, y, outline[i].y),
+					Vector3(outline[i + 1].x, y, outline[i + 1].y), up)
+		for i in outline.size():  # the four long sides and the four corner faces
+			var p := outline[i]
+			var q := outline[(i + 1) % outline.size()]
+			var mid := (p + q) * 0.5
+			var out := Vector3(mid.x, 0, mid.y)
+			_tri(st, Vector3(p.x, hy, p.y), Vector3(q.x, hy, q.y), Vector3(p.x, -hy, p.y), out)
+			_tri(st, Vector3(q.x, hy, q.y), Vector3(q.x, -hy, q.y), Vector3(p.x, -hy, p.y), out)
+		mesh = _with_box_uvs(st.commit(), size)
+	_cache[key] = mesh
+	return mesh
