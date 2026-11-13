@@ -88,10 +88,11 @@ func _build() -> void:
 	var spots := UnitStyle.battle_positions(true, members.size())
 	for member in run.state.party:
 		var character: UnitDefinition = run.content.units.get(member["character"])
-		var view := _unit(_spawn(room, RoomPlacement.Kind.PLAYER_SPAWN, member["slot"], Vector2i(2, member["slot"] + 1)),
-			character)
 		var order := members.find(member)
-		if order >= 0 and order < spots.size():
+		var placed := order >= 0 and order < spots.size()  # the formation spot first, the room's spawn cell only without one
+		var view := _unit(Vector2i.ZERO if placed else _spawn(room, RoomPlacement.Kind.PLAYER_SPAWN, member["slot"],
+			Vector2i(2, member["slot"] + 1)), character)
+		if placed:
 			view.position = spots[order]
 		view.set_stats("%s\nHP %d" % [_name(character), member["hp"] / 100])
 		view.set_dead(not member["alive"])
@@ -129,8 +130,9 @@ func _on_battle_started(battle: Battle) -> void:
 	for unit in battle.units():
 		var kind := RoomPlacement.Kind.PLAYER_SPAWN if unit.is_party() else RoomPlacement.Kind.ENEMY_SPAWN
 		var fallback := Vector2i(2 if unit.is_party() else 10, unit.slot + 1)
-		var view := _unit(_spawn(room, kind, unit.slot, fallback), unit.definition)
-		if spots.has(unit.unit_id):
+		var placed: bool = spots.has(unit.unit_id)  # the formation spot first, the room's spawn cell only without one
+		var view := _unit(Vector2i.ZERO if placed else _spawn(room, kind, unit.slot, fallback), unit.definition)
+		if placed:
 			view.position = spots[unit.unit_id]
 		_views[unit.unit_id] = view
 		if view is UnitAnimator:
@@ -202,8 +204,14 @@ func restyle() -> void:
 				child.material_override = _rig.floor_material()
 			&"wall":
 				child.material_override = _rig.wall_material()
-	for view in _views.values():
-		if is_instance_valid(view) and view is UnitAnimator:
+	var spots := _formation_spots(_battle)  # a variant may bring another formation
+	for id in _views:
+		var view = _views[id]
+		if not is_instance_valid(view):
+			continue
+		if spots.has(id):
+			view.position = spots[id]
+		if view is UnitAnimator:
 			view.restyle()
 
 
