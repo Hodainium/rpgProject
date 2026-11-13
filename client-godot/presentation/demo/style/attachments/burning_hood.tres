@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_cone"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.4
+radius_top = 0.03
+curve = PackedVector3Array(0, -0.02, 0, 0, 0.35, 0, 0, 0.5, -0.16)
+segments = 20
+color = Color(0.36, 0.08, 0.05, 1)
+roughness = 0.8
+
+[sub_resource type="Resource" id="Resource_tip"]
+script = ExtResource("1_part")
+kind = 5
+profile = PackedVector2Array(0, 0, 0.07, 0.02, 0.09, 0.07, 0.06, 0.13, 0, 0.22)
+segments = 14
+position = Vector3(0, 0.47, -0.18)
+color = Color(1, 0.5, 0.1, 1)
+roughness = 0.5
+emission = 3.0
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Burning hood"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_cone"), SubResource("Resource_tip")])

@@ -16,6 +16,20 @@
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/crown.tres" id="12_p1ca3"]
 [ext_resource type="Material" path="res://presentation/demo/style/surfaces/stone.tres" id="15_stone"]
 [ext_resource type="Script" path="res://game/view/battle_formation.gd" id="16_form"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/ranger_point_cap.tres" id="19_ranger"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/horned_helm.tres" id="20_bulwark"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/frost_crown.tres" id="21_cryo"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/burning_hood.tres" id="22_pyro"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/welding_mask_crown_fire.tres" id="23_ember"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/fire_ring.tres" id="24_fire"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/beak_mask.tres" id="25_plague"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/shard_orbit.tres" id="26_shatter"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/bubble_ring.tres" id="27_bubbles"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/frost_ring.tres" id="28_frost"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/holy_ground.tres" id="29_holy"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/arcane_runes.tres" id="30_runes"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/golden_glow.tres" id="31_golden"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/shard_cracks.tres" id="32_cracks"]
 
 [sub_resource type="Resource" id="Resource_h2uv3"]
 script = ExtResource("1_avbba")
@@ -506,7 +520,10 @@ motion_amount = 0.04
 
 [sub_resource type="Resource" id="Resource_hdoby"]
 script = ExtResource("1_avbba")
+use_color_override = true
+color_override = Color(0.94, 0.94, 0.92, 1)
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_gyu0e")])
+effect = ExtResource("29_holy")
 
 [sub_resource type="Resource" id="Resource_i6477"]
 script = ExtResource("2_b37kx")
@@ -517,6 +534,7 @@ rotation_degrees = Vector3(0, 0, 6)
 [sub_resource type="Resource" id="Resource_wasn7"]
 script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_i6477")])
+effect = ExtResource("30_runes")
 
 [sub_resource type="Resource" id="Resource_jh0p1"]
 script = ExtResource("2_b37kx")
@@ -525,6 +543,7 @@ shape = ExtResource("7_jty54")
 [sub_resource type="Resource" id="Resource_6q8ru"]
 script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_jh0p1")])
+effect = ExtResource("31_golden")
 
 [sub_resource type="Resource" id="Resource_y4wh2"]
 script = ExtResource("2_b37kx")
@@ -577,13 +596,87 @@ script = ExtResource("16_form")
 lane_spacing = 2.2
 center_z = 0.1
 
+[sub_resource type="Resource" id="Resource_ranger_att"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("19_ranger")
+offset = Vector3(0, 0.05, 0)
+
+[sub_resource type="Resource" id="Resource_ranger"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_ranger_att")])
+
+[sub_resource type="Resource" id="Resource_bulwark_att"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("20_bulwark")
+
+[sub_resource type="Resource" id="Resource_bulwark"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_bulwark_att")])
+
+[sub_resource type="Resource" id="Resource_cryo_att"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("21_cryo")
+
+[sub_resource type="Resource" id="Resource_cryo"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_cryo_att")])
+effect = ExtResource("28_frost")
+
+[sub_resource type="Resource" id="Resource_pyro_att"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("22_pyro")
+
+[sub_resource type="Resource" id="Resource_pyro"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_pyro_att")])
+effect = ExtResource("24_fire")
+
+[sub_resource type="Resource" id="Resource_ember_att"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("23_ember")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_ember"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_ember_att")])
+effect = ExtResource("24_fire")
+
+[sub_resource type="Resource" id="Resource_plague_att"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("25_plague")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_plague"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_plague_att")])
+effect = ExtResource("27_bubbles")
+
+[sub_resource type="Resource" id="Resource_shatter_att"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("26_shatter")
+socket = &"Center"
+motion = 2
+motion_speed = 0.15
+
+[sub_resource type="Resource" id="Resource_shatter"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_shatter_att")])
+effect = ExtResource("32_cracks")
+
 [resource]
 script = ExtResource("4_amh85")
 default_look = SubResource("Resource_h2uv3")
 looks = Dictionary[StringName, ExtResource("1_avbba")]({
 &"demo.character.arcanist": SubResource("Resource_wasn7"),
 &"demo.character.bard": SubResource("Resource_6q8ru"),
+&"demo.character.bulwark": SubResource("Resource_bulwark"),
 &"demo.character.cleric": SubResource("Resource_hdoby"),
+&"demo.character.cryomancer": SubResource("Resource_cryo"),
+&"demo.character.ember_knight": SubResource("Resource_ember"),
+&"demo.character.plaguewright": SubResource("Resource_plague"),
+&"demo.character.pyromancer": SubResource("Resource_pyro"),
+&"demo.character.ranger": SubResource("Resource_ranger"),
+&"demo.character.shatterweaver": SubResource("Resource_shatter"),
 &"demo.character.warrior": SubResource("Resource_n5cye"),
 &"demo.enemy.bat": SubResource("Resource_x2aw2"),
 &"demo.enemy.golem": SubResource("Resource_6xxrr"),

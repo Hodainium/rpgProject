@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_binding"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_quad"]
+[ext_resource type="Shader" path="res://game/fx/shaders/rune_glyphs.gdshader" id="4_runes"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_track"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="6_param"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="7_def"]
+
+[sub_resource type="Resource" id="Resource_color"]
+script = ExtResource("2_binding")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Curve" id="Curve_flat"]
+_limits = [-360.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_lie_flat"]
+script = ExtResource("5_track")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_flat")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_runes"]
+script = ExtResource("3_quad")
+shader = ExtResource("4_runes")
+size = Vector2(1.9, 1.9)
+face_camera = false
+id = &"runes"
+space = 2
+socket = &"Base"
+loop = true
+loop_period = 10.0
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_color")])
+tracks = Array[ExtResource("5_track")]([SubResource("Resource_lie_flat")])
+
+[sub_resource type="Resource" id="Resource_param_color"]
+script = ExtResource("6_param")
+name = &"color"
+kind = 3
+default_value = Color(0.68, 0.52, 1, 1)
+description = "Rune colour."
+
+[resource]
+script = ExtResource("7_def")
+id = &"fx.arcane_runes"
+display_name = "Arcane runes"
+params = Array[ExtResource("6_param")]([SubResource("Resource_param_color")])
+layers = Array[ExtResource("1_layer")]([SubResource("Resource_runes")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "A slowly turning ring of glowing runes on the floor under a unit (the Arcanist's look, spec cube-style 6a)."

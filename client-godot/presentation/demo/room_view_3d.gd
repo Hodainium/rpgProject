@@ -83,6 +83,7 @@ func _on_party_changed() -> void:
 
 func _on_battle_finished(outcome: String) -> void:
 	_battle = null
+	_props_root.visible = true  # hidden for the fight (spec cube-style Set K); the rebuild below refills them
 	UnitStyle.explore_framing().tween_to(_camera, CAMERA_SECONDS)  # spec cube-style 3.9
 	_celebrate = outcome == Battle.VICTORY
 	_queue_build()
@@ -132,6 +133,7 @@ func _build() -> void:
 		_build_box(data["doors"])
 	_free_views(func(id: StringName) -> bool: return not String(id).begins_with("P"))  # the battle's enemies (faded out)
 	_sync_party(room)
+	_props_root.visible = true
 	for child in _props_root.get_children():
 		child.queue_free()
 	if room == null:
@@ -212,6 +214,7 @@ func _free_views(pick: Callable) -> void:
 
 func _on_battle_started(battle: Battle) -> void:
 	_battle = battle
+	_props_root.visible = false  # spec cube-style Set K: no pickup or event prop during a fight; the rebuild after it shows them
 	UnitStyle.battle_framing().tween_to(_camera, CAMERA_SECONDS)  # spec cube-style 3.9
 	var ids: Array[StringName] = []
 	for unit in battle.units():

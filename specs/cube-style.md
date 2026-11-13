@@ -77,6 +77,7 @@ so it must not reference meshes or textures (the reason `UnitDefinition.view` is
 | `use_color_override`, `color_override` | `bool`, `Color` | off = unset | Replaces `display_color` (a switch, not "alpha 0 = unset": the inspector's picker keeps alpha 0) |
 | `rim` | `float` | from the default look | `StandardMaterial3D.rim` strength |
 | `attachments` | `Array[UnitAttachment]` | none | What the cube wears |
+| `effect`, `effect_params` | `FxDefinition`, `Dictionary` | null = unset | A looping effect the cube carries (user, 2026-11-13: "for these cubes effects we can add shaders or effects"; the Ember Knight's `fx.fire_ring`, flames rising from a ring on the floor). The view plays it on itself (`FxAnchor.node3d`) once it is built, stops it (faded) when the unit dies or the view leaves the tree, starts it again on a revive, and swaps it on a restyle. Unset fields come from the rule, then the default look, like the others. Presentation only: headless `FxManager` is inert. Validator: `style_effect_not_looping` (an effect with no looping layer would play once and end). It follows the effects quality (off stops it, a raised tier starts it again), keeps playing while a death waits behind a cast, and goes with a death fade. Known limit: `effect_params` travel with their `effect`, so a look cannot recolour an effect it inherits from a rule or the default look |
 | `size` | `Vector3` | unset = the 0.8 cube | Later rounds only |
 | `animation_set` | `UnitAnimationSet` | the view's | Later rounds only |
 
@@ -274,7 +275,8 @@ gloss, rim and subsurface. B (real transparency) needs either dithered alpha (`T
 grainy) or a change to the stencil system, proposed on its own. A wobble (squash) cannot go on `Body.scale` (animations key it):
 it would be a new motion or a vertex shader, not in this sheet.
 **Decided (user, 2026-11-13):** A first (opaque fake goo); if it does not convince, real transparency through a stencil-system
-change is considered next.
+change is considered next. Also to try on the Slime (user, 2026-11-13): a look effect like the Ember Knight's fire ring, with green
+bubbles rising instead of flames (`UnitLook.effect`, 3.2).
 
 ### Set 2: Forge (5)
 | Unit | Colour | A | B |
