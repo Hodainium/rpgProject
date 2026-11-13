@@ -30,6 +30,19 @@
 [ext_resource type="Resource" path="res://presentation/demo/fx/arcane_runes.tres" id="30_runes"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/golden_glow.tres" id="31_golden"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/shard_cracks.tres" id="32_cracks"]
+[ext_resource type="Material" path="res://presentation/demo/style/surfaces/goo_clear.tres" id="33_goo"]
+[ext_resource type="Material" path="res://presentation/demo/style/surfaces/toad_spots.tres" id="34_warts"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/toad_eyes.tres" id="35_toad_eyes"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/throat_sac_spotted.tres" id="36_toad_sac"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/toad_tongue.tres" id="37_toad_tongue"]
+[ext_resource type="Material" path="res://presentation/demo/style/surfaces/frost_clear.tres" id="38_frost_clear"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/wisp_motes.tres" id="39_motes"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/totem_staff.tres" id="40_staff"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/feather_headdress.tres" id="41_headdress"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/rat_tail.tres" id="42_rat_tail"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/mouse_face.tres" id="43_mouse"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/longhorn_skull.tres" id="44_longhorn"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bone_crown.tres" id="45_bone_crown"]
 
 [sub_resource type="Resource" id="Resource_h2uv3"]
 script = ExtResource("1_avbba")
@@ -663,6 +676,95 @@ script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_shatter_att")])
 effect = ExtResource("32_cracks")
 
+[sub_resource type="Resource" id="Resource_slime"]
+script = ExtResource("1_avbba")
+use_color_override = true
+color_override = Color(0.2, 0.8, 0.2, 0.45)
+rim = 0.9
+rim_tint = 0.5
+surface = ExtResource("33_goo")
+effect = ExtResource("27_bubbles")
+effect_params = {
+"color": Color(0.55, 1, 0.35, 1),
+"size": 1.3
+}
+
+[sub_resource type="Resource" id="Resource_toad_eyes"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("35_toad_eyes")
+mirror = true
+
+[sub_resource type="Resource" id="Resource_toad_sac"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("36_toad_sac")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_toad_tongue"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("37_toad_tongue")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_toad"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_toad_eyes"), SubResource("Resource_toad_sac"), SubResource("Resource_toad_tongue")])
+surface = ExtResource("34_warts")
+
+[sub_resource type="Resource" id="Resource_wisp"]
+script = ExtResource("1_avbba")
+use_color_override = true
+color_override = Color(0.88, 1, 1, 0.55)
+rim = 1.0
+rim_tint = 0.3
+surface = ExtResource("38_frost_clear")
+effect = ExtResource("39_motes")
+
+[sub_resource type="Resource" id="Resource_shaman_staff"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("40_staff")
+socket = &"Left"
+offset = Vector3(0.1, 0.12, 0.25)
+
+[sub_resource type="Resource" id="Resource_shaman_headdress"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("41_headdress")
+
+[sub_resource type="Resource" id="Resource_shaman"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_shaman_staff"), SubResource("Resource_shaman_headdress")])
+
+[sub_resource type="Resource" id="Resource_rat_tail"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("42_rat_tail")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_rat_crown"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("12_p1ca3")
+use_tint = true
+tint = Color(0.55, 0.4, 0.2, 1)
+
+[sub_resource type="Resource" id="Resource_rat_face"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("43_mouse")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_rat"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_rat_tail"), SubResource("Resource_rat_crown"), SubResource("Resource_rat_face")])
+
+[sub_resource type="Resource" id="Resource_warden_skull"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("44_longhorn")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_warden_crown"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("45_bone_crown")
+
+[sub_resource type="Resource" id="Resource_warden"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_warden_skull"), SubResource("Resource_warden_crown")])
+
 [resource]
 script = ExtResource("4_amh85")
 default_look = SubResource("Resource_h2uv3")
@@ -679,10 +781,16 @@ looks = Dictionary[StringName, ExtResource("1_avbba")]({
 &"demo.character.shatterweaver": SubResource("Resource_shatter"),
 &"demo.character.warrior": SubResource("Resource_n5cye"),
 &"demo.enemy.bat": SubResource("Resource_x2aw2"),
+&"demo.enemy.bone_warden": SubResource("Resource_warden"),
 &"demo.enemy.golem": SubResource("Resource_6xxrr"),
 &"demo.enemy.imp": SubResource("Resource_rptdn"),
 &"demo.enemy.knight": SubResource("Resource_knightlook"),
-&"demo.enemy.lich": SubResource("Resource_q38xi")
+&"demo.enemy.lich": SubResource("Resource_q38xi"),
+&"demo.enemy.rat_king": SubResource("Resource_rat"),
+&"demo.enemy.shaman": SubResource("Resource_shaman"),
+&"demo.enemy.slime": SubResource("Resource_slime"),
+&"demo.enemy.toad": SubResource("Resource_toad"),
+&"demo.enemy.wisp": SubResource("Resource_wisp")
 })
 tag_rules = Array[ExtResource("5_m0vw3")]([])
 default_mood = SubResource("Resource_v4wvm")

@@ -1,0 +1,46 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[sub_resource type="Gradient" id="Gradient_spots"]
+offsets = PackedFloat32Array(0, 0.22, 0.3, 1)
+colors = PackedColorArray(0.32, 0.3, 0.22, 1, 0.32, 0.3, 0.22, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_spots"]
+noise_type = 2
+seed = 11
+frequency = 0.035
+fractal_type = 0
+cellular_return_type = 1
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_spots"]
+width = 256
+height = 256
+noise = SubResource("FastNoiseLite_spots")
+color_ramp = SubResource("Gradient_spots")
+seamless = true
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_warts"]
+noise_type = 2
+seed = 5
+frequency = 0.07
+fractal_type = 1
+fractal_octaves = 2
+cellular_return_type = 1
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_warts"]
+width = 256
+height = 256
+noise = SubResource("FastNoiseLite_warts")
+seamless = true
+invert = true
+as_normal_map = true
+bump_strength = 18.0
+
+[resource]
+albedo_texture = SubResource("NoiseTexture2D_spots")
+roughness = 0.25
+normal_enabled = true
+normal_scale = 2.2
+normal_texture = SubResource("NoiseTexture2D_warts")
+clearcoat_enabled = true
+clearcoat_roughness = 0.2
+uv1_triplanar = true

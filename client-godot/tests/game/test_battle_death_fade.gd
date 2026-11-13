@@ -80,6 +80,22 @@ func test_an_enemy_fades_a_party_member_falls() -> void:
 	party.queue_free()
 
 
+## Code review, PR #35: a see-through body (the Slime at 45%) keeps its own alpha through the flash and the tint, and fades from
+## it, instead of turning solid when it dies.
+func test_a_see_through_body_fades_from_its_own_alpha() -> void:
+	var enemy := _view(&"E1", null, Color(0.2, 0.8, 0.2, 0.45))
+	enemy.die()
+	var driver := enemy.death_fade_driver()
+	driver.set_process(false)
+	var settings := driver.fade
+	driver.advance(settings.flash_seconds + settings.tint_seconds)
+	check(is_equal_approx(_material(enemy).albedo_color.a, 0.45), "tinted, still 45%% see-through (%s)" % _material(enemy).albedo_color)
+	driver.advance(settings.fade_seconds * 0.5)
+	var half := _material(enemy).albedo_color.a
+	check(half > 0.15 and half < 0.3, "half way through the fade: about half of 45%% (%.3f)" % half)
+	enemy.queue_free()
+
+
 func test_attachments_fade_too_and_revive_cancels() -> void:
 	var registry := StyleRegistry.new()
 	var look := UnitLook.new()

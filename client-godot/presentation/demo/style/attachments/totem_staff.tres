@@ -1,0 +1,70 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_staff"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.035
+radius_top = 0.03
+curve = PackedVector3Array(0, -0.55, 0, 0.04, 0.1, 0, -0.02, 0.62, 0)
+segments = 14
+color = Color(0.38, 0.25, 0.14, 1)
+roughness = 0.85
+
+[sub_resource type="Resource" id="Resource_skull"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.1
+segments = 16
+position = Vector3(-0.02, 0.72, 0)
+scale = Vector3(1, 0.95, 1.1)
+color = Color(0.92, 0.89, 0.8, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_eye_l"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.025
+segments = 8
+position = Vector3(0.02, 0.73, 0.085)
+color = Color(0.05, 0.04, 0.04, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_eye_r"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.025
+segments = 8
+position = Vector3(-0.06, 0.73, 0.085)
+color = Color(0.05, 0.04, 0.04, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_feather_a"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.05
+segments = 10
+position = Vector3(0.07, 0.56, 0.02)
+rotation_degrees = Vector3(0, 0, -15)
+scale = Vector3(0.45, 2.2, 0.25)
+color = Color(0.85, 0.2, 0.15, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_feather_b"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.05
+segments = 10
+position = Vector3(-0.09, 0.54, -0.01)
+rotation_degrees = Vector3(0, 0, 18)
+scale = Vector3(0.45, 2.0, 0.25)
+color = Color(0.15, 0.55, 0.6, 1)
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Totem staff"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_staff"), SubResource("Resource_skull"), SubResource("Resource_eye_l"), SubResource("Resource_eye_r"), SubResource("Resource_feather_a"), SubResource("Resource_feather_b")])

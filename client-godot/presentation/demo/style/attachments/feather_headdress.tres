@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_band"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.33
+radius_top = 0.32
+height = 0.07
+segments = 28
+position = Vector3(0, 0.035, 0)
+color = Color(0.45, 0.28, 0.15, 1)
+roughness = 0.8
+tintable = false
+
+[sub_resource type="Resource" id="Resource_feathers"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.06
+segments = 10
+position = Vector3(0, 0.25, 0)
+rotation_degrees = Vector3(0, 0, -18)
+scale = Vector3(0.95, 3.6, 0.25)
+ring_count = 9
+ring_radius = 0.3
+color = Color(0.9, 0.35, 0.12, 1)
+roughness = 0.7
+
+[sub_resource type="Resource" id="Resource_tips"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.04
+segments = 8
+position = Vector3(0, 0.44, 0)
+rotation_degrees = Vector3(0, 0, -18)
+scale = Vector3(0.6, 1.6, 0.3)
+ring_count = 9
+ring_radius = 0.36
+color = Color(0.1, 0.1, 0.12, 1)
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Feather headdress"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_band"), SubResource("Resource_feathers"), SubResource("Resource_tips")])
