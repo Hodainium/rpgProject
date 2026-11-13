@@ -33,7 +33,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5. `card-collection` | ✅ Done (spec synced; the account's cards on the server: catalog, packs with Epic / Legendary / Mythic pity and a Rare guarantee, dust and craft, the run lock, the run's item pool as a verified input, `POST /runs/{id}/abandon`; Godot: the pool in the run hash and steps, card tags on all 160 demo cards, core-set proposal, console commands, run-end gate; no Vault pool; 535 .NET, 626 Godot, 5 card e2e scenarios; not built: the Grafana row; the screens are 5b, the numbers 5c) | 2026-11-09 |
 | 5a. `vfx-framework` | 🔨 Built, awaiting the user's review (`specs/vfx-framework.md`; data-driven FX in 2D, 3D and hybrid, the GodotGAS cue bridge, the hybrid stage, a shader library, a proof set of 12 effects, dev tools, the gallery; 696 Godot tests; every hit in a battle now sparks; spec to sync after tuning) | 2026-11-09 |
 | 5a2. `vfx-content-pass` | ✅ Built 2026-11-09 (effects for hits, DoTs, controls, stat statuses, heals, revives, 24 ultimates, battle moments and damage numbers; open for playtest fixes) | `specs/vfx-content-pass.md` |
-| 5a3. `vfx-stencil` | ⬜ Next (stencil buffer support after Unreal's Custom Depth-Stencil as Lyra uses it: per-unit stencil values, effects drawn over their own unit and hidden by everything else; two implementations prototyped and compared; see its section) | |
+| 5a3. `vfx-stencil` | ✅ Done (PRs #21, #22, #23, #24; `specs/vfx-stencil.md`, reusable reference `specs/design/stencil-over-own-unit.md`): stencil replaces the depth bias, each unit stamps its battle position's value, effects draw over their own unit in two passes (OWN, OTHER) through `FxStencilMaterial`, the shader copies are prepared at boot, run start and battle start; the leak went from 270 to 6 pixels at equal GPU time and the first-battle hitch is gone (user playtest 2026-11-12). Open items in the spec. | 2026-11-12 |
 | 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |
@@ -580,6 +580,8 @@ variants need either separate damage effect variants with their own cue tags, or
 carries the hit tags) with a tag filter, which `FxListener` does not have yet. Decide the approach in this slice's spec.
 
 ### 5a3. `vfx-stencil`
+**Done 2026-11-12** (PRs #21–#24). The experiment, its findings and the open items are in `specs/vfx-stencil.md`; the technique as a reusable reference is `specs/design/stencil-over-own-unit.md`. The text below is the original plan.
+
 Added 2026-11-10 from the VFX playtest (`playtest-fixes` B14), as the user's next task. Stencil buffer support for the project,
 with effects as its first user. Today an effect on a unit is kept from being cut by that unit's own mesh by a depth bias (the
 unit's radius, Unreal's Pixel Depth Offset), so it still shows through a unit standing less than the bias in front of it. With
