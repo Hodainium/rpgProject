@@ -111,6 +111,7 @@ tool can save the cached meshes as mesh files (for speed or an export) without c
 | `mirror` | Also a copy mirrored across the unit's middle (X): a pair of wings, two horns |
 | `use_tint`, `tint` | Replaces the colour of the shape's tintable parts (one hat shape, many colours) |
 | `motion`, `motion_speed`, `motion_amount` | `NONE`, `BOB` (up and down), `SPIN` (around Y), `FLAP` (a swing around Z, mirrored for pairs) |
+| `spin_axis` | `SPIN` only: the axis in the attachment's own frame (after its rotation), so a gear stood on its side turns on its axle (the Brass Colossus, Set 2); zero (unset) = around the parent's Y, as before |
 
 `UnitLook.attachments` is unset when empty: an exact look's list wins whole over a rule's, a rule's over the default's (lists are
 not merged). Attachments are children of `Body`, so every unit animation moves them. Every part's material goes through
@@ -233,7 +234,7 @@ demo registry:
 
 Plus the existing suites unchanged: `tools/godot_tests.sh` and `tools/dotnet_test.sh`.
 
-## 6a. Round 4: the roll-out design sheet (in progress; Set P and Set 1 done 2026-11-13)
+## 6a. Round 4: the roll-out design sheet (in progress; Set P, Set 1 and Set 2 done 2026-11-13)
 
 The looks for the 36 units that had none (round 2 dressed Warrior, Cleric, Arcanist, Bard, Bat, Fire Imp, Knight, Lich, Golem).
 Each unit gets a first proposal (**A**) and an alternative (**B**); the user picks A, B, a mix, or a change, usually over several
@@ -241,7 +242,7 @@ iterations. Every detail is data: primitive attachments (3.3), a surface (`UnitL
 3.2), or a shader in the effect library. "Reuse" means an existing shape or effect with a tint or parameters (memory
 `reuse-vfx-parameterize`). Colours come from the unit's `display_color` unless noted.
 
-**Design approach (evolved during Set P and Set 1, user, 2026-11-13; memory `cube-style-design-lessons`):**
+**Design approach (evolved during Set P, Set 1 and Set 2, user, 2026-11-13; memory `cube-style-design-lessons`):**
 - **Start simple, combine freely.** A proposal starts from one signature detail, but combined details are fine and often chosen
   (A and B together, plus a face). The original "one detail per cube" rule is relaxed.
 - **Party:** headwear (never a held item) plus a **floor effect** in the class's theme under the cube (fire, bubbles, frost, holy
@@ -254,9 +255,17 @@ iterations. Every detail is data: primitive attachments (3.3), a surface (`UnitL
   The battle camera sees enemies from the side, so front details lean toward the camera side and tails swing sideways.
 - **Effects:** each unit gets its own (a party effect is reused on an enemy only when the user asks); pulses go clearly from light
   to dark; every shader uniform a track animates is set in the layer's `shader_params`.
+- **Held items and long shapes (Set 2):** a held item sits on the unit's own Left (the camera side in battle) and clear of the body;
+  a ladle's handle rises from its bowl's rim, not through it; a hammer's head runs along the unit's facing (Z), so its long side
+  shows from the battle camera. A gear stood on its side spins on its own axle (`UnitAttachment.spin_axis`, 3.3).
+- **Faces on the face plate:** small glowing eyes read best on a dark plate behind them (the Anvil Guard's visor, the Smelter's
+  eye plate); eyes stay flush with the face (the user turned down eyes that stick out).
+- **Surfaces glow through colour, not emission:** an emission texture on a body surface renders the whole cube white (seen on the
+  Golem's cracks and the Cinder Hound's crust), so a hot surface uses bright seams in its albedo and a looping effect for heat.
 
 **Review (user, 2026-11-13; memory `live-preview-window`):** set by set in a live window the user closes. First an A/B room with
-every unit **facing the camera** (to see the faces); then each iteration shown with **only the units under discussion**; finally
+every unit **facing the camera** (to see the faces), with a **Turn** button that turns the cubes to their battle facing and back
+(the review tools' `lineup`, outside the repo; user, Set 2); then each iteration shown with **only the units under discussion**; finally
 **one demo fight** facing the party as in battle, with the party moving first so no enemy acts. Rejected files are deleted with the
 user's OK when the set is approved; a code review runs before each set's PR.
 
@@ -314,6 +323,13 @@ a longhorn skull on its face and a crown of bone spikes.
 | Forgemaster (boss) | firebrick | Held great forge hammer (box head, long handle, iron) | A welding visor on the front |
 | Brass Colossus (boss) | brass gold | A big gear on the back, turning (torus + ring of teeth, `SPIN`) | **Surface:** riveted brass plates (like the Golem's stone, metal plates) |
 
+**Picked (Set 2, approved 2026-11-13):** Cinder Hound: B, the ember crust (`ember_crust`: dark plates with bright orange seams in
+the colour) with charcoal ears, a snout, ember eyes and rising embers (`cinder_embers`). Smelter: A and B together, a ladle of
+molten metal held clear of the body, a chimney with smoke (`chimney_smoke`) and a furnace-mouth face with slit eyes on a dark plate.
+Anvil Guard: A and B together, an anvil on its head (horn toward the party), a smith's hammer and a visor with glowing slits.
+Forgemaster: B, the great forge hammer and smith's goggles, with a handlebar moustache in place of the first proposal's beard.
+Brass Colossus: B (`riveted_brass` plates, steam pipes, porthole eyes) with A's brass gear turning on the camera side.
+
 ### Set 3: Hollow (6)
 | Unit | Colour | A | B |
 |---|---|---|---|
@@ -348,9 +364,9 @@ asked.
 | The Nameless (boss) | dark teal | A void halo: a dark ring tilted behind the head, a faint violet glow, slowly turning (`SPIN`) | **Surface:** a starfield (dark, sparse emissive specks) |
 
 ### Sets 2-5 and what the roll-out needed so far
-- Sets 2-5 above are first proposals. They are built under the design approach above, so expect faces, effects and combined
+- Sets 3-5 above are first proposals. They are built under the design approach above, so expect faces, effects and combined
   details to be added while iterating.
-- System code the roll-out added: `UnitLook.effect` / `effect_params` (3.2), the `rune_glyphs` shader, see-through bodies keeping
+- System code the roll-out added: `UnitAttachment.spin_axis` (3.3, Set 2), `UnitLook.effect` / `effect_params` (3.2), the `rune_glyphs` shader, see-through bodies keeping
   their alpha in the death fade. Still only if picked: a `PULSE` motion (hearts), a body wobble.
 - Q3 (the props) is answered below for keys and armor; items wait for their own slice.
 
