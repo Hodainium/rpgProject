@@ -26,7 +26,7 @@ static func boss_default() -> DeathFade:
 	fade.tint_seconds = 0.8
 	fade.fade_seconds = 1.4
 	fade.emission = 3.0
-	fade.end_beat = 0.6
+	fade.end_beat = 0.2  # user, 2026-11-13: 0.6 waited too long once the boss was gone
 	return fade
 
 

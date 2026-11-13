@@ -58,7 +58,8 @@ No C# DTOs, queues, topics or Redis keys. The Godot pieces:
 
 `StyleRegistry.enemy_death` and `boss_death: DeathFade` (through the base chain; null everywhere = built-in defaults, so the game
 always fades enemies). A unit tagged `Enemy.Boss` uses `boss_death` (user, 2026-11-13: "a longer more dramatic one"): defaults
-flash 0.12 s, tint 0.8 s, fade 1.4 s, glow 3, end beat 0.6 s.
+flash 0.12 s, tint 0.8 s, fade 1.4 s, glow 3, end beat 0.2 s (0.6 s first; the user, after the live preview: the battle
+waited too long once the boss was no longer visible).
 
 ### 3.2 `UnitAnimator`
 - `die()`: an enemy view (`unit_id` starts with `E`) runs the fade; a party view keeps today's `death` slot.
