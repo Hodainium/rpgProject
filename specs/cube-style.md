@@ -404,7 +404,9 @@ with glowing pink eyes) and the ritual dagger held on the camera side (its first
 replaced by a leaf blade). Bound Demon: A and B, two slanted bands of chain with a broken shackle, big curled black horns and an
 angry ember face with fangs. High Witch: A, the big witch hat (bent tip, green band, gold buckle), green eyes, a hooked nose and a
 grin, with green motes (`hex_motes`). Void Wraith: B, a see-through violet body (`void_clear`, 50%) with hollow glowing eyes and
-rising wisps (`void_wisps`). Abyssal Hulk: renamed **Guardian** (display name only; the id `demo.enemy.abyssal_hulk` stays): the
+rising wisps (`void_wisps`). Abyssal Hulk: renamed **Guardian** (display name only; the id `demo.enemy.abyssal_hulk` stays; `build_full_descent.gd` writes the
+new name too; the only content-root change of the roll-out, so it changes the ruleset version: re-export the full build for the
+dev stack's verifier): the
 Nameless's B proposal, retuned to stand apart: a blue starfield (`starfield` under a blue colour override), a cyan void slit and a
 smaller, still cyan ring behind the head. The Nameless: C (a second iteration), a starfield body, a black-hole face (a black
 disc in a glowing accretion ring with beads, turning on its own axle) and seven dark shards orbiting, with dark smoke rising from

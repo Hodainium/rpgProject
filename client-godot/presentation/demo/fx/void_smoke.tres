@@ -85,4 +85,4 @@ display_name = "Void smoke"
 params = Array[ExtResource("4_param")]([SubResource("Resource_param_color"), SubResource("Resource_param_ember_color")])
 layers = Array[ExtResource("1_layer")]([SubResource("Resource_smoke"), SubResource("Resource_embers")])
 tags = Array[StringName]([&"Fx.Kind.Aura"])
-description = "Thick dark smoke rising round a unit from the floor, with a few cyan embers (the Guardian's look, spec cube-style 6a)."
+description = "Thick dark smoke rising round a unit from the floor, with a few cyan embers (the Nameless's look, spec cube-style 6a)."
