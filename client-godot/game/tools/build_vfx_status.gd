@@ -76,7 +76,7 @@ func _status_skin() -> FxDefinition:
 		_param(&"erosion", FxParam.Kind.FLOAT, 0.4, "How much of the shell the noise eats.", 0.0, 1.0),
 		_param(&"noise_scale", FxParam.Kind.FLOAT, 5.0, "Size of the noise pattern.", 0.5, 20.0),
 		_param(&"scroll", FxParam.Kind.FLOAT, 0.5, "Noise speed up the body (negative = down).", -4.0, 4.0)],
-		"A looping glowing shell on the unit: ooze, bleeding, vines, sluggishness by colour and shell settings.", [&"Fx.Kind.Aura"], &"Center", false)
+		"A looping glowing shell on the unit: ooze, bleeding, vines, sluggishness by colour and shell settings.", [&"Fx.Kind.Aura"], &"Center")
 
 
 ## Burning: flames on the top face, embers and a fire skin, for as long as the status lasts.
@@ -137,7 +137,7 @@ func _burning() -> FxDefinition:
 	return _define(&"fx.burning", "Burning", [flames, embers, rim],
 		[_param(&"color", FxParam.Kind.COLOR, FIRE, "Fire colour."),
 		_param(&"size", FxParam.Kind.FLOAT, 1.0, "Flame size multiplier.", 0.3, 3.0)],
-		"A unit on fire: flames licking up from its top, embers and a fire skin.", [&"Fx.Kind.Aura"], &"Center", true)
+		"A unit on fire: flames licking up from its top, embers and a fire skin.", [&"Fx.Kind.Aura"], &"Center")
 
 
 ## One bleed tick: red drops thrown off the unit that fall, and a short splat.
@@ -168,7 +168,7 @@ func _bleed_tick() -> FxDefinition:
 	return _define(&"fx.bleed_tick", "Bleed tick", [drops, splat],
 		[_param(&"color", FxParam.Kind.COLOR, BLEED, "Blood colour."),
 		_param(&"intensity", FxParam.Kind.FLOAT, 1.0, "Splat brightness.", 0.0, 4.0)],
-		"Red drops falling off a unit that is bleeding.", [&"Fx.Kind.Hit"], &"Center", true)
+		"Red drops falling off a unit that is bleeding.", [&"Fx.Kind.Hit"], &"Center")
 
 
 ## Frozen: an ice shell, crystals growing on the surface and a cold mist at the feet.
@@ -226,7 +226,7 @@ func _frozen() -> FxDefinition:
 	mist.bindings = [_bind("process_material:color", &"color")]
 	return _define(&"fx.frozen", "Frozen", [rim, crystals, mist],
 		[_param(&"color", FxParam.Kind.COLOR, ICE, "Ice colour.")],
-		"A frozen unit: an ice shell, crystals on its surface and a cold mist at its feet.", [&"Fx.Kind.Aura"], &"Center", true)
+		"A frozen unit: an ice shell, crystals on its surface and a cold mist at its feet.", [&"Fx.Kind.Aura"], &"Center")
 
 
 ## Stun, Persona style: three solid yellow stars circling the head on a slightly tilted ring, each chased by a white trail. A star is one
@@ -287,7 +287,7 @@ func _stun_stars() -> FxDefinition:
 	return _define(&"fx.stun_stars", "Stun stars", layers,
 		[_param(&"color", FxParam.Kind.COLOR, Color.WHITE, "Tint of the stars (white keeps the sprite's own yellow)."),
 		_param(&"trail_color", FxParam.Kind.COLOR, Color.WHITE, "Colour of the chaser trail.")],
-		"Stars circling above a stunned unit, each chased by a white trail.", [&"Fx.Kind.Aura"], &"Top", true)
+		"Stars circling above a stunned unit, each chased by a white trail.", [&"Fx.Kind.Aura"], &"Top")
 
 
 # --- Cue scenes --------------------------------------------------------------------------------------------------------
@@ -319,8 +319,7 @@ func _cue(file: String, fx: FxDefinition, literals: Dictionary, persistent: bool
 
 # --- Helpers ---------------------------------------------------------------------------------------------------------------
 
-func _define(effect_id: StringName, title: String, layers: Array, params: Array, note: String, tags: Array, socket: StringName,
-		_biased: bool) -> FxDefinition:
+func _define(effect_id: StringName, title: String, layers: Array, params: Array, note: String, tags: Array, socket: StringName) -> FxDefinition:
 	var definition := FxDefinition.new()
 	definition.id = effect_id
 	definition.display_name = title

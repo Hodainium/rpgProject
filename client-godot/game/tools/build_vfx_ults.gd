@@ -132,7 +132,7 @@ func _ult_flourish() -> FxDefinition:
 		_param(&"intensity", FxParam.Kind.FLOAT, 1.0, "Brightness.", 0.0, 4.0),
 		_param(&"ray_count", FxParam.Kind.FLOAT, 14.0, "Number of god rays.", 2.0, 40.0),
 		_param(&"spin", FxParam.Kind.FLOAT, 0.08, "Turns per second of the rays (negative the other way).", -1.0, 1.0)],
-		"An ultimate's cast: rays, ripples, a pillar of light, a flash, a light and a shake.", [&"Fx.Kind.Burst"], &"Center", true)
+		"An ultimate's cast: rays, ripples, a pillar of light, a flash, a light and a shake.", [&"Fx.Kind.Burst"], &"Center")
 
 
 ## A physical hit: a crescent cut across the target, a few sparks and a flash. Replaces the generic spark physical hits used to have.
@@ -170,7 +170,7 @@ func _slash_hit() -> FxDefinition:
 		[_param(&"color", FxParam.Kind.COLOR, Color(1.0, 0.96, 0.85), "Colour of the cut."),
 		_param(&"intensity", FxParam.Kind.FLOAT, 1.0, "Brightness.", 0.0, 4.0),
 		_param(&"angle", FxParam.Kind.FLOAT, -25.0, "Degrees the cut is turned.", -180.0, 180.0)],
-		"A crescent cut with sparks on a unit hit by physical damage.", [&"Fx.Kind.Hit"], &"Hit", true)
+		"A crescent cut with sparks on a unit hit by physical damage.", [&"Fx.Kind.Hit"], &"Hit")
 
 
 func _floor_ring(layer_id: StringName, delay: float) -> FxShaderQuadLayer:
@@ -246,8 +246,7 @@ func _register(effects: Array[FxDefinition]) -> void:
 
 # --- Helpers ---------------------------------------------------------------------------------------------------------------
 
-func _define(effect_id: StringName, title: String, layers: Array, params: Array, note: String, tags: Array, socket: StringName,
-		_biased: bool) -> FxDefinition:
+func _define(effect_id: StringName, title: String, layers: Array, params: Array, note: String, tags: Array, socket: StringName) -> FxDefinition:
 	var definition := FxDefinition.new()
 	definition.id = effect_id
 	definition.display_name = title
