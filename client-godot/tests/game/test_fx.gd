@@ -611,6 +611,25 @@ func test_persistent_cue_loops_until_ended() -> void:
 	eq(done[0], 1, "and finishes after the fade")
 
 
+## A persistent cue node freed without end_cue() (a battle freed with its units) takes its looping look with it: the unit's
+## view outlives the battle, and the effect must not stay on it in exploration (2026-11-13).
+func test_a_freed_persistent_cue_stops_its_effect() -> void:
+	var service := _service()
+	FxCueNotify.service_override = service
+	var layer := _particles(&"aura", 0.4)
+	layer.loop = true
+	var cue := FxCueNotify.new()
+	cue.fx = _def(&"fx.aura_freed", [layer])
+	cue.auto_destroy = false
+	cue.stop_fade = 0.1
+	cue.execute_cue(_keep(Node3D.new()))
+	service.advance(1.0)
+	eq(service.live_count(&"fx.aura_freed"), 1, "the aura plays")
+	cue.free()
+	service.advance(1.0)
+	eq(service.live_count(&"fx.aura_freed"), 0, "freed with its cue: the aura fades out")
+
+
 func test_cue_through_the_real_cue_manager() -> void:
 	var service := _service()
 	FxCueNotify.service_override = service

@@ -142,6 +142,14 @@ func _on_quality_changed(_tier: int) -> void:
 func _notification(what: int) -> void:
 	if not _on:
 		return
+	# A persistent cue freed without end_cue() (its battle freed with its units, 2026-11-13): its look plays on the unit's view,
+	# which now outlives the battle, so it is faded out here instead of staying on the cube in exploration.
+	if what == NOTIFICATION_PREDELETE:
+		_on = false
+		if _handle != null and _handle.is_playing():
+			_handle.stop(stop_fade)
+		_handle = null
+		return
 	if what == NOTIFICATION_DISABLED and _handle != null and _handle.is_playing():
 		_handle.stop(stop_fade)
 		_handle = null
