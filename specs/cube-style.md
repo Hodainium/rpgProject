@@ -218,6 +218,12 @@ demo registry:
 
 Plus the existing suites unchanged: `tools/godot_tests.sh` and `tools/dotnet_test.sh`.
 
+## 6b. Open items
+- **Fog and effects (found in the 2026-11-13 playtest):** the Crypt and Coven moods had fog, and Godot's fog tinted the
+  transparent parts of every effect quad, so effects showed as pale boxes. The fog was removed from both moods. Fog can come
+  back once the effect materials opt out of it (`render_mode fog_disabled` in the effect shaders, `disable_fog` on the
+  particles' draw materials): a change to the VFX system (spec `vfx-framework`), to be proposed on its own.
+
 ## 7. Open questions for the user
 - **Q1** Round 3's models: which ones from Poly Pizza (CC0 preferred; CC-BY needs a CREDITS line per author)?
 - **Q2** In-game credits: a small "Credits" entry in Settings, or the repo and README only? (CC0 needs none; it matters once
