@@ -233,17 +233,32 @@ demo registry:
 
 Plus the existing suites unchanged: `tools/godot_tests.sh` and `tools/dotnet_test.sh`.
 
-## 6a. Round 4: the roll-out design sheet (draft 2026-11-13, awaiting the user's approval)
+## 6a. Round 4: the roll-out design sheet (in progress; Set P and Set 1 done 2026-11-13)
 
-The looks for the 36 units that have none yet (round 2 dressed Warrior, Cleric, Arcanist, Bard, Bat, Fire Imp, Knight, Lich,
-Golem). Rules (3.4, memory `cube-style-one-detail`): **one detail per cube** (a mirrored pair or a ring of copies counts as one);
-party characters wear **headwear** and never hold items; enemies get one signature detail: headwear, a held item, something on the
-back or front, or a **surface** (`UnitLook.surface`). Each unit has a first proposal (**A**) and an alternative (**B**); the user picks
-A, B or a change. Every detail is primitive data (3.3); "reuse" means an existing `AttachmentShape` with a tint, so look-alike
-details share one shape (memory `reuse-vfx-parameterize`). Colours come from the unit's `display_color` unless noted.
+The looks for the 36 units that had none (round 2 dressed Warrior, Cleric, Arcanist, Bard, Bat, Fire Imp, Knight, Lich, Golem).
+Each unit gets a first proposal (**A**) and an alternative (**B**); the user picks A, B, a mix, or a change, usually over several
+iterations. Every detail is data: primitive attachments (3.3), a surface (`UnitLook.surface`), a looping effect (`UnitLook.effect`,
+3.2), or a shader in the effect library. "Reuse" means an existing shape or effect with a tint or parameters (memory
+`reuse-vfx-parameterize`). Colours come from the unit's `display_color` unless noted.
 
-**Review (user, 2026-11-13):** set by set in a demo room, in a live window the user closes (memory `live-preview-window`); A and
-B are both built and shown side by side, and the user picks, rejects or asks for a change per unit before the next set is built. The party set first, then the enemies chapter by chapter.
+**Design approach (evolved during Set P and Set 1, user, 2026-11-13; memory `cube-style-design-lessons`):**
+- **Start simple, combine freely.** A proposal starts from one signature detail, but combined details are fine and often chosen
+  (A and B together, plus a face). The original "one detail per cube" rule is relaxed.
+- **Party:** headwear (never a held item) plus a **floor effect** in the class's theme under the cube (fire, bubbles, frost, holy
+  glow, runes, golden glow, cracks). **Enemies:** a signature detail, often a **face** (eyes, muzzle, skull, tongue), plus an effect
+  or surface where it fits.
+- **See-through bodies** are allowed for jelly and spirit creatures (an alpha surface with both faces drawn and a colour override
+  alpha around 45-55%). They are not stencil-stamped, so effects on them use the plain depth test; that is accepted because those
+  effects show through the body. They need something to see inside or behind, and no solid part may start inside them.
+- **Placement:** nothing clips into the cube or sits close to the floor, orbiting parts are evenly spaced, round shapes are smooth.
+  The battle camera sees enemies from the side, so front details lean toward the camera side and tails swing sideways.
+- **Effects:** each unit gets its own (a party effect is reused on an enemy only when the user asks); pulses go clearly from light
+  to dark; every shader uniform a track animates is set in the layer's `shader_params`.
+
+**Review (user, 2026-11-13; memory `live-preview-window`):** set by set in a live window the user closes. First an A/B room with
+every unit **facing the camera** (to see the faces); then each iteration shown with **only the units under discussion**; finally
+**one demo fight** facing the party as in battle, with the party moving first so no enemy acts. Rejected files are deleted with the
+user's OK when the set is approved; a code review runs before each set's PR.
 
 ### Set P: the party (7)
 | Unit | Colour | A | B |
@@ -258,6 +273,13 @@ B are both built and shown side by side, and the user picks, rejects or asks for
 
 Cryomancer and Shatterweaver both use crystals: the Cryomancer's stand still and upright in a crown; the Shatterweaver's are loose
 and turn.
+
+**Picked (Set P, approved 2026-11-13, PR #34):** Ranger: a pointed green cap (the wizard-hat shape) with a red bobble on its tip.
+Bulwark: B, the horns swept back and up. Cryomancer: A, plus a frost ring on the floor. Pyromancer: B, plus the fire ring.
+Ember Knight: neither; a welding mask with head flames, plus a fire ring rising from the floor. Plaguewright: A (the beak straight
+and level), plus a green bubble ring. Shatterweaver: seven gem shards orbiting the body evenly, plus pink floor cracks pulsing light
+to dark. Round 2 classes gained floor effects too: Cleric (now a white body) a holy glow with rising motes, Arcanist a ring of runes
+(new shader `rune_glyphs`), Bard a golden glow.
 
 ### Set 1: Cellar and Crypt (6)
 | Unit | Colour | A | B |
@@ -274,9 +296,14 @@ see-through Slime would lose "draw over own unit" effects and use the plain dept
 gloss, rim and subsurface. B (real transparency) needs either dithered alpha (`TRANSPARENCY_ALPHA_HASH`, opaque pass, stampable;
 grainy) or a change to the stencil system, proposed on its own. A wobble (squash) cannot go on `Body.scale` (animations key it):
 it would be a new motion or a vertex shader, not in this sheet.
-**Decided (user, 2026-11-13):** A first (opaque fake goo); if it does not convince, real transparency through a stencil-system
-change is considered next. Also to try on the Slime (user, 2026-11-13): a look effect like the Ember Knight's fire ring, with green
-bubbles rising instead of flames (`UnitLook.effect`, 3.2).
+**Decided (user, 2026-11-13):** after trying A, the user chose real transparency without a stencil change: the plain depth test is
+fine for a see-through body (see the design approach above).
+
+**Picked (Set 1, approved 2026-11-13, PR #35):** Slime: see-through goo (`goo_clear`, 45% opaque) with the green bubble ring.
+Bog Toad: warty spotted skin, bulging eyes with slit pupils turned toward the battle camera, a spotted throat sac and a mlem with a
+black line. Frost Wisp: frosted glass (`frost_clear`, 55%) with drifting motes (`wisp_motes`), no tail. Shaman: A and B (staff and
+headdress). Rat King: a tail along its side, a straight bronze crown and a mouse muzzle with dark whiskers. Bone Warden: neither;
+a longhorn skull on its face and a crown of bone spikes.
 
 ### Set 2: Forge (5)
 | Unit | Colour | A | B |
@@ -320,11 +347,11 @@ asked.
 | Abyssal Hulk | black | Two glowing violet eyes (`glow_eye` reused): on a black cube the eyes carry it | A row of spikes down the back |
 | The Nameless (boss) | dark teal | A void halo: a dark ring tilted behind the head, a faint violet glow, slowly turning (`SPIN`) | **Surface:** a starfield (dark, sparse emissive specks) |
 
-### New shapes and code this sheet needs (choosing all A)
-- About 25 new `AttachmentShape`s (the reuses: `pointed_ear`, `glow_eye` ×2, `devil_horn` only in B options); 6 new surfaces
-  (Slime goo, Toad spots, Wisp frost glow, plus B options).
-- No new system code for the A column. New code only if picked: a `PULSE` motion (hearts), real transparency for the Slime
-  (dithered alpha or a stencil change), a body wobble.
+### Sets 2-5 and what the roll-out needed so far
+- Sets 2-5 above are first proposals. They are built under the design approach above, so expect faces, effects and combined
+  details to be added while iterating.
+- System code the roll-out added: `UnitLook.effect` / `effect_params` (3.2), the `rune_glyphs` shader, see-through bodies keeping
+  their alpha in the death fade. Still only if picked: a `PULSE` motion (hearts), a body wobble.
 - Q3 (the props) is answered below for keys and armor; items wait for their own slice.
 
 ### Set K: pickups on the floor (user, 2026-11-13)
