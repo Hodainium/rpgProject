@@ -1,7 +1,7 @@
 ## Spec cube-style 3.2: how one unit's cube looks. A field left unset (a negative number, a colour with alpha 0) is filled from the
 ## first matching tag rule, then the registry's default look (StyleRegistry.look_for). Presentation only: a unit's view reads it,
 ## combat never does (UnitDefinition lives in combat/ and the verifier loads it, so the look is keyed by id instead).
-## Attachments, size and animation set come with round 2 (spec cube-style 2).
+## Size and animation set come with a later round (spec cube-style 2).
 class_name UnitLook
 extends Resource
 
@@ -17,6 +17,11 @@ const UNSET: float = -1.0
 @export_range(-1.0, 1.0) var rim_tint: float = UNSET
 ## StandardMaterial3D.roughness; negative = unset (the material's default, 1).
 @export_range(-1.0, 1.0) var roughness: float = UNSET
+## Spec cube-style 3.3: what the cube wears. Empty = unset; a list is not merged: the nearest non-empty one wins whole.
+@export var attachments: Array[UnitAttachment] = []
+## Spec cube-style 3.4: the cube's own surface (a stone, a bark…) as a material template; null = unset (a plain colour). A
+## StandardMaterial3D, so the unit still takes its stencil stamp; its textures and bumps are tinted by the unit's colour.
+@export var surface: StandardMaterial3D
 
 
 ## A new look: this one's set fields, the rest from `fallback` (either may be null).
@@ -28,6 +33,8 @@ func merged_over(fallback: UnitLook) -> UnitLook:
 	merged.rim = rim if rim >= 0.0 else (fallback.rim if fallback != null else UNSET)
 	merged.rim_tint = rim_tint if rim_tint >= 0.0 else (fallback.rim_tint if fallback != null else UNSET)
 	merged.roughness = roughness if roughness >= 0.0 else (fallback.roughness if fallback != null else UNSET)
+	merged.attachments = attachments if not attachments.is_empty() else (fallback.attachments if fallback != null else attachments)
+	merged.surface = surface if surface != null else (fallback.surface if fallback != null else null)
 	return merged
 
 
@@ -43,13 +50,18 @@ func paint(material: StandardMaterial3D) -> void:
 		material.rim = rim
 		if rim_tint >= 0.0:
 			material.rim_tint = rim_tint
-	if roughness >= 0.0:
+	if roughness >= 0.0 and surface == null:  # a surface keeps its own roughness
 		material.roughness = roughness
 
 
 ## One line for the console (`style show`).
 func describe() -> String:
-	return "colour %s, rim %s, rim tint %s, roughness %s" % [
+	var worn := PackedStringArray()
+	for attachment in attachments:
+		if attachment != null and attachment.shape != null:
+			worn.append("%s@%s%s" % [attachment.shape.display_name if attachment.shape.display_name != "" else "?", attachment.socket,
+				" x2" if attachment.mirror else ""])
+	return "colour %s, rim %s, rim tint %s, roughness %s, wears %s" % [
 		"#" + color_override.to_html(false) if use_color_override else "-",
 		"%.2f" % rim if rim >= 0.0 else "-", "%.2f" % rim_tint if rim_tint >= 0.0 else "-",
-		"%.2f" % roughness if roughness >= 0.0 else "-"]
+		"%.2f" % roughness if roughness >= 0.0 else "-", ", ".join(worn) if not worn.is_empty() else "nothing"]

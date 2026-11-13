@@ -87,7 +87,7 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		"check":
 			if registry == null:
 				return "no style registry in use"
-			var issues := StyleValidator.validate(registry, ctx.content, UnitStyle.source)
+			var issues := StyleValidator.validate(registry, ctx.content, UnitStyle.source, true)  # also the units with no look yet
 			return ContentValidator.report(issues) if not issues.is_empty() else "style: no problems"
 	return ctx.fail("usage: " + usage)
 
