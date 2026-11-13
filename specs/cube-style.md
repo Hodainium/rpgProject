@@ -413,6 +413,20 @@ disc in a glowing accretion ring with beads, turning on its own axle) and seven 
 the floor and violet embers (`void_smoke`, the user's ask for a final boss). Rejected: the hoodless chanting face, the Hulk's
 faces and spikes, the crescent moon, the shroud, the turning void halo and the slit.
 
+### Party pass: faces and held items (user, 2026-11-13)
+After the enemy sets the party looked plain next to the enemies, which all have faces. The user chose **faces for every class**
+(the Ember Knight and Plaguewright keep their masks) and, for the first time, **held items** for the party (the earlier rule
+"the party never holds items" is lifted; not every class holds one). Faces are symmetric about the middle (the eye highlights are
+mirrored, each toward the outside). Items sit on the **Right** socket: facing +90, the party's own right is the side the battle
+camera sees (the enemies' camera side is their Left).
+
+**Picked:** Warrior B (heavy angry brows, gritted teeth) with a sword; Cleric B (amber eyes, soft gold brows, a smile) with a sun
+staff; Arcanist A (round spectacles, an "o" mouth) with a closed leather tome (an open book at its side did not make sense);
+Bard A (happy closed eyes, an open smile, blush) with a lute; Ranger D2 (round eyes, thin high brows, freckles, a small smile;
+its first faces read like the Bulwark's) with a bow; Bulwark A (stern eyes under a heavy brow) with a round shield; Cryomancer A
+(glowing ice eyes) with an ice staff; Pyromancer A (glowing ember eyes, gritted teeth) and Shatterweaver A (pink gem eyes), both
+empty-handed. Files: `face_<class>_<pick>.tres` and `item_*.tres` in `presentation/demo/style/attachments/`.
+
 ### Sets 2-5 and what the roll-out needed so far
 - Sets 3-5 above are first proposals. They are built under the design approach above, so expect faces, effects and combined
   details to be added while iterating.
