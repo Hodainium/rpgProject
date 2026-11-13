@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_n44pq"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_cpjyx"]
+
+[sub_resource type="Resource" id="Resource_tx0qg"]
+script = ExtResource("1_n44pq")
+kind = 2
+radius_bottom = 0.17
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+segments = 6
+color = Color(0.42, 0.38, 0.34, 1)
+roughness = 0.4
+
+[resource]
+script = ExtResource("2_cpjyx")
+display_name = "Boulder"
+parts = Array[ExtResource("1_n44pq")]([SubResource("Resource_tx0qg")])

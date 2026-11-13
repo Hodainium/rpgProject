@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_njmxq"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_fgehl"]
+
+[sub_resource type="Resource" id="Resource_2tc8i"]
+script = ExtResource("1_njmxq")
+kind = 2
+radius_bottom = 0.055
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+segments = 16
+color = Color(0.4, 1, 0.7, 1)
+roughness = 0.4
+emission = 4.0
+
+[resource]
+script = ExtResource("2_fgehl")
+display_name = "Glowing eye"
+parts = Array[ExtResource("1_njmxq")]([SubResource("Resource_2tc8i")])

@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_2xmeq"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_he76v"]
+
+[sub_resource type="Resource" id="Resource_2ter5"]
+script = ExtResource("1_2xmeq")
+kind = 6
+radius_bottom = 0.035
+radius_top = 0.012
+profile = PackedVector2Array()
+curve = PackedVector3Array(0, 0, 0, 0, -0.05, -0.47, 0.2, 0.35, -0.42)
+segments = 16
+color = Color(0.12, 0.06, 0.05, 1)
+roughness = 0.35
+
+[sub_resource type="Resource" id="Resource_q6omw"]
+script = ExtResource("1_2xmeq")
+kind = 1
+radius_bottom = 0.07
+radius_top = 0.0
+height = 0.12
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+segments = 4
+position = Vector3(0.2, 0.39, -0.42)
+color = Color(0.12, 0.06, 0.05, 1)
+roughness = 0.35
+
+[resource]
+script = ExtResource("2_he76v")
+display_name = "Devil tail"
+parts = Array[ExtResource("1_2xmeq")]([SubResource("Resource_2ter5"), SubResource("Resource_q6omw")])
