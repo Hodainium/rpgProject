@@ -703,22 +703,17 @@ func test_a_looks_effect_merges_like_its_other_fields() -> void:
 	check(own.effect == own_effect and own.effect_params.is_empty(), "an exact look's effect wins, with its own (empty) parameters")
 
 
-## Spec cube-style 3.2: the view plays its look's effect while the unit lives, stops it on a death, plays it again on a revive,
-## and stops it when it leaves the tree.
+## Spec cube-style 3.2: the view plays its look's effect while the unit lives, from the frame after it is built; stops it on a death,
+## plays it again on a revive, keeps it on a same-effect restyle, and stops it when it leaves the tree (code review, PR #34: and
+## starts it again when it comes back).
 func test_a_unit_view_plays_its_looks_effect_while_alive() -> void:
-	var was_enabled := FxManager.enabled
-	var was_manual := FxManager.manual_clock
-	FxManager.enabled = true
-	FxManager.manual_clock = true
-	var registry := _registry()
-	var look := UnitLook.new()
-	look.effect = _looping_effect()
-	registry.looks[&"u.burning"] = look
-	UnitStyle.use(registry, "test")
-	var view: UnitAnimator = UnitAnimator.instantiate_for(_unit(&"u.burning"), load(PROBE_VIEW) as PackedScene)
+	var saved := _fx_on()
+	var view := _burning_view()
 	host.add_child(view)
+	check(view.get("_look_fx") == null, "not on the frame it is built (a caller may still set it dead)")
+	await host.get_tree().process_frame
 	var first: FxHandle = view.get("_look_fx")
-	check(first != null and first.is_playing() and first.definition == look.effect, "the effect plays once the view is built")
+	check(first != null and first.is_playing() and first.definition == view.look.effect, "the effect plays from the next frame")
 	view.set_dead(true)
 	check(view.get("_look_fx") == null and (first.stopping or not first.is_playing()), "a death stops it")
 	view.set_dead(false)
@@ -728,9 +723,95 @@ func test_a_unit_view_plays_its_looks_effect_while_alive() -> void:
 	check(view.get("_look_fx") == second, "a restyle with the same effect keeps it running")
 	host.remove_child(view)
 	check(view.get("_look_fx") == null and (second.stopping or not second.is_playing()), "leaving the tree stops it")
+	host.add_child(view)
+	var third: FxHandle = view.get("_look_fx")
+	check(third != null and third.is_playing(), "coming back into the tree plays it again")
 	view.free()
-	FxManager.enabled = was_enabled
-	FxManager.manual_clock = was_manual
+	_fx_restore(saved)
+
+
+## Code review, PR #34: a view built dead (set_dead right after add_child) never starts its effect.
+func test_a_view_built_dead_never_plays_its_looks_effect() -> void:
+	var saved := _fx_on()
+	var view := _burning_view()
+	host.add_child(view)
+	view.set_dead(true)
+	await host.get_tree().process_frame
+	check(view.get("_look_fx") == null, "no play and stop for a dead unit's view")
+	view.free()
+	_fx_restore(saved)
+
+
+## Code review, PR #34: quality off stops the look effect and a raised tier brings it back; a view built while quality is off
+## starts its effect once the quality is raised.
+func test_the_looks_effect_follows_the_quality_setting() -> void:
+	var saved := _fx_on()
+	var view := _burning_view()
+	host.add_child(view)
+	await host.get_tree().process_frame
+	check(view.get("_look_fx") != null, "playing at the starting tier")
+	FxManager.quality = FxQuality.OFF
+	check(view.get("_look_fx") == null, "quality off: no effect")
+	FxManager.quality = FxQuality.MEDIUM
+	var back: FxHandle = view.get("_look_fx")
+	check(back != null and back.is_playing(), "a raised tier plays it again")
+	FxManager.quality = FxQuality.OFF
+	var late := _burning_view()
+	host.add_child(late)
+	await host.get_tree().process_frame
+	check(late.get("_look_fx") == null, "built while quality is off: nothing yet")
+	FxManager.quality = FxQuality.HIGH
+	check(late.get("_look_fx") != null and (late.get("_look_fx") as FxHandle).is_playing(), "and its effect starts when the tier is raised")
+	view.free()
+	late.free()
+	_fx_restore(saved)
+
+
+## Code review, PR #34: a death waiting behind a cast keeps the effect until the death starts; a death fade (also the console's
+## `style death test` on a living unit) takes it with the body.
+func test_the_looks_effect_ends_when_the_death_starts() -> void:
+	var saved := _fx_on()
+	var view := _burning_view()
+	host.add_child(view)
+	await host.get_tree().process_frame
+	view.set("_gate", ClientGate.new())
+	view.die()
+	check(view.get("_pending_death") and view.get("_look_fx") != null, "a death waiting behind a cast keeps the effect")
+	view.call("_finish_montage")
+	check(view.get("_look_fx") == null, "the death starts: the effect goes")
+	view.revive()
+	check(view.get("_look_fx") != null, "revived: back")
+	view.play_death_fade()
+	check(view.get("_look_fx") == null, "a death fade on a living unit takes the effect with the body")
+	view.set_dead(false)
+	check(view.get("_look_fx") != null, "the fade cancelled: back")
+	view.free()
+	_fx_restore(saved)
+
+
+## FxManager switched on with a manual clock at high quality; returns what to restore.
+func _fx_on() -> Dictionary:
+	var saved := {"enabled": FxManager.enabled, "manual": FxManager.manual_clock, "quality": FxManager.quality}
+	FxManager.enabled = true
+	FxManager.manual_clock = true
+	FxManager.quality = FxQuality.HIGH
+	return saved
+
+
+func _fx_restore(saved: Dictionary) -> void:
+	FxManager.quality = saved["quality"]
+	FxManager.enabled = saved["enabled"]
+	FxManager.manual_clock = saved["manual"]
+
+
+## A probe view whose look carries a looping effect (the registry in use is set here).
+func _burning_view() -> UnitAnimator:
+	var registry := _registry()
+	var look := UnitLook.new()
+	look.effect = _looping_effect()
+	registry.looks[&"u.burning"] = look
+	UnitStyle.use(registry, "test")
+	return UnitAnimator.instantiate_for(_unit(&"u.burning"), load(PROBE_VIEW) as PackedScene)
 
 
 func test_validator_attachment_codes() -> void:

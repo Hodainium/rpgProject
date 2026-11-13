@@ -22,7 +22,7 @@ static func attachment_problems(look: UnitLook, where: String) -> Array[Validati
 	var issues: Array[ValidationIssue] = []
 	if look == null:
 		return issues
-	if look.effect != null and not look.effect.layers.any(func(layer: FxLayer) -> bool: return layer != null and layer.loop):
+	if look.effect != null and not look.effect.is_looping():
 		issues.append(ValidationIssue.new(ValidationIssue.ERROR, "style_effect_not_looping", where + ".effect",
 			"%s has no looping layer: it would play once and end" % look.effect.id))
 	for i in look.attachments.size():

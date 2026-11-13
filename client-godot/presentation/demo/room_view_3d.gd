@@ -83,6 +83,7 @@ func _on_party_changed() -> void:
 
 func _on_battle_finished(outcome: String) -> void:
 	_battle = null
+	_props_root.visible = true  # hidden for the fight (spec cube-style Set K); the rebuild below refills them
 	UnitStyle.explore_framing().tween_to(_camera, CAMERA_SECONDS)  # spec cube-style 3.9
 	_celebrate = outcome == Battle.VICTORY
 	_queue_build()
