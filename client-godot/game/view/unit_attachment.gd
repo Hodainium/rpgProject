@@ -25,8 +25,8 @@ const SOCKETS: Array[StringName] = [&"Center", &"Top", &"Base", &"Front", &"Back
 
 
 ## The attachment's nodes at `socket_position`: one pivot per copy (the mirrored one under a scale (-1, 1, 1) node), each holding the
-## shape. Returns the pivots that move (for animate) in `pivots`.
-func build(socket_position: Vector3, stamp: Callable, pivots: Array) -> Node3D:
+## shape with its own materials (the view stamps and greys them afterwards). Returns the pivots that move (for animate) in `pivots`.
+func build(socket_position: Vector3, pivots: Array) -> Node3D:
 	var holder := Node3D.new()
 	holder.name = "Attachment"
 	if shape == null:
@@ -43,7 +43,7 @@ func build(socket_position: Vector3, stamp: Callable, pivots: Array) -> Node3D:
 		pivot.position = socket_position + offset
 		pivot.rotation_degrees = rotation_degrees
 		pivot.scale = scale
-		pivot.add_child(shape.build(tint if use_tint else null, stamp))
+		pivot.add_child(shape.build(tint if use_tint else null))
 		side.add_child(pivot)
 		pivots.append([pivot, pivot.transform])
 	return holder

@@ -8,12 +8,14 @@ extends RefCounted
 static var _cache: Dictionary = {}
 
 
+## The part's mesh, from the cache when an equal part was built before; null when it cannot be built (checked on a cache miss only,
+## and a broken part is cached as null so it is not checked again).
 static func mesh_for(part: AttachmentPart) -> Mesh:
-	if part == null or part.problem() != "":
+	if part == null:
 		return null
 	var key := part.mesh_key()
 	if not _cache.has(key):
-		_cache[key] = _build(part)
+		_cache[key] = _build(part) if part.problem() == "" else null
 	return _cache[key]
 
 
@@ -170,6 +172,10 @@ static func tube(points: PackedVector3Array, r0: float, r1: float, sides: int) -
 	var base_direction := (points[0] - points[1]).normalized()
 	for s in sides:
 		_tri(st, points[0], rings[0][s][0], rings[0][(s + 1) % sides][0], base_direction)
+	# The far end too: a tube that ends with a radius (a plume, a feather) would otherwise show a hole.
+	var end_direction := (points[n - 1] - points[n - 2]).normalized()
+	for s in sides:
+		_tri(st, points[n - 1], rings[n - 1][s][0], rings[n - 1][(s + 1) % sides][0], end_direction)
 	return st.commit()
 
 

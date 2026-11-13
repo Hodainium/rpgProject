@@ -60,6 +60,9 @@ static func use_path(path: String) -> String:
 				if attachment != null and attachment.shape != null and attachment.shape.resource_path != "" \
 						and not shapes.has(attachment.shape.resource_path):
 					shapes.append(attachment.shape.resource_path)
+			var surface := (look as UnitLook).surface  # surfaces are files of their own too (the stone)
+			if surface != null and surface.resource_path != "" and not shapes.has(surface.resource_path):
+				shapes.append(surface.resource_path)
 	for shape in shapes:
 		ResourceLoader.load(shape, "", ResourceLoader.CACHE_MODE_REPLACE)
 	use(loaded, path)

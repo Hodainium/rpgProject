@@ -376,6 +376,15 @@ func _attachment(shape: AttachmentShape, socket: StringName, mirror := false) ->
 	return attachment
 
 
+func _motion(view: UnitAnimator) -> AttachmentMotionDriver:
+	if view.attachments_node() == null:
+		return null
+	for child in view.attachments_node().get_children():
+		if child is AttachmentMotionDriver:
+			return child
+	return null
+
+
 func test_every_part_kind_builds_and_caches_its_mesh() -> void:
 	AttachmentMesh.clear_cache()
 	for kind in AttachmentPart.Kind.values():
@@ -440,7 +449,7 @@ func test_mirror_and_motion() -> void:
 	var attachment := _attachment(_shape([_part(AttachmentPart.Kind.BOX)]), &"Back", true)
 	attachment.offset = Vector3(0.3, 0, 0)
 	var pivots: Array = []
-	var holder := attachment.build(Vector3(0, 0, -0.4), Callable(), pivots)
+	var holder := attachment.build(Vector3(0, 0, -0.4), pivots)
 	eq(pivots.size(), 2, "a mirrored attachment has two pivots")
 	var mirror := holder.get_node("Mirror") as Node3D
 	check(mirror != null and mirror.scale == Vector3(-1, 1, 1), "the copy sits under a mirror across X")
@@ -472,10 +481,11 @@ func test_unit_view_wears_its_attachments_stamped() -> void:
 	host.add_child(view)
 	var worn := view.attachments_node()
 	check(worn != null, "the view wears its look's attachments")
-	eq(worn.get_child_count(), 2, "one holder per attachment")
+	eq(worn.get_children().filter(func(n: Node) -> bool: return not n is AttachmentMotionDriver).size(), 2, "one holder per attachment")
 	eq(view.socket_position(&"Top"), Vector3(0, 0.4, 0), "Top is the top face of the 0.8 cube")
 	eq(view.socket_position(&"Front"), Vector3(0, 0, 0.4), "Front faces the camera (+Z)")
-	check(view.is_processing(), "a moving attachment turns on the view's clock")
+	check(_motion(view) != null and _motion(view).is_processing(), "a moving attachment runs its own motion driver")
+	check(not view.is_processing(), "the view's own processing is left alone")
 	view.stencil_value = StencilIds.values_for(1)[0]
 	var stamped := 0
 	var meshes := 0
@@ -487,7 +497,7 @@ func test_unit_view_wears_its_attachments_stamped() -> void:
 	check(meshes == 3 and stamped == meshes, "every attachment mesh carries the unit's stencil stamp (%d of %d)" % [stamped, meshes])
 	UnitStyle.use(null)
 	view.restyle()
-	check(view.attachments_node() == null and not view.is_processing(), "with no look it wears nothing and stops its clock")
+	check(view.attachments_node() == null, "with no look it wears nothing (and its motion driver goes with it)")
 	view.queue_free()
 
 
@@ -518,10 +528,10 @@ func test_attachments_face_opponents_and_go_grey_when_dead() -> void:
 	var mesh := view.attachments_node().find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
 	var paint := mesh.material_override as StandardMaterial3D
 	check(paint.albedo_color == Color(0.35, 0.35, 0.35) and not paint.emission_enabled, "a dead unit's attachments are grey and dark")
-	check(not view.is_processing(), "and still")
+	check(not _motion(view).is_processing(), "and still")
 	view.set_dead(false)
 	paint = mesh.material_override as StandardMaterial3D
-	check(paint.albedo_color == Color.GREEN and paint.emission_enabled and view.is_processing(), "revived: its colours and motion back")
+	check(paint.albedo_color == Color.GREEN and paint.emission_enabled and _motion(view).is_processing(), "revived: its colours and motion back")
 	view.queue_free()
 
 
@@ -566,6 +576,30 @@ func test_a_surface_replaces_the_plain_colour() -> void:
 	check(body.rim_enabled, "and still gets the look's rim")
 	view.is_dead = true
 	eq(view.body_material(Color(0.35, 0.35, 0.35)).albedo_color, Color(0.35, 0.35, 0.35), "a dead unit is plain grey")
+	view.queue_free()
+
+
+func test_face_sockets_stay_on_the_surface_at_any_facing_and_rest_when_dead() -> void:
+	var registry := _registry()
+	registry.facing_degrees = 45.0
+	var look := UnitLook.new()
+	var bobbing := _attachment(_shape([_part(AttachmentPart.Kind.BOX)]), &"Front")
+	bobbing.motion = UnitAttachment.Motion.BOB
+	bobbing.motion_amount = 0.2
+	look.attachments.append(bobbing)
+	registry.looks[&"u.turned"] = look
+	UnitStyle.use(registry, "test")
+	var view: UnitAnimator = UnitAnimator.instantiate_for(_unit(&"u.turned"), load(PROBE_VIEW) as PackedScene)
+	host.add_child(view)
+	var holder := view.attachments_node()
+	var pivot := holder.find_children("Pivot", "Node3D", true, false)[0] as Node3D
+	var on_body := holder.transform * pivot.position  # in the view's (body's) frame
+	check(is_equal_approx(maxf(absf(on_body.x), absf(on_body.z)), 0.4), "at 45° the Front socket sits on the cube's surface: %s" % on_body)
+	var rest := pivot.transform
+	_motion(view)._process(0.25)  # a quarter cycle in: lifted
+	check(not pivot.transform.is_equal_approx(rest), "the bob moved it")
+	view.set_dead(true)
+	check(pivot.transform.is_equal_approx(rest), "a dead unit's attachments go back to rest, not frozen mid-motion")
 	view.queue_free()
 
 

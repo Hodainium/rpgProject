@@ -39,10 +39,8 @@ var look: UnitLook
 @export var body_size: Vector3 = Vector3(0.8, 0.8, 0.8)
 ## Spec cube-style 3.3: the look's attachments, under the "Body" node (so unit animations move them) or the view.
 var _attachments: Node3D
-## [UnitAttachment, [[pivot, rest transform], ...]] for each attachment that moves.
-var _moving: Array = []
-## The attachments' presentation clock (never in a hash).
-var _style_clock: float = 0.0
+## Moves the attachments that move (a child of _attachments; null when the unit wears nothing).
+var _motion: AttachmentMotionDriver
 var _warned_missing_shape: bool = false
 ## Meta key on each attachment mesh: the part's own material, repainted from on a stencil change or a death.
 const STYLE_PAINT: StringName = &"style_paint"
@@ -53,7 +51,8 @@ const STYLE_PAINT: StringName = &"style_paint"
 var unit_id: StringName = &"":
 	set(value):
 		unit_id = value
-		_face_attachments()  # spec cube-style 3.4: an enemy's attachments turn toward the party
+		if is_node_ready() and _attachments != null:
+			_build_attachments()  # spec cube-style 3.4: an enemy's attachments turn toward the party (sockets follow the turn)
 ## Spec vfx-stencil 3.2: the stencil value of the unit's battle position (StencilIds), set by the room view; 0 = none (stencil off,
 ## outside a battle). A new value repaints the view, and _paint() stamps it through mark_stencil().
 var stencil_value: int = 0:
@@ -177,14 +176,15 @@ func _build_attachments() -> void:
 	if _attachments != null:
 		_attachments.free()
 		_attachments = null
-	_moving.clear()
-	set_process(false)
+	_motion = null
 	if look == null or look.attachments.is_empty():
 		return
 	var body := get_node_or_null(^"Body") as Node3D
 	_attachments = Node3D.new()
 	_attachments.name = "Attachments"
 	(body if body != null else self).add_child(_attachments)
+	_motion = AttachmentMotionDriver.new()
+	_attachments.add_child(_motion)
 	for attachment in look.attachments:
 		if attachment == null or attachment.shape == null:
 			if not _warned_missing_shape:  # spec cube-style 4: the unit without it, a warning once per unit
@@ -192,13 +192,30 @@ func _build_attachments() -> void:
 				push_warning("style: unit '%s' lists an attachment with no shape (style check)" % definition_id)
 			continue
 		var pivots: Array = []
-		_attachments.add_child(attachment.build(socket_position(attachment.socket), Callable(), pivots))
+		_attachments.add_child(attachment.build(_socket_on_body(attachment.socket), pivots))
 		if attachment.motion != UnitAttachment.Motion.NONE:
-			_moving.append([attachment, pivots])
+			_motion.moving.append([attachment, pivots])
 	for mesh in _attachments.find_children("*", "MeshInstance3D", true, false):
 		mesh.set_meta(STYLE_PAINT, (mesh as MeshInstance3D).material_override)  # the part's own material, before any stamp
 	_face_attachments()
 	_repaint_attachments()
+
+
+## The socket's position in the attachments' frame once facing turns them, pushed out onto the body's surface: at 90° it is the
+## face centre itself; at another turn (45°) the turned point would sink into the cube, so it is moved out along its direction
+## to the nearest face.
+func _socket_on_body(socket: StringName) -> Vector3:
+	var local := socket_position(socket)
+	if local == Vector3.ZERO:
+		return local
+	var turn := Basis(Vector3.UP, deg_to_rad(facing_degrees()))
+	var turned := turn * local
+	var half := body_size * 0.5
+	var reach := INF
+	for axis in 3:
+		if absf(turned[axis]) > 0.00001:
+			reach = minf(reach, half[axis] / absf(turned[axis]))
+	return turn.inverse() * (turned * reach)
 
 
 ## Spec cube-style 3.4: which way the unit faces, as a turn around Y of its attachments (their Front is local +Z, toward the
@@ -221,26 +238,22 @@ func _repaint_attachments() -> void:
 	if _attachments == null:
 		return
 	var body_stamped := _stamped
+	var painted: Dictionary = {}  # own material -> its painted copy (parts sharing a material share the copy)
 	for mesh in _attachments.find_children("*", "MeshInstance3D", true, false):
 		var own := mesh.get_meta(STYLE_PAINT) as StandardMaterial3D
 		if own == null:
 			continue
-		var paint := own
-		if is_dead:
-			paint = own.duplicate() as StandardMaterial3D
-			paint.albedo_color = Color(0.35, 0.35, 0.35)
-			paint.emission_enabled = false
-		(mesh as MeshInstance3D).material_override = mark_stencil(paint)
+		if not painted.has(own):
+			var paint := own
+			if is_dead:
+				paint = own.duplicate() as StandardMaterial3D
+				paint.albedo_color = Color(0.35, 0.35, 0.35)
+				paint.emission_enabled = false
+			painted[own] = mark_stencil(paint)
+		(mesh as MeshInstance3D).material_override = painted[own]
 	_stamped = body_stamped
-	set_process(not _moving.is_empty() and not is_dead)
-
-
-func _process(delta: float) -> void:
-	_style_clock += delta
-	for entry in _moving:
-		var attachment: UnitAttachment = entry[0]
-		for pivot in entry[1]:
-			(pivot[0] as Node3D).transform = attachment.animate(pivot[1], _style_clock)
+	if _motion != null:
+		_motion.set_running(not is_dead)
 
 
 func setup(title: String, color: Color) -> void:
