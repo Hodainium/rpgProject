@@ -185,7 +185,7 @@ func _kept_view(id: StringName, definition: UnitDefinition) -> Node3D:
 	if view == null or not is_instance_valid(view) or view.is_queued_for_deletion():
 		_views.erase(id)
 		return null
-	var shows: StringName = view.definition_id if view is UnitAnimator else &""
+	var shows: StringName = view.get_meta(&"definition_id", &"")
 	if definition == null or shows != definition.id:
 		view.queue_free()
 		_views.erase(id)
@@ -375,6 +375,7 @@ func _prop(cell: Vector2i, color: Color, text: String, item: ItemDefinition = nu
 ## facing the right way once (a later id rebuilds them), and it takes its battle position's stencil value at once.
 func _unit(cell: Vector2i, definition: UnitDefinition, id: StringName) -> Node3D:
 	var view: Node3D = UnitAnimator.instantiate_for(definition, _main.unit_view)  # its own view, or the cube
+	view.set_meta(&"definition_id", definition.id if definition != null else &"")  # _kept_view: any kind of view
 	if view is UnitAnimator:
 		view.unit_id = id  # spec vfx-framework: effects find a unit's view by this id
 	_units_root.add_child(view)
