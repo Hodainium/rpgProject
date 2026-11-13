@@ -405,6 +405,68 @@ func test_every_part_kind_builds_and_caches_its_mesh() -> void:
 	check(flat_torus.problem() != "" and AttachmentMesh.mesh_for(flat_torus) == null, "a torus with equal radii builds nothing")
 
 
+func test_wall_blocks_are_bevelled_by_the_mood() -> void:
+	var size := Vector3(1, 0.6, 1)
+	var mesh := AttachmentMesh.bevel_box(size, 0.06) as ArrayMesh
+	check(mesh != null, "a bevel builds an ArrayMesh")
+	check(mesh.get_aabb().size.is_equal_approx(size), "the block keeps its size: %s" % mesh.get_aabb().size)
+	check(AttachmentMesh.bevel_box(size, 0.06) == mesh, "every wall shares one cached block")
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	eq((arrays[Mesh.ARRAY_TEX_UV] as PackedVector2Array).size(), vertices.size(), "every vertex has a UV")
+	# 6 faces and 12 edge strips (2 triangles each) and 8 corners.
+	eq(vertices.size(), (6 * 2 + 12 * 2 + 8) * 3, "faces, edge strips and corners")
+	var wrong := 0
+	for t in range(0, vertices.size(), 3):
+		var face := (vertices[t + 1] - vertices[t]).cross(vertices[t + 2] - vertices[t])
+		var centre := (vertices[t] + vertices[t + 1] + vertices[t + 2]) / 3.0
+		if face.dot(normals[t]) > 0.0 or normals[t].dot(centre) <= 0.0:
+			wrong += 1
+	eq(wrong, 0, "every triangle is wound clockwise and faces out")
+	check(AttachmentMesh.bevel_box(size, 0.0) is BoxMesh, "a bevel of 0 is a plain box")
+	check(AttachmentMesh.bevel_box(size, 5.0).get_aabb().size.is_equal_approx(size), "a too deep bevel is held inside the box")
+	check((arrays[Mesh.ARRAY_TANGENT] as PackedFloat32Array).size() == vertices.size() * 4, "tangents, so a normal map lights right")
+	check(AttachmentMesh.bevel_box(Vector3(1, 0.001, 1), 0.06) is BoxMesh, "a box too thin to bevel is a plain box, never inside out")
+	check(AttachmentMesh.bevel_box(size, NAN) is BoxMesh, "a bevel that is not a number is a plain box")
+	var slab_size := Vector3(15, 0.2, 9)
+	var slab := AttachmentMesh.corner_slab(slab_size, 0.06) as ArrayMesh
+	check(slab != null and slab.get_aabb().size.is_equal_approx(slab_size), "the floor slab keeps its size")
+	var slab_vertices: PackedVector3Array = slab.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var slab_normals: PackedVector3Array = slab.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
+	eq(slab_vertices.size(), (6 * 2 + 8 * 2) * 3, "an octagon top and bottom (6 triangles each) and 8 sides")
+	var slab_wrong := 0
+	for t in range(0, slab_vertices.size(), 3):
+		var face := (slab_vertices[t + 1] - slab_vertices[t]).cross(slab_vertices[t + 2] - slab_vertices[t])
+		var centre := (slab_vertices[t] + slab_vertices[t + 1] + slab_vertices[t + 2]) / 3.0
+		if face.dot(slab_normals[t]) > 0.0 or slab_normals[t].dot(centre) <= 0.0:
+			slab_wrong += 1
+	eq(slab_wrong, 0, "every slab triangle is wound clockwise and faces out")
+	check(AttachmentMesh.corner_slab(slab_size, 0.0) is BoxMesh, "a slab with no bevel is a plain box")
+	var rig := StageRig.new()
+	eq(rig.wall_bevel(), 0.0, "no mood: today's sharp walls")
+	check(rig.floor_mesh(slab_size) is BoxMesh, "and a plain floor")
+	check(rig.wall_mesh(size) is BoxMesh, "a plain box")
+	var mood := _mood("a")
+	eq(mood.wall_bevel, 0.06, "a mood bevels its walls by default")
+	rig.apply(mood)
+	check(rig.wall_mesh(size) == mesh, "the mood's bevelled block")
+	check(rig.floor_mesh(slab_size) == slab, "and the corner-chamfered floor")
+	rig.queue_free()
+	var registry := StyleRegistry.new()
+	registry.default_mood = _mood("deep")
+	registry.default_mood.wall_bevel = 0.4
+	registry.moods[&"no.such.chapter"] = _mood("negative")
+	registry.moods[&"no.such.chapter"].wall_bevel = -0.1
+	registry.moods[&"no.such.nan"] = _mood("nan")
+	registry.moods[&"no.such.nan"].wall_bevel = NAN
+	var codes: Array = []
+	for issue in StyleValidator.validate(registry, null, "test"):
+		if issue.code == "style_wall_bevel_invalid":
+			codes.append(issue.path)
+	eq(codes.size(), 3, "a bevel outside 0..0.25 (or not a number) is reported per mood: %s" % [codes])
+
+
 func test_extruded_and_lathed_faces_point_outward() -> void:
 	for kind in [AttachmentPart.Kind.EXTRUDE, AttachmentPart.Kind.LATHE, AttachmentPart.Kind.TUBE]:
 		var mesh := AttachmentMesh.mesh_for(_part(kind)) as ArrayMesh

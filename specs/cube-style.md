@@ -160,6 +160,20 @@ itself has no positions; rooms keep their spawn cells for exploration. All follo
 | `environment` | `Environment` | Tonemap, glow, SSAO, ambient, optional fog; authored in the inspector |
 | `key_light`, `fill_light`, `rim_light` | `MoodLight` (colour, energy, rotation; shadows on the key only) | Three-point rig, the rim light behind the units, opposite the camera |
 | `floor_material`, `wall_material` | `Material` | The room box's floor and wall cubes |
+| `wall_bevel` | `float` (metres, default 0.06, 0..`MAX_WALL_BEVEL` 0.25) | How deep the wall blocks' edges and corners are chamfered; 0 = sharp boxes |
+
+**Bevelled room walls (user, 2026-11-13: "the rooms get the bevelled-cube look of the preview").** The room box's wall blocks
+(1 × 0.6 × 1) are chamfered boxes, the look of the 2026-11-12 preview shot `2_after_battle.png`; the floor stays a plain slab and the
+units stay unbevelled (3.4). `AttachmentMesh.bevel_box(size, bevel)` builds the block (flat-shaded edge strips and corner triangles,
+UVs projected per face, cached by size and bevel so every wall shares one mesh; a bevel of 0 is a plain `BoxMesh`, a too deep one is
+held inside the box), `StageRig.wall_mesh()` gives the mood's block (no mood = today's sharp box), `RoomView3D` builds its walls
+from it and swaps it with the materials on a battle restyle. The floor slab runs under the wall ring (`COLUMNS + 2` × `ROWS + 2`;
+user, 2026-11-13: the chamfered bottom edges left a crack between the floor and the walls), so the walls stand on it and every
+groove shows floor, never the background. Its four vertical corner edges are chamfered by the same `wall_bevel` (user, same day:
+"just the short edges at the corners"; the long edges stay sharp) so the slab's corners match the corner blocks:
+`AttachmentMesh.corner_slab(size, bevel)` through `StageRig.floor_mesh(size)`, swapped on a battle restyle like the walls. Both shapes are flat-shaded with UVs projected per face (a texture tiles once per metre) and tangents (a normal map lights right); a `BoxMesh` maps a 3 × 2 atlas instead, so a textured material looks different at bevel 0. A bevel that is not finite, or that a too thin box holds to nothing, is a plain box. The room view passes its own sizes (`WALL_SIZE`, `FLOOR_SIZE`). Door gaps show floor (user, 2026-11-13: keep it). Every mood bevels by default (0.06, the preview's), so the
+registry file is unchanged. Validator: `style_wall_bevel_invalid` (a mood's bevel outside 0..0.25 or not a number). Shots:
+`H:\claudeOutShots\2026-11-13 bevelled walls\`.
 
 `RoomView3D` applies the mood of `RunState.chapter_id` when it builds a room or a battle. `UnitStyle` (the lookup in `game/view/`)
 loads nothing in a headless process (the rule `FxManager` follows); the verifier, replay, trace and step runners never build a view.
@@ -172,7 +186,7 @@ fails when a folder under `attachments/<pack>/` has no line in `CREDITS.md`.
 ### 3.8 Dev tools
 - Console `style list` (each unit's look and where it came from: exact, rule, default), `style show <unit>`, `style mood [<chapter>]`
   (apply a mood to the current room), `style reload`, `style check`.
-- Validator in `validate_content.tscn`: `style_look_unknown_unit`, `style_mood_unknown_chapter`, `style_socket_unknown`,
+- Validator in `validate_content.tscn`: `style_look_unknown_unit`, `style_mood_unknown_chapter`, `style_wall_bevel_invalid`, `style_socket_unknown`,
   `style_attachment_shape_missing`, `style_part_invalid` (a lathe or outline with fewer than 2/3 points, a tube without 3 curve points), `style_pack_uncredited` (round 3).
 - **Shots** come from the real game: a window `dev_run` (`--window --local --manual --shots <dir>`) starts a run, `goto boss`, then
   switches with `style registry <variant>` / `style mood <chapter>` and takes `shot <name> [seconds]` (the delay, added here, waits

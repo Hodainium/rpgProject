@@ -50,6 +50,22 @@ func wall_material() -> Material:
 	return mood.wall_material if mood != null else null
 
 
+## The wall blocks' bevel (no mood = today's sharp boxes).
+func wall_bevel() -> float:
+	return mood.wall_bevel if mood != null else 0.0
+
+
+## The room box's wall block of `size`, bevelled by the mood (shared by every wall of that size).
+func wall_mesh(size: Vector3) -> Mesh:
+	return AttachmentMesh.bevel_box(size, wall_bevel())
+
+
+## The room box's floor slab of `size`: its four vertical corner edges chamfered like the wall blocks on them (no mood = a plain
+## box).
+func floor_mesh(size: Vector3) -> Mesh:
+	return AttachmentMesh.corner_slab(size, wall_bevel())
+
+
 func _apply_environment() -> void:
 	if world_environment != null:
 		world_environment.environment = mood.environment if mood != null and active else null

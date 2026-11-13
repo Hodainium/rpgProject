@@ -61,6 +61,15 @@ static func validate(registry: StyleRegistry, content: ContentIndex, path: Strin
 		elif content != null and not content.chapters.has(id):
 			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "style_mood_unknown_chapter", where + "::moods[%s]" % id,
 				"no chapter '%s' in the content" % id))
+	# Spec cube-style 3.6: the wall blocks' bevel, in every mood the registry owns (the chapters' and the default).
+	var owned_moods: Dictionary = {"default_mood": registry.default_mood}
+	for id in registry.moods:
+		owned_moods["moods[%s]" % id] = registry.moods[id]
+	for key in owned_moods:
+		var mood: StageMood = owned_moods[key]
+		if mood != null and not (is_finite(mood.wall_bevel) and mood.wall_bevel >= 0.0 and mood.wall_bevel <= StageMood.MAX_WALL_BEVEL):
+			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "style_wall_bevel_invalid", where + "::" + key,
+				"wall_bevel %s is outside 0..%s" % [mood.wall_bevel, StageMood.MAX_WALL_BEVEL]))
 	for i in registry.tag_rules.size():
 		var rule := registry.tag_rules[i]
 		if rule == null or rule.query == null or rule.look == null:
