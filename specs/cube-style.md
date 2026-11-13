@@ -270,8 +270,10 @@ iterations. Every detail is data: primitive attachments (3.3), a surface (`UnitL
   stripes need real geometry or a texture made for the cube's faces.
 - **Drool, legs and other hanging parts stop above the body's bottom** (the cube stands on the floor); bent legs are two tubes
   (thigh and shin, each a three-point curve) with a ball at the knee.
-- **Beats in step:** looping pulses sync when their speeds fit a whole number of beats in the layer's `loop_period` (10 s): the
-  Mother Heart beats once a second, the twin hearts at half that.
+- **Beats in step:** a shader pulse runs on the layer's own clock (`time` since the effect started, never wrapped by
+  `loop_period`), so pulses keep a fixed ratio by their speeds (the Mother Heart once a second, the twin hearts at half that) and
+  are in phase when their effects start together, as the units of one battle do. An effect started later (a revive, a quality
+  change) beats out of phase; a shared clock would be a change to the VFX system.
 
 **Review (user, 2026-11-13; memory `live-preview-window`):** set by set in a live window the user closes. First an A/B room with
 every unit **facing the camera** (to see the faces), with a **Turn** button that turns the cubes to their battle facing and back
