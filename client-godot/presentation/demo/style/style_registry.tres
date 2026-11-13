@@ -501,7 +501,6 @@ attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_1p7hb"), SubR
 script = ExtResource("2_b37kx")
 shape = ExtResource("5_lijnf")
 offset = Vector3(0, 0.28, 0)
-motion = 1
 motion_speed = 0.5
 motion_amount = 0.04
 
@@ -575,6 +574,7 @@ center_z = 0.1
 
 [sub_resource type="Resource" id="Resource_enemyform"]
 script = ExtResource("16_form")
+lane_spacing = 2.2
 center_z = 0.1
 
 [resource]
