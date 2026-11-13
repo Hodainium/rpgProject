@@ -4,6 +4,8 @@ extends Node3D
 
 const COLUMNS: int = 13
 const ROWS: int = 7
+## The floor slab: the room's cells and the wall ring around them.
+const FLOOR_SIZE: Vector3 = Vector3(COLUMNS + 2, 0.2, ROWS + 2)
 
 var _main: GameMain
 var _room_root: Node3D
@@ -296,8 +298,10 @@ func restyle() -> void:
 	for child in _box_root.get_children():  # the floor and walls _build_box marked take the new mood's materials
 		match child.get_meta(&"style_part", &""):
 			&"floor":
+				child.mesh = _rig.floor_mesh(FLOOR_SIZE)
 				child.material_override = _rig.floor_material()
 			&"wall":
+				child.mesh = _rig.wall_mesh()
 				child.material_override = _rig.wall_material()
 	var spots := _formation_spots(_battle)  # a variant may bring another formation
 	for id in _views:
@@ -320,9 +324,9 @@ func _refresh_stats() -> void:
 
 func _build_box(doors: int) -> void:
 	var floor_mesh := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(COLUMNS, 0.2, ROWS)
-	floor_mesh.mesh = box
+	# Under the wall ring too: the bevelled walls stand on the floor, so their chamfered bottom edges and the grooves between
+	# blocks show floor, never the background; its corners are chamfered like the walls on them (spec cube-style 3.6).
+	floor_mesh.mesh = _rig.floor_mesh(FLOOR_SIZE)
 	floor_mesh.material_override = _rig.floor_material()  # spec cube-style: the mood's floor (null = today's)
 	floor_mesh.set_meta(&"style_part", &"floor")  # restyle() finds it in battle
 	floor_mesh.position = Vector3(0, -0.6, 0)
@@ -342,9 +346,7 @@ func _build_box(doors: int) -> void:
 
 func _wall(cell: Vector2i) -> void:
 	var wall := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(1, 0.6, 1)
-	wall.mesh = box
+	wall.mesh = _rig.wall_mesh()  # spec cube-style 3.6: a 1 x 0.6 x 1 block, bevelled by the mood
 	wall.material_override = _rig.wall_material()  # spec cube-style: the mood's walls (null = today's)
 	wall.set_meta(&"style_part", &"wall")
 	wall.position = _world(cell) + Vector3(0, -0.2, 0)
