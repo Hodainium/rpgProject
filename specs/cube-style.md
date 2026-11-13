@@ -245,7 +245,7 @@ iterations. Every detail is data: primitive attachments (3.3), a surface (`UnitL
 **Design approach (evolved during Set P, Set 1 and Set 2, user, 2026-11-13; memory `cube-style-design-lessons`):**
 - **Start simple, combine freely.** A proposal starts from one signature detail, but combined details are fine and often chosen
   (A and B together, plus a face). The original "one detail per cube" rule is relaxed.
-- **Party:** headwear (never a held item) plus a **floor effect** in the class's theme under the cube (fire, bubbles, frost, holy
+- **Party:** headwear, a centred face and, since the party pass, sometimes a held item plus a **floor effect** in the class's theme under the cube (fire, bubbles, frost, holy
   glow, runes, golden glow, cracks). **Enemies:** a signature detail, often a **face** (eyes, muzzle, skull, tongue), plus an effect
   or surface where it fits.
 - **See-through bodies** are allowed for jelly and spirit creatures (an alpha surface with both faces drawn and a colour override
@@ -255,7 +255,7 @@ iterations. Every detail is data: primitive attachments (3.3), a surface (`UnitL
   The battle camera sees enemies from the side, so front details lean toward the camera side and tails swing sideways.
 - **Effects:** each unit gets its own (a party effect is reused on an enemy only when the user asks); pulses go clearly from light
   to dark; every shader uniform a track animates is set in the layer's `shader_params`.
-- **Held items and long shapes (Set 2):** a held item sits on the unit's own Left (the camera side in battle) and clear of the body;
+- **Held items and long shapes (Set 2):** a held item sits on the unit's camera side in battle: an enemy's own Left, a party member's own Right and clear of the body;
   a ladle's handle rises from its bowl's rim, not through it; a hammer's head runs along the unit's facing (Z), so its long side
   shows from the battle camera. A gear stood on its side spins on its own axle (`UnitAttachment.spin_axis`, 3.3).
 - **Faces on the face plate:** small glowing eyes read best on a dark plate behind them (the Anvil Guard's visor, the Smelter's
