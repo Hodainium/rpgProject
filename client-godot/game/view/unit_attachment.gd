@@ -22,8 +22,9 @@ const SOCKETS: Array[StringName] = [&"Center", &"Top", &"Base", &"Front", &"Back
 @export var motion_speed: float = 1.0
 ## BOB: units up and down; FLAP: degrees each way; SPIN: unused.
 @export var motion_amount: float = 0.05
-## SPIN only: the axis it turns around in the attachment's own frame (after rotation_degrees), so a gear stood on its side turns
-## on its own axle. Zero (unset) = around the parent's up (Y), as before.
+## SPIN only: the axis it turns around in the attachment's own frame (after rotation_degrees; the scale stays outside the turn, so
+## a stretched gear turns rigidly), so a gear stood on its side turns on its own axle. Zero (unset) = around the parent's up (Y),
+## as before. Ignored by the other motions (the style check warns).
 @export var spin_axis: Vector3 = Vector3.ZERO
 
 
@@ -62,7 +63,8 @@ func animate(rest: Transform3D, time: float) -> Transform3D:
 			var angle := time * motion_speed * TAU
 			if spin_axis.is_zero_approx():
 				return Transform3D(Basis(Vector3.UP, angle) * rest.basis, rest.origin)
-			return Transform3D(rest.basis * Basis(spin_axis.normalized(), angle), rest.origin)
+			var turn := rest.basis.orthonormalized() * Basis(spin_axis.normalized(), angle)  # R * spin * S: no shear on a scale
+			return Transform3D(turn * Basis.from_scale(rest.basis.get_scale()), rest.origin)
 		Motion.FLAP:
 			return Transform3D(rest.basis * Basis(Vector3.FORWARD, deg_to_rad(phase * motion_amount)), rest.origin)
 	return rest

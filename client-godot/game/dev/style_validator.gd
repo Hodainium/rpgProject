@@ -31,6 +31,9 @@ static func attachment_problems(look: UnitLook, where: String) -> Array[Validati
 		if attachment == null or attachment.shape == null:
 			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "style_attachment_shape_missing", at, "an attachment with no shape"))
 			continue
+		if not attachment.spin_axis.is_zero_approx() and attachment.motion != UnitAttachment.Motion.SPIN:
+			issues.append(ValidationIssue.new(ValidationIssue.WARNING, "style_spin_axis_unused", at,
+				"spin_axis is set but the motion is not SPIN: nothing turns"))
 		if not UnitAttachment.SOCKETS.has(attachment.socket):
 			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "style_socket_unknown", at,
 				"no socket '%s' (%s)" % [attachment.socket, ", ".join(UnitAttachment.SOCKETS)]))
