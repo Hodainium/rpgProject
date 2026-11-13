@@ -1,0 +1,101 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.045
+segments = 14
+position = Vector3(0.13, 0.12, 0)
+scale = Vector3(1, 1, 0.5)
+color = Color(0.04, 0.02, 0.03, 1)
+roughness = 0.2
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 3
+radius_bottom = 0.09
+radius_top = 0.11
+segments = 28
+position = Vector3(0.13, 0.12, 0.02)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.95, 0.72, 0.25, 1)
+metallic = 0.9
+roughness = 0.25
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.09
+radius_top = 0.09
+height = 0.01
+segments = 28
+position = Vector3(0.13, 0.12, 0.025)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.75, 0.9, 1, 1)
+roughness = 0.02
+emission = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.007
+radius_top = 0.007
+curve = PackedVector3Array(0.23, 0.08, 0.02, 0.3, -0.1, 0.04, 0.36, -0.2, 0.01)
+segments = 12
+color = Color(0.95, 0.72, 0.25, 1)
+metallic = 0.9
+roughness = 0.25
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.12, 0.025, 0.02)
+position = Vector3(-0.13, 0.12, 0)
+rotation_degrees = Vector3(0, 0, -8)
+color = Color(0.04, 0.02, 0.03, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.15, 0.03, 0.03)
+position = Vector3(-0.13, 0.17, 0)
+rotation_degrees = Vector3(0, 0, -14)
+color = Color(0.25, 0.15, 0.05, 1)
+roughness = 0.8
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.02
+radius_top = 0.02
+curve = PackedVector3Array(-0.17, -0.09, 0, 0, -0.22, 0.02, 0.17, -0.09, 0)
+segments = 16
+color = Color(0.14, 0.03, 0.04, 1)
+roughness = 0.8
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p7"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.04, 0.045, 0.02)
+position = Vector3(0.06, -0.17, 0.02)
+rotation_degrees = Vector3(0, 0, 18)
+color = Color(0.95, 0.72, 0.25, 1)
+metallic = 0.9
+roughness = 0.25
+emission = 0.3
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Monocle and grin"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6"), SubResource("Resource_p7")])

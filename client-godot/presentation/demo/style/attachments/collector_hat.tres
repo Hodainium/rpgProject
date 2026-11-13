@@ -1,0 +1,91 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.34
+radius_top = 0.34
+height = 0.03
+segments = 32
+position = Vector3(0, 0.015, 0)
+color = Color(0.22, 0.08, 0.2, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 3
+radius_bottom = 0.31
+radius_top = 0.35
+segments = 32
+position = Vector3(0, 0.035, 0)
+color = Color(0.22, 0.08, 0.2, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.22
+radius_top = 0.24
+height = 0.42
+segments = 28
+position = Vector3(0, 0.24, 0)
+color = Color(0.22, 0.08, 0.2, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.225
+radius_top = 0.228
+height = 0.07
+segments = 28
+position = Vector3(0, 0.08, 0)
+color = Color(0.95, 0.72, 0.25, 1)
+metallic = 0.9
+roughness = 0.25
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.09, 0.09, 0.02)
+position = Vector3(0, 0.08, 0.228)
+color = Color(0.95, 0.72, 0.25, 1)
+metallic = 0.9
+roughness = 0.25
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.05, 0.05, 0.03)
+position = Vector3(0, 0.08, 0.228)
+color = Color(0.22, 0.08, 0.2, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.06
+radius_top = 0.06
+height = 0.015
+segments = 20
+position = Vector3(0.19, 0.16, 0.19)
+rotation_degrees = Vector3(-80, 45, 0)
+color = Color(0.95, 0.72, 0.25, 1)
+metallic = 0.9
+roughness = 0.25
+emission = 0.35
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Collector's top hat"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6")])

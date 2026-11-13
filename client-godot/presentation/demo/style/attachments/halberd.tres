@@ -1,0 +1,85 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.025
+radius_top = 0.025
+height = 1.25
+segments = 12
+position = Vector3(0, 0.2, 0)
+color = Color(0.3, 0.19, 0.1, 1)
+roughness = 0.85
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 7
+size = Vector3(1, 1, 0.025)
+profile = PackedVector2Array(0, -0.13, 0.06, -0.12, 0.2, -0.2, 0.24, -0.05, 0.24, 0.07, 0.2, 0.2, 0.06, 0.12, 0, 0.13)
+position = Vector3(0, 0.66, 0.02)
+rotation_degrees = Vector3(0, -90, 0)
+color = Color(0.62, 0.66, 0.72, 1)
+metallic = 0.85
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 7
+size = Vector3(1, 1, 0.025)
+profile = PackedVector2Array(0, -0.035, 0.1, -0.05, 0.16, -0.11, 0.13, -0.01, 0, 0.035)
+position = Vector3(0, 0.66, -0.02)
+rotation_degrees = Vector3(0, 90, 0)
+color = Color(0.62, 0.66, 0.72, 1)
+metallic = 0.85
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.035
+radius_top = 0
+height = 0.26
+segments = 10
+position = Vector3(0, 0.95, 0)
+color = Color(0.62, 0.66, 0.72, 1)
+metallic = 0.85
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.04
+radius_top = 0.04
+height = 0.12
+segments = 12
+position = Vector3(0, 0.76, 0)
+color = Color(0.2, 0.2, 0.23, 1)
+metallic = 0.7
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.035
+radius_top = 0
+height = 0.08
+segments = 10
+position = Vector3(0, -0.44, 0)
+rotation_degrees = Vector3(180, 0, 0)
+color = Color(0.2, 0.2, 0.23, 1)
+metallic = 0.7
+roughness = 0.4
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Halberd"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5")])

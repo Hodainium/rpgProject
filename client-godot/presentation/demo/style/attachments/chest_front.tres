@@ -1,0 +1,59 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.08, 0.8, 0.02)
+position = Vector3(-0.22, 0, 0)
+color = Color(0.2, 0.2, 0.23, 1)
+metallic = 0.7
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.08, 0.8, 0.02)
+position = Vector3(0.22, 0, 0)
+color = Color(0.2, 0.2, 0.23, 1)
+metallic = 0.7
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.18, 0.22, 0.03)
+position = Vector3(0, 0.1, 0)
+color = Color(0.2, 0.2, 0.23, 1)
+metallic = 0.7
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.025
+radius_top = 0.025
+height = 0.02
+segments = 14
+position = Vector3(0, 0.13, 0.016)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.04, 0.02, 0.03, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.022, 0.06, 0.02)
+position = Vector3(0, 0.09, 0.016)
+color = Color(0.04, 0.02, 0.03, 1)
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Chest straps and lock"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4")])

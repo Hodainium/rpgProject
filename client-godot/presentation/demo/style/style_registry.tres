@@ -72,6 +72,27 @@
 [ext_resource type="Material" path="res://presentation/demo/style/surfaces/heart_flesh.tres" id="s3_9"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/heart_pulse.tres" id="s3_10"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/mother_arteries.tres" id="s3_11"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/seraph_wing_small.tres" id="s4_10"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/seraph_face.tres" id="s4_11"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/seraph_down.tres" id="s4_12"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/thorn_crown.tres" id="s4_13"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/penitent_blindfold.tres" id="s4_14"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/censer.tres" id="s4_15"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/judge_scales.tres" id="s4_16"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/judge_wig.tres" id="s4_17"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/mitre.tres" id="s4_18"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/judge_face.tres" id="s4_19"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/mimic_lid.tres" id="s4_20"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/mimic_jaw.tres" id="s4_21"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/chest_front.tres" id="s4_22"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/mimic_tongue.tres" id="s4_23"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/lens_eye.tres" id="s4_24"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/halberd.tres" id="s4_25"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/sentry_crest.tres" id="s4_26"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/collector_face.tres" id="s4_27"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/collector_hat.tres" id="s4_28"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/coin_orbit.tres" id="s4_29"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/coin_glints.tres" id="s4_30"]
 
 [sub_resource type="Resource" id="Resource_h2uv3"]
 script = ExtResource("1_avbba")
@@ -987,6 +1008,155 @@ effect_params = {
 "speed": 1.0
 }
 
+[sub_resource type="Resource" id="Resource_s4a1"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_10")
+socket = &"Back"
+offset = Vector3(0.3, 0.26, -0.05)
+rotation_degrees = Vector3(0, 22, 30)
+mirror = true
+motion = 3
+motion_speed = 0.8
+motion_amount = 16
+
+[sub_resource type="Resource" id="Resource_s4a2"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_10")
+socket = &"Back"
+offset = Vector3(0.3, -0.06, -0.05)
+rotation_degrees = Vector3(0, 22, -14)
+mirror = true
+motion = 3
+motion_speed = 0.65
+motion_amount = 12
+
+[sub_resource type="Resource" id="Resource_s4a3"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_11")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_s4l4"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s4a1"), SubResource("Resource_s4a2"), SubResource("Resource_s4a3")])
+effect = ExtResource("s4_12")
+
+[sub_resource type="Resource" id="Resource_s4a5"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_13")
+
+[sub_resource type="Resource" id="Resource_s4a6"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_14")
+socket = &"Center"
+offset = Vector3(0, 0.1, 0)
+
+[sub_resource type="Resource" id="Resource_s4a7"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_15")
+socket = &"Left"
+offset = Vector3(0.24, 0.3, 0)
+rotation_degrees = Vector3(0, 90, 0)
+scale = Vector3(1.3, 1.3, 1.3)
+motion = 3
+motion_speed = 0.5
+motion_amount = 14
+
+[sub_resource type="Resource" id="Resource_s4l8"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s4a5"), SubResource("Resource_s4a6"), SubResource("Resource_s4a7")])
+
+[sub_resource type="Resource" id="Resource_s4a9"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_16")
+socket = &"Left"
+offset = Vector3(0.2, 0, 0)
+
+[sub_resource type="Resource" id="Resource_s4a10"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_17")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_s4a11"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_18")
+offset = Vector3(0, 0.06, 0)
+
+[sub_resource type="Resource" id="Resource_s4a12"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_19")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_s4l13"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s4a9"), SubResource("Resource_s4a10"), SubResource("Resource_s4a11"), SubResource("Resource_s4a12")])
+
+[sub_resource type="Resource" id="Resource_s4a14"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_20")
+offset = Vector3(0, 0, -0.4)
+rotation_degrees = Vector3(0, 90, 0)
+motion = 3
+motion_speed = 0.7
+motion_amount = 14
+
+[sub_resource type="Resource" id="Resource_s4a15"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_21")
+
+[sub_resource type="Resource" id="Resource_s4a16"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_22")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_s4a17"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_23")
+
+[sub_resource type="Resource" id="Resource_s4l18"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s4a14"), SubResource("Resource_s4a15"), SubResource("Resource_s4a16"), SubResource("Resource_s4a17")])
+
+[sub_resource type="Resource" id="Resource_s4a19"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_24")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_s4a20"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_25")
+socket = &"Left"
+offset = Vector3(0.2, 0, 0)
+
+[sub_resource type="Resource" id="Resource_s4a21"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_26")
+
+[sub_resource type="Resource" id="Resource_s4l22"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s4a19"), SubResource("Resource_s4a20"), SubResource("Resource_s4a21")])
+
+[sub_resource type="Resource" id="Resource_s4a23"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_27")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_s4a24"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_28")
+
+[sub_resource type="Resource" id="Resource_s4a25"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s4_29")
+socket = &"Center"
+offset = Vector3(0, 0.1, 0)
+motion = 2
+motion_speed = 0.12
+
+[sub_resource type="Resource" id="Resource_s4l26"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s4a23"), SubResource("Resource_s4a24"), SubResource("Resource_s4a25")])
+effect = ExtResource("s4_30")
+
 [resource]
 script = ExtResource("4_amh85")
 default_look = SubResource("Resource_h2uv3")
@@ -1006,10 +1176,14 @@ looks = Dictionary[StringName, ExtResource("1_avbba")]({
 &"demo.enemy.bat": SubResource("Resource_x2aw2"),
 &"demo.enemy.bone_warden": SubResource("Resource_warden"),
 &"demo.enemy.brass_colossus": SubResource("Resource_s2l19"),
+&"demo.enemy.choir_seraph": SubResource("Resource_s4l4"),
 &"demo.enemy.cinder_hound": SubResource("Resource_s2l3"),
+&"demo.enemy.collector": SubResource("Resource_s4l26"),
 &"demo.enemy.forgemaster": SubResource("Resource_s2l15"),
+&"demo.enemy.gilded_mimic": SubResource("Resource_s4l18"),
 &"demo.enemy.golem": SubResource("Resource_6xxrr"),
 &"demo.enemy.gutter_maw": SubResource("Resource_s3l3"),
+&"demo.enemy.hallowed_judge": SubResource("Resource_s4l13"),
 &"demo.enemy.heart_left": SubResource("Resource_s3l10"),
 &"demo.enemy.heart_right": SubResource("Resource_s3l12"),
 &"demo.enemy.imp": SubResource("Resource_rptdn"),
@@ -1017,11 +1191,13 @@ looks = Dictionary[StringName, ExtResource("1_avbba")]({
 &"demo.enemy.leech": SubResource("Resource_s3l5"),
 &"demo.enemy.lich": SubResource("Resource_q38xi"),
 &"demo.enemy.mother_heart": SubResource("Resource_s3l14"),
+&"demo.enemy.penitent_knight": SubResource("Resource_s4l8"),
 &"demo.enemy.rat_king": SubResource("Resource_rat"),
 &"demo.enemy.shaman": SubResource("Resource_shaman"),
 &"demo.enemy.slime": SubResource("Resource_slime"),
 &"demo.enemy.smelter": SubResource("Resource_s2l7"),
 &"demo.enemy.toad": SubResource("Resource_toad"),
+&"demo.enemy.vault_sentry": SubResource("Resource_s4l22"),
 &"demo.enemy.vein_weaver": SubResource("Resource_s3l8"),
 &"demo.enemy.wisp": SubResource("Resource_wisp")
 })
