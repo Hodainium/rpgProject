@@ -111,7 +111,7 @@ tool can save the cached meshes as mesh files (for speed or an export) without c
 | `mirror` | Also a copy mirrored across the unit's middle (X): a pair of wings, two horns |
 | `use_tint`, `tint` | Replaces the colour of the shape's tintable parts (one hat shape, many colours) |
 | `motion`, `motion_speed`, `motion_amount` | `NONE`, `BOB` (up and down), `SPIN` (around Y), `FLAP` (a swing around Z, mirrored for pairs) |
-| `spin_axis` | `SPIN` only: the axis in the attachment's own frame (after its rotation), so a gear stood on its side turns on its axle (the Brass Colossus, Set 2); zero (unset) = around the parent's Y, as before |
+| `spin_axis` | `SPIN` only: the axis in the attachment's own frame (after its rotation), so a gear stood on its side turns on its axle (the Brass Colossus, Set 2; its scale stays outside the turn); zero (unset) = around the parent's Y, as before; set with another motion it does nothing (warning `style_spin_axis_unused`) |
 
 `UnitLook.attachments` is unset when empty: an exact look's list wins whole over a rule's, a rule's over the default's (lists are
 not merged). Attachments are children of `Body`, so every unit animation moves them. Every part's material goes through
