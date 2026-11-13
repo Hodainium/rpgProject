@@ -1,0 +1,70 @@
+[gd_resource type="Resource" script_class="StyleRegistry" format=3]
+
+[ext_resource type="Script" path="res://game/view/unit_look.gd" id="1_4rtsm"]
+[ext_resource type="Script" path="res://game/view/mood_light.gd" id="2_a764h"]
+[ext_resource type="Script" path="res://game/view/stage_mood.gd" id="3_4qmp3"]
+[ext_resource type="Script" path="res://game/view/style_registry.gd" id="4_xa7w4"]
+[ext_resource type="Script" path="res://game/view/unit_look_rule.gd" id="5_e1y8t"]
+
+[sub_resource type="Resource" id="Resource_orq80"]
+script = ExtResource("1_4rtsm")
+rim = 0.3
+rim_tint = 0.6
+roughness = 0.7
+
+[sub_resource type="Environment" id="Environment_kl1fa"]
+background_mode = 1
+background_color = Color(0.62, 0.66, 0.74, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.75, 0.78, 0.85, 1)
+ambient_light_energy = 0.9
+tonemap_mode = 4
+ssao_enabled = true
+ssao_radius = 0.6
+ssao_intensity = 1.2
+glow_intensity = 0.9
+glow_bloom = 0.05
+
+[sub_resource type="Resource" id="Resource_2jqtx"]
+script = ExtResource("2_a764h")
+color = Color(0.6, 0.7, 1, 1)
+energy = 0.25
+rotation_degrees = Vector3(-30, -60, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_iraeo"]
+albedo_color = Color(0.72, 0.72, 0.74, 1)
+roughness = 0.9
+
+[sub_resource type="Resource" id="Resource_ujwd8"]
+script = ExtResource("2_a764h")
+color = Color(1, 0.97, 0.92, 1)
+energy = 1.1
+rotation_degrees = Vector3(-55, 35, 0)
+shadows = true
+
+[sub_resource type="Resource" id="Resource_ktiyj"]
+script = ExtResource("2_a764h")
+energy = 0.6
+rotation_degrees = Vector3(-20, 180, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xn7mx"]
+albedo_color = Color(0.6, 0.6, 0.64, 1)
+roughness = 0.8
+
+[sub_resource type="Resource" id="Resource_8m8ub"]
+script = ExtResource("3_4qmp3")
+display_name = "Bright: soft daylight"
+environment = SubResource("Environment_kl1fa")
+key_light = SubResource("Resource_ujwd8")
+fill_light = SubResource("Resource_2jqtx")
+rim_light = SubResource("Resource_ktiyj")
+floor_material = SubResource("StandardMaterial3D_iraeo")
+wall_material = SubResource("StandardMaterial3D_xn7mx")
+
+[resource]
+script = ExtResource("4_xa7w4")
+default_look = SubResource("Resource_orq80")
+looks = Dictionary[StringName, ExtResource("1_4rtsm")]({})
+tag_rules = Array[ExtResource("5_e1y8t")]([])
+default_mood = SubResource("Resource_8m8ub")
+moods = Dictionary[StringName, ExtResource("3_4qmp3")]({})

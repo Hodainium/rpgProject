@@ -1,0 +1,485 @@
+[gd_resource type="Resource" script_class="StyleRegistry" format=3]
+
+[ext_resource type="Script" path="res://game/view/unit_look.gd" id="1_avbba"]
+[ext_resource type="Script" path="res://game/view/mood_light.gd" id="2_jc83w"]
+[ext_resource type="Script" path="res://game/view/stage_mood.gd" id="3_wpew0"]
+[ext_resource type="Script" path="res://game/view/style_registry.gd" id="4_amh85"]
+[ext_resource type="Script" path="res://game/view/unit_look_rule.gd" id="5_m0vw3"]
+
+[sub_resource type="Resource" id="Resource_h2uv3"]
+script = ExtResource("1_avbba")
+rim = 0.6
+rim_tint = 0.4
+roughness = 0.5
+
+[sub_resource type="Environment" id="Environment_nktf2"]
+background_mode = 1
+background_color = Color(0.05, 0.05, 0.08, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.42, 0.45, 0.6, 1)
+ambient_light_energy = 0.55
+tonemap_mode = 4
+ssao_enabled = true
+ssao_radius = 0.6
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.05
+
+[sub_resource type="Resource" id="Resource_scl6q"]
+script = ExtResource("2_jc83w")
+color = Color(0.6, 0.7, 1, 1)
+energy = 0.25
+rotation_degrees = Vector3(-30, -60, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hxilu"]
+albedo_color = Color(0.16, 0.16, 0.2, 1)
+roughness = 0.9
+
+[sub_resource type="Resource" id="Resource_s6kus"]
+script = ExtResource("2_jc83w")
+color = Color(1, 1, 1, 1)
+energy = 1.25
+rotation_degrees = Vector3(-55, 35, 0)
+shadows = true
+
+[sub_resource type="Resource" id="Resource_cwmk4"]
+script = ExtResource("2_jc83w")
+color = Color(0.7, 0.8, 1, 1)
+energy = 1.6
+rotation_degrees = Vector3(-20, 180, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3g52e"]
+albedo_color = Color(0.24, 0.23, 0.28, 1)
+roughness = 0.8
+
+[sub_resource type="Resource" id="Resource_v4wvm"]
+script = ExtResource("3_wpew0")
+display_name = "Stage"
+environment = SubResource("Environment_nktf2")
+key_light = SubResource("Resource_s6kus")
+fill_light = SubResource("Resource_scl6q")
+rim_light = SubResource("Resource_cwmk4")
+floor_material = SubResource("StandardMaterial3D_hxilu")
+wall_material = SubResource("StandardMaterial3D_3g52e")
+
+[sub_resource type="Environment" id="Environment_sr4w0"]
+background_mode = 1
+background_color = Color(0.06, 0.05, 0.04, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.45, 0.4, 0.35, 1)
+ambient_light_energy = 0.55
+tonemap_mode = 4
+ssao_enabled = true
+ssao_radius = 0.6
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.05
+
+[sub_resource type="Resource" id="Resource_i55ax"]
+script = ExtResource("2_jc83w")
+color = Color(0.6, 0.7, 1, 1)
+energy = 0.25
+rotation_degrees = Vector3(-30, -60, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8h0fs"]
+albedo_color = Color(0.17, 0.15, 0.13, 1)
+roughness = 0.9
+
+[sub_resource type="Resource" id="Resource_u0pw2"]
+script = ExtResource("2_jc83w")
+color = Color(1, 1, 1, 1)
+energy = 1.3
+rotation_degrees = Vector3(-55, 35, 0)
+shadows = true
+
+[sub_resource type="Resource" id="Resource_jtgr8"]
+script = ExtResource("2_jc83w")
+color = Color(1, 0.85, 0.65, 1)
+energy = 1.4
+rotation_degrees = Vector3(-20, 180, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_iyivn"]
+albedo_color = Color(0.27, 0.22, 0.19, 1)
+roughness = 0.8
+
+[sub_resource type="Resource" id="Resource_8qsqi"]
+script = ExtResource("3_wpew0")
+display_name = "Cellar: torchlit stone"
+environment = SubResource("Environment_sr4w0")
+key_light = SubResource("Resource_u0pw2")
+fill_light = SubResource("Resource_i55ax")
+rim_light = SubResource("Resource_jtgr8")
+floor_material = SubResource("StandardMaterial3D_8h0fs")
+wall_material = SubResource("StandardMaterial3D_iyivn")
+
+[sub_resource type="Environment" id="Environment_pteq5"]
+background_mode = 1
+background_color = Color(0.04, 0.06, 0.07, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.35, 0.45, 0.55, 1)
+ambient_light_energy = 0.6
+tonemap_mode = 4
+ssao_enabled = true
+ssao_radius = 0.6
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.05
+fog_enabled = true
+fog_light_color = Color(0.2, 0.28, 0.32, 1)
+fog_density = 0.015
+
+[sub_resource type="Resource" id="Resource_n1le8"]
+script = ExtResource("2_jc83w")
+color = Color(0.6, 0.7, 1, 1)
+energy = 0.25
+rotation_degrees = Vector3(-30, -60, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bqdwy"]
+albedo_color = Color(0.13, 0.15, 0.17, 1)
+roughness = 0.9
+
+[sub_resource type="Resource" id="Resource_3dv43"]
+script = ExtResource("2_jc83w")
+color = Color(1, 1, 1, 1)
+rotation_degrees = Vector3(-55, 35, 0)
+shadows = true
+
+[sub_resource type="Resource" id="Resource_rhqsj"]
+script = ExtResource("2_jc83w")
+color = Color(0.5, 0.9, 0.9, 1)
+energy = 1.8
+rotation_degrees = Vector3(-20, 180, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6tbjd"]
+albedo_color = Color(0.2, 0.23, 0.25, 1)
+roughness = 0.8
+
+[sub_resource type="Resource" id="Resource_wb725"]
+script = ExtResource("3_wpew0")
+display_name = "Crypt: cold mist"
+environment = SubResource("Environment_pteq5")
+key_light = SubResource("Resource_3dv43")
+fill_light = SubResource("Resource_n1le8")
+rim_light = SubResource("Resource_rhqsj")
+floor_material = SubResource("StandardMaterial3D_bqdwy")
+wall_material = SubResource("StandardMaterial3D_6tbjd")
+
+[sub_resource type="Environment" id="Environment_vvw8h"]
+background_mode = 1
+background_color = Color(0.07, 0.03, 0.02, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.5, 0.3, 0.2, 1)
+ambient_light_energy = 0.55
+tonemap_mode = 4
+ssao_enabled = true
+ssao_radius = 0.6
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.05
+
+[sub_resource type="Resource" id="Resource_ygbct"]
+script = ExtResource("2_jc83w")
+color = Color(0.6, 0.7, 1, 1)
+energy = 0.25
+rotation_degrees = Vector3(-30, -60, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ob32e"]
+albedo_color = Color(0.14, 0.11, 0.1, 1)
+roughness = 0.9
+
+[sub_resource type="Resource" id="Resource_46eo0"]
+script = ExtResource("2_jc83w")
+color = Color(1, 1, 1, 1)
+energy = 1.4
+rotation_degrees = Vector3(-55, 35, 0)
+shadows = true
+
+[sub_resource type="Resource" id="Resource_l7oh2"]
+script = ExtResource("2_jc83w")
+color = Color(1, 0.45, 0.15, 1)
+energy = 2.0
+rotation_degrees = Vector3(-20, 180, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_udpyr"]
+albedo_color = Color(0.25, 0.17, 0.13, 1)
+roughness = 0.8
+
+[sub_resource type="Resource" id="Resource_6hff8"]
+script = ExtResource("3_wpew0")
+display_name = "Ember Forge: heat"
+environment = SubResource("Environment_vvw8h")
+key_light = SubResource("Resource_46eo0")
+fill_light = SubResource("Resource_ygbct")
+rim_light = SubResource("Resource_l7oh2")
+floor_material = SubResource("StandardMaterial3D_ob32e")
+wall_material = SubResource("StandardMaterial3D_udpyr")
+
+[sub_resource type="Environment" id="Environment_3ueiy"]
+background_mode = 1
+background_color = Color(0.04, 0.06, 0.04, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.35, 0.45, 0.3, 1)
+ambient_light_energy = 0.6
+tonemap_mode = 4
+ssao_enabled = true
+ssao_radius = 0.6
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.05
+
+[sub_resource type="Resource" id="Resource_y0c75"]
+script = ExtResource("2_jc83w")
+color = Color(0.6, 0.7, 1, 1)
+energy = 0.25
+rotation_degrees = Vector3(-30, -60, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_18f24"]
+albedo_color = Color(0.13, 0.16, 0.11, 1)
+roughness = 0.9
+
+[sub_resource type="Resource" id="Resource_hnblb"]
+script = ExtResource("2_jc83w")
+color = Color(1, 1, 1, 1)
+energy = 1.2
+rotation_degrees = Vector3(-55, 35, 0)
+shadows = true
+
+[sub_resource type="Resource" id="Resource_1ktuf"]
+script = ExtResource("2_jc83w")
+color = Color(0.7, 1, 0.6, 1)
+energy = 1.6
+rotation_degrees = Vector3(-20, 180, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vvd4c"]
+albedo_color = Color(0.2, 0.25, 0.17, 1)
+roughness = 0.8
+
+[sub_resource type="Resource" id="Resource_uhnwc"]
+script = ExtResource("3_wpew0")
+display_name = "Hollow: moss"
+environment = SubResource("Environment_3ueiy")
+key_light = SubResource("Resource_hnblb")
+fill_light = SubResource("Resource_y0c75")
+rim_light = SubResource("Resource_1ktuf")
+floor_material = SubResource("StandardMaterial3D_18f24")
+wall_material = SubResource("StandardMaterial3D_vvd4c")
+
+[sub_resource type="Environment" id="Environment_fw45j"]
+background_mode = 1
+background_color = Color(0.12, 0.11, 0.1, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.6, 0.58, 0.55, 1)
+ambient_light_energy = 0.7
+tonemap_mode = 4
+ssao_enabled = true
+ssao_radius = 0.6
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.05
+
+[sub_resource type="Resource" id="Resource_5rrs2"]
+script = ExtResource("2_jc83w")
+color = Color(0.6, 0.7, 1, 1)
+energy = 0.25
+rotation_degrees = Vector3(-30, -60, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0qbwf"]
+albedo_color = Color(0.35, 0.33, 0.3, 1)
+roughness = 0.9
+
+[sub_resource type="Resource" id="Resource_0ddo8"]
+script = ExtResource("2_jc83w")
+color = Color(1, 1, 1, 1)
+energy = 1.5
+rotation_degrees = Vector3(-55, 35, 0)
+shadows = true
+
+[sub_resource type="Resource" id="Resource_8up2r"]
+script = ExtResource("2_jc83w")
+color = Color(1, 0.9, 0.6, 1)
+energy = 1.8
+rotation_degrees = Vector3(-20, 180, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_v2b6v"]
+albedo_color = Color(0.5, 0.47, 0.42, 1)
+roughness = 0.8
+
+[sub_resource type="Resource" id="Resource_k0a7y"]
+script = ExtResource("3_wpew0")
+display_name = "Silent Cathedral: pale gold"
+environment = SubResource("Environment_fw45j")
+key_light = SubResource("Resource_0ddo8")
+fill_light = SubResource("Resource_5rrs2")
+rim_light = SubResource("Resource_8up2r")
+floor_material = SubResource("StandardMaterial3D_0qbwf")
+wall_material = SubResource("StandardMaterial3D_v2b6v")
+
+[sub_resource type="Environment" id="Environment_udqad"]
+background_mode = 1
+background_color = Color(0.06, 0.05, 0.02, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.5, 0.45, 0.3, 1)
+ambient_light_energy = 0.55
+tonemap_mode = 4
+ssao_enabled = true
+ssao_radius = 0.6
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.05
+
+[sub_resource type="Resource" id="Resource_kdfqh"]
+script = ExtResource("2_jc83w")
+color = Color(0.6, 0.7, 1, 1)
+energy = 0.25
+rotation_degrees = Vector3(-30, -60, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_h4jwf"]
+albedo_color = Color(0.2, 0.17, 0.1, 1)
+roughness = 0.9
+
+[sub_resource type="Resource" id="Resource_885la"]
+script = ExtResource("2_jc83w")
+color = Color(1, 1, 1, 1)
+energy = 1.35
+rotation_degrees = Vector3(-55, 35, 0)
+shadows = true
+
+[sub_resource type="Resource" id="Resource_beyyl"]
+script = ExtResource("2_jc83w")
+color = Color(1, 0.8, 0.4, 1)
+energy = 1.8
+rotation_degrees = Vector3(-20, 180, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dxsbj"]
+albedo_color = Color(0.32, 0.27, 0.16, 1)
+roughness = 0.8
+
+[sub_resource type="Resource" id="Resource_ro52i"]
+script = ExtResource("3_wpew0")
+display_name = "Vault: gold hoard"
+environment = SubResource("Environment_udqad")
+key_light = SubResource("Resource_885la")
+fill_light = SubResource("Resource_kdfqh")
+rim_light = SubResource("Resource_beyyl")
+floor_material = SubResource("StandardMaterial3D_h4jwf")
+wall_material = SubResource("StandardMaterial3D_dxsbj")
+
+[sub_resource type="Environment" id="Environment_i0t3p"]
+background_mode = 1
+background_color = Color(0.05, 0.03, 0.06, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.35, 0.25, 0.45, 1)
+ambient_light_energy = 0.6
+tonemap_mode = 4
+ssao_enabled = true
+ssao_radius = 0.6
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.05
+fog_enabled = true
+fog_light_color = Color(0.22, 0.12, 0.26, 1)
+fog_density = 0.015
+
+[sub_resource type="Resource" id="Resource_ocr8i"]
+script = ExtResource("2_jc83w")
+color = Color(0.6, 0.7, 1, 1)
+energy = 0.25
+rotation_degrees = Vector3(-30, -60, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ys1u7"]
+albedo_color = Color(0.12, 0.09, 0.14, 1)
+roughness = 0.9
+
+[sub_resource type="Resource" id="Resource_ch75r"]
+script = ExtResource("2_jc83w")
+color = Color(1, 1, 1, 1)
+energy = 1.1
+rotation_degrees = Vector3(-55, 35, 0)
+shadows = true
+
+[sub_resource type="Resource" id="Resource_b7qxp"]
+script = ExtResource("2_jc83w")
+color = Color(0.9, 0.3, 0.8, 1)
+energy = 2.0
+rotation_degrees = Vector3(-20, 180, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1jt5r"]
+albedo_color = Color(0.2, 0.15, 0.24, 1)
+roughness = 0.8
+
+[sub_resource type="Resource" id="Resource_sfmtn"]
+script = ExtResource("3_wpew0")
+display_name = "Black Coven: hex light"
+environment = SubResource("Environment_i0t3p")
+key_light = SubResource("Resource_ch75r")
+fill_light = SubResource("Resource_ocr8i")
+rim_light = SubResource("Resource_b7qxp")
+floor_material = SubResource("StandardMaterial3D_ys1u7")
+wall_material = SubResource("StandardMaterial3D_1jt5r")
+
+[sub_resource type="Environment" id="Environment_2we8u"]
+background_mode = 1
+background_color = Color(0.01, 0, 0.02, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.2, 0.15, 0.3, 1)
+ambient_light_energy = 0.4
+tonemap_mode = 4
+ssao_enabled = true
+ssao_radius = 0.6
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.05
+
+[sub_resource type="Resource" id="Resource_d2ryc"]
+script = ExtResource("2_jc83w")
+color = Color(0.6, 0.7, 1, 1)
+energy = 0.25
+rotation_degrees = Vector3(-30, -60, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tdba8"]
+albedo_color = Color(0.05, 0.04, 0.07, 1)
+roughness = 0.9
+
+[sub_resource type="Resource" id="Resource_a5yls"]
+script = ExtResource("2_jc83w")
+color = Color(1, 1, 1, 1)
+energy = 0.7
+rotation_degrees = Vector3(-55, 35, 0)
+shadows = true
+
+[sub_resource type="Resource" id="Resource_0tqdd"]
+script = ExtResource("2_jc83w")
+color = Color(0.6, 0.3, 1, 1)
+energy = 2.5
+rotation_degrees = Vector3(-20, 180, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_p0dkd"]
+albedo_color = Color(0.1, 0.08, 0.13, 1)
+roughness = 0.8
+
+[sub_resource type="Resource" id="Resource_evg4v"]
+script = ExtResource("3_wpew0")
+display_name = "Void: nothing"
+environment = SubResource("Environment_2we8u")
+key_light = SubResource("Resource_a5yls")
+fill_light = SubResource("Resource_d2ryc")
+rim_light = SubResource("Resource_0tqdd")
+floor_material = SubResource("StandardMaterial3D_tdba8")
+wall_material = SubResource("StandardMaterial3D_p0dkd")
+
+[resource]
+script = ExtResource("4_amh85")
+default_look = SubResource("Resource_h2uv3")
+looks = Dictionary[StringName, ExtResource("1_avbba")]({})
+tag_rules = Array[ExtResource("5_m0vw3")]([])
+default_mood = SubResource("Resource_v4wvm")
+moods = Dictionary[StringName, ExtResource("3_wpew0")]({
+&"demo.chapter.cathedral": SubResource("Resource_k0a7y"),
+&"demo.chapter.cellar": SubResource("Resource_8qsqi"),
+&"demo.chapter.coven": SubResource("Resource_sfmtn"),
+&"demo.chapter.crypt": SubResource("Resource_wb725"),
+&"demo.chapter.forge": SubResource("Resource_6hff8"),
+&"demo.chapter.hollow": SubResource("Resource_uhnwc"),
+&"demo.chapter.vault": SubResource("Resource_ro52i"),
+&"demo.chapter.void": SubResource("Resource_evg4v")
+})
