@@ -147,7 +147,7 @@ socket = &"Front"
 script = ExtResource("2_b37kx")
 shape = ExtResource("pi_cleric")
 socket = &"Right"
-offset = Vector3(-0.14, -0.15, 0)
+offset = Vector3(-0.14, 0, 0)
 
 [sub_resource type="Resource" id="Resource_pf_arcanist"]
 script = ExtResource("2_b37kx")
@@ -181,7 +181,7 @@ socket = &"Front"
 script = ExtResource("2_b37kx")
 shape = ExtResource("pi_ranger")
 socket = &"Right"
-offset = Vector3(-0.14, 0, 0)
+offset = Vector3(-0.14, 0.03, 0)
 
 [sub_resource type="Resource" id="Resource_pf_bulwark"]
 script = ExtResource("2_b37kx")
@@ -203,7 +203,7 @@ socket = &"Front"
 script = ExtResource("2_b37kx")
 shape = ExtResource("pi_cryomancer")
 socket = &"Right"
-offset = Vector3(-0.14, -0.12, 0)
+offset = Vector3(-0.14, 0, 0)
 
 [sub_resource type="Resource" id="Resource_pf_pyromancer"]
 script = ExtResource("2_b37kx")
