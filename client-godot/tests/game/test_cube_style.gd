@@ -528,6 +528,21 @@ func test_mirror_and_motion() -> void:
 	check(is_equal_approx(swing, 30.0), "a flap swings its full amount around Z (%.2f)" % swing)
 	attachment.motion = UnitAttachment.Motion.NONE
 	eq(attachment.animate(rest, 0.25), rest, "no motion stays at rest")
+	attachment.motion = UnitAttachment.Motion.SPIN
+	var tilted := Transform3D(Basis(Vector3.BACK, deg_to_rad(90.0)), Vector3(0.4, 0, 0))  # a gear stood on its side (axle along X)
+	var around_up := attachment.animate(tilted, 0.25)
+	check(around_up.basis.is_equal_approx(Basis(Vector3.UP, TAU * 0.25) * tilted.basis) and around_up.origin == tilted.origin,
+		"an unset spin axis turns around the parent's up, as before")
+	attachment.spin_axis = Vector3.UP
+	var axle := tilted.basis * Vector3.UP  # the gear's own axle in the parent's frame
+	var own := attachment.animate(tilted, 0.25)
+	check((own.basis * Vector3.UP).is_equal_approx(axle), "a spin axis turns the attachment on its own axle (the axle stays put)")
+	check(not own.basis.is_equal_approx(tilted.basis), "and it does turn")
+	var stretched := Transform3D(tilted.basis * Basis.from_scale(Vector3(1.5, 1, 0.5)), tilted.origin)
+	var turned := attachment.animate(stretched, 0.125)
+	check(turned.basis.get_scale().is_equal_approx(Vector3(1.5, 1, 0.5)), "a scaled attachment keeps its scale while it turns")
+	var c := turned.basis.orthonormalized()
+	check((turned.basis * Basis.from_scale(Vector3(1.5, 1, 0.5)).inverse()).is_equal_approx(c), "and turns rigidly (no shear)")
 
 
 func test_unit_view_wears_its_attachments_stamped() -> void:
@@ -822,10 +837,14 @@ func test_validator_attachment_codes() -> void:
 	var broken := AttachmentPart.new()
 	broken.kind = AttachmentPart.Kind.LATHE
 	look.attachments.append(_attachment(_shape([broken]), &"Top"))
+	var idle_axis := _attachment(_shape([_part(AttachmentPart.Kind.BOX)]), &"Top")
+	idle_axis.spin_axis = Vector3.UP  # set, but the motion is NONE
+	look.attachments.append(idle_axis)
 	look.effect = _looping_effect(false)
 	registry.default_look = look
 	var codes: Array = []
 	for issue in StyleValidator.validate(registry, null, "test"):
 		codes.append(issue.code)
-	for code in ["style_attachment_shape_missing", "style_socket_unknown", "style_part_invalid", "style_effect_not_looping"]:
+	for code in ["style_attachment_shape_missing", "style_socket_unknown", "style_part_invalid", "style_effect_not_looping",
+			"style_spin_axis_unused"]:
 		check(codes.has(code), "%s is reported: %s" % [code, codes])

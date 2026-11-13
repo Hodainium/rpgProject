@@ -1,0 +1,45 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_plates"]
+noise_type = 2
+seed = 5
+frequency = 0.018
+fractal_type = 0
+cellular_distance_function = 2
+cellular_return_type = 0
+
+[sub_resource type="Gradient" id="Gradient_plates"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.82, 0.8, 0.76, 1, 1, 1, 1, 1)
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_albedo"]
+width = 256
+height = 256
+noise = SubResource("FastNoiseLite_plates")
+color_ramp = SubResource("Gradient_plates")
+seamless = true
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_seams"]
+noise_type = 2
+seed = 5
+frequency = 0.018
+fractal_type = 0
+cellular_distance_function = 2
+cellular_return_type = 4
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_normal"]
+width = 256
+height = 256
+noise = SubResource("FastNoiseLite_seams")
+seamless = true
+as_normal_map = true
+bump_strength = 3.0
+
+[resource]
+albedo_texture = SubResource("NoiseTexture2D_albedo")
+metallic = 0.6
+roughness = 0.5
+normal_enabled = true
+normal_scale = 0.7
+normal_texture = SubResource("NoiseTexture2D_normal")
+uv1_triplanar = true

@@ -1,0 +1,53 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_binding"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_particles"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="4_param"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="5_def"]
+
+[sub_resource type="Resource" id="Resource_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_motes"]
+offsets = PackedFloat32Array(0, 0.25, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.75, 1, 1, 1, 0.45, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_motes"]
+script = ExtResource("3_particles")
+size_min = 0.14
+size_max = 0.26
+direction = Vector3(0, 1, 0)
+spread = 12.0
+speed_min = 0.3
+speed_max = 0.45
+gravity = Vector3(0, 0.05, 0)
+damping = 0.2
+emission_radius = 0.05
+emission_offset = Vector3(0, 0.36, 0)
+amount = 18
+lifetime = 2.2
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_motes")
+id = &"motes"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_color")])
+
+[sub_resource type="Resource" id="Resource_param_color"]
+script = ExtResource("4_param")
+name = &"color"
+kind = 3
+default_value = Color(0.45, 0.43, 0.42, 1)
+description = "Smoke colour."
+
+[resource]
+script = ExtResource("5_def")
+id = &"fx.chimney_smoke"
+display_name = "Chimney smoke"
+params = Array[ExtResource("4_param")]([SubResource("Resource_param_color")])
+layers = Array[ExtResource("1_layer")]([SubResource("Resource_motes")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+socket = &"Top"
+description = "Grey smoke puffing from the top of a unit (the Smelter's chimney, spec cube-style 6a)."
