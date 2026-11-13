@@ -163,3 +163,21 @@ Tests: `test_ui` (a hidden panel is kept and comes back as the same node; `queue
 
 Not done (left for later): a first-ever shader compile on a machine with a cold shader cache can still hitch once per new effect;
 effects could be pre-compiled at load like the stencil copies.
+
+## 10. Code review fixes (2026-11-13)
+- **The battle stays current and alive through the wait.** `_do_fight` clears `current_battle` and frees the battle after
+  `hold_end()`, just before `battle_finished`: a 1103 / 1108 rebuild (`ServerLink`) waits for `battle_finished` while
+  `current_battle` is set, and the screens holding the battle drop it on `battle_finished`, so none holds a freed one. A run
+  stopped during the wait gets no rewards, XP, drops or room clear.
+- **A death during the unit's own cast** starts its fade before the cast releases the gate (`_finish_montage`), so the battle's
+  end sees the fade.
+- **`hold_end()`** counts game time (the fades' clock), stops waiting when `skip_all` is set during the wait, and at the cap or on
+  Skip finishes every running fade (`DeathFadeDriver.finish_now`), so no fade can hold a later battle.
+- **The unit's label** (name and HP) fades with it, and a revive restores it.
+- **A parked screen** refreshes once when it is shown again (not from the visibility change and `on_activated` both); a placed
+  `UIToastHost` takes no toasts while parked and drops what it showed (as a freed one did), so nothing comes out in a burst.
+
+Accepted for now: the fade copies only `BaseMaterial3D` overrides (the cube and its attachments; an imported model with shader or
+per-surface materials would pop out at the end instead of fading, to handle with the models); a dev `style` restyle in the middle
+of a fade repaints the dying unit solid. No HUD panel uses `on_pushed` or holds a nested slot, so showing a parked panel again
+needs neither. Worst battle-end frame after these fixes: 14–17 ms.

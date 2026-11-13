@@ -444,3 +444,32 @@ func test_queue_refresh_coalesces_and_waits_while_hidden() -> void:
 	screen.visible = true
 	eq(screen.get("count"), 2, "not again when nothing was asked")
 	screen.queue_free()
+
+
+## Review fixes: a parked screen marked stale refreshes once when it is shown again (not from both the visibility change and
+## on_activated); a placed toast host takes no toasts while it is parked.
+func test_a_parked_screen_refreshes_once_and_a_parked_toast_host_rests() -> void:
+	var script := GDScript.new()
+	script.source_code = "extends UIScreen\nvar count := 0\nfunc refresh() -> void:\n\tcount += 1\n"
+	script.reload()
+	var screen: UIScreen = script.new()
+	host.add_child(screen)
+	screen._ui_activate()
+	screen._ui_deactivate()
+	var before: int = screen.get("count")
+	screen.queue_refresh()
+	await host.get_tree().process_frame
+	eq(screen.get("count"), before, "hidden: nothing yet")
+	screen._ui_activate()
+	eq(screen.get("count"), before + 1, "shown again: one refresh")
+	screen.queue_free()
+	var toasts := UIToastHost.new()
+	host.add_child(toasts)
+	check(not toasts._resting(), "a host made in code always takes toasts")
+	toasts.ctx = UIContext.new(null, null)
+	toasts._ui_activate()
+	check(not toasts._resting(), "placed and active: takes toasts")
+	toasts._ui_deactivate()
+	check(toasts._resting(), "placed and parked: rests")
+	toasts.ctx = null
+	toasts.queue_free()

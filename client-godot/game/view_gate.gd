@@ -53,16 +53,32 @@ func open_holds() -> int:
 	return count
 
 
-## Waits until every open hold is released, at most HOLD_CAP seconds; at once with skip_all or no holds.
+## Waits until every open hold is released, at most HOLD_CAP seconds of game time (the fades' own clock, so a slowed engine
+## waits as long as they take); at once with skip_all or no holds, and it stops waiting when skip_all is set during the wait.
+## At the cap the explicit holds are cleared and the fades still running are finished at once, so none holds a later battle.
 func hold_end() -> void:
 	if skip_all or open_holds() == 0:
 		return
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null:
 		return
-	var deadline := Time.get_ticks_msec() + int(HOLD_CAP * 1000.0)
-	while open_holds() > 0 and Time.get_ticks_msec() < deadline:
+	var waited := 0.0
+	while open_holds() > 0 and waited < HOLD_CAP and not skip_all:
 		await tree.process_frame
+		waited += tree.root.get_process_delta_time()
+	if skip_all:
+		_finish_all()
+		return
 	if open_holds() > 0:
 		push_warning("battle end: %d hold(s) still open after %.1f s; leaving the battle anyway" % [open_holds(), HOLD_CAP])
-		_holds.clear()
+		_finish_all()
+
+
+## Releases every explicit hold and ends every running death fade (its view hides).
+func _finish_all() -> void:
+	_holds.clear()
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return
+	for driver in tree.get_nodes_in_group(DeathFadeDriver.GROUP):
+		(driver as DeathFadeDriver).finish_now()

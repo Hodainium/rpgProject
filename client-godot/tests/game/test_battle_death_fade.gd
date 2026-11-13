@@ -194,18 +194,24 @@ func _fight(gate: ViewGate, hold_seconds: float) -> Dictionary:
 	run.state.map.cells[cell]["content"]["enemies"] = enemies
 	run.pending_battle = {"cell": cell, "encounter": encounter.id, "enemies": enemies, "label": "/test"}
 	gate.ability_began.connect(func(_unit_id: StringName, _ability: BattleAbility) -> void: gate.release_finished())
-	var state := {"finished_at": 0, "held_until": 0}
-	run.battle_finished.connect(func(_outcome: String) -> void: state["finished_at"] = Time.get_ticks_msec())
+	var state := {"finished_at": 0, "held_until": 0, "current_while_held": false, "current_at_finish": true}
+	run.battle_finished.connect(func(_outcome: String) -> void:
+		state["finished_at"] = Time.get_ticks_msec()
+		state["current_at_finish"] = run.current_battle != null)
 	if hold_seconds > 0.0:
 		var id := gate.begin_hold()
 		run.battle_started.connect(func(battle: Battle) -> void:
-			await battle.tree_exiting
+			await battle.battle_ended
 			await host.get_tree().create_timer(hold_seconds).timeout
+			# Review fix: the battle stays current and alive through the wait (a rebuild waits for battle_finished while it is set).
+			state["current_while_held"] = run.current_battle == battle and is_instance_valid(battle) \
+				and not battle.is_queued_for_deletion()
 			state["held_until"] = Time.get_ticks_msec()
 			gate.end_hold(id))
 	eq(await run.fight(ScriptedController.new(), gate), "", "the fight runs")
 	var logged: Dictionary = run.run_log.filter(func(e: Dictionary) -> bool: return e["type"] == "battle")[-1]
-	return {"log": WireJson.stringify(logged), "finished_at": state["finished_at"], "held_until": state["held_until"]}
+	return {"log": WireJson.stringify(logged), "finished_at": state["finished_at"], "held_until": state["held_until"],
+		"current_while_held": state["current_while_held"], "current_at_finish": state["current_at_finish"]}
 
 
 func test_the_run_waits_and_the_result_does_not_change() -> void:
@@ -213,6 +219,59 @@ func test_the_run_waits_and_the_result_does_not_change() -> void:
 	var held := await _fight(ViewGate.new(), 0.3)
 	check(held["held_until"] > 0 and held["finished_at"] >= held["held_until"], "battle_finished fires only after the hold is released")
 	eq(held["log"], plain["log"], "the logged battle (outcome, final hash, action log) is the same with the wait")
+	check(held["current_while_held"], "during the wait the battle is still current and alive")
+	check(not held["current_at_finish"], "at battle_finished it is no longer current")
+
+
+## Review fixes: Skip during the wait ends it and finishes the fades; the cap finishes a fade that never ends, so it cannot hold a
+## later battle; the unit's label fades with it.
+func test_skip_and_the_cap_finish_the_fades_and_the_label_fades() -> void:
+	UnitStyle.use(StyleRegistry.new(), "test")
+	UnitStyle.registry().enemy_death = _fade(5.0, 5.0, 0.0)
+	var view := _view(&"E1")
+	var label := Label3D.new()
+	view.add_child(label)
+	view.die()
+	var driver := view.death_fade_driver()
+	driver.set_process(false)
+	driver.advance(5.0 + 2.5)
+	check(label.modulate.a < 0.6 and label.modulate.a > 0.4, "the label is half faded with the cube (%.2f)" % label.modulate.a)
+	driver.set_process(true)
+	var gate := ViewGate.new()
+	var skip := func() -> void:
+		await host.get_tree().create_timer(0.2).timeout
+		gate.skip_all = true
+	skip.call()
+	var start := Time.get_ticks_msec()
+	await gate.hold_end()
+	check(Time.get_ticks_msec() - start < 1000, "Skip during the wait ends it (%d ms)" % (Time.get_ticks_msec() - start))
+	check(driver.is_done() and not view.visible, "and finishes the fade")
+	view.revive()
+	check(view.visible and is_equal_approx(label.modulate.a, 1.0), "a revive brings the label back")
+	var stuck := _view(&"E2")
+	stuck.die()
+	stuck.death_fade_driver().set_process(false)  # a fade that never advances
+	gate.skip_all = false
+	await gate.hold_end()
+	check(stuck.death_fade_driver().is_done(), "the cap finishes it")
+	eq(gate.open_holds(), 0, "so it holds no later battle")
+	view.queue_free()
+	stuck.queue_free()
+
+
+## Review fix: a unit that dies during its own cast starts its fade before its cast releases the gate (the release can run the
+## battle on to its end, which waits only for fades that exist).
+func test_a_death_during_a_cast_fades_before_the_gate_is_released() -> void:
+	var view := _view(&"E1")
+	var gate := ViewGate.new()
+	var seen := [false]
+	gate.released.connect(func() -> void: seen[0] = view.death_fade_driver() != null)
+	view._gate = gate
+	view.die()
+	check(view.death_fade_driver() == null, "a cast is playing: the death waits")
+	view._finish_montage()
+	check(seen[0], "the fade exists when the gate is released")
+	view.queue_free()
 
 
 func test_the_base_gate_never_waits() -> void:

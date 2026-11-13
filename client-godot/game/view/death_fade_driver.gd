@@ -15,6 +15,8 @@ var clock: float = 0.0
 var _view: Node3D
 ## [MeshInstance3D, its material before the fade, its fade copy].
 var _meshes: Array = []
+## [Label3D, its modulate, its outline modulate]: the unit's name and HP fade with it (review fix).
+var _labels: Array = []
 var _hidden: bool = false
 var _done: bool = false
 
@@ -38,6 +40,8 @@ func _ready() -> void:
 		copy.emission = Color.BLACK
 		_meshes.append([mesh, original, copy])
 		(mesh as MeshInstance3D).material_override = copy
+	for label in _view.find_children("*", "Label3D", true, false):
+		_labels.append([label, (label as Label3D).modulate, (label as Label3D).outline_modulate])
 	advance(0.0)
 
 
@@ -68,6 +72,12 @@ func advance(delta: float) -> void:
 			copy.albedo_color = Color(color.r, color.g, color.b, alpha)
 			copy.emission = fade.color * tint
 			copy.emission_energy_multiplier = fade.emission * alpha
+	var label_alpha := 1.0 if clock < tint_end or fade.fade_seconds <= 0.0 else 1.0 - clampf((clock - tint_end) / fade.fade_seconds, 0.0, 1.0)
+	for entry in _labels:
+		if is_instance_valid(entry[0]):
+			var label := entry[0] as Label3D
+			label.modulate = Color(entry[1].r, entry[1].g, entry[1].b, entry[1].a * label_alpha)
+			label.outline_modulate = Color(entry[2].r, entry[2].g, entry[2].b, entry[2].a * label_alpha)
 	if not _hidden and clock >= fade_end:
 		_hidden = true
 		_view.visible = false
@@ -82,11 +92,22 @@ func is_done() -> bool:
 	return _done
 
 
-## Stops the fade and puts every material back and the view in sight (a revive). Does not emit `finished`.
+## Ends the fade now (the battle's end stopped waiting: Skip, or the cap): the view hides, `finished` is emitted.
+func finish_now() -> void:
+	if _done:
+		return
+	advance(fade.hold_seconds() - clock + 0.001)
+
+
+## Stops the fade and puts every material and label back and the view in sight (a revive). Does not emit `finished`.
 func cancel() -> void:
 	for entry in _meshes:
 		if is_instance_valid(entry[0]):
 			(entry[0] as MeshInstance3D).material_override = entry[1]
+	for entry in _labels:
+		if is_instance_valid(entry[0]):
+			(entry[0] as Label3D).modulate = entry[1]
+			(entry[0] as Label3D).outline_modulate = entry[2]
 	_view.visible = true
 	_done = true
 	set_process(false)

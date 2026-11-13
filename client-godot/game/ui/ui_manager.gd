@@ -319,9 +319,10 @@ func _park(panel: CanvasItem) -> void:
 
 func _unpark(panel: CanvasItem) -> void:
 	_parked.erase(panel)
-	panel.visible = true
 	if panel is UIScreen:
-		panel._ui_activate()
+		panel._ui_activate()  # shows it, then on_activated() refreshes it once
+	else:
+		panel.visible = true
 
 
 ## True when `panel` is kept hidden while its state is off.

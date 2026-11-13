@@ -104,6 +104,7 @@ func _ui_activate() -> void:
 	if active:
 		return
 	active = true
+	_stale = false  # on_activated() refreshes it; the visibility change must not refresh it a second time
 	visible = true
 	on_activated()
 	if not focus_on_activate.is_empty():

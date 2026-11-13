@@ -623,8 +623,8 @@ func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 	battle_started.emit(battle)
 	_record_battle(battle)
 	await battle.run(controller)
-	current_battle = null
 	if battle.runner_error != "":
+		current_battle = null
 		var message_text := battle.runner_error
 		battle.queue_free()
 		return _stop("battle %s: %s" % [snapshot["battleId"], message_text])
@@ -638,15 +638,19 @@ func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 	_warn_all(battle.content_warnings)
 	_read_back(battle)
 	_apply_used_items(battle.used_items, won)
-	battle.queue_free()
 	var cell: int = pending_battle["cell"]
 	# Spec battle-death-fade: the result is final (logged and hashed above); the screens may still be finishing (an enemy
-	# fading out). Only the moment the battle is left waits; the headless gate (and no gate) returns at once.
-	var outcome := battle.outcome  # the battle node is freed during the wait
+	# fading out). Only the moment the battle is left waits; the headless gate (and no gate) returns at once. The battle stays
+	# current and alive until then (review fix): a conflict or rollback rebuild waits for battle_finished while current_battle
+	# is set, and the screens that hold the battle drop it on battle_finished.
 	if gate != null:
 		await gate.hold_end()
+	current_battle = null
+	battle.queue_free()
 	pending_battle = {}
-	battle_finished.emit(outcome)
+	battle_finished.emit(battle.outcome)
+	if not _active():  # stopped during the wait (a server error): nothing more is applied
+		return runner_error
 	if won:
 		_tally["enemiesDefeated"] += snapshot["enemies"].size()
 		_grant_rewards(content.encounters.get(StringName(_tally["lastEncounter"])))

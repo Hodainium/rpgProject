@@ -608,13 +608,15 @@ func _on_mixer_applied() -> void:
 
 func _finish_montage() -> void:
 	_montage_live = false
+	# The pending death starts before the gate is released (review fix): releasing it can run the battle on to its end at
+	# once, and the end only waits for fades that already exist.
+	if _pending_death:
+		_pending_death = false
+		_start_death()
 	if _gate != null:
 		var gate := _gate
 		_gate = null
 		gate.release_finished()
-	if _pending_death:
-		_pending_death = false
-		_start_death()
 
 
 func _start(state: StringName) -> void:
