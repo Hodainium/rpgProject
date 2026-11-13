@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.11
+radius_top = 0
+height = 0.28
+segments = 4
+position = Vector3(0, 0.14, 0)
+rotation_degrees = Vector3(0, 45, -12)
+scale = Vector3(1, 1, 0.45)
+color = Color(0.16, 0.13, 0.12, 1)
+roughness = 0.8
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Hound ear"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0")])

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 7
+size = Vector3(1, 1, 0.2)
+profile = PackedVector2Array(-0.17, 0, 0.17, 0, 0.12, 0.04, 0.07, 0.065, 0.07, 0.14, 0.2, 0.15, 0.3, 0.17, 0.4, 0.205, 0.2, 0.235, -0.24, 0.235, -0.24, 0.16, -0.08, 0.14, -0.08, 0.065, -0.12, 0.04)
+color = Color(0.38, 0.38, 0.42, 1)
+metallic = 0.6
+roughness = 0.4
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Anvil"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0")])

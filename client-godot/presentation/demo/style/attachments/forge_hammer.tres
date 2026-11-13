@@ -1,0 +1,73 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.035
+radius_top = 0.03
+height = 0.95
+segments = 12
+position = Vector3(0, 0.22, 0)
+color = Color(0.36, 0.23, 0.13, 1)
+roughness = 0.85
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.2, 0.2, 0.42)
+position = Vector3(0, 0.72, 0)
+color = Color(0.18, 0.18, 0.2, 1)
+metallic = 0.7
+roughness = 0.35
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.22, 0.22, 0.06)
+position = Vector3(0, 0.72, 0.08)
+color = Color(0.85, 0.62, 0.22, 1)
+metallic = 0.8
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.22, 0.22, 0.06)
+position = Vector3(0, 0.72, -0.08)
+color = Color(0.85, 0.62, 0.22, 1)
+metallic = 0.8
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.17, 0.17, 0.02)
+position = Vector3(0, 0.72, 0.215)
+color = Color(1, 0.55, 0.12, 1)
+emission = 2.5
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.04
+radius_top = 0.04
+height = 0.08
+segments = 12
+position = Vector3(0, -0.22, 0)
+color = Color(0.85, 0.62, 0.22, 1)
+metallic = 0.8
+roughness = 0.3
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Great forge hammer"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5")])
