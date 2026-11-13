@@ -26,6 +26,11 @@ func _ready() -> void:
 			FxManager.registry, load("res://godot_gas/cue_registry.tres") as GameplayCueRegistry))
 		# Spec vfx-stencil: stencil words and values in the shaders and materials (the game's and the designer's).
 		issues.append_array(FxValidator.stencil_problems(["res://game/fx/shaders/", "res://presentation/", "res://content/"]))
+	# Spec cube-style 3.8: the style registry (presentation, like the UI policy; loaded explicitly, UnitStyle loads nothing headless).
+	if root == "res://content/" and ResourceLoader.exists(UnitStyle.DEFAULT_REGISTRY):
+		issues.append_array(StyleValidator.validate(load(UnitStyle.DEFAULT_REGISTRY) as StyleRegistry, content, UnitStyle.DEFAULT_REGISTRY))
+		for variant in StyleValidator.registries_under(UnitStyle.DEFAULT_REGISTRY.get_base_dir().path_join("variants")):
+			issues.append_array(StyleValidator.validate(load(variant) as StyleRegistry, content, variant))
 	print("validate_content: ", root)
 	print(ContentValidator.report(issues))
 	get_tree().quit(3 if ContentValidator.error_count(issues) > 0 else 0)

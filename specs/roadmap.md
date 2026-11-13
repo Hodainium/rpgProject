@@ -34,6 +34,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5a. `vfx-framework` | 🔨 Built, awaiting the user's review (`specs/vfx-framework.md`; data-driven FX in 2D, 3D and hybrid, the GodotGAS cue bridge, the hybrid stage, a shader library, a proof set of 12 effects, dev tools, the gallery; 696 Godot tests; every hit in a battle now sparks; spec to sync after tuning) | 2026-11-09 |
 | 5a2. `vfx-content-pass` | ✅ Built 2026-11-09 (effects for hits, DoTs, controls, stat statuses, heals, revives, 24 ultimates, battle moments and damage numbers; open for playtest fixes) | `specs/vfx-content-pass.md` |
 | 5a3. `vfx-stencil` | ✅ Done (PRs #21, #22, #23, #24; `specs/vfx-stencil.md`, reusable reference `specs/design/stencil-over-own-unit.md`): stencil replaces the depth bias, each unit stamps its battle position's value, effects draw over their own unit in two passes (OWN, OTHER) through `FxStencilMaterial`, the shader copies are prepared at boot, run start and battle start; the leak went from 270 to 6 pixels at equal GPU time and the first-battle hitch is gone (user playtest 2026-11-12). Open items in the spec. | 2026-11-12 |
+| 5a4. `cube-style` | 🟨 In progress (`specs/cube-style.md`, an art experiment in rounds with user gates; the primitives preview liked 2026-11-12; round 1, the stage and camera, built and awaiting its gate) | |
 | 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |
@@ -617,6 +618,14 @@ The spec decides:
 - proof: both prototypes in the gallery on the same scene (two cubes close together, an effect on the back one, a floor ring,
   a big disc into the floor), compared on look, cost (passes, shader variants, frame time) and how well each serves later
   outlines and silhouettes; the user picks one; then battle shots and tests.
+
+### 5a4. `cube-style`
+Added 2026-11-12. The units stay cubes as an art choice (no humanoids; Mixamo and Quaternius characters were weighed and
+rejected: mixed styles and a cost per unit that would shrink the cast). An art experiment in rounds, each ending at a user gate
+with comparison shots: the stage (lighting and a mood per chapter, bevelled cubes with rim light), attachments built from
+primitives (hats, crowns, horns, wings, weapons), downloaded single models (Poly Pizza, recoloured) only if wanted, then the
+roll-out. Presentation only: the data lives in `presentation/`, outside the ruleset version. Spec: `specs/cube-style.md`.
+Card art is decided separately (5b): data-driven frames, game-icons glyphs, the existing effects.
 
 ### 5b. `card-ui`
 Added 2026-11-09, right after slice 5. The screens for the card system, built on the UI framework and the FF7 theme:

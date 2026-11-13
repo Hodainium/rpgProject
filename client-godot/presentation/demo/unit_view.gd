@@ -9,6 +9,6 @@ extends UnitAnimator
 
 
 func _paint() -> void:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.35, 0.35, 0.35) if is_dead else display_color
+	# Spec cube-style: the unit's look (its colour override, rim, roughness); with no style registry this is today's material.
+	var material := body_material(Color(0.35, 0.35, 0.35) if is_dead else body_color())
 	_body.material_override = mark_stencil(material)

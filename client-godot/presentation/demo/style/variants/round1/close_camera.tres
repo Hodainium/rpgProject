@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="StyleRegistry" format=3]
+
+[ext_resource type="Resource" path="res://presentation/demo/style/style_registry.tres" id="1_inm83"]
+[ext_resource type="Script" path="res://game/view/camera_framing.gd" id="2_wf3pf"]
+[ext_resource type="Script" path="res://game/view/unit_look.gd" id="3_atg10"]
+[ext_resource type="Script" path="res://game/view/stage_mood.gd" id="4_llnlo"]
+[ext_resource type="Script" path="res://game/view/style_registry.gd" id="5_8pf5r"]
+[ext_resource type="Script" path="res://game/view/unit_look_rule.gd" id="6_n885n"]
+
+[sub_resource type="Resource" id="Resource_0yyd6"]
+script = ExtResource("2_wf3pf")
+position = Vector3(0, 6.2, 6.6)
+rotation_degrees = Vector3(-46, 0, 0)
+fov = 55.0
+
+[resource]
+script = ExtResource("5_8pf5r")
+base = ExtResource("1_inm83")
+looks = Dictionary[StringName, ExtResource("3_atg10")]({})
+tag_rules = Array[ExtResource("6_n885n")]([])
+moods = Dictionary[StringName, ExtResource("4_llnlo")]({})
+battle_camera = SubResource("Resource_0yyd6")

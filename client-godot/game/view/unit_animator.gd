@@ -31,6 +31,10 @@ var display_color: Color = Color.WHITE
 var is_dead: bool = false
 ## The unit definition this view shows (set by instantiate_for).
 var definition_id: StringName = &""
+## Spec cube-style 3.2: the definition itself and its resolved look (UnitStyle), both set by instantiate_for; look null = no style
+## registry in use (today's look). A view paints with body_color() and body_material().
+var unit_definition: UnitDefinition
+var look: UnitLook
 ## Spec vfx-content-pass 3.6: the unit's radius for effects (world units). 0 = derived from its mesh's bounding sphere.
 @export var fx_radius: float = 0.0
 ## The battle unit this view shows ("P1", "E2"), set by the room view; the effects system finds a unit's view by it
@@ -92,7 +96,30 @@ static func instantiate_for(definition: UnitDefinition, default_scene: PackedSce
 	var view: Node3D = view_scene(definition, default_scene).instantiate()
 	if view is UnitAnimator and definition != null:
 		view.definition_id = definition.id
+		view.unit_definition = definition
+		view.look = UnitStyle.look_for(definition)  # spec cube-style: null headless or with no registry
 	return view
+
+
+## Spec cube-style 3.2: the body's colour: the look's override, else the definition's display_color (setup's colour).
+func body_color() -> Color:
+	return look.body_color(display_color) if look != null else display_color
+
+
+## Spec cube-style 3.2: a new body material in `color` with this unit's look (rim, roughness). Pass it through mark_stencil().
+func body_material(color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	if look != null:
+		look.paint(material)
+	return material
+
+
+## Spec cube-style 3.8: resolves the look again from the registry in use (the console's `style` changes it) and repaints.
+func restyle() -> void:
+	look = UnitStyle.look_for(unit_definition) if unit_definition != null else null
+	if is_node_ready():
+		_paint()
 
 
 func setup(title: String, color: Color) -> void:
