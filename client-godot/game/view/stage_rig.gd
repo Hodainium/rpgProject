@@ -55,9 +55,9 @@ func wall_bevel() -> float:
 	return mood.wall_bevel if mood != null else 0.0
 
 
-## The room box's wall block: a 1 × 0.6 × 1 box, bevelled by the mood (shared by every wall).
-func wall_mesh() -> Mesh:
-	return AttachmentMesh.bevel_box(Vector3(1, 0.6, 1), wall_bevel())
+## The room box's wall block of `size`, bevelled by the mood (shared by every wall of that size).
+func wall_mesh(size: Vector3) -> Mesh:
+	return AttachmentMesh.bevel_box(size, wall_bevel())
 
 
 ## The room box's floor slab of `size`: its four vertical corner edges chamfered like the wall blocks on them (no mood = a plain

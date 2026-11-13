@@ -426,6 +426,9 @@ func test_wall_blocks_are_bevelled_by_the_mood() -> void:
 	eq(wrong, 0, "every triangle is wound clockwise and faces out")
 	check(AttachmentMesh.bevel_box(size, 0.0) is BoxMesh, "a bevel of 0 is a plain box")
 	check(AttachmentMesh.bevel_box(size, 5.0).get_aabb().size.is_equal_approx(size), "a too deep bevel is held inside the box")
+	check((arrays[Mesh.ARRAY_TANGENT] as PackedFloat32Array).size() == vertices.size() * 4, "tangents, so a normal map lights right")
+	check(AttachmentMesh.bevel_box(Vector3(1, 0.001, 1), 0.06) is BoxMesh, "a box too thin to bevel is a plain box, never inside out")
+	check(AttachmentMesh.bevel_box(size, NAN) is BoxMesh, "a bevel that is not a number is a plain box")
 	var slab_size := Vector3(15, 0.2, 9)
 	var slab := AttachmentMesh.corner_slab(slab_size, 0.06) as ArrayMesh
 	check(slab != null and slab.get_aabb().size.is_equal_approx(slab_size), "the floor slab keeps its size")
@@ -443,11 +446,11 @@ func test_wall_blocks_are_bevelled_by_the_mood() -> void:
 	var rig := StageRig.new()
 	eq(rig.wall_bevel(), 0.0, "no mood: today's sharp walls")
 	check(rig.floor_mesh(slab_size) is BoxMesh, "and a plain floor")
-	check(rig.wall_mesh() is BoxMesh, "a plain box")
+	check(rig.wall_mesh(size) is BoxMesh, "a plain box")
 	var mood := _mood("a")
 	eq(mood.wall_bevel, 0.06, "a mood bevels its walls by default")
 	rig.apply(mood)
-	check(rig.wall_mesh() == mesh, "the mood's bevelled block")
+	check(rig.wall_mesh(size) == mesh, "the mood's bevelled block")
 	check(rig.floor_mesh(slab_size) == slab, "and the corner-chamfered floor")
 	rig.queue_free()
 	var registry := StyleRegistry.new()
@@ -455,11 +458,13 @@ func test_wall_blocks_are_bevelled_by_the_mood() -> void:
 	registry.default_mood.wall_bevel = 0.4
 	registry.moods[&"no.such.chapter"] = _mood("negative")
 	registry.moods[&"no.such.chapter"].wall_bevel = -0.1
+	registry.moods[&"no.such.nan"] = _mood("nan")
+	registry.moods[&"no.such.nan"].wall_bevel = NAN
 	var codes: Array = []
 	for issue in StyleValidator.validate(registry, null, "test"):
 		if issue.code == "style_wall_bevel_invalid":
 			codes.append(issue.path)
-	eq(codes.size(), 2, "a bevel outside 0..0.25 is reported per mood: %s" % [codes])
+	eq(codes.size(), 3, "a bevel outside 0..0.25 (or not a number) is reported per mood: %s" % [codes])
 
 
 func test_extruded_and_lathed_faces_point_outward() -> void:

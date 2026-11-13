@@ -67,7 +67,7 @@ static func validate(registry: StyleRegistry, content: ContentIndex, path: Strin
 		owned_moods["moods[%s]" % id] = registry.moods[id]
 	for key in owned_moods:
 		var mood: StageMood = owned_moods[key]
-		if mood != null and (mood.wall_bevel < 0.0 or mood.wall_bevel > StageMood.MAX_WALL_BEVEL):
+		if mood != null and not (is_finite(mood.wall_bevel) and mood.wall_bevel >= 0.0 and mood.wall_bevel <= StageMood.MAX_WALL_BEVEL):
 			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "style_wall_bevel_invalid", where + "::" + key,
 				"wall_bevel %s is outside 0..%s" % [mood.wall_bevel, StageMood.MAX_WALL_BEVEL]))
 	for i in registry.tag_rules.size():
