@@ -12,21 +12,21 @@ property = "process_material:color"
 param = &"color"
 
 [sub_resource type="Gradient" id="Gradient_motes"]
-offsets = PackedFloat32Array(0, 0.15, 0.4, 1)
+offsets = PackedFloat32Array(0, 0.25, 0.7, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 0)
 
 [sub_resource type="Resource" id="Resource_motes"]
 script = ExtResource("3_particles")
-size_min = 0.03
-size_max = 0.08
+size_min = 0.1
+size_max = 0.22
 spread = 180.0
 speed_min = 0.05
-speed_max = 0.08
-gravity = Vector3(0, 0.04, 0)
+speed_max = 0.18
+gravity = Vector3(0, 0.16, 0)
 damping = 0.2
-emission_radius = 0.75
-amount = 26
-lifetime = 1.1
+emission_radius = 0.5
+amount = 44
+lifetime = 2.6
 explosiveness = 0.0
 color_ramp = SubResource("Gradient_motes")
 id = &"motes"
@@ -37,14 +37,14 @@ bindings = Array[ExtResource("2_binding")]([SubResource("Resource_color")])
 script = ExtResource("4_param")
 name = &"color"
 kind = 3
-default_value = Color(1, 0.82, 0.32, 1)
+default_value = Color(0.5, 0.3, 0.95, 1)
 description = "Mote colour."
 
 [resource]
 script = ExtResource("5_def")
-id = &"fx.coin_glints"
-display_name = "Coin glints"
+id = &"fx.void_wisps"
+display_name = "Void wisps"
 params = Array[ExtResource("4_param")]([SubResource("Resource_param_color")])
 layers = Array[ExtResource("1_layer")]([SubResource("Resource_motes")])
 tags = Array[StringName]([&"Fx.Kind.Aura"])
-description = "Small gold glints twinkling briefly around a unit (the Collector's look, spec cube-style 6a)."
+description = "Dark violet wisps rising slowly off a unit (the Void Wraith's look, spec cube-style 6a)."

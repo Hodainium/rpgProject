@@ -1,0 +1,112 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_binding"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_particles"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="4_param"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="5_def"]
+
+[sub_resource type="Resource" id="Resource_bind_ring"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_ring"]
+offsets = PackedFloat32Array(0, 0.2, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_ring"]
+script = ExtResource("3_particles")
+size_min = 0.05
+size_max = 0.11
+direction = Vector3(0, 1, 0)
+spread = 15.0
+speed_min = 0.25
+speed_max = 0.5
+gravity = Vector3(0, 0.05, 0)
+emission_ring_radius = 0.6
+emission_offset = Vector3(0, -0.38, 0)
+amount = 40
+lifetime = 1.6
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_ring")
+id = &"ring"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_bind_ring")])
+
+[sub_resource type="Resource" id="Resource_bind_coins"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"coin_color"
+
+[sub_resource type="Gradient" id="Gradient_coins"]
+offsets = PackedFloat32Array(0, 0.1, 0.85, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_coins"]
+script = ExtResource("3_particles")
+size_min = 0.07
+size_max = 0.11
+direction = Vector3(0, -1, 0)
+spread = 10.0
+speed_min = 0.1
+speed_max = 0.2
+gravity = Vector3(0, -0.6, 0)
+emission_radius = 0.75
+emission_offset = Vector3(0, 0.9, 0)
+amount = 16
+lifetime = 1.8
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_coins")
+id = &"coins"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_bind_coins")])
+
+[sub_resource type="Resource" id="Resource_bind_glints"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_glints"]
+offsets = PackedFloat32Array(0, 0.15, 0.4, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_glints"]
+script = ExtResource("3_particles")
+size_min = 0.03
+size_max = 0.08
+spread = 180.0
+speed_min = 0.02
+speed_max = 0.08
+gravity = Vector3(0, 0.04, 0)
+emission_radius = 0.75
+amount = 26
+lifetime = 1.1
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_glints")
+id = &"glints"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_bind_glints")])
+
+[sub_resource type="Resource" id="Resource_param_color"]
+script = ExtResource("4_param")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.82, 0.32, 1)
+description = "Spark and glint colour."
+
+[sub_resource type="Resource" id="Resource_param_coin_color"]
+script = ExtResource("4_param")
+name = &"coin_color"
+kind = 3
+default_value = Color(1, 0.72, 0.2, 1)
+description = "Coin colour."
+
+[resource]
+script = ExtResource("5_def")
+id = &"fx.gold_hoard"
+display_name = "Gold hoard"
+params = Array[ExtResource("4_param")]([SubResource("Resource_param_color"), SubResource("Resource_param_coin_color")])
+layers = Array[ExtResource("1_layer")]([SubResource("Resource_ring"), SubResource("Resource_coins"), SubResource("Resource_glints")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "Gold sparks rising from a ring on the floor, coins raining down round a unit and gold glints (the Collector's look, spec cube-style 6a)."
