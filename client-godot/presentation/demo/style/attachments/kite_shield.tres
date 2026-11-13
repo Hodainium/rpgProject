@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_shield"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shield"]
+
+[sub_resource type="Resource" id="Resource_face"]
+script = ExtResource("1_shield")
+kind = 7
+size = Vector3(0, 0, 0.04)
+profile = PackedVector2Array(0, 0.3, 0.2, 0.24, 0.21, 0.02, 0, -0.32, -0.21, 0.02, -0.2, 0.24)
+color = Color(0.62, 0.12, 0.12, 1)
+roughness = 0.6
+
+[sub_resource type="Resource" id="Resource_boss"]
+script = ExtResource("1_shield")
+kind = 2
+radius_bottom = 0.055
+segments = 16
+position = Vector3(0, 0.03, 0.025)
+color = Color(0.9, 0.7, 0.28, 1)
+metallic = 0.5
+roughness = 0.3
+tintable = false
+
+[resource]
+script = ExtResource("2_shield")
+display_name = "Kite shield"
+parts = Array[ExtResource("1_shield")]([SubResource("Resource_face"), SubResource("Resource_boss")])
