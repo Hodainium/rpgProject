@@ -314,7 +314,7 @@ asked.
 | Unit | Colour | A | B |
 |---|---|---|---|
 | Cultist | purple | A deep pointed hood (lathe cowl) | A held ritual dagger |
-| Bound Demon | dark red | Chains: two links of chain wrapped around the body (torus rings) and a broken shackle | Big curled horns (Bone Warden's ram horns, tinted black); risks reading as the Imp |
+| Bound Demon | dark red | Chains: two links of chain wrapped around the body (torus rings) and a broken shackle | Big curled horns (a new curled-horn shape, black; the Bone Warden's ram horns were dropped in Set 1); risks reading as the Imp |
 | High Witch (boss) | indigo | A wide-brimmed witch hat with a buckle, much larger than the Arcanist's | A crescent moon floating behind the head (extruded outline, `BOB`) |
 | Void Wraith | midnight blue | A tattered shroud from the base (jagged extruded skirt, `BOB`) | Two glowing eyes (`glow_eye` reused) |
 | Abyssal Hulk | black | Two glowing violet eyes (`glow_eye` reused): on a black cube the eyes carry it | A row of spikes down the back |

@@ -62,14 +62,14 @@ func advance(delta: float) -> void:
 		var copy: BaseMaterial3D = entry[2]
 		var base := original.albedo_color
 		if clock < flash_end:
-			copy.albedo_color = Color(1, 1, 1, 1)
+			copy.albedo_color = Color(1, 1, 1, base.a)  # a see-through body (the Slime) keeps its own alpha
 			copy.emission = Color.WHITE
 			copy.emission_energy_multiplier = maxf(fade.emission, 1.0)
 		else:
 			var tint := 1.0 if fade.tint_seconds <= 0.0 else clampf((clock - flash_end) / fade.tint_seconds, 0.0, 1.0)
 			var alpha := 1.0 if clock < tint_end or fade.fade_seconds <= 0.0 else 1.0 - clampf((clock - tint_end) / fade.fade_seconds, 0.0, 1.0)
 			var color := base.lerp(fade.color, tint)
-			copy.albedo_color = Color(color.r, color.g, color.b, alpha)
+			copy.albedo_color = Color(color.r, color.g, color.b, base.a * alpha)  # fades from the body's own alpha
 			copy.emission = fade.color * tint
 			copy.emission_energy_multiplier = fade.emission * alpha
 	var label_alpha := 1.0 if clock < tint_end or fade.fade_seconds <= 0.0 else 1.0 - clampf((clock - tint_end) / fade.fade_seconds, 0.0, 1.0)
