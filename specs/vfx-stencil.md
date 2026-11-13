@@ -205,6 +205,19 @@ OWN pass would draw over the wall. H7 must test exactly this before stencil is t
   the plain depth test (after the bias is gone), for debugging and for a renderer without stencil.
 - **`prepare()` runs at battle start,** for the positions in that battle only (their values × the over-unit shaders × 2 passes).
   It is not the whole set at run start: there is no loading screen today.
+  - **Changed (user, 2026-11-12, after a playtest hitch in the first battle):** prepare runs **at boot, at run start and at battle
+    start**, each skipping what an earlier one drew. Since values follow positions, the whole set is known before any battle: the
+    party positions plus the enemy slots of the content's largest encounter (`StencilIds.values_for`), × the over-unit shaders × 2.
+    - **Boot:** `GameMain.load_content` draws them in the background on the main menu, 2 copies a batch so no frame stalls.
+    - **Run start:** `GameMain.start_run` draws whatever boot has not finished, 8 a batch.
+    - **Battle start:** `RoomView3D` remains the safety net.
+    - All three draw through the room view's own camera, which exists from boot, so the pipelines match the battle's.
+    - **Measured** (window, a Godot shader cache made cold with the dev salt `RPG_FX_SALT`): boot drew 84 copies in 575 ms; the
+      run-start and battle-start prepares found nothing left. In the first battle, the worst frame while 7 effects played was
+      15 ms; the worst menu frame afterwards was 14 ms.
+    - **Caveat:** the salt is a comment, which the preprocessor strips, so the GPU driver's own cache may still have been warm. On a
+      truly cold driver (about 35 ms a copy) the boot batches make frames of about 70 ms during the first seconds on the menu,
+      first launch only.
 - **The 45 effect files** in `presentation/demo/fx/` that bind `depth_bias` (327 lines) are stripped of it in a commit of their own
   (`design:`). That commit comes before the system code removes the bias, so no file binds a uniform that does not exist.
 

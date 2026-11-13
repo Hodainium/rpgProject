@@ -168,15 +168,22 @@ character. Particle shaders guard their own soft fade the same way: `#ifndef FX_
 Each copy is a new pipeline: the first draw of a copy compiles it. Measured cold, that was **about 18 ms a copy**, and Godot's own
 shader cache does **not** remove it. With the driver's pipeline cache warm it was **about 2 ms**.
 
-**Prepare at battle start** (`FxService.prepare_stencil(camera)`):
-- **What:** the values of the battle's positions × the shaders that over-unit layers of the effect registry draw with
-  (`FxLayer.stencil_shader()`) × 2 passes.
-- **How:** each copy is drawn once as a speck in front of the camera, for two frames. A particle shader is drawn through a
-  one-particle emitter, because particles draw instanced.
-- **Remembered:** copies drawn once are remembered for the session, and only counted once really drawn.
-- **Measured:** a real battle with 5 positions prepared 60 copies in 117 ms (warm), or about 1 s cold.
+**Prepare before any battle** (`FxService.prepare_stencil(camera, values, per_frame, label)`). Because values follow positions, the
+whole set is known at boot: `StencilIds.values_for(largest encounter)` × the shaders that over-unit layers of the effect registry
+draw with (`FxLayer.stencil_shader()`) × 2 passes. It runs three times, each skipping what an earlier one drew:
+1. **Boot** (`GameMain.load_content`): in the background on the main menu, 2 copies a batch, so no frame stalls.
+2. **Run start** (`GameMain.start_run`): whatever boot has not finished (a player who starts a run at once), 8 a batch.
+3. **Battle start** (`RoomView3D`): the battle's own positions, the safety net. Normally nothing is left.
 
-If it ever shows, compile fewer values (only positions the battle uses, which is already the case) or fewer shaders.
+- **How:** each copy is drawn once as a speck in front of the room view's own camera (it exists from boot, so the pipelines match
+  the battle's), for two frames. A particle shader is drawn through a one-particle emitter, because particles draw instanced.
+- **Remembered:** copies drawn, or being drawn by another prepare, are skipped; a copy only counts once really drawn.
+- **Measured:** boot drew 84 copies in 575 ms. In the first battle, the worst frame while 7 effects played was 15 ms. Before this,
+  the battle-start prepare alone was 60 copies, 117 ms warm and about 1 s cold, as a freeze when the battle appeared.
+- **Measuring a first launch:** set the environment variable `RPG_FX_SALT` to a new word. Every copy then gets a comment line, so
+  Godot's shader cache sees new code. The preprocessor strips comments, so the GPU driver's own cache may stay warm.
+- **Porting:** prepare at the earliest point a 3D camera of the same viewport exists, spread over frames. A hidden viewport only
+  helps if its render target matches the game's (buffer formats, MSAA), so verify by measuring.
 
 ## 6. Guard rails (validator, tests, dev switch)
 - **Validator** (`game/dev/fx_validator.gd`):

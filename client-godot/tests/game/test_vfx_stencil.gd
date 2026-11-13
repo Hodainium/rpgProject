@@ -554,3 +554,25 @@ stencil_mode read,
 	(quad.material as ShaderMaterial).set_shader_parameter(&"depth_fade", 0.3)
 	flat.rebind(quad, {}, FxDefinition.new())
 	eq((quad.material as ShaderMaterial).get_shader_parameter(&"depth_fade"), 0.0, "rebind keeps a floor quad unfaded")
+
+
+# --- Prepare before any battle (boot, run start) ---------------------------------------------------------------------------
+
+func test_the_values_a_content_can_use() -> void:
+	eq(StencilIds.values_for(5), [1, 2, 3, 4, 5, 6, 7, 8, 9], "the four party positions and enemy slots 1-5")
+	eq(StencilIds.values_for(0), [1, 2, 3, 4], "no encounters: the party only")
+	eq(StencilIds.values_for(40).size(), 4 + 20, "capped at the enemy range (slots 1-20)")
+
+
+func test_prepare_before_a_battle_is_inert_headless_and_the_salt_is_a_comment() -> void:
+	var game := GameMain.new()
+	game.prepare_effects(2, "boot")  # not in the tree, no content, no camera: nothing happens, no error
+	game.free()
+	eq(await FxStencilShaders.prepare(null, [load(GLOW)] as Array[Shader], [1, 2], 2, "boot"), 0, "headless: nothing drawn")
+	var salt := FxStencilShaders.dev_salt
+	FxStencilShaders.dev_salt = "abc"
+	check(FxStencilShaders.defines(3, FxStencilShaders.Pass.OWN).begins_with("// salt abc
+#define FX_STENCIL_REF 3"),
+		"the dev salt is a comment line in front of the defines")
+	FxStencilShaders.dev_salt = salt
+	check(salt != "" or not FxStencilShaders.defines(3, FxStencilShaders.Pass.OWN).contains("salt"), "no salt: no line")

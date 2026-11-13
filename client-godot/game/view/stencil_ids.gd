@@ -65,5 +65,14 @@ static func for_added(number: int) -> int:
 	return ADDED_FIRST + number - 1 if number >= 1 and number <= ADDED_LAST - ADDED_FIRST + 1 else NONE
 
 
+## Every value a battle of this content can use: the party positions and the enemy slots up to `max_enemy_slots` (the largest
+## encounter), for preparing the shader copies before any battle (spec vfx-stencil 3.4).
+static func values_for(max_enemy_slots: int) -> Array:
+	var values: Array = range(PARTY_FIRST, PARTY_LAST + 1)
+	for slot in range(1, mini(max_enemy_slots, ENEMY_LAST - ENEMY_FIRST + 1) + 1):
+		values.append(ENEMY_FIRST + slot - 1)
+	return values
+
+
 static func is_unit(value: int) -> bool:
 	return value >= UNIT_FIRST and value <= UNIT_LAST

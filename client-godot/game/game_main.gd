@@ -222,6 +222,7 @@ func set_content_root(path: String) -> void:
 
 func load_content() -> void:
 	content = ContentIndex.new(content_root)
+	prepare_effects(BOOT_PREPARE_PER_FRAME, "boot")
 	# The console's dev stat items (spec dev-tools 3.3), only while cheats are allowed; never in a pool.
 	var dev := get_node_or_null("/root/Dev")
 	if dev != null and dev.cheats_allowed() and DirAccess.dir_exists_absolute(RunController.DEV_CONTENT):
@@ -240,7 +241,24 @@ var local_card_pool: Variant = null
 ## `run_id` picks the RunStructure (spec playable-demo 2.2); empty = the only or the default one.
 ## In server mode the seed is ignored: the server opens the run and issues every floor seed; "" returns at once and the
 ## run starts when the server answers ("Connecting…" meanwhile; a refusal shows as a Notification).
+## Spec vfx-stencil 3.4: compile the effect shader copies every battle of the content can need, before any battle: at boot (the
+## main menu, a few copies a frame, `BOOT_PREPARE_PER_FRAME`) and again at run start (whatever boot has not finished). Inert
+## headless, with stencil off or before the room view's camera exists.
+const BOOT_PREPARE_PER_FRAME := 2
+
+
+func prepare_effects(per_frame: int, label: String) -> void:
+	var camera := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if content == null or camera == null:
+		return
+	var largest := 0
+	for encounter in content.encounters.values():
+		largest = maxi(largest, (encounter as EncounterDefinition).slots.size())
+	FxManager.prepare_stencil(camera, StencilIds.values_for(largest), per_frame, label)
+
+
 func start_run(character_ids: Array, seed_text: String, run_id: StringName = &"") -> String:
+	prepare_effects(8, "run start")
 	if server != null:
 		_start_server_run(character_ids, run_id)
 		return ""
