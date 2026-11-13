@@ -59,7 +59,7 @@ func _damage_number() -> FxDefinition:
 		_param(&"font_size", FxParam.Kind.INT, 64, 16, 200, "Text size in pixels; a crit is bigger, a resisted hit smaller."),
 		_param(&"label", FxParam.Kind.STRING, "", 0, 0, "A small line above the number (Crit!, Weak!, Break). Empty = none."),
 		_param(&"label_color", FxParam.Kind.COLOR, GOLD, 0, 0, "Colour of that line.")],
-		"A number that pops in, rises and fades away, Honkai style.", [&"Fx.Kind.Hit"], &"Top", false)
+		"A number that pops in, rises and fades away, Honkai style.", [&"Fx.Kind.Hit"], &"Top")
 
 
 ## Fire: a flame flipbook, embers, a glow and a light. Colour tints it (orange, or green for a different fire).
@@ -360,7 +360,7 @@ func _light(energy: float, light_range: float, seconds: float) -> FxLightLayer:
 
 
 func _define(effect_id: StringName, title: String, space: FxDefinition.Space, layers: Array, params: Array, note: String, tags: Array,
-		socket: StringName = &"Center", _biased: bool = true) -> FxDefinition:
+		socket: StringName = &"Center") -> FxDefinition:
 	var definition := FxDefinition.new()
 	definition.id = effect_id
 	definition.display_name = title

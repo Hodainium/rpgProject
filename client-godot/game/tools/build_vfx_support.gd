@@ -92,7 +92,7 @@ static func _cue_file(suffix: String) -> String:
 func _stat_arrows() -> FxDefinition:
 	var arrows := _arrow_layer(true)
 	return _define(&"fx.stat_arrows", "Stat arrows", [arrows],
-		_arrow_params(), "Chevrons rising or sinking around a unit with a stat buff or debuff.", [&"Fx.Kind.Aura"], &"Center", true)
+		_arrow_params(), "Chevrons rising or sinking around a unit with a stat buff or debuff.", [&"Fx.Kind.Aura"], &"Center")
 
 
 ## The same chevrons as one burst, with a flash, when the stat change lands.
@@ -109,7 +109,7 @@ func _stat_apply() -> FxDefinition:
 	var params := _arrow_params()
 	params.append(_param(&"intensity", FxParam.Kind.FLOAT, 1.0, "Flash brightness.", 0.0, 4.0))
 	return _define(&"fx.stat_apply", "Stat apply", [arrows, glow, rim], params,
-		"A burst of chevrons and a flash when a stat buff or debuff lands.", [&"Fx.Kind.Burst"], &"Center", true)
+		"A burst of chevrons and a flash when a stat buff or debuff lands.", [&"Fx.Kind.Burst"], &"Center")
 
 
 func _arrow_layer(looping: bool) -> FxParticles3DLayer:
@@ -182,7 +182,7 @@ func _revive_rise() -> FxDefinition:
 	return _define(&"fx.revive_rise", "Revive", [beam, motes, ring, light],
 		[_param(&"color", FxParam.Kind.COLOR, WHITE_GOLD, "Light colour."),
 		_param(&"intensity", FxParam.Kind.FLOAT, 1.0, "Beam brightness.", 0.0, 4.0)],
-		"A column of light with rising motes and a ring on the floor: a unit brought back.", [&"Fx.Kind.Heal"], &"Base", true)
+		"A column of light with rising motes and a ring on the floor: a unit brought back.", [&"Fx.Kind.Heal"], &"Base")
 
 
 ## Cleanse and dispel: sparkles thrown outward, a ring and a white flash on the unit.
@@ -211,7 +211,7 @@ func _cleanse_sparkle() -> FxDefinition:
 	var rim := _rim(0.5)
 	return _define(&"fx.cleanse_sparkle", "Cleanse", [sparkles, ring, rim],
 		[_param(&"color", FxParam.Kind.COLOR, Color(1.0, 0.97, 0.85), "Sparkle colour.")],
-		"Sparkles thrown off a unit that was cleansed or dispelled.", [&"Fx.Kind.Burst"], &"Center", true)
+		"Sparkles thrown off a unit that was cleansed or dispelled.", [&"Fx.Kind.Burst"], &"Center")
 
 
 ## The caster's flourish: a ripple on the floor and a flash on the unit, coloured by what the ability does.
@@ -229,7 +229,7 @@ func _cast_ring() -> FxDefinition:
 	var rim := _rim(0.45)
 	return _define(&"fx.cast_ring", "Cast ring", [ring, echo, rim],
 		[_param(&"color", FxParam.Kind.COLOR, GOLD, "Colour of the ring and the flash (the ability's role).")],
-		"Two ripples on the floor and a flash on the caster.", [&"Fx.Kind.Burst"], &"Base", true)
+		"Two ripples on the floor and a flash on the caster.", [&"Fx.Kind.Burst"], &"Base")
 
 
 ## A ring lying flat on the floor (the quad turned to face up).
@@ -323,8 +323,7 @@ func _cue(file: String, fx: FxDefinition, literals: Dictionary, persistent: bool
 
 # --- Helpers ---------------------------------------------------------------------------------------------------------------
 
-func _define(effect_id: StringName, title: String, layers: Array, params: Array, note: String, tags: Array, socket: StringName,
-		_biased: bool) -> FxDefinition:
+func _define(effect_id: StringName, title: String, layers: Array, params: Array, note: String, tags: Array, socket: StringName) -> FxDefinition:
 	var definition := FxDefinition.new()
 	definition.id = effect_id
 	definition.display_name = title

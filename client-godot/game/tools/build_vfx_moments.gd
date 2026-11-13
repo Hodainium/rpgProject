@@ -169,7 +169,7 @@ func _one_more() -> FxDefinition:
 	sparks.color_ramp = _ramp([Color(1, 1, 1, 1), Color(1, 1, 1, 0)], [0.0, 1.0])
 	return _define(&"fx.one_more", "One More", [rays, text, sparks],
 		[_param(&"color", FxParam.Kind.COLOR, Color(1.0, 0.45, 0.35), "Ray and spark colour."), _param(&"intensity", FxParam.Kind.FLOAT, 1.0, "Ray brightness.", 0.0, 4.0)],
-		"ONE MORE! pops over the unit with a burst of rays and sparks.", &"Top", false)
+		"ONE MORE! pops over the unit with a burst of rays and sparks.", &"Top")
 
 
 ## The small pulse of a triggered passive: a ring, a few motes and a flash, in the colour of what triggered it.
@@ -440,7 +440,7 @@ func _scale_curve(points: Array) -> FxCurveTrack:
 	return track
 
 
-func _define(effect_id: StringName, title: String, layers: Array, params: Array, note: String, socket: StringName, _biased: bool = true) -> FxDefinition:
+func _define(effect_id: StringName, title: String, layers: Array, params: Array, note: String, socket: StringName) -> FxDefinition:
 	var definition := FxDefinition.new()
 	definition.id = effect_id
 	definition.display_name = title

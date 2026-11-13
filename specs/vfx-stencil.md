@@ -1,6 +1,7 @@
 # Spec: `vfx-stencil` (slice 5a3), an experiment
 
-Status: draft for review, 2026-11-11. This version rewrites the first draft as a reversible experiment (user, 2026-11-11).
+Status: built (2026-11-11, PR #22); stencil kept and on by default. This spec is the record of the experiment that led there, in
+order. **For how the technique works (to reuse it), read `specs/design/stencil-over-own-unit.md`.**
 Roadmap entry: `specs/roadmap.md`, "5a3. `vfx-stencil`" (from `playtest-fixes` B14).
 Builds on `vfx-framework` (5a) and `vfx-content-pass` (5a2). Presentation only.
 
@@ -377,14 +378,17 @@ OTHER).
   a few `#define` lines followed by the original code. The lines are `FX_STENCIL_REF <value>`, `FX_STENCIL_COMPARE compare_equal`
   or `compare_not_equal`, and `FX_STENCIL_OWN` for the OWN pass. The probe proved that defines placed before `shader_type` reach
   an include. The copies are cached by (shader, value, pass).
-- **Materials.** The layer's material is the OTHER pass, with the OWN pass as its `next_pass`. Parameters are set on both passes
-  (`FxLayer.apply` and the bindings walk the `next_pass` chain). No `render_priority` change is needed (H5).
-- **Compiled while loading (change 5).** `FxStencilShaders.prepare()` runs behind the run's loading screen, once per run.
-  - For every shader used by an over-unit layer in the effect registry, it makes the copies for every unit value (1–31) and both
-    passes, and has the renderer compile them. A battle then never compiles a copy.
-  - H9 measures the time. If it is too long, the values prepared shrink to the positions the run can actually use (the party
-    size, the largest encounter).
-  - `FxStencilShaders.prepare_values(values)` does the same for chosen values only, for the gallery and the tests.
+- **Materials.** The layer's material is an `FxStencilMaterial`: the OTHER pass, with the OWN pass as its `next_pass`. Bindings and
+  tracks write only the first pass (the engine writes `material:shader_parameter/x`, which a script cannot intercept), so
+  `FxStencilMaterial.sync_own_pass()` copies the uniforms to the OWN pass: on every swap, on `apply` and `reset`, and on every tick
+  of a live over-unit layer (`FxLayer.follow_stencil`). The uniform names are read once per shader code; engine-filled samplers
+  (`fx_scene_depth`) are skipped; `render_priority` is mirrored. How it works and how to make it cheaper:
+  `specs/design/stencil-over-own-unit.md` and the per-tick options above. No `render_priority` change is needed (H5).
+- **Compiled at battle start** (the user's choice, step 2; there is no loading screen). `FxService.prepare_stencil(camera)`, called
+  by `RoomView3D`, takes the values of the battle's positions and every shader an over-unit layer of the registry draws with
+  (`FxLayer.stencil_shader()`), and `FxStencilShaders.prepare` draws each copy once as a speck in front of the camera (a particle
+  shader through a one-particle emitter), so the renderer builds its pipelines before the first hit. Copies drawn once are
+  remembered for the session. Cost: about 18 ms a copy on a cold driver cache, about 2 ms on a warm one.
 
 ### 3.5 Value 0
 During the experiment, a layer with value 0 behaves exactly as today (depth bias and depth fade). After the decision, value 0
@@ -467,10 +471,10 @@ Client-side failure modes:
 | A misspelt stencil mode word (`write_foo` silently counts as `write`, K6) | Validator `fx_stencil_mode_unknown` (error): every word of a `stencil_mode` line in `game/fx/shaders/` and in the unit include must be exactly a mode name, a compare name, a number or an `FX_STENCIL_*` define | `test_fx_validator_stencil_mode` |
 | A content or presentation material uses a unit stencil value (Godot's Outline and X-Ray presets default to reference **1**, which is P1) | Validator `fx_stencil_value_taken` (error): a material under `content/` or `presentation/` with stencil on must use a value outside 1–31, from a range the table gives it | `test_fx_validator_stencil_value` |
 | An over-unit effect shader that does not include `fx_stencil_depth.gdshaderinc` | It would never get the stencil blocks: validator `fx_stencil_include_missing` (error) for shaders used by over-unit layers | `test_fx_validator_stencil_include` |
-| A shader copy compiled mid-battle | Every copy is compiled behind the run's loading screen (3.4); a copy missing from the cache is made at once and counted in `fx stats` | `test_stencil_variants_prepared` |
-| Parameters drift between the two passes | `apply` and bindings walk `next_pass` | `test_stencil_next_pass_params_in_sync` |
+| A shader copy compiled mid-battle | The battle's copies are drawn once at battle start (3.4); a copy missing from the cache (an added unit) compiles at its first draw | `test_the_registry_shaders_to_prepare`; the Stencil page's `first_frames_ms` |
+| Parameters drift between the two passes | `FxStencilMaterial.sync_own_pass()` on every swap, `apply`, `reset` and tick (3.4) | `test_the_quad_switches_to_two_passes_and_back_keeping_its_parameters`, `test_the_stencil_material_swaps_on_its_setting_and_follows_an_edited_shader` |
 | A view freed while an effect still plays on it | The effect keeps its value until it ends; the value is not reused in that battle | `test_stencil_value_not_reused_in_battle` |
-| A Godot upgrade changes the stencil API (K3) | The stencil lines live only in the include and `FxStencilShaders`; the tests and the probe fail on what they expect, and the switch goes back to `bias` until it is fixed | `test_stencil_variant_code` |
+| A Godot upgrade changes the stencil API (K3) | The stencil lines live only in the include and `FxStencilShaders`; the tests and the probe fail on what they expect, and `fx stencil off` (one pass, the plain depth test) holds until it is fixed | `test_a_copy_is_the_defines_in_front_of_the_unchanged_code`; the claim probe |
 | Script or engine error while drawing | `ScriptErrorLog` fails the test, as everywhere | (suite rule) |
 
 ## 5. Observability
