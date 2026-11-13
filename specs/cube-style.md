@@ -171,8 +171,8 @@ from it and swaps it with the materials on a battle restyle. The floor slab runs
 user, 2026-11-13: the chamfered bottom edges left a crack between the floor and the walls), so the walls stand on it and every
 groove shows floor, never the background. Its four vertical corner edges are chamfered by the same `wall_bevel` (user, same day:
 "just the short edges at the corners"; the long edges stay sharp) so the slab's corners match the corner blocks:
-`AttachmentMesh.corner_slab(size, bevel)` through `StageRig.floor_mesh(size)`, swapped on a battle restyle like the walls. Every mood bevels by default (0.06, the preview's), so the
-registry file is unchanged. Validator: `style_wall_bevel_invalid` (a mood's bevel outside 0..0.25). Shots:
+`AttachmentMesh.corner_slab(size, bevel)` through `StageRig.floor_mesh(size)`, swapped on a battle restyle like the walls. Both shapes are flat-shaded with UVs projected per face (a texture tiles once per metre) and tangents (a normal map lights right); a `BoxMesh` maps a 3 × 2 atlas instead, so a textured material looks different at bevel 0. A bevel that is not finite, or that a too thin box holds to nothing, is a plain box. The room view passes its own sizes (`WALL_SIZE`, `FLOOR_SIZE`). Door gaps show floor (user, 2026-11-13: keep it). Every mood bevels by default (0.06, the preview's), so the
+registry file is unchanged. Validator: `style_wall_bevel_invalid` (a mood's bevel outside 0..0.25 or not a number). Shots:
 `H:\claudeOutShots\2026-11-13 bevelled walls\`.
 
 `RoomView3D` applies the mood of `RunState.chapter_id` when it builds a room or a battle. `UnitStyle` (the lookup in `game/view/`)
