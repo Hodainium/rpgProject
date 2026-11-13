@@ -73,6 +73,8 @@ var _warned_unstamped: bool = false
 var _gate: ClientGate
 var _cast_id: int = 0
 var _pending_death: bool = false
+## Spec battle-death-fade: the enemy's death fade while it plays (null otherwise).
+var _fade: DeathFadeDriver
 ## The montage was seen playing since the last cast started (its end is when it stops).
 var _montage_live: bool = false
 
@@ -269,6 +271,7 @@ func set_stats(text: String) -> void:
 
 ## Instant pose (building a room or a battle): lying down or standing, no animation.
 func set_dead(dead: bool) -> void:
+	_cancel_fade()
 	is_dead = dead
 	_pending_death = false
 	_paint()
@@ -276,23 +279,67 @@ func set_dead(dead: bool) -> void:
 	_start(&"dead" if dead else &"idle")
 
 
-## The unit died: `death`, then `dead`. Waits for a cast that is still playing.
+## The unit died: `death`, then `dead` (a party member, grey); an enemy fades out instead (spec battle-death-fade). Waits for a
+## cast that is still playing.
 func die() -> void:
 	is_dead = true
-	_paint()
-	_repaint_attachments()
+	if not fades_on_death():
+		_paint()
+		_repaint_attachments()
 	if _gate != null or bool(tree.get("parameters/montage/active")):
 		_pending_death = true
 	else:
-		_start(&"death")
+		_start_death()
 
 
 func revive() -> void:
+	_cancel_fade()
 	is_dead = false
 	_pending_death = false
 	_paint()
 	_repaint_attachments()
 	_start(&"revive")
+
+
+## Spec battle-death-fade 3.2: whether this view fades out when it dies (an enemy, battle id "E…") instead of falling over.
+func fades_on_death() -> bool:
+	return String(unit_id).begins_with("E")
+
+
+## The death fade playing on this view, or null.
+func death_fade_driver() -> DeathFadeDriver:
+	return _fade if _fade != null and is_instance_valid(_fade) else null
+
+
+## Spec battle-death-fade 3.4: plays the fade on this view now (the console's `style death test`), dead or not. Returns the driver.
+func play_death_fade() -> DeathFadeDriver:
+	_cancel_fade()
+	var boss := unit_definition != null and unit_definition.tags.has(&"Enemy.Boss")
+	_fade = DeathFadeDriver.new(self, UnitStyle.death_fade(boss))
+	tree.active = false  # the idle freezes where it is (FF7 enemies stop as they die)
+	if _motion != null:
+		_motion.set_running(false)
+	add_child(_fade)
+	return _fade
+
+
+func _start_death() -> void:
+	if fades_on_death():
+		play_death_fade()
+	else:
+		_start(&"death")
+
+
+func _cancel_fade() -> void:
+	var driver := death_fade_driver()
+	_fade = null
+	if driver == null:
+		return
+	driver.cancel()
+	driver.queue_free()
+	tree.active = true
+	if _motion != null:
+		_motion.set_running(not is_dead)
 
 
 func celebrate() -> void:
@@ -561,13 +608,15 @@ func _on_mixer_applied() -> void:
 
 func _finish_montage() -> void:
 	_montage_live = false
+	# The pending death starts before the gate is released (review fix): releasing it can run the battle on to its end at
+	# once, and the end only waits for fades that already exist.
+	if _pending_death:
+		_pending_death = false
+		_start_death()
 	if _gate != null:
 		var gate := _gate
 		_gate = null
 		gate.release_finished()
-	if _pending_death:
-		_pending_death = false
-		_start(&"death")
 
 
 func _start(state: StringName) -> void:

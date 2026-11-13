@@ -73,7 +73,8 @@ func test_battle_hud_policy() -> void:
 	await host.get_tree().process_frame
 	await host.get_tree().process_frame
 	check(game.find_child("MapPanel", true, false) != null, "after the battle the map is back")
-	check(game.find_child("TurnOrderPanel", true, false) == null, "and the turn order is gone")
+	var order := game.find_child("TurnOrderPanel", true, false) as CanvasItem
+	check(order == null or not order.is_visible_in_tree(), "and the turn order is gone (kept hidden for the next battle)")
 
 
 ## Spec ui-fixes B3: a clicked room starts its battle before the deferred UI state adds the panels. A panel made after

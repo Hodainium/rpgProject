@@ -9,7 +9,7 @@ extends UIScreen
 
 func bind(context: UIContext) -> void:
 	for signal_name in [&"pickups_shown", &"room_entered", &"room_cleared", &"party_changed"]:
-		context.on_run(self, signal_name, func(_a = null): refresh.call_deferred())
+		context.on_run(self, signal_name, func(_a = null): queue_refresh())
 	%Rows.entry_filled.connect(func(row, _item):
 		if not row.taken.is_connected(_after_take):
 			row.taken.connect(_after_take))

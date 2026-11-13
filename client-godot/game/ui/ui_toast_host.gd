@@ -36,6 +36,17 @@ func bind(_context: UIContext) -> void:
 	start()
 
 
+## Hidden and kept while its state is off (UIManager parks HUD panels, review fix 2026-11-13): it drops what it shows and
+## takes no toasts until it is active again (_resting), as a freed host did, so nothing comes out in a burst later.
+func on_deactivated() -> void:
+	clear()
+
+
+## A host the UIManager placed (it has a context) takes toasts only while active; a host made in code always does.
+func _resting() -> bool:
+	return ctx != null and not active
+
+
 ## Starts listening for the set's rules (bind does this; a host made in code calls it itself).
 func start() -> void:
 	if _listening or toast_set == null:
@@ -109,7 +120,7 @@ func update() -> void:
 
 
 func _on_message(_channel: StringName, message: GameplayMessage, rule: UIToastRule) -> void:
-	if not rule.matches(message):
+	if _resting() or not rule.matches(message):
 		return
 	_latest[rule] = message
 	var toast := _make(rule, message)

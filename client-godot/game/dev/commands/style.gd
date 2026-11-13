@@ -6,7 +6,7 @@ extends DevCommand
 
 func _init() -> void:
 	name = "style"
-	usage = "style list | show <unit> | mood [<chapter>|off] | registry [<res://path>|default|off] | camera [explore|battle] | reload | check"
+	usage = "style list | show <unit> | mood [<chapter>|off] | registry [<res://path>|default|off] | camera [explore|battle] | reload | check | death [test <unit>|all]"
 	help = "Cube style (spec cube-style): list the looks, show one unit's, show a chapter's mood everywhere, use a variant registry, move the camera, reload, check."
 	cheat = false
 	arg_kinds.assign(["style_op", "text"])
@@ -84,6 +84,31 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 				return ctx.fail(problem)
 			_restyle(ctx)
 			return "reloaded %s" % path
+		"death":
+			if args.size() < 2:
+				var lines := PackedStringArray()
+				for boss in [false, true]:
+					var fade := UnitStyle.death_fade(boss)
+					lines.append("%s: colour %s, flash %.2f s, tint %.2f s, fade %.2f s, glow %.1f, end beat %.2f s" % [
+						"boss" if boss else "enemy", fade.color.to_html(false), fade.flash_seconds, fade.tint_seconds,
+						fade.fade_seconds, fade.emission, fade.end_beat])
+				return "\n".join(lines)
+			if args[1] != "test":
+				return ctx.fail("usage: style death [test <unit id>|all]")
+			if ctx.game == null or not ctx.game.is_inside_tree():
+				return ctx.fail("no views (headless)")
+			var which := args[2] if args.size() > 2 else "all"
+			var played := PackedStringArray()
+			for view in ctx.game.get_tree().get_nodes_in_group(UnitAnimator.GROUP):
+				var animator := view as UnitAnimator
+				if animator.unit_id == &"" or not animator.fades_on_death():
+					continue
+				if which == "all" or String(animator.unit_id) == which:
+					animator.play_death_fade()
+					played.append(String(animator.unit_id))
+			if played.is_empty():
+				return ctx.fail("no enemy view '%s' (style death test <E1..>|all, in a battle)" % which)
+			return "death fade: %s" % ", ".join(played)
 		"check":
 			if registry == null:
 				return "no style registry in use"

@@ -19,6 +19,8 @@ var active: bool = false
 var owned_by_rule: bool = false
 ## The scene this screen was made from (no duplicates on one stack).
 var source_scene: PackedScene
+var _refresh_queued: bool = false
+var _stale: bool = false  # a queued refresh was skipped while hidden
 
 
 ## Override: connect to the run with ctx.on_run(self, "signal", callable), read ctx.main, ctx.run, ctx.state.
@@ -51,6 +53,34 @@ func refresh() -> void:
 	pass
 
 
+## Asks for one refresh() at the end of this frame, however many run signals ask (a won battle fires five in one frame);
+## a hidden screen skips it, since on_activated() refreshes it when it shows again (playtest fix 2026-11-13, the battle-end
+## hitch). Use it instead of refresh.call_deferred() in a screen's run signal handlers.
+func queue_refresh() -> void:
+	if _refresh_queued:
+		return
+	_refresh_queued = true
+	_queued_refresh.call_deferred()
+
+
+func _queued_refresh() -> void:
+	_refresh_queued = false
+	if not is_inside_tree():
+		return
+	if is_visible_in_tree():
+		refresh()
+		return
+	_stale = true  # hidden (its own slot or a parent): refresh once it shows again
+	if not visibility_changed.is_connected(_on_visibility_for_refresh):
+		visibility_changed.connect(_on_visibility_for_refresh)
+
+
+func _on_visibility_for_refresh() -> void:
+	if _stale and is_visible_in_tree():
+		_stale = false
+		refresh()
+
+
 ## The context of the screen `node` sits in (the nearest UIScreen ancestor that is bound), or null.
 static func context_of(node: Node) -> UIContext:
 	var current := node
@@ -74,6 +104,7 @@ func _ui_activate() -> void:
 	if active:
 		return
 	active = true
+	_stale = false  # on_activated() refreshes it; the visibility change must not refresh it a second time
 	visible = true
 	on_activated()
 	if not focus_on_activate.is_empty():
