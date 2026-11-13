@@ -34,7 +34,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5a. `vfx-framework` | 🔨 Built, awaiting the user's review (`specs/vfx-framework.md`; data-driven FX in 2D, 3D and hybrid, the GodotGAS cue bridge, the hybrid stage, a shader library, a proof set of 12 effects, dev tools, the gallery; 696 Godot tests; every hit in a battle now sparks; spec to sync after tuning) | 2026-11-09 |
 | 5a2. `vfx-content-pass` | ✅ Built 2026-11-09 (effects for hits, DoTs, controls, stat statuses, heals, revives, 24 ultimates, battle moments and damage numbers; open for playtest fixes) | `specs/vfx-content-pass.md` |
 | 5a3. `vfx-stencil` | ✅ Done (PRs #21, #22, #23, #24; `specs/vfx-stencil.md`, reusable reference `specs/design/stencil-over-own-unit.md`): stencil replaces the depth bias, each unit stamps its battle position's value, effects draw over their own unit in two passes (OWN, OTHER) through `FxStencilMaterial`, the shader copies are prepared at boot, run start and battle start; the leak went from 270 to 6 pixels at equal GPU time and the first-battle hitch is gone (user playtest 2026-11-12). Open items in the spec. | 2026-11-12 |
-| 5a4. `cube-style` | 🟨 Spec written (`specs/cube-style.md`, an art experiment in rounds with user gates; the primitives preview approved 2026-11-12) | |
+| 5a4. `cube-style` | 🟨 In progress (`specs/cube-style.md`, an art experiment in rounds with user gates; the primitives preview liked 2026-11-12; round 1, the stage and camera, built and awaiting its gate) | |
 | 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |

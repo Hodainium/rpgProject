@@ -33,7 +33,7 @@ approved. Rejected variants are deleted.
 
 | Round | What is tried | Variants shown |
 |---|---|---|
-| 1. Stage | Lighting and mood: `WorldEnvironment` (AgX tonemap, glow, SSAO, ambient), key / fill / rim lights, floor and wall materials; one mood per chapter. The bevelled cube with rim light | Today vs 2–3 moods on the same battle; one shot per chapter for the approved one |
+| 1. Stage | Lighting and mood: `WorldEnvironment` (AgX tonemap, glow, SSAO, ambient), key / fill / rim lights, floor and wall materials; one mood per chapter. Rim light on the cubes (kept **unbevelled**: user, 2026-11-12). The battle framing (3.9) | Today vs 2–3 moods on the same battle, today's camera vs a closer battle framing; one shot per chapter for the approved one |
 | 2. Primitives | Attachments **Claude builds from engine shapes** in code (cylinders, cones, prisms, tori, extruded outlines, path sweeps): a crown, bat wings, devil horns, a sword, a halo, a wizard hat, on five units (a Warrior, a Bat, a Fire Imp, the Lich, the Golem); motion on them (wings flap, a crown floats) | Each object 1–2 shapes, on its unit, still and in motion |
 | 3. Downloaded models | Single headwear models picked from Poly Pizza (CC0 or CC-BY, 3.5 (b)) on the same five units, side by side with the approved primitives, each shown with its own textures and **recoloured** (flat colour + our rim, which makes mixed sources read as one style); mixing with primitives is allowed (a downloaded hat + primitive wings) | One sheet per source, then a mixed sheet |
 | 4+. Roll-out | The chosen sources on every class and enemy, a few units a round | Per unit: 1–2 proposals |
@@ -64,8 +64,9 @@ No C# DTOs, queues, topics or Redis keys. The Godot resources (system code in `g
 | `default_look` | `UnitLook` | Used when nothing else matches |
 | `looks` | `Dictionary[StringName, UnitLook]` | Unit definition id → its look (characters and enemies) |
 | `tag_rules` | `Array[UnitLookRule]` | A `GameplayTagQuery` on the definition's tags + a partial look; first match fills what an exact look leaves unset (e.g. `Enemy.Boss` → a larger body). GAS-first: archetypes come from tags the content has |
-| `default_mood` | `StageMood` | For a chapter with no mood, the sandbox and the menus |
+| `default_mood` | `StageMood` | For a chapter with no mood, the sandbox and rooms outside a chapter (never the menus: the room view's environment is detached while it is hidden) |
 | `moods` | `Dictionary[StringName, StageMood]` | Chapter id → its mood |
+| `explore_camera`, `battle_camera` | `CameraFraming` | The room camera out of and in battle (3.9) |
 
 A registry keyed by id (like `FxRegistry`), not fields on `UnitDefinition`: that class lives in `combat/` and the verifier loads it,
 so it must not reference meshes or textures (the reason `UnitDefinition.view` is a path). `display_color` stays the unit's base colour.
@@ -73,8 +74,7 @@ so it must not reference meshes or textures (the reason `UnitDefinition.view` is
 ### 3.2 `UnitLook` (Resource)
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `color_override` | `Color` | alpha 0 = unset | Replaces `display_color` |
-| `bevel` | `float` | from the default look | Edge radius, a fraction of the smallest side |
+| `use_color_override`, `color_override` | `bool`, `Color` | off = unset | Replaces `display_color` (a switch, not "alpha 0 = unset": the inspector's picker keeps alpha 0) |
 | `rim` | `float` | from the default look | `StandardMaterial3D.rim` strength |
 | `attachments` | `Array[UnitAttachment]` | none | What the cube wears |
 | `size` | `Vector3` | unset = the 0.8 cube | Later rounds only |
@@ -95,10 +95,8 @@ Attachments are children of `Body`, so every unit animation moves them. Their ma
 so an effect "over own unit" also draws over them (spec `vfx-stencil`). Motion is on a presentation clock, never in a hash.
 
 ### 3.4 Body and sockets
-- **Body mesh:** a box with chamfered edges from `size` and `bevel`, built with `SurfaceTool` into a cached `ArrayMesh` (proven on
-  4.7.2 by the preview). Wrapping it as a `BevelBoxMesh` `PrimitiveMesh` subclass (an inspector-editable resource) needs a GDScript
-  override of `_create_mesh_array`: a claim to verify before building on it (`verify-documented-claims`); the cached mesh is the
-  fallback.
+- **Body mesh:** a plain `BoxMesh` at the look's size. The cubes stay unbevelled (user, 2026-11-12: "for now"); a bevel
+  (`SurfaceTool`, proven by the preview) is a possible later round, not built.
 - **Material:** `StandardMaterial3D` with `rim_enabled`; no custom shader, so `mark_stencil()` stamps it as today.
 - **Sockets:** today `SocketCenter`, `SocketHit`, `SocketTop`, `SocketBase` (`FxSocket`). Added: `Front`, `Back`, `Left`, `Right`
   (the face centres). All follow the body's size; the size lives in the mesh, never `Body.scale` (animations key the scale); the
@@ -137,9 +135,18 @@ fails when a folder under `attachments/<pack>/` has no line in `CREDITS.md`.
   (apply a mood to the current room), `style reload`, `style check`.
 - Validator in `validate_content.tscn`: `style_look_unknown_unit`, `style_mood_unknown_chapter`, `style_socket_unknown`,
   `style_attachment_scene_missing`, `style_attachment_unstampable` (a material `mark_stencil` cannot stamp), `style_pack_uncredited`.
-- **Shots:** a "Style" page in `game/dev/fx_gallery.tscn`: a fixed battle line-up in a chapter's mood, a turntable view of one unit,
-  `-- --style <chapter> --units <id,...> --variant <name> --shots <dir>`. This is how every round's comparison sheets are made.
-  Variants under test live in `presentation/demo/style/variants/<round>/<name>/` until the gate.
+- **Shots** come from the real game: a window `dev_run` (`--window --local --manual --shots <dir>`) starts a run, `goto boss`, then
+  switches with `style registry <variant>` / `style mood <chapter>` and takes `shot <name> [seconds]` (the delay, added here, waits
+  out the camera move). No separate stage scene (built 2026-11-12: the real room view, HUD and battle line-up are what the user
+  judges). Variants under test are registries of their own in `presentation/demo/style/variants/<round>/<name>.tres` until the gate:
+  usually a `base` registry plus what they change (a partial look merges over the base's), or a standalone alternative with no
+  `base` (round 1's `bright`: one look for every chapter). `validate_content.tscn` checks every variant too.
+
+### 3.9 Camera framing
+`CameraFraming` (Resource: `position`, `rotation_degrees`, `fov`). `StyleRegistry.explore_camera` and `battle_camera`; `RoomView3D`
+moves its camera to the battle framing when a battle starts and back when it ends (a short tween, presentation only). Unset = today's
+camera ((0, 9, 8), pitched −50°, the default fov) for both, so a registry without framings changes nothing. Round 1 shows today's
+framing beside a closer battle framing.
 
 ## 4. Failure modes
 N/A for the acceptance scenarios: none is about presentation. Presentation failures:
@@ -159,7 +166,6 @@ demo registry:
 | Test | Proves |
 |---|---|
 | Resolution order | exact id > first matching tag rule > default; unset fields filled in that order |
-| Bevel mesh | `size` and `bevel` give the expected bounds; bevel 0 = a plain box; same mesh twice for the same inputs |
 | Sockets follow the size | every socket and the label for three sizes; the bottom stays at −0.4 |
 | Attachments | placed at their socket, `mirror` makes the opposite copy, `color` tints, they move with `Body` during the default set's idle, hit and death |
 | Motion | `bob`, `spin`, `orbit`, `flap` on a manual clock give the expected transforms |
