@@ -380,7 +380,7 @@ each with a drip, and a brass censer swinging front to back on its chain. Hallow
 along the facing), a barrister's curled wig, the mitre on top of it and stern gold eyes under a V of grey brows. Gilded Mimic: B, a
 chest (iron straps and a lock on the face), the lid open about 60° and chomping on its hinge (`FLAP` on a pivot turned so its axis
 is the hinge), a row of teeth on the lid and on the front edge, eyes glowing inside and a centred tongue. Vault Sentry: B, the lens
-eye, a halberd (blade along the facing) and a steel crest, symmetric front to back. The Collector: B, a monocle with its chain, a
+eye, a halberd (blade along the facing) and a steel crest (the crest symmetric front to back). The Collector: B, a monocle with its chain, a
 squint and a centred grin with a gold tooth, gold coins orbiting slowly (`SPIN`) with gold glints (`coin_glints`), and a plum top
 hat with a gold band and a coin resting on it, upright (the user's addition).
 
