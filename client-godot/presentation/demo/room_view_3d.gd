@@ -7,6 +7,13 @@ const ROWS: int = 7
 
 var _main: GameMain
 var _room_root: Node3D
+## Playtest fix 2026-11-13 (nothing rebuilt that is already there): the walls and floor, rebuilt only when the room changes
+## (_box_key); the props (pedestals, shop slots, the event marker), rebuilt with each build; the units, whose party cubes are
+## made once and kept across rooms and battles.
+var _box_root: Node3D
+var _props_root: Node3D
+var _units_root: Node3D
+var _box_key: String = ""
 var _views: Dictionary = {}  # unit id ("P1", "E2") -> unit view
 var _battle: Battle
 var _gate: ViewGate
@@ -32,6 +39,13 @@ func setup(main: GameMain) -> void:
 	add_child(_rig)
 	_room_root = Node3D.new()
 	add_child(_room_root)
+	for part in ["Box", "Props", "Units"]:
+		var node := Node3D.new()
+		node.name = part
+		_room_root.add_child(node)
+	_box_root = _room_root.get_node(^"Box")
+	_props_root = _room_root.get_node(^"Props")
+	_units_root = _room_root.get_node(^"Units")
 	main.run_changed.connect(_bind)
 	main.battle_prepared.connect(_on_battle_prepared)
 	main.mode_changed.connect(_on_mode)
@@ -93,34 +107,29 @@ func _build_now() -> void:
 				_views[id].celebrate()
 
 
-## Rebuilds the current room from run state (out of battle).
+## Shows the current room from run state (out of battle): the walls only when the room changed, the props again, the party
+## cubes kept (made only for a member who has none), the enemy cubes of a finished battle freed.
 func _build() -> void:
-	for child in _room_root.get_children():
-		child.queue_free()
-	_views.clear()
 	var run := _main.run
 	if run == null or run.state == null or run.state.map == null:
+		for child in _props_root.get_children() + _box_root.get_children():
+			child.queue_free()
+		_free_views(func(_id: StringName) -> bool: return true)
+		_box_key = ""
 		return
 	var data: Dictionary = run.state.map.cells[run.state.current_cell]
 	var room: RoomDefinition = run.content.rooms.get(data["room"])
-	_rig.apply(UnitStyle.mood_for(run.state.chapter_id))  # spec cube-style 3.6: the chapter's mood
-	_build_box(data["doors"])
-	# Spec cube-style 3.10: the party stands in its formation out of battle too (slot order), else on the room's spawn cells.
-	var members: Array = run.state.party.duplicate()
-	members.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["slot"]) < int(b["slot"]))
-	var spots := UnitStyle.battle_positions(true, members.size())
-	for member in run.state.party:
-		var character: UnitDefinition = run.content.units.get(member["character"])
-		var order := members.find(member)
-		var placed := order >= 0 and order < spots.size()  # the formation spot first, the room's spawn cell only without one
-		var view := _unit(Vector2i.ZERO if placed else _spawn(room, RoomPlacement.Kind.PLAYER_SPAWN, member["slot"],
-			Vector2i(2, member["slot"] + 1)), character)
-		if placed:
-			view.position = spots[order]
-		view.set_stats("%s\nHP %d" % [_name(character), member["hp"] / 100])
-		view.set_dead(not member["alive"])
-		# Same id as in battle, so a starting battle replaces this cube instead of drawing a second one on top.
-		_views[StringName("P%d" % member["slot"])] = view
+	var key := "%d|%d|%d|%s" % [run.state.floor_index, run.state.current_cell, data["doors"], run.state.chapter_id]
+	if key != _box_key:
+		_box_key = key
+		for child in _box_root.get_children():
+			child.queue_free()
+		_rig.apply(UnitStyle.mood_for(run.state.chapter_id))  # spec cube-style 3.6: the chapter's mood
+		_build_box(data["doors"])
+	_free_views(func(id: StringName) -> bool: return not String(id).begins_with("P"))  # the battle's enemies (faded out)
+	_sync_party(room)
+	for child in _props_root.get_children():
+		child.queue_free()
 	if room == null:
 		return
 	for number in room.placements.size():
@@ -141,12 +150,70 @@ func _build() -> void:
 						_prop(placement.cell, Color.GOLD if piece == null else Color.SILVER, title + price, item)
 
 
+## Spec cube-style 3.10: the party stands in its formation out of battle too (slot order), else on the room's spawn cells. Each
+## member keeps its cube ("P<slot>", the id it has in battle); a cube is made only for a slot with none or another character,
+## and the pose changes only when the member's state does (so a celebration or a fall is never restarted).
+func _sync_party(room: RoomDefinition) -> void:
+	var run := _main.run
+	var members: Array = run.state.party.duplicate()
+	members.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["slot"]) < int(b["slot"]))
+	var spots := UnitStyle.battle_positions(true, members.size())
+	var kept: Array[StringName] = []
+	for order in members.size():
+		var member: Dictionary = members[order]
+		var id := StringName("P%d" % member["slot"])
+		var character: UnitDefinition = run.content.units.get(member["character"])
+		var placed := order < spots.size()  # the formation spot first, the room's spawn cell only without one
+		var at := Vector2i.ZERO if placed else _spawn(room, RoomPlacement.Kind.PLAYER_SPAWN, member["slot"],
+			Vector2i(2, member["slot"] + 1))
+		var view := _kept_view(id, character)
+		if view == null:
+			view = _unit(at, character, id)
+			view.set_dead(not member["alive"])
+		elif _is_dead(view) != (not member["alive"]):
+			view.set_dead(not member["alive"])
+		view.position = spots[order] if placed else _world(at)
+		view.set_stats("%s\nHP %d" % [_name(character), member["hp"] / 100])
+		_views[id] = view
+		kept.append(id)
+	_free_views(func(id: StringName) -> bool: return String(id).begins_with("P") and not kept.has(id))
+
+
+## The live view kept under `id` when it still shows `definition`, else null (a stale one is freed).
+func _kept_view(id: StringName, definition: UnitDefinition) -> Node3D:
+	var view: Node3D = _views.get(id)
+	if view == null or not is_instance_valid(view) or view.is_queued_for_deletion():
+		_views.erase(id)
+		return null
+	var shows: StringName = view.definition_id if view is UnitAnimator else &""
+	if definition == null or shows != definition.id:
+		view.queue_free()
+		_views.erase(id)
+		return null
+	return view
+
+
+func _is_dead(view: Node3D) -> bool:
+	return view is UnitAnimator and view.is_dead
+
+
+## Frees the views whose id `pick` accepts.
+func _free_views(pick: Callable) -> void:
+	for id in _views.keys():
+		if pick.call(id):
+			if is_instance_valid(_views[id]):
+				_views[id].queue_free()
+			_views.erase(id)
+
+
 func _on_battle_started(battle: Battle) -> void:
 	_battle = battle
 	UnitStyle.battle_framing().tween_to(_camera, CAMERA_SECONDS)  # spec cube-style 3.9
-	for view in _views.values():
-		view.queue_free()
-	_views.clear()
+	var ids: Array[StringName] = []
+	for unit in battle.units():
+		ids.append(unit.unit_id)
+	# The party's cubes stay as they are; anything else (a stale enemy) goes, and the enemies are made new.
+	_free_views(func(id: StringName) -> bool: return not ids.has(id) or not String(id).begins_with("P"))
 	var run := _main.run
 	var room: RoomDefinition = run.content.rooms.get(run.state.map.cells[run.state.current_cell]["room"])
 	var spots := _formation_spots(battle)  # spec cube-style 3.10: the style's battle formation, else the room's spawn cells
@@ -154,14 +221,15 @@ func _on_battle_started(battle: Battle) -> void:
 		var kind := RoomPlacement.Kind.PLAYER_SPAWN if unit.is_party() else RoomPlacement.Kind.ENEMY_SPAWN
 		var fallback := Vector2i(2 if unit.is_party() else 10, unit.slot + 1)
 		var placed: bool = spots.has(unit.unit_id)  # the formation spot first, the room's spawn cell only without one
-		var view := _unit(Vector2i.ZERO if placed else _spawn(room, kind, unit.slot, fallback), unit.definition)
-		if placed:
-			view.position = spots[unit.unit_id]
+		var at := Vector2i.ZERO if placed else _spawn(room, kind, unit.slot, fallback)
+		var view := _kept_view(unit.unit_id, unit.definition)
+		if view == null:
+			view = _unit(at, unit.definition, unit.unit_id)
+			view.set_dead(not unit.alive)
+		elif _is_dead(view) != (not unit.alive):
+			view.set_dead(not unit.alive)
+		view.position = spots[unit.unit_id] if placed else _world(at)
 		_views[unit.unit_id] = view
-		if view is UnitAnimator:
-			view.unit_id = unit.unit_id  # spec vfx-framework: effects find a unit's view by this id
-			view.assign_stencil()  # spec vfx-stencil 3.1: the stencil value of its battle position (0 with stencil off)
-		view.set_dead(not unit.alive)
 	FxManager.prepare_stencil(get_viewport().get_camera_3d())  # spec vfx-stencil: compile this battle's effect shader copies now
 	battle.execution_resolved.connect(_on_execution)
 	battle.unit_died.connect(_set_dead.bind(true))
@@ -217,11 +285,15 @@ func restyle() -> void:
 		return
 	if _battle == null:
 		UnitStyle.explore_framing().apply_to(_camera)
+		_box_key = ""  # the walls and floor take the new mood
 		_build()
+		for view in _views.values():
+			if is_instance_valid(view) and view is UnitAnimator:
+				view.restyle()
 		return
 	UnitStyle.battle_framing().apply_to(_camera)
 	_rig.apply(UnitStyle.mood_for(_main.run.state.chapter_id))
-	for child in _room_root.get_children():  # the floor and walls _build_box marked take the new mood's materials
+	for child in _box_root.get_children():  # the floor and walls _build_box marked take the new mood's materials
 		match child.get_meta(&"style_part", &""):
 			&"floor":
 				child.material_override = _rig.floor_material()
@@ -254,7 +326,7 @@ func _build_box(doors: int) -> void:
 	floor_mesh.material_override = _rig.floor_material()  # spec cube-style: the mood's floor (null = today's)
 	floor_mesh.set_meta(&"style_part", &"floor")  # restyle() finds it in battle
 	floor_mesh.position = Vector3(0, -0.6, 0)
-	_room_root.add_child(floor_mesh)
+	_box_root.add_child(floor_mesh)
 	# Walls of unit blocks, with a gap in the middle of each side that has a door.
 	for x in range(-1, COLUMNS + 1):
 		for y in [-1, ROWS]:
@@ -276,7 +348,7 @@ func _wall(cell: Vector2i) -> void:
 	wall.material_override = _rig.wall_material()  # spec cube-style: the mood's walls (null = today's)
 	wall.set_meta(&"style_part", &"wall")
 	wall.position = _world(cell) + Vector3(0, -0.2, 0)
-	_room_root.add_child(wall)
+	_box_root.add_child(wall)
 
 
 func _prop(cell: Vector2i, color: Color, text: String, item: ItemDefinition = null) -> void:
@@ -291,17 +363,23 @@ func _prop(cell: Vector2i, color: Color, text: String, item: ItemDefinition = nu
 		material.albedo_color = color
 		prop.material_override = material
 	prop.position = _world(cell)
-	_room_root.add_child(prop)
+	_props_root.add_child(prop)
 	var label := Label3D.new()
 	label.text = text
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.position = _world(cell) + Vector3(0, 0.6, 0)
-	_room_root.add_child(label)
+	_props_root.add_child(label)
 
 
-func _unit(cell: Vector2i, definition: UnitDefinition) -> Node3D:
+## A new view for `definition` as unit `id` ("P1", "E2"). The id is set before the view is ready, so its attachments are built
+## facing the right way once (a later id rebuilds them), and it takes its battle position's stencil value at once.
+func _unit(cell: Vector2i, definition: UnitDefinition, id: StringName) -> Node3D:
 	var view: Node3D = UnitAnimator.instantiate_for(definition, _main.unit_view)  # its own view, or the cube
-	_room_root.add_child(view)
+	if view is UnitAnimator:
+		view.unit_id = id  # spec vfx-framework: effects find a unit's view by this id
+	_units_root.add_child(view)
+	if view is UnitAnimator:
+		view.assign_stencil()  # spec vfx-stencil 3.1: the stencil value of its battle position (0 with stencil off)
 	view.position = _world(cell)
 	view.setup(_name(definition), definition.display_color if definition != null else Color.WHITE)
 	return view
