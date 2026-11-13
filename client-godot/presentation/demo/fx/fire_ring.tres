@@ -1,0 +1,102 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_binding"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_particles"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/flame_sheet.png" id="4_flame"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="5_param"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="6_def"]
+
+[sub_resource type="Resource" id="Resource_flames_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_flames_min"]
+script = ExtResource("2_binding")
+property = "process_material:scale_min"
+param = &"size"
+scale = 0.6
+
+[sub_resource type="Resource" id="Resource_flames_max"]
+script = ExtResource("2_binding")
+property = "process_material:scale_max"
+param = &"size"
+scale = 0.95
+
+[sub_resource type="Gradient" id="Gradient_flames"]
+offsets = PackedFloat32Array(0, 0.2, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_flames"]
+script = ExtResource("3_particles")
+size_min = 0.6
+size_max = 0.95
+spread = 8.0
+speed_min = 0.25
+speed_max = 0.55
+gravity = Vector3(0, 0.9, 0)
+emission_ring_radius = 0.58
+emission_offset = Vector3(0, -0.36, 0)
+soft_distance = 0.3
+amount = 26
+lifetime = 0.75
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_flames")
+texture = ExtResource("4_flame")
+h_frames = 8
+v_frames = 4
+id = &"flames"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_flames_color"), SubResource("Resource_flames_min"), SubResource("Resource_flames_max")])
+
+[sub_resource type="Resource" id="Resource_embers_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_embers"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_embers"]
+script = ExtResource("3_particles")
+size_min = 0.04
+size_max = 0.08
+spread = 25.0
+speed_min = 0.6
+speed_max = 1.4
+gravity = Vector3(0, 0.4, 0)
+emission_ring_radius = 0.58
+emission_offset = Vector3(0, -0.34, 0)
+amount = 10
+lifetime = 1.2
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_embers")
+id = &"embers"
+loop = true
+min_quality = 2
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_embers_color")])
+
+[sub_resource type="Resource" id="Resource_color"]
+script = ExtResource("5_param")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.45, 0.16, 1)
+description = "Fire colour."
+
+[sub_resource type="Resource" id="Resource_size"]
+script = ExtResource("5_param")
+name = &"size"
+default_value = 1.0
+min_value = 0.3
+max_value = 3.0
+description = "Flame size multiplier."
+
+[resource]
+script = ExtResource("6_def")
+id = &"fx.fire_ring"
+display_name = "Fire ring"
+params = Array[ExtResource("5_param")]([SubResource("Resource_color"), SubResource("Resource_size")])
+layers = Array[ExtResource("1_layer")]([SubResource("Resource_flames"), SubResource("Resource_embers")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "A ring of fire on the floor around a unit: flames and embers rising from below (the Ember Knight's look, spec cube-style 6a)."

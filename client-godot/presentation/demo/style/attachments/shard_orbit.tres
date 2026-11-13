@@ -1,0 +1,81 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_a"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.08
+segments = 4
+position = Vector3(0.72, 0.12, 0)
+rotation_degrees = Vector3(20, 10, 35)
+scale = Vector3(0.8, 1.4, 0.8)
+color = Color(1, 0.62, 0.72, 1)
+metallic = 0.2
+roughness = 0.05
+emission = 0.9
+
+[sub_resource type="Resource" id="Resource_b"]
+script = ExtResource("1_part")
+kind = 4
+size = Vector3(0.1, 0.18, 0.06)
+position = Vector3(0.36, -0.08, 0.64)
+rotation_degrees = Vector3(30, 40, -20)
+color = Color(1, 0.8, 0.86, 1)
+metallic = 0.2
+roughness = 0.05
+emission = 0.9
+
+[sub_resource type="Resource" id="Resource_c"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.06
+segments = 5
+position = Vector3(-0.34, 0.2, 0.66)
+rotation_degrees = Vector3(-15, 60, 20)
+scale = Vector3(1, 1.6, 1)
+color = Color(1, 0.62, 0.72, 1)
+metallic = 0.2
+roughness = 0.05
+emission = 0.9
+
+[sub_resource type="Resource" id="Resource_d"]
+script = ExtResource("1_part")
+kind = 4
+size = Vector3(0.12, 0.24, 0.06)
+position = Vector3(-0.73, -0.02, 0.05)
+rotation_degrees = Vector3(0, 80, 25)
+color = Color(1, 0.62, 0.72, 1)
+metallic = 0.2
+roughness = 0.05
+emission = 0.9
+
+[sub_resource type="Resource" id="Resource_e"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.05
+segments = 4
+position = Vector3(-0.38, 0.16, -0.63)
+rotation_degrees = Vector3(40, 0, 15)
+scale = Vector3(1, 1.5, 1)
+color = Color(1, 0.8, 0.86, 1)
+metallic = 0.2
+roughness = 0.05
+emission = 0.9
+
+[sub_resource type="Resource" id="Resource_f"]
+script = ExtResource("1_part")
+kind = 4
+size = Vector3(0.09, 0.2, 0.05)
+position = Vector3(0.4, 0.04, -0.62)
+rotation_degrees = Vector3(-25, -30, 30)
+color = Color(1, 0.62, 0.72, 1)
+metallic = 0.2
+roughness = 0.05
+emission = 0.9
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Orbiting gem shards"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_a"), SubResource("Resource_b"), SubResource("Resource_c"), SubResource("Resource_d"), SubResource("Resource_e"), SubResource("Resource_f")])
