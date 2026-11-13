@@ -1,0 +1,73 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_cranium"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.24
+segments = 20
+position = Vector3(0, 0.06, 0.03)
+scale = Vector3(1.05, 0.85, 0.4)
+color = Color(0.93, 0.9, 0.82, 1)
+roughness = 0.65
+tintable = false
+
+[sub_resource type="Resource" id="Resource_snout"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.15
+segments = 18
+position = Vector3(0, -0.17, 0.05)
+scale = Vector3(0.85, 1.15, 0.45)
+color = Color(0.93, 0.9, 0.82, 1)
+roughness = 0.65
+tintable = false
+
+[sub_resource type="Resource" id="Resource_eye_l"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.06
+segments = 12
+position = Vector3(0.11, 0.07, 0.11)
+scale = Vector3(1, 1.15, 0.45)
+color = Color(0.06, 0.05, 0.05, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_eye_r"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.06
+segments = 12
+position = Vector3(-0.11, 0.07, 0.11)
+scale = Vector3(1, 1.15, 0.45)
+color = Color(0.06, 0.05, 0.05, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_horn_l"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.065
+radius_top = 0.012
+curve = PackedVector3Array(0.2, 0.13, 0.06, 0.58, 0.08, 0.12, 0.74, 0.38, 0.04)
+segments = 16
+color = Color(0.82, 0.76, 0.62, 1)
+roughness = 0.5
+tintable = false
+
+[sub_resource type="Resource" id="Resource_horn_r"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.065
+radius_top = 0.012
+curve = PackedVector3Array(-0.2, 0.13, 0.06, -0.58, 0.08, 0.12, -0.74, 0.38, 0.04)
+segments = 16
+color = Color(0.82, 0.76, 0.62, 1)
+roughness = 0.5
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Longhorn skull"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_cranium"), SubResource("Resource_snout"), SubResource("Resource_eye_l"), SubResource("Resource_eye_r"), SubResource("Resource_horn_l"), SubResource("Resource_horn_r")])

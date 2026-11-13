@@ -1,0 +1,97 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_sac"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.22
+segments = 24
+position = Vector3(0, 0.1, 0.04)
+scale = Vector3(1.2, 0.85, 0.75)
+color = Color(0.86, 0.84, 0.5, 1)
+roughness = 0.2
+tintable = false
+
+[sub_resource type="Resource" id="Resource_s1"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.032
+segments = 10
+position = Vector3(0, 0.12, 0.2)
+scale = Vector3(1, 1, 0.4)
+color = Color(0.36, 0.34, 0.16, 1)
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_s2"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.026
+segments = 10
+position = Vector3(-0.12, 0.16, 0.174)
+scale = Vector3(1, 1, 0.4)
+color = Color(0.36, 0.34, 0.16, 1)
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_s3"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.03
+segments = 10
+position = Vector3(0.13, 0.05, 0.174)
+scale = Vector3(1, 1, 0.4)
+color = Color(0.36, 0.34, 0.16, 1)
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_s4"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.022
+segments = 10
+position = Vector3(0.08, 0.2, 0.167)
+scale = Vector3(1, 1, 0.4)
+color = Color(0.36, 0.34, 0.16, 1)
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_s5"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.024
+segments = 10
+position = Vector3(-0.06, 0.03, 0.185)
+scale = Vector3(1, 1, 0.4)
+color = Color(0.36, 0.34, 0.16, 1)
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_s6"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.022
+segments = 10
+position = Vector3(0.19, 0.14, 0.146)
+scale = Vector3(1, 1, 0.4)
+color = Color(0.36, 0.34, 0.16, 1)
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_s7"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.022
+segments = 10
+position = Vector3(-0.19, 0.07, 0.148)
+scale = Vector3(1, 1, 0.4)
+color = Color(0.36, 0.34, 0.16, 1)
+roughness = 0.3
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Spotted throat sac"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_sac"), SubResource("Resource_s1"), SubResource("Resource_s2"), SubResource("Resource_s3"), SubResource("Resource_s4"), SubResource("Resource_s5"), SubResource("Resource_s6"), SubResource("Resource_s7")])
