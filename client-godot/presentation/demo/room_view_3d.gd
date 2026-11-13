@@ -82,10 +82,17 @@ func _build() -> void:
 	var room: RoomDefinition = run.content.rooms.get(data["room"])
 	_rig.apply(UnitStyle.mood_for(run.state.chapter_id))  # spec cube-style 3.6: the chapter's mood
 	_build_box(data["doors"])
+	# Spec cube-style 3.10: the party stands in its formation out of battle too (slot order), else on the room's spawn cells.
+	var members: Array = run.state.party.duplicate()
+	members.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["slot"]) < int(b["slot"]))
+	var spots := UnitStyle.battle_positions(true, members.size())
 	for member in run.state.party:
 		var character: UnitDefinition = run.content.units.get(member["character"])
 		var view := _unit(_spawn(room, RoomPlacement.Kind.PLAYER_SPAWN, member["slot"], Vector2i(2, member["slot"] + 1)),
 			character)
+		var order := members.find(member)
+		if order >= 0 and order < spots.size():
+			view.position = spots[order]
 		view.set_stats("%s\nHP %d" % [_name(character), member["hp"] / 100])
 		view.set_dead(not member["alive"])
 		# Same id as in battle, so a starting battle replaces this cube instead of drawing a second one on top.
