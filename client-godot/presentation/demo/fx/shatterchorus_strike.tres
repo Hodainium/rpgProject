@@ -17,11 +17,6 @@ script = ExtResource("2_1sscl")
 property = "material:shader_parameter/color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_mr8mp"]
-script = ExtResource("2_1sscl")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_gn82a"]
 script = ExtResource("3_k8x5d")
 shader = ExtResource("4_ujpjj")
@@ -35,17 +30,12 @@ size = Vector2(3, 3)
 id = &"sonic0"
 space = 2
 duration = 0.55
-bindings = Array[ExtResource("2_1sscl")]([SubResource("Resource_qqx41"), SubResource("Resource_mr8mp")])
+bindings = Array[ExtResource("2_1sscl")]([SubResource("Resource_qqx41")])
 
 [sub_resource type="Resource" id="Resource_2eseb"]
 script = ExtResource("2_1sscl")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_w65km"]
-script = ExtResource("2_1sscl")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_0hr28"]
 script = ExtResource("3_k8x5d")
@@ -61,17 +51,12 @@ id = &"sonic1"
 space = 2
 start_delay = 0.12
 duration = 0.55
-bindings = Array[ExtResource("2_1sscl")]([SubResource("Resource_2eseb"), SubResource("Resource_w65km")])
+bindings = Array[ExtResource("2_1sscl")]([SubResource("Resource_2eseb")])
 
 [sub_resource type="Resource" id="Resource_25kgm"]
 script = ExtResource("2_1sscl")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_2iwds"]
-script = ExtResource("2_1sscl")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_s716s"]
 script = ExtResource("3_k8x5d")
@@ -87,17 +72,12 @@ id = &"sonic2"
 space = 2
 start_delay = 0.24
 duration = 0.55
-bindings = Array[ExtResource("2_1sscl")]([SubResource("Resource_25kgm"), SubResource("Resource_2iwds")])
+bindings = Array[ExtResource("2_1sscl")]([SubResource("Resource_25kgm")])
 
 [sub_resource type="Resource" id="Resource_u1w5o"]
 script = ExtResource("2_1sscl")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_bc7a0"]
-script = ExtResource("2_1sscl")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_xjc4a"]
 offsets = PackedFloat32Array(0, 0.7, 1)
@@ -124,7 +104,7 @@ random_frame = true
 additive = false
 id = &"shards"
 start_delay = 0.2
-bindings = Array[ExtResource("2_1sscl")]([SubResource("Resource_u1w5o"), SubResource("Resource_bc7a0")])
+bindings = Array[ExtResource("2_1sscl")]([SubResource("Resource_u1w5o")])
 
 [sub_resource type="Resource" id="Resource_1t3g0"]
 script = ExtResource("2_1sscl")
@@ -156,18 +136,11 @@ kind = 3
 default_value = Color(0.7, 0.95, 1, 1)
 description = "Sound and glass colour."
 
-[sub_resource type="Resource" id="Resource_co0q7"]
-script = ExtResource("10_nkubn")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("11_cw51y")
 id = &"fx.shatterchorus_strike"
 display_name = "Shatter Chorus strike"
-params = Array[ExtResource("10_nkubn")]([SubResource("Resource_y3dtv"), SubResource("Resource_co0q7")])
+params = Array[ExtResource("10_nkubn")]([SubResource("Resource_y3dtv")])
 layers = Array[ExtResource("1_j5dlt")]([SubResource("Resource_gn82a"), SubResource("Resource_0hr28"), SubResource("Resource_s716s"), SubResource("Resource_u51nr"), SubResource("Resource_7m4dx"), SubResource("Resource_h8lyn")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "Sonic rings ring out from the target and glass shards burst from it."

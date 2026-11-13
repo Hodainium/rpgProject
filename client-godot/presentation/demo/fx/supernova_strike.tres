@@ -70,11 +70,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 0.9
 
-[sub_resource type="Resource" id="Resource_u6n6e"]
-script = ExtResource("2_24pjb")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_b2pol"]
 script = ExtResource("5_b4h1r")
 shader = ExtResource("6_jub27")
@@ -87,17 +82,12 @@ size = Vector2(5, 5)
 id = &"rays"
 space = 2
 duration = 0.6
-bindings = Array[ExtResource("2_24pjb")]([SubResource("Resource_02g5w"), SubResource("Resource_ktjc8"), SubResource("Resource_u6n6e")])
+bindings = Array[ExtResource("2_24pjb")]([SubResource("Resource_02g5w"), SubResource("Resource_ktjc8")])
 
 [sub_resource type="Resource" id="Resource_i7s4k"]
 script = ExtResource("2_24pjb")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_613qf"]
-script = ExtResource("2_24pjb")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_0naxo"]
 script = ExtResource("5_b4h1r")
@@ -113,17 +103,12 @@ id = &"wave"
 space = 2
 start_delay = 0.08
 duration = 0.55
-bindings = Array[ExtResource("2_24pjb")]([SubResource("Resource_i7s4k"), SubResource("Resource_613qf")])
+bindings = Array[ExtResource("2_24pjb")]([SubResource("Resource_i7s4k")])
 
 [sub_resource type="Resource" id="Resource_cb55k"]
 script = ExtResource("2_24pjb")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_pl5pe"]
-script = ExtResource("2_24pjb")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_bv5ic"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -139,7 +124,7 @@ damping = 1.5
 amount = 44
 color_ramp = SubResource("Gradient_bv5ic")
 id = &"sparks"
-bindings = Array[ExtResource("2_24pjb")]([SubResource("Resource_cb55k"), SubResource("Resource_pl5pe")])
+bindings = Array[ExtResource("2_24pjb")]([SubResource("Resource_cb55k")])
 
 [sub_resource type="Resource" id="Resource_b8se0"]
 script = ExtResource("10_pe5n1")
@@ -187,18 +172,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Ray brightness."
 
-[sub_resource type="Resource" id="Resource_tahbk"]
-script = ExtResource("13_u14j6")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("14_y011l")
 id = &"fx.supernova_strike"
 display_name = "Supernova strike"
-params = Array[ExtResource("13_u14j6")]([SubResource("Resource_0ghpk"), SubResource("Resource_8ji3c"), SubResource("Resource_tahbk")])
+params = Array[ExtResource("13_u14j6")]([SubResource("Resource_0ghpk"), SubResource("Resource_8ji3c")])
 layers = Array[ExtResource("1_n5ep3")]([SubResource("Resource_wc67e"), SubResource("Resource_b2pol"), SubResource("Resource_0naxo"), SubResource("Resource_cuwt4"), SubResource("Resource_b8se0"), SubResource("Resource_aetj8"), SubResource("Resource_5p3mv")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "A white-hot star swells at the target and blows out in a shockwave, rays and sparks."

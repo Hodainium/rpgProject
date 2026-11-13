@@ -3,13 +3,12 @@ render_mode unshaded, blend_premul_alpha, depth_draw_never, cull_disabled, shado
 
 // Particle draw material, 3D (spec vfx-content-pass 3.6): what FxParticles3DLayer draws its quads with. Camera-facing
 // particles (their rotation and scale kept), a sprite-sheet flipbook, the particle colour, additive or normal blending
-// in one shader, and the depth bias that keeps a quad centred on a unit from being cut by that unit's mesh.
+// in one shader, and the stencil include that lets the particles draw over the unit they sit on (spec vfx-stencil).
 // @uniform albedo_texture the particle texture (a sheet when h_frames x v_frames is more than 1)
 // @uniform h_frames       columns of the sheet
 // @uniform v_frames       rows of the sheet
 // @uniform additive       1 = adds light (fire, sparks, glows), 0 = normal alpha blending (smoke, shards)
-// @uniform depth_bias     world units the depth test sees the particle closer to the camera
-// @uniform depth_fade     world units before the depth cut over which a particle fades out where it passes into the scene (at most half the bias)
+// @uniform depth_fade world units in front of the scene over which the effect fades out where it passes into it (soft particles), instead of a hard line
 // @uniform fx_scene_depth the scene depth buffer, read for the soft and depth fades (filled by the engine)
 // @uniform soft_distance  world units over which a particle fades out where it nears scene geometry (0 = off)
 uniform sampler2D albedo_texture : source_color, filter_linear_mipmap, repeat_disable;
@@ -18,7 +17,7 @@ uniform int v_frames = 1;
 uniform float additive = 1.0;
 uniform float soft_distance = 0.0;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 varying vec4 particle_color;
 varying float particle_frame;
@@ -47,16 +46,16 @@ void fragment() {
 	vec2 uv = (UV + vec2(column, row)) / vec2(float(h_frames), float(v_frames));
 	vec4 texel = texture(albedo_texture, uv);
 	float alpha = texel.a * particle_color.a;
+#ifndef FX_STENCIL_OWN
 	if (soft_distance > 0.0) {
-		// Soft particles: how far the scene is behind this particle (its depth with the bias applied), faded to 0 at contact.
-		float gap = fx_scene_gap(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX) + depth_bias;
+		// Soft particles: how far the scene is behind this particle, faded to 0 at contact (not over its own unit, the OWN pass,
+		// where the scene is the unit's own surface in front of a particle inside the body).
+		float gap = fx_scene_gap(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX);
 		alpha *= clamp(gap / soft_distance, 0.0, 1.0);
 	}
+#endif
 	alpha *= fx_depth_fade(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX);
 	// Premultiplied output: normal blending keeps its alpha, additive sets it to 0 so the light only adds.
 	ALBEDO = texel.rgb * particle_color.rgb * alpha;
 	ALPHA = alpha * (1.0 - additive);
-	if (fx_depth_moved()) {
-		DEPTH = fx_biased_depth(VERTEX, PROJECTION_MATRIX);
-	}
 }

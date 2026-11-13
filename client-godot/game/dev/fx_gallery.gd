@@ -106,6 +106,13 @@ func _build_hud() -> void:
 		_loops.clear()
 		FxManager.stop_all())
 	column.add_child(stop)
+	# Spec vfx-stencil 3.7: the Stencil page, the experiment's scene (B / S switch bias and stencil there).
+	var stencil_page := Button.new()
+	stencil_page.text = "Stencil page"
+	stencil_page.pressed.connect(func() -> void:
+		FxManager.stop_all()
+		get_tree().change_scene_to_file("res://game/dev/fx_stencil_stage.tscn"))
+	column.add_child(stencil_page)
 	# Rarity colours and quality.
 	var options := HBoxContainer.new()
 	options.position = Vector2(280, 12)

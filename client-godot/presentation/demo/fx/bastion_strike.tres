@@ -72,11 +72,6 @@ script = ExtResource("2_0p5c6")
 property = "material:shader_parameter/color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_pp4iy"]
-script = ExtResource("2_0p5c6")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Curve" id="Curve_20kbf"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
 _data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
@@ -103,18 +98,13 @@ id = &"seal"
 space = 2
 socket = &"Base"
 duration = 0.7
-bindings = Array[ExtResource("2_0p5c6")]([SubResource("Resource_2hykt"), SubResource("Resource_pp4iy")])
+bindings = Array[ExtResource("2_0p5c6")]([SubResource("Resource_2hykt")])
 tracks = Array[ExtResource("5_qjdlk")]([SubResource("Resource_o5sqo")])
 
 [sub_resource type="Resource" id="Resource_jodmc"]
 script = ExtResource("2_0p5c6")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_bwght"]
-script = ExtResource("2_0p5c6")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_m5ufx"]
 offsets = PackedFloat32Array(0, 0.2, 1)
@@ -132,7 +122,7 @@ emission_ring_radius = 0.9
 lifetime = 1.0
 color_ramp = SubResource("Gradient_m5ufx")
 id = &"motes"
-bindings = Array[ExtResource("2_0p5c6")]([SubResource("Resource_jodmc"), SubResource("Resource_bwght")])
+bindings = Array[ExtResource("2_0p5c6")]([SubResource("Resource_jodmc")])
 
 [sub_resource type="Resource" id="Resource_e1k1w"]
 script = ExtResource("2_0p5c6")
@@ -161,18 +151,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Brightness."
 
-[sub_resource type="Resource" id="Resource_t8xqt"]
-script = ExtResource("10_cnajy")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("11_mq0yp")
 id = &"fx.bastion_strike"
 display_name = "Bastion strike"
-params = Array[ExtResource("10_cnajy")]([SubResource("Resource_sti82"), SubResource("Resource_2jtq7"), SubResource("Resource_t8xqt")])
+params = Array[ExtResource("10_cnajy")]([SubResource("Resource_sti82"), SubResource("Resource_2jtq7")])
 layers = Array[ExtResource("1_t0hnh")]([SubResource("Resource_2p2yx"), SubResource("Resource_l61cy"), SubResource("Resource_440l7"), SubResource("Resource_tmc01")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "A hexagonal force-field dome rises around the unit, its plates outlined in light."

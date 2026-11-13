@@ -543,11 +543,6 @@ start_delay = 0.24
 bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_mvauf")])
 tracks = Array[ExtResource("4_wws0u")]([SubResource("Resource_733to"), SubResource("Resource_jq2l5"), SubResource("Resource_uk170"), SubResource("Resource_425w6"), SubResource("Resource_s2wr5")])
 
-[sub_resource type="Resource" id="Resource_c6pdf"]
-script = ExtResource("2_hkqb8")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_llnox"]
 offsets = PackedFloat32Array(0, 0.15, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.6, 1, 1, 1, 0)
@@ -572,17 +567,12 @@ h_frames = 4
 v_frames = 4
 additive = false
 id = &"dust"
-bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_c6pdf")])
+bindings = Array[ExtResource("2_hkqb8")]([])
 
 [sub_resource type="Resource" id="Resource_8vlgh"]
 script = ExtResource("2_hkqb8")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_do3t7"]
-script = ExtResource("2_hkqb8")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Curve" id="Curve_hrlcv"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
@@ -610,7 +600,7 @@ id = &"rings"
 space = 2
 socket = &"Base"
 duration = 0.5
-bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_8vlgh"), SubResource("Resource_do3t7")])
+bindings = Array[ExtResource("2_hkqb8")]([SubResource("Resource_8vlgh")])
 tracks = Array[ExtResource("4_wws0u")]([SubResource("Resource_gh8el")])
 
 [sub_resource type="Resource" id="Resource_syjwr"]
@@ -627,18 +617,11 @@ kind = 3
 default_value = Color(0.9, 0.88, 0.75, 1)
 description = "Ring colour."
 
-[sub_resource type="Resource" id="Resource_wn63y"]
-script = ExtResource("10_nn8ba")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("11_3km1w")
 id = &"fx.ossuary_strike"
 display_name = "Ossuary strike"
-params = Array[ExtResource("10_nn8ba")]([SubResource("Resource_w8xfc"), SubResource("Resource_wn63y")])
+params = Array[ExtResource("10_nn8ba")]([SubResource("Resource_w8xfc")])
 layers = Array[ExtResource("1_kfx0c")]([SubResource("Resource_b3ru7"), SubResource("Resource_vd81d"), SubResource("Resource_nidnk"), SubResource("Resource_d1fgx"), SubResource("Resource_nkso6"), SubResource("Resource_d1jkg"), SubResource("Resource_ytkmk"), SubResource("Resource_eau0c"), SubResource("Resource_apuvu"), SubResource("Resource_syjwr")])
 socket = &"Base"
 tags = Array[StringName]([&"Fx.Kind.Burst"])

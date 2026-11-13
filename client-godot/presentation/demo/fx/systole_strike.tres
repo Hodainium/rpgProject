@@ -18,11 +18,6 @@ script = ExtResource("2_4q81y")
 property = "material:shader_parameter/color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_x2v14"]
-script = ExtResource("2_4q81y")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_np5g6"]
 script = ExtResource("3_68f2k")
 shader = ExtResource("4_uolgp")
@@ -36,17 +31,12 @@ size = Vector2(3.8, 3.8)
 id = &"squeeze"
 space = 2
 duration = 0.35
-bindings = Array[ExtResource("2_4q81y")]([SubResource("Resource_vc8sd"), SubResource("Resource_x2v14")])
+bindings = Array[ExtResource("2_4q81y")]([SubResource("Resource_vc8sd")])
 
 [sub_resource type="Resource" id="Resource_jdmsi"]
 script = ExtResource("2_4q81y")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_of2ke"]
-script = ExtResource("2_4q81y")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_wjnk0"]
 script = ExtResource("3_68f2k")
@@ -62,17 +52,12 @@ id = &"lub"
 space = 2
 start_delay = 0.34
 duration = 0.4
-bindings = Array[ExtResource("2_4q81y")]([SubResource("Resource_jdmsi"), SubResource("Resource_of2ke")])
+bindings = Array[ExtResource("2_4q81y")]([SubResource("Resource_jdmsi")])
 
 [sub_resource type="Resource" id="Resource_co2eu"]
 script = ExtResource("2_4q81y")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_jpdq4"]
-script = ExtResource("2_4q81y")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_jo3qb"]
 script = ExtResource("3_68f2k")
@@ -88,17 +73,12 @@ id = &"squeeze2"
 space = 2
 start_delay = 0.5
 duration = 0.3
-bindings = Array[ExtResource("2_4q81y")]([SubResource("Resource_co2eu"), SubResource("Resource_jpdq4")])
+bindings = Array[ExtResource("2_4q81y")]([SubResource("Resource_co2eu")])
 
 [sub_resource type="Resource" id="Resource_lisoy"]
 script = ExtResource("2_4q81y")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_x6fx5"]
-script = ExtResource("2_4q81y")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_tww5r"]
 script = ExtResource("3_68f2k")
@@ -114,7 +94,7 @@ id = &"dub"
 space = 2
 start_delay = 0.8
 duration = 0.45
-bindings = Array[ExtResource("2_4q81y")]([SubResource("Resource_lisoy"), SubResource("Resource_x6fx5")])
+bindings = Array[ExtResource("2_4q81y")]([SubResource("Resource_lisoy")])
 
 [sub_resource type="Resource" id="Resource_mjw6x"]
 script = ExtResource("2_4q81y")
@@ -153,11 +133,6 @@ script = ExtResource("2_4q81y")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_nia1i"]
-script = ExtResource("2_4q81y")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_xqbj0"]
 offsets = PackedFloat32Array(0, 0.7, 1)
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -175,7 +150,7 @@ color_ramp = SubResource("Gradient_xqbj0")
 additive = false
 id = &"blood"
 start_delay = 0.8
-bindings = Array[ExtResource("2_4q81y")]([SubResource("Resource_n8q4q"), SubResource("Resource_nia1i")])
+bindings = Array[ExtResource("2_4q81y")]([SubResource("Resource_n8q4q")])
 
 [sub_resource type="Resource" id="Resource_mup04"]
 script = ExtResource("9_1ln78")
@@ -210,18 +185,11 @@ kind = 3
 default_value = Color(1, 0.25, 0.3, 1)
 description = "Blood colour."
 
-[sub_resource type="Resource" id="Resource_aks1d"]
-script = ExtResource("11_q446w")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("12_mev3y")
 id = &"fx.systole_strike"
 display_name = "Systole strike"
-params = Array[ExtResource("11_q446w")]([SubResource("Resource_lfs7e"), SubResource("Resource_aks1d")])
+params = Array[ExtResource("11_q446w")]([SubResource("Resource_lfs7e")])
 layers = Array[ExtResource("1_fbm65")]([SubResource("Resource_np5g6"), SubResource("Resource_wjnk0"), SubResource("Resource_jo3qb"), SubResource("Resource_tww5r"), SubResource("Resource_y8woc"), SubResource("Resource_uyfrj"), SubResource("Resource_5wt6p"), SubResource("Resource_mup04"), SubResource("Resource_m42di"), SubResource("Resource_pykxu")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "A heartbeat: rings close in, thump out and thump again, and blood flies on the second beat."

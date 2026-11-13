@@ -698,12 +698,6 @@ func _rise_and_sink(height: float) -> FxCurveTrack:
 
 
 func _define(effect_id: StringName, title: String, layers: Array, params: Array, note: String, socket: StringName) -> FxDefinition:
-	for layer in layers:
-		if layer is FxParticles3DLayer:
-			layer.bindings.append(_bind("draw_pass_1:material:shader_parameter/depth_bias", &"depth_bias"))
-		elif layer is FxShaderQuadLayer:
-			layer.bindings.append(_bind("material:shader_parameter/depth_bias", &"depth_bias"))
-	params.append(_param(&"depth_bias", FxParam.Kind.FLOAT, 0.7, "Filled with the unit's radius unless the caller passes one.", 0.0, 4.0))
 	var definition := FxDefinition.new()
 	definition.id = effect_id
 	definition.display_name = title

@@ -11,4 +11,4 @@ extends UnitAnimator
 func _paint() -> void:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(0.35, 0.35, 0.35) if is_dead else display_color
-	_body.material_override = material
+	_body.material_override = mark_stencil(material)

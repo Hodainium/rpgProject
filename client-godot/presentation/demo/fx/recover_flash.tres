@@ -63,11 +63,6 @@ script = ExtResource("2_1m7yc")
 property = "material:shader_parameter/color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_ub3ll"]
-script = ExtResource("2_1m7yc")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_iepv8"]
 script = ExtResource("6_f4250")
 shader = ExtResource("7_brshj")
@@ -81,17 +76,12 @@ size = Vector2(2.6, 2.6)
 id = &"ring"
 space = 2
 duration = 0.45
-bindings = Array[ExtResource("2_1m7yc")]([SubResource("Resource_ggn7n"), SubResource("Resource_ub3ll")])
+bindings = Array[ExtResource("2_1m7yc")]([SubResource("Resource_ggn7n")])
 
 [sub_resource type="Resource" id="Resource_i4i3u"]
 script = ExtResource("2_1m7yc")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_kp1ft"]
-script = ExtResource("2_1m7yc")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_o2275"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -107,7 +97,7 @@ amount = 22
 lifetime = 0.6
 color_ramp = SubResource("Gradient_o2275")
 id = &"sparks"
-bindings = Array[ExtResource("2_1m7yc")]([SubResource("Resource_i4i3u"), SubResource("Resource_kp1ft")])
+bindings = Array[ExtResource("2_1m7yc")]([SubResource("Resource_i4i3u")])
 
 [sub_resource type="Resource" id="Resource_jyyv0"]
 script = ExtResource("9_f0xu5")
@@ -116,18 +106,11 @@ kind = 3
 default_value = Color(0.7, 0.9, 1, 1)
 description = "Shield colour."
 
-[sub_resource type="Resource" id="Resource_1ijx8"]
-script = ExtResource("9_f0xu5")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("10_y8dxx")
 id = &"fx.recover_flash"
 display_name = "Recovery"
-params = Array[ExtResource("9_f0xu5")]([SubResource("Resource_jyyv0"), SubResource("Resource_1ijx8")])
+params = Array[ExtResource("9_f0xu5")]([SubResource("Resource_jyyv0")])
 layers = Array[ExtResource("1_jycqy")]([SubResource("Resource_hwxlk"), SubResource("Resource_iepv8"), SubResource("Resource_ffhlk")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "A hex shield snaps back on for a moment, with a ring and sparks."

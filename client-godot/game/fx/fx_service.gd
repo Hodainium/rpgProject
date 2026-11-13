@@ -89,6 +89,8 @@ func _exit_tree() -> void:
 		for instance in pool:
 			instance.free_nodes()
 	_pools.clear()
+	if get_tree().root.get_node_or_null(^"FxManager") == self:
+		FxStencilShaders.clear()  # spec vfx-stencil: the autoload's shutdown drops the cached copies (not a test's own service)
 
 
 func _process(delta: float) -> void:
@@ -175,6 +177,10 @@ func play_nested(effect: Variant, anchor: FxAnchor, params: Dictionary, depth: i
 		_stats["skipped"] += 1
 		return FxHandle.make_inert(def)
 	anchor = anchor.placed(def.socket)  # the socket's place and the unit's radius, for this play
+	# Spec vfx-stencil 3.3: a caller may mark another unit than the anchor's (a beam starting on its caster draws over the caster).
+	if given_has(params, STENCIL_UNIT_PARAM):
+		anchor.stencil_value = int(params[STENCIL_UNIT_PARAM] if params.has(STENCIL_UNIT_PARAM) else params[String(STENCIL_UNIT_PARAM)])
+		anchor.stencil_forced = true
 	_enforce_max_instances(def)
 	var handle := FxHandle.new()
 	handle.service = self
@@ -182,10 +188,6 @@ func play_nested(effect: Variant, anchor: FxAnchor, params: Dictionary, depth: i
 	handle.anchor = anchor
 	handle.depth = depth
 	handle.params = _resolve_params(def, params)
-	# Spec vfx-content-pass 3.6: an effect with a depth_bias parameter that the caller did not set gets the unit's radius, so the
-	# unit's own mesh does not cut it and no caller passes numbers per unit.
-	if anchor.radius > 0.0 and def.param(&"depth_bias") != null and not given_has(params, &"depth_bias"):
-		handle.params[&"depth_bias"] = anchor.radius
 	handle.instance = _acquire(def)
 	_attach(handle)
 	_prepare_layers(handle)
@@ -401,6 +403,29 @@ func unit_view(unit_id: StringName) -> Node3D:
 	return null
 
 
+## Spec vfx-stencil 3.3: a reserved parameter every effect takes, without declaring it: the stencil value to draw over (a beam marks
+## its caster). The anchor's own unit when not given.
+const STENCIL_UNIT_PARAM: StringName = &"stencil_unit"
+
+
+## Spec vfx-stencil 3.4: has the renderer compile now, at battle start, the shader copies this battle's positions need (the values of
+## the unit views in the tree × the shaders the registry's effects draw over their unit with × 2 passes), so no hit compiles one.
+## The room view calls it once the views have their values; it takes two frames. Inert headless or with stencil off.
+func prepare_stencil(camera: Camera3D) -> void:
+	if not enabled or not FxStencilShaders.enabled():
+		return
+	_ensure_loaded()
+	var values: Array = []
+	for view in get_tree().get_nodes_in_group(UnitAnimator.GROUP):
+		var value: int = (view as UnitAnimator).stencil_value
+		if StencilIds.is_unit(value) and not value in values:
+			values.append(value)
+	var definitions: Array = []
+	for id in catalog():
+		definitions.append(definition(id))
+	await FxStencilShaders.prepare(camera, FxStencilShaders.over_unit_shaders(definitions), values)
+
+
 static func given_has(params: Dictionary, key: StringName) -> bool:
 	return params.has(key) or params.has(String(key))
 
@@ -408,6 +433,8 @@ static func given_has(params: Dictionary, key: StringName) -> bool:
 func _resolve_params(def: FxDefinition, given: Dictionary) -> Dictionary:
 	var out := def.default_params()
 	for key in given:
+		if StringName(str(key)) == STENCIL_UNIT_PARAM:
+			continue  # spec vfx-stencil 3.3: reserved, every effect takes it (read by play, never a layer binding)
 		var coerced := _coerce(def, StringName(str(key)), given[key])
 		if coerced["ok"]:
 			out[StringName(str(key))] = coerced["value"]

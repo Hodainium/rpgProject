@@ -15,11 +15,6 @@ script = ExtResource("2_6hkl3")
 property = "material:shader_parameter/color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_8n47g"]
-script = ExtResource("2_6hkl3")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_hwhwn"]
 script = ExtResource("3_r8xhs")
 shader = ExtResource("4_o30e4")
@@ -33,17 +28,12 @@ size = Vector2(1.9, 1.9)
 id = &"ring"
 space = 2
 duration = 0.35
-bindings = Array[ExtResource("2_6hkl3")]([SubResource("Resource_bjivk"), SubResource("Resource_8n47g")])
+bindings = Array[ExtResource("2_6hkl3")]([SubResource("Resource_bjivk")])
 
 [sub_resource type="Resource" id="Resource_ycwe1"]
 script = ExtResource("2_6hkl3")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_d8bjv"]
-script = ExtResource("2_6hkl3")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_80exh"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -61,7 +51,7 @@ lifetime = 0.6
 explosiveness = 0.9
 color_ramp = SubResource("Gradient_80exh")
 id = &"motes"
-bindings = Array[ExtResource("2_6hkl3")]([SubResource("Resource_ycwe1"), SubResource("Resource_d8bjv")])
+bindings = Array[ExtResource("2_6hkl3")]([SubResource("Resource_ycwe1")])
 
 [sub_resource type="Resource" id="Resource_mrfti"]
 script = ExtResource("2_6hkl3")
@@ -84,18 +74,11 @@ kind = 3
 default_value = Color(1, 1, 1, 1)
 description = "The triggering event's colour."
 
-[sub_resource type="Resource" id="Resource_ank3k"]
-script = ExtResource("8_4vjmn")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("9_r2b0a")
 id = &"fx.proc_pulse"
 display_name = "Passive proc"
-params = Array[ExtResource("8_4vjmn")]([SubResource("Resource_drq4s"), SubResource("Resource_ank3k")])
+params = Array[ExtResource("8_4vjmn")]([SubResource("Resource_drq4s")])
 layers = Array[ExtResource("1_8i363")]([SubResource("Resource_hwhwn"), SubResource("Resource_xjfse"), SubResource("Resource_u47ng")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "A small pulse on a unit whose passive triggered."

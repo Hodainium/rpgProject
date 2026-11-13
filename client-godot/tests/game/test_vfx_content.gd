@@ -179,20 +179,18 @@ func _label(service: FxService) -> Label3D:
 
 # --- Flipbook fields ------------------------------------------------------------------------------------------------
 
-func test_flipbook_and_depth_bias_reach_the_material() -> void:
+func test_flipbook_reaches_the_material() -> void:
 	var layer := FxParticles3DLayer.new()
 	layer.h_frames = 8
 	layer.v_frames = 4
 	layer.anim_cycles = 1.0
 	layer.random_frame = true
 	layer.additive = false
-	layer.depth_bias = 0.8
 	var node := layer.build() as GPUParticles3D
 	var draw := (node.draw_pass_1 as QuadMesh).material as ShaderMaterial
 	eq(draw.get_shader_parameter("h_frames"), 8, "the sheet's columns")
 	eq(draw.get_shader_parameter("v_frames"), 4, "and rows")
 	eq(draw.get_shader_parameter("additive"), 0.0, "normal blending")
-	eq(draw.get_shader_parameter("depth_bias"), 0.8, "the depth bias that keeps a unit's mesh from cutting the quad")
 	var process := node.process_material as ParticleProcessMaterial
 	eq(process.anim_speed_min, 1.0, "the sheet plays once over a particle's life")
 	eq(process.anim_offset_max, 1.0, "random_frame starts each particle on its own frame")
@@ -201,46 +199,6 @@ func test_flipbook_and_depth_bias_reach_the_material() -> void:
 	eq(((plain.draw_pass_1 as QuadMesh).material as ShaderMaterial).get_shader_parameter("h_frames"), 1, "a plain texture is not a flipbook")
 	plain.free()
 
-
-func test_bias_binds_to_an_effect_parameter() -> void:
-	var service := _service()
-	var layer := FxParticles3DLayer.new()
-	layer.id = &"p"
-	layer.bindings = [_bind("draw_pass_1:material:shader_parameter/depth_bias", &"depth_bias")]
-	var definition := FxDefinition.new()
-	definition.id = &"fx.test_bias"
-	definition.space = FxDefinition.Space.WORLD_3D
-	definition.layers.assign([layer])
-	definition.params.assign([_param(&"depth_bias", FxParam.Kind.FLOAT, 0.0)])
-	service.play(definition, FxAnchor.position3d(Vector3.ZERO), {"depth_bias": 0.9})
-	var particles := service.live()[0].instance.nodes[0] as GPUParticles3D
-	eq(((particles.draw_pass_1 as QuadMesh).material as ShaderMaterial).get_shader_parameter("depth_bias"), 0.9, "a play sets the bias")
-
-
-## playtest-fixes B14: a quad laid on the floor takes at most its small flat bias (a unit in front of a floor ring hides it); a
-## camera-facing quad keeps the unit-radius bias.
-func test_flat_quads_cap_the_depth_bias() -> void:
-	var service := _service()
-	var biases := {}
-	for facing in [true, false]:
-		var layer := FxShaderQuadLayer.new()
-		layer.id = &"q"
-		layer.space = FxLayer.Space.WORLD_3D
-		layer.shader = load("res://game/fx/shaders/burst_3d.gdshader")
-		layer.face_camera = facing
-		layer.bindings = [_bind("material:shader_parameter/depth_bias", &"depth_bias")]
-		var definition := FxDefinition.new()
-		definition.id = StringName("fx.test_flat_%s" % facing)
-		definition.space = FxDefinition.Space.WORLD_3D
-		definition.layers.assign([layer])
-		definition.params.assign([_param(&"depth_bias", FxParam.Kind.FLOAT, 0.0)])
-		var handle := service.play(definition, FxAnchor.position3d(Vector3.ZERO), {"depth_bias": 0.7})
-		biases[facing] = (handle.instance.nodes[0] as FxQuad3D).material.get_shader_parameter("depth_bias")
-		handle.set_param(&"depth_bias", 0.9)
-		if not facing:
-			eq((handle.instance.nodes[0] as FxQuad3D).material.get_shader_parameter("depth_bias"), 0.05, "a changed parameter is capped again")
-	eq(biases[true], 0.7, "a camera-facing quad keeps the unit-radius bias")
-	eq(biases[false], 0.05, "a floor quad takes its flat bias")
 
 
 func test_fresnel_overlay_sets_and_restores() -> void:
@@ -364,13 +322,11 @@ func _socket_effect(socket: StringName, layer_socket: StringName = &"") -> FxDef
 	var layer := FxParticles3DLayer.new()
 	layer.id = &"p"
 	layer.socket = layer_socket
-	layer.bindings = [_bind("draw_pass_1:material:shader_parameter/depth_bias", &"depth_bias")]
 	var definition := FxDefinition.new()
 	definition.id = &"fx.test_socket"
 	definition.space = FxDefinition.Space.WORLD_3D
 	definition.socket = socket
 	definition.layers.assign([layer])
-	definition.params.assign([_param(&"depth_bias", FxParam.Kind.FLOAT, 0.1)])
 	return definition
 
 
@@ -388,15 +344,9 @@ func test_an_effect_attaches_at_its_socket_and_a_layer_can_move_off_it() -> void
 	eq(handle.instance.nodes[0].position, Vector3(0, -1, 0), "and the layer moves itself to Base")
 
 
-func test_the_unit_radius_is_the_default_depth_bias() -> void:
+func test_the_callers_anchor_is_left_alone() -> void:
 	var service := _service()
 	var view := _view(Vector3(1, 2, 1))
-	var handle := service.play(_socket_effect(FxSocket.CENTER), FxAnchor.node3d(view))
-	check(is_equal_approx(float(handle.params[&"depth_bias"]), sqrt(6.0) * 0.5), "no bias passed: the unit's radius")
-	var explicit := service.play(_socket_effect(FxSocket.CENTER), FxAnchor.node3d(view), {"depth_bias": 0.2})
-	eq(explicit.params[&"depth_bias"], 0.2, "an explicit value wins")
-	var plain := service.play(_socket_effect(FxSocket.CENTER), FxAnchor.position3d(Vector3.ZERO))
-	eq(plain.params[&"depth_bias"], 0.1, "an anchor with no radius keeps the effect's own default")
 	var anchor := FxAnchor.node3d(view)
 	service.play(_socket_effect(FxSocket.TOP), anchor)
 	eq(anchor.socket_offset, Vector3.ZERO, "the caller's anchor is left alone, so it can be reused")

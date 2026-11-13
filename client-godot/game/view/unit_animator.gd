@@ -36,6 +36,21 @@ var definition_id: StringName = &""
 ## The battle unit this view shows ("P1", "E2"), set by the room view; the effects system finds a unit's view by it
 ## (spec vfx-framework: FxAnchor.unit). Empty outside a battle.
 var unit_id: StringName = &""
+## Spec vfx-stencil 3.2: the stencil value of the unit's battle position (StencilIds), set by the room view; 0 = none (stencil off,
+## outside a battle). A new value repaints the view, and _paint() stamps it through mark_stencil().
+var stencil_value: int = 0:
+	set(value):
+		if value == stencil_value:
+			return
+		stencil_value = value
+		_stamped = false  # nothing carries the new value until a paint stamps it
+		if is_node_ready():
+			_paint()  # before ready, the view's own setup paints (its nodes are not there yet)
+
+## Whether the latest mark_stencil() stamped its material (a view that never calls it, as the base _paint() does, stays false:
+## its effects use the plain depth test). The latest paint decides, so a unit that fades out and comes back solid is stamped again.
+var _stamped: bool = false
+var _warned_unstamped: bool = false
 
 var _gate: ClientGate
 var _cast_id: int = 0
@@ -170,9 +185,51 @@ func execute(row_id: StringName) -> void:
 		_gate.release_execution(row_id)
 
 
-## Override to recolour the model (the demo cube greys out when dead).
+## Override to recolour the model (the demo cube greys out when dead). Pass each material through mark_stencil().
 func _paint() -> void:
 	pass
+
+
+## Spec vfx-stencil 3.2: a copy of `material` set to stamp this unit's stencil value where it is drawn, so an effect on this unit can
+## draw over exactly these pixels. A copy, so a material shared by several views (an imported model's) never carries another
+## view's value. A BaseMaterial3D drawn in the opaque pass (opaque, alpha scissor, alpha hash) gets Custom / Write / Always / the
+## value and nothing else (it stays opaque: the probe's K1). Returned untouched, and the view counts as not stamped (its effects
+## use the plain depth test, see effect_stencil_value):
+## - a blending material (alpha, depth pre-pass): it draws with the effects, so its stamp could land after they tested;
+## - any other material (a ShaderMaterial; step 2 adds the unit include), with one warning.
+## Value 0 returns the material untouched.
+func mark_stencil(material: Material) -> Material:
+	if not StencilIds.is_unit(stencil_value):
+		return material
+	var base := material as BaseMaterial3D
+	if base == null or base.transparency in [BaseMaterial3D.TRANSPARENCY_ALPHA, BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS]:
+		_stamped = false
+		if base == null and material != null and not _warned_unstamped:
+			_warned_unstamped = true
+			push_warning("stencil: view '%s' has a %s, which takes no stamp; its effects use the plain depth test" % [unit_id, material.get_class()])
+		return material
+	var stamped := base.duplicate() as BaseMaterial3D
+	stamped.stencil_mode = BaseMaterial3D.STENCIL_MODE_CUSTOM
+	stamped.stencil_flags = BaseMaterial3D.STENCIL_FLAG_WRITE
+	stamped.stencil_compare = BaseMaterial3D.STENCIL_COMPARE_ALWAYS
+	stamped.stencil_reference = stencil_value
+	_stamped = true
+	return stamped
+
+
+## Spec vfx-stencil 3.3: the value effects on this unit draw with: its stencil value while its materials carry the stamp, else 0
+## (an effect on an unstamped unit draws once with the plain depth test, not over a stamp that is not there).
+func effect_stencil_value() -> int:
+	return stencil_value if _stamped else StencilIds.NONE
+
+
+## Spec vfx-stencil 3.1: takes the stencil value of this view's battle position from its unit_id (0 with stencil off). The room view
+## calls it after setting unit_id.
+func assign_stencil() -> void:
+	var value := StencilIds.for_unit_id(unit_id) if FxStencilShaders.enabled() else StencilIds.NONE
+	if value == StencilIds.NONE and FxStencilShaders.enabled() and unit_id != &"":
+		push_warning("stencil: no value for unit '%s' (position outside the table); its effects use the plain depth test" % unit_id)
+	stencil_value = value
 
 
 ## True when the animation moves the model (transform or visibility tracks), not only keys and sounds.

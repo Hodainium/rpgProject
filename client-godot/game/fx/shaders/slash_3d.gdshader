@@ -11,8 +11,7 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 // @uniform intensity  brightness
 // @uniform angle      degrees the cut is turned (0 sweeps left to right along an arc bulging upward through the centre)
 // @uniform thickness  how thick the crescent is at its middle (0..1); it tapers to points at both tips
-// @uniform depth_bias world units the depth test sees the effect closer to the camera (keeps it from being cut by the unit it sits on)
-// @uniform depth_fade world units before the depth cut over which the effect fades out where it passes into the scene (at most half the bias), instead of a hard line
+// @uniform depth_fade world units in front of the scene over which the effect fades out where it passes into it (soft particles), instead of a hard line
 // @uniform fx_scene_depth the scene depth buffer, read for the depth fade (filled by the engine)
 uniform float progress = 0.0;
 uniform float time = 0.0;
@@ -22,12 +21,9 @@ uniform float intensity = 2.0;
 uniform float angle = -25.0;
 uniform float thickness = 0.5;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 void fragment() {
-	if (fx_depth_moved()) {
-		DEPTH = fx_biased_depth(VERTEX, PROJECTION_MATRIX);
-	}
 	// Quad space -1..1 with y up, turned by `angle` about the centre.
 	vec2 p = vec2(UV.x - 0.5, 0.5 - UV.y) * 2.0;
 	float a = radians(angle);

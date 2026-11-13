@@ -20,6 +20,11 @@ var socket: StringName = &""
 ## Set by FxService when it places the effect: where the socket is in the node's local space, and the unit's radius.
 var socket_offset: Vector3 = Vector3.ZERO
 var radius: float = 0.0
+## Spec vfx-stencil 3.3: the stencil value of the unit the effect sits on (its view's effect_stencil_value()), set with the radius
+## when the effect is placed; 0 = no unit, an unstamped unit or stencil off: one pass, the plain depth test.
+var stencil_value: int = 0
+## True when the caller set the value (the effect's `stencil_unit` parameter, a beam marking its caster): it is never re-read.
+var stencil_forced: bool = false
 
 
 static func node3d(target: Node3D, shift: Vector3 = Vector3.ZERO, socket_role: StringName = &"") -> FxAnchor:
@@ -117,7 +122,20 @@ func placed(default_socket: StringName) -> FxAnchor:
 	if target != null and is_instance_valid(target):
 		copy.socket_offset = FxAttach.socket_position(target, socket if socket != &"" else default_socket)
 		copy.radius = FxAttach.radius(target)
+		if not stencil_forced and target is UnitAnimator and kind in [Kind.UNIT, Kind.NODE3D]:  # not a stage: not stamped (spec 3.5)
+			copy.stencil_value = (target as UnitAnimator).effect_stencil_value()
+	if stencil_forced:
+		copy.stencil_value = stencil_value  # the caller's value (a sub-effect of a beam marking its caster keeps it, anchor or not)
+		copy.stencil_forced = true
 	return copy
+
+
+## The value now: a unit view's current effect_stencil_value() (its stamp may have changed since the effect was placed), else the
+## value set at placing (or by the caller).
+func live_stencil_value() -> int:
+	if not stencil_forced and kind in [Kind.UNIT, Kind.NODE3D] and is_instance_valid(node) and node is UnitAnimator:
+		return (node as UnitAnimator).effect_stencil_value()
+	return stencil_value
 
 
 func describe() -> String:

@@ -10,8 +10,7 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 // @uniform intensity  brightness
 // @uniform spin       turns per second of the outer ring (the inner one turns the other way)
 // @uniform segments   number of tick marks and inner segments
-// @uniform depth_bias world units the depth test sees the effect closer to the camera (keeps it from being cut by the unit it sits on)
-// @uniform depth_fade world units before the depth cut over which the effect fades out where it passes into the scene (at most half the bias), instead of a hard line
+// @uniform depth_fade world units in front of the scene over which the effect fades out where it passes into it (soft particles), instead of a hard line
 // @uniform fx_scene_depth the scene depth buffer, read for the depth fade (filled by the engine)
 uniform float progress = 0.0;
 uniform float time = 0.0;
@@ -21,16 +20,13 @@ uniform float intensity = 1.6;
 uniform float spin = 0.12;
 uniform float segments = 16.0;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 float ring(float r, float centre, float width) {
 	return 1.0 - smoothstep(0.0, width, abs(r - centre));
 }
 
 void fragment() {
-	if (fx_depth_moved()) {
-		DEPTH = fx_biased_depth(VERTEX, PROJECTION_MATRIX);
-	}
 	vec2 p = (UV - vec2(0.5)) * 2.0;
 	float r = length(p);
 	float angle = atan(p.y, p.x);

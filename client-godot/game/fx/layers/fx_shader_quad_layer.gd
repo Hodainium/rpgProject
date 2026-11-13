@@ -16,11 +16,11 @@ extends FxLayer
 @export var grow: float = 0.0
 ## 3D only: turn to face the camera every frame.
 @export var face_camera: bool = true
-## 3D only, a quad that does not face the camera (a ring or circle laid on the floor): the most depth bias it takes. The
-## unit-radius bias is for camera-facing quads centred inside a unit; a floor decal needs only enough to beat the floor's
-## own depth, so a unit standing in front of it hides it (playtest-fixes B14).
-@export var flat_depth_bias: float = 0.05
 @export var default_size_when_empty: Vector2 = Vector2(160, 160)
+
+## Spec vfx-stencil 3.3: does this 3D quad draw over the unit it sits on? AUTO: a camera-facing quad does (a hit glow), a flat one
+## does not (a floor ring keeps the plain depth test, so its back half stays behind the unit's legs).
+@export var over_own_unit: FxLayer.OverOwnUnit = FxLayer.OverOwnUnit.AUTO
 
 const META_FADE: StringName = &"fx_quad_fade"
 const META_TIME: StringName = &"fx_quad_time"
@@ -35,8 +35,9 @@ func native_space() -> int:
 
 
 func build() -> Node:
-	var material := ShaderMaterial.new()
-	material.shader = shader
+	# Spec vfx-stencil 3.4: a shader material with a stencil setting; at stencil_unit 0 it is a plain ShaderMaterial of `shader`.
+	var material := FxStencilMaterial.new()
+	material.base_shader = shader
 	for key in shader_params:
 		material.set_shader_parameter(key, shader_params[key])
 	if space == Space.WORLD_3D:
@@ -54,12 +55,44 @@ func build() -> Node:
 	return rect
 
 
+func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, definition: FxDefinition) -> void:
+	super(node, params, anchor, quality, definition)
+	if node is FxQuad3D:
+		var material := (node as FxQuad3D).material as FxStencilMaterial
+		if material != null:
+			material.stencil_unit = stencil_for(anchor)  # also re-checks a hot-reloaded shader and syncs the OWN pass
+
+
 func rebind(node: Node, params: Dictionary, definition: FxDefinition) -> void:
 	super(node, params, definition)
-	if node is FxQuad3D and not face_camera and node.material != null:
-		var bias: Variant = node.material.get_shader_parameter(&"depth_bias")
-		if bias != null and float(bias) > flat_depth_bias:
-			node.material.set_shader_parameter(&"depth_bias", flat_depth_bias)
+	if node is FxQuad3D and not face_camera and _fades_by_default():
+		# A flat quad lies on the floor (a ring, a crack): fading it against the floor it lies on would dim it, so it keeps the plain
+		# depth test with no fade (spec vfx-stencil step 2 review; what the old flat bias did). Here, with the bindings, so a live
+		# parameter change keeps it.
+		(node as FxQuad3D).material.set_shader_parameter(&"depth_fade", 0.0)
+
+
+## True unless the layer sets or binds depth_fade itself.
+func _fades_by_default() -> bool:
+	if shader_params.has("depth_fade"):
+		return false
+	for binding in bindings:
+		if binding != null and binding.property.ends_with("/depth_fade"):
+			return false
+	return true
+
+
+## The stencil value this layer draws with for `anchor` (3D quads only; see FxLayer.stencil_value).
+func stencil_for(anchor: FxAnchor) -> int:
+	return stencil_value(anchor, shader, over_own_unit) if space == Space.WORLD_3D else StencilIds.NONE
+
+
+func over_own_default() -> bool:
+	return face_camera
+
+
+func stencil_shader() -> Shader:
+	return shader if space == Space.WORLD_3D and draws_over_own_unit(over_own_unit) and FxStencilShaders.supports(shader) else null
 
 
 func update(node: Node, local_time: float, length_seconds: float, params: Dictionary) -> void:
@@ -82,6 +115,8 @@ func update(node: Node, local_time: float, length_seconds: float, params: Dictio
 			node.material.set_shader_parameter(&"rect_size", (node as Control).size)
 			node.material.set_shader_parameter(&"margin", grow)
 	super(node, local_time, length_seconds, params)
+	if node is FxQuad3D and space == Space.WORLD_3D:
+		follow_stencil(node, (node as FxQuad3D).material as FxStencilMaterial, shader, over_own_unit)
 
 
 ## Stopped: the shader's `fade` uniform runs from 1 to 0 over `fade_seconds` (see update).
@@ -94,6 +129,8 @@ func reset(node: Node) -> void:
 	node.set_meta(META_FADE, null)
 	if node.material != null:
 		node.material.set_shader_parameter(&"fade", 1.0)
+		if node.material is FxStencilMaterial:
+			(node.material as FxStencilMaterial).sync_own_pass()  # the OWN pass too, so a recycled quad starts clean
 	super(node)
 
 
@@ -107,6 +144,10 @@ func extra_problems(_definition: FxDefinition, _probe: Node) -> PackedStringArra
 		out.append("fx_shader_missing: layer '%s' has no shader" % id)
 	elif drive_progress and not shader.code.contains("uniform float progress"):
 		out.append("fx_shader_progress: layer '%s': %s declares no 'progress' uniform (drive_progress is on)" % [id, shader.resource_path.get_file()])
+	if space == Space.WORLD_3D:
+		var stencil := stencil_include_problem(shader, over_own_unit)
+		if stencil != "":
+			out.append(stencil)
 	return out
 
 

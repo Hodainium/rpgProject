@@ -24,11 +24,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 2.0
 
-[sub_resource type="Resource" id="Resource_ikg6c"]
-script = ExtResource("2_47tjq")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Curve" id="Curve_lvdms"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
 _data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
@@ -49,13 +44,8 @@ id = &"cracks"
 space = 2
 socket = &"Base"
 duration = 1.0
-bindings = Array[ExtResource("2_47tjq")]([SubResource("Resource_27oiq"), SubResource("Resource_y4jko"), SubResource("Resource_ikg6c")])
+bindings = Array[ExtResource("2_47tjq")]([SubResource("Resource_27oiq"), SubResource("Resource_y4jko")])
 tracks = Array[ExtResource("5_3a3fh")]([SubResource("Resource_six1c")])
-
-[sub_resource type="Resource" id="Resource_gb2e5"]
-script = ExtResource("2_47tjq")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_4q4fk"]
 offsets = PackedFloat32Array(0, 0.8, 1)
@@ -79,12 +69,7 @@ color = Color(0.32, 0.26, 0.22, 1)
 color_ramp = SubResource("Gradient_4q4fk")
 additive = false
 id = &"rocks"
-bindings = Array[ExtResource("2_47tjq")]([SubResource("Resource_gb2e5")])
-
-[sub_resource type="Resource" id="Resource_e6imd"]
-script = ExtResource("2_47tjq")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
+bindings = Array[ExtResource("2_47tjq")]([])
 
 [sub_resource type="Gradient" id="Gradient_lp8f0"]
 offsets = PackedFloat32Array(0, 0.12, 1)
@@ -109,17 +94,12 @@ h_frames = 4
 v_frames = 4
 additive = false
 id = &"dust"
-bindings = Array[ExtResource("2_47tjq")]([SubResource("Resource_e6imd")])
+bindings = Array[ExtResource("2_47tjq")]([])
 
 [sub_resource type="Resource" id="Resource_n5g4j"]
 script = ExtResource("2_47tjq")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_asir0"]
-script = ExtResource("2_47tjq")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Curve" id="Curve_kxngs"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
@@ -147,7 +127,7 @@ id = &"wave"
 space = 2
 socket = &"Base"
 duration = 0.5
-bindings = Array[ExtResource("2_47tjq")]([SubResource("Resource_n5g4j"), SubResource("Resource_asir0")])
+bindings = Array[ExtResource("2_47tjq")]([SubResource("Resource_n5g4j")])
 tracks = Array[ExtResource("5_3a3fh")]([SubResource("Resource_e73hq")])
 
 [sub_resource type="Resource" id="Resource_2swcs"]
@@ -184,18 +164,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Brightness."
 
-[sub_resource type="Resource" id="Resource_rag1h"]
-script = ExtResource("11_my2b2")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("12_lp56o")
 id = &"fx.quake_strike"
 display_name = "Quake strike"
-params = Array[ExtResource("11_my2b2")]([SubResource("Resource_6gbte"), SubResource("Resource_bw6jn"), SubResource("Resource_rag1h")])
+params = Array[ExtResource("11_my2b2")]([SubResource("Resource_6gbte"), SubResource("Resource_bw6jn")])
 layers = Array[ExtResource("1_qcajm")]([SubResource("Resource_ou4o6"), SubResource("Resource_op5f6"), SubResource("Resource_pnsq6"), SubResource("Resource_d5t3s"), SubResource("Resource_80kay"), SubResource("Resource_u735o")])
 socket = &"Base"
 tags = Array[StringName]([&"Fx.Kind.Burst"])

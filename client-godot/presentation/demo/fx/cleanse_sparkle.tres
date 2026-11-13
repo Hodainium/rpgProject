@@ -15,11 +15,6 @@ script = ExtResource("2_k636o")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_oen0w"]
-script = ExtResource("2_k636o")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_7ir3f"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
 
@@ -34,17 +29,12 @@ amount = 26
 lifetime = 0.7
 color_ramp = SubResource("Gradient_7ir3f")
 id = &"sparkles"
-bindings = Array[ExtResource("2_k636o")]([SubResource("Resource_mha3y"), SubResource("Resource_oen0w")])
+bindings = Array[ExtResource("2_k636o")]([SubResource("Resource_mha3y")])
 
 [sub_resource type="Resource" id="Resource_22l3r"]
 script = ExtResource("2_k636o")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_h8mep"]
-script = ExtResource("2_k636o")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_u7tjb"]
 script = ExtResource("5_2ynq6")
@@ -53,7 +43,7 @@ size = Vector2(2.6, 2.6)
 id = &"ring"
 space = 2
 duration = 0.4
-bindings = Array[ExtResource("2_k636o")]([SubResource("Resource_22l3r"), SubResource("Resource_h8mep")])
+bindings = Array[ExtResource("2_k636o")]([SubResource("Resource_22l3r")])
 
 [sub_resource type="Resource" id="Resource_8mrjx"]
 script = ExtResource("2_k636o")
@@ -76,18 +66,11 @@ kind = 3
 default_value = Color(1, 0.97, 0.85, 1)
 description = "Sparkle colour."
 
-[sub_resource type="Resource" id="Resource_enp68"]
-script = ExtResource("8_v8wk1")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("9_m1uwo")
 id = &"fx.cleanse_sparkle"
 display_name = "Cleanse"
-params = Array[ExtResource("8_v8wk1")]([SubResource("Resource_i711b"), SubResource("Resource_enp68")])
+params = Array[ExtResource("8_v8wk1")]([SubResource("Resource_i711b")])
 layers = Array[ExtResource("1_x4cp7")]([SubResource("Resource_j65xo"), SubResource("Resource_u7tjb"), SubResource("Resource_ehrek")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "Sparkles thrown off a unit that was cleansed or dispelled."

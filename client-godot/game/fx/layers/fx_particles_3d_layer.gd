@@ -1,7 +1,7 @@
 ## Particles in the 3D world (spec vfx-framework 3.1): a GPUParticles3D with a ParticleProcessMaterial built from the
 ## exports (or your own process material, including a custom `shader_type particles` ShaderMaterial). Billboarded
 ## quads, additive by default. Bind any property with "amount", "lifetime", "process_material:color",
-## "draw_pass_1:material:shader_parameter/depth_bias"… Quality scales the amount.
+## "draw_pass_1:material:shader_parameter/additive"… Quality scales the amount.
 class_name FxParticles3DLayer
 extends FxParticlesLayer
 
@@ -29,18 +29,19 @@ const PARTICLE_SHADER: Shader = preload("res://game/fx/shaders/material/particle
 ## Replaces the generated process material (a ParticleProcessMaterial or a ShaderMaterial with a particles shader).
 @export var process_material_override: Material
 @export var draw_mesh: Mesh
-## World units the depth test sees each particle closer to the camera (spec vfx-content-pass 3.6). A flame or glow is a flat
-## quad centred on the unit, and the unit's own mesh would cut it in half; the bias lifts it past the unit's surface, while a wall
-## or another unit that really is in front still hides it. About the target's radius; bind it to an effect parameter.
-@export var depth_bias: float = 0.0
 ## Soft particles (spec vfx-content-pass 3.6): a particle fades out over this many world units where it nears scene geometry
-## (its depth, with the bias applied, against the depth buffer), which removes the hard cut line against walls and other units.
+## (its depth against the depth buffer), which removes the hard cut line against walls and other units.
 ## 0 = off.
 @export var soft_distance: float = 0.0
 ## Surface emission (spec 3.6): particles start on the surface of the target's first mesh instead of at one point, so a flame or a
 ## bubble is born on the body. The points are sampled once per mesh (area-weighted) and the emitter follows the mesh every tick, which
 ## is right for a unit that moves as a rigid whole; a skinned model emits from a bone-attached layer instead.
 @export var emit_from_mesh: bool = false
+## Spec vfx-stencil 3.3: do the particles draw over the unit they sit on? AUTO (the user's choice, 2026-11-11): only particles born on
+## the unit's own mesh surface (`emit_from_mesh`, a flame on the body); rings, orbits and sparks that fly behind the unit keep the
+## plain depth test, so their back half stays behind it. Set ON for others that should. Only the
+## generated draw material takes part; a custom `draw_mesh` keeps its own material and the plain depth test.
+@export var over_own_unit: FxLayer.OverOwnUnit = FxLayer.OverOwnUnit.AUTO
 @export var emission_point_count: int = 128
 ## Only faces whose outward normal points at least this far up (-1 = every face, 0 = not the underside, 0.5 = the top and gentle slopes). A flame
 ## should not be born under the unit and burn through the floor.
@@ -102,13 +103,12 @@ func _make_process_material() -> ParticleProcessMaterial:
 
 
 func _make_draw_material() -> ShaderMaterial:
-	var material := ShaderMaterial.new()
-	material.shader = PARTICLE_SHADER
+	var material := FxStencilMaterial.new()  # spec vfx-stencil 3.4: a shader material with a stencil setting
+	material.base_shader = PARTICLE_SHADER
 	material.set_shader_parameter("albedo_texture", texture if texture != null else FxQuality.soft_dot())
 	material.set_shader_parameter("h_frames", maxi(h_frames, 1))
 	material.set_shader_parameter("v_frames", maxi(v_frames, 1))
 	material.set_shader_parameter("additive", 1.0 if additive else 0.0)
-	material.set_shader_parameter("depth_bias", depth_bias)
 	material.set_shader_parameter("soft_distance", soft_distance)
 	return material
 
@@ -122,6 +122,9 @@ static var _points: Dictionary = {}
 
 func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, definition: FxDefinition) -> void:
 	super(node, params, anchor, quality, definition)
+	var draw := _stencil_material(node)
+	if draw != null:
+		draw.stencil_unit = stencil_value(anchor, PARTICLE_SHADER, over_own_unit)
 	node.set_meta(EMIT_MESH, null)
 	if not emit_from_mesh or process_material_override != null:
 		return
@@ -139,6 +142,22 @@ func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, defin
 func update(node: Node, local_time: float, length_seconds: float, params: Dictionary) -> void:
 	_follow_mesh(node)
 	super(node, local_time, length_seconds, params)
+	follow_stencil(node, _stencil_material(node), PARTICLE_SHADER, over_own_unit)
+
+
+func over_own_default() -> bool:
+	return emit_from_mesh  # born on the body (a flame): over it. Anything else (rings, orbits, sparks behind) keeps the depth test.
+
+
+func stencil_shader() -> Shader:
+	return PARTICLE_SHADER if draw_mesh == null and draws_over_own_unit(over_own_unit) else null
+
+
+## The generated draw material (an FxStencilMaterial), or null for a custom draw mesh.
+func _stencil_material(node: Node) -> FxStencilMaterial:
+	var particles := node as GPUParticles3D
+	var mesh := particles.draw_pass_1 as PrimitiveMesh if particles != null else null
+	return mesh.material as FxStencilMaterial if mesh != null else null
 
 
 ## The emitter sits on the mesh it samples, so the points stay on its surface while the unit moves.
@@ -190,3 +209,10 @@ static func points_for(mesh: Mesh, count: int, min_normal_y: float = -1.0) -> Im
 	var texture := ImageTexture.create_from_image(image)
 	_points[key] = [weakref(mesh), texture]
 	return texture
+
+
+func extra_problems(_definition: FxDefinition, _probe: Node) -> PackedStringArray:
+	var out := PackedStringArray()
+	if over_own_unit == OverOwnUnit.ON and draw_mesh != null:
+		out.append("fx_stencil_include_missing: particles layer '%s' draws over its unit, but a custom draw_mesh keeps its own material" % id)
+	return out

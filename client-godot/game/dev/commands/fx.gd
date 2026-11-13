@@ -9,8 +9,8 @@ const STEP: float = 1.0 / 30.0
 
 func _init() -> void:
 	name = "fx"
-	usage = "fx list [tag] | params <id> | play <id> [key=value ...] [at=screen|origin|unit:<id>] | stop | stats | check [id] | quality [off|low|medium|high [save]] | log [on|off]"
-	help = "Visual effects (spec vfx-framework): list, params <id>, play <id> color=#ff9a00 scale=1.5 at=unit:P1, stop, stats, check, quality, log."
+	usage = "fx list [tag] | params <id> | play <id> [key=value ...] [at=screen|origin|unit:<id>] | stop | stats | check [id] | quality [off|low|medium|high [save]] | log [on|off] | stencil [on|off|dump]"
+	help = "Visual effects (spec vfx-framework): list, params <id>, play <id> color=#ff9a00 scale=1.5 at=unit:P1, stop, stats, check, quality, log, stencil (spec vfx-stencil: on/off, dump the unit views' values and the shader copies)."
 	cheat = false
 	arg_kinds.assign(["fx_op", "fx", "text"])
 
@@ -75,11 +75,34 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 				if args.size() > 2 and args[2] == "save":
 					GameMain.save_setting(FxService.SETTINGS_SECTION, FxService.SETTINGS_KEY, FxQuality.NAMES[tier])
 			return "fx quality: %s" % FxQuality.NAMES[FxManager.quality]
+		"stencil":
+			return _stencil(ctx, args)
 		"log":
 			if args.size() > 1:
 				FxManager.dev_messages = args[1] == "on"
 			return "fx log: %s (messages on Message.Dev.Fx shows it)" % ("on" if FxManager.dev_messages else "off")
 	return ctx.fail("usage: " + usage)
+
+
+## Spec vfx-stencil: the switch (dev only; on by default) and what it is doing. A switch reaches every unit view now (they take
+## their value again) and every live effect on its next tick.
+func _stencil(ctx: DevContext, args: PackedStringArray) -> String:
+	if args.size() > 1 and args[1] in ["on", "off"]:
+		FxStencilShaders.mode = FxStencilShaders.STENCIL if args[1] == "on" else FxStencilShaders.OFF
+		for view in (Engine.get_main_loop() as SceneTree).get_nodes_in_group(UnitAnimator.GROUP):
+			if (view as UnitAnimator).unit_id != &"":
+				(view as UnitAnimator).assign_stencil()
+	elif args.size() > 1 and args[1] != "dump":
+		return ctx.fail("usage: fx stencil [on|off|dump]")
+	var lines := PackedStringArray(["fx stencil: %s; %d shader copies (%d made, %.1f ms building them)" % [
+		"on" if FxStencilShaders.enabled() else "off", FxStencilShaders.cached_count(), FxStencilShaders.made, FxStencilShaders.build_ms]])
+	if args.size() > 1 and args[1] == "dump":
+		lines.append("  last prepare: %d copies drawn in %.0f ms" % [FxStencilShaders.last_prepare_copies, FxStencilShaders.last_prepare_ms])
+		for view in (Engine.get_main_loop() as SceneTree).get_nodes_in_group(UnitAnimator.GROUP):
+			var unit := view as UnitAnimator
+			lines.append("  %-4s value %-3d %s" % [unit.unit_id, unit.stencil_value,
+				"stamped" if unit.effect_stencil_value() != 0 else "not stamped (its effects use the plain depth test)"])
+	return "\n".join(lines)
 
 
 func _find(args: PackedStringArray, at: int) -> FxDefinition:

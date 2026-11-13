@@ -16,11 +16,6 @@ script = ExtResource("2_1f4v2")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_xpqot"]
-script = ExtResource("2_1f4v2")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_h7rgn"]
 offsets = PackedFloat32Array(0, 0.2, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.75, 1, 1, 1, 0)
@@ -43,12 +38,7 @@ h_frames = 4
 v_frames = 4
 additive = false
 id = &"cloud"
-bindings = Array[ExtResource("2_1f4v2")]([SubResource("Resource_p57no"), SubResource("Resource_xpqot")])
-
-[sub_resource type="Resource" id="Resource_etoyu"]
-script = ExtResource("2_1f4v2")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
+bindings = Array[ExtResource("2_1f4v2")]([SubResource("Resource_p57no")])
 
 [sub_resource type="Gradient" id="Gradient_vw2iu"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -66,7 +56,7 @@ lifetime = 1.2
 color = Color(1, 0.5, 0.15, 1)
 color_ramp = SubResource("Gradient_vw2iu")
 id = &"flecks"
-bindings = Array[ExtResource("2_1f4v2")]([SubResource("Resource_etoyu")])
+bindings = Array[ExtResource("2_1f4v2")]([])
 
 [sub_resource type="Resource" id="Resource_gyrh1"]
 script = ExtResource("2_1f4v2")
@@ -91,11 +81,6 @@ script = ExtResource("2_1f4v2")
 property = "material:shader_parameter/color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_2egio"]
-script = ExtResource("2_1f4v2")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_8bf0k"]
 script = ExtResource("7_2u0bf")
 shader = ExtResource("8_0escg")
@@ -109,7 +94,7 @@ size = Vector2(3.4, 3.4)
 id = &"wave"
 space = 2
 duration = 0.8
-bindings = Array[ExtResource("2_1f4v2")]([SubResource("Resource_5ntcl"), SubResource("Resource_2egio")])
+bindings = Array[ExtResource("2_1f4v2")]([SubResource("Resource_5ntcl")])
 
 [sub_resource type="Resource" id="Resource_6spf6"]
 script = ExtResource("9_xrie8")
@@ -118,18 +103,11 @@ kind = 3
 default_value = Color(0.6, 0.9, 0.25, 1)
 description = "Plague colour."
 
-[sub_resource type="Resource" id="Resource_4hod3"]
-script = ExtResource("9_xrie8")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("10_ilfyq")
 id = &"fx.pandemic_strike"
 display_name = "Pandemic strike"
-params = Array[ExtResource("9_xrie8")]([SubResource("Resource_6spf6"), SubResource("Resource_4hod3")])
+params = Array[ExtResource("9_xrie8")]([SubResource("Resource_6spf6")])
 layers = Array[ExtResource("1_ho4lo")]([SubResource("Resource_xg6pw"), SubResource("Resource_mwup3"), SubResource("Resource_fxffq"), SubResource("Resource_8bf0k")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "A sick green cloud rolls over the target, flecked with fire, and its skin turns to ooze."

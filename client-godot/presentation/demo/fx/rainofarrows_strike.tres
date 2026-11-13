@@ -574,11 +574,6 @@ script = ExtResource("2_d7vt7")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_qoaht"]
-script = ExtResource("2_d7vt7")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_id0ic"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
 
@@ -597,17 +592,12 @@ explosiveness = 0.0
 color_ramp = SubResource("Gradient_id0ic")
 id = &"strikes"
 start_delay = 0.15
-bindings = Array[ExtResource("2_d7vt7")]([SubResource("Resource_gagot"), SubResource("Resource_qoaht")])
+bindings = Array[ExtResource("2_d7vt7")]([SubResource("Resource_gagot")])
 
 [sub_resource type="Resource" id="Resource_kte2l"]
 script = ExtResource("2_d7vt7")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_wl5r6"]
-script = ExtResource("2_d7vt7")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Curve" id="Curve_2pfmw"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
@@ -635,7 +625,7 @@ id = &"mark"
 space = 2
 socket = &"Base"
 duration = 0.55
-bindings = Array[ExtResource("2_d7vt7")]([SubResource("Resource_kte2l"), SubResource("Resource_wl5r6")])
+bindings = Array[ExtResource("2_d7vt7")]([SubResource("Resource_kte2l")])
 tracks = Array[ExtResource("4_1ewxf")]([SubResource("Resource_3gfke")])
 
 [sub_resource type="Resource" id="Resource_3ms7l"]
@@ -645,18 +635,11 @@ kind = 3
 default_value = Color(0.8, 1, 0.85, 1)
 description = "Spark colour."
 
-[sub_resource type="Resource" id="Resource_s26vp"]
-script = ExtResource("8_bj12y")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("9_npx6f")
 id = &"fx.rainofarrows_strike"
 display_name = "Rain of Arrows strike"
-params = Array[ExtResource("8_bj12y")]([SubResource("Resource_3ms7l"), SubResource("Resource_s26vp")])
+params = Array[ExtResource("8_bj12y")]([SubResource("Resource_3ms7l")])
 layers = Array[ExtResource("1_ifrj8")]([SubResource("Resource_el2x4"), SubResource("Resource_3ar37"), SubResource("Resource_ba3la"), SubResource("Resource_xt1a5"), SubResource("Resource_u8b4d"), SubResource("Resource_hn10l"), SubResource("Resource_4wx76"), SubResource("Resource_i3e0g"), SubResource("Resource_ibrv2"), SubResource("Resource_1x1s5")])
 socket = &"Base"
 tags = Array[StringName]([&"Fx.Kind.Burst"])

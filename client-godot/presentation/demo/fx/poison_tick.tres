@@ -16,11 +16,6 @@ script = ExtResource("2_b7qs6")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_kjhcg"]
-script = ExtResource("2_b7qs6")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_svuaf"]
 offsets = PackedFloat32Array(0, 0.2, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -46,7 +41,7 @@ h_frames = 4
 anim_cycles = 0.0
 random_frame = true
 id = &"bubbles"
-bindings = Array[ExtResource("2_b7qs6")]([SubResource("Resource_ueier"), SubResource("Resource_kjhcg")])
+bindings = Array[ExtResource("2_b7qs6")]([SubResource("Resource_ueier")])
 
 [sub_resource type="Resource" id="Resource_6r14g"]
 script = ExtResource("2_b7qs6")
@@ -59,11 +54,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 0.8
 
-[sub_resource type="Resource" id="Resource_ap11m"]
-script = ExtResource("2_b7qs6")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_sd00a"]
 script = ExtResource("6_oucpq")
 shader = ExtResource("7_5hhxr")
@@ -75,7 +65,7 @@ size = Vector2(1.6, 1.6)
 id = &"haze"
 space = 2
 duration = 0.8
-bindings = Array[ExtResource("2_b7qs6")]([SubResource("Resource_6r14g"), SubResource("Resource_dv0w4"), SubResource("Resource_ap11m")])
+bindings = Array[ExtResource("2_b7qs6")]([SubResource("Resource_6r14g"), SubResource("Resource_dv0w4")])
 
 [sub_resource type="Resource" id="Resource_x5rxu"]
 script = ExtResource("2_b7qs6")
@@ -109,18 +99,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Haze brightness."
 
-[sub_resource type="Resource" id="Resource_jxbrl"]
-script = ExtResource("9_a774g")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "World units the depth test sees the effect closer to the camera. Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("10_n2deo")
 id = &"fx.poison_tick"
 display_name = "Poison tick"
-params = Array[ExtResource("9_a774g")]([SubResource("Resource_dmise"), SubResource("Resource_c7ckl"), SubResource("Resource_jxbrl")])
+params = Array[ExtResource("9_a774g")]([SubResource("Resource_dmise"), SubResource("Resource_c7ckl")])
 layers = Array[ExtResource("1_k8ouc")]([SubResource("Resource_tsy22"), SubResource("Resource_sd00a"), SubResource("Resource_5jjck")])
 tags = Array[StringName]([&"Fx.Kind.Aura"])
 description = "Bubbles rising off a unit that is poisoned."

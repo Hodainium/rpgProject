@@ -18,11 +18,6 @@ script = ExtResource("2_mb0c0")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_cosfg"]
-script = ExtResource("2_mb0c0")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_gww6b"]
 offsets = PackedFloat32Array(0, 0.15, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -46,17 +41,12 @@ texture = ExtResource("4_yhqxe")
 h_frames = 8
 v_frames = 4
 id = &"column"
-bindings = Array[ExtResource("2_mb0c0")]([SubResource("Resource_1xgx7"), SubResource("Resource_cosfg")])
+bindings = Array[ExtResource("2_mb0c0")]([SubResource("Resource_1xgx7")])
 
 [sub_resource type="Resource" id="Resource_dflbl"]
 script = ExtResource("2_mb0c0")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_syvrl"]
-script = ExtResource("2_mb0c0")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_rl18e"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -74,7 +64,7 @@ amount = 30
 lifetime = 1.2
 color_ramp = SubResource("Gradient_rl18e")
 id = &"embers"
-bindings = Array[ExtResource("2_mb0c0")]([SubResource("Resource_dflbl"), SubResource("Resource_syvrl")])
+bindings = Array[ExtResource("2_mb0c0")]([SubResource("Resource_dflbl")])
 
 [sub_resource type="Resource" id="Resource_hga2c"]
 script = ExtResource("2_mb0c0")
@@ -98,11 +88,6 @@ bindings = Array[ExtResource("2_mb0c0")]([SubResource("Resource_hga2c")])
 script = ExtResource("2_mb0c0")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_kixry"]
-script = ExtResource("2_mb0c0")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Curve" id="Curve_mxs47"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
@@ -130,7 +115,7 @@ id = &"heat"
 space = 2
 socket = &"Base"
 duration = 0.7
-bindings = Array[ExtResource("2_mb0c0")]([SubResource("Resource_orbjx"), SubResource("Resource_kixry")])
+bindings = Array[ExtResource("2_mb0c0")]([SubResource("Resource_orbjx")])
 tracks = Array[ExtResource("5_eyxa8")]([SubResource("Resource_07l4n")])
 
 [sub_resource type="Resource" id="Resource_s55pg"]
@@ -161,18 +146,11 @@ kind = 3
 default_value = Color(1, 0.5, 0.15, 1)
 description = "Flame colour."
 
-[sub_resource type="Resource" id="Resource_7nssj"]
-script = ExtResource("11_64230")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("12_bvxhg")
 id = &"fx.combustion_strike"
 display_name = "Combustion strike"
-params = Array[ExtResource("11_64230")]([SubResource("Resource_gat73"), SubResource("Resource_7nssj")])
+params = Array[ExtResource("11_64230")]([SubResource("Resource_gat73")])
 layers = Array[ExtResource("1_h0vkd")]([SubResource("Resource_4g1ed"), SubResource("Resource_htoyb"), SubResource("Resource_5k0bk"), SubResource("Resource_atjqh"), SubResource("Resource_nvrl5"), SubResource("Resource_hg2ti")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "The caster ignites in a column of flame."

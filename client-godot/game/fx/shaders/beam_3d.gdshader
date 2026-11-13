@@ -11,8 +11,7 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 // @uniform intensity  brightness
 // @uniform sharpness  how thin the core is (higher = thinner)
 // @uniform ripple     how much the edges ripple (0 = smooth)
-// @uniform depth_bias world units the depth test sees the effect closer to the camera (keeps it from being cut by the unit it sits on)
-// @uniform depth_fade world units before the depth cut over which the effect fades out where it passes into the scene (at most half the bias), instead of a hard line
+// @uniform depth_fade world units in front of the scene over which the effect fades out where it passes into it (soft particles), instead of a hard line
 // @uniform fx_scene_depth the scene depth buffer, read for the depth fade (filled by the engine)
 uniform float progress = 0.0;
 uniform float time = 0.0;
@@ -23,7 +22,7 @@ uniform float intensity = 2.0;
 uniform float sharpness = 14.0;
 uniform float ripple = 0.35;
 
-#include "res://game/fx/shaders/fx_depth_bias.gdshaderinc"
+#include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
@@ -39,9 +38,6 @@ float value_noise(vec2 p) {
 }
 
 void fragment() {
-	if (fx_depth_moved()) {
-		DEPTH = fx_biased_depth(VERTEX, PROJECTION_MATRIX);
-	}
 	float x = (UV.x - 0.5) * 2.0;
 	float swell = smoothstep(0.0, 0.12, progress) * (1.0 - smoothstep(0.55, 1.0, progress));
 	float width_scale = mix(0.25, 1.0, smoothstep(0.0, 0.2, progress));

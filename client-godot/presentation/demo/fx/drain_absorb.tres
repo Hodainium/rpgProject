@@ -18,11 +18,6 @@ script = ExtResource("2_646wk")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_nxmwj"]
-script = ExtResource("2_646wk")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_2cj1x"]
 offsets = PackedFloat32Array(0, 0.3, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.9)
@@ -41,17 +36,12 @@ lifetime = 0.7
 explosiveness = 0.15
 color_ramp = SubResource("Gradient_2cj1x")
 id = &"pull"
-bindings = Array[ExtResource("2_646wk")]([SubResource("Resource_iwth7"), SubResource("Resource_nxmwj")])
+bindings = Array[ExtResource("2_646wk")]([SubResource("Resource_iwth7")])
 
 [sub_resource type="Resource" id="Resource_wqt6o"]
 script = ExtResource("2_646wk")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_qyqet"]
-script = ExtResource("2_646wk")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_541qb"]
 script = ExtResource("5_58622")
@@ -66,7 +56,7 @@ size = Vector2(3.6, 3.6)
 id = &"closing"
 space = 2
 duration = 0.5
-bindings = Array[ExtResource("2_646wk")]([SubResource("Resource_wqt6o"), SubResource("Resource_qyqet")])
+bindings = Array[ExtResource("2_646wk")]([SubResource("Resource_wqt6o")])
 
 [sub_resource type="Resource" id="Resource_l2mrr"]
 script = ExtResource("2_646wk")
@@ -78,11 +68,6 @@ script = ExtResource("2_646wk")
 property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 1.5
-
-[sub_resource type="Resource" id="Resource_jxu2p"]
-script = ExtResource("2_646wk")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Resource" id="Resource_ggwqk"]
 script = ExtResource("5_58622")
@@ -96,7 +81,7 @@ id = &"pulse"
 space = 2
 start_delay = 0.3
 duration = 0.45
-bindings = Array[ExtResource("2_646wk")]([SubResource("Resource_l2mrr"), SubResource("Resource_tib75"), SubResource("Resource_jxu2p")])
+bindings = Array[ExtResource("2_646wk")]([SubResource("Resource_l2mrr"), SubResource("Resource_tib75")])
 
 [sub_resource type="Resource" id="Resource_5ce84"]
 script = ExtResource("2_646wk")
@@ -148,18 +133,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Pulse brightness."
 
-[sub_resource type="Resource" id="Resource_grto3"]
-script = ExtResource("11_o3lhh")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("12_jjfst")
 id = &"fx.drain_absorb"
 display_name = "Drain absorb"
-params = Array[ExtResource("11_o3lhh")]([SubResource("Resource_wes5v"), SubResource("Resource_34a7c"), SubResource("Resource_grto3")])
+params = Array[ExtResource("11_o3lhh")]([SubResource("Resource_wes5v"), SubResource("Resource_34a7c")])
 layers = Array[ExtResource("1_yxyuc")]([SubResource("Resource_t3cd5"), SubResource("Resource_541qb"), SubResource("Resource_ggwqk"), SubResource("Resource_13vn5"), SubResource("Resource_uqbat")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "The element streams into a unit that absorbs it, a ring closes in, and ABSORB floats up."

@@ -24,6 +24,8 @@ func _ready() -> void:
 		# Registries are edited by hand (builders never rewrite them): this catches a forgotten line.
 		issues.append_array(FxValidator.sync_problems("res://presentation/demo/fx/", "res://presentation/demo/cues/",
 			FxManager.registry, load("res://godot_gas/cue_registry.tres") as GameplayCueRegistry))
+		# Spec vfx-stencil: stencil words and values in the shaders and materials (the game's and the designer's).
+		issues.append_array(FxValidator.stencil_problems(["res://game/fx/shaders/", "res://presentation/", "res://content/"]))
 	print("validate_content: ", root)
 	print(ContentValidator.report(issues))
 	get_tree().quit(3 if ContentValidator.error_count(issues) > 0 else 0)

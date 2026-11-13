@@ -36,11 +36,6 @@ script = ExtResource("2_uloow")
 property = "process_material:color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_npdip"]
-script = ExtResource("2_uloow")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Gradient" id="Gradient_646vv"]
 offsets = PackedFloat32Array(0, 0.15, 0.8, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
@@ -65,17 +60,12 @@ random_frame = true
 additive = false
 id = &"crystals"
 loop = true
-bindings = Array[ExtResource("2_uloow")]([SubResource("Resource_tcymb"), SubResource("Resource_npdip")])
+bindings = Array[ExtResource("2_uloow")]([SubResource("Resource_tcymb")])
 
 [sub_resource type="Resource" id="Resource_pa3tf"]
 script = ExtResource("2_uloow")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_oe1nw"]
-script = ExtResource("2_uloow")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_eveou"]
 offsets = PackedFloat32Array(0, 0.3, 1)
@@ -101,7 +91,7 @@ id = &"mist"
 socket = &"Base"
 loop = true
 min_quality = 2
-bindings = Array[ExtResource("2_uloow")]([SubResource("Resource_pa3tf"), SubResource("Resource_oe1nw")])
+bindings = Array[ExtResource("2_uloow")]([SubResource("Resource_pa3tf")])
 
 [sub_resource type="Resource" id="Resource_3e4jw"]
 script = ExtResource("8_dofah")
@@ -110,18 +100,11 @@ kind = 3
 default_value = Color(0.45, 0.88, 1, 1)
 description = "Ice colour."
 
-[sub_resource type="Resource" id="Resource_ay504"]
-script = ExtResource("8_dofah")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("9_nqd6m")
 id = &"fx.frozen"
 display_name = "Frozen"
-params = Array[ExtResource("8_dofah")]([SubResource("Resource_3e4jw"), SubResource("Resource_ay504")])
+params = Array[ExtResource("8_dofah")]([SubResource("Resource_3e4jw")])
 layers = Array[ExtResource("1_vkqjk")]([SubResource("Resource_y12nl"), SubResource("Resource_wp8fq"), SubResource("Resource_kcswc")])
 tags = Array[StringName]([&"Fx.Kind.Aura"])
 description = "A frozen unit: an ice shell, crystals on its surface and a cold mist at its feet."

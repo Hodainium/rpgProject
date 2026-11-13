@@ -19,11 +19,6 @@ script = ExtResource("2_3f2im")
 property = "material:shader_parameter/color"
 param = &"color"
 
-[sub_resource type="Resource" id="Resource_50cuy"]
-script = ExtResource("2_3f2im")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Curve" id="Curve_xowo7"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
 _data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
@@ -50,18 +45,13 @@ id = &"surge0"
 space = 2
 socket = &"Base"
 duration = 0.8
-bindings = Array[ExtResource("2_3f2im")]([SubResource("Resource_qkuod"), SubResource("Resource_50cuy")])
+bindings = Array[ExtResource("2_3f2im")]([SubResource("Resource_qkuod")])
 tracks = Array[ExtResource("5_u8j2t")]([SubResource("Resource_71fvi")])
 
 [sub_resource type="Resource" id="Resource_rytu1"]
 script = ExtResource("2_3f2im")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_vmvi6"]
-script = ExtResource("2_3f2im")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Curve" id="Curve_t8u0f"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
@@ -90,18 +80,13 @@ space = 2
 socket = &"Base"
 start_delay = 0.15
 duration = 0.8
-bindings = Array[ExtResource("2_3f2im")]([SubResource("Resource_rytu1"), SubResource("Resource_vmvi6")])
+bindings = Array[ExtResource("2_3f2im")]([SubResource("Resource_rytu1")])
 tracks = Array[ExtResource("5_u8j2t")]([SubResource("Resource_ag25j")])
 
 [sub_resource type="Resource" id="Resource_awkkc"]
 script = ExtResource("2_3f2im")
 property = "material:shader_parameter/color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_d574r"]
-script = ExtResource("2_3f2im")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Curve" id="Curve_f6upf"]
 _limits = [-360.0, 360.0, 0.0, 1.0]
@@ -130,7 +115,7 @@ space = 2
 socket = &"Base"
 start_delay = 0.3
 duration = 0.8
-bindings = Array[ExtResource("2_3f2im")]([SubResource("Resource_awkkc"), SubResource("Resource_d574r")])
+bindings = Array[ExtResource("2_3f2im")]([SubResource("Resource_awkkc")])
 tracks = Array[ExtResource("5_u8j2t")]([SubResource("Resource_a2wu4")])
 
 [sub_resource type="Resource" id="Resource_qmb7p"]
@@ -144,11 +129,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 1.2
 
-[sub_resource type="Resource" id="Resource_qagbn"]
-script = ExtResource("2_3f2im")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_yhhff"]
 script = ExtResource("3_qy1oe")
 shader = ExtResource("6_upflg")
@@ -161,7 +141,7 @@ size = Vector2(7, 7)
 id = &"rays"
 space = 2
 duration = 0.9
-bindings = Array[ExtResource("2_3f2im")]([SubResource("Resource_qmb7p"), SubResource("Resource_5y52b"), SubResource("Resource_qagbn")])
+bindings = Array[ExtResource("2_3f2im")]([SubResource("Resource_qmb7p"), SubResource("Resource_5y52b")])
 
 [sub_resource type="Resource" id="Resource_s24m6"]
 script = ExtResource("8_1mgxf")
@@ -226,18 +206,11 @@ default_value = 1.0
 max_value = 4.0
 description = "Ray brightness."
 
-[sub_resource type="Resource" id="Resource_k5k0o"]
-script = ExtResource("12_ntf8l")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("13_rnmcg")
 id = &"fx.phase_shift"
 display_name = "Phase shift"
-params = Array[ExtResource("12_ntf8l")]([SubResource("Resource_58gel"), SubResource("Resource_o5ifi"), SubResource("Resource_k5k0o")])
+params = Array[ExtResource("12_ntf8l")]([SubResource("Resource_58gel"), SubResource("Resource_o5ifi")])
 layers = Array[ExtResource("1_nhymu")]([SubResource("Resource_cuffo"), SubResource("Resource_d1spw"), SubResource("Resource_3x87y"), SubResource("Resource_yhhff"), SubResource("Resource_s24m6"), SubResource("Resource_3fjw1"), SubResource("Resource_wy333"), SubResource("Resource_d7013")])
 socket = &"Base"
 tags = Array[StringName]([&"Fx.Kind.Burst"])

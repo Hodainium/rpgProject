@@ -30,11 +30,6 @@ property = "process_material:scale_max"
 param = &"size"
 scale = 3.4
 
-[sub_resource type="Resource" id="Resource_8cdhp"]
-script = ExtResource("2_41iju")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_p7asp"]
 script = ExtResource("3_8adwu")
 size_min = 3.4
@@ -47,7 +42,7 @@ texture = ExtResource("4_moojw")
 h_frames = 8
 v_frames = 4
 id = &"fireball"
-bindings = Array[ExtResource("2_41iju")]([SubResource("Resource_w004u"), SubResource("Resource_naw78"), SubResource("Resource_tq8ao"), SubResource("Resource_8cdhp")])
+bindings = Array[ExtResource("2_41iju")]([SubResource("Resource_w004u"), SubResource("Resource_naw78"), SubResource("Resource_tq8ao")])
 
 [sub_resource type="Resource" id="Resource_mucmv"]
 script = ExtResource("2_41iju")
@@ -60,11 +55,6 @@ script = ExtResource("2_41iju")
 property = "process_material:scale_max"
 param = &"size"
 scale = 2.5
-
-[sub_resource type="Resource" id="Resource_gcvie"]
-script = ExtResource("2_41iju")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_hj4vu"]
 offsets = PackedFloat32Array(0, 0.15, 1)
@@ -89,17 +79,12 @@ v_frames = 4
 additive = false
 id = &"smoke"
 min_quality = 2
-bindings = Array[ExtResource("2_41iju")]([SubResource("Resource_mucmv"), SubResource("Resource_kcsug"), SubResource("Resource_gcvie")])
+bindings = Array[ExtResource("2_41iju")]([SubResource("Resource_mucmv"), SubResource("Resource_kcsug")])
 
 [sub_resource type="Resource" id="Resource_bic3n"]
 script = ExtResource("2_41iju")
 property = "process_material:color"
 param = &"color"
-
-[sub_resource type="Resource" id="Resource_qltag"]
-script = ExtResource("2_41iju")
-property = "draw_pass_1:material:shader_parameter/depth_bias"
-param = &"depth_bias"
 
 [sub_resource type="Gradient" id="Gradient_iip45"]
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
@@ -114,7 +99,7 @@ damping = 0.8
 amount = 30
 color_ramp = SubResource("Gradient_iip45")
 id = &"sparks"
-bindings = Array[ExtResource("2_41iju")]([SubResource("Resource_bic3n"), SubResource("Resource_qltag")])
+bindings = Array[ExtResource("2_41iju")]([SubResource("Resource_bic3n")])
 
 [sub_resource type="Resource" id="Resource_wey1u"]
 script = ExtResource("2_41iju")
@@ -127,11 +112,6 @@ property = "material:shader_parameter/intensity"
 param = &"intensity"
 scale = 0.7
 
-[sub_resource type="Resource" id="Resource_aaaon"]
-script = ExtResource("2_41iju")
-property = "material:shader_parameter/depth_bias"
-param = &"depth_bias"
-
 [sub_resource type="Resource" id="Resource_i0wnb"]
 script = ExtResource("7_35k5a")
 shader = ExtResource("8_lmkvl")
@@ -140,7 +120,7 @@ id = &"shockwave"
 space = 2
 socket = &"Base"
 duration = 0.45
-bindings = Array[ExtResource("2_41iju")]([SubResource("Resource_wey1u"), SubResource("Resource_ecub5"), SubResource("Resource_aaaon")])
+bindings = Array[ExtResource("2_41iju")]([SubResource("Resource_wey1u"), SubResource("Resource_ecub5")])
 
 [sub_resource type="Resource" id="Resource_d4bak"]
 script = ExtResource("2_41iju")
@@ -185,18 +165,11 @@ min_value = 0.3
 max_value = 3.0
 description = "Size multiplier of the fireball and smoke."
 
-[sub_resource type="Resource" id="Resource_iq1r7"]
-script = ExtResource("11_yted3")
-name = &"depth_bias"
-default_value = 0.7
-max_value = 4.0
-description = "World units the depth test sees the effect closer to the camera. Filled with the unit's radius unless the caller passes one."
-
 [resource]
 script = ExtResource("12_iguvm")
 id = &"fx.explosion"
 display_name = "Explosion"
-params = Array[ExtResource("11_yted3")]([SubResource("Resource_gnlwi"), SubResource("Resource_86d3j"), SubResource("Resource_w8skt"), SubResource("Resource_iq1r7")])
+params = Array[ExtResource("11_yted3")]([SubResource("Resource_gnlwi"), SubResource("Resource_86d3j"), SubResource("Resource_w8skt")])
 layers = Array[ExtResource("1_nmbo6")]([SubResource("Resource_p7asp"), SubResource("Resource_hj7j1"), SubResource("Resource_ehg5d"), SubResource("Resource_i0wnb"), SubResource("Resource_tmjin"), SubResource("Resource_dycuw")])
 tags = Array[StringName]([&"Fx.Kind.Burst"])
 description = "A fireball with smoke, sparks, a shockwave, a light and a shake."
