@@ -5,6 +5,17 @@
 [ext_resource type="Script" path="res://game/view/stage_mood.gd" id="3_wpew0"]
 [ext_resource type="Script" path="res://game/view/style_registry.gd" id="4_amh85"]
 [ext_resource type="Script" path="res://game/view/unit_look_rule.gd" id="5_m0vw3"]
+[ext_resource type="Script" path="res://game/view/unit_attachment.gd" id="2_b37kx"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/sword.tres" id="3_pek0f"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/kettle_helm.tres" id="17_kettle"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/kite_shield.tres" id="18_shield"][ext_resource type="Resource" path="res://presentation/demo/style/attachments/halo.tres" id="5_lijnf"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/wizard_hat.tres" id="6_6yhn0"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/top_hat.tres" id="7_jty54"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bat_wing.tres" id="8_5gk3l"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/devil_horn.tres" id="10_dngw0"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/crown.tres" id="12_p1ca3"]
+[ext_resource type="Material" path="res://presentation/demo/style/surfaces/stone.tres" id="15_stone"]
+[ext_resource type="Script" path="res://game/view/battle_formation.gd" id="16_form"]
 
 [sub_resource type="Resource" id="Resource_h2uv3"]
 script = ExtResource("1_avbba")
@@ -124,9 +135,6 @@ ssao_radius = 0.6
 glow_enabled = true
 glow_intensity = 0.9
 glow_bloom = 0.05
-fog_enabled = true
-fog_light_color = Color(0.2, 0.28, 0.32, 1)
-fog_density = 0.015
 
 [sub_resource type="Resource" id="Resource_n1le8"]
 script = ExtResource("2_jc83w")
@@ -376,9 +384,6 @@ ssao_radius = 0.6
 glow_enabled = true
 glow_intensity = 0.9
 glow_bloom = 0.05
-fog_enabled = true
-fog_light_color = Color(0.22, 0.12, 0.26, 1)
-fog_density = 0.015
 
 [sub_resource type="Resource" id="Resource_ocr8i"]
 script = ExtResource("2_jc83w")
@@ -467,10 +472,125 @@ rim_light = SubResource("Resource_0tqdd")
 floor_material = SubResource("StandardMaterial3D_tdba8")
 wall_material = SubResource("StandardMaterial3D_p0dkd")
 
+[sub_resource type="Resource" id="Resource_1p7hb"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("3_pek0f")
+socket = &"Left"
+offset = Vector3(0.08, -0.1, 0.3)
+rotation_degrees = Vector3(0, -90, -20)
+
+[sub_resource type="Resource" id="Resource_kettlehat"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("17_kettle")
+
+[sub_resource type="Resource" id="Resource_n5cye"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_kettlehat")])
+
+[sub_resource type="Resource" id="Resource_knightshield"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("18_shield")
+socket = &"Front"
+offset = Vector3(-0.2, -0.05, 0.03)
+
+[sub_resource type="Resource" id="Resource_knightlook"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_1p7hb"), SubResource("Resource_knightshield")])
+
+[sub_resource type="Resource" id="Resource_gyu0e"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("5_lijnf")
+offset = Vector3(0, 0.28, 0)
+motion = 1
+motion_speed = 0.5
+motion_amount = 0.04
+
+[sub_resource type="Resource" id="Resource_hdoby"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_gyu0e")])
+
+[sub_resource type="Resource" id="Resource_i6477"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("6_6yhn0")
+offset = Vector3(0, 0.05, 0)
+rotation_degrees = Vector3(0, 0, 6)
+
+[sub_resource type="Resource" id="Resource_wasn7"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_i6477")])
+
+[sub_resource type="Resource" id="Resource_jh0p1"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("7_jty54")
+
+[sub_resource type="Resource" id="Resource_6q8ru"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_jh0p1")])
+
+[sub_resource type="Resource" id="Resource_y4wh2"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("8_5gk3l")
+socket = &"Back"
+offset = Vector3(0.36, 0.18, -0.05)
+rotation_degrees = Vector3(0, 40, 40)
+scale = Vector3(1.4, 1.4, 1.4)
+mirror = true
+motion = 3
+motion_speed = 1.2
+motion_amount = 18.0
+
+[sub_resource type="Resource" id="Resource_x2aw2"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_y4wh2")])
+
+[sub_resource type="Resource" id="Resource_qos7m"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("10_dngw0")
+offset = Vector3(0.2, -0.04, 0.08)
+mirror = true
+
+[sub_resource type="Resource" id="Resource_rptdn"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_qos7m")])
+
+[sub_resource type="Resource" id="Resource_fun37"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("12_p1ca3")
+
+[sub_resource type="Resource" id="Resource_q38xi"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_fun37")])
+
+[sub_resource type="Resource" id="Resource_6xxrr"]
+script = ExtResource("1_avbba")
+use_color_override = true
+color_override = Color(0.36, 0.24, 0.15, 1)
+surface = ExtResource("15_stone")
+
+[sub_resource type="Resource" id="Resource_partyform"]
+script = ExtResource("16_form")
+row_sizes = PackedInt32Array(2, 2)
+row_lane_spacing = PackedFloat32Array(2, 4)
+center_z = 0.1
+
+[sub_resource type="Resource" id="Resource_enemyform"]
+script = ExtResource("16_form")
+center_z = 0.1
+
 [resource]
 script = ExtResource("4_amh85")
 default_look = SubResource("Resource_h2uv3")
-looks = Dictionary[StringName, ExtResource("1_avbba")]({})
+looks = Dictionary[StringName, ExtResource("1_avbba")]({
+&"demo.character.arcanist": SubResource("Resource_wasn7"),
+&"demo.character.bard": SubResource("Resource_6q8ru"),
+&"demo.character.cleric": SubResource("Resource_hdoby"),
+&"demo.character.warrior": SubResource("Resource_n5cye"),
+&"demo.enemy.bat": SubResource("Resource_x2aw2"),
+&"demo.enemy.golem": SubResource("Resource_6xxrr"),
+&"demo.enemy.imp": SubResource("Resource_rptdn"),
+&"demo.enemy.knight": SubResource("Resource_knightlook"),
+&"demo.enemy.lich": SubResource("Resource_q38xi")
+})
 tag_rules = Array[ExtResource("5_m0vw3")]([])
 default_mood = SubResource("Resource_v4wvm")
 moods = Dictionary[StringName, ExtResource("3_wpew0")]({
@@ -483,3 +603,5 @@ moods = Dictionary[StringName, ExtResource("3_wpew0")]({
 &"demo.chapter.vault": SubResource("Resource_ro52i"),
 &"demo.chapter.void": SubResource("Resource_evg4v")
 })
+party_formation = SubResource("Resource_partyform")
+enemy_formation = SubResource("Resource_enemyform")

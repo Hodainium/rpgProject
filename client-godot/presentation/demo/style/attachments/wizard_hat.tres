@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_fqcxr"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_d6tts"]
+
+[sub_resource type="Resource" id="Resource_cqkuq"]
+script = ExtResource("1_fqcxr")
+kind = 1
+radius_bottom = 0.46
+radius_top = 0.46
+height = 0.03
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+segments = 32
+position = Vector3(0, 0.015, 0)
+color = Color(0.16, 0.18, 0.48, 1)
+roughness = 0.75
+
+[sub_resource type="Resource" id="Resource_nvesh"]
+script = ExtResource("1_fqcxr")
+kind = 6
+radius_bottom = 0.27
+radius_top = 0.012
+profile = PackedVector2Array()
+curve = PackedVector3Array(0, 0.02, 0, 0, 0.55, 0, 0, 0.62, -0.22)
+segments = 16
+color = Color(0.16, 0.18, 0.48, 1)
+
+[sub_resource type="Resource" id="Resource_klvwm"]
+script = ExtResource("1_fqcxr")
+kind = 1
+radius_bottom = 0.275
+radius_top = 0.27
+height = 0.06
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+segments = 32
+position = Vector3(0, 0.06, 0)
+color = Color(0.95, 0.75, 0.25, 1)
+metallic = 0.7
+roughness = 0.35
+tintable = false
+
+[resource]
+script = ExtResource("2_d6tts")
+display_name = "Wizard hat"
+parts = Array[ExtResource("1_fqcxr")]([SubResource("Resource_cqkuq"), SubResource("Resource_nvesh"), SubResource("Resource_klvwm")])

@@ -268,8 +268,12 @@ func test_validator_codes() -> void:
 	registry.looks[&"fixture.unit.brute"] = null
 	registry.moods[&"no.such.chapter"] = _mood("x")
 	registry.tag_rules.append(UnitLookRule.new())
-	var codes: Array = []
+	var quiet: Array = []
 	for issue in StyleValidator.validate(registry, content, "test"):
+		quiet.append(issue.code)
+	check(not quiet.has("style_unit_without_look"), "units without a look are not reported unless asked (validate_content)")
+	var codes: Array = []
+	for issue in StyleValidator.validate(registry, content, "test", true):
 		codes.append(issue.code)
 	for code in ["style_look_unknown_unit", "style_look_empty", "style_mood_unknown_chapter", "style_rule_incomplete",
 			"style_unit_without_look"]:
@@ -335,3 +339,293 @@ func test_demo_registry_loads_and_validates() -> void:
 			if issue.is_error():
 				variant_errors.append(str(issue))
 		eq(variant_errors, [], "%s has no errors" % path)
+
+
+# --- Round 2: attachments as data (spec cube-style 3.3) ------------------------------------------------------------------
+
+func _part(kind: int) -> AttachmentPart:
+	var part := AttachmentPart.new()
+	part.kind = kind
+	match kind:
+		AttachmentPart.Kind.LATHE:
+			part.profile = PackedVector2Array([Vector2(0.2, 0), Vector2(0.3, 0), Vector2(0.3, 0.1), Vector2(0.2, 0.1)])
+		AttachmentPart.Kind.EXTRUDE:
+			part.profile = PackedVector2Array([Vector2(0, 0), Vector2(0.5, 0.2), Vector2(0.4, -0.1), Vector2(0.2, 0.05), Vector2(0.1, -0.1)])
+			part.size = Vector3(0, 0, 0.03)
+		AttachmentPart.Kind.TUBE:
+			part.curve = PackedVector3Array([Vector3.ZERO, Vector3(0.2, 0.2, 0), Vector3(0.1, 0.4, 0)])
+			part.radius_top = 0.01
+		AttachmentPart.Kind.TORUS:
+			part.radius_top = 0.15
+	return part
+
+
+func _shape(parts: Array) -> AttachmentShape:
+	var shape := AttachmentShape.new()
+	shape.display_name = "test"
+	for part in parts:
+		shape.parts.append(part)
+	return shape
+
+
+func _attachment(shape: AttachmentShape, socket: StringName, mirror := false) -> UnitAttachment:
+	var attachment := UnitAttachment.new()
+	attachment.shape = shape
+	attachment.socket = socket
+	attachment.mirror = mirror
+	return attachment
+
+
+func _motion(view: UnitAnimator) -> AttachmentMotionDriver:
+	if view.attachments_node() == null:
+		return null
+	for child in view.attachments_node().get_children():
+		if child is AttachmentMotionDriver:
+			return child
+	return null
+
+
+func test_every_part_kind_builds_and_caches_its_mesh() -> void:
+	AttachmentMesh.clear_cache()
+	for kind in AttachmentPart.Kind.values():
+		var part := _part(kind)
+		eq(part.problem(), "", "kind %s is valid" % kind)
+		var mesh := AttachmentMesh.mesh_for(part)
+		check(mesh != null and mesh.get_aabb().size.length() > 0.0, "kind %s builds a mesh with a size" % kind)
+		check(AttachmentMesh.mesh_for(_part(kind)) == mesh, "an equal part shares the cached mesh (kind %s)" % kind)
+	var before := AttachmentMesh.cache_size()
+	var changed := _part(AttachmentPart.Kind.TUBE)
+	changed.radius_bottom = 0.3
+	check(AttachmentMesh.mesh_for(changed) != null and AttachmentMesh.cache_size() == before + 1, "an edit makes a new mesh")
+	var broken := AttachmentPart.new()
+	broken.kind = AttachmentPart.Kind.TUBE
+	check(broken.problem() != "" and AttachmentMesh.mesh_for(broken) == null, "a tube with no curve builds nothing")
+	var flat_torus := AttachmentPart.new()
+	flat_torus.kind = AttachmentPart.Kind.TORUS
+	check(flat_torus.problem() != "" and AttachmentMesh.mesh_for(flat_torus) == null, "a torus with equal radii builds nothing")
+
+
+func test_extruded_and_lathed_faces_point_outward() -> void:
+	for kind in [AttachmentPart.Kind.EXTRUDE, AttachmentPart.Kind.LATHE, AttachmentPart.Kind.TUBE]:
+		var mesh := AttachmentMesh.mesh_for(_part(kind)) as ArrayMesh
+		var arrays := mesh.surface_get_arrays(0)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var wrong := 0
+		for t in range(0, vertices.size(), 3):
+			# Godot's front faces are clockwise from outside: (b - a) x (c - a) points inward, against the normal.
+			var face := (vertices[t + 1] - vertices[t]).cross(vertices[t + 2] - vertices[t])
+			if face.length() > 0.0000001 and face.dot(normals[t] + normals[t + 1] + normals[t + 2]) > 0.0:
+				wrong += 1
+		eq(wrong, 0, "kind %s: every triangle is wound clockwise around its outward normal" % kind)
+
+
+func test_ring_parts_repeat_around_y() -> void:
+	var spike := _part(AttachmentPart.Kind.CYLINDER)
+	spike.ring_count = 7
+	spike.ring_radius = 0.3
+	var placed := spike.transforms()
+	eq(placed.size(), 7, "seven copies")
+	for transform in placed:
+		check(is_equal_approx(Vector2(transform.origin.x, transform.origin.z).length(), 0.3), "each on the ring")
+	var node := _shape([spike]).build()
+	eq(node.get_child_count(), 7, "the shape builds one node per copy")
+	node.free()
+
+
+func test_tint_replaces_only_tintable_parts() -> void:
+	var cloth := _part(AttachmentPart.Kind.BOX)
+	cloth.color = Color.BLUE
+	var gem := _part(AttachmentPart.Kind.SPHERE)
+	gem.color = Color.GREEN
+	gem.tintable = false
+	gem.emission = 2.0
+	eq(cloth.material(Color.RED).albedo_color, Color.RED, "a tintable part takes the tint")
+	eq(gem.material(Color.RED).albedo_color, Color.GREEN, "a fixed part keeps its colour")
+	check(gem.material().emission_enabled and gem.material().emission == Color.GREEN, "emission glows in the part's colour")
+
+
+func test_mirror_and_motion() -> void:
+	var attachment := _attachment(_shape([_part(AttachmentPart.Kind.BOX)]), &"Back", true)
+	attachment.offset = Vector3(0.3, 0, 0)
+	var pivots: Array = []
+	var holder := attachment.build(Vector3(0, 0, -0.4), pivots)
+	eq(pivots.size(), 2, "a mirrored attachment has two pivots")
+	var mirror := holder.get_node("Mirror") as Node3D
+	check(mirror != null and mirror.scale == Vector3(-1, 1, 1), "the copy sits under a mirror across X")
+	eq((pivots[0][0] as Node3D).position, Vector3(0.3, 0, -0.4), "socket + offset")
+	holder.free()
+	var rest := Transform3D.IDENTITY
+	attachment.motion = UnitAttachment.Motion.BOB
+	attachment.motion_amount = 0.1
+	attachment.motion_speed = 1.0
+	check(is_equal_approx(attachment.animate(rest, 0.25).origin.y, 0.1), "a bob is at its top a quarter cycle in")
+	attachment.motion = UnitAttachment.Motion.FLAP
+	attachment.motion_amount = 30.0
+	var swing := absf(rad_to_deg(attachment.animate(rest, 0.25).basis.get_euler().z))
+	check(is_equal_approx(swing, 30.0), "a flap swings its full amount around Z (%.2f)" % swing)
+	attachment.motion = UnitAttachment.Motion.NONE
+	eq(attachment.animate(rest, 0.25), rest, "no motion stays at rest")
+
+
+func test_unit_view_wears_its_attachments_stamped() -> void:
+	var registry := _registry()
+	var look := UnitLook.new()
+	look.attachments.append(_attachment(_shape([_part(AttachmentPart.Kind.SPHERE)]), &"Top"))
+	var moving := _attachment(_shape([_part(AttachmentPart.Kind.BOX)]), &"Front", true)
+	moving.motion = UnitAttachment.Motion.BOB
+	look.attachments.append(moving)
+	registry.looks[&"u.dressed"] = look
+	UnitStyle.use(registry, "test")
+	var view: UnitAnimator = UnitAnimator.instantiate_for(_unit(&"u.dressed"), load(PROBE_VIEW) as PackedScene)
+	host.add_child(view)
+	var worn := view.attachments_node()
+	check(worn != null, "the view wears its look's attachments")
+	eq(worn.get_children().filter(func(n: Node) -> bool: return not n is AttachmentMotionDriver).size(), 2, "one holder per attachment")
+	eq(view.socket_position(&"Top"), Vector3(0, 0.4, 0), "Top is the top face of the 0.8 cube")
+	eq(view.socket_position(&"Front"), Vector3(0, 0, 0.4), "Front faces the camera (+Z)")
+	check(_motion(view) != null and _motion(view).is_processing(), "a moving attachment runs its own motion driver")
+	check(not view.is_processing(), "the view's own processing is left alone")
+	view.stencil_value = StencilIds.values_for(1)[0]
+	var stamped := 0
+	var meshes := 0
+	for node in view.attachments_node().find_children("*", "MeshInstance3D", true, false):
+		meshes += 1
+		var paint := (node as MeshInstance3D).material_override as BaseMaterial3D
+		if paint != null and paint.stencil_mode == BaseMaterial3D.STENCIL_MODE_CUSTOM:
+			stamped += 1
+	check(meshes == 3 and stamped == meshes, "every attachment mesh carries the unit's stencil stamp (%d of %d)" % [stamped, meshes])
+	UnitStyle.use(null)
+	view.restyle()
+	check(view.attachments_node() == null, "with no look it wears nothing (and its motion driver goes with it)")
+	view.queue_free()
+
+
+func test_attachments_face_opponents_and_go_grey_when_dead() -> void:
+	var registry := _registry()
+	var look := UnitLook.new()
+	var glowing := _part(AttachmentPart.Kind.SPHERE)
+	glowing.color = Color.GREEN
+	glowing.emission = 2.0
+	var flapping := _attachment(_shape([glowing]), &"Back", true)
+	flapping.motion = UnitAttachment.Motion.FLAP
+	look.attachments.append(flapping)
+	registry.looks[&"u.dressed"] = look
+	UnitStyle.use(registry, "test")
+	var view: UnitAnimator = UnitAnimator.instantiate_for(_unit(&"u.dressed"), load(PROBE_VIEW) as PackedScene)
+	host.add_child(view)
+	eq(view.attachments_node().rotation_degrees.y, 90.0, "out of battle (and the party) faces +X, toward the enemies")
+	view.unit_id = &"E2"
+	eq(view.attachments_node().rotation_degrees.y, -90.0, "an enemy faces -X, toward the party")
+	view.unit_id = &"P1"
+	eq(view.attachments_node().rotation_degrees.y, 90.0, "a party member faces +X")
+	eq(view.socket_position(&"Right"), Vector3(-0.4, 0, 0), "Right is the unit's own right (-X while facing +Z)")
+	var before := view.attachments_node()
+	view.stencil_value = StencilIds.values_for(1)[0]
+	check(view.attachments_node() == before, "a new stencil value repaints, it does not rebuild")
+	check(view.effect_stencil_value() == StencilIds.NONE, "the probe body takes no stamp, and the attachments' stamps do not change that")
+	view.set_dead(true)
+	var mesh := view.attachments_node().find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
+	var paint := mesh.material_override as StandardMaterial3D
+	check(paint.albedo_color == Color(0.35, 0.35, 0.35) and not paint.emission_enabled, "a dead unit's attachments are grey and dark")
+	check(not _motion(view).is_processing(), "and still")
+	view.set_dead(false)
+	paint = mesh.material_override as StandardMaterial3D
+	check(paint.albedo_color == Color.GREEN and paint.emission_enabled and _motion(view).is_processing(), "revived: its colours and motion back")
+	view.queue_free()
+
+
+func test_battle_formation_fills_rows_front_first() -> void:
+	var enemies := BattleFormation.new()
+	var five := enemies.positions(5, 1)
+	eq(five.size(), 5, "five places")
+	check(is_equal_approx(five[0].x, 2.6) and is_equal_approx(five[1].x, 2.6), "two in the front row")
+	check(is_equal_approx(five[2].x, 4.4) and is_equal_approx(five[3].x, 4.4) and is_equal_approx(five[4].x, 4.4), "three in the back row")
+	check(is_equal_approx(five[0].z + five[1].z, -0.8) and is_equal_approx(five[3].z, -0.4), "each row centred on center_z")
+	check(enemies.positions(1, 1)[0].is_equal_approx(Vector3(2.6, 0, -0.4)), "a lone boss stands front centre")
+	var party := BattleFormation.new()
+	party.row_sizes = PackedInt32Array([2, 2])
+	var four := party.positions(4, -1)
+	check(four[0].x < 0 and four[2].x < four[0].x, "the party stands on the left, its back row further left")
+	party.row_lane_spacing = PackedFloat32Array([2.0, 4.0])
+	var staggered := party.positions(4, -1)
+	check(is_equal_approx(staggered[1].z - staggered[0].z, 2.0) and is_equal_approx(staggered[3].z - staggered[2].z, 4.0),
+		"each row can have its own lane spacing (a wider back row)")
+	check(is_equal_approx(enemies.positions(8, 1)[7].x, 6.2), "big groups repeat the last row size further back")
+	var registry := _registry()
+	UnitStyle.use(registry, "test")
+	eq(UnitStyle.battle_positions(false, 3), [] as Array[Vector3], "no formation: the rooms' spawn cells")
+	registry.enemy_formation = enemies
+	eq(UnitStyle.battle_positions(false, 3).size(), 3, "a formation places every unit")
+
+
+func test_a_surface_replaces_the_plain_colour() -> void:
+	var registry := _registry()
+	var stone := StandardMaterial3D.new()
+	stone.albedo_color = Color(0.4, 0.38, 0.35)
+	stone.roughness = 0.95
+	var look := UnitLook.new()
+	look.surface = stone
+	registry.looks[&"u.stone"] = look
+	UnitStyle.use(registry, "test")
+	var view: UnitAnimator = UnitAnimator.instantiate_for(_unit(&"u.stone"), load(PROBE_VIEW) as PackedScene)
+	host.add_child(view)
+	var body := view.body_material(Color.RED)
+	check(body != stone and body.albedo_color == Color.RED, "a copy of the surface, tinted by the unit's colour")
+	check(is_equal_approx(body.roughness, 0.95), "the surface keeps its own roughness over the default look's")
+	check(body.rim_enabled, "and still gets the look's rim")
+	view.is_dead = true
+	eq(view.body_material(Color(0.35, 0.35, 0.35)).albedo_color, Color(0.35, 0.35, 0.35), "a dead unit is plain grey")
+	view.queue_free()
+
+
+func test_face_sockets_stay_on_the_surface_at_any_facing_and_rest_when_dead() -> void:
+	var registry := _registry()
+	registry.facing_degrees = 45.0
+	var look := UnitLook.new()
+	var bobbing := _attachment(_shape([_part(AttachmentPart.Kind.BOX)]), &"Front")
+	bobbing.motion = UnitAttachment.Motion.BOB
+	bobbing.motion_amount = 0.2
+	look.attachments.append(bobbing)
+	registry.looks[&"u.turned"] = look
+	UnitStyle.use(registry, "test")
+	var view: UnitAnimator = UnitAnimator.instantiate_for(_unit(&"u.turned"), load(PROBE_VIEW) as PackedScene)
+	host.add_child(view)
+	var holder := view.attachments_node()
+	var pivot := holder.find_children("Pivot", "Node3D", true, false)[0] as Node3D
+	var on_body := holder.transform * pivot.position  # in the view's (body's) frame
+	check(is_equal_approx(maxf(absf(on_body.x), absf(on_body.z)), 0.4), "at 45° the Front socket sits on the cube's surface: %s" % on_body)
+	var rest := pivot.transform
+	_motion(view)._process(0.25)  # a quarter cycle in: lifted
+	check(not pivot.transform.is_equal_approx(rest), "the bob moved it")
+	view.set_dead(true)
+	check(pivot.transform.is_equal_approx(rest), "a dead unit's attachments go back to rest, not frozen mid-motion")
+	view.queue_free()
+
+
+func test_attachment_lists_are_not_merged() -> void:
+	var registry := _registry()
+	var hat := _attachment(_shape([_part(AttachmentPart.Kind.BOX)]), &"Top")
+	registry.default_look.attachments.append(hat)
+	eq(registry.look_for(_unit(&"u.plain")).attachments, [hat], "the default look's attachments")
+	var own := _attachment(_shape([_part(AttachmentPart.Kind.SPHERE)]), &"Front")
+	var exact := UnitLook.new()
+	exact.attachments.append(own)
+	registry.looks[&"u.own"] = exact
+	eq(registry.look_for(_unit(&"u.own")).attachments, [own], "an exact look's list wins whole")
+
+
+func test_validator_attachment_codes() -> void:
+	var registry := StyleRegistry.new()
+	var look := UnitLook.new()
+	look.attachments.append(null)
+	look.attachments.append(_attachment(_shape([_part(AttachmentPart.Kind.BOX)]), &"Elbow"))
+	var broken := AttachmentPart.new()
+	broken.kind = AttachmentPart.Kind.LATHE
+	look.attachments.append(_attachment(_shape([broken]), &"Top"))
+	registry.default_look = look
+	var codes: Array = []
+	for issue in StyleValidator.validate(registry, null, "test"):
+		codes.append(issue.code)
+	for code in ["style_attachment_shape_missing", "style_socket_unknown", "style_part_invalid"]:
+		check(codes.has(code), "%s is reported: %s" % [code, codes])

@@ -19,6 +19,31 @@ extends Resource
 ## Null = the base's, else today's camera (CameraFraming.today()); each framing on its own.
 @export var explore_camera: CameraFraming
 @export var battle_camera: CameraFraming
+## Spec cube-style 3.4: how far a unit's attachments turn toward its opponents, in degrees (90 = fully sideways, 45 = a three-quarter
+## view toward the camera); negative = unset (the base's, else 90).
+@export_range(-1.0, 90.0) var facing_degrees: float = -1.0
+
+
+## Spec cube-style 3.10: where the party and the enemies stand in a battle; null = the base's, else the rooms' own spawn cells.
+@export var party_formation: BattleFormation
+@export var enemy_formation: BattleFormation
+
+
+## The formation of one side through the base chain, or null (the rooms' spawn cells).
+func formation(party: bool) -> BattleFormation:
+	for registry in chain():
+		var found: BattleFormation = registry.party_formation if party else registry.enemy_formation
+		if found != null:
+			return found
+	return null
+
+
+## The facing turn through the base chain (90 when no registry sets one).
+func facing() -> float:
+	for registry in chain():
+		if registry.facing_degrees >= 0.0:
+			return registry.facing_degrees
+	return 90.0
 
 
 ## This registry and its bases, nearest first; stops at a loop (the validator reports it as style_base_cycle).

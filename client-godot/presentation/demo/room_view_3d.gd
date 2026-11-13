@@ -82,10 +82,18 @@ func _build() -> void:
 	var room: RoomDefinition = run.content.rooms.get(data["room"])
 	_rig.apply(UnitStyle.mood_for(run.state.chapter_id))  # spec cube-style 3.6: the chapter's mood
 	_build_box(data["doors"])
+	# Spec cube-style 3.10: the party stands in its formation out of battle too (slot order), else on the room's spawn cells.
+	var members: Array = run.state.party.duplicate()
+	members.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["slot"]) < int(b["slot"]))
+	var spots := UnitStyle.battle_positions(true, members.size())
 	for member in run.state.party:
 		var character: UnitDefinition = run.content.units.get(member["character"])
-		var view := _unit(_spawn(room, RoomPlacement.Kind.PLAYER_SPAWN, member["slot"], Vector2i(2, member["slot"] + 1)),
-			character)
+		var order := members.find(member)
+		var placed := order >= 0 and order < spots.size()  # the formation spot first, the room's spawn cell only without one
+		var view := _unit(Vector2i.ZERO if placed else _spawn(room, RoomPlacement.Kind.PLAYER_SPAWN, member["slot"],
+			Vector2i(2, member["slot"] + 1)), character)
+		if placed:
+			view.position = spots[order]
 		view.set_stats("%s\nHP %d" % [_name(character), member["hp"] / 100])
 		view.set_dead(not member["alive"])
 		# Same id as in battle, so a starting battle replaces this cube instead of drawing a second one on top.
@@ -118,10 +126,14 @@ func _on_battle_started(battle: Battle) -> void:
 	_views.clear()
 	var run := _main.run
 	var room: RoomDefinition = run.content.rooms.get(run.state.map.cells[run.state.current_cell]["room"])
+	var spots := _formation_spots(battle)  # spec cube-style 3.10: the style's battle formation, else the room's spawn cells
 	for unit in battle.units():
 		var kind := RoomPlacement.Kind.PLAYER_SPAWN if unit.is_party() else RoomPlacement.Kind.ENEMY_SPAWN
 		var fallback := Vector2i(2 if unit.is_party() else 10, unit.slot + 1)
-		var view := _unit(_spawn(room, kind, unit.slot, fallback), unit.definition)
+		var placed: bool = spots.has(unit.unit_id)  # the formation spot first, the room's spawn cell only without one
+		var view := _unit(Vector2i.ZERO if placed else _spawn(room, kind, unit.slot, fallback), unit.definition)
+		if placed:
+			view.position = spots[unit.unit_id]
 		_views[unit.unit_id] = view
 		if view is UnitAnimator:
 			view.unit_id = unit.unit_id  # spec vfx-framework: effects find a unit's view by this id
@@ -134,6 +146,18 @@ func _on_battle_started(battle: Battle) -> void:
 	battle.damage_dealt.connect(_on_damage_dealt)
 	battle.turn_started.connect(func(_id, _turn): _refresh_stats())
 	_refresh_stats()
+
+
+## Spec cube-style 3.10: unit id -> its position in the style's battle formation, each side in slot order; empty with no formation.
+func _formation_spots(battle: Battle) -> Dictionary:
+	var spots := {}
+	for party in [true, false]:
+		var side: Array = battle.units().filter(func(unit: BattleUnit) -> bool: return unit.is_party() == party)
+		side.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)
+		var placed := UnitStyle.battle_positions(party, side.size())
+		for i in placed.size():
+			spots[side[i].unit_id] = placed[i]
+	return spots
 
 
 ## Spec animation-sets: `death` (after any cast the unit is still playing) or `revive`.
@@ -180,8 +204,14 @@ func restyle() -> void:
 				child.material_override = _rig.floor_material()
 			&"wall":
 				child.material_override = _rig.wall_material()
-	for view in _views.values():
-		if is_instance_valid(view) and view is UnitAnimator:
+	var spots := _formation_spots(_battle)  # a variant may bring another formation
+	for id in _views:
+		var view = _views[id]
+		if not is_instance_valid(view):
+			continue
+		if spots.has(id):
+			view.position = spots[id]
+		if view is UnitAnimator:
 			view.restyle()
 
 

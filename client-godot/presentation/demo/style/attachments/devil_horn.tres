@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_biba6"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_nl4sy"]
+
+[sub_resource type="Resource" id="Resource_f378g"]
+script = ExtResource("1_biba6")
+kind = 6
+radius_bottom = 0.075
+radius_top = 0.004
+profile = PackedVector2Array()
+curve = PackedVector3Array(0, 0, 0, 0.22, 0.19, 0, 0.08, 0.46, -0.1)
+segments = 14
+color = Color(0.12, 0.06, 0.05, 1)
+roughness = 0.35
+
+[resource]
+script = ExtResource("2_nl4sy")
+display_name = "Devil horn"
+parts = Array[ExtResource("1_biba6")]([SubResource("Resource_f378g")])

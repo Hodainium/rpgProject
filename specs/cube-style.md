@@ -51,7 +51,7 @@ extruded outline). **The user liked the direction.** Findings carried into the r
   units tighter); the shots include both.
 - To fix in round 2: the Warrior's crest reads as a handle (try a plume or a helmet), the Bat's wings are small and hidden behind
   it, the top hat catches too much rim light; metal needs a low `metallic` with no reflection probe (it renders dark).
-- The preview's code (the builders' first draft) is the starting point for `build_attachments` (3.5).
+- The preview's code is the starting point for `AttachmentMesh` (3.3, 3.5).
 
 The experiment ends when the user says the look is done. The spec is then synced to what was kept (`/sync-spec cube-style`).
 
@@ -80,34 +80,73 @@ so it must not reference meshes or textures (the reason `UnitDefinition.view` is
 | `size` | `Vector3` | unset = the 0.8 cube | Later rounds only |
 | `animation_set` | `UnitAnimationSet` | the view's | Later rounds only |
 
-### 3.3 `UnitAttachment` (Resource)
-| Field | Type | Meaning |
-|---|---|---|
-| `scene` | `PackedScene` | The object: a primitive-built, voxel or pack scene (3.5); any `MeshInstance3D`s inside it |
-| `socket` | `StringName` | Where it sits: `Top`, `Front`, `Back`, `Left`, `Right`, `Base` (3.4) |
-| `offset`, `rotation_degrees`, `scale` | `Vector3` | Placement relative to the socket |
-| `mirror` | `bool` | Also place a mirrored copy on the opposite side (a pair of wings, two horns) |
-| `color` | `Color` | alpha 0 = keep the scene's materials; else tint them |
-| `emission` | `float` | 0 = none |
-| `motion` | `AttachmentMotion` | none, `bob`, `spin`, `orbit`, `flap` (an angle swing), with speed and amount |
+### 3.3 Attachments as data (round 2; decided 2026-11-13, option A)
+An attachment is **data built at run time**, not a baked mesh: the designer edits it in the inspector, and a new attachment is a new
+`.tres`. Meshes are built on first use and cached by their parameters (an edit makes a new mesh). Baking stays possible later: a
+tool can save the cached meshes as mesh files (for speed or an export) without changing the data.
 
-Attachments are children of `Body`, so every unit animation moves them. Their materials go through `mark_stencil()` like the body's,
-so an effect "over own unit" also draws over them (spec `vfx-stencil`). Motion is on a presentation clock, never in a hash.
+`AttachmentShape` (Resource, `presentation/demo/style/attachments/<name>.tres`): `display_name` and `parts: Array[AttachmentPart]`.
+
+`AttachmentPart` (Resource): one primitive.
+| Field | Meaning |
+|---|---|
+| `kind` | `BOX`, `CYLINDER` (a cone when one radius is 0), `SPHERE`, `TORUS`, `PRISM`, `LATHE` (a 2D profile spun around Y), `TUBE` (a tapering tube along a quadratic curve), `EXTRUDE` (a 2D outline with thickness) |
+| `size` | `BOX` / `PRISM` size; `EXTRUDE`'s depth is `size.z` |
+| `radius_bottom`, `radius_top`, `height` | `CYLINDER`; `SPHERE` uses `radius_bottom`; `TORUS` uses `radius_bottom` (inner) and `radius_top` (outer); `TUBE` tapers from `radius_bottom` to `radius_top` |
+| `profile` | `PackedVector2Array`: `LATHE`'s profile (x = radius, y = height) or `EXTRUDE`'s outline |
+| `curve` | `PackedVector3Array`: `TUBE`'s three control points (start, bend, end) |
+| `segments` | Sides of round shapes, steps of a tube |
+| `position`, `rotation_degrees`, `scale` | Placement inside the attachment |
+| `ring_count`, `ring_radius` | Repeat the part `ring_count` times around Y at `ring_radius` (a crown's spikes); 0 = once |
+| `color`, `metallic`, `roughness`, `emission` | Its `StandardMaterial3D`; `emission` > 0 glows (and blooms) in its colour |
+| `tintable` | Whether a `UnitAttachment`'s tint replaces this part's colour (a gem stays its own colour) |
+
+`UnitAttachment` (Resource, in a `UnitLook`):
+| Field | Meaning |
+|---|---|
+| `shape` | The `AttachmentShape` |
+| `socket` | Where it sits: `Center`, `Top`, `Base`, `Front`, `Back`, `Left`, `Right` (3.4) |
+| `offset`, `rotation_degrees`, `scale` | Placement relative to the socket |
+| `mirror` | Also a copy mirrored across the unit's middle (X): a pair of wings, two horns |
+| `use_tint`, `tint` | Replaces the colour of the shape's tintable parts (one hat shape, many colours) |
+| `motion`, `motion_speed`, `motion_amount` | `NONE`, `BOB` (up and down), `SPIN` (around Y), `FLAP` (a swing around Z, mirrored for pairs) |
+
+`UnitLook.attachments` is unset when empty: an exact look's list wins whole over a rule's, a rule's over the default's (lists are
+not merged). Attachments are children of `Body`, so every unit animation moves them. Every part's material goes through
+`mark_stencil()` like the body's, so an effect "over own unit" also draws over them (spec `vfx-stencil`). Motion runs on the
+view's own presentation clock, never in a hash.
 
 ### 3.4 Body and sockets
 - **Body mesh:** a plain `BoxMesh` at the look's size. The cubes stay unbevelled (user, 2026-11-12: "for now"); a bevel
   (`SurfaceTool`, proven by the preview) is a possible later round, not built.
 - **Material:** `StandardMaterial3D` with `rim_enabled`; no custom shader, so `mark_stencil()` stamps it as today.
-- **Sockets:** today `SocketCenter`, `SocketHit`, `SocketTop`, `SocketBase` (`FxSocket`). Added: `Front`, `Back`, `Left`, `Right`
-  (the face centres). All follow the body's size; the size lives in the mesh, never `Body.scale` (animations key the scale); the
+- **Sockets:** today `SocketCenter`, `SocketHit`, `SocketTop`, `SocketBase` (`FxSocket`, for effects). Attachments use
+  `UnitAnimator.socket_position()` from `body_size` (default the 0.8 cube), in the unit's own frame: `Center`, `Top`, `Base` and the
+  face centres `Front` (+Z), `Back`, and the unit's own `Left` (+X) and `Right` (-X); no scene edit.
+- **Facing (user, 2026-11-13: the helmet faced the wrong way, the enemies faced the screen):** a unit's attachments turn toward its
+  opponents: the party (and every unit outside a battle) faces +X (90° around Y), enemies (battle ids `E…`) face -X (-90°).
+  The body is a cube, so only the attachments turn.
+- **One detail per cube (user, 2026-11-13):** a look wears one attachment (a mirrored pair counts as one). Party characters
+  wear hats and never hold items; enemies their signature detail (the Bat its wings, the Imp its horns).
+- **Death:** a dead unit's attachments turn grey and stop moving, like its body; a revive restores them.
+- **Surface (user, 2026-11-13: "an accessory can be just to change the texture of the cube"):** `UnitLook.surface`, a
+  `StandardMaterial3D` template (noise textures, triplanar; still stampable) that replaces the plain colour; the Golem wears
+  `presentation/demo/style/surfaces/stone.tres` (rock plates: a cellular-noise normal map and a light shade variation, tinted by the unit's own colour, so the Golem stays orange-brown; a first grey noise stone read as "just a noise texture", and glowing cracks washed the cube white) as its one detail. The
+  meteor's `lava_rock` shader was not reused: its lumps push vertices along normals, which splits a cube's edges, and a custom
+  shader takes no stencil stamp.
+
+### 3.10 Battle formation (user, 2026-11-13: units too close together)
+`BattleFormation` (Resource, `game/view/`): `row_sizes` (front row first; the last size repeats), `front_x` (distance from the
+centre line to the front row), `row_spacing`, `lane_spacing`, `center_z`. `StyleRegistry.party_formation` / `enemy_formation`
+(null = the rooms' own spawn cells, today's layout). `RoomView3D` places each side's battle units in slot order. The demo: enemies
+2 in front and 3 behind, 1.8 apart; the party 2 and 2 with its front row moved right (x -4 → -2.6) and a wider back row
+(`row_lane_spacing` 2.0 then 4.0, staggered like the rooms' old spawn cells: the user found a perfect grid odd). Presentation only: the battle
+itself has no positions; rooms keep their spawn cells for exploration. All follow the body's size; the size lives in the mesh, never `Body.scale` (animations key the scale); the
   bottom stays at y = −0.4, so floor rings keep their place. `fx_radius` stays derived from the body only.
 
 ### 3.5 Where attachment scenes come from (rounds 2 and 3 decide)
-- **(a) Primitives (round 2):** `game/tools/build_attachments.tscn` builds each object in code: engine primitive meshes (`CylinderMesh`,
-  `PrismMesh`, `SphereMesh`, `TorusMesh`, `BoxMesh`) plus three `SurfaceTool` generators proven by the preview: a **lathe** (a 2D
-  profile spun around the vertical axis: hat crowns, crown bands, helmets), a **tapered tube along a curve** (horns, plumes, a bent
-  wizard-hat cone, tails) and an **extruded outline** (wings, blades). It saves `presentation/demo/style/attachments/<name>.tscn` with
-  its meshes; nothing is generated at runtime. No CSG.
+- **(a) Primitives (round 2):** `AttachmentShape` data (3.3), built at run time by `AttachmentMesh` (`game/view/`): engine primitive
+  meshes plus three `SurfaceTool` generators proven by the preview (lathe, tube, extrude). No builder, no CSG.
 - **(b) Downloaded models (round 3):** single models (Poly Pizza: about 20 crowns, 43 hats, 52 helmets, 2026-11-12; no CC0 artist
   found ships a headwear pack: KayKit Adventurers bakes its hats into the characters) or packs: (glTF) copied in from `H:\assets\<pack>\` by `game/tools/import_models.tscn -- --from <folder> --pick
   <file>[,...]` into `presentation/demo/style/attachments/<pack>/`, never overwriting (`--force`). Only a licence that allows
@@ -134,7 +173,7 @@ fails when a folder under `attachments/<pack>/` has no line in `CREDITS.md`.
 - Console `style list` (each unit's look and where it came from: exact, rule, default), `style show <unit>`, `style mood [<chapter>]`
   (apply a mood to the current room), `style reload`, `style check`.
 - Validator in `validate_content.tscn`: `style_look_unknown_unit`, `style_mood_unknown_chapter`, `style_socket_unknown`,
-  `style_attachment_scene_missing`, `style_attachment_unstampable` (a material `mark_stencil` cannot stamp), `style_pack_uncredited`.
+  `style_attachment_shape_missing`, `style_part_invalid` (a lathe or outline with fewer than 2/3 points, a tube without 3 curve points), `style_pack_uncredited` (round 3).
 - **Shots** come from the real game: a window `dev_run` (`--window --local --manual --shots <dir>`) starts a run, `goto boss`, then
   switches with `style registry <variant>` / `style mood <chapter>` and takes `shot <name> [seconds]` (the delay, added here, waits
   out the camera move). No separate stage scene (built 2026-11-12: the real room view, HUD and battle line-up are what the user
@@ -178,6 +217,12 @@ demo registry:
 | Console | `style list / show / mood / reload / check` |
 
 Plus the existing suites unchanged: `tools/godot_tests.sh` and `tools/dotnet_test.sh`.
+
+## 6b. Open items
+- **Fog and effects (found in the 2026-11-13 playtest):** the Crypt and Coven moods had fog, and Godot's fog tinted the
+  transparent parts of every effect quad, so effects showed as pale boxes. The fog was removed from both moods. Fog can come
+  back once the effect materials opt out of it (`render_mode fog_disabled` in the effect shaders, `disable_fog` on the
+  particles' draw materials): a change to the VFX system (spec `vfx-framework`), to be proposed on its own.
 
 ## 7. Open questions for the user
 - **Q1** Round 3's models: which ones from Poly Pizza (CC0 preferred; CC-BY needs a CREDITS line per author)?

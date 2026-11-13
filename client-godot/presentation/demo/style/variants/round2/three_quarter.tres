@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="StyleRegistry" format=3]
+
+[ext_resource type="Resource" path="res://presentation/demo/style/style_registry.tres" id="1_base"]
+[ext_resource type="Script" path="res://game/view/style_registry.gd" id="2_reg"]
+
+[resource]
+script = ExtResource("2_reg")
+base = ExtResource("1_base")
+facing_degrees = 45.0

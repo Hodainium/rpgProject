@@ -1,0 +1,67 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_va324"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_ax0ko"]
+
+[sub_resource type="Resource" id="Resource_rkxh4"]
+script = ExtResource("1_va324")
+size = Vector3(0.1, 0.62, 0.03)
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+position = Vector3(0, 0.2, 0)
+color = Color(0.82, 0.85, 0.9, 1)
+metallic = 0.45
+roughness = 0.3
+
+[sub_resource type="Resource" id="Resource_e1nw7"]
+script = ExtResource("1_va324")
+kind = 4
+size = Vector3(0.1, 0.12, 0.03)
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+position = Vector3(0, 0.57, 0)
+color = Color(0.82, 0.85, 0.9, 1)
+metallic = 0.45
+roughness = 0.3
+
+[sub_resource type="Resource" id="Resource_3fe7g"]
+script = ExtResource("1_va324")
+size = Vector3(0.26, 0.045, 0.06)
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+position = Vector3(0, -0.12, 0)
+color = Color(0.95, 0.75, 0.3, 1)
+metallic = 0.5
+roughness = 0.3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_8dh81"]
+script = ExtResource("1_va324")
+kind = 1
+radius_bottom = 0.025
+radius_top = 0.025
+height = 0.16
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+segments = 12
+position = Vector3(0, -0.22, 0)
+color = Color(0.35, 0.22, 0.12, 1)
+roughness = 0.8
+tintable = false
+
+[sub_resource type="Resource" id="Resource_rjd5v"]
+script = ExtResource("1_va324")
+kind = 2
+radius_bottom = 0.04
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+segments = 16
+position = Vector3(0, -0.31, 0)
+color = Color(0.95, 0.75, 0.3, 1)
+roughness = 0.4
+tintable = false
+
+[resource]
+script = ExtResource("2_ax0ko")
+display_name = "Sword"
+parts = Array[ExtResource("1_va324")]([SubResource("Resource_rkxh4"), SubResource("Resource_e1nw7"), SubResource("Resource_3fe7g"), SubResource("Resource_8dh81"), SubResource("Resource_rjd5v")])

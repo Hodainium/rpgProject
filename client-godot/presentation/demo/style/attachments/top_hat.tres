@@ -1,0 +1,59 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_bgyx4"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_jk0ph"]
+
+[sub_resource type="Resource" id="Resource_6ofk3"]
+script = ExtResource("1_bgyx4")
+kind = 1
+radius_bottom = 0.36
+radius_top = 0.36
+height = 0.03
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+segments = 32
+position = Vector3(0, 0.015, 0)
+color = Color(0.08, 0.08, 0.1, 1)
+roughness = 0.5
+
+[sub_resource type="Resource" id="Resource_3fwk7"]
+script = ExtResource("1_bgyx4")
+kind = 1
+radius_bottom = 0.25
+radius_top = 0.22
+height = 0.36
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+segments = 32
+position = Vector3(0, 0.2, 0)
+color = Color(0.08, 0.08, 0.1, 1)
+roughness = 0.5
+
+[sub_resource type="Resource" id="Resource_ka6av"]
+script = ExtResource("1_bgyx4")
+kind = 1
+radius_bottom = 0.226
+radius_top = 0.226
+height = 0.06
+profile = PackedVector2Array()
+curve = PackedVector3Array()
+segments = 32
+position = Vector3(0, 0.07, 0)
+color = Color(0.75, 0.12, 0.3, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_las81"]
+script = ExtResource("1_bgyx4")
+kind = 6
+radius_bottom = 0.035
+radius_top = 0.005
+profile = PackedVector2Array()
+curve = PackedVector3Array(0.2, 0.08, 0.04, 0.32, 0.3, 0, 0.22, 0.5, -0.12)
+segments = 12
+color = Color(1, 0.85, 0.3, 1)
+tintable = false
+
+[resource]
+script = ExtResource("2_jk0ph")
+display_name = "Top hat"
+parts = Array[ExtResource("1_bgyx4")]([SubResource("Resource_6ofk3"), SubResource("Resource_3fwk7"), SubResource("Resource_ka6av"), SubResource("Resource_las81")])

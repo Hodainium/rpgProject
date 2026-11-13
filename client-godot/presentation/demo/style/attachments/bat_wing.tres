@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_fx12p"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_2hvuw"]
+
+[sub_resource type="Resource" id="Resource_k0nkx"]
+script = ExtResource("1_fx12p")
+kind = 7
+size = Vector3(0, 0, 0.025)
+profile = PackedVector2Array(0, 0, 0.24, 0.21, 0.5, 0.29, 0.72, 0.19, 0.62, 0.08, 0.56, -0.06, 0.45, 0.03, 0.35, -0.13, 0.26, -0.02, 0.13, -0.11, 0.05, -0.05)
+curve = PackedVector3Array()
+color = Color(0.32, 0.24, 0.47, 1)
+roughness = 0.7
+
+[resource]
+script = ExtResource("2_2hvuw")
+display_name = "Bat wing"
+parts = Array[ExtResource("1_fx12p")]([SubResource("Resource_k0nkx")])
