@@ -982,6 +982,10 @@ script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s3a13")])
 surface = ExtResource("s3_9")
 effect = ExtResource("s3_10")
+effect_params = {
+"color": Color(0.95, 0.15, 0.6, 1),
+"speed": 1.0
+}
 
 [resource]
 script = ExtResource("4_amh85")
