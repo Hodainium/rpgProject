@@ -10,6 +10,9 @@ var _room_root: Node3D
 var _views: Dictionary = {}  # unit id ("P1", "E2") -> unit view
 var _battle: Battle
 var _gate: ViewGate
+## A rebuild is waiting for the end of this frame (_queue_build); the party celebrates after it.
+var _build_queued: bool = false
+var _celebrate: bool = false
 ## Spec cube-style: the chapter's mood (environment and lights; with no style registry, today's one light) and the camera.
 var _rig: StageRig
 var _camera: Camera3D
@@ -47,9 +50,9 @@ func _on_battle_prepared(_recorder: ActionRecorder, gate: ViewGate) -> void:
 
 func _bind(run: RunController) -> void:
 	UnitStyle.explore_framing().apply_to(_camera)  # spec cube-style 3.9: a new run never starts in a battle framing
-	run.floor_entered.connect(func(_floor): _build())
-	run.room_entered.connect(func(_cell): _build())
-	run.room_cleared.connect(func(_cell): _build())
+	run.floor_entered.connect(func(_floor): _queue_build())
+	run.room_entered.connect(func(_cell): _queue_build())
+	run.room_cleared.connect(func(_cell): _queue_build())
 	run.party_changed.connect(_on_party_changed)
 	run.battle_started.connect(_on_battle_started)
 	run.battle_finished.connect(_on_battle_finished)
@@ -57,14 +60,34 @@ func _bind(run: RunController) -> void:
 
 func _on_party_changed() -> void:
 	if _battle == null:
-		_build()
+		_queue_build()
 
 
 func _on_battle_finished(outcome: String) -> void:
 	_battle = null
 	UnitStyle.explore_framing().tween_to(_camera, CAMERA_SECONDS)  # spec cube-style 3.9
+	_celebrate = outcome == Battle.VICTORY
+	_queue_build()
+
+
+## Rebuilds the room once, at the end of this frame: a won battle fires battle_finished, party_changed (rewards, XP, drops)
+## and room_cleared in one frame, which rebuilt the whole room five times (playtest fix 2026-11-13, the battle-end hitch).
+## The one rebuild reads the final state; nothing is drawn in between.
+func _queue_build() -> void:
+	if _build_queued:
+		return
+	_build_queued = true
+	_build_now.call_deferred()
+
+
+func _build_now() -> void:
+	_build_queued = false
+	if _battle != null:  # a battle started in the same frame: its own views are up, the room waits
+		_celebrate = false
+		return
 	_build()
-	if outcome == Battle.VICTORY:  # spec animation-sets: the living party celebrates
+	if _celebrate:  # spec animation-sets: the living party celebrates
+		_celebrate = false
 		for id in _views:
 			if String(id).begins_with("P") and _views[id].has_method("celebrate"):
 				_views[id].celebrate()

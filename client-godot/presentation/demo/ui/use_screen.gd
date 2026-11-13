@@ -33,7 +33,7 @@ func on_pushed(payload: Dictionary) -> void:
 
 
 func bind(context: UIContext) -> void:
-	context.on_run(self, &"party_changed", func(): refresh.call_deferred())
+	context.on_run(self, &"party_changed", func(): queue_refresh())
 
 
 func handles_back() -> bool:

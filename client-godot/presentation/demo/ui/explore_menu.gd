@@ -15,7 +15,7 @@ extends UIScreen
 
 func bind(context: UIContext) -> void:
 	for signal_name in [&"party_changed", &"floor_entered", &"room_entered"]:
-		context.on_run(self, signal_name, func(_a = null): refresh.call_deferred())
+		context.on_run(self, signal_name, func(_a = null): queue_refresh())
 
 
 func refresh() -> void:

@@ -40,7 +40,7 @@ func on_pushed(payload: Dictionary) -> void:
 
 
 func bind(context: UIContext) -> void:
-	context.on_run(self, &"party_changed", func(): refresh.call_deferred())
+	context.on_run(self, &"party_changed", func(): queue_refresh())
 	%Equip.pressed.connect(_on_equip)
 	%TakeOff.pressed.connect(_on_take_off)
 	%Cancel.pressed.connect(_close_menu)

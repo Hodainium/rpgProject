@@ -7,7 +7,7 @@ extends UIScreen
 
 func bind(context: UIContext) -> void:
 	for signal_name in [&"event_page_shown", &"party_changed"]:
-		context.on_run(self, signal_name, func(_a = null, _b = null): refresh.call_deferred())
+		context.on_run(self, signal_name, func(_a = null, _b = null): queue_refresh())
 
 
 func refresh() -> void:
