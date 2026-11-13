@@ -24,6 +24,12 @@
 [ext_resource type="Resource" path="res://presentation/demo/fx/fire_ring.tres" id="24_fire"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/beak_mask.tres" id="25_plague"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/shard_orbit.tres" id="26_shatter"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/bubble_ring.tres" id="27_bubbles"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/frost_ring.tres" id="28_frost"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/holy_ground.tres" id="29_holy"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/arcane_runes.tres" id="30_runes"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/golden_glow.tres" id="31_golden"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/shard_cracks.tres" id="32_cracks"]
 
 [sub_resource type="Resource" id="Resource_h2uv3"]
 script = ExtResource("1_avbba")
@@ -514,7 +520,10 @@ motion_amount = 0.04
 
 [sub_resource type="Resource" id="Resource_hdoby"]
 script = ExtResource("1_avbba")
+use_color_override = true
+color_override = Color(0.94, 0.94, 0.92, 1)
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_gyu0e")])
+effect = ExtResource("29_holy")
 
 [sub_resource type="Resource" id="Resource_i6477"]
 script = ExtResource("2_b37kx")
@@ -525,6 +534,7 @@ rotation_degrees = Vector3(0, 0, 6)
 [sub_resource type="Resource" id="Resource_wasn7"]
 script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_i6477")])
+effect = ExtResource("30_runes")
 
 [sub_resource type="Resource" id="Resource_jh0p1"]
 script = ExtResource("2_b37kx")
@@ -533,6 +543,7 @@ shape = ExtResource("7_jty54")
 [sub_resource type="Resource" id="Resource_6q8ru"]
 script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_jh0p1")])
+effect = ExtResource("31_golden")
 
 [sub_resource type="Resource" id="Resource_y4wh2"]
 script = ExtResource("2_b37kx")
@@ -609,6 +620,7 @@ shape = ExtResource("21_cryo")
 [sub_resource type="Resource" id="Resource_cryo"]
 script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_cryo_att")])
+effect = ExtResource("28_frost")
 
 [sub_resource type="Resource" id="Resource_pyro_att"]
 script = ExtResource("2_b37kx")
@@ -617,6 +629,7 @@ shape = ExtResource("22_pyro")
 [sub_resource type="Resource" id="Resource_pyro"]
 script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_pyro_att")])
+effect = ExtResource("24_fire")
 
 [sub_resource type="Resource" id="Resource_ember_att"]
 script = ExtResource("2_b37kx")
@@ -636,6 +649,7 @@ socket = &"Front"
 [sub_resource type="Resource" id="Resource_plague"]
 script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_plague_att")])
+effect = ExtResource("27_bubbles")
 
 [sub_resource type="Resource" id="Resource_shatter_att"]
 script = ExtResource("2_b37kx")
@@ -647,6 +661,7 @@ motion_speed = 0.15
 [sub_resource type="Resource" id="Resource_shatter"]
 script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_shatter_att")])
+effect = ExtResource("32_cracks")
 
 [resource]
 script = ExtResource("4_amh85")

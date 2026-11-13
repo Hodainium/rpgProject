@@ -1,0 +1,88 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_binding"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_particles"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/smoke_sheet.png" id="4_smoke"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/shard_sheet.png" id="5_shard"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="6_param"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="7_def"]
+
+[sub_resource type="Resource" id="Resource_mist_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_mist"]
+offsets = PackedFloat32Array(0, 0.3, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.45, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_mist"]
+script = ExtResource("3_particles")
+size_min = 0.6
+size_max = 0.9
+spread = 30.0
+speed_min = 0.05
+speed_max = 0.15
+gravity = Vector3(0, 0.1, 0)
+emission_ring_radius = 0.55
+emission_offset = Vector3(0, -0.36, 0)
+soft_distance = 0.4
+amount = 10
+lifetime = 2.0
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_mist")
+texture = ExtResource("4_smoke")
+h_frames = 4
+v_frames = 4
+id = &"mist"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_mist_color")])
+
+[sub_resource type="Resource" id="Resource_flakes_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_flakes"]
+offsets = PackedFloat32Array(0, 0.15, 0.8, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.9, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_flakes"]
+script = ExtResource("3_particles")
+size_min = 0.07
+size_max = 0.14
+spread = 15.0
+speed_min = 0.2
+speed_max = 0.4
+gravity = Vector3(0, 0.25, 0)
+spin_min = -90.0
+spin_max = 90.0
+emission_ring_radius = 0.58
+emission_offset = Vector3(0, -0.34, 0)
+amount = 14
+lifetime = 1.6
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_flakes")
+texture = ExtResource("5_shard")
+h_frames = 4
+v_frames = 2
+id = &"flakes"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_flakes_color")])
+
+[sub_resource type="Resource" id="Resource_color"]
+script = ExtResource("6_param")
+name = &"color"
+kind = 3
+default_value = Color(0.6, 0.92, 1, 1)
+description = "Frost colour."
+
+[resource]
+script = ExtResource("7_def")
+id = &"fx.frost_ring"
+display_name = "Frost ring"
+params = Array[ExtResource("6_param")]([SubResource("Resource_color")])
+layers = Array[ExtResource("1_layer")]([SubResource("Resource_mist"), SubResource("Resource_flakes")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "Cold mist on the floor around a unit with ice shards drifting up (the Cryomancer's look, spec cube-style 6a)."
