@@ -232,6 +232,129 @@ demo registry:
 
 Plus the existing suites unchanged: `tools/godot_tests.sh` and `tools/dotnet_test.sh`.
 
+## 6a. Round 4: the roll-out design sheet (draft 2026-11-13, awaiting the user's approval)
+
+The looks for the 36 units that have none yet (round 2 dressed Warrior, Cleric, Arcanist, Bard, Bat, Fire Imp, Knight, Lich,
+Golem). Rules (3.4, memory `cube-style-one-detail`): **one detail per cube** (a mirrored pair or a ring of copies counts as one);
+party characters wear **headwear** and never hold items; enemies get one signature detail: headwear, a held item, something on the
+back or front, or a **surface** (`UnitLook.surface`). Each unit has a first proposal (**A**) and an alternative (**B**); the user picks
+A, B or a change. Every detail is primitive data (3.3); "reuse" means an existing `AttachmentShape` with a tint, so look-alike
+details share one shape (memory `reuse-vfx-parameterize`). Colours come from the unit's `display_color` unless noted.
+
+**Review (user, 2026-11-13):** set by set in a demo room, in a live window the user closes (memory `live-preview-window`); A and
+B are both built and shown side by side, and the user picks, rejects or asks for a change per unit before the next set is built. The party set first, then the enemies chapter by chapter.
+
+### Set P: the party (7)
+| Unit | Colour | A | B |
+|---|---|---|---|
+| Ranger | forest green | Feathered cap: a peaked hunter's cap (extruded side outline) with a long red feather (tube) | A pulled-up hood (lathe cowl) |
+| Bulwark | khaki brass | Great helm: a flat-topped bucket helm with a cross-shaped eye slit, brass | Horned helm: a round helm with two short horns (`devil_horn` reused, ivory) |
+| Cryomancer | ice blue | Frost crown: tall uneven ice shards (prism ring), pale cyan, faint glow | A frosted hood with an icicle fringe |
+| Pyromancer | orange-red | A floating flame above the head (teardrop lathe, emissive, `BOB`), like the Cleric's halo | A pointed hood whose tip burns (emissive cone) |
+| Ember Knight | coral red | Visored sallet with a flame plume (emissive tubes on the crest) | Kettle helm (Warrior's, reused) with an ember plume; risks reading as the Warrior |
+| Plaguewright | acid green | Plague-doctor beak mask on the front face (long cone, leather brown, two round lenses) | Wide-brimmed plague hat (lathe), dark leather |
+| Shatterweaver | rose | A ring of glass shards orbiting the head (prism ring, glass pink, `SPIN`) | A crystal tiara (still, low) |
+
+Cryomancer and Shatterweaver both use crystals: the Cryomancer's stand still and upright in a crown; the Shatterweaver's are loose
+and turn.
+
+### Set 1: Cellar and Crypt (6)
+| Unit | Colour | A | B |
+|---|---|---|---|
+| Slime | green | **Surface:** gooey: glossy (low roughness, clearcoat), strong rim, a light subsurface tint (user's note) | The same, really see-through (see the catch below) |
+| Bog Toad | olive | **Surface:** spotted and slimy: dark cellular spots on the colour, wet low roughness (user's example) | A throat sac on the front (sphere, pale) |
+| Frost Wisp | pale cyan | **Surface:** frosted glow: emission in its own colour, strong rim | A wispy tail curling up from the back (tapered tube, emissive, `BOB`) |
+| Shaman | orchid | Held totem staff: a crooked staff topped with a small skull and two feathers | A feathered headdress (ring of feather shapes) |
+| Rat King (boss) | brown | A long knotted rat tail from the back (tube, pink); tells it apart from the Golem's identical brown | A crooked, tilted crown (`crown` reused, tarnished bronze) |
+| Bone Warden (boss) | bone white | Curling ram horns (new curled-tube horn, ivory) | A ribcage on the front (a row of curved tubes) |
+
+**The Slime's catch:** `mark_stencil()` skips alpha-transparent materials (`TRANSPARENCY_ALPHA` is not in the opaque pass), so a
+see-through Slime would lose "draw over own unit" effects and use the plain depth test. A keeps it opaque and fakes the goo with
+gloss, rim and subsurface. B (real transparency) needs either dithered alpha (`TRANSPARENCY_ALPHA_HASH`, opaque pass, stampable;
+grainy) or a change to the stencil system, proposed on its own. A wobble (squash) cannot go on `Body.scale` (animations key it):
+it would be a new motion or a vertex shader, not in this sheet.
+**Decided (user, 2026-11-13):** A first (opaque fake goo); if it does not convince, real transparency through a stencil-system
+change is considered next.
+
+### Set 2: Forge (5)
+| Unit | Colour | A | B |
+|---|---|---|---|
+| Cinder Hound | orange | Dog ears (`pointed_ear` reused, charcoal) | **Surface:** ember crust: dark plates with a faint orange glow in the seams (kept dim: the Golem's glowing cracks washed the cube white) |
+| Smelter | rust orange | Held ladle: a long handle with a bowl of glowing metal (emissive) | A chimney on the back |
+| Anvil Guard | iron grey | An anvil on its head (extruded anvil outline, dark iron) | A held smith's hammer |
+| Forgemaster (boss) | firebrick | Held great forge hammer (box head, long handle, iron) | A welding visor on the front |
+| Brass Colossus (boss) | brass gold | A big gear on the back, turning (torus + ring of teeth, `SPIN`) | **Surface:** riveted brass plates (like the Golem's stone, metal plates) |
+
+### Set 3: Hollow (6)
+| Unit | Colour | A | B |
+|---|---|---|---|
+| Gutter Maw | moss green | A jaw on the front face: two rows of teeth (cone rings), ivory | A wide lower lip and tongue |
+| Leech | dark red | A round sucker mouth on the front (torus with a ring of tiny teeth) | **Surface:** glossy, banded (stripes) |
+| Vein Weaver | crimson | Spider legs: four bent legs a side (tubes, mirrored) | **Surface:** a red vein network |
+| Left Heart (boss) | red | Arteries from the top: two or three thick curved tubes (one shape for all three hearts) | **Surface:** veined flesh |
+| Right Heart (boss) | royal blue | The same arteries, tinted blue | The same surface, blue |
+| Mother Heart (boss) | magenta | The arteries, larger and more of them (ring copies) | The arteries and a pulse |
+
+A heartbeat (a `PULSE` motion: a scale beat on the attachment) would need a fourth `UnitAttachment.Motion`; not in the sheet unless
+asked.
+
+### Set 4: Cathedral and Vault (6)
+| Unit | Colour | A | B |
+|---|---|---|---|
+| Choir Seraph | cream white | Feathered wings (new extruded outline with a scalloped edge, mirrored, `FLAP`); the bat wing stays the Bat's | Two pairs of small wings |
+| Penitent Knight | slate | A crown of thorns (torus with a ring of thorn cones, dark wood) | A held censer on a chain |
+| Hallowed Judge (boss) | white | Held balance scales (a bar, two pans on chains, gold) | A tall mitre (extruded outline, gold trim) |
+| Gilded Mimic | gold | A chest lid on top, open, with a row of teeth; the lid chomps (`FLAP` around its hinge) | A tongue out of the front |
+| Vault Sentry | steel blue | One large lens eye on the front (rim cylinder + glowing ice-blue sphere; it drains Ice) | A held halberd |
+| The Collector (boss) | dark gold | A loot sack on the back (lathe sack, a few coins on top) | A monocle on the front |
+
+### Set 5: Coven and Void (6)
+| Unit | Colour | A | B |
+|---|---|---|---|
+| Cultist | purple | A deep pointed hood (lathe cowl) | A held ritual dagger |
+| Bound Demon | dark red | Chains: two links of chain wrapped around the body (torus rings) and a broken shackle | Big curled horns (Bone Warden's ram horns, tinted black); risks reading as the Imp |
+| High Witch (boss) | indigo | A wide-brimmed witch hat with a buckle, much larger than the Arcanist's | A crescent moon floating behind the head (extruded outline, `BOB`) |
+| Void Wraith | midnight blue | A tattered shroud from the base (jagged extruded skirt, `BOB`) | Two glowing eyes (`glow_eye` reused) |
+| Abyssal Hulk | black | Two glowing violet eyes (`glow_eye` reused): on a black cube the eyes carry it | A row of spikes down the back |
+| The Nameless (boss) | dark teal | A void halo: a dark ring tilted behind the head, a faint violet glow, slowly turning (`SPIN`) | **Surface:** a starfield (dark, sparse emissive specks) |
+
+### New shapes and code this sheet needs (choosing all A)
+- About 25 new `AttachmentShape`s (the reuses: `pointed_ear`, `glow_eye` ×2, `devil_horn` only in B options); 6 new surfaces
+  (Slime goo, Toad spots, Wisp frost glow, plus B options).
+- No new system code for the A column. New code only if picked: a `PULSE` motion (hearts), real transparency for the Slime
+  (dithered alpha or a stencil change), a body wobble.
+- Q3 (the props) is answered below for keys and armor; items wait for their own slice.
+
+### Set K: pickups on the floor (user, 2026-11-13)
+Today every pickup is a small cube with a `Label3D` (`presentation/demo/room_view_3d.gd` `_prop`): items gold, armor silver, events
+cyan "?". **A key for sale shows as a gold cube named "?"** (the shop slot's id is neither an item nor equipment). In this slice:
+| Prop | A | B |
+|---|---|---|
+| Key (shop slot, and a key drop if it shows on the floor) | A key (ring + shaft + bit, extruded outline, gold metal), turning slowly (`SPIN`), labelled "Key" with its price | The golden key's look tinted brass |
+| Armor, one icon per slot | A simple 3D icon floating and turning, by the piece's `Equipment.Slot.*` tag: **Head** a helm, **Body** a breastplate, **Arms** a gauntlet, **Legs** greaves/a boot, **Accessory** a ring with a gem, **Weapon** a sword (`sword` reused); `BOB` + `SPIN` | One floating loot bag for every piece (Dark Souls style), the slot shown by its label only |
+| Chest (wooden, gilded) | Three states of one shape: **closed**, **open and filled** (the lid up, a glow and the reward showing), **open and empty** (the lid up, dark inside); the gilded chest tinted gold with metal bands | One closed chest and one open chest, no filled state |
+
+**Armor in its rarity's hue (user, 2026-11-13):** every armor icon is tinted by the piece's `Item.Rarity.*` tag (all 33 demo pieces
+have one), with the UI's rarity colours (`ui_theme.tres`: Common light grey, Rare blue, Epic violet, Legendary amber) kept in one
+rarity → colour map in `StyleRegistry`. Like the Dark Souls pickups (references in `H:\assets\references\ds-items\`), the icon
+glows softly in that hue with a few sparkles (an `FxDefinition` with a `color` parameter, reused for every rarity). It also gets
+the floor items' **rarity outline** (roadmap 5b2, references `H:\assets\references\ror\`): a silhouette outline in the rarity
+colour (likely an inverted-hull `next_pass` material; props are not units, so no stencil stamp is needed), built here once and
+reused by the item cards.
+
+**Chests (user, 2026-11-13):** a chest is never in a room today: a drop goes to the chest inventory (spec `keys-and-gear`) and is
+opened from the menu. The user wants chests on the floor, opened where they lie: a rule change (run state, hash, the logged
+`open_chest`, the bots), so it is its own slice (roadmap 5a5 `floor-chests`, right after this one; a chest works like a shop). This slice only draws the three chest states, ready
+for it.
+
+The content's slots are Weapon, Head, Body, Arms, Legs and Accessory (there is no Feet slot: a boot stands for Legs). The icons are
+`AttachmentShape`s too, picked by a slot-tag → shape map in `StyleRegistry` (GAS-first: the tag the piece already has). Items stay
+as today until slice 5b2 `item-cards` (floating cards on the floor, after `card-ui`). Event "?" props stay as they are.
+
+**No props during a fight (user, 2026-11-13; fixed the same day):** an event or room that starts a battle kept its props on the
+stage (the event's cyan "?" cube sat in the middle of the fight). `RoomView3D` hides its props when a battle starts; the rebuild
+after the battle shows what the room holds then, so a reward appears only after the fight.
+
 ## 6b. Open items
 - **Fog and effects (found in the 2026-11-13 playtest):** the Crypt and Coven moods had fog, and Godot's fog tinted the
   transparent parts of every effect quad, so effects showed as pale boxes. The fog was removed from both moods. Fog can come
@@ -239,8 +362,8 @@ Plus the existing suites unchanged: `tools/godot_tests.sh` and `tools/dotnet_tes
   particles' draw materials): a change to the VFX system (spec `vfx-framework`), to be proposed on its own.
 
 ## 7. Open questions for the user
-- **Q1** Round 3's models: which ones from Poly Pizza (CC0 preferred; CC-BY needs a CREDITS line per author)?
-- **Q2** In-game credits: a small "Credits" entry in Settings, or the repo and README only? (CC0 needs none; it matters once
-  game-icons arrive in 5b.)
-- **Q3** The props (pedestal items, shop slots, the event "?") are small cubes too: include them in the roll-out rounds, or leave
-  them for 5b, where items get their card icons?
+All answered (user, 2026-11-13):
+- **Q1** Round 3's models: **dropped.** Primitives only: every detail is primitive data (3.3), so the import tool, the model packs
+  and `style_pack_uncredited` (3.5 (b), 3.7, 3.8) are not built in this slice.
+- **Q2** Credits: **`CREDITS.md` in the repo and a small Credits entry on the Settings screen.**
+- **Q3** Props: keys, armor and chests in this slice (6a Set K); items in 5b2 `item-cards`; event "?" props unchanged.
