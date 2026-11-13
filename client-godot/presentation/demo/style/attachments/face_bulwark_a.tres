@@ -1,0 +1,84 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.048
+segments = 18
+position = Vector3(0.13, 0.1, 0)
+scale = Vector3(1, 1.1, 0.4)
+color = Color(0.06, 0.04, 0.05, 1)
+roughness = 0.15
+emission = 0
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.048
+segments = 18
+position = Vector3(-0.13, 0.1, 0)
+scale = Vector3(1, 1.1, 0.4)
+color = Color(0.06, 0.04, 0.05, 1)
+roughness = 0.15
+emission = 0
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.0154
+segments = 10
+position = Vector3(0.1468, 0.1192, 0.0182)
+scale = Vector3(1, 1, 0.5)
+color = Color(1, 1, 1, 1)
+emission = 1
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.0154
+segments = 10
+position = Vector3(-0.1468, 0.1192, 0.0182)
+scale = Vector3(1, 1, 0.5)
+color = Color(1, 1, 1, 1)
+emission = 1
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.17, 0.06, 0.025)
+position = Vector3(0.13, 0.2, 0.005)
+rotation_degrees = Vector3(0, 0, 10)
+color = Color(0.06, 0.04, 0.05, 1)
+roughness = 0.7
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.17, 0.06, 0.025)
+position = Vector3(-0.13, 0.2, 0.005)
+rotation_degrees = Vector3(0, 0, -10)
+color = Color(0.06, 0.04, 0.05, 1)
+roughness = 0.7
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.18, 0.025, 0.02)
+position = Vector3(0, -0.08, 0)
+color = Color(0.25, 0.06, 0.08, 1)
+roughness = 0.7
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Bulwark face A"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6")])

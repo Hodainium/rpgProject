@@ -1,0 +1,60 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.16
+segments = 24
+position = Vector3(0, -0.05, 0)
+scale = Vector3(0.5, 1.25, 1)
+color = Color(0.72, 0.45, 0.2, 1)
+roughness = 0.5
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.04
+radius_top = 0.04
+height = 0.012
+segments = 16
+position = Vector3(-0.08, -0.02, 0)
+rotation_degrees = Vector3(0, 0, 90)
+color = Color(0.15, 0.08, 0.04, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.04, 0.38, 0.06)
+position = Vector3(-0.04, 0.3, 0)
+color = Color(0.3, 0.17, 0.08, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.04, 0.1, 0.07)
+position = Vector3(-0.03, 0.52, -0.03)
+rotation_degrees = Vector3(-30, 0, 0)
+color = Color(0.3, 0.17, 0.08, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.004, 0.55, 0.03)
+position = Vector3(-0.082, 0.18, 0)
+color = Color(0.9, 0.9, 0.85, 1)
+metallic = 0.6
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Lute"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4")])

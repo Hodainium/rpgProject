@@ -110,6 +110,110 @@
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/black_hole.tres" id="s5_24"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/void_shards.tres" id="s5_25"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/void_smoke.tres" id="s5_26"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_warrior_b.tres" id="pf_warrior"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_sword.tres" id="pi_warrior"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_cleric_b.tres" id="pf_cleric"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_sun_staff.tres" id="pi_cleric"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_arcanist_a.tres" id="pf_arcanist"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_spellbook.tres" id="pi_arcanist"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_bard_a.tres" id="pf_bard"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_lute.tres" id="pi_bard"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_ranger_d2.tres" id="pf_ranger"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_bow.tres" id="pi_ranger"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_bulwark_a.tres" id="pf_bulwark"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_round_shield.tres" id="pi_bulwark"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_cryomancer_a.tres" id="pf_cryomancer"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_ice_staff.tres" id="pi_cryomancer"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_pyromancer_a.tres" id="pf_pyromancer"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_shatterweaver_a.tres" id="pf_shatterweaver"]
+
+[sub_resource type="Resource" id="Resource_pf_warrior"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_warrior")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_warrior"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_warrior")
+socket = &"Right"
+offset = Vector3(-0.14, -0.1, 0)
+
+[sub_resource type="Resource" id="Resource_pf_cleric"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_cleric")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_cleric"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_cleric")
+socket = &"Right"
+offset = Vector3(-0.14, -0.15, 0)
+
+[sub_resource type="Resource" id="Resource_pf_arcanist"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_arcanist")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_arcanist"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_arcanist")
+socket = &"Right"
+offset = Vector3(-0.12, -0.08, 0)
+scale = Vector3(1.35, 1.35, 1.35)
+
+[sub_resource type="Resource" id="Resource_pf_bard"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_bard")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_bard"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_bard")
+socket = &"Right"
+offset = Vector3(-0.16, -0.05, 0)
+
+[sub_resource type="Resource" id="Resource_pf_ranger"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_ranger")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_ranger"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_ranger")
+socket = &"Right"
+offset = Vector3(-0.14, 0, 0)
+
+[sub_resource type="Resource" id="Resource_pf_bulwark"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_bulwark")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_bulwark"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_bulwark")
+socket = &"Right"
+offset = Vector3(-0.08, 0, 0)
+
+[sub_resource type="Resource" id="Resource_pf_cryomancer"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_cryomancer")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_cryomancer"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_cryomancer")
+socket = &"Right"
+offset = Vector3(-0.14, -0.12, 0)
+
+[sub_resource type="Resource" id="Resource_pf_pyromancer"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_pyromancer")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pf_shatterweaver"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_shatterweaver")
+socket = &"Front"
 
 [sub_resource type="Resource" id="Resource_h2uv3"]
 script = ExtResource("1_avbba")
@@ -579,7 +683,7 @@ shape = ExtResource("17_kettle")
 
 [sub_resource type="Resource" id="Resource_n5cye"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_kettlehat")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_kettlehat"), SubResource("Resource_pf_warrior"), SubResource("Resource_pi_warrior")])
 
 [sub_resource type="Resource" id="Resource_knightshield"]
 script = ExtResource("2_b37kx")
@@ -602,7 +706,7 @@ motion_amount = 0.04
 script = ExtResource("1_avbba")
 use_color_override = true
 color_override = Color(0.94, 0.94, 0.92, 1)
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_gyu0e")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_gyu0e"), SubResource("Resource_pf_cleric"), SubResource("Resource_pi_cleric")])
 effect = ExtResource("29_holy")
 
 [sub_resource type="Resource" id="Resource_i6477"]
@@ -613,7 +717,7 @@ rotation_degrees = Vector3(0, 0, 6)
 
 [sub_resource type="Resource" id="Resource_wasn7"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_i6477")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_i6477"), SubResource("Resource_pf_arcanist"), SubResource("Resource_pi_arcanist")])
 effect = ExtResource("30_runes")
 
 [sub_resource type="Resource" id="Resource_jh0p1"]
@@ -622,7 +726,7 @@ shape = ExtResource("7_jty54")
 
 [sub_resource type="Resource" id="Resource_6q8ru"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_jh0p1")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_jh0p1"), SubResource("Resource_pf_bard"), SubResource("Resource_pi_bard")])
 effect = ExtResource("31_golden")
 
 [sub_resource type="Resource" id="Resource_y4wh2"]
@@ -683,7 +787,7 @@ offset = Vector3(0, 0.05, 0)
 
 [sub_resource type="Resource" id="Resource_ranger"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_ranger_att")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_ranger_att"), SubResource("Resource_pf_ranger"), SubResource("Resource_pi_ranger")])
 
 [sub_resource type="Resource" id="Resource_bulwark_att"]
 script = ExtResource("2_b37kx")
@@ -691,7 +795,7 @@ shape = ExtResource("20_bulwark")
 
 [sub_resource type="Resource" id="Resource_bulwark"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_bulwark_att")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_bulwark_att"), SubResource("Resource_pf_bulwark"), SubResource("Resource_pi_bulwark")])
 
 [sub_resource type="Resource" id="Resource_cryo_att"]
 script = ExtResource("2_b37kx")
@@ -699,7 +803,7 @@ shape = ExtResource("21_cryo")
 
 [sub_resource type="Resource" id="Resource_cryo"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_cryo_att")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_cryo_att"), SubResource("Resource_pf_cryomancer"), SubResource("Resource_pi_cryomancer")])
 effect = ExtResource("28_frost")
 
 [sub_resource type="Resource" id="Resource_pyro_att"]
@@ -708,7 +812,7 @@ shape = ExtResource("22_pyro")
 
 [sub_resource type="Resource" id="Resource_pyro"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_pyro_att")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_pyro_att"), SubResource("Resource_pf_pyromancer")])
 effect = ExtResource("24_fire")
 
 [sub_resource type="Resource" id="Resource_ember_att"]
@@ -740,7 +844,7 @@ motion_speed = 0.15
 
 [sub_resource type="Resource" id="Resource_shatter"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_shatter_att")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_shatter_att"), SubResource("Resource_pf_shatterweaver")])
 effect = ExtResource("32_cracks")
 
 [sub_resource type="Resource" id="Resource_slime"]
