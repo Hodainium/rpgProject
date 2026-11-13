@@ -1,0 +1,73 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.055
+segments = 18
+position = Vector3(0.12, 0.22, 0)
+scale = Vector3(1, 1, 0.6)
+color = Color(0.95, 0.82, 0.2, 1)
+roughness = 0.25
+emission = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.03
+segments = 14
+position = Vector3(0.12, 0.22, 0.0303)
+scale = Vector3(0.35, 1, 0.5)
+color = Color(0.04, 0.02, 0.03, 1)
+roughness = 0.1
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.055
+segments = 18
+position = Vector3(-0.12, 0.22, 0)
+scale = Vector3(1, 1, 0.6)
+color = Color(0.95, 0.82, 0.2, 1)
+roughness = 0.25
+emission = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.03
+segments = 14
+position = Vector3(-0.12, 0.22, 0.0303)
+scale = Vector3(0.35, 1, 0.5)
+color = Color(0.04, 0.02, 0.03, 1)
+roughness = 0.1
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.15, 0.06, 0.05)
+position = Vector3(0.12, 0.255, 0.012)
+rotation_degrees = Vector3(0, 0, 24)
+color = Color(0.42, 0.56, 0.14, 1)
+roughness = 0.6
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.15, 0.06, 0.05)
+position = Vector3(-0.12, 0.255, 0.012)
+rotation_degrees = Vector3(0, 0, -24)
+color = Color(0.42, 0.56, 0.14, 1)
+roughness = 0.6
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Angry slit eyes under heavy lids"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5")])

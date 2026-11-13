@@ -1,0 +1,111 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.13
+radius_top = 0.11
+curve = PackedVector3Array(0.05, -0.02, 0.02, 0.05, 0.52, -0.04, -0.05, 0.3, -0.3)
+segments = 16
+color = Color(0.62, 0.1, 0.12, 1)
+roughness = 0.35
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 3
+radius_bottom = 0.0682
+radius_top = 0.1232
+segments = 20
+position = Vector3(-0.05, 0.3, -0.3)
+rotation_degrees = Vector3(-130.2364, 0, 16.3628)
+color = Color(0.62, 0.1, 0.12, 1)
+roughness = 0.35
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.0726
+radius_top = 0.0726
+height = 0.012
+segments = 20
+position = Vector3(-0.05, 0.3, -0.3)
+rotation_degrees = Vector3(-130.2364, 0, 16.3628)
+color = Color(0.14, 0.03, 0.04, 1)
+roughness = 1
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.09
+radius_top = 0.08
+curve = PackedVector3Array(-0.18, -0.02, 0.14, -0.2, 0.2, 0.16, -0.3, 0.3, 0.24)
+segments = 16
+color = Color(0.62, 0.1, 0.12, 1)
+roughness = 0.35
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 3
+radius_bottom = 0.0496
+radius_top = 0.0896
+segments = 20
+position = Vector3(-0.3, 0.3, 0.24)
+rotation_degrees = Vector3(38.6598, 0, 37.9852)
+color = Color(0.62, 0.1, 0.12, 1)
+roughness = 0.35
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.0528
+radius_top = 0.0528
+height = 0.012
+segments = 20
+position = Vector3(-0.3, 0.3, 0.24)
+rotation_degrees = Vector3(38.6598, 0, 37.9852)
+color = Color(0.14, 0.03, 0.04, 1)
+roughness = 1
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.085
+radius_top = 0.075
+curve = PackedVector3Array(0.24, -0.02, -0.12, 0.27, 0.18, -0.14, 0.37, 0.26, -0.2)
+segments = 16
+color = Color(0.62, 0.1, 0.12, 1)
+roughness = 0.35
+
+[sub_resource type="Resource" id="Resource_p7"]
+script = ExtResource("1_part")
+kind = 3
+radius_bottom = 0.0465
+radius_top = 0.084
+segments = 20
+position = Vector3(0.37, 0.26, -0.2)
+rotation_degrees = Vector3(-36.8699, 0, -45)
+color = Color(0.62, 0.1, 0.12, 1)
+roughness = 0.35
+
+[sub_resource type="Resource" id="Resource_p8"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.0495
+radius_top = 0.0495
+height = 0.012
+segments = 20
+position = Vector3(0.37, 0.26, -0.2)
+rotation_degrees = Vector3(-36.8699, 0, -45)
+color = Color(0.14, 0.03, 0.04, 1)
+roughness = 1
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Heart arteries"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6"), SubResource("Resource_p7"), SubResource("Resource_p8")])
