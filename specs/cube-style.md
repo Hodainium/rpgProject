@@ -381,12 +381,13 @@ along the facing), a barrister's curled wig, the mitre on top of it and stern go
 chest (iron straps and a lock on the face), the lid open about 60° and chomping on its hinge (`FLAP` on a pivot turned so its axis
 is the hinge), a row of teeth on the lid and on the front edge, eyes glowing inside and a centred tongue. Vault Sentry: B, the lens
 eye, a halberd (blade along the facing) and a steel crest (the crest symmetric front to back). The Collector: B, a monocle with its chain, a
-squint and a centred grin with a gold tooth, gold coins orbiting slowly (`SPIN`) with gold glints (`coin_glints`), and a plum top
+squint and a centred grin with a gold tooth, gold coins orbiting slowly (`SPIN`) with a gold effect (`gold_hoard`: sparks rising from a floor ring, coins raining down and
+glints; it replaced the first `coin_glints` in Set 5 when the user asked for more gold on a final boss), and a plum top
 hat with a gold band and a coin resting on it, upright (the user's addition).
 
-**More enemies (user, 2026-11-13):** after Set 4's looks, 3 new enemies for the Cathedral and 3 for the Vault, so each of those
-floors has 6. New enemies are content (abilities, brains, encounters, balance), so they get their own spec; their looks follow
-as a set like this one.
+**More enemies (user, 2026-11-13):** 3 new enemies (an elite and two regulars) for each of the Cathedral, Vault, Coven and Void,
+so each of those floors has 6 counting its boss. New enemies are content, so they have their own slice and spec (`route-enemies`),
+which also holds their looks as two sets, 4b (Cathedral, Vault) and 5b (Coven, Void).
 
 ### Set 5: Coven and Void (6)
 | Unit | Colour | A | B |
@@ -398,11 +399,24 @@ as a set like this one.
 | Abyssal Hulk | black | Two glowing violet eyes (`glow_eye` reused): on a black cube the eyes carry it | A row of spikes down the back |
 | The Nameless (boss) | dark teal | A void halo: a dark ring tilted behind the head, a faint violet glow, slowly turning (`SPIN`) | **Surface:** a starfield (dark, sparse emissive specks) |
 
+**Picked (Set 5, approved 2026-11-13):** Cultist: A and B, the deep robe hood (a square peak, drapes and a rim round a shadowed face
+with glowing pink eyes) and the ritual dagger held on the camera side (its first wavy outline failed to triangulate and was
+replaced by a leaf blade). Bound Demon: A and B, two slanted bands of chain with a broken shackle, big curled black horns and an
+angry ember face with fangs. High Witch: A, the big witch hat (bent tip, green band, gold buckle), green eyes, a hooked nose and a
+grin, with green motes (`hex_motes`). Void Wraith: B, a see-through violet body (`void_clear`, 50%) with hollow glowing eyes and
+rising wisps (`void_wisps`). Abyssal Hulk: renamed **Guardian** (display name only; the id `demo.enemy.abyssal_hulk` stays): the
+Nameless's B proposal, retuned to stand apart: a blue starfield (`starfield` under a blue colour override), a cyan void slit and a
+smaller, still cyan ring behind the head. The Nameless: C (a second iteration), a starfield body, a black-hole face (a black
+disc in a glowing accretion ring with beads, turning on its own axle) and seven dark shards orbiting, with dark smoke rising from
+the floor and violet embers (`void_smoke`, the user's ask for a final boss). Rejected: the hoodless chanting face, the Hulk's
+faces and spikes, the crescent moon, the shroud, the turning void halo and the slit.
+
 ### Sets 2-5 and what the roll-out needed so far
 - Sets 3-5 above are first proposals. They are built under the design approach above, so expect faces, effects and combined
   details to be added while iterating.
 - System code the roll-out added: `UnitAttachment.spin_axis` (3.3, Set 2), `UnitLook.effect` / `effect_params` (3.2), the `rune_glyphs` shader, see-through bodies keeping
-  their alpha in the death fade, a `speed` parameter on `fx.heart_pulse` (Set 3); nothing for Set 4 (data only: two new effects). Still only if picked: a body wobble.
+  their alpha in the death fade, a `speed` parameter on `fx.heart_pulse` (Set 3); nothing for Sets 4 and 5 (data only: new effects and surfaces; a dark particle
+  effect uses the particle layer's existing `additive = false`). Still only if picked: a body wobble.
 - Q3 (the props) is answered below for keys and armor; items wait for their own slice.
 
 ### Set K: pickups on the floor (user, 2026-11-13)
