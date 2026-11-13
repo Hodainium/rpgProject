@@ -42,6 +42,9 @@ var _attachments: Node3D
 ## Moves the attachments that move (a child of _attachments; null when the unit wears nothing).
 var _motion: AttachmentMotionDriver
 var _warned_missing_shape: bool = false
+## Spec cube-style 3.2: the look's own looping effect while it plays (and the definition it plays), else null.
+var _look_fx: FxHandle
+var _look_fx_source: FxDefinition
 ## Meta key on each attachment mesh: the part's own material, repainted from on a stencil change or a death.
 const STYLE_PAINT: StringName = &"style_paint"
 ## Spec vfx-content-pass 3.6: the unit's radius for effects (world units). 0 = derived from its mesh's bounding sphere.
@@ -180,6 +183,7 @@ func _build_attachments() -> void:
 		_attachments = null
 	_motion = null
 	if look == null or look.attachments.is_empty():
+		_sync_look_effect()
 		return
 	var body := get_node_or_null(^"Body") as Node3D
 	_attachments = Node3D.new()
@@ -238,6 +242,7 @@ func _face_attachments() -> void:
 ## value. The body decides whether the unit counts as stamped (effect_stencil_value), so these stamps never change it.
 func _repaint_attachments() -> void:
 	if _attachments == null:
+		_sync_look_effect()
 		return
 	var body_stamped := _stamped
 	var painted: Dictionary = {}  # own material -> its painted copy (parts sharing a material share the copy)
@@ -256,6 +261,27 @@ func _repaint_attachments() -> void:
 	_stamped = body_stamped
 	if _motion != null:
 		_motion.set_running(not is_dead)
+	_sync_look_effect()
+
+
+## Spec cube-style 3.2: plays the look's looping effect on this view while the unit lives and the view is in the tree; stops it
+## (faded) on a death, when the view leaves, or when the look's effect changes (a restyle). Presentation only.
+func _sync_look_effect() -> void:
+	var wanted: FxDefinition = look.effect if look != null and not is_dead and is_inside_tree() else null
+	if _look_fx != null and (wanted != _look_fx_source or (not _look_fx.inert and not _look_fx.is_playing())):
+		_look_fx.stop(0.3)
+		_look_fx = null
+		_look_fx_source = null
+	if wanted != null and _look_fx == null:
+		_look_fx = FxManager.play(wanted, FxAnchor.node3d(self), look.effect_params)
+		_look_fx_source = wanted
+
+
+func _exit_tree() -> void:
+	if _look_fx != null:
+		_look_fx.stop(0.0)
+		_look_fx = null
+		_look_fx_source = null
 
 
 func setup(title: String, color: Color) -> void:
@@ -283,6 +309,7 @@ func set_dead(dead: bool) -> void:
 ## cast that is still playing.
 func die() -> void:
 	is_dead = true
+	_sync_look_effect()  # an enemy that fades skips the repaint below; its effect fades out now
 	if not fades_on_death():
 		_paint()
 		_repaint_attachments()

@@ -16,11 +16,15 @@ static func registries_under(directory: String) -> PackedStringArray:
 	return found
 
 
-## The problems of one look's attachments: an empty slot or a missing shape, an unknown socket, a part that cannot be built.
+## The problems of one look: an effect that never loops (spec cube-style 3.2), and its attachments: an empty slot or a missing
+## shape, an unknown socket, a part that cannot be built.
 static func attachment_problems(look: UnitLook, where: String) -> Array[ValidationIssue]:
 	var issues: Array[ValidationIssue] = []
 	if look == null:
 		return issues
+	if look.effect != null and not look.effect.layers.any(func(layer: FxLayer) -> bool: return layer != null and layer.loop):
+		issues.append(ValidationIssue.new(ValidationIssue.ERROR, "style_effect_not_looping", where + ".effect",
+			"%s has no looping layer: it would play once and end" % look.effect.id))
 	for i in look.attachments.size():
 		var attachment := look.attachments[i]
 		var at := "%s.attachments[%d]" % [where, i]

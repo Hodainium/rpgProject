@@ -677,6 +677,62 @@ func test_attachment_lists_are_not_merged() -> void:
 	eq(registry.look_for(_unit(&"u.own")).attachments, [own], "an exact look's list wins whole")
 
 
+## A looping effect for a look: one light layer (no rendering needed).
+func _looping_effect(loop: bool = true) -> FxDefinition:
+	var effect := FxDefinition.new()
+	effect.id = &"fx.test_look"
+	var light := FxLightLayer.new()
+	light.id = &"light"
+	light.loop = loop
+	effect.layers.append(light)
+	return effect
+
+
+func test_a_looks_effect_merges_like_its_other_fields() -> void:
+	var registry := _registry()
+	var aura := _looping_effect()
+	registry.default_look.effect = aura
+	registry.default_look.effect_params = {"color": Color.RED}
+	var plain := registry.look_for(_unit(&"u.plain"))
+	check(plain.effect == aura and plain.effect_params == {"color": Color.RED}, "the default look's effect and its parameters")
+	var own_effect := _looping_effect()
+	var exact := UnitLook.new()
+	exact.effect = own_effect
+	registry.looks[&"u.own"] = exact
+	var own := registry.look_for(_unit(&"u.own"))
+	check(own.effect == own_effect and own.effect_params.is_empty(), "an exact look's effect wins, with its own (empty) parameters")
+
+
+## Spec cube-style 3.2: the view plays its look's effect while the unit lives, stops it on a death, plays it again on a revive,
+## and stops it when it leaves the tree.
+func test_a_unit_view_plays_its_looks_effect_while_alive() -> void:
+	var was_enabled := FxManager.enabled
+	var was_manual := FxManager.manual_clock
+	FxManager.enabled = true
+	FxManager.manual_clock = true
+	var registry := _registry()
+	var look := UnitLook.new()
+	look.effect = _looping_effect()
+	registry.looks[&"u.burning"] = look
+	UnitStyle.use(registry, "test")
+	var view: UnitAnimator = UnitAnimator.instantiate_for(_unit(&"u.burning"), load(PROBE_VIEW) as PackedScene)
+	host.add_child(view)
+	var first: FxHandle = view.get("_look_fx")
+	check(first != null and first.is_playing() and first.definition == look.effect, "the effect plays once the view is built")
+	view.set_dead(true)
+	check(view.get("_look_fx") == null and (first.stopping or not first.is_playing()), "a death stops it")
+	view.set_dead(false)
+	var second: FxHandle = view.get("_look_fx")
+	check(second != null and second != first and second.is_playing(), "a revive plays it again")
+	view.restyle()
+	check(view.get("_look_fx") == second, "a restyle with the same effect keeps it running")
+	host.remove_child(view)
+	check(view.get("_look_fx") == null and (second.stopping or not second.is_playing()), "leaving the tree stops it")
+	view.free()
+	FxManager.enabled = was_enabled
+	FxManager.manual_clock = was_manual
+
+
 func test_validator_attachment_codes() -> void:
 	var registry := StyleRegistry.new()
 	var look := UnitLook.new()
@@ -685,9 +741,10 @@ func test_validator_attachment_codes() -> void:
 	var broken := AttachmentPart.new()
 	broken.kind = AttachmentPart.Kind.LATHE
 	look.attachments.append(_attachment(_shape([broken]), &"Top"))
+	look.effect = _looping_effect(false)
 	registry.default_look = look
 	var codes: Array = []
 	for issue in StyleValidator.validate(registry, null, "test"):
 		codes.append(issue.code)
-	for code in ["style_attachment_shape_missing", "style_socket_unknown", "style_part_invalid"]:
+	for code in ["style_attachment_shape_missing", "style_socket_unknown", "style_part_invalid", "style_effect_not_looping"]:
 		check(codes.has(code), "%s is reported: %s" % [code, codes])
