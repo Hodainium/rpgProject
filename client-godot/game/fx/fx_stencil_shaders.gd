@@ -22,6 +22,9 @@ const DEFAULT_MODE: StringName = STENCIL
 
 ## The switch: dev only (console `fx stencil on|off`, the Stencil page, tests); no player Setting.
 static var mode: StringName = DEFAULT_MODE
+## Dev only: a word put in a comment line in front of every copy (environment RPG_FX_SALT), so its code is new to the driver's and
+## Godot's shader caches and a measurement sees a player's first launch (a cold cache). Empty in normal runs: no line is added.
+static var dev_salt: String = OS.get_environment("RPG_FX_SALT")
 ## How many copies were made since the last clear(), and the time spent building the copy objects (ms). Building is cheap: the
 ## renderer compiles a copy the first time it draws it, which this cannot see (the stage measures it as first_frames_ms).
 static var made: int = 0
@@ -79,7 +82,8 @@ static func supports(shader: Shader) -> bool:
 
 ## The lines put in front of a shader's code (the probe showed defines before shader_type reach an #include).
 static func defines(value: int, pass_kind: int) -> String:
-	var lines := "#define FX_STENCIL_REF %d\n#define FX_STENCIL_COMPARE %s\n" % [value,
+	var lines := ("// salt %s\n" % dev_salt) if dev_salt != "" else ""
+	lines += "#define FX_STENCIL_REF %d\n#define FX_STENCIL_COMPARE %s\n" % [value,
 		"compare_equal" if pass_kind == Pass.OWN else "compare_not_equal"]
 	if pass_kind == Pass.OWN:
 		lines += "#define FX_STENCIL_OWN\n"
@@ -113,18 +117,24 @@ static func clear() -> void:
 	_source.clear()
 	_names.clear()
 	_prepared.clear()
+	_in_flight.clear()
 	_supports.clear()
+	prepare_log.clear()
 	made = 0
 	build_ms = 0.0
 
 
-# --- Prepare at battle start (spec vfx-stencil 3.4, the user's choice: the positions in that battle) --------------------------
+# --- Prepare (spec vfx-stencil 3.4): at boot, at run start and at battle start ---------------------------------------------------
 
 ## How long the last prepare took (ms, the frames it drew included) and how many copies it drew, for `fx stencil dump`.
 static var last_prepare_ms: float = 0.0
 static var last_prepare_copies: int = 0
-## The copies already drawn once this session (the renderer keeps their pipelines): a later battle skips them.
+## Every prepare's (when, copies drawn, ms) this session, oldest first, for `fx stencil dump` and the frame log.
+static var prepare_log: Array[String] = []
+## The copies already drawn once this session (the renderer keeps their pipelines): a later prepare skips them.
 static var _prepared: Dictionary = {}
+## The copies a running prepare is drawing now: another prepare (boot still going when the run starts) skips them too.
+static var _in_flight: Dictionary = {}
 
 
 ## The shaders the effects in `definitions` draw over their unit with (each layer's stencil_shader()), once each.
@@ -142,42 +152,56 @@ static func over_unit_shaders(definitions: Array) -> Array[Shader]:
 
 ## Has the renderer compile the copies of `shaders` for `values` (both passes) now, so no battle frame does: each copy is drawn once,
 ## a speck in front of `camera` for two frames (a particle shader through a one-particle emitter, the way particles draw it), then
-## removed. Returns the number of copies drawn. Does nothing when stencil is off, headless, or with no camera.
-static func prepare(camera: Camera3D, shaders: Array[Shader], values: Array) -> int:
+## removed. `per_frame` > 0 spreads the work: that many copies a batch, one batch after another, so no single frame stalls (the
+## boot prepare on the main menu); 0 draws them all in one batch. Copies already drawn, or being drawn by another prepare, are
+## skipped. `label` names the caller in `prepare_log`. Returns the number of copies drawn. Does nothing when stencil is off,
+## headless, or with no camera.
+static func prepare(camera: Camera3D, shaders: Array[Shader], values: Array, per_frame: int = 0, label: String = "battle") -> int:
 	if not enabled() or camera == null or not camera.is_inside_tree() or DisplayServer.get_name() == "headless":
 		return 0
 	var started := Time.get_ticks_usec()
-	var holder := Node3D.new()
-	holder.name = "FxStencilPrepare"
-	camera.add_child(holder)
-	holder.position = Vector3(0, 0, -maxf(camera.near * 4.0, 0.2))
-	holder.scale = Vector3.ONE * 0.001
-	var count := 0
-	var drawn: Array[Shader] = []
+	var todo: Array = []  # [shader, copy]
 	for shader in shaders:
 		for value in values:
 			if not StencilIds.is_unit(int(value)):
 				continue
 			for pass_kind in [Pass.OWN, Pass.OTHER]:
 				var copy := variant(shader, int(value), pass_kind)
-				if _prepared.has(copy):
-					continue
-				drawn.append(copy)
-				var material := ShaderMaterial.new()
-				material.shader = copy
-				holder.add_child(_speck(shader, material))
-				count += 1
+				if not _prepared.has(copy) and not _in_flight.has(copy):
+					_in_flight[copy] = true
+					todo.append([shader, copy])
+	var batch_size: int = todo.size() if per_frame <= 0 else per_frame
+	var count := 0
 	var tree := camera.get_tree()
-	for frame in 2:
-		await tree.process_frame
-	await RenderingServer.frame_post_draw
-	if not is_instance_valid(holder) or not is_instance_valid(camera) or not camera.is_inside_tree():
-		return 0  # the battle's scene closed during these frames: nothing counts as drawn, the next battle tries again
-	holder.queue_free()
-	for copy in drawn:
-		_prepared[copy] = true
+	var at := 0
+	while at < todo.size():
+		if not is_instance_valid(camera) or not camera.is_inside_tree():
+			break  # the camera's scene closed: what is left is drawn by the next prepare
+		var holder := Node3D.new()
+		holder.name = "FxStencilPrepare"
+		camera.add_child(holder)
+		holder.position = Vector3(0, 0, -maxf(camera.near * 4.0, 0.2))
+		holder.scale = Vector3.ONE * 0.001
+		var batch := todo.slice(at, at + batch_size)
+		for item in batch:
+			var material := ShaderMaterial.new()
+			material.shader = item[1]
+			holder.add_child(_speck(item[0], material))
+		for frame in 2:
+			await tree.process_frame
+		await RenderingServer.frame_post_draw
+		if not is_instance_valid(holder) or not is_instance_valid(camera) or not camera.is_inside_tree():
+			break  # gone during these frames: this batch does not count as drawn
+		holder.queue_free()
+		for item in batch:
+			_prepared[item[1]] = true
+		count += batch.size()
+		at += batch_size
+	for item in todo:
+		_in_flight.erase(item[1])
 	last_prepare_ms = (Time.get_ticks_usec() - started) / 1000.0
 	last_prepare_copies = count
+	prepare_log.append("%s: %d copies drawn in %.0f ms" % [label, count, last_prepare_ms])
 	return count
 
 

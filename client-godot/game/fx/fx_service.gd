@@ -408,22 +408,25 @@ func unit_view(unit_id: StringName) -> Node3D:
 const STENCIL_UNIT_PARAM: StringName = &"stencil_unit"
 
 
-## Spec vfx-stencil 3.4: has the renderer compile now, at battle start, the shader copies this battle's positions need (the values of
-## the unit views in the tree × the shaders the registry's effects draw over their unit with × 2 passes), so no hit compiles one.
-## The room view calls it once the views have their values; it takes two frames. Inert headless or with stencil off.
-func prepare_stencil(camera: Camera3D) -> void:
+## Spec vfx-stencil 3.4: has the renderer compile now the shader copies for `values` (stencil values × the shaders the registry's
+## effects draw over their unit with × 2 passes), so no hit compiles one. Called three times, each skipping what an earlier one drew:
+## - at boot, on the main menu (GameMain, every position the content can use, `per_frame` copies a batch so the menu never stalls);
+## - at run start (GameMain, the same values: whatever boot has not finished yet);
+## - at battle start (RoomView3D, no `values`: the battle's own positions, read from its unit views; normally nothing is left).
+## Inert headless or with stencil off.
+func prepare_stencil(camera: Camera3D, values: Array = [], per_frame: int = 0, label: String = "battle") -> void:
 	if not enabled or not FxStencilShaders.enabled():
 		return
 	_ensure_loaded()
-	var values: Array = []
-	for view in get_tree().get_nodes_in_group(UnitAnimator.GROUP):
-		var value: int = (view as UnitAnimator).stencil_value
-		if StencilIds.is_unit(value) and not value in values:
-			values.append(value)
+	if values.is_empty():
+		for view in get_tree().get_nodes_in_group(UnitAnimator.GROUP):
+			var value: int = (view as UnitAnimator).stencil_value
+			if StencilIds.is_unit(value) and not value in values:
+				values.append(value)
 	var definitions: Array = []
 	for id in catalog():
 		definitions.append(definition(id))
-	await FxStencilShaders.prepare(camera, FxStencilShaders.over_unit_shaders(definitions), values)
+	await FxStencilShaders.prepare(camera, FxStencilShaders.over_unit_shaders(definitions), values, per_frame, label)
 
 
 static func given_has(params: Dictionary, key: StringName) -> bool:

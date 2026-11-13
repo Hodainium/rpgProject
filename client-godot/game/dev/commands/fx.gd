@@ -98,6 +98,8 @@ func _stencil(ctx: DevContext, args: PackedStringArray) -> String:
 		"on" if FxStencilShaders.enabled() else "off", FxStencilShaders.cached_count(), FxStencilShaders.made, FxStencilShaders.build_ms]])
 	if args.size() > 1 and args[1] == "dump":
 		lines.append("  last prepare: %d copies drawn in %.0f ms" % [FxStencilShaders.last_prepare_copies, FxStencilShaders.last_prepare_ms])
+		for entry in FxStencilShaders.prepare_log:
+			lines.append("  prepare " + entry)
 		for view in (Engine.get_main_loop() as SceneTree).get_nodes_in_group(UnitAnimator.GROUP):
 			var unit := view as UnitAnimator
 			lines.append("  %-4s value %-3d %s" % [unit.unit_id, unit.stencil_value,
