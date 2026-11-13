@@ -1,0 +1,73 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_beak"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.14
+radius_top = 0.012
+curve = PackedVector3Array(0, -0.04, 0, 0, -0.04, 0.25, 0, -0.04, 0.5)
+segments = 16
+color = Color(0.34, 0.22, 0.13, 1)
+roughness = 0.7
+
+[sub_resource type="Resource" id="Resource_lens_l"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.085
+radius_top = 0.085
+height = 0.04
+segments = 20
+position = Vector3(0.17, 0.13, 0.02)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.12, 0.18, 0.12, 1)
+metallic = 0.3
+roughness = 0.08
+tintable = false
+
+[sub_resource type="Resource" id="Resource_lens_r"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.085
+radius_top = 0.085
+height = 0.04
+segments = 20
+position = Vector3(-0.17, 0.13, 0.02)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.12, 0.18, 0.12, 1)
+metallic = 0.3
+roughness = 0.08
+tintable = false
+
+[sub_resource type="Resource" id="Resource_rims"]
+script = ExtResource("1_part")
+kind = 3
+radius_bottom = 0.08
+radius_top = 0.105
+segments = 20
+position = Vector3(0.17, 0.13, 0.03)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.8, 0.62, 0.28, 1)
+metallic = 0.6
+roughness = 0.35
+tintable = false
+
+[sub_resource type="Resource" id="Resource_rims_r"]
+script = ExtResource("1_part")
+kind = 3
+radius_bottom = 0.08
+radius_top = 0.105
+segments = 20
+position = Vector3(-0.17, 0.13, 0.03)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.8, 0.62, 0.28, 1)
+metallic = 0.6
+roughness = 0.35
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Beak mask"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_beak"), SubResource("Resource_lens_l"), SubResource("Resource_lens_r"), SubResource("Resource_rims"), SubResource("Resource_rims_r")])

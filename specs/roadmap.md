@@ -630,6 +630,16 @@ primitives (hats, crowns, horns, wings, weapons), downloaded single models (Poly
 roll-out. Presentation only: the data lives in `presentation/`, outside the ruleset version. Spec: `specs/cube-style.md`.
 Card art is decided separately (5b): data-driven frames, game-icons glyphs, the existing effects.
 
+### 5a5. `floor-chests`
+Added 2026-11-13 at the user's request. **Order (user, 2026-11-13):** right after 5a4 `cube-style`, before 5e `audio-pass`. A dropped chest stays in the room where it dropped and is
+opened there, like Isaac's chests, instead of going straight to the chest inventory (spec `keys-and-gear`). **A chest works like a
+shop (user, 2026-11-13):** paying its key opens it, and its rewards spawn as pickups inside the chest, in that room, the way a shop
+slot holds an item for a price; taking them is a separate choice, so the player may leave an item in the chest (it stays there,
+like an unbought shop item). Only items and armor wait in the chest; a reward that is not an item (keys, coins, a golden key, a
+map reveal) is given as soon as the chest opens (user, 2026-11-13). The chest shows open and filled while it holds something, open and empty after. A rule change: the
+room holds the chest and its pickups (run state and hash), `open_chest` names the room's chest, the bots and the console follow,
+and the run goldens are re-recorded. It reuses the shop's pickup path, so most of the machinery exists. The 3D chest (closed, open and filled, open and empty) is drawn in 5a4 `cube-style` (Set K).
+
 ### 5b. `card-ui`
 Added 2026-11-09, right after slice 5. The screens for the card system, built on the UI framework and the FF7 theme:
 the collection (browse by set, rarity and room pool, a core badge, owned or not), pack opening, dust and craft with their
@@ -651,6 +661,18 @@ Local mode keeps working without cards (the core set only).
 - Built on the UI framework (`UIPolicy` states, `UIScreen`s, shared components, Back top left, hover previews, click
   selects) and the server calls already in `ServerLink`.
 
+### 5b2. `item-cards`
+Added 2026-11-13 at the user's request, a small slice right after 5b `card-ui` (it reuses that slice's card look). Items on
+the floor (pedestals, shop shelves, drops) show as **floating cards** that turn and bob up and down with a particle effect around
+them, in the style of Risk of Rain 2's item pickups (the user brings reference screenshots when this slice is specced). The card
+face comes from 5b's data-driven frames and icons; the motion and particles are `vfx-framework` data.
+**Rarity outline (user, 2026-11-13; references `H:\assets\references\ror\`: white, green, red, void):** every floor item has a
+silhouette outline in its rarity's colour, and the effect around it grows with the tier, as in Risk of Rain 2: Common a thin plain
+outline; Rare a glowing outline; Epic adds sparks; Legendary adds rising ribbon trails and a glow pool on the floor. Corrupted
+`Pool.Void` items use a magenta outline (RoR's void tier) whatever their rarity (confirmed by the user, 2026-11-13). One outline and one
+aura effect with a `color` and a tier parameter, not one per rarity. Keys and armor pickups got
+their own 3D icons in 5a4 `cube-style` (Set K). Presentation only.
+
 ### 5c. `card-balance`
 Added 2026-11-09, after 5b. The game balancing pass for cards: retune the win-rate gate on the core pool alone (30 / 30 / 21
 / 15 / 15 per room pool; the 31.8% figure was measured on the full item pool), then pack odds and prices in gems, dust
@@ -665,7 +687,7 @@ when not empty, so the committed run goldens may change and the balance gate is 
 
 ### 5e. `audio-pass`
 Added 2026-11-13 at the user's request, a small slice of its own (to be discussed in a separate chat before `/spec`).
-**Order (user, 2026-11-13):** after the 5a4 `cube-style` roll-out to the remaining units, before 5b `card-ui`. A new
+**Order (user, 2026-11-13):** after the 5a4 `cube-style` roll-out to the remaining units and 5a5 `floor-chests` (added 2026-11-13), before 5b `card-ui`. A new
 sound-effect bank to replace or extend the RTP pack in `presentation/audio/rtp/`, plus **volume sliders** on the Settings
 screen (Master and effects, a music bus only if music comes later; Godot audio buses, saved in the Settings). **No music is
 needed** (user, 2026-11-13). Licence first: only CC0 or clearly redistributable packs (the repo is public), each credited in

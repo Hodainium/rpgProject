@@ -42,6 +42,12 @@ var _attachments: Node3D
 ## Moves the attachments that move (a child of _attachments; null when the unit wears nothing).
 var _motion: AttachmentMotionDriver
 var _warned_missing_shape: bool = false
+## Spec cube-style 3.2: the look's own looping effect while it plays (and the definition it plays), else null.
+var _look_fx: FxHandle
+var _look_fx_source: FxDefinition
+## False until the frame after _ready: callers set a new view's state (set_dead) right after add_child, so a view built dead
+## never starts its look effect only to stop it again.
+var _look_fx_ready: bool = false
 ## Meta key on each attachment mesh: the part's own material, repainted from on a stencil change or a death.
 const STYLE_PAINT: StringName = &"style_paint"
 ## Spec vfx-content-pass 3.6: the unit's radius for effects (world units). 0 = derived from its mesh's bounding sphere.
@@ -97,6 +103,12 @@ func _ready() -> void:
 	tree.set("parameters/flinch/add_amount", 1.0)
 	_start(&"idle")
 	_build_attachments()
+	_enable_look_effect.call_deferred()
+
+
+func _enable_look_effect() -> void:
+	_look_fx_ready = true
+	_sync_look_effect()
 
 
 ## The scene to instantiate for a unit: its definition's `view` (a res:// or uid:// path), else `default_scene`.
@@ -180,6 +192,7 @@ func _build_attachments() -> void:
 		_attachments = null
 	_motion = null
 	if look == null or look.attachments.is_empty():
+		_sync_look_effect()
 		return
 	var body := get_node_or_null(^"Body") as Node3D
 	_attachments = Node3D.new()
@@ -238,6 +251,7 @@ func _face_attachments() -> void:
 ## value. The body decides whether the unit counts as stamped (effect_stencil_value), so these stamps never change it.
 func _repaint_attachments() -> void:
 	if _attachments == null:
+		_sync_look_effect()
 		return
 	var body_stamped := _stamped
 	var painted: Dictionary = {}  # own material -> its painted copy (parts sharing a material share the copy)
@@ -256,6 +270,45 @@ func _repaint_attachments() -> void:
 	_stamped = body_stamped
 	if _motion != null:
 		_motion.set_running(not is_dead)
+	_sync_look_effect()
+
+
+## Spec cube-style 3.2: plays the look's looping effect on this view while the unit lives (a death waiting behind a cast still
+## counts as alive), no death fade plays, the view is in the tree and effects are on (FxManager enabled, quality not off); stops
+## it (faded) otherwise, and swaps it when the look's effect changes (a restyle). A quality change resyncs it (_on_fx_quality).
+## Presentation only.
+func _sync_look_effect() -> void:
+	var alive := not is_dead or _pending_death
+	var shown := _look_fx_ready and is_inside_tree() and alive and death_fade_driver() == null 		and FxManager.enabled and FxManager.quality != FxQuality.OFF
+	var wanted: FxDefinition = look.effect if look != null and shown else null
+	if _look_fx != null and (wanted != _look_fx_source or not _look_fx.is_playing()):
+		_look_fx.stop(0.3)
+		_look_fx = null
+		_look_fx_source = null
+	if wanted != null and _look_fx == null:
+		_look_fx = FxManager.play(wanted, FxAnchor.node3d(self), look.effect_params)
+		_look_fx_source = wanted
+
+
+func _enter_tree() -> void:
+	if not FxManager.quality_changed.is_connected(_on_fx_quality):
+		FxManager.quality_changed.connect(_on_fx_quality)
+	if is_node_ready():
+		_sync_look_effect()  # back in the tree (a reparent): its effect again
+
+
+func _exit_tree() -> void:
+	if FxManager.quality_changed.is_connected(_on_fx_quality):
+		FxManager.quality_changed.disconnect(_on_fx_quality)
+	if _look_fx != null:
+		_look_fx.stop(0.0)
+		_look_fx = null
+		_look_fx_source = null
+
+
+## Quality off finished every live effect (and a raised tier must start it again): the look effect follows the setting.
+func _on_fx_quality(_tier: int) -> void:
+	_sync_look_effect()
 
 
 func setup(title: String, color: Color) -> void:
@@ -283,12 +336,12 @@ func set_dead(dead: bool) -> void:
 ## cast that is still playing.
 func die() -> void:
 	is_dead = true
+	var waiting := _gate != null or bool(tree.get("parameters/montage/active"))
+	_pending_death = waiting  # set first: the look effect keeps playing until the death itself starts (_start_death)
 	if not fades_on_death():
 		_paint()
 		_repaint_attachments()
-	if _gate != null or bool(tree.get("parameters/montage/active")):
-		_pending_death = true
-	else:
+	if not waiting:
 		_start_death()
 
 
@@ -320,13 +373,16 @@ func play_death_fade() -> DeathFadeDriver:
 	if _motion != null:
 		_motion.set_running(false)
 	add_child(_fade)
+	_sync_look_effect()  # the look effect fades with the body (also for the console's `style death test` on a living unit)
 	return _fade
 
 
 func _start_death() -> void:
+	_pending_death = false
 	if fades_on_death():
 		play_death_fade()
 	else:
+		_sync_look_effect()  # the death starts now: the look effect fades out
 		_start(&"death")
 
 
@@ -340,6 +396,7 @@ func _cancel_fade() -> void:
 	tree.active = true
 	if _motion != null:
 		_motion.set_running(not is_dead)
+	_sync_look_effect()
 
 
 func celebrate() -> void:

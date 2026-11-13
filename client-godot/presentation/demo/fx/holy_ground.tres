@@ -1,0 +1,91 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_binding"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_quad"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="4_glow"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_track"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="6_particles"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/star_sheet.png" id="7_star"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="8_param"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="9_def"]
+
+[sub_resource type="Resource" id="Resource_glow_color"]
+script = ExtResource("2_binding")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Curve" id="Curve_flat"]
+_limits = [-360.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_lie_flat"]
+script = ExtResource("5_track")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_flat")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_glow"]
+script = ExtResource("3_quad")
+shader = ExtResource("4_glow")
+shader_params = {
+"falloff": 2.6,
+"fade_out": 0.0,
+"intensity": 1.1,
+"pulse_amount": 0.2,
+"pulse_speed": 0.35
+}
+size = Vector2(1.3, 1.3)
+face_camera = false
+id = &"glow"
+space = 2
+socket = &"Base"
+loop = true
+loop_period = 10.0
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_glow_color")])
+tracks = Array[ExtResource("5_track")]([SubResource("Resource_lie_flat")])
+
+[sub_resource type="Resource" id="Resource_motes_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_motes"]
+offsets = PackedFloat32Array(0, 0.2, 0.75, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_motes"]
+script = ExtResource("6_particles")
+size_min = 0.07
+size_max = 0.13
+spread = 6.0
+speed_min = 0.35
+speed_max = 0.65
+gravity = Vector3(0, 0.3, 0)
+emission_ring_radius = 0.5
+emission_offset = Vector3(0, -0.36, 0)
+amount = 12
+lifetime = 1.8
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_motes")
+texture = ExtResource("7_star")
+id = &"motes"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_motes_color")])
+
+[sub_resource type="Resource" id="Resource_param_color"]
+script = ExtResource("8_param")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.93, 0.65, 1)
+description = "Holy light colour."
+
+[resource]
+script = ExtResource("9_def")
+id = &"fx.holy_ground"
+display_name = "Holy ground"
+params = Array[ExtResource("8_param")]([SubResource("Resource_param_color")])
+layers = Array[ExtResource("1_layer")]([SubResource("Resource_glow"), SubResource("Resource_motes")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "A pale holy glow on the floor under a unit with motes of light rising (the Cleric's look, spec cube-style 6a)."
