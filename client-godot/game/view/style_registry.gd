@@ -29,6 +29,21 @@ extends Resource
 @export var enemy_formation: BattleFormation
 
 
+## Spec battle-death-fade 3.1: how an enemy and a boss (Enemy.Boss) fade out when they die; null = the base's, else the built-in
+## defaults (DeathFade.enemy_default / boss_default).
+@export var enemy_death: DeathFade
+@export var boss_death: DeathFade
+
+
+## The death fade for an enemy (boss = tagged Enemy.Boss), through the base chain, else the built-in default.
+func death_fade(boss: bool) -> DeathFade:
+	for registry in chain():
+		var found: DeathFade = registry.boss_death if boss else registry.enemy_death
+		if found != null:
+			return found
+	return DeathFade.boss_default() if boss else DeathFade.enemy_default()
+
+
 ## The formation of one side through the base chain, or null (the rooms' spawn cells).
 func formation(party: bool) -> BattleFormation:
 	for registry in chain():

@@ -47,7 +47,8 @@ func _frames(count: int) -> void:
 
 
 func _find(game: GameMain, node_name: String) -> Node:
-	return game.find_child(node_name, true, false)
+	var found := game.find_child(node_name, true, false)
+	return found if found != null and (not found is CanvasItem or found.is_visible_in_tree()) else null  # hidden = kept for later
 
 
 # --- MapCells (system) ----------------------------------------------------------------------------------------------

@@ -101,6 +101,14 @@ static func battle_positions(party: bool, count: int) -> Array[Vector3]:
 	return formation.positions(count, -1 if party else 1)
 
 
+## Spec battle-death-fade: the death fade for an enemy (boss = Enemy.Boss); the built-in defaults with no registry.
+static func death_fade(boss: bool) -> DeathFade:
+	var current := registry()
+	if current != null:
+		return current.death_fade(boss)
+	return DeathFade.boss_default() if boss else DeathFade.enemy_default()
+
+
 static func explore_framing() -> CameraFraming:
 	var current := registry()
 	return current.explore_framing() if current != null else CameraFraming.today()

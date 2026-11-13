@@ -122,7 +122,8 @@ func _game(policy: UIPolicy) -> GameMain:
 
 
 static func _names(nodes: Array) -> Array:
-	return nodes.filter(func(node) -> bool: return not node.is_queued_for_deletion()).map(
+	# Shown panels only: a panel whose state ended is kept hidden (UIManager._park), not freed.
+	return nodes.filter(func(node) -> bool: return not node.is_queued_for_deletion() and (not node is CanvasItem or node.visible)).map(
 		func(node) -> String: return String(node.name))
 
 
@@ -200,7 +201,16 @@ func test_ui_rules() -> void:
 	eq(manager.top(GAME_MENU), null, "closes it")
 	game.run.pending_battle = {"cell": game.run.state.current_cell}
 	manager.apply_now()
-	eq(_names(hud_screen.get_node("Slot").get_children()), ["Party"], "Battle state: the map-only panel is removed")
+	var field := hud_screen.get_node("Slot/Field")
+	eq(_names(hud_screen.get_node("Slot").get_children()), ["Party"], "Battle state: the map-only panel is hidden")
+	check(manager.is_parked(field) and not field.visible, "kept, hidden, not freed")
+	game.run.pending_battle = {}
+	manager.apply_now()
+	check(hud_screen.get_node("Slot/Field") == field and field.visible and not manager.is_parked(field),
+		"back on the map: the same panel shows again (nothing rebuilt)")
+	eq(_names(hud_screen.get_node("Slot").get_children()), ["Field", "Party"], "in its order")
+	game.run.pending_battle = {"cell": game.run.state.current_cell}
+	manager.apply_now()
 	game.run.pending_battle = {}
 	manager.apply_now()
 	manager.back()
@@ -409,3 +419,28 @@ func test_demo_ui_policy() -> void:
 		return
 	var issues := UIPolicyCheck.validate(load(GameMain.UI_POLICY))
 	eq(issues.map(func(issue) -> String: return str(issue)), [], "the demo UI policy has no errors")
+
+
+## Playtest fix 2026-11-13 (the battle-end hitch): many queue_refresh() calls in one frame refresh once; a hidden screen
+## waits and refreshes when it shows again.
+func test_queue_refresh_coalesces_and_waits_while_hidden() -> void:
+	var script := GDScript.new()
+	script.source_code = "extends UIScreen\nvar count := 0\nfunc refresh() -> void:\n\tcount += 1\n"
+	script.reload()
+	var screen: UIScreen = script.new()
+	host.add_child(screen)
+	for i in 5:
+		screen.queue_refresh()
+	await host.get_tree().process_frame
+	eq(screen.get("count"), 1, "five asks in one frame refresh once")
+	screen.visible = false
+	screen.queue_refresh()
+	screen.queue_refresh()
+	await host.get_tree().process_frame
+	eq(screen.get("count"), 1, "hidden: no refresh")
+	screen.visible = true
+	eq(screen.get("count"), 2, "shown again: refreshed once")
+	screen.visible = false
+	screen.visible = true
+	eq(screen.get("count"), 2, "not again when nothing was asked")
+	screen.queue_free()

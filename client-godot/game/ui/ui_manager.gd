@@ -26,6 +26,7 @@ var _stacks: Dictionary = {}  # layer tag -> UILayerStack
 var _points: Array[UIExtensionPoint] = []
 var _rule_screens: Dictionary = {}  # UIScreenRule -> UIScreen
 var _panels: Dictionary = {}  # UIExtensionPoint -> {UIExtension: Node}
+var _parked: Dictionary = {}  # panel -> true: kept hidden while its extension's state is off (_park)
 var _dirty: bool = false
 
 
@@ -209,7 +210,7 @@ func dump() -> String:
 	for point in _points:
 		var names := PackedStringArray()
 		for child in point.get_children():
-			if not child.is_queued_for_deletion():
+			if not child.is_queued_for_deletion() and not _parked.has(child):  # a parked panel is not shown
 				names.append(String(child.name))
 		lines.append("%s: %s" % [point.slot, ", ".join(names) if not names.is_empty() else "-"])
 	return "\n".join(lines)
@@ -266,6 +267,9 @@ func _apply_extensions() -> void:
 	if policy == null:
 		return
 	_points = _points.filter(func(point) -> bool: return _live(point))
+	for panel in _parked.keys():
+		if not is_instance_valid(panel):
+			_parked.erase(panel)
 	for point in _panels.keys():
 		if not _points.has(point):
 			_panels.erase(point)
@@ -279,7 +283,9 @@ func _apply_extensions() -> void:
 			if panel != null and not is_instance_valid(panel):
 				placed.erase(extension)
 				panel = null
-			if wanted and panel == null and extension.scene != null:
+			if wanted and panel != null and _parked.has(panel):
+				_unpark(panel)
+			elif wanted and panel == null and extension.scene != null:
 				panel = extension.scene.instantiate()
 				panel.set_meta("ui_order", extension.order)
 				point.add_child(panel)
@@ -290,13 +296,37 @@ func _apply_extensions() -> void:
 					panel._ui_bind(context)
 					panel.on_pushed({})
 					panel._ui_activate()
-			elif not wanted and panel != null:
-				placed.erase(extension)
-				if panel is UIScreen:
-					panel._ui_deactivate()
-				point.remove_child(panel)
-				panel.queue_free()
+			elif not wanted and panel != null and not _parked.has(panel):
+				if panel is CanvasItem:
+					_park(panel)  # kept, hidden, for the next time its state comes back
+				else:
+					placed.erase(extension)
+					point.remove_child(panel)
+					panel.queue_free()
 		_panels[point] = placed
+
+
+## Spec ui-framework 3.4 (playtest fix 2026-11-13, the battle-to-room hitch): a panel whose state ends is hidden and kept,
+## not freed, so the next battle or room shows it again without building it (building the HUD cost about 23 ms plus a
+## heavy first frame). A UIScreen panel is deactivated (on_deactivated, hidden) and activated again (on_activated
+## refreshes it); the panel keeps its run connections, which it made once in bind().
+func _park(panel: CanvasItem) -> void:
+	_parked[panel] = true
+	if panel is UIScreen:
+		panel._ui_deactivate()
+	panel.visible = false
+
+
+func _unpark(panel: CanvasItem) -> void:
+	_parked.erase(panel)
+	panel.visible = true
+	if panel is UIScreen:
+		panel._ui_activate()
+
+
+## True when `panel` is kept hidden while its state is off.
+func is_parked(panel: Node) -> bool:
+	return _parked.has(panel)
 
 
 static func _live(point: Node) -> bool:

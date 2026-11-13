@@ -23,3 +23,9 @@ func next_execution() -> void:
 ## Waits until the ability's animation has ended (or been skipped).
 func finished() -> void:
 	pass
+
+
+## Spec battle-death-fade 3.3: waits, after a battle's result is final, until the screens are done with it (an enemy still
+## fading out). The headless gate returns at once: replays, traces, steps and tests never wait.
+func hold_end() -> void:
+	pass

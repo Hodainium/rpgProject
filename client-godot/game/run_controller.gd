@@ -640,8 +640,13 @@ func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 	_apply_used_items(battle.used_items, won)
 	battle.queue_free()
 	var cell: int = pending_battle["cell"]
+	# Spec battle-death-fade: the result is final (logged and hashed above); the screens may still be finishing (an enemy
+	# fading out). Only the moment the battle is left waits; the headless gate (and no gate) returns at once.
+	var outcome := battle.outcome  # the battle node is freed during the wait
+	if gate != null:
+		await gate.hold_end()
 	pending_battle = {}
-	battle_finished.emit(battle.outcome)
+	battle_finished.emit(outcome)
 	if won:
 		_tally["enemiesDefeated"] += snapshot["enemies"].size()
 		_grant_rewards(content.encounters.get(StringName(_tally["lastEncounter"])))

@@ -90,3 +90,18 @@ func test_addon_internals_we_rely_on_still_exist() -> void:
 			"_calculate_base_targets", "remove_active_effect", "initialize_attribute_overrides"]:
 		check(asc.has_method(method), "GodotGAS still has %s (CombatASC depends on it)" % method)
 	check("_active_effects" in asc and "_active_tags" in asc, "GodotGAS still has _active_effects and _active_tags")
+
+
+## A persistent cue node freed before its effect is removed (a battle being freed) is dropped first: GodotGAS's
+## remove_persistent_cue(cue: GameplayCueNotify) would refuse the freed node with a script error (2026-11-13).
+func test_freed_persistent_cues_are_dropped_before_removal() -> void:
+	var effect := ActiveGameplayEffect.new(GameplayEffectSpec.new(GameplayEffect.new(), GameplayEffectContext.new(null, null)))
+	var live := GameplayCueNotify.new()
+	var gone := GameplayCueNotify.new()
+	effect.active_cues.append(live)
+	effect.active_cues.append(gone)
+	gone.free()
+	CombatASC.drop_freed_cues(effect)
+	eq(effect.active_cues.size(), 1, "the freed cue is dropped")
+	check(effect.active_cues[0] == live, "the live one stays for the addon to end")
+	live.free()

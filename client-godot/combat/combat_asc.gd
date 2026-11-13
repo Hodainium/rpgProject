@@ -31,6 +31,34 @@ func _ready() -> void:
 	active_effect_added.connect(_on_active_effect_added)
 
 
+## GodotGAS hands each of an effect's persistent cue nodes to GameplayCueManager.remove_persistent_cue(cue: GameplayCueNotify),
+## whose typed parameter refuses a freed node before its own is_instance_valid guard can run: a script error. A cue node is a
+## child of the unit, so when a battle is freed it can go before this component cleans up (the dev `spawn` showed four per
+## battle, 2026-11-13). Freed cue nodes are dropped first; the live ones are ended by the addon as before. Presentation only:
+## cues are never in a hash.
+func remove_active_effect(active_effect: ActiveGameplayEffect, skip_array_erase: bool = false) -> void:
+	if active_effect != null:
+		drop_freed_cues(active_effect)
+	super(active_effect, skip_array_erase)
+
+
+func _suppress_effect(active_effect: ActiveGameplayEffect) -> void:
+	drop_freed_cues(active_effect)
+	super(active_effect)
+
+
+func _unsuppress_effect(active_effect: ActiveGameplayEffect) -> void:
+	drop_freed_cues(active_effect)
+	super(active_effect)
+
+
+## Removes the cue nodes that are already freed from `active_effect`'s persistent cues.
+static func drop_freed_cues(active_effect: ActiveGameplayEffect) -> void:
+	for index in range(active_effect.active_cues.size() - 1, -1, -1):
+		if not is_instance_valid(active_effect.active_cues[index]):
+			active_effect.active_cues.remove_at(index)
+
+
 ## Spec keys-and-gear 2.6: GodotGAS's gatekeeper plus the Ability.Usage.* rule, so every caller (battle actions, ult
 ## windows, brains, Auto, field mode) refuses a Field-only ability in battle and a Battle-only one on the map.
 func can_activate_ability(ability: GameplayAbility, emit_failure: bool = false) -> bool:
