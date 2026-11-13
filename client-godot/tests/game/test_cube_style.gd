@@ -528,6 +528,16 @@ func test_mirror_and_motion() -> void:
 	check(is_equal_approx(swing, 30.0), "a flap swings its full amount around Z (%.2f)" % swing)
 	attachment.motion = UnitAttachment.Motion.NONE
 	eq(attachment.animate(rest, 0.25), rest, "no motion stays at rest")
+	attachment.motion = UnitAttachment.Motion.SPIN
+	var tilted := Transform3D(Basis(Vector3.BACK, deg_to_rad(90.0)), Vector3(0.4, 0, 0))  # a gear stood on its side (axle along X)
+	var around_up := attachment.animate(tilted, 0.25)
+	check(around_up.basis.is_equal_approx(Basis(Vector3.UP, TAU * 0.25) * tilted.basis) and around_up.origin == tilted.origin,
+		"an unset spin axis turns around the parent's up, as before")
+	attachment.spin_axis = Vector3.UP
+	var axle := tilted.basis * Vector3.UP  # the gear's own axle in the parent's frame
+	var own := attachment.animate(tilted, 0.25)
+	check((own.basis * Vector3.UP).is_equal_approx(axle), "a spin axis turns the attachment on its own axle (the axle stays put)")
+	check(not own.basis.is_equal_approx(tilted.basis), "and it does turn")
 
 
 func test_unit_view_wears_its_attachments_stamped() -> void:
