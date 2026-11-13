@@ -1,0 +1,358 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 3
+radius_bottom = 0.13
+radius_top = 0.25
+segments = 32
+position = Vector3(0, 0, 0.03)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.4, 0.06, 0.08, 1)
+roughness = 0.15
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 3
+radius_bottom = 0.09
+radius_top = 0.15
+segments = 28
+position = Vector3(0, 0, 0.05)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.3, 0.03, 0.05, 1)
+roughness = 0.15
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.11
+radius_top = 0.11
+height = 0.02
+segments = 28
+position = Vector3(0, 0, 0.02)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.14, 0.03, 0.04, 1)
+roughness = 0.8
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(0.12, 0, 0.08)
+rotation_degrees = Vector3(0, 0, 90)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(0.1081, 0.0521, 0.08)
+rotation_degrees = Vector3(0, 0, 115.7143)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(0.0748, 0.0938, 0.08)
+rotation_degrees = Vector3(0, 0, 141.4286)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(0.0267, 0.117, 0.08)
+rotation_degrees = Vector3(0, 0, 167.1429)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p7"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(-0.0267, 0.117, 0.08)
+rotation_degrees = Vector3(0, 0, 192.8571)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p8"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(-0.0748, 0.0938, 0.08)
+rotation_degrees = Vector3(0, 0, 218.5714)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p9"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(-0.1081, 0.0521, 0.08)
+rotation_degrees = Vector3(0, 0, 244.2857)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p10"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(-0.12, 0, 0.08)
+rotation_degrees = Vector3(0, 0, 270)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p11"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(-0.1081, -0.0521, 0.08)
+rotation_degrees = Vector3(0, 0, 295.7143)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p12"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(-0.0748, -0.0938, 0.08)
+rotation_degrees = Vector3(0, 0, 321.4286)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p13"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(-0.0267, -0.117, 0.08)
+rotation_degrees = Vector3(0, 0, 347.1429)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p14"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(0.0267, -0.117, 0.08)
+rotation_degrees = Vector3(0, 0, 372.8571)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p15"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(0.0748, -0.0938, 0.08)
+rotation_degrees = Vector3(0, 0, 398.5714)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p16"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0
+height = 0.0576
+segments = 8
+position = Vector3(0.1081, -0.0521, 0.08)
+rotation_degrees = Vector3(0, 0, 424.2857)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p17"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.014
+radius_top = 0
+height = 0.0448
+segments = 8
+position = Vector3(0.07, 0, 0.065)
+rotation_degrees = Vector3(0, 0, 90)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p18"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.014
+radius_top = 0
+height = 0.0448
+segments = 8
+position = Vector3(0.0566, 0.0411, 0.065)
+rotation_degrees = Vector3(0, 0, 126)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p19"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.014
+radius_top = 0
+height = 0.0448
+segments = 8
+position = Vector3(0.0216, 0.0666, 0.065)
+rotation_degrees = Vector3(0, 0, 162)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p20"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.014
+radius_top = 0
+height = 0.0448
+segments = 8
+position = Vector3(-0.0216, 0.0666, 0.065)
+rotation_degrees = Vector3(0, 0, 198)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p21"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.014
+radius_top = 0
+height = 0.0448
+segments = 8
+position = Vector3(-0.0566, 0.0411, 0.065)
+rotation_degrees = Vector3(0, 0, 234)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p22"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.014
+radius_top = 0
+height = 0.0448
+segments = 8
+position = Vector3(-0.07, 0, 0.065)
+rotation_degrees = Vector3(0, 0, 270)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p23"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.014
+radius_top = 0
+height = 0.0448
+segments = 8
+position = Vector3(-0.0566, -0.0411, 0.065)
+rotation_degrees = Vector3(0, 0, 306)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p24"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.014
+radius_top = 0
+height = 0.0448
+segments = 8
+position = Vector3(-0.0216, -0.0666, 0.065)
+rotation_degrees = Vector3(0, 0, 342)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p25"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.014
+radius_top = 0
+height = 0.0448
+segments = 8
+position = Vector3(0.0216, -0.0666, 0.065)
+rotation_degrees = Vector3(0, 0, 378)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p26"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.014
+radius_top = 0
+height = 0.0448
+segments = 8
+position = Vector3(0.0566, -0.0411, 0.065)
+rotation_degrees = Vector3(0, 0, 414)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Sucker mouth, fleshy lip and two rings of teeth"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6"), SubResource("Resource_p7"), SubResource("Resource_p8"), SubResource("Resource_p9"), SubResource("Resource_p10"), SubResource("Resource_p11"), SubResource("Resource_p12"), SubResource("Resource_p13"), SubResource("Resource_p14"), SubResource("Resource_p15"), SubResource("Resource_p16"), SubResource("Resource_p17"), SubResource("Resource_p18"), SubResource("Resource_p19"), SubResource("Resource_p20"), SubResource("Resource_p21"), SubResource("Resource_p22"), SubResource("Resource_p23"), SubResource("Resource_p24"), SubResource("Resource_p25"), SubResource("Resource_p26")])

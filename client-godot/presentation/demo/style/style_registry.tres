@@ -61,6 +61,17 @@
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/porthole_eyes.tres" id="s2_25"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/brass_gear.tres" id="s2_26"]
 [ext_resource type="Material" path="res://presentation/demo/style/surfaces/riveted_brass.tres" id="s2_27"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/maw_jagged_drool.tres" id="s3_1"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/maw_eyes_angry.tres" id="s3_2"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/leech_sucker_big.tres" id="s3_3"]
+[ext_resource type="Material" path="res://presentation/demo/style/surfaces/leech_veins.tres" id="s3_4"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/spider_legs.tres" id="s3_5"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/spider_eyes.tres" id="s3_6"]
+[ext_resource type="Material" path="res://presentation/demo/style/surfaces/vein_net.tres" id="s3_7"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/heart_arteries.tres" id="s3_8"]
+[ext_resource type="Material" path="res://presentation/demo/style/surfaces/heart_flesh.tres" id="s3_9"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/heart_pulse.tres" id="s3_10"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/mother_arteries.tres" id="s3_11"]
 
 [sub_resource type="Resource" id="Resource_h2uv3"]
 script = ExtResource("1_avbba")
@@ -888,6 +899,94 @@ script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s2a16"), SubResource("Resource_s2a17"), SubResource("Resource_s2a18")])
 surface = ExtResource("s2_27")
 
+[sub_resource type="Resource" id="Resource_s3a1"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s3_1")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_s3a2"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s3_2")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_s3l3"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s3a1"), SubResource("Resource_s3a2")])
+
+[sub_resource type="Resource" id="Resource_s3a4"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s3_3")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_s3l5"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s3a4")])
+surface = ExtResource("s3_4")
+
+[sub_resource type="Resource" id="Resource_s3a6"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s3_5")
+socket = &"Center"
+mirror = true
+
+[sub_resource type="Resource" id="Resource_s3a7"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s3_6")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_s3l8"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s3a6"), SubResource("Resource_s3a7")])
+surface = ExtResource("s3_7")
+
+[sub_resource type="Resource" id="Resource_s3a9"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s3_8")
+use_tint = true
+tint = Color(0.62, 0.1, 0.12, 1)
+
+[sub_resource type="Resource" id="Resource_s3l10"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s3a9")])
+surface = ExtResource("s3_9")
+effect = ExtResource("s3_10")
+effect_params = {
+"color": Color(0.95, 0.2, 0.2, 1),
+"speed": 0.5
+}
+
+[sub_resource type="Resource" id="Resource_s3a11"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s3_8")
+use_tint = true
+tint = Color(0.12, 0.2, 0.6, 1)
+
+[sub_resource type="Resource" id="Resource_s3l12"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s3a11")])
+surface = ExtResource("s3_9")
+effect = ExtResource("s3_10")
+effect_params = {
+"color": Color(0.3, 0.5, 1, 1),
+"speed": 0.5
+}
+
+[sub_resource type="Resource" id="Resource_s3a13"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s3_11")
+use_tint = true
+tint = Color(0.6, 0.06, 0.38, 1)
+
+[sub_resource type="Resource" id="Resource_s3l14"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s3a13")])
+surface = ExtResource("s3_9")
+effect = ExtResource("s3_10")
+effect_params = {
+"color": Color(0.95, 0.15, 0.6, 1),
+"speed": 1.0
+}
+
 [resource]
 script = ExtResource("4_amh85")
 default_look = SubResource("Resource_h2uv3")
@@ -910,14 +1009,20 @@ looks = Dictionary[StringName, ExtResource("1_avbba")]({
 &"demo.enemy.cinder_hound": SubResource("Resource_s2l3"),
 &"demo.enemy.forgemaster": SubResource("Resource_s2l15"),
 &"demo.enemy.golem": SubResource("Resource_6xxrr"),
+&"demo.enemy.gutter_maw": SubResource("Resource_s3l3"),
+&"demo.enemy.heart_left": SubResource("Resource_s3l10"),
+&"demo.enemy.heart_right": SubResource("Resource_s3l12"),
 &"demo.enemy.imp": SubResource("Resource_rptdn"),
 &"demo.enemy.knight": SubResource("Resource_knightlook"),
+&"demo.enemy.leech": SubResource("Resource_s3l5"),
 &"demo.enemy.lich": SubResource("Resource_q38xi"),
+&"demo.enemy.mother_heart": SubResource("Resource_s3l14"),
 &"demo.enemy.rat_king": SubResource("Resource_rat"),
 &"demo.enemy.shaman": SubResource("Resource_shaman"),
 &"demo.enemy.slime": SubResource("Resource_slime"),
 &"demo.enemy.smelter": SubResource("Resource_s2l7"),
 &"demo.enemy.toad": SubResource("Resource_toad"),
+&"demo.enemy.vein_weaver": SubResource("Resource_s3l8"),
 &"demo.enemy.wisp": SubResource("Resource_wisp")
 })
 tag_rules = Array[ExtResource("5_m0vw3")]([])

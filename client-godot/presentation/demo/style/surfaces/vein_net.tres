@@ -1,0 +1,37 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[sub_resource type="Gradient" id="Gradient_veins"]
+offsets = PackedFloat32Array(0, 0.05, 0.12, 0.2, 1)
+colors = PackedColorArray(0.3, 0.04, 0.12, 1, 0.42, 0.08, 0.2, 1, 0.85, 0.7, 0.75, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_veins"]
+noise_type = 2
+seed = 21
+frequency = 0.03
+fractal_type = 1
+fractal_octaves = 2
+cellular_distance_function = 0
+cellular_return_type = 4
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_veins"]
+width = 256
+height = 256
+noise = SubResource("FastNoiseLite_veins")
+color_ramp = SubResource("Gradient_veins")
+seamless = true
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_vein_bump"]
+width = 256
+height = 256
+noise = SubResource("FastNoiseLite_veins")
+seamless = true
+as_normal_map = true
+bump_strength = 10.0
+
+[resource]
+albedo_texture = SubResource("NoiseTexture2D_veins")
+roughness = 0.5
+normal_enabled = true
+normal_scale = 1.4
+normal_texture = SubResource("NoiseTexture2D_vein_bump")
+uv1_triplanar = true

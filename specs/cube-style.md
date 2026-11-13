@@ -262,6 +262,18 @@ iterations. Every detail is data: primitive attachments (3.3), a surface (`UnitL
   eye plate); eyes stay flush with the face (the user turned down eyes that stick out).
 - **Surfaces glow through colour, not emission:** an emission texture on a body surface renders the whole cube white (seen on the
   Golem's cracks and the Cinder Hound's crust), so a hot surface uses bright seams in its albedo and a looping effect for heat.
+- **Faces centred, expressions by slant (Set 3):** a face that is the unit's whole identity (a mouth, a sucker, a spider's eyes)
+  sits in the middle of the face plate, not leaned to the camera side. Angry reads by slant: lids or brows low in the middle (a V);
+  the opposite slant reads worried.
+- **Textures that work and don't (Set 3):** a vein net (cellular noise, the cell edges dark, with matching bumps) reads on any
+  colour, matte or glossy. Ribs or bands from a gradient texture in triplanar projection did not read (the user dropped them):
+  stripes need real geometry or a texture made for the cube's faces.
+- **Drool, legs and other hanging parts stop above the body's bottom** (the cube stands on the floor); bent legs are two tubes
+  (thigh and shin, each a three-point curve) with a ball at the knee.
+- **Beats in step:** a shader pulse runs on the layer's own clock (`time` since the effect started, never wrapped by
+  `loop_period`), so pulses keep a fixed ratio by their speeds (the Mother Heart once a second, the twin hearts at half that) and
+  are in phase when their effects start together, as the units of one battle do. An effect started later (a revive, a quality
+  change) beats out of phase; a shared clock would be a change to the VFX system.
 
 **Review (user, 2026-11-13; memory `live-preview-window`):** set by set in a live window the user closes. First an A/B room with
 every unit **facing the camera** (to see the faces), with a **Turn** button that turns the cubes to their battle facing and back
@@ -343,6 +355,14 @@ Brass Colossus: B (`riveted_brass` plates, steam pipes, porthole eyes) with A's 
 A heartbeat (a `PULSE` motion: a scale beat on the attachment) would need a fourth `UnitAttachment.Motion`; not in the sheet unless
 asked.
 
+**Picked (Set 3, approved 2026-11-13):** Gutter Maw: A, reworked: a centred mouth with gums and uneven teeth with two fangs, two
+strands of drool ending above the floor, angry yellow slit eyes under heavy green lids slanting down to the middle (no brows).
+Leech: a big sucker centred on the face (a fleshy lip and two rings of teeth) on glossy dark veins (`leech_veins`); the banded and
+ribbed skins were dropped. Vein Weaver: A's spider legs (four a side, thigh, knee and shin) with eight eyes and two fangs, centred,
+on B's vein net (`vein_net`). Left and Right Heart: B, the arteries tinted red or blue on veined flesh (`heart_flesh`), with a floor
+glow beating in their colour (`heart_pulse`, `speed` 0.5). Mother Heart: B, five arteries arching out round a central aorta on the
+same flesh, beating in magenta twice as fast (`speed` 1). The beat is the floor glow; no `PULSE` motion was built.
+
 ### Set 4: Cathedral and Vault (6)
 | Unit | Colour | A | B |
 |---|---|---|---|
@@ -367,7 +387,7 @@ asked.
 - Sets 3-5 above are first proposals. They are built under the design approach above, so expect faces, effects and combined
   details to be added while iterating.
 - System code the roll-out added: `UnitAttachment.spin_axis` (3.3, Set 2), `UnitLook.effect` / `effect_params` (3.2), the `rune_glyphs` shader, see-through bodies keeping
-  their alpha in the death fade. Still only if picked: a `PULSE` motion (hearts), a body wobble.
+  their alpha in the death fade, a `speed` parameter on `fx.heart_pulse` (Set 3). Still only if picked: a body wobble.
 - Q3 (the props) is answered below for keys and armor; items wait for their own slice.
 
 ### Set K: pickups on the floor (user, 2026-11-13)
@@ -401,6 +421,10 @@ stage (the event's cyan "?" cube sat in the middle of the fight). `RoomView3D` h
 after the battle shows what the room holds then, so a reward appears only after the fight.
 
 ## 6b. Open items
+- **Battle camera hides the faces (user, 2026-11-13, Set 3 demo fight):** the battle camera looks down at the units from the side,
+  so the face details this roll-out adds are hard to see. Ideas: push both sides closer to their own walls (the Bat's wings
+  would then clip into the walls), a rotatable camera, or a bigger room. Left for a later slice (with the camera modes, memory
+  `camera-modes-later`).
 - **Fog and effects (found in the 2026-11-13 playtest):** the Crypt and Coven moods had fog, and Godot's fog tinted the
   transparent parts of every effect quad, so effects showed as pale boxes. The fog was removed from both moods. Fog can come
   back once the effect materials opt out of it (`render_mode fog_disabled` in the effect shaders, `disable_fog` on the
