@@ -26,6 +26,12 @@ extends FxLayer
 @export var local_coords: bool = false
 ## Fewer particles on low quality (low 40 %, medium 70 %).
 @export var scale_amount_with_quality: bool = true
+## A random head start of 0..start_jitter seconds for each copy of the effect (the particles' preprocess), so copies started on
+## the same frame (several statuses landing at once) do not emit in step. 0 = every copy starts from nothing, in step.
+@export_range(0.0, 10.0) var start_jitter: float = 0.0
+
+## Presentation-only randomness for start_jitter (never a battle or run stream; like the sound layer's pitch).
+static var _jitter_rng: RandomNumberGenerator
 
 
 func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, definition: FxDefinition) -> void:
@@ -44,8 +50,17 @@ func rebind(node: Node, params: Dictionary, definition: FxDefinition) -> void:
 
 func start(node: Node) -> void:
 	super(node)
+	node.preprocess = _jitter() if start_jitter > 0.0 else 0.0
 	node.restart()
 	node.emitting = true
+
+
+## A head start in [0, start_jitter] seconds.
+func _jitter() -> float:
+	if _jitter_rng == null:
+		_jitter_rng = RandomNumberGenerator.new()
+		_jitter_rng.randomize()
+	return _jitter_rng.randf_range(0.0, start_jitter)
 
 
 func stop(node: Node, _fade: float) -> void:

@@ -89,6 +89,26 @@ func _quad_shader() -> Shader:
 
 # --- Parameters, bindings, tracks -----------------------------------------------------------------------------------
 
+func test_start_jitter_gives_each_copy_a_head_start() -> void:
+	var layer := FxParticles3DLayer.new()
+	layer.loop = true
+	var steady := layer.build() as GPUParticles3D
+	host.add_child(steady)
+	layer.start(steady)
+	eq(steady.preprocess, 0.0, "no jitter: every copy starts from nothing")
+	layer.start_jitter = 1.3
+	var heads: Array = []
+	for i in 6:
+		var copy := layer.build() as GPUParticles3D
+		host.add_child(copy)
+		layer.start(copy)
+		check(copy.preprocess >= 0.0 and copy.preprocess <= 1.3, "a head start within 0..start_jitter (%.2f)" % copy.preprocess)
+		heads.append(copy.preprocess)
+		copy.queue_free()
+	check(heads.any(func(h: float) -> bool: return not is_equal_approx(h, heads[0])), "copies started together get different head starts")
+	steady.queue_free()
+
+
 func test_param_types_clamp_and_parse() -> void:
 	var number := _param(&"n", FxParam.Kind.FLOAT, 1.0, 0.0, 2.0)
 	eq(number.clamp_value(5), 2.0, "float clamps to the range")
