@@ -185,6 +185,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-11-10: Added an open question to 4b `game-analytics`: where the analytics tables live (main Postgres, a separate
   analytics database or schema, or a column store such as ClickHouse), to decide when the 4b spec is written. Added by an
   external chat (resume write-up discussion), at the user's request.
+- 2026-11-13: Added slice 5e `audio-pass` (a new sound-effect bank and volume sliders, no music) at the user's request;
+  licence check first (OFF's soundtrack ruled out: no reuse licence; the shipped RTP pack's origin to check); it comes
+  after the cube-style roll-out and before 5b `card-ui`.
 
 
 ## Design tuning: any time, not just in breaks
@@ -659,6 +662,18 @@ from a chapter's event query appears at most once per run (seen = placed on a fl
 pool gives an empty room; fixed room events and the rest stop stay repeatable), and a named item the run already saw becomes a
 food item (like Isaac's drops), so no route hands out a second copy (pool picks already did not). Decided 2026-11-09; implemented together with 5c. Client only; the run hash gains `events_seen=`
 when not empty, so the committed run goldens may change and the balance gate is re-measured.
+
+### 5e. `audio-pass`
+Added 2026-11-13 at the user's request, a small slice of its own (to be discussed in a separate chat before `/spec`).
+**Order (user, 2026-11-13):** after the 5a4 `cube-style` roll-out to the remaining units, before 5b `card-ui`. A new
+sound-effect bank to replace or extend the RTP pack in `presentation/audio/rtp/`, plus **volume sliders** on the Settings
+screen (Master and effects, a music bus only if music comes later; Godot audio buses, saved in the Settings). **No music is
+needed** (user, 2026-11-13). Licence first: only CC0 or clearly redistributable packs (the repo is public), each credited in
+`CREDITS.md` (spec `cube-style` 3.7). OFF (Mortis Ghost, 2008) was raised and ruled out: its soundtrack by Alias Conrad
+Coldwood is a free download (2017) but carries no reuse licence, and the 2025 remaster itself replaced it because the
+composer would not sign the rights over; its sound effects only if they come from an openly licensed source. Also check
+where the shipped RTP pack comes from: RPG Maker's RTP is licensed for games made with RPG Maker. Candidates: Kenney's
+audio packs (CC0), OpenGameArt filtered to CC0, the Sonniss GDC bundles (royalty-free; check redistribution in a public repo).
 
 ### 6. `observability`
 End-to-end traces HTTP → RabbitMQ → worker → outbox → Redpanda. Metrics: verify latency, queue age,

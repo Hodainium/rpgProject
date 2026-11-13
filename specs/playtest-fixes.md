@@ -93,6 +93,15 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   the user: a size-aware bias (paints over units in front), lifting the quads (they float), laying shockwave rings flat
   (`presentation/` per effect); the user chose the soft fade, Unreal's DepthFade, in the shared include.
 
+- **B15. "Weak!" / "Resist" labels overlap the damage number and can show twice** (reported 2026-11-13, open, not yet
+  reproduced). In some hits a weakness or resist label is drawn twice over itself, and over the damage number, which makes the
+  number hard to read. Leads (2026-11-13, from the data, unconfirmed): the number's own small line (`cue_number.tscn` styles
+  `Weak!` for `Hit.Weakness`) and a separate `RESIST` text effect on `Message.Battle.Resisted` (a resisted *status*, from
+  `battle.status_resisted`, `moment_fx_rules.tres`) both anchor on the target, so a hit that lands and has its debuff resisted
+  stacks two texts in one place; multi-hit abilities and per-hit numbers on one target may stack labels the same way. To do:
+  reproduce with a window run (`--manual`, a weakness hit with a debuff roll), find which sources draw, then offset or merge
+  them (an Honkai-style stack that pushes earlier numbers up, or one label per hit).
+
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved. B9 and B10 only show the state of the client's existing calls (no new request, field or header); they are the
 player-facing side of the offline-first retries in `server-authority` 2.1–2.4.
