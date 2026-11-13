@@ -10,17 +10,23 @@ var _room_root: Node3D
 var _views: Dictionary = {}  # unit id ("P1", "E2") -> unit view
 var _battle: Battle
 var _gate: ViewGate
+## Spec cube-style: the chapter's mood (environment and lights; with no style registry, today's one light) and the camera.
+var _rig: StageRig
+var _camera: Camera3D
+
+## Spec cube-style 3.9: how long the camera takes to move between the exploration and the battle framing.
+const CAMERA_SECONDS: float = 0.45
 
 
 func setup(main: GameMain) -> void:
 	_main = main
-	var camera := Camera3D.new()
-	camera.position = Vector3(0, 9, 8)
-	camera.rotation_degrees = Vector3(-50, 0, 0)
-	add_child(camera)
-	var light := DirectionalLight3D.new()
-	light.rotation_degrees = Vector3(-60, 30, 0)
-	add_child(light)
+	add_to_group(&"style_listeners")  # spec cube-style 3.8: the console's `style` restyles the room
+	_camera = Camera3D.new()
+	add_child(_camera)
+	UnitStyle.explore_framing().apply_to(_camera)  # today's (0, 9, 8), -50° unless the registry says otherwise
+	_rig = StageRig.new()
+	_rig.active = false  # hidden until a mode other than the menu (see visible below and _on_mode)
+	add_child(_rig)
 	_room_root = Node3D.new()
 	add_child(_room_root)
 	main.run_changed.connect(_bind)
@@ -31,6 +37,7 @@ func setup(main: GameMain) -> void:
 
 func _on_mode(mode: String) -> void:
 	visible = mode != "menu"
+	_rig.active = visible  # the mood's environment never tints a menu
 
 
 func _on_battle_prepared(_recorder: ActionRecorder, gate: ViewGate) -> void:
@@ -39,6 +46,7 @@ func _on_battle_prepared(_recorder: ActionRecorder, gate: ViewGate) -> void:
 
 
 func _bind(run: RunController) -> void:
+	UnitStyle.explore_framing().apply_to(_camera)  # spec cube-style 3.9: a new run never starts in a battle framing
 	run.floor_entered.connect(func(_floor): _build())
 	run.room_entered.connect(func(_cell): _build())
 	run.room_cleared.connect(func(_cell): _build())
@@ -54,6 +62,7 @@ func _on_party_changed() -> void:
 
 func _on_battle_finished(outcome: String) -> void:
 	_battle = null
+	UnitStyle.explore_framing().tween_to(_camera, CAMERA_SECONDS)  # spec cube-style 3.9
 	_build()
 	if outcome == Battle.VICTORY:  # spec animation-sets: the living party celebrates
 		for id in _views:
@@ -71,6 +80,7 @@ func _build() -> void:
 		return
 	var data: Dictionary = run.state.map.cells[run.state.current_cell]
 	var room: RoomDefinition = run.content.rooms.get(data["room"])
+	_rig.apply(UnitStyle.mood_for(run.state.chapter_id))  # spec cube-style 3.6: the chapter's mood
 	_build_box(data["doors"])
 	for member in run.state.party:
 		var character: UnitDefinition = run.content.units.get(member["character"])
@@ -102,6 +112,7 @@ func _build() -> void:
 
 func _on_battle_started(battle: Battle) -> void:
 	_battle = battle
+	UnitStyle.battle_framing().tween_to(_camera, CAMERA_SECONDS)  # spec cube-style 3.9
 	for view in _views.values():
 		view.queue_free()
 	_views.clear()
@@ -153,6 +164,27 @@ func _on_execution(_unit_id: StringName, _row_id: StringName, _target_ids: Array
 	_refresh_stats()
 
 
+## Spec cube-style 3.8: the console changed the style (a registry, a mood override): the room, the camera and the units again.
+func restyle() -> void:
+	if _main == null or _main.run == null or _main.run.state == null:
+		return
+	if _battle == null:
+		UnitStyle.explore_framing().apply_to(_camera)
+		_build()
+		return
+	UnitStyle.battle_framing().apply_to(_camera)
+	_rig.apply(UnitStyle.mood_for(_main.run.state.chapter_id))
+	for child in _room_root.get_children():  # the floor and walls _build_box marked take the new mood's materials
+		match child.get_meta(&"style_part", &""):
+			&"floor":
+				child.material_override = _rig.floor_material()
+			&"wall":
+				child.material_override = _rig.wall_material()
+	for view in _views.values():
+		if is_instance_valid(view) and view is UnitAnimator:
+			view.restyle()
+
+
 func _refresh_stats() -> void:
 	if _battle == null:
 		return
@@ -166,6 +198,8 @@ func _build_box(doors: int) -> void:
 	var box := BoxMesh.new()
 	box.size = Vector3(COLUMNS, 0.2, ROWS)
 	floor_mesh.mesh = box
+	floor_mesh.material_override = _rig.floor_material()  # spec cube-style: the mood's floor (null = today's)
+	floor_mesh.set_meta(&"style_part", &"floor")  # restyle() finds it in battle
 	floor_mesh.position = Vector3(0, -0.6, 0)
 	_room_root.add_child(floor_mesh)
 	# Walls of unit blocks, with a gap in the middle of each side that has a door.
@@ -186,6 +220,8 @@ func _wall(cell: Vector2i) -> void:
 	var box := BoxMesh.new()
 	box.size = Vector3(1, 0.6, 1)
 	wall.mesh = box
+	wall.material_override = _rig.wall_material()  # spec cube-style: the mood's walls (null = today's)
+	wall.set_meta(&"style_part", &"wall")
 	wall.position = _world(cell) + Vector3(0, -0.2, 0)
 	_room_root.add_child(wall)
 
