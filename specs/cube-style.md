@@ -373,6 +373,21 @@ same flesh, beating in magenta twice as fast (`speed` 1). The beat is the floor 
 | Vault Sentry | steel blue | One large lens eye on the front (rim cylinder + glowing ice-blue sphere; it drains Ice) | A held halberd |
 | The Collector (boss) | dark gold | A loot sack on the back (lathe sack, a few coins on top) | A monocle on the front |
 
+**Picked (Set 4, approved 2026-11-13):** Choir Seraph: B, two pairs of small feathered wings (scalloped extruded outlines, each
+pair flapping at its own speed), with a singing face (closed eyes, a round open mouth, blush) and soft light drifting down
+(`seraph_down`). Penitent Knight: A and B, the crown of thorns, a linen blindfold with two matching blood stains where the eyes are,
+each with a drip, and a brass censer swinging front to back on its chain. Hallowed Judge: A and B, the gold balance scales (beam
+along the facing), a barrister's curled wig, the mitre on top of it and stern gold eyes under a V of grey brows. Gilded Mimic: B, a
+chest (iron straps and a lock on the face), the lid open about 60° and chomping on its hinge (`FLAP` on a pivot turned so its axis
+is the hinge), a row of teeth on the lid and on the front edge, eyes glowing inside and a centred tongue. Vault Sentry: B, the lens
+eye, a halberd (blade along the facing) and a steel crest (the crest symmetric front to back). The Collector: B, a monocle with its chain, a
+squint and a centred grin with a gold tooth, gold coins orbiting slowly (`SPIN`) with gold glints (`coin_glints`), and a plum top
+hat with a gold band and a coin resting on it, upright (the user's addition).
+
+**More enemies (user, 2026-11-13):** after Set 4's looks, 3 new enemies for the Cathedral and 3 for the Vault, so each of those
+floors has 6. New enemies are content (abilities, brains, encounters, balance), so they get their own spec; their looks follow
+as a set like this one.
+
 ### Set 5: Coven and Void (6)
 | Unit | Colour | A | B |
 |---|---|---|---|
@@ -387,7 +402,7 @@ same flesh, beating in magenta twice as fast (`speed` 1). The beat is the floor 
 - Sets 3-5 above are first proposals. They are built under the design approach above, so expect faces, effects and combined
   details to be added while iterating.
 - System code the roll-out added: `UnitAttachment.spin_axis` (3.3, Set 2), `UnitLook.effect` / `effect_params` (3.2), the `rune_glyphs` shader, see-through bodies keeping
-  their alpha in the death fade, a `speed` parameter on `fx.heart_pulse` (Set 3). Still only if picked: a body wobble.
+  their alpha in the death fade, a `speed` parameter on `fx.heart_pulse` (Set 3); nothing for Set 4 (data only: two new effects). Still only if picked: a body wobble.
 - Q3 (the props) is answered below for keys and armor; items wait for their own slice.
 
 ### Set K: pickups on the floor (user, 2026-11-13)
