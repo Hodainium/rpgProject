@@ -234,6 +234,8 @@ func _requalify_live() -> void:
 
 
 func _requalify(handle: FxHandle) -> void:
+	if _gone(handle):
+		return
 	var def := handle.definition
 	for index in def.layers.size():
 		var layer := def.layers[index]
@@ -311,6 +313,8 @@ func stats() -> Dictionary:
 
 ## Changes a parameter of a live effect (FxHandle.set_param).
 func set_handle_param(handle: FxHandle, param_name: StringName, value: Variant) -> void:
+	if _gone(handle):
+		return
 	var coerced := _coerce(handle.definition, param_name, value)
 	if not coerced["ok"]:
 		return
@@ -341,9 +345,20 @@ func _coerce(def: FxDefinition, param_name: StringName, value: Variant) -> Dicti
 	return {"ok": true, "value": spec.clamp_value(value)}
 
 
+## Playtest-fixes B19: a handle whose anchor or instance nodes left (a unit view freed) is finished at once instead of
+## reaching its freed nodes; advance() does the same on its next tick. True when it was.
+func _gone(handle: FxHandle) -> bool:
+	if handle.done:
+		return false
+	if handle.anchor != null and handle.anchor.is_valid() and handle.instance != null and handle.instance.is_intact():
+		return false
+	_finish(handle)
+	return true
+
+
 ## Fades an effect out (FxHandle.stop).
 func stop_handle(handle: FxHandle, fade: float) -> void:
-	if handle.done or handle.stopping:
+	if handle.done or handle.stopping or _gone(handle):
 		return
 	handle.stopping = true
 	var wait := maxf(fade, 0.0)

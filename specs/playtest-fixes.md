@@ -239,12 +239,12 @@ turns the fade off). What stays: an effect still shows through a unit less than 
 ### Fix for B17 (system code)
 | File | Change |
 |---|---|
-| `game/view/unit_animator.gd` | `shows_anything(animation)`: a value track other than `visible`, or any sound, bezier, animation or transform track. A triggered passive whose animation shows nothing releases the gate at once (its keys resolve in order, as headless): no montage, no wait. `SAFETY_SECONDS` 0.5 → 0: a montage ends at its length, on a timer on the same scaled clock, so a short one never waits for a safety. |
+| `game/view/unit_animator.gd` | A triggered passive whose animation shows nothing releases the gate at once (its keys resolve in order, as headless): no montage, no wait (first as `shows_anything`, replaced by B21's `plays_nothing`: no passive animates except a follow-up attack). `SAFETY_SECONDS` 0.5 → 0.05: a montage ends at its length, on a timer on the same scaled clock, so a short one never waits for a safety; the 0.05 s lets the tree reach a key at the montage's very end first (review fix). |
 
 ### Fix for B18 (system code; your UI files with your OK)
 | File | Change |
 |---|---|
-| `game/view_gate.gd` | Pacing: an action (any ability that is not a triggered passive) stays on screen at least `min_action_seconds` (1.0) and then `pause_seconds` (0.4) pass, in game time (the battle speed scales both). Its hits still land on the `execute` keys; only the end waits. `skip()` and `skip_all` cut it short; 0 turns either off. |
+| `game/view_gate.gd` | Pacing: an action (any ability that is not a triggered passive) or a follow-up attack stays on screen at least `min_action_seconds` (1.0) and then `pause_seconds` (0.4) pass, in game time (the minimum on a scene timer, so a speed change mid-action counts at once; review fix). Its hits still land on the `execute` keys; only the end waits. `ViewGate.apply_settings` loads both. `skip()` and `skip_all` cut it short; 0 turns either off. |
 | `game/game_main.gd` | Each battle's gate takes the two values from the Settings (`battle_min_action`, `battle_pause`). |
 | `game/dev/commands/pace.gd` (new) | `pace [<min> [<pause>]]`: shows or sets them (saved; the current battle takes them at once). |
 | `presentation/demo/ui/settings.tscn`, `settings.gd` | Rows "Action time (s)" (0–3, step 0.1) and "Pause between actions (s)" (0–2); a change applies to the battle on screen. Speeds `[1, 2]` → `[1, 2, 3]`. |
@@ -256,7 +256,7 @@ passives 0–2 ms (were 0–530 ms).
 ### Fix for B19 (system code)
 | File | Change |
 |---|---|
-| `game/fx/fx_service.gd` | `stop_handle`: a running layer whose node is no longer valid is marked done instead of being stopped. |
+| `game/fx/fx_service.gd` | `_gone(handle)`: `stop_handle`, `set_handle_param` and `_requalify` finish a handle whose anchor or instance nodes left (a unit view freed) instead of reaching its freed nodes, as `advance` already did (review fix); `stop_handle` also skips a running layer whose node is gone. |
 
 ### Fix for B20 (your file, with your OK)
 | File | Change |
@@ -272,6 +272,8 @@ passives 0–2 ms (were 0–530 ms).
 | File | Change |
 |---|---|
 | `game/messages/battle_messages.gd` | After `Message.Battle.Ended` nothing more is broadcast. |
+| `game/game_main.gd` | The battle's `FxTagCues` (Broken, Downed looks) are detached at `battle_finished`, before the teardown removes the tags (review fix). |
+| `game/fx/fx_cue_notify.gd` | A cue on a unit whose cues are closed plays nothing: GodotGAS spawns persistent cues through `GameplayCueManager.add_persistent_cue`, past `execute_cue` (review fix). |
 | `combat/combat_asc.gd` | `cues_closed`: `execute_cue` does nothing while it is set (persistent cues are still ended). Presentation only: cues are never in a hash. |
 | `combat/battle.gd` | Closes every unit's cues when the battle ends and when the Battle node is deleted (before its units clean up); a field battle's cues are open only inside `perform` / `apply_to_units` (a heal on the map, eating food). |
 | `combat/battle_unit.gd` | A field battle's units start with cues closed. |
@@ -334,7 +336,7 @@ N/A: no server metrics.
   Pyromancer's burst and of Sanctuary's circles hide them.
 - **B16:** `test_battle_pacing::test_a_spin_stays_within_half_a_turn_and_keeps_its_motion` (1, 2 and −1 turns: every key within
   about half a turn, start and end at rest, the same pose as the original every 10 ms; a small turn is played as it is).
-- **B17:** `test_battle_pacing::test_what_shows`, `test_an_invisible_passive_takes_no_screen_time`; `test_animation_sets` still passes
+- **B17:** `test_battle_pacing::test_an_invisible_passive_takes_no_screen_time` (and B21's tests); `test_animation_sets` still passes
   (a stuck montage is released at its length).
 - **B18:** `test_battle_pacing::test_the_gate_paces_actions_and_skips_cut_it_short` (an action waits its minimum and the pause in
   game time with its hits released at once; skip, skip_all, a triggered passive and 0/0 do not wait), `test_the_pace_command`.

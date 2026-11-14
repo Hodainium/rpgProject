@@ -22,9 +22,9 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		GameMain.save_setting("settings", ViewGate.SETTING_MIN_ACTION, values[0])
 	if values.size() > 1:
 		GameMain.save_setting("settings", ViewGate.SETTING_PAUSE, values[1])
-	var min_action := float(GameMain.load_setting("settings", ViewGate.SETTING_MIN_ACTION, ViewGate.DEFAULT_MIN_ACTION))
-	var pause := float(GameMain.load_setting("settings", ViewGate.SETTING_PAUSE, ViewGate.DEFAULT_PAUSE))
+	var shown := ViewGate.new()
+	ViewGate.apply_settings(shown)
 	if ctx.game != null and ctx.game.gate != null:
-		ctx.game.gate.min_action_seconds = min_action
-		ctx.game.gate.pause_seconds = pause
-	return "battle pace: an action at least %.2f s, then a %.2f s pause (at 1×)" % [min_action, pause]
+		ViewGate.apply_settings(ctx.game.gate)
+	return "battle pace: an action at least %.2f s, then a %.2f s pause (at 1×)" % [shown.min_action_seconds,
+		shown.pause_seconds]

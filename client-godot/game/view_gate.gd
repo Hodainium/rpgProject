@@ -31,14 +31,24 @@ var min_action_seconds: float = DEFAULT_MIN_ACTION
 var pause_seconds: float = DEFAULT_PAUSE
 var _paced: bool = false
 var _pace_id: int = 0
-var _began_usec: int = 0
+var _min_timer: SceneTreeTimer  # the action's minimum time, on the scaled clock (a speed change mid-action counts at once)
+
+
+## Loads the pacing from the Settings into `gate` (GameMain for each battle, the console's `pace`).
+static func apply_settings(gate: ViewGate) -> void:
+	gate.min_action_seconds = float(GameMain.load_setting("settings", SETTING_MIN_ACTION, DEFAULT_MIN_ACTION))
+	gate.pause_seconds = float(GameMain.load_setting("settings", SETTING_PAUSE, DEFAULT_PAUSE))
 
 
 func begin_ability(unit_id: StringName, ability: BattleAbility, sequence: Array[StringName]) -> void:
 	super(unit_id, ability, sequence)
 	_pace_id += 1
-	_paced = not skip_all and not ability.is_triggered() and (min_action_seconds > 0.0 or pause_seconds > 0.0)
-	_began_usec = Time.get_ticks_usec()
+	# An action, or a follow-up attack (it plays like one, B21); never another triggered passive.
+	_paced = not skip_all and (not ability.is_triggered() or ability.is_follow_up()) 		and (min_action_seconds > 0.0 or pause_seconds > 0.0)
+	_min_timer = null
+	var tree := Engine.get_main_loop() as SceneTree
+	if _paced and tree != null and min_action_seconds > 0.0:
+		_min_timer = tree.create_timer(min_action_seconds)
 	if skip_all:
 		release_finished()
 		return
@@ -57,10 +67,10 @@ func release_finished() -> void:
 	released.emit()
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree != null:
-		var shown := (Time.get_ticks_usec() - _began_usec) / 1000000.0 * Engine.time_scale
-		var wait := maxf(min_action_seconds - shown, 0.0) + pause_seconds
+		while _min_timer != null and _min_timer.time_left > 0.0 and id == _pace_id and not skip_all:
+			await tree.process_frame
 		var waited := 0.0
-		while waited < wait and id == _pace_id and not skip_all:
+		while waited < pause_seconds and id == _pace_id and not skip_all:
 			await tree.process_frame
 			waited += tree.root.get_process_delta_time()
 	if id == _pace_id:

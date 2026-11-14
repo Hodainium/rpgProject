@@ -14,8 +14,9 @@ extends Node3D
 const MONTAGE: StringName = &"montage/current"
 ## Extra time after an ability animation's length before the gate is released anyway. 0 (playtest-fixes B17): the montage
 ## ends at its length, read from a timer on the same scaled clock, because a montage shorter than the OneShot's fades (the
-## 0.05 s bookkeeping passives) was often never seen active and sat on a 0.5 s safety wait with nothing on screen.
-const SAFETY_SECONDS: float = 0.0
+## 0.05 s bookkeeping passives) was often never seen active and sat on a 0.5 s safety wait with nothing on screen. The few
+## hundredths left let the tree reach the montage's last frame first, so a key at its very end fires into this cast's gate.
+const SAFETY_SECONDS: float = 0.05
 const MONTAGE_FADE: float = 0.1
 ## Value-track properties that move a model; an ability animation with none of them gets the set's `cast` merged in.
 const MODEL_PROPERTIES: Array[String] = ["position", "rotation", "rotation_degrees", "scale", "transform",
@@ -635,7 +636,6 @@ func _record_rest(animation: Animation) -> void:
 		library.add_animation(&"RESET", reset)
 
 
-const FOLLOW_UP: StringName = &"Ability.Type.FollowUp"
 static var _blinkless: Dictionary = {}  # animation id -> the copy without `visible` tracks (or the animation)
 
 
@@ -643,7 +643,7 @@ static var _blinkless: Dictionary = {}  # animation id -> the copy without `visi
 ## battle-start spin, no ult-charge flash); its `execute` keys resolve at once, as headless. A follow-up attack
 ## (Ability.Type.FollowUp) is an attack and still plays.
 static func plays_nothing(ability: BattleAbility) -> bool:
-	return ability.is_triggered() and not ability.asset_tags.has(FOLLOW_UP)
+	return ability.is_triggered() and not ability.is_follow_up()
 
 
 ## Playtest-fixes B21 (user, 2026-11-14: a cube never blinks when it acts, only when it is hit): the animation, or a copy
@@ -655,7 +655,8 @@ static func without_blinks(animation: Animation) -> Animation:
 		return _blinkless[id]
 	var copy: Animation = null
 	for track in range(animation.get_track_count() - 1, -1, -1):
-		if animation.track_get_type(track) == Animation.TYPE_VALUE 				and String(animation.track_get_path(track).get_concatenated_subnames()) == "visible":
+		if animation.track_get_type(track) == Animation.TYPE_VALUE \
+				and String(animation.track_get_path(track).get_concatenated_subnames()) == "visible":
 			if copy == null:
 				copy = animation.duplicate()
 			copy.remove_track(track)

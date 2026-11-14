@@ -55,7 +55,7 @@ func test_passives_play_nothing_but_follow_ups_do() -> void:
 	check(UnitAnimator.plays_nothing(passive), "a battle-start passive plays nothing (no spin, B21)")
 	var follow_up := BattleAbility.new()
 	follow_up.trigger_event_tag = &"Event.Damage.Dealt"
-	follow_up.asset_tags.assign([UnitAnimator.FOLLOW_UP])
+	follow_up.asset_tags.assign([BattleAbility.FOLLOW_UP_TAG])
 	check(not UnitAnimator.plays_nothing(follow_up), "a follow-up attack still plays")
 	var action := BattleAbility.new()
 	check(not UnitAnimator.plays_nothing(action), "an action plays")
@@ -142,6 +142,13 @@ func test_the_gate_paces_actions_and_skips_cut_it_short() -> void:
 	gate.begin_ability(&"P1", passive, [] as Array[StringName])
 	gate.release_finished()
 	check(gate._finished, "a triggered passive is never paced")
+	var follow_up := _action(true)
+	follow_up.asset_tags.assign([BattleAbility.FOLLOW_UP_TAG])
+	gate.begin_ability(&"P1", follow_up, [] as Array[StringName])
+	gate.release_finished()
+	check(not gate._finished, "a follow-up attack is paced like an action (it plays like one)")
+	gate.skip()
+	follow_up.free()
 	gate.skip_all = true
 	gate.begin_ability(&"P1", action, [] as Array[StringName])
 	check(gate._finished, "skip_all: at once")
