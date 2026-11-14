@@ -179,6 +179,7 @@ script = ExtResource("2_b37kx")
 shape = ExtResource("f1_15")
 socket = &"Back"
 offset = Vector3(0, -0.2, 0)
+scale = Vector3(0.7, 0.7, 0.7)
 
 [sub_resource type="Resource" id="Resource_f1l8"]
 script = ExtResource("1_avbba")

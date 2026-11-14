@@ -34,8 +34,8 @@ tintable = false
 [sub_resource type="Resource" id="Resource_p3"]
 script = ExtResource("1_part")
 kind = 0
-size = Vector3(0.04, 0.52, 0.04)
-position = Vector3(0, 0.04, 0.012)
+size = Vector3(0.04, 0.52, 0.02)
+position = Vector3(0, 0.04, 0)
 color = Color(0.45, 0.48, 0.52, 1)
 metallic = 0.8
 roughness = 0.3
