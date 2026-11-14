@@ -2,7 +2,7 @@
 ## user://game_main.cfg [settings]. Presentation only: nothing here changes a run or a battle.
 extends UIScreen
 
-@export var speeds: Array[float] = [1.0, 2.0]
+@export var speeds: Array[float] = [1.0, 2.0, 3.0]
 @export var speed_format: String = "%d×"
 ## Spec main-menu M7: shown instead of the switch while a run is playing.
 @export var run_note: String = "Switch modes from the main menu"
@@ -13,6 +13,17 @@ func bind(context: UIContext) -> void:
 		%Speed.add_item(speed_format % int(speed))
 	%Speed.select(maxi(speeds.find(float(GameMain.load_setting("settings", "battle_speed", speeds[0]))), 0))
 	%Speed.item_selected.connect(func(index): GameMain.save_setting("settings", "battle_speed", speeds[index]))
+	# Playtest-fixes B18: the battle pacing at 1× (the speed scales it); the next action of a battle already on uses it.
+	%MinAction.value = float(GameMain.load_setting("settings", ViewGate.SETTING_MIN_ACTION, ViewGate.DEFAULT_MIN_ACTION))
+	%MinAction.value_changed.connect(func(value):
+		GameMain.save_setting("settings", ViewGate.SETTING_MIN_ACTION, value)
+		if context.main.gate != null:
+			context.main.gate.min_action_seconds = value)
+	%Pause.value = float(GameMain.load_setting("settings", ViewGate.SETTING_PAUSE, ViewGate.DEFAULT_PAUSE))
+	%Pause.value_changed.connect(func(value):
+		GameMain.save_setting("settings", ViewGate.SETTING_PAUSE, value)
+		if context.main.gate != null:
+			context.main.gate.pause_seconds = value)
 	%Skip.button_pressed = GameMain.load_setting("settings", "skip_animations", false)
 	%Skip.toggled.connect(func(on): GameMain.save_setting("settings", "skip_animations", on))
 	# Spec auto-battle: whether a new run starts on Auto (A1), and whether Auto casts ults (A2, applies at once).

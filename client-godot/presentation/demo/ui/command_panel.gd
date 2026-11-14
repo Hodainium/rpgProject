@@ -11,7 +11,7 @@ enum Page { IDLE, COMMANDS, LIST, TARGET }
 const BASIC_TAG: StringName = &"Ability.Type.Basic"
 const GUARD_TAG: StringName = &"Ability.Role.Guard"
 
-@export var speeds: Array[float] = [1.0, 2.0]
+@export var speeds: Array[float] = [1.0, 2.0, 3.0]
 @export var speed_format: String = "SPEED %d×"
 @export var hint_format: String = "HINT %s"
 @export var attack_text: String = "Attack"

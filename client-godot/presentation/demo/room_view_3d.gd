@@ -124,13 +124,7 @@ func _build() -> void:
 		return
 	var data: Dictionary = run.state.map.cells[run.state.current_cell]
 	var room: RoomDefinition = run.content.rooms.get(data["room"])
-	var key := "%d|%d|%d|%s" % [run.state.floor_index, run.state.current_cell, data["doors"], run.state.chapter_id]
-	if key != _box_key:
-		_box_key = key
-		for child in _box_root.get_children():
-			child.queue_free()
-		_rig.apply(UnitStyle.mood_for(run.state.chapter_id))  # spec cube-style 3.6: the chapter's mood
-		_build_box(data["doors"])
+	_sync_box(run)
 	_free_views(func(id: StringName) -> bool: return not String(id).begins_with("P"))  # the battle's enemies (faded out)
 	_sync_party(room)
 	_props_root.visible = true
@@ -212,8 +206,24 @@ func _free_views(pick: Callable) -> void:
 			_views.erase(id)
 
 
+## The walls, floor and mood of the room the party is in, rebuilt only when the room changed.
+func _sync_box(run: RunController) -> void:
+	var data: Dictionary = run.state.map.cells[run.state.current_cell]
+	var key := "%d|%d|%d|%s" % [run.state.floor_index, run.state.current_cell, data["doors"], run.state.chapter_id]
+	if key == _box_key:
+		return
+	_box_key = key
+	for child in _box_root.get_children():
+		child.queue_free()
+	_rig.apply(UnitStyle.mood_for(run.state.chapter_id))  # spec cube-style 3.6: the chapter's mood
+	_build_box(data["doors"])
+
+
 func _on_battle_started(battle: Battle) -> void:
 	_battle = battle
+	# Playtest-fixes B20: a room entered by a click starts its battle in the same frame, before the queued rebuild runs (which
+	# then waits for the battle), so the fight showed the previous room's walls and the doors moved when it ended.
+	_sync_box(_main.run)
 	_props_root.visible = false  # spec cube-style Set K: no pickup or event prop during a fight; the rebuild after it shows them
 	UnitStyle.battle_framing().tween_to(_camera, CAMERA_SECONDS)  # spec cube-style 3.9
 	var ids: Array[StringName] = []
