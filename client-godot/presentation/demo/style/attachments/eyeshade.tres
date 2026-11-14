@@ -1,0 +1,79 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.86, 0.08, 0.03)
+position = Vector3(0, -0.06, 0.415)
+color = Color(0.18, 0.42, 0.22, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.86, 0.08, 0.03)
+position = Vector3(0, -0.06, -0.415)
+color = Color(0.18, 0.42, 0.22, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.03, 0.08, 0.86)
+position = Vector3(0.415, -0.06, 0)
+color = Color(0.18, 0.42, 0.22, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.03, 0.08, 0.86)
+position = Vector3(-0.415, -0.06, 0)
+color = Color(0.18, 0.42, 0.22, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.66, 0.02, 0.2)
+position = Vector3(0, -0.08, 0.5)
+rotation_degrees = Vector3(24, 0, 0)
+color = Color(0.22, 0.62, 0.32, 1)
+roughness = 0.3
+emission = 0.25
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 7
+size = Vector3(1, 1, 0.012)
+profile = PackedVector2Array(0, 0, 0.03, 0.06, 0.04, 0.16, 0.03, 0.26, 0, 0.32, -0.02, 0.26, -0.03, 0.14, -0.02, 0.05)
+position = Vector3(0.44, 0, -0.08)
+rotation_degrees = Vector3(-35, 90, 0)
+color = Color(0.97, 0.96, 0.92, 1)
+roughness = 0.8
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.008
+radius_top = 0.006
+height = 0.36
+segments = 6
+position = Vector3(0.445, 0.08, -0.03)
+rotation_degrees = Vector3(-35, 0, 0)
+color = Color(0.3, 0.25, 0.2, 1)
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Eyeshade and quill"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6")])

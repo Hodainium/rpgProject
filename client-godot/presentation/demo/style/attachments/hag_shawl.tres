@@ -1,0 +1,115 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.88, 0.04, 0.88)
+position = Vector3(0, 0.43, 0)
+color = Color(0.24, 0.22, 0.16, 1)
+roughness = 0.95
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 7
+size = Vector3(1, 1, 0.025)
+profile = PackedVector2Array(-0.44, 0.44, 0.44, 0.44, 0.44, -0.18, 0.352, -0.31, 0.264, -0.18, 0.176, -0.34, 0.088, -0.18, 0, -0.31, -0.088, -0.18, -0.176, -0.34, -0.264, -0.18, -0.352, -0.31, -0.44, -0.18)
+position = Vector3(0, 0, -0.435)
+color = Color(0.24, 0.22, 0.16, 1)
+roughness = 0.95
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 7
+size = Vector3(1, 1, 0.025)
+profile = PackedVector2Array(-0.44, 0.44, 0.44, 0.44, 0.44, -0.18, 0.352, -0.31, 0.264, -0.18, 0.176, -0.34, 0.088, -0.18, 0, -0.31, -0.088, -0.18, -0.176, -0.34, -0.264, -0.18, -0.352, -0.31, -0.44, -0.18)
+position = Vector3(0.435, 0, 0)
+rotation_degrees = Vector3(0, 90, 0)
+color = Color(0.24, 0.22, 0.16, 1)
+roughness = 0.95
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 7
+size = Vector3(1, 1, 0.025)
+profile = PackedVector2Array(-0.44, 0.44, 0.44, 0.44, 0.44, -0.18, 0.352, -0.31, 0.264, -0.18, 0.176, -0.34, 0.088, -0.18, 0, -0.31, -0.088, -0.18, -0.176, -0.34, -0.264, -0.18, -0.352, -0.31, -0.44, -0.18)
+position = Vector3(-0.435, 0, 0)
+rotation_degrees = Vector3(0, 90, 0)
+color = Color(0.24, 0.22, 0.16, 1)
+roughness = 0.95
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 7
+size = Vector3(1, 1, 0.025)
+profile = PackedVector2Array(-0.44, 0.44, 0.44, 0.44, 0.44, 0.35, 0.3667, 0.31, 0.2933, 0.35, 0.22, 0.28, 0.1467, 0.35, 0.0733, 0.31, 0, 0.35, -0.0733, 0.28, -0.1467, 0.35, -0.22, 0.31, -0.2933, 0.35, -0.3667, 0.28, -0.44, 0.35)
+position = Vector3(0, 0, 0.435)
+color = Color(0.24, 0.22, 0.16, 1)
+roughness = 0.95
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.45
+segments = 24
+position = Vector3(0, 0.44, -0.05)
+scale = Vector3(1, 0.22, 1)
+color = Color(0.24, 0.22, 0.16, 1)
+roughness = 0.95
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.02
+radius_top = 0.008
+curve = PackedVector3Array(0.34, 0.3, 0.44, 0.38, 0.05, 0.47, 0.35, -0.2, 0.45)
+segments = 12
+color = Color(0.72, 0.72, 0.68, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p7"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.02
+radius_top = 0.008
+curve = PackedVector3Array(0.38, 0.3, 0.44, 0.42, 0.05, 0.47, 0.39, -0.24, 0.45)
+segments = 12
+color = Color(0.72, 0.72, 0.68, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p8"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.02
+radius_top = 0.008
+curve = PackedVector3Array(-0.34, 0.3, 0.44, -0.38, 0.05, 0.47, -0.35, -0.2, 0.45)
+segments = 12
+color = Color(0.72, 0.72, 0.68, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p9"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.02
+radius_top = 0.008
+curve = PackedVector3Array(-0.38, 0.3, 0.44, -0.42, 0.05, 0.47, -0.39, -0.24, 0.45)
+segments = 12
+color = Color(0.72, 0.72, 0.68, 1)
+roughness = 0.9
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Hag shawl and hair"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6"), SubResource("Resource_p7"), SubResource("Resource_p8"), SubResource("Resource_p9")])

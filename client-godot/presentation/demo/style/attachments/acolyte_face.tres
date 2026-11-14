@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.014
+radius_top = 0.014
+curve = PackedVector3Array(0.06, 0.11, 0, 0.13, 0.06, 0.012, 0.2, 0.11, 0)
+segments = 12
+color = Color(0.4, 0.3, 0.2, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.014
+radius_top = 0.014
+curve = PackedVector3Array(-0.2, 0.11, 0, -0.13, 0.06, 0.012, -0.06, 0.11, 0)
+segments = 12
+color = Color(0.4, 0.3, 0.2, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.014
+radius_top = 0.014
+curve = PackedVector3Array(-0.07, -0.12, 0, 0, -0.16, 0.012, 0.07, -0.12, 0)
+segments = 12
+color = Color(0.14, 0.03, 0.04, 1)
+roughness = 0.8
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.04
+segments = 12
+position = Vector3(0.21, -0.04, 0)
+scale = Vector3(1, 0.6, 0.3)
+color = Color(1, 0.72, 0.62, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.04
+segments = 12
+position = Vector3(-0.21, -0.04, 0)
+scale = Vector3(1, 0.6, 0.3)
+color = Color(1, 0.72, 0.62, 1)
+roughness = 0.9
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Acolyte face"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4")])
