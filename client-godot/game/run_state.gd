@@ -64,7 +64,8 @@ var chest_serial: int = 0
 ## Dev commands so far; the k-th one draws from the stream "dev/<k>".
 var dev_commands: int = 0
 ## Spec card-collection 2.5: the item pool of the run (item and equipment ids: the core set and the cards owned at the start).
-## Only picks from the item pools are restricted to it (FloorGenerator); loadouts, named gifts, drops and mirrors ignore it.
+## Only picks from the item pools are restricted to it (FloorGenerator); loadouts, named gifts and mirrors ignore it;
+## enemy drops obey it through RunController._pooled_drop (spec route-enemies 3.6).
 ## `card_pool_set` false = unrestricted (local mode today). The pool is the server's input (never in a snapshot), and the run
 ## hash covers a digest of it only when it is set, so runs without one hash exactly as before.
 var card_pool: Array[StringName] = []

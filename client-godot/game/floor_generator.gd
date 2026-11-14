@@ -340,15 +340,16 @@ func _pick_pooled(stream: RandomNumberGenerator, candidates: Array) -> Variant:
 
 
 ## Spec card-collection 2.5: a pick is allowed when the run has no card pool, or the pool holds the id. Only the three pick
-## functions below ask; fixed items, loadouts, drops and mirrors never do.
+## functions below ask; fixed items, loadouts and mirrors never do (drops ask through RunController._pooled_drop).
 static func _in_card_pool(pools: Dictionary, id: StringName) -> bool:
 	var pool: Variant = pools.get("card_pool")
 	return pool == null or pool.has(id)
 
 
 ## A fixed item, or one picked from the pool (unlocked, not held, not seen this run).
-## Falls back to the run structure's fallback_item.
-func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNumberGenerator, pools: Dictionary) -> ItemDefinition:
+## Falls back to the run structure's fallback_item, unless `use_fallback` is false (then null when nothing is left).
+func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNumberGenerator, pools: Dictionary,
+		use_fallback: bool = true) -> ItemDefinition:
 	if fixed != null:
 		return fixed
 	var candidates: Array = []
@@ -360,7 +361,7 @@ func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNum
 			continue
 		candidates.append(item)
 	var picked: ItemDefinition = _pick_pooled(stream, candidates)
-	if picked == null and run_structure != null:
+	if picked == null and run_structure != null and use_fallback:
 		picked = run_structure.fallback_item
 	return picked
 

@@ -746,11 +746,48 @@ func _roll_drops(enemies: Array, cell: int) -> void:
 		if definition == null or definition.drop_item == null or definition.drop_chance_x100 <= 0:
 			continue
 		if RunSeeds.roll(stream, definition.drop_chance_x100):
-			_notify("%s dropped %s" % [definition.display_name, definition.drop_item.display_name])
-			_send(GameplayMessageRouter.RUN_ITEM_DROPPED, &"Verb.Drop", definition.id, definition.drop_item.id, 0,
-				definition.drop_item.tags, {"instigatorName": definition.display_name,
-				"targetName": definition.drop_item.display_name})
-			give_item(definition.drop_item, null, null)
+			var item := _pooled_drop(definition.drop_item, stream)
+			if item == null:
+				continue
+			_notify("%s dropped %s" % [definition.display_name, item.display_name])
+			_send(GameplayMessageRouter.RUN_ITEM_DROPPED, &"Verb.Drop", definition.id, item.id, 0,
+				item.tags, {"instigatorName": definition.display_name, "targetName": item.display_name})
+			give_item(item, null, null)
+
+
+const DROP_FALLBACK_POOL: StringName = &"Pool.Treasure"
+const DROP_FOOD_POOL: StringName = &"Pool.Food"
+
+
+## Spec route-enemies 3.6: a drop obeys the run's card pool (spec card-collection 2.5). An item outside it becomes an
+## item-room item (Pool.Treasure) from the pool, not held and not seen; when none is left, a food item from the pool
+## (held or seen ones too). Either way only items some member can hold; null when there is none. The substitute is
+## marked seen, like every generated offer. Only that case draws more from the drop stream, so a run without a card pool
+## (local mode, every golden) and a drop inside the pool roll exactly as before.
+func _pooled_drop(item: ItemDefinition, stream: RandomNumberGenerator) -> ItemDefinition:
+	if not state.card_pool_set or state.card_pool.has(item.id):
+		return item
+	var unholdable: Array = []
+	for id in content.items:
+		var candidate: ItemDefinition = content.items[id]
+		if not state.party.any(func(member) -> bool: return can_hold(member["slot"], candidate) == ""):
+			unholdable.append(id)
+	var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
+	var pools := _pools()
+	pools["held"] = pools["held"] + unholdable
+	var picked := generator.pick_item(null, _pool_query(DROP_FALLBACK_POOL), stream, pools, false)
+	if picked == null:
+		picked = generator.pick_item(null, _pool_query(DROP_FOOD_POOL), stream,
+			{"card_pool": state.card_pool, "held": unholdable}, false)
+	if picked != null and not state.seen_items.has(picked.id):
+		state.seen_items.append(picked.id)
+	return picked
+
+
+static func _pool_query(tag: StringName) -> GameplayTagQuery:
+	var query := GameplayTagQuery.new()
+	query.require_all_tags.assign([tag])
+	return query
 
 
 ## Spec playable-demo 3.7: the encounter's rewards after a won battle, in order. Event directives (go to page, start
@@ -2066,10 +2103,8 @@ func dev_spawn_item(item: Resource, pool_tag: StringName, price: int) -> String:
 		return "no run"
 	var stream := dev_log("spawn item" if item != null else "spawn pool", [item.id if item != null else pool_tag, price])
 	if item == null:
-		var query := GameplayTagQuery.new()
-		query.require_all_tags.assign([pool_tag])
 		var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
-		item = generator.pick_pickup(null, null, query, stream, _pools())
+		item = generator.pick_pickup(null, null, _pool_query(pool_tag), stream, _pools())
 		if item == null:
 			return "no item in the pool %s" % pool_tag
 	var data: Dictionary = state.map.cells[state.current_cell]

@@ -33,7 +33,7 @@ N/A for the backend: nothing new travels. In the game, the flow is today's:
 1. The floor generator picks each battle room's encounter from the chapter's `encounter_query` (`Chapter.Cathedral` /
    `Chapter.Vault`, not `Encounter.Boss`) by `EncounterDefinition.weight`. The new encounters carry the chapter tag, so they join the
    pool with no change to the chapter files.
-2. The elites' encounters have a **lower weight** (proposed 40 against the regulars' 100), which is what makes them "special": rarer,
+2. The elites' encounters have a **lower weight** (0.4 against the regulars' default 1, stored ×100 as 40 and 100), which is what makes them "special": rarer,
    at most as likely as any one regular encounter. No room type, floor rule or generator change.
 3. In battle, each enemy acts by its brain (`PatternBrain`, or `TacticalBrain` where noted); the elites change at 50% HP through
    `EnemyDefinition.phases` (`BossPhase`), which is not limited to bosses (to be confirmed in implement by a test; if it is, the
@@ -55,7 +55,7 @@ Reference (today, floor 9-10): regulars HP 520-1100, ATK 260-420, DEF 150-380, S
 | Enemy | Rank | HP / ATK / DEF / SPD / Tough. | Tags | Abilities (new in **bold**) | Brain |
 |---|---|---|---|---|---|
 | **Bell Ringer** `demo.enemy.bell_ringer` | regular | 640 / 300 / 180 / 110 / 80 | `Enemy.Type.Ringer`, `Weakness.Fire` | **Toll**: all party, Physical 50%, and every hit delays its target's next action by 20% (`ExecutionRow.delay`); `strike` | Pattern: Toll, Strike, Strike |
-| **Candle Acolyte** `demo.enemy.candle_acolyte` | regular | 480 / 320 / 140 / 125 / 60 | `Enemy.Type.Acolyte`, `Resist.Fire`, `Weakness.Ice` | **Votive Flame**: one target, Fire 110%, Burn at 60%; **Vigil**: the lowest-HP ally heals 15% of max HP and loses one debuff (heal + cleanse effects) | Tactical (Vigil when an ally is below half), else Votive Flame |
+| **Candle Acolyte** `demo.enemy.candle_acolyte` | regular | 480 / 320 / 140 / 125 / 60 | `Enemy.Type.Acolyte`, `Resist.Fire`, `Weakness.Ice` | **Votive Flame**: one target, Fire 110%, Burn at 60%; **Vigil**: every ally heals 10% of max HP and loses its debuffs (heal + cleanse effects; built, section 7b) | Pattern: Votive Flame, Votive Flame, Vigil |
 | **Glass Saint** `demo.enemy.glass_saint` | **elite** | 2600 / 380 / 260 / 100 / 240 | `Enemy.Type.Saint`, `Enemy.Rank.Elite`, `Resist.Ice`, `Resist.Fire`, `Weakness.Physical` | **Prism Ray**: all party, Ice 70%, Vulnerable at 40%; **Stained Ward**: Ward on every ally; `smite`. Phase at 50% HP, *Cracked*: Haste on itself and **Shard Rain** joins its pattern (all party, Physical 60%, Bleed at 50%) | Pattern: Prism Ray, Stained Ward, Smite (Cracked: Shard Rain, Prism Ray, Smite) |
 
 Theme and role: the Cathedral today is healing (Seraph's Hymn, Bless) and a wall (Penitent's Provoke). The Bell Ringer adds tempo
@@ -109,10 +109,10 @@ the Nameless (`Weakness.Fire`). The new ones avoid a fourth Fire weakness.
 | Enemy | Rank | HP / ATK / DEF / SPD / Tough. | Tags | Abilities (new in **bold**) | Brain |
 |---|---|---|---|---|---|
 | **Null Moth** `demo.enemy.null_moth` | regular | 440 / 290 / 120 / 140 / 50 | `Enemy.Type.Moth`, `Weakness.Physical` | **Dim Wings**: all party, Ice 40%, Weaken (ATK down) at 40%; `bite` | Pattern: Dim Wings, Bite, Bite |
-| **Hollow Echo** `demo.enemy.hollow_echo` | regular | 700 / 330 / 220 / 115 / 100 | `Enemy.Type.Echo`, `Resist.Fire`, `Weakness.Ice` | **Echo Strike**: one target, two Physical hits of 50% (two execution rows); `strike`; passive **Resound**: when hit, strikes back for 40% ATK Physical (a copy of `retaliate` without its `State.Taunting` query, on `Event.Damage.Taken`) | Pattern: Echo Strike, Strike, Echo Strike |
-| **Void Devourer** `demo.enemy.void_devourer` | **elite** | 3100 / 430 / 250 / 100 / 230 | `Enemy.Type.Devourer`, `Enemy.Rank.Elite`, `Resist.Ice`, `Weakness.Physical` | **Consume**: one target, Physical 120%, and it heals by part of the damage (the existing drain-heal effect); **Gravity Well**: all party, every target's next action delayed 25%, Slow at 40%; `tremor`. Phase at 50%, *Starving*: Haste on itself, Consume twice in its pattern | Pattern: Gravity Well, Consume, Tremor (Starving: Consume, Gravity Well, Consume) |
+| **Hollow Echo** `demo.enemy.hollow_echo` | regular | 700 / 330 / 220 / 115 / 100 | `Enemy.Type.Echo`, `Resist.Fire`, `Weakness.Ice` | **Echo Strike**: one target, two Physical hits of 50% (two execution rows); `strike`; passive **Resound**: when hit on its weakness, strikes back for 40% ATK Physical (on `Event.Damage.Taken.Weakness`, section 7b) | Pattern: Echo Strike, Strike, Echo Strike |
+| **Void Devourer** `demo.enemy.void_devourer` | **elite** | 3100 / 430 / 250 / 100 / 230 | `Enemy.Type.Devourer`, `Enemy.Rank.Elite`, `Resist.Ice`, `Weakness.Physical` | **Consume**: one target, Physical 120%, and the passive **Gorge** heals the Devourer 10% of max HP (section 7b); **Gravity Well**: all party, no damage, every target's next action delayed 25%, Slow at 40%; `tremor`. Phase at 50%, *Starving*: Haste on itself, Consume twice in its pattern | Pattern: Gravity Well, Consume, Tremor (Starving: Consume, Gravity Well, Consume) |
 
-Theme: what is left in the dark. The Moth weakens, the Echo hits twice and counters every hit (Resound), and the Devourer is a tempo-and-sustain elite.
+Theme: what is left in the dark. The Moth weakens, the Echo hits twice and counters a hit on its weakness (Resound), and the Devourer is a tempo-and-sustain elite.
 The Hollow Echo is weak to Ice while the Void Wraith **drains** Ice, the same aiming tension as in the Vault.
 
 **Coven and Void encounters (new files):**
@@ -133,8 +133,8 @@ Elite drops (25%, like the light route's): the Hag Sister the Witch's Eye, the V
 - **New abilities** (`content/demo/abilities/`, each with an `Ability.*` tag and an animation from the default set): Toll, Votive
   Flame, Vigil, Prism Ray, Stained Ward, Shard Rain, Levy, Stone Gaze, Gilded Breath, Hoard Greed (light route); Pinprick,
   Ill Omen, Boil Over, Cauldron Brew, Dim Wings, Echo Strike, Consume, Gravity Well and the passive Resound (dark route). They reuse today's effects
-  (`damage`, `burn`, `bleed`, `stun`, `vulnerable`, `ward`, `haste`, `rally`, `heal`, `cleanse`, `slow`, `weaken`, `vampire_heal`) except one:
-- **One new effect:** `sp_drain_15` (instant, `mp` −15, clamped at 0 by the attribute set), for Levy.
+  (`damage`, `burn`, `bleed`, `stun`, `vulnerable`, `ward`, `haste`, `rally`, `heal`, `cleanse`, `slow`, `weaken`, `vampire_heal`) except these:
+- **New effects:** `sp_drain_15` (instant, `mp` −15, clamped at 0 by the attribute set), for Levy; as built (7b), the percent heals `vigil_heal` (10%), `cauldron_brew_heal` (12%), `hoard_greed_heal` (10%), `gorge_heal` (10%), and the empty `gravity_pull` that carries Gravity Well's delay.
 - **New tags** (in `godot_gas/tag_registry.tres`, the user's file, so on the user's OK): twelve `Enemy.Type.*` tags (Ringer, Acolyte,
   Saint, Clerk, Gargoyle, Drake, Doll, Familiar, Hag, Moth, Echo, Devourer), `Enemy.Rank.Elite` and one `Ability.*` tag per new
   ability (nineteen; Resound as `Ability.Passive.Resound`); checked by `game/tools/sync_tags.tscn`.
@@ -170,11 +170,11 @@ deaths per encounter and floor, which is how these enemies are watched.
 **Godot (`tools/godot_tests.sh`):**
 - `tests/game/test_route_enemies.gd` (new): for each of the twelve enemies, a headless battle against a fixed demo party on a fixed
   seed in which every new ability is used at least once (asserted from the battle log, `BattleLog`), then a replay through
-  `ReplayRunner` reaching the same final hash; Levy lowers the target's `mp` by 15 and never below 0; Vigil heals the lowest-HP
-  ally and removes one debuff; Toll delays every target; Resound strikes back when the Echo is hit; each elite's phase fires below 50% HP and changes its pattern.
+  `ReplayRunner` reaching the same final hash; Levy lowers the target's `mp` by 15 and never below 0; Vigil heals its allies and removes
+  their debuffs; Toll delays every target; Resound strikes back when the Echo is hit on its weakness and starts no chain with the party's counters; drops obey the card pool; each elite's phase fires below 50% HP and changes its pattern.
 - The content validator over `content/` (existing test) stays clean; `sync_tags` reports no missing tag.
 - Seed report: over the 600 balance seeds, the four route chapters (both routes) draw every new encounter, and the elites' encounters
-  appear at roughly their weight's share (40 / (sum of weights) of battle rooms, ± a tolerance), with no elite on any other chapter.
+  appear at roughly their weight's share (0.4 / (sum of weights) of battle rooms, ± a tolerance), with no elite on any other chapter.
 - No golden should move: the committed goldens use the fixtures or runs that never reach floors 9-10. If one moves, it is
   investigated and regenerated on purpose, never worked around.
 
@@ -200,6 +200,36 @@ The numbers go to the user before any tuning; tuning is done on the `.tres` valu
   the Echo never has, and a passive is no pattern step), at 40% so area attacks are not punished too hard; the Void Devourer
   drops the **Vampire Fang** (Epic, `Pool.Treasure`), not the Void Scar (a curse); the Coven Familiar is **weak to Fire** (was
   Physical), so the Familiars encounter sets Fire against the Bound Demon's Fire drain.
+
+### 7b. Built differently from 3.x (user, 2026-11-13, during /implement)
+
+The engine has no data for some of the designs above; the user chose these data-only versions (no new combat mechanic):
+
+- **Build:** one builder, `game/tools/build_route_enemies.tscn`, creates every new file (never overwrites); the tags are added
+  to the registry by hand.
+- **Elite phases:** `PatternBrain` has one rotation and a `BossPhase` can only add abilities, tags and effects. Each elite has a
+  four-step pattern whose fourth step is an ability its phase grants (with Haste); before the phase that step falls back to its
+  first ability, like the Golem's Rockfall. Glass Saint: Prism Ray, Stained Ward, Smite, *Shard Rain* (Smite before). Hoard
+  Drake: Bite, Gilded Breath, Hoard Greed, *Fury Breath* (a copy of Gilded Breath; Bite before). Hag Sister: Boil Over, Hag's Hex,
+  Cauldron Brew, *Bitter Boil* (a copy of Boil Over; Hag's Hex before). Void Devourer: Gravity Well, Consume, Tremor, *Ravenous
+  Maw* (a copy of Consume; Tremor before).
+- **Hag's Hex** (`Ability.Haghex`, all party, Vulnerable and Weaken at 50% each) replaces `hex_all`, which needs the High
+  Witch's `State.Phase.Two`.
+- **Vigil:** no brain uses a non-ult heal "when an ally is below half" or aims at the lowest HP, and `cleanse` removes every
+  debuff: Vigil heals all allies 10% and cleanses them, on a pattern.
+- **Consume:** no effect heals by part of the damage (`vampire_heal` is a flat 15 HP). Consume and Ravenous Maw carry
+  `Ability.Type.Consume`; its `Event.Ability.Used.Consume` triggers the passive **Gorge** (`Ability.Passive.Gorge`, 10% of max HP).
+- **Gravity Well** has no damage: its delay rides an empty instant effect (`effects/gravity_pull.tres`) that always lands.
+- **Resound** fires on `Event.Damage.Taken.Weakness` (review fix): on every hit it answered the party's counters (Thorn Mail,
+  Retaliate, Thornbark, Corrupted Thorns) until the chain cap of 10. The party's counters are Physical and the Echo is weak to
+  Ice, so a chain stops after one exchange.
+- **Drops obey the card pool** (review fix): three elite drops are collectible (Golden Idol, Witch's Eye, Vampire Fang). A drop
+  outside the run's card pool becomes an item-room item (`Pool.Treasure`, not held or seen) from the pool, else a food item
+  (`Pool.Food`), else nothing; only that case draws more from the drop stream, so runs without a pool are unchanged
+  (`RunController._pooled_drop`; spec `card-collection` 2.5).
+- **Food drops:** the regulars drop `rations`, `honey_cake`, `roast_haunch` or `hearty_feast` (the `Pool.Food` items).
+- **Tags** beyond Q4's count, for the above: `Ability.Furybreath`, `Ability.Bitterboil`, `Ability.Ravenousmaw`, `Ability.Haghex`,
+  `Ability.Passive.Gorge`, `Ability.Type.Consume`, `Event.Ability.Used.Consume`, `Event.Damage.Taken.Weakness`.
 
 ## 8. Out of scope
 

@@ -164,7 +164,9 @@ a local test pool) the save is refused with the reason, because every hash of su
 **Godot side (the pool is a verified input).** `RunState.card_pool` is a set of content ids, or `null` (unrestricted;
 local mode in this slice, so every golden is unchanged). It restricts only **picks from `Pool.*` queries** (item rooms,
 shops, boss and Vault/Void rewards, chests, events that pick by pool tag). It never touches starting loadouts, items
-named by id in an outcome, enemy drops, or boss mirrors. A pick that finds its filtered pool empty falls back as the
+named by id in an outcome, or boss mirrors. **Enemy drops** obey it since spec `route-enemies` (2026-11-13): a drop outside
+the pool becomes an item-room (`Pool.Treasure`) item from the pool, else a food item (`Pool.Food`), else nothing
+(`RunController._pooled_drop`). A pick that finds its filtered pool empty falls back as the
 room already does for an empty pool. `card_pool=<sha256 of the sorted ids>` joins the run hash **only when the pool is
 set**, so unset runs hash as before (`run-v2`, same rule as `floor_seeds`). The pool is not a snapshot field, so
 `test_snapshot_fields_are_covered` is unchanged; `RunSnapshot.restore(…, card_pool)` takes it from the caller. The verifier gives
@@ -543,7 +545,7 @@ All in `test_cards.gd` (with `card_world.gd`) and the pool cases of `test_step_r
   uploading and loses its save; a save that lost or changed its pool is noticed (local continue refuses).
 - `cards local` sets a pool for local runs; the server commands need server mode.
 - pool picks: with `card_pool` set, shop / item room / boss / chest picks come only from it; with it `null`, every
-  existing golden (floors, scripted run, keyed run) is unchanged; starting loadouts, named gifts, drops and mirrors ignore it;
+  existing golden (floors, scripted run, keyed run) is unchanged; starting loadouts, named gifts and mirrors ignore it (drops obey it, spec `route-enemies` 3.6);
   an empty filtered pool falls back.
 - the run hash line `card_pool=` only when set and order-independent; a snapshot never holds the pool and a restore without it
   hashes differently; steps of a pool run verify and link; a step with a stripped, widened or foreign pool is refused
