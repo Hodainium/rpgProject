@@ -1,6 +1,6 @@
 # Spec: food-items (food becomes passive: eat it on pickup, keep a lasting bonus)
 
-Status: reviewed 2026-11-13 (section 7). Slice: a small content-and-rules slice after `route-enemies` (before its cube looks,
+Status: built 2026-11-13, awaiting playtest (decisions in section 7; synced with the build 2026-11-13). Slice: a small content-and-rules slice after `route-enemies` (before its cube looks,
 Sets 4b and 5b). The four new Food items of slice 5c `card-balance` follow this pattern.
 
 ## 1. Purpose & enterprise mapping
@@ -38,12 +38,15 @@ N/A for the backend: nothing new travels. In the game:
 2. Every dropped item is given with the recipient CHOOSE (Q2): when more than one living member could hold it (always, for a
    passive item), the item waits in `RunState.pending_gifts` and every other run action is refused until the logged
    `give_to(slot)` (spec `event-items`; `UI.State.Run.Gift` shows the choice). One possible holder: it goes straight to them.
-   Several drops after one battle wait one after another, in the order they were rolled.
+   Several drops after one battle wait one after another, in the order they were rolled. **The battle that wins the run**
+   (the last floor's boss room, `RunController._wins_run`) **drops nothing** (Q4): no pick can follow the win. Drops are
+   rolled before the room is cleared but given after it, so a dropped item counts from the next room on (its
+   `on_room_cleared`, a Twin Fob's key doubling; Q6).
 3. `give_to` → `_receive_item(slot, item)` → `_place_item` adds it to the member's `items` (a passive item; no use slot), then
    the item's `on_pickup` outcomes run with `hook_item` and the new **`hook_slot`** (the receiving member) set.
 4. The food's outcome **`ApplyHolderEffect`** (new) applies its effect to the holder only (`RunController.apply_member_effect`
    with `[hook_slot]`, the field context): the HP foods heal a percent of max HP (`exec_calc_percent_of_max`, as today's food
-   effects), the Honey Cake restores a percent of max SP (`food_mp_40`). The Hearty Feast uses the existing `ApplyPartyEffect`.
+   effects), the Honey Cake restores a percent of max SP (`food_mp_40`, which holds 33% despite its name). The Hearty Feast uses the existing `ApplyPartyEffect`.
    Because the item is placed first, the bonus already counts, so a percent heal reads the new maximum.
 5. The lasting bonus is the item's `grants`: an `AbilitySet` with one INFINITE effect (max HP flat or percent; max SP), applied
    in every later battle and field context like any passive item's grants (`applies_to` HOLDER, PARTY for the Hearty Feast).
@@ -60,26 +63,36 @@ them (stored ×100, root `CLAUDE.md`); the `.tres` files are the source of truth
 
 ### 3.1 System code (`game/`)
 
-- `_roll_drops` gives every drop with `GiveItem.Recipient.CHOOSE` (was FIRST). Chests (already CHOOSE), events, pickups and
-  shops keep their own rules. No new field: the rule is the same for every drop (Q2).
+- `_roll_drops` gives every drop with `GiveItem.Recipient.CHOOSE` (was FIRST), except in the battle that wins the run, which
+  rolls no drops (Q4; `_wins_run(cell)` is the one win rule, also used by `_clear_room`). Chests (already CHOOSE), events,
+  pickups and shops keep their own rules. No new field: the rule is the same for every drop (Q2).
+- Encounter rewards may be CHOOSE (Q5): such a reward waits for `give_to` like a drop (rewards come before the drops); in the
+  battle that wins the run it goes to the first member who can hold it (the transient `_choose_off`, set only while those
+  rewards are granted). The validator's `give_choose_outside_event` now covers item hooks only (spec `event-items` D3).
+- `_pooled_drop` (spec `route-enemies` 3.6) checks who can hold only its possible picks (card-pool items tagged
+  `Pool.Treasure` or `Pool.Food`); the picks are the same as checking the whole content.
 - `ApplyHolderEffect` (new `RunOutcome`, `game/defs/outcomes/apply_holder_effect.gd`): `effect: GameplayEffect`; `apply(run)`
   calls `run.apply_holder_effect(effect)`, which applies it to `hook_slot` through `apply_member_effect`. Outside an item hook
   (no holder) it does nothing and pushes a content warning. The content validator reports `holder_effect_outside_item` when
-  the outcome sits anywhere but an item's `on_pickup` / `on_floor_start` / `on_room_cleared`.
+  the outcome sits anywhere but an item's `on_pickup` / `on_floor_start` / `on_room_cleared`, and `dangling_ref` when it has
+  no effect.
 - `RunController.hook_slot: int` (transient, like `hook_item`): set around an item's hooks in `_receive_item` (and the floor /
-  room hooks, which already know the holder); never logged, hashed or snapshotted.
+  room hooks, which already know the holder), the outer value restored after (a hook may run inside another); never logged,
+  hashed or snapshotted.
 - `RunPlayer` gift resolution (D4): food (an item tagged `Pool.Food`) to the lowest HP share, else today's rule.
 - Validator (new codes): `food_usable` (a `Pool.Food` item that is USABLE: food is passive, D1), `food_no_pickup` (a `Pool.Food`
   item whose `on_pickup` is empty).
 
 ### 3.2 Content (`content/demo/`, the user's folder; existing files changed with the user's OK, shown as old → new)
 
-| Item | On pickup (D2) | Lasting bonus (D3) | `applies_to` | Starting values (Claude tunes them on the gate, Q1) |
-|---|---|---|---|---|
-| Rations | holder heals 15% of max HP | +40 max HP (flat) | HOLDER | today's heal kept |
-| Roast Haunch | holder heals 30% of max HP | +8% max HP | HOLDER | today's heal kept |
-| Honey Cake | holder regains 40% of max SP | +10% max SP | HOLDER | today's restore kept |
-| Hearty Feast | the party heals 25% of max HP (`ApplyPartyEffect`) | +5% max HP | PARTY | today's heal kept |
+The numbers live in the effect files (the source of truth); the starting values were kept after the gate (Q1, section 6).
+
+| Item | On pickup (D2) | Lasting bonus (D3) | `applies_to` |
+|---|---|---|---|
+| Rations | holder heals a percent of max HP (`effects/food_heal_15.tres`) | flat max HP (`effects/food_rations_bonus.tres`) | HOLDER |
+| Roast Haunch | holder heals a percent of max HP (`effects/food_heal_30.tres`) | percent max HP (`effects/food_roast_haunch_bonus.tres`) | HOLDER |
+| Honey Cake | holder regains a percent of max SP (`effects/food_mp_40.tres`; the name is historic) | percent max SP (`effects/food_honey_cake_bonus.tres`) | HOLDER |
+| Hearty Feast | the party heals a percent of max HP (`ApplyPartyEffect`, `effects/food_heal_25.tres`) | percent max HP (`effects/food_hearty_feast_bonus.tres`) | PARTY |
 
 Each item file: `kind` USABLE → PASSIVE, `use_ability` cleared, `on_pickup` = the heal outcome on the existing effect
 (`food_heal_15`, `food_heal_30`, `food_mp_40`, `food_heal_25`), `grants` = a new `AbilitySet` (`loadouts/food_<name>.tres`, its set
@@ -121,7 +134,8 @@ N/A: no new metric. The play report already counts items taken; food appears in 
 
 **Godot (`tools/godot_tests.sh`), on fixtures for the system parts:**
 - `ApplyHolderEffect`: heals only `hook_slot`; outside an item hook it does nothing (and warns); the validator flags it outside
-  an item hook (broken fixture).
+  an item hook (content built in memory, as `test_event_items` does; no broken fixture file).
+- The battle that wins the run drops nothing; a CHOOSE encounter reward waits, except in that battle (first holder).
 - Drops: a drop waits in `pending_gifts` and refuses other actions until `give_to`; with one possible holder it goes straight to
   them; two drops after one battle wait in roll order. No fixture enemy has a drop, so no golden changes.
 - `RunPlayer`: a waiting food goes to the lowest HP share (ties: lowest slot); any other gift to the first member who can hold it.
@@ -132,11 +146,13 @@ N/A: no new metric. The play report already counts items taken; food appears in 
 **Godot, content (`tests/game/`, skipped without the demo content):**
 - `test_food_items`: each of the four demo foods is passive, has an `on_pickup` and a `grants` bonus; picked up it heals its
   holder (the Hearty Feast the party) and adds its bonus; the Honey Cake restores and raises SP; the Collector skips food.
-- A demo run with food drops played by the bots to its end, then replayed step by step (`StepRunner`) to Verified.
+- A run with food drops (a fixture food dropped by every fixture enemy) played by the bots to its end, then replayed step
+  by step (`StepRunner`) to Verified. A demo-content step replay is optional, on demand: `tools/e2e.sh verify_demo_content`.
 - The content validator stays clean (`food_usable`, `food_no_pickup` silent); `sync_tags` reports no missing tag.
 
 **Balance gate** (spec `skill-points` D16): the smart four-member report on the 600 balance seeds before and after, compared
 with `--compare` (win rate, per route, deaths by floor). Claude tunes the starting values on the gate (Q1) and reports the before and after numbers.
+Result (2026-11-13): 29.3% → 31.0% won, sound parties 37.4% → 38.9%, 0 violations; the starting values were kept.
 
 **.NET:** no change; `dotnet test` must still pass. Optional on demand: `tools/e2e.sh verify_demo_content` with the rebuilt export.
 
@@ -146,6 +162,13 @@ with `--compare` (win rate, per route, deaths by floor). Claude tunes the starti
 - **Q2. Other drops:** the player always chooses who gets a dropped item, every drop, not only food (section 2 step 2). The
   bots give food to the lowest HP share and any other drop to the first member who can hold it.
 - **Q3. Old use abilities:** deleted, with their animations (section 3.2).
+- **Q4. The last boss drops nothing** (after the build): the battle that wins the run rolls no drops, so no gift waits in a
+  won run.
+- **Q5. CHOOSE encounter rewards** (after the build): allowed, waiting like a drop; in the battle that wins the run they go to
+  the first member who can hold them.
+- **Q6. A dropped item counts from the next room** (accepted): it is given after the room's clear, so its `on_room_cleared`
+  and run modifiers miss that room.
+- Old saves with food in a use slot: no migration (none existed when this was built).
 
 ## 8. Out of scope
 
