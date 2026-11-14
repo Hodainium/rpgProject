@@ -2,14 +2,20 @@
 
 [ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_7oevk"]
 [ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_bgmb6"]
-[ext_resource type="PackedScene" path="res://content/demo/abilities/rations.tscn" id="3_lsm5t"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_holder_effect.gd" id="3_fdhld"]
+[ext_resource type="Resource" path="res://content/demo/effects/food_heal_15.tres" id="4_fdhea"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/food_rations.tres" id="5_fdset"]
+
+[sub_resource type="Resource" id="Resource_fdpick"]
+script = ExtResource("3_fdhld")
+effect = ExtResource("4_fdhea")
 
 [resource]
 script = ExtResource("2_bgmb6")
 id = &"demo.item.rations"
 display_name = "Rations"
-description = "One ally heals 15% of max HP."
+description = "On pickup: heal 15% of max HP. +40 max HP."
 tags = Array[StringName]([&"Pool.Food", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 2
-kind = 1
-use_ability = ExtResource("3_lsm5t")
+grants = ExtResource("5_fdset")
+on_pickup = Array[ExtResource("1_7oevk")]([SubResource("Resource_fdpick")])

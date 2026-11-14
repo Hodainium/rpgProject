@@ -652,7 +652,8 @@ func _check_encounter(encounter: EncounterDefinition) -> void:
 	if encounter.grants != null:
 		_check_ability_set(encounter.grants, path + "::grants")
 	for index in encounter.rewards.size():
-		_check_outcome(encounter.rewards[index], "%s::rewards[%d]" % [path, index], null)
+		# User, 2026-11-13: the gift panel asks after a battle (enemy drops do), so a reward may be CHOOSE too.
+		_check_outcome(encounter.rewards[index], "%s::rewards[%d]" % [path, index], null, true)
 	_check_weight(encounter, path)
 
 
@@ -870,10 +871,16 @@ func _check_item(item: ItemDefinition) -> void:
 			_error("bad_item", path + "::cooldown_battles", "%s has a COOLDOWN use mode with %d battles" % [item.id, item.cooldown_battles])
 	_check_ability_set(item.grants, path + "::grants", true)
 	_check_run_modifiers(item.tags, path + "::tags")
+	if TagMatch.has(item.tags, RunController.DROP_FOOD_POOL):
+		# Spec food-items D1, D2: food is passive and is eaten on pickup.
+		if item.kind == ItemDefinition.Kind.USABLE:
+			_error("food_usable", path + "::kind", "%s is food (Pool.Food) but USABLE; food is passive" % item.id)
+		if item.on_pickup.filter(func(outcome) -> bool: return outcome != null).is_empty():
+			_error("food_no_pickup", path + "::on_pickup", "%s is food (Pool.Food) but has no on_pickup outcome" % item.id)
 	for hook in ["on_pickup", "on_floor_start", "on_room_cleared"]:
 		var outcomes: Array = item.get(hook)
 		for index in outcomes.size():
-			_check_outcome(outcomes[index], "%s::%s[%d]" % [path, hook, index], null)
+			_check_outcome(outcomes[index], "%s::%s[%d]" % [path, hook, index], null, false, true)
 
 
 func _check_ability_set(ability_set: AbilitySet, path: String, party: bool = false) -> void:
@@ -916,11 +923,18 @@ func _check_event(event: EventDefinition) -> void:
 	_check_weight(event, path)
 
 
-## `can_choose`: the outcome runs in an event choice or a chest, where the player can pick an item's holder.
-func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition, can_choose: bool = false) -> void:
+## `can_choose`: the outcome runs in an event choice, a chest or an encounter reward, where the player can pick an
+## item's holder.
+## `item_hook`: the outcome runs in an item's on_pickup / on_floor_start / on_room_cleared, where it has a holder.
+func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition, can_choose: bool = false,
+		item_hook: bool = false) -> void:
+	if outcome is ApplyHolderEffect and not item_hook:
+		# Spec food-items 3.1: the holder is the member whose item hook runs; elsewhere there is none.
+		_error("holder_effect_outside_item", where, "ApplyHolderEffect only works in an item's run hooks")
 	if outcome is GiveItem and outcome.recipient == GiveItem.Recipient.CHOOSE and not can_choose:
-		# Spec event-items D3: no screen can ask who gets it in an encounter reward or an item hook.
-		_error("give_choose_outside_event", where, "GiveItem recipient CHOOSE only works in an event choice or a chest")
+		# Spec event-items D3: no screen can ask who gets it in an item hook (encounter rewards may, user 2026-11-13).
+		_error("give_choose_outside_event", where,
+			"GiveItem recipient CHOOSE only works in an event choice, a chest or an encounter reward")
 	if outcome == null:
 		_error("dangling_ref", where, "an empty outcome entry")
 	elif outcome is GiveItem and outcome.item == null and outcome.item_query == null:
@@ -933,6 +947,8 @@ func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition, 
 		_error("dangling_ref", where, "GiveChest has no chest")
 	elif outcome is ApplyPartyEffect and outcome.effect == null:
 		_error("dangling_ref", where, "ApplyPartyEffect has no effect")
+	elif outcome is ApplyHolderEffect and outcome.effect == null:
+		_error("dangling_ref", where, "ApplyHolderEffect has no effect")
 	elif outcome is GoToPage and event != null and (outcome.page < 0 or outcome.page >= event.pages.size()):
 		_error("bad_event", where, "GoToPage %d, but %s has %d page(s)" % [outcome.page, event.id, event.pages.size()])
 

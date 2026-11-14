@@ -41,26 +41,36 @@ func _mp_percent(typed: float) -> GameplayEffect:
 	return effect
 
 
+## Spec food-items: food is passive, eaten on pickup (the holder heals or regains SP; the Hearty Feast heals the party) and
+## keeps a stacking bonus (an AbilitySet with the set tag Item.Food, which the Collector's mirror skips).
 func _food() -> void:
-	var D := ExecutionRow.DamageMode
-	var T := ExecutionRow.Targets
-	var B := BattleAbility.Targeting
 	var food := &"Pool.Food"
-	var consumable := ItemDefinition.UseMode.CONSUMABLE
 	_save("effects/food_heal_15", _percent_of_max(15))
 	_save("effects/food_heal_30", _percent_of_max(30))
 	_save("effects/food_heal_25", _percent_of_max(25))
-	_save("effects/food_mp_40", _mp_percent(40))
-	for spec in [["rations", "Ability.Item.Rations", B.SINGLE_ALLY, "food_heal_15"],
-			["roast_haunch", "Ability.Item.Roasthaunch", B.SINGLE_ALLY, "food_heal_30"],
-			["honey_cake", "Ability.Item.Honeycake", B.SINGLE_ALLY, "food_mp_40"],
-			["hearty_feast", "Ability.Item.Heartyfeast", B.ALL_ALLIES, "food_heal_25"]]:
-		_ability(spec[0], spec[1], spec[2], [_row("eat", spec[3], D.USE_EFFECT, 0, T.ALL)], _jump(0.5), [[0.25, "eat"]],
-			{"sound": ["Recovery5", 0.1, -6.0]})
-	_usable("rations", "Rations", [food, COMMON], 2, "rations", consumable, 1, "One ally heals 15% of max HP.")
-	_usable("roast_haunch", "Roast Haunch", [food, COMMON], 3, "roast_haunch", consumable, 1, "One ally heals 30% of max HP.")
-	_usable("honey_cake", "Honey Cake", [food, COMMON], 3, "honey_cake", consumable, 1, "One ally regains 40% of max MP.")
-	_usable("hearty_feast", "Hearty Feast", [food, RARE], 6, "hearty_feast", consumable, 1, "The party heals 25% of max HP.")
+	_save("effects/food_mp_40", _mp_percent(33))  # the tuned 33% (the file keeps its old name)
+	# [name, title, tags, price, pickup effect, party-wide, bonus attribute, bonus as typed, percent, description]
+	for spec in [["rations", "Rations", [food, COMMON], 2, "food_heal_15", false, "max_hp", 40, false,
+				"On pickup: heal 15% of max HP. +40 max HP."],
+			["roast_haunch", "Roast Haunch", [food, COMMON], 3, "food_heal_30", false, "max_hp", 8, true,
+				"On pickup: heal 30% of max HP. +8% max HP."],
+			["honey_cake", "Honey Cake", [food, COMMON], 3, "food_mp_40", false, "max_mp", 10, true,
+				"On pickup: regain 33% of max SP. +10% max SP."],
+			["hearty_feast", "Hearty Feast", [food, RARE], 6, "food_heal_25", true, "max_hp", 5, true,
+				"On pickup: the party heals 25% of max HP. The party gets +5% max HP."]]:
+		_save("effects/food_%s_bonus" % spec[0], _infinite({spec[6]: spec[7]}, spec[8]))
+		var bonus := _ability_set([], ["food_%s_bonus" % spec[0]])
+		bonus.tags.assign([&"Item.Food"])
+		var grants: AbilitySet = _save("loadouts/food_" + spec[0], bonus)
+		var eat: RunOutcome
+		if spec[5]:
+			eat = ApplyPartyEffect.new()
+		else:
+			eat = ApplyHolderEffect.new()
+		eat.set("effect", _r["effects/" + spec[4]])
+		var on_pickup: Array[RunOutcome] = [eat]
+		_item(spec[0], spec[1], spec[2], spec[3], grants, {"description": spec[9], "on_pickup": on_pickup,
+			"applies_to": ItemDefinition.AppliesTo.PARTY if spec[5] else ItemDefinition.AppliesTo.HOLDER})
 
 
 func _heal_party(name: String, percent: float, include_dead: bool) -> ApplyPartyEffect:

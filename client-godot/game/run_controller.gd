@@ -65,6 +65,12 @@ var current_battle: Battle
 var battle_log: Array[Dictionary] = []
 ## The item whose run hook is running (null otherwise); an empty RemoveItem in a hook removes it.
 var hook_item: ItemDefinition
+## Spec food-items 3.1: the slot of the member holding hook_item while its hook runs (0 otherwise); ApplyHolderEffect
+## targets it. Transient: never logged, hashed or snapshotted.
+var hook_slot: int = 0
+## True while the rewards of the battle that wins the run are granted: a CHOOSE gift goes FIRST (no pick can follow).
+## Transient, like hook_slot.
+var _choose_off := false
 ## Spec playable-demo 3.1: what run_summary() can't read from the log (coins in and out, enemies beaten). Never hashed.
 var _tally: Dictionary = {}
 
@@ -653,7 +659,7 @@ func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 		return runner_error
 	if won:
 		_tally["enemiesDefeated"] += snapshot["enemies"].size()
-		_grant_rewards(content.encounters.get(StringName(_tally["lastEncounter"])))
+		_grant_rewards(content.encounters.get(StringName(_tally["lastEncounter"])), cell)
 		if not _active():
 			return runner_error
 		_award_xp(snapshot["enemies"])
@@ -740,6 +746,10 @@ func _announce_skills(member: Dictionary, character: UnitDefinition, shown: Stri
 ## Castlevania-style drops: one roll per beaten enemy that has a drop_item, on the stream floor/<n>/item_drop/<cell>
 ## (its own stream, so the coin roll never moves).
 func _roll_drops(enemies: Array, cell: int) -> void:
+	# Spec food-items (user, 2026-11-13): the battle that wins the run drops nothing; a drop waits for give_to, and a won
+	# run has nothing left to play.
+	if _wins_run(cell):
+		return
 	var stream := state.seeds().floor_rng(state.floor_index, "item_drop/%d" % cell)
 	for enemy in enemies:
 		var definition := content.units.get(StringName(str(enemy.get("unitDefId", "")))) as EnemyDefinition
@@ -752,7 +762,15 @@ func _roll_drops(enemies: Array, cell: int) -> void:
 			_notify("%s dropped %s" % [definition.display_name, item.display_name])
 			_send(GameplayMessageRouter.RUN_ITEM_DROPPED, &"Verb.Drop", definition.id, item.id, 0,
 				item.tags, {"instigatorName": definition.display_name, "targetName": item.display_name})
-			give_item(item, null, null)
+			# Spec food-items D4 / Q2: the player picks who gets every dropped item (several wait in roll order).
+			give_item(item, null, null, GiveItem.Recipient.CHOOSE)
+
+
+## True when clearing `cell` wins the run: the last floor's boss room (or any room once its boss is beaten), outside the
+## sandbox. The one win rule: _clear_room ends the run on it, drops and CHOOSE rewards read it.
+func _wins_run(cell: int) -> bool:
+	return (state.boss_cleared or state.map.cells[cell]["role"] == FloorMap.ROLE_BOSS) and is_last_floor() \
+		and not state.sandbox
 
 
 const DROP_FALLBACK_POOL: StringName = &"Pool.Treasure"
@@ -767,18 +785,23 @@ const DROP_FOOD_POOL: StringName = &"Pool.Food"
 func _pooled_drop(item: ItemDefinition, stream: RandomNumberGenerator) -> ItemDefinition:
 	if not state.card_pool_set or state.card_pool.has(item.id):
 		return item
+	var treasure := _pool_query(DROP_FALLBACK_POOL)
+	var food := _pool_query(DROP_FOOD_POOL)
+	# Only the possible picks are checked: pool items with one of the two tags (pick_item skips every other item anyway,
+	# so the pick is the same as checking the whole content).
 	var unholdable: Array = []
-	for id in content.items:
-		var candidate: ItemDefinition = content.items[id]
+	for id in state.card_pool:
+		var candidate: ItemDefinition = content.items.get(id)
+		if candidate == null or not (TagMatch.matches(treasure, candidate.tags) or TagMatch.matches(food, candidate.tags)):
+			continue
 		if not state.party.any(func(member) -> bool: return can_hold(member["slot"], candidate) == ""):
 			unholdable.append(id)
 	var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
 	var pools := _pools()
 	pools["held"] = pools["held"] + unholdable
-	var picked := generator.pick_item(null, _pool_query(DROP_FALLBACK_POOL), stream, pools, false)
+	var picked := generator.pick_item(null, treasure, stream, pools, false)
 	if picked == null:
-		picked = generator.pick_item(null, _pool_query(DROP_FOOD_POOL), stream,
-			{"card_pool": state.card_pool, "held": unholdable}, false)
+		picked = generator.pick_item(null, food, stream, {"card_pool": state.card_pool, "held": unholdable}, false)
 	if picked != null and not state.seen_items.has(picked.id):
 		state.seen_items.append(picked.id)
 	return picked
@@ -792,14 +815,18 @@ static func _pool_query(tag: StringName) -> GameplayTagQuery:
 
 ## Spec playable-demo 3.7: the encounter's rewards after a won battle, in order. Event directives (go to page, start
 ## an encounter) mean nothing here and are dropped.
-func _grant_rewards(encounter: EncounterDefinition) -> void:
+## A CHOOSE reward waits for give_to like a drop (user, 2026-11-13); in the battle that wins the run nothing is left to
+## play, so there it goes to the first member who can hold it.
+func _grant_rewards(encounter: EncounterDefinition, cell: int) -> void:
 	if encounter == null:
 		return
+	_choose_off = _wins_run(cell)
 	for outcome in encounter.rewards:
 		if outcome != null:
 			outcome.apply(self)
 		if not _active():
-			return
+			break
+	_choose_off = false
 	_directive = ""
 
 
@@ -922,7 +949,7 @@ func _clear_room(index: int, after_battle: bool) -> void:
 	party_changed.emit()
 	if not data["pickups"].is_empty():
 		pickups_shown.emit(index)
-	if state.boss_cleared and is_last_floor() and _active() and not state.sandbox:
+	if _wins_run(index) and _active():
 		_end(RunState.WON)
 
 
@@ -1333,11 +1360,14 @@ func _receive_item(slot: int, item: ItemDefinition) -> void:
 	if not state.seen_items.has(item.id):
 		state.seen_items.append(item.id)
 	var outer := hook_item  # a hook that gives an item (Mystery Box) is still running after this one
+	var outer_slot := hook_slot
 	hook_item = item
+	hook_slot = slot  # spec food-items 3.1: the item is placed first, so its bonus already counts in the hook
 	for outcome in item.on_pickup:
 		if outcome != null:
 			outcome.apply(self)
 	hook_item = outer
+	hook_slot = outer_slot
 	party_changed.emit()
 
 
@@ -1752,6 +1782,15 @@ func apply_party_effect(effect: GameplayEffect, include_dead: bool) -> void:
 	apply_member_effect(effect, [], include_dead)
 
 
+## Spec food-items 3.1 (ApplyHolderEffect): `effect` on the member holding the item whose hook is running, through the
+## field context. Outside an item hook (no holder) it does nothing and warns.
+func apply_holder_effect(effect: GameplayEffect) -> void:
+	if hook_slot == 0 or state == null or state.member(hook_slot).is_empty():
+		_warn("ApplyHolderEffect outside an item hook; nothing applied")
+		return
+	apply_member_effect(effect, [hook_slot], false)
+
+
 ## apply_party_effect for some members only (`slots` empty = everyone), through the same field context.
 func apply_member_effect(effect: GameplayEffect, slots: Array, include_dead: bool) -> void:
 	if effect == null:
@@ -1786,6 +1825,8 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 	if _chest_rng != null:
 		recipient = GiveItem.Recipient.CHOOSE  # spec event-items D5: a chest always lets the player pick
 		character = null
+	elif _choose_off and recipient == GiveItem.Recipient.CHOOSE:
+		recipient = GiveItem.Recipient.FIRST  # the battle that wins the run: no pick can follow
 	var holders: Array[int] = []
 	for member in state.party:
 		if can_hold(member["slot"], item) == "":
@@ -2211,16 +2252,20 @@ func _indexed(resource: Resource) -> bool:
 # --- Helpers ---------------------------------------------------------------------------------------------------------
 
 func _run_hooks(kind: String) -> void:
+	var outer_item := hook_item  # restored after, like _receive_item: a hook may run inside another item's hook
+	var outer_slot := hook_slot
 	for member in state.party:
 		var held: Array = member["items"].duplicate()
 		for use_slot in member["use_slots"]:
 			held.append(use_slot["item"])
 		for item_id in held:
 			hook_item = content.items[item_id]
+			hook_slot = member["slot"]
 			for outcome in hook_item.get(kind):
 				if outcome != null and _active():
 					outcome.apply(self)
-			hook_item = null
+	hook_item = outer_item
+	hook_slot = outer_slot
 
 
 func _pools() -> Dictionary:

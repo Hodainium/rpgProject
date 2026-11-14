@@ -2,14 +2,20 @@
 
 [ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_wf83p"]
 [ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_5jcvq"]
-[ext_resource type="PackedScene" path="res://content/demo/abilities/honey_cake.tscn" id="3_inp3q"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_holder_effect.gd" id="3_fdhld"]
+[ext_resource type="Resource" path="res://content/demo/effects/food_mp_40.tres" id="4_fdhea"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/food_honey_cake.tres" id="5_fdset"]
+
+[sub_resource type="Resource" id="Resource_fdpick"]
+script = ExtResource("3_fdhld")
+effect = ExtResource("4_fdhea")
 
 [resource]
 script = ExtResource("2_5jcvq")
 id = &"demo.item.honey_cake"
 display_name = "Honey Cake"
-description = "One ally regains 33% of max SP."
+description = "On pickup: regain 33% of max SP. +10% max SP."
 tags = Array[StringName]([&"Pool.Food", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 3
-kind = 1
-use_ability = ExtResource("3_inp3q")
+grants = ExtResource("5_fdset")
+on_pickup = Array[ExtResource("1_wf83p")]([SubResource("Resource_fdpick")])

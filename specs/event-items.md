@@ -32,6 +32,8 @@ no run DTOs yet.
 - **D3:** `CHOOSE` is valid in an event choice and in a chest. The validator flags it in encounter rewards and item
   hooks (`give_choose_outside_event`), where no picker can show. `FIRST` stays the default, so existing content and
   run hashes do not change unless content opts in (or a chest gives an item, D5).
+  **Changed by spec `food-items` (Q5, 2026-11-13):** CHOOSE is now valid in an encounter reward too (the gift panel already
+  asks after a battle for enemy drops); the validator flags it in item hooks only.
 - **D4:** `CHOOSE` with exactly one living member who can hold the item gives it at once, with no prompt and no
   `give_to` entry (it still toasts). With none, the item is lost with a warning (as today).
 
@@ -96,8 +98,8 @@ System tests on fixtures (events and chests built in memory over fixture items; 
 - D4: one possible holder gives at once, with no `give_to` entry, and toasts.
 - The toast: a gift sends `Message.Run.ItemTaken` with the holder's name, rarity and description.
 - `UIState` has `UI.State.Run.Gift` while gifts are pending.
-- The validator flags `CHOOSE` in an encounter reward (`give_choose_outside_event`) and accepts it in a chest and an
-  event (built in memory, like the keys-and-gear validator checks).
+- The validator flags `CHOOSE` in an item hook (`give_choose_outside_event`; an encounter reward until spec `food-items`
+  Q5) and accepts it in a chest, an event and an encounter reward (built in memory, like the keys-and-gear validator checks).
 - The bots (`RunPlayer`: auto, smart and chaos) give a pending gift to the first member who can hold it, and go back to
   the top of their loop after opening chests when one waits; chaos also tries an illegal `give_to` (`give_nothing`).
 - Console command `giveto <slot>` (dev-tools parity), with a test.

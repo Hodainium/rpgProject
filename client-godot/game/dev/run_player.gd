@@ -36,12 +36,7 @@ static func play(run: RunController, max_steps: int = 400, battle: Callable = Ca
 				await run.fight(ScriptedController.new())
 			continue
 		if not run.state.pending_gifts.is_empty():
-			var gift := run.pending_gift()
-			var holder := 0
-			for member in run.state.party:
-				if gift != null and run.can_hold(member["slot"], gift) == "":
-					holder = member["slot"]
-					break
+			var holder := gift_holder(run, run.pending_gift())
 			if holder == 0 or run.give_to(holder) != "":
 				return "stuck"
 			continue
@@ -219,6 +214,31 @@ static func _illegal_action(run: RunController, case: String) -> Callable:
 			if state.pending_gifts.is_empty():
 				return run.give_to.bind(state.party[0]["slot"])
 	return Callable()
+
+
+## Who the bots give a waiting gift to (0 = nobody can hold it). Spec food-items D4: food (Pool.Food) goes to the living
+## member with the lowest HP share (hp × 100 / max_hp; ties to the lowest slot); anything else to the first member who
+## can hold it. can_hold already refuses the dead.
+static func gift_holder(run: RunController, gift: ItemDefinition) -> int:
+	if gift == null:
+		return 0
+	if not TagMatch.has(gift.tags, RunController.DROP_FOOD_POOL):
+		return run._first_holder(gift)
+	var holders: Array = run.state.party.filter(func(member) -> bool: return run.can_hold(member["slot"], gift) == "")
+	if holders.is_empty():
+		return 0
+	var stats := run.party_stats()
+	var best := 0
+	var best_share := -1
+	for member in holders:
+		var max_hp := int(stats.get(member["slot"], {}).get(BattleUnit.MAX_HP, 0))
+		if max_hp <= 0:
+			continue
+		var share := int(member["hp"]) * 100 / max_hp
+		if best == 0 or share < best_share or (share == best_share and member["slot"] < best):
+			best = member["slot"]
+			best_share = share
+	return best if best != 0 else holders[0]["slot"]
 
 
 static func _take_pickups(run: RunController) -> void:
