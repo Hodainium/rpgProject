@@ -1,0 +1,93 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.05
+radius_top = 0.035
+curve = PackedVector3Array(0.38, -0.05, 0.12, 0.68, -0.11, 0.22, 0.74, 0.11, 0.24)
+segments = 14
+color = Color(0.1, 0.2, 0.2, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.035
+segments = 12
+position = Vector3(0.74, 0.11, 0.24)
+color = Color(0.1, 0.2, 0.2, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.035
+radius_top = 0.01
+curve = PackedVector3Array(0.74, 0.11, 0.24, 0.8, 0.31, 0.26, 0.98, 0.29, 0.22)
+segments = 14
+color = Color(0.1, 0.2, 0.2, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.018
+segments = 8
+position = Vector3(0.98, 0.29, 0.22)
+color = Color(0.3, 1, 0.85, 1)
+emission = 3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.05
+radius_top = 0.035
+curve = PackedVector3Array(0.38, -0.24, -0.12, 0.56, -0.3, -0.02, 0.608, -0.08, 0)
+segments = 14
+color = Color(0.1, 0.2, 0.2, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.035
+segments = 12
+position = Vector3(0.608, -0.08, 0)
+color = Color(0.1, 0.2, 0.2, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.035
+radius_top = 0.01
+curve = PackedVector3Array(0.608, -0.08, 0, 0.656, 0.12, 0.02, 0.8, 0.1, -0.02)
+segments = 14
+color = Color(0.1, 0.2, 0.2, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p7"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.018
+segments = 8
+position = Vector3(0.8, 0.1, -0.02)
+color = Color(0.3, 1, 0.85, 1)
+emission = 3
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Tendrils"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6"), SubResource("Resource_p7")])

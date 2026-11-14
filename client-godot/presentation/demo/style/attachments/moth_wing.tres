@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 7
+size = Vector3(1, 1, 0.02)
+profile = PackedVector2Array(0.6352, 0.2974, 0.6153, 0.3293, 0.584, 0.3551, 0.5426, 0.3738, 0.4926, 0.3846, 0.436, 0.3872, 0.3749, 0.3815, 0.3117, 0.3676, 0.2488, 0.3462, 0.1887, 0.3179, 0.1336, 0.284, 0.0857, 0.2457, 0.0468, 0.2045, 0.0183, 0.162, 0.0015, 0.1197, -0.0031, 0.0794, 0.0048, 0.0426, 0.0247, 0.0107, 0.056, -0.0151, 0.0974, -0.0338, 0.1474, -0.0446, 0.204, -0.0472, 0.2651, -0.0415, 0.3283, -0.0276, 0.3912, -0.0062, 0.4513, 0.0221, 0.5064, 0.056, 0.5543, 0.0943, 0.5932, 0.1355, 0.6217, 0.178, 0.6385, 0.2203, 0.6431, 0.2606)
+color = Color(0.86, 0.84, 0.94, 1)
+roughness = 0.95
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 7
+size = Vector3(1, 1, 0.012)
+profile = PackedVector2Array(0.5918, 0.2937, 0.576, 0.3161, 0.5493, 0.3327, 0.5132, 0.3426, 0.4694, 0.3454, 0.4201, 0.3409, 0.3678, 0.3293, 0.315, 0.3113, 0.2646, 0.2876, 0.2189, 0.2596, 0.1803, 0.2286, 0.1507, 0.1962, 0.1317, 0.1639, 0.124, 0.1335, 0.1282, 0.1063, 0.144, 0.0839, 0.1707, 0.0673, 0.2068, 0.0574, 0.2506, 0.0546, 0.2999, 0.0591, 0.3522, 0.0707, 0.405, 0.0887, 0.4554, 0.1124, 0.5011, 0.1404, 0.5397, 0.1714, 0.5693, 0.2038, 0.5883, 0.2361, 0.596, 0.2665)
+position = Vector3(0, 0, 0.016)
+color = Color(0.7, 0.66, 0.82, 1)
+roughness = 0.95
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.07
+radius_top = 0.07
+height = 0.01
+segments = 24
+position = Vector3(0.42, 0.22, 0.026)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.3, 0.2, 0.45, 1)
+roughness = 0.8
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.04
+radius_top = 0.04
+height = 0.01
+segments = 20
+position = Vector3(0.42, 0.22, 0.032)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.95, 0.9, 0.7, 1)
+roughness = 0.8
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.018
+radius_top = 0.018
+height = 0.01
+segments = 14
+position = Vector3(0.42, 0.22, 0.038)
+rotation_degrees = Vector3(90, 0, 0)
+color = Color(0.04, 0.02, 0.03, 1)
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Moth forewing"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4")])
