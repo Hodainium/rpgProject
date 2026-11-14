@@ -1,0 +1,83 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_binding"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_particles"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="4_param"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="5_def"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/smoke_sheet.png" id="10_tex"]
+
+[sub_resource type="Resource" id="Resource_steam_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_steam"]
+offsets = PackedFloat32Array(0, 0.3, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.45, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_steam"]
+script = ExtResource("3_particles")
+size_min = 0.35
+size_max = 0.6
+spread = 20
+speed_min = 0.1
+speed_max = 0.25
+emission_ring_radius = 0.5
+soft_distance = 0.3
+lifetime = 2.4
+explosiveness = 0
+gravity = Vector3(0, 0.12, 0)
+emission_offset = Vector3(0, -0.3, 0)
+amount = 14
+color_ramp = SubResource("Gradient_steam")
+texture = ExtResource("10_tex")
+h_frames = 4
+v_frames = 4
+random_frame = true
+id = &"steam"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_steam_color")])
+
+[sub_resource type="Resource" id="Resource_specks_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_specks"]
+offsets = PackedFloat32Array(0, 0.25, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_specks"]
+script = ExtResource("3_particles")
+size_min = 0.04
+size_max = 0.07
+spread = 30
+speed_min = 0.2
+speed_max = 0.35
+emission_ring_radius = 0.5
+lifetime = 1.8
+explosiveness = 0
+gravity = Vector3(0, 0.1, 0)
+emission_offset = Vector3(0, -0.3, 0)
+amount = 16
+color_ramp = SubResource("Gradient_specks")
+id = &"specks"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_specks_color")])
+
+[sub_resource type="Resource" id="Resource_param_color"]
+script = ExtResource("4_param")
+name = &"color"
+kind = 3
+default_value = Color(0.5, 0.95, 0.35, 1)
+description = "Colour."
+
+[resource]
+script = ExtResource("5_def")
+id = &"fx.brew_steam"
+display_name = "Brew steam"
+params = Array[ExtResource("4_param")]([SubResource("Resource_param_color")])
+layers = Array[ExtResource("1_layer")]([SubResource("Resource_steam"), SubResource("Resource_specks")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "Green brew vapour rising round a unit, with glowing specks (the Hag Sister's look, Set 5b)."

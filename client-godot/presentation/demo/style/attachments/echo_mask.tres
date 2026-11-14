@@ -1,0 +1,77 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.33
+segments = 28
+position = Vector3(0, 0, 0)
+scale = Vector3(1, 1.12, 0.12)
+color = Color(0.92, 0.9, 0.84, 1)
+roughness = 0.45
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.06
+segments = 16
+position = Vector3(0.13, 0.09, 0.035)
+rotation_degrees = Vector3(0, 0, -20)
+scale = Vector3(1.4, 0.7, 0.2)
+color = Color(0.04, 0.02, 0.03, 1)
+roughness = 1
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.06
+segments = 16
+position = Vector3(-0.13, 0.09, 0.035)
+rotation_degrees = Vector3(0, 0, 20)
+scale = Vector3(1.4, 0.7, 0.2)
+color = Color(0.04, 0.02, 0.03, 1)
+roughness = 1
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.055
+segments = 16
+position = Vector3(0, -0.17, 0.035)
+scale = Vector3(0.9, 1.6, 0.2)
+color = Color(0.04, 0.02, 0.03, 1)
+roughness = 1
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.015
+segments = 8
+position = Vector3(0.13, 0.09, 0.045)
+scale = Vector3(1, 1, 0.4)
+color = Color(0.6, 0.8, 1, 1)
+emission = 3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.015
+segments = 8
+position = Vector3(-0.13, 0.09, 0.045)
+scale = Vector3(1, 1, 0.4)
+color = Color(0.6, 0.8, 1, 1)
+emission = 3
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Hollow mask"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5")])
