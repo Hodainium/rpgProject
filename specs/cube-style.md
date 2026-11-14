@@ -245,7 +245,7 @@ iterations. Every detail is data: primitive attachments (3.3), a surface (`UnitL
 **Design approach (evolved during Set P, Set 1 and Set 2, user, 2026-11-13; memory `cube-style-design-lessons`):**
 - **Start simple, combine freely.** A proposal starts from one signature detail, but combined details are fine and often chosen
   (A and B together, plus a face). The original "one detail per cube" rule is relaxed.
-- **Party:** headwear (never a held item) plus a **floor effect** in the class's theme under the cube (fire, bubbles, frost, holy
+- **Party:** headwear, a centred face and, since the party pass, sometimes a held item plus a **floor effect** in the class's theme under the cube (fire, bubbles, frost, holy
   glow, runes, golden glow, cracks). **Enemies:** a signature detail, often a **face** (eyes, muzzle, skull, tongue), plus an effect
   or surface where it fits.
 - **See-through bodies** are allowed for jelly and spirit creatures (an alpha surface with both faces drawn and a colour override
@@ -255,7 +255,7 @@ iterations. Every detail is data: primitive attachments (3.3), a surface (`UnitL
   The battle camera sees enemies from the side, so front details lean toward the camera side and tails swing sideways.
 - **Effects:** each unit gets its own (a party effect is reused on an enemy only when the user asks); pulses go clearly from light
   to dark; every shader uniform a track animates is set in the layer's `shader_params`.
-- **Held items and long shapes (Set 2):** a held item sits on the unit's own Left (the camera side in battle) and clear of the body;
+- **Held items and long shapes (Set 2):** a held item sits on the unit's camera side in battle: an enemy's own Left, a party member's own Right and clear of the body;
   a ladle's handle rises from its bowl's rim, not through it; a hammer's head runs along the unit's facing (Z), so its long side
   shows from the battle camera. A gear stood on its side spins on its own axle (`UnitAttachment.spin_axis`, 3.3).
 - **Faces on the face plate:** small glowing eyes read best on a dark plate behind them (the Anvil Guard's visor, the Smelter's
@@ -381,12 +381,13 @@ along the facing), a barrister's curled wig, the mitre on top of it and stern go
 chest (iron straps and a lock on the face), the lid open about 60° and chomping on its hinge (`FLAP` on a pivot turned so its axis
 is the hinge), a row of teeth on the lid and on the front edge, eyes glowing inside and a centred tongue. Vault Sentry: B, the lens
 eye, a halberd (blade along the facing) and a steel crest (the crest symmetric front to back). The Collector: B, a monocle with its chain, a
-squint and a centred grin with a gold tooth, gold coins orbiting slowly (`SPIN`) with gold glints (`coin_glints`), and a plum top
+squint and a centred grin with a gold tooth, gold coins orbiting slowly (`SPIN`) with a gold effect (`gold_hoard`: sparks rising from a floor ring, coins raining down and
+glints; it replaced the first `coin_glints` in Set 5 when the user asked for more gold on a final boss), and a plum top
 hat with a gold band and a coin resting on it, upright (the user's addition).
 
-**More enemies (user, 2026-11-13):** after Set 4's looks, 3 new enemies for the Cathedral and 3 for the Vault, so each of those
-floors has 6. New enemies are content (abilities, brains, encounters, balance), so they get their own spec; their looks follow
-as a set like this one.
+**More enemies (user, 2026-11-13):** 3 new enemies (an elite and two regulars) for each of the Cathedral, Vault, Coven and Void,
+so each of those floors has 6 counting its boss. New enemies are content, so they have their own slice and spec (`route-enemies`),
+which also holds their looks as two sets, 4b (Cathedral, Vault) and 5b (Coven, Void).
 
 ### Set 5: Coven and Void (6)
 | Unit | Colour | A | B |
@@ -398,11 +399,50 @@ as a set like this one.
 | Abyssal Hulk | black | Two glowing violet eyes (`glow_eye` reused): on a black cube the eyes carry it | A row of spikes down the back |
 | The Nameless (boss) | dark teal | A void halo: a dark ring tilted behind the head, a faint violet glow, slowly turning (`SPIN`) | **Surface:** a starfield (dark, sparse emissive specks) |
 
+**Picked (Set 5, approved 2026-11-13):** Cultist: A and B, the deep robe hood (a square peak, drapes and a rim round a shadowed face
+with glowing pink eyes) and the ritual dagger held on the camera side (its first wavy outline failed to triangulate and was
+replaced by a leaf blade). Bound Demon: A and B, two slanted bands of chain with a broken shackle, big curled black horns and an
+angry ember face with fangs. High Witch: A, the big witch hat (bent tip, green band, gold buckle), green eyes, a hooked nose and a
+grin, with green motes (`hex_motes`). Void Wraith: B, a see-through violet body (`void_clear`, 50%) with hollow glowing eyes and
+rising wisps (`void_wisps`). Abyssal Hulk: renamed **Guardian** (display name only; the id `demo.enemy.abyssal_hulk` stays; `build_full_descent.gd` writes the
+new name too; the only content-root change of the roll-out, so it changes the ruleset version: re-export the full build for the
+dev stack's verifier): the
+Nameless's B proposal, retuned to stand apart: a blue starfield (`starfield` under a blue colour override), a cyan void slit and a
+smaller, still cyan ring behind the head. The Nameless: C (a second iteration), a starfield body, a black-hole face (a black
+disc in a glowing accretion ring with beads, turning on its own axle) and seven dark shards orbiting, with dark smoke rising from
+the floor and violet embers (`void_smoke`, the user's ask for a final boss). Rejected: the hoodless chanting face, the Hulk's
+faces and spikes, the crescent moon, the shroud, the turning void halo and the slit.
+
+### Party pass: faces and held items (user, 2026-11-13)
+After the enemy sets the party looked plain next to the enemies, which all have faces. The user chose **faces for every class**
+(the Ember Knight and Plaguewright keep their masks) and, for the first time, **held items** for the party (the earlier rule
+"the party never holds items" is lifted; not every class holds one). Faces are symmetric about the middle (the eye highlights are
+mirrored, each toward the outside). Items sit on the **Right** socket: facing +90, the party's own right is the side the battle
+camera sees (the enemies' camera side is their Left).
+
+**Picked:** Warrior B (heavy angry brows, gritted teeth) with a sword; Cleric B (amber eyes, soft gold brows, a smile) with a sun
+staff; Arcanist A (round spectacles, an "o" mouth) with a closed leather tome (an open book at its side did not make sense);
+Bard A (happy closed eyes, an open smile, blush) with a lute; Ranger D2 (round eyes, thin high brows, freckles, a small smile;
+its first faces read like the Bulwark's) with a bow; Bulwark A (stern eyes under a heavy brow) with a round shield; Cryomancer A
+(glowing ice eyes) with an ice staff; Pyromancer A (glowing ember eyes, gritted teeth) and Shatterweaver A (pink gem eyes), both
+empty-handed. Files: `face_<class>_<pick>.tres` and `item_*.tres` in `presentation/demo/style/attachments/`.
+
+### Floor-1 refresh (user, 2026-11-13)
+The round-2 enemies looked plain next to the later sets. The user asked for fangs on the Bat and a second look at the first
+floor's enemies; the Bat, Fire Imp, Knight and Golem (the ones still on their round-2 looks) got faces and one more detail each,
+and the user picked B for all four: **Bat** red eyes, a pug nose, two fangs and big pointed ears (wings kept); **Fire Imp**
+yellow slit eyes under a V of brows and a fanged grin, with a devil tail (horns kept); **Knight** a great-helm visor with a glowing
+cross slit and a red plume, the sword kept and the kite shield moved off the face to its Right; **Golem** amber eyes under a stone
+brow, a glowing crack of a mouth, and moss with two mushrooms on top (the rock surface kept). The Imp's tail is scaled to 70% so it stays clear
+of the row behind. Files: `bat_face`, `bat_ear`, `imp_face`, `knight_visor`, `knight_plume`, `golem_face`, `golem_moss` (enemy faces
+are named by unit, without the party's `_<pick>` suffix).
+
 ### Sets 2-5 and what the roll-out needed so far
 - Sets 3-5 above are first proposals. They are built under the design approach above, so expect faces, effects and combined
   details to be added while iterating.
 - System code the roll-out added: `UnitAttachment.spin_axis` (3.3, Set 2), `UnitLook.effect` / `effect_params` (3.2), the `rune_glyphs` shader, see-through bodies keeping
-  their alpha in the death fade, a `speed` parameter on `fx.heart_pulse` (Set 3); nothing for Set 4 (data only: two new effects). Still only if picked: a body wobble.
+  their alpha in the death fade, a `speed` parameter on `fx.heart_pulse` (Set 3); nothing for Sets 4 and 5 (data only: new effects and surfaces; a dark particle
+  effect uses the particle layer's existing `additive = false`). Still only if picked: a body wobble.
 - Q3 (the props) is answered below for keys and armor; items wait for their own slice.
 
 ### Set K: pickups on the floor (user, 2026-11-13)

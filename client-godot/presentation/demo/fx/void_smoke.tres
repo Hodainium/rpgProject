@@ -1,0 +1,88 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_binding"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_particles"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="4_param"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="5_def"]
+
+[sub_resource type="Resource" id="Resource_bind_smoke"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_smoke"]
+offsets = PackedFloat32Array(0, 0.2, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_smoke"]
+script = ExtResource("3_particles")
+size_min = 0.4
+size_max = 0.75
+direction = Vector3(0, 1, 0)
+spread = 25.0
+speed_min = 0.12
+speed_max = 0.3
+gravity = Vector3(0, 0.08, 0)
+damping = 0.2
+emission_ring_radius = 0.55
+emission_offset = Vector3(0, -0.34, 0)
+amount = 56
+lifetime = 3.0
+explosiveness = 0.0
+additive = false
+color_ramp = SubResource("Gradient_smoke")
+id = &"smoke"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_bind_smoke")])
+
+[sub_resource type="Resource" id="Resource_bind_embers"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"ember_color"
+
+[sub_resource type="Gradient" id="Gradient_embers"]
+offsets = PackedFloat32Array(0, 0.2, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_embers"]
+script = ExtResource("3_particles")
+size_min = 0.04
+size_max = 0.08
+direction = Vector3(0, 1, 0)
+spread = 30.0
+speed_min = 0.2
+speed_max = 0.4
+gravity = Vector3(0, 0.05, 0)
+emission_ring_radius = 0.55
+emission_offset = Vector3(0, -0.34, 0)
+amount = 14
+lifetime = 2.2
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_embers")
+id = &"embers"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_bind_embers")])
+
+[sub_resource type="Resource" id="Resource_param_color"]
+script = ExtResource("4_param")
+name = &"color"
+kind = 3
+default_value = Color(0.07, 0.03, 0.14, 1)
+description = "Smoke colour (dark)."
+
+[sub_resource type="Resource" id="Resource_param_ember_color"]
+script = ExtResource("4_param")
+name = &"ember_color"
+kind = 3
+default_value = Color(0.3, 0.9, 1, 1)
+description = "Ember colour."
+
+[resource]
+script = ExtResource("5_def")
+id = &"fx.void_smoke"
+display_name = "Void smoke"
+params = Array[ExtResource("4_param")]([SubResource("Resource_param_color"), SubResource("Resource_param_ember_color")])
+layers = Array[ExtResource("1_layer")]([SubResource("Resource_smoke"), SubResource("Resource_embers")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "Thick dark smoke rising round a unit from the floor, with a few cyan embers (the Nameless's look, spec cube-style 6a)."

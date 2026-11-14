@@ -1,0 +1,116 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.05
+segments = 18
+position = Vector3(0.13, 0.1, 0)
+scale = Vector3(1, 1.1, 0.4)
+color = Color(0.06, 0.04, 0.05, 1)
+roughness = 0.15
+emission = 0
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.05
+segments = 18
+position = Vector3(-0.13, 0.1, 0)
+scale = Vector3(1, 1.1, 0.4)
+color = Color(0.06, 0.04, 0.05, 1)
+roughness = 0.15
+emission = 0
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.016
+segments = 10
+position = Vector3(0.1475, 0.12, 0.019)
+scale = Vector3(1, 1, 0.5)
+color = Color(1, 1, 1, 1)
+emission = 1
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.016
+segments = 10
+position = Vector3(-0.1475, 0.12, 0.019)
+scale = Vector3(1, 1, 0.5)
+color = Color(1, 1, 1, 1)
+emission = 1
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.15, 0.045, 0.025)
+position = Vector3(0.13, 0.2, 0.005)
+rotation_degrees = Vector3(0, 0, 22)
+color = Color(0.06, 0.04, 0.05, 1)
+roughness = 0.7
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.15, 0.045, 0.025)
+position = Vector3(-0.13, 0.2, 0.005)
+rotation_degrees = Vector3(0, 0, -22)
+color = Color(0.06, 0.04, 0.05, 1)
+roughness = 0.7
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.2, 0.05, 0.02)
+position = Vector3(0, -0.08, 0)
+color = Color(0.95, 0.93, 0.88, 1)
+roughness = 0.5
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p7"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.22, 0.012, 0.022)
+position = Vector3(0, -0.08, 0.002)
+color = Color(0.06, 0.04, 0.05, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p8"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.01, 0.05, 0.022)
+position = Vector3(-0.05, -0.08, 0.002)
+color = Color(0.06, 0.04, 0.05, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p9"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.01, 0.05, 0.022)
+position = Vector3(0, -0.08, 0.002)
+color = Color(0.06, 0.04, 0.05, 1)
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p10"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.01, 0.05, 0.022)
+position = Vector3(0.05, -0.08, 0.002)
+color = Color(0.06, 0.04, 0.05, 1)
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Warrior face B"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6"), SubResource("Resource_p7"), SubResource("Resource_p8"), SubResource("Resource_p9"), SubResource("Resource_p10")])

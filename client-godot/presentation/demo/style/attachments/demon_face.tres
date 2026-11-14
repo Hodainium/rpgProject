@@ -1,0 +1,88 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.045
+segments = 14
+position = Vector3(0.12, 0.1, 0)
+scale = Vector3(1.3, 0.7, 0.4)
+color = Color(1, 0.55, 0.1, 1)
+emission = 3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.045
+segments = 14
+position = Vector3(-0.12, 0.1, 0)
+scale = Vector3(1.3, 0.7, 0.4)
+color = Color(1, 0.55, 0.1, 1)
+emission = 3
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.17, 0.045, 0.035)
+position = Vector3(0.12, 0.18, 0.012)
+rotation_degrees = Vector3(0, 0, 22)
+color = Color(0.2, 0.02, 0.02, 1)
+roughness = 0.8
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.17, 0.045, 0.035)
+position = Vector3(-0.12, 0.18, 0.012)
+rotation_degrees = Vector3(0, 0, -22)
+color = Color(0.2, 0.02, 0.02, 1)
+roughness = 0.8
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 0
+size = Vector3(0.3, 0.07, 0.02)
+position = Vector3(0, -0.12, 0)
+color = Color(0.12, 0.02, 0.04, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.028
+radius_top = 0
+height = 0.08
+segments = 8
+position = Vector3(0.08, -0.12, 0.02)
+rotation_degrees = Vector3(180, 0, 0)
+scale = Vector3(1, 1, 0.6)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.028
+radius_top = 0
+height = 0.08
+segments = 8
+position = Vector3(-0.08, -0.12, 0.02)
+rotation_degrees = Vector3(180, 0, 0)
+scale = Vector3(1, 1, 0.6)
+color = Color(0.93, 0.88, 0.72, 1)
+roughness = 0.4
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Demon face"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6")])

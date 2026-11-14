@@ -92,7 +92,229 @@
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/collector_face.tres" id="s4_27"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/collector_hat.tres" id="s4_28"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/coin_orbit.tres" id="s4_29"]
-[ext_resource type="Resource" path="res://presentation/demo/fx/coin_glints.tres" id="s4_30"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/gold_hoard.tres" id="s4_30"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/cultist_hood.tres" id="s5_10"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/ritual_dagger.tres" id="s5_11"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/demon_chains.tres" id="s5_12"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/demon_horn.tres" id="s5_13"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/demon_face.tres" id="s5_14"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/witch_hat.tres" id="s5_15"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/witch_face.tres" id="s5_16"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/hex_motes.tres" id="s5_17"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/wraith_eyes.tres" id="s5_18"]
+[ext_resource type="Material" path="res://presentation/demo/style/surfaces/void_clear.tres" id="s5_19"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/void_wisps.tres" id="s5_20"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/guardian_halo.tres" id="s5_21"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/guardian_slit.tres" id="s5_22"]
+[ext_resource type="Material" path="res://presentation/demo/style/surfaces/starfield.tres" id="s5_23"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/black_hole.tres" id="s5_24"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/void_shards.tres" id="s5_25"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/void_smoke.tres" id="s5_26"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_warrior_b.tres" id="pf_warrior"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_sword.tres" id="pi_warrior"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_cleric_b.tres" id="pf_cleric"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_sun_staff.tres" id="pi_cleric"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_arcanist_a.tres" id="pf_arcanist"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_spellbook.tres" id="pi_arcanist"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_bard_a.tres" id="pf_bard"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_lute.tres" id="pi_bard"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_ranger_d2.tres" id="pf_ranger"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_bow.tres" id="pi_ranger"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_bulwark_a.tres" id="pf_bulwark"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_round_shield.tres" id="pi_bulwark"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_cryomancer_a.tres" id="pf_cryomancer"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/item_ice_staff.tres" id="pi_cryomancer"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_pyromancer_a.tres" id="pf_pyromancer"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/face_shatterweaver_a.tres" id="pf_shatterweaver"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bat_face.tres" id="f1_11"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bat_ear.tres" id="f1_12"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/imp_face.tres" id="f1_14"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/devil_tail.tres" id="f1_15"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/knight_visor.tres" id="f1_18"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/knight_plume.tres" id="f1_19"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/golem_face.tres" id="f1_20"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/golem_moss.tres" id="f1_21"]
+
+[sub_resource type="Resource" id="Resource_f1a1"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("8_5gk3l")
+socket = &"Back"
+offset = Vector3(0.36, 0.18, -0.05)
+rotation_degrees = Vector3(0, 40, 40)
+scale = Vector3(1.4, 1.4, 1.4)
+mirror = true
+motion = 3
+motion_speed = 1.2
+motion_amount = 18
+
+[sub_resource type="Resource" id="Resource_f1a2"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("f1_11")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_f1a3"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("f1_12")
+offset = Vector3(0.2, 0, 0)
+rotation_degrees = Vector3(0, 0, -12)
+mirror = true
+
+[sub_resource type="Resource" id="Resource_f1l4"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_f1a1"), SubResource("Resource_f1a2"), SubResource("Resource_f1a3")])
+
+[sub_resource type="Resource" id="Resource_f1a5"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("10_dngw0")
+offset = Vector3(0.2, -0.04, 0.08)
+mirror = true
+
+[sub_resource type="Resource" id="Resource_f1a6"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("f1_14")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_f1a7"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("f1_15")
+socket = &"Back"
+offset = Vector3(0, -0.2, 0)
+scale = Vector3(0.7, 0.7, 0.7)
+
+[sub_resource type="Resource" id="Resource_f1l8"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_f1a5"), SubResource("Resource_f1a6"), SubResource("Resource_f1a7")])
+
+[sub_resource type="Resource" id="Resource_f1a9"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("3_pek0f")
+socket = &"Left"
+offset = Vector3(0.08, -0.1, 0.3)
+rotation_degrees = Vector3(0, -90, -20)
+
+[sub_resource type="Resource" id="Resource_f1a10"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("18_shield")
+socket = &"Right"
+offset = Vector3(-0.03, -0.05, 0)
+rotation_degrees = Vector3(0, -90, 0)
+
+[sub_resource type="Resource" id="Resource_f1a11"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("f1_18")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_f1a12"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("f1_19")
+
+[sub_resource type="Resource" id="Resource_f1l13"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_f1a9"), SubResource("Resource_f1a10"), SubResource("Resource_f1a11"), SubResource("Resource_f1a12")])
+
+[sub_resource type="Resource" id="Resource_f1a14"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("f1_20")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_f1a15"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("f1_21")
+
+[sub_resource type="Resource" id="Resource_f1l16"]
+script = ExtResource("1_avbba")
+use_color_override = true
+color_override = Color(0.36, 0.24, 0.15, 1)
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_f1a14"), SubResource("Resource_f1a15")])
+surface = ExtResource("15_stone")
+
+[sub_resource type="Resource" id="Resource_pf_warrior"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_warrior")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_warrior"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_warrior")
+socket = &"Right"
+offset = Vector3(-0.14, -0.1, 0)
+
+[sub_resource type="Resource" id="Resource_pf_cleric"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_cleric")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_cleric"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_cleric")
+socket = &"Right"
+offset = Vector3(-0.14, 0, 0)
+
+[sub_resource type="Resource" id="Resource_pf_arcanist"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_arcanist")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_arcanist"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_arcanist")
+socket = &"Right"
+offset = Vector3(-0.12, -0.08, 0)
+scale = Vector3(1.35, 1.35, 1.35)
+
+[sub_resource type="Resource" id="Resource_pf_bard"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_bard")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_bard"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_bard")
+socket = &"Right"
+offset = Vector3(-0.16, -0.05, 0)
+
+[sub_resource type="Resource" id="Resource_pf_ranger"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_ranger")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_ranger"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_ranger")
+socket = &"Right"
+offset = Vector3(-0.14, 0.03, 0)
+
+[sub_resource type="Resource" id="Resource_pf_bulwark"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_bulwark")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_bulwark"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_bulwark")
+socket = &"Right"
+offset = Vector3(-0.08, 0, 0)
+
+[sub_resource type="Resource" id="Resource_pf_cryomancer"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_cryomancer")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pi_cryomancer"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pi_cryomancer")
+socket = &"Right"
+offset = Vector3(-0.14, 0, 0)
+
+[sub_resource type="Resource" id="Resource_pf_pyromancer"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_pyromancer")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_pf_shatterweaver"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("pf_shatterweaver")
+socket = &"Front"
 
 [sub_resource type="Resource" id="Resource_h2uv3"]
 script = ExtResource("1_avbba")
@@ -549,30 +771,13 @@ rim_light = SubResource("Resource_0tqdd")
 floor_material = SubResource("StandardMaterial3D_tdba8")
 wall_material = SubResource("StandardMaterial3D_p0dkd")
 
-[sub_resource type="Resource" id="Resource_1p7hb"]
-script = ExtResource("2_b37kx")
-shape = ExtResource("3_pek0f")
-socket = &"Left"
-offset = Vector3(0.08, -0.1, 0.3)
-rotation_degrees = Vector3(0, -90, -20)
-
 [sub_resource type="Resource" id="Resource_kettlehat"]
 script = ExtResource("2_b37kx")
 shape = ExtResource("17_kettle")
 
 [sub_resource type="Resource" id="Resource_n5cye"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_kettlehat")])
-
-[sub_resource type="Resource" id="Resource_knightshield"]
-script = ExtResource("2_b37kx")
-shape = ExtResource("18_shield")
-socket = &"Front"
-offset = Vector3(-0.2, -0.05, 0.03)
-
-[sub_resource type="Resource" id="Resource_knightlook"]
-script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_1p7hb"), SubResource("Resource_knightshield")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_kettlehat"), SubResource("Resource_pf_warrior"), SubResource("Resource_pi_warrior")])
 
 [sub_resource type="Resource" id="Resource_gyu0e"]
 script = ExtResource("2_b37kx")
@@ -585,7 +790,7 @@ motion_amount = 0.04
 script = ExtResource("1_avbba")
 use_color_override = true
 color_override = Color(0.94, 0.94, 0.92, 1)
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_gyu0e")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_gyu0e"), SubResource("Resource_pf_cleric"), SubResource("Resource_pi_cleric")])
 effect = ExtResource("29_holy")
 
 [sub_resource type="Resource" id="Resource_i6477"]
@@ -596,7 +801,7 @@ rotation_degrees = Vector3(0, 0, 6)
 
 [sub_resource type="Resource" id="Resource_wasn7"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_i6477")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_i6477"), SubResource("Resource_pf_arcanist"), SubResource("Resource_pi_arcanist")])
 effect = ExtResource("30_runes")
 
 [sub_resource type="Resource" id="Resource_jh0p1"]
@@ -605,34 +810,8 @@ shape = ExtResource("7_jty54")
 
 [sub_resource type="Resource" id="Resource_6q8ru"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_jh0p1")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_jh0p1"), SubResource("Resource_pf_bard"), SubResource("Resource_pi_bard")])
 effect = ExtResource("31_golden")
-
-[sub_resource type="Resource" id="Resource_y4wh2"]
-script = ExtResource("2_b37kx")
-shape = ExtResource("8_5gk3l")
-socket = &"Back"
-offset = Vector3(0.36, 0.18, -0.05)
-rotation_degrees = Vector3(0, 40, 40)
-scale = Vector3(1.4, 1.4, 1.4)
-mirror = true
-motion = 3
-motion_speed = 1.2
-motion_amount = 18.0
-
-[sub_resource type="Resource" id="Resource_x2aw2"]
-script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_y4wh2")])
-
-[sub_resource type="Resource" id="Resource_qos7m"]
-script = ExtResource("2_b37kx")
-shape = ExtResource("10_dngw0")
-offset = Vector3(0.2, -0.04, 0.08)
-mirror = true
-
-[sub_resource type="Resource" id="Resource_rptdn"]
-script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_qos7m")])
 
 [sub_resource type="Resource" id="Resource_fun37"]
 script = ExtResource("2_b37kx")
@@ -641,12 +820,6 @@ shape = ExtResource("12_p1ca3")
 [sub_resource type="Resource" id="Resource_q38xi"]
 script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_fun37")])
-
-[sub_resource type="Resource" id="Resource_6xxrr"]
-script = ExtResource("1_avbba")
-use_color_override = true
-color_override = Color(0.36, 0.24, 0.15, 1)
-surface = ExtResource("15_stone")
 
 [sub_resource type="Resource" id="Resource_partyform"]
 script = ExtResource("16_form")
@@ -666,7 +839,7 @@ offset = Vector3(0, 0.05, 0)
 
 [sub_resource type="Resource" id="Resource_ranger"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_ranger_att")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_ranger_att"), SubResource("Resource_pf_ranger"), SubResource("Resource_pi_ranger")])
 
 [sub_resource type="Resource" id="Resource_bulwark_att"]
 script = ExtResource("2_b37kx")
@@ -674,7 +847,7 @@ shape = ExtResource("20_bulwark")
 
 [sub_resource type="Resource" id="Resource_bulwark"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_bulwark_att")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_bulwark_att"), SubResource("Resource_pf_bulwark"), SubResource("Resource_pi_bulwark")])
 
 [sub_resource type="Resource" id="Resource_cryo_att"]
 script = ExtResource("2_b37kx")
@@ -682,7 +855,7 @@ shape = ExtResource("21_cryo")
 
 [sub_resource type="Resource" id="Resource_cryo"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_cryo_att")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_cryo_att"), SubResource("Resource_pf_cryomancer"), SubResource("Resource_pi_cryomancer")])
 effect = ExtResource("28_frost")
 
 [sub_resource type="Resource" id="Resource_pyro_att"]
@@ -691,7 +864,7 @@ shape = ExtResource("22_pyro")
 
 [sub_resource type="Resource" id="Resource_pyro"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_pyro_att")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_pyro_att"), SubResource("Resource_pf_pyromancer")])
 effect = ExtResource("24_fire")
 
 [sub_resource type="Resource" id="Resource_ember_att"]
@@ -723,7 +896,7 @@ motion_speed = 0.15
 
 [sub_resource type="Resource" id="Resource_shatter"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_shatter_att")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_shatter_att"), SubResource("Resource_pf_shatterweaver")])
 effect = ExtResource("32_cracks")
 
 [sub_resource type="Resource" id="Resource_slime"]
@@ -1157,6 +1330,131 @@ script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s4a23"), SubResource("Resource_s4a24"), SubResource("Resource_s4a25")])
 effect = ExtResource("s4_30")
 
+[sub_resource type="Resource" id="Resource_s5a1"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_10")
+socket = &"Center"
+
+
+[sub_resource type="Resource" id="Resource_s5a2"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_11")
+socket = &"Left"
+offset = Vector3(0.16, 0.05, 0)
+scale = Vector3(1.7, 1.7, 1.7)
+
+
+[sub_resource type="Resource" id="Resource_s5l3"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s5a1"), SubResource("Resource_s5a2")])
+
+
+[sub_resource type="Resource" id="Resource_s5a4"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_12")
+socket = &"Center"
+
+
+[sub_resource type="Resource" id="Resource_s5a5"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_13")
+mirror = true
+
+
+[sub_resource type="Resource" id="Resource_s5a6"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_14")
+socket = &"Front"
+
+
+[sub_resource type="Resource" id="Resource_s5l7"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s5a4"), SubResource("Resource_s5a5"), SubResource("Resource_s5a6")])
+
+
+[sub_resource type="Resource" id="Resource_s5a8"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_15")
+
+
+[sub_resource type="Resource" id="Resource_s5a9"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_16")
+socket = &"Front"
+
+
+[sub_resource type="Resource" id="Resource_s5l10"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s5a8"), SubResource("Resource_s5a9")])
+effect = ExtResource("s5_17")
+
+
+[sub_resource type="Resource" id="Resource_s5a11"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_18")
+socket = &"Front"
+
+
+[sub_resource type="Resource" id="Resource_s5l12"]
+script = ExtResource("1_avbba")
+use_color_override = true
+color_override = Color(0.3, 0.3, 0.75, 0.5)
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s5a11")])
+surface = ExtResource("s5_19")
+effect = ExtResource("s5_20")
+
+
+[sub_resource type="Resource" id="Resource_s5a13"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_21")
+socket = &"Back"
+offset = Vector3(0, 0.42, -0.12)
+rotation_degrees = Vector3(82, 0, 0)
+scale = Vector3(0.85, 0.85, 0.85)
+
+
+[sub_resource type="Resource" id="Resource_s5a14"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_22")
+socket = &"Front"
+
+
+[sub_resource type="Resource" id="Resource_s5l15"]
+script = ExtResource("1_avbba")
+use_color_override = true
+color_override = Color(0.18, 0.26, 0.6, 1)
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s5a13"), SubResource("Resource_s5a14")])
+surface = ExtResource("s5_23")
+
+
+[sub_resource type="Resource" id="Resource_s5a16"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_24")
+socket = &"Front"
+rotation_degrees = Vector3(90, 0, 0)
+motion = 2
+motion_speed = 0.15
+spin_axis = Vector3(0, 1, 0)
+
+
+[sub_resource type="Resource" id="Resource_s5a17"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("s5_25")
+socket = &"Center"
+offset = Vector3(0, 0.15, 0)
+motion = 2
+motion_speed = 0.08
+
+
+[sub_resource type="Resource" id="Resource_s5l18"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s5a16"), SubResource("Resource_s5a17")])
+surface = ExtResource("s5_23")
+effect = ExtResource("s5_26")
+effect_params = {
+"ember_color": Color(0.7, 0.45, 1, 1)
+}
+
 [resource]
 script = ExtResource("4_amh85")
 default_look = SubResource("Resource_h2uv3")
@@ -1172,25 +1470,30 @@ looks = Dictionary[StringName, ExtResource("1_avbba")]({
 &"demo.character.ranger": SubResource("Resource_ranger"),
 &"demo.character.shatterweaver": SubResource("Resource_shatter"),
 &"demo.character.warrior": SubResource("Resource_n5cye"),
+&"demo.enemy.abyssal_hulk": SubResource("Resource_s5l15"),
 &"demo.enemy.anvil_guard": SubResource("Resource_s2l11"),
-&"demo.enemy.bat": SubResource("Resource_x2aw2"),
+&"demo.enemy.bat": SubResource("Resource_f1l4"),
 &"demo.enemy.bone_warden": SubResource("Resource_warden"),
+&"demo.enemy.bound_demon": SubResource("Resource_s5l7"),
 &"demo.enemy.brass_colossus": SubResource("Resource_s2l19"),
 &"demo.enemy.choir_seraph": SubResource("Resource_s4l4"),
 &"demo.enemy.cinder_hound": SubResource("Resource_s2l3"),
 &"demo.enemy.collector": SubResource("Resource_s4l26"),
+&"demo.enemy.cultist": SubResource("Resource_s5l3"),
 &"demo.enemy.forgemaster": SubResource("Resource_s2l15"),
 &"demo.enemy.gilded_mimic": SubResource("Resource_s4l18"),
-&"demo.enemy.golem": SubResource("Resource_6xxrr"),
+&"demo.enemy.golem": SubResource("Resource_f1l16"),
 &"demo.enemy.gutter_maw": SubResource("Resource_s3l3"),
 &"demo.enemy.hallowed_judge": SubResource("Resource_s4l13"),
 &"demo.enemy.heart_left": SubResource("Resource_s3l10"),
 &"demo.enemy.heart_right": SubResource("Resource_s3l12"),
-&"demo.enemy.imp": SubResource("Resource_rptdn"),
-&"demo.enemy.knight": SubResource("Resource_knightlook"),
+&"demo.enemy.high_witch": SubResource("Resource_s5l10"),
+&"demo.enemy.imp": SubResource("Resource_f1l8"),
+&"demo.enemy.knight": SubResource("Resource_f1l13"),
 &"demo.enemy.leech": SubResource("Resource_s3l5"),
 &"demo.enemy.lich": SubResource("Resource_q38xi"),
 &"demo.enemy.mother_heart": SubResource("Resource_s3l14"),
+&"demo.enemy.nameless": SubResource("Resource_s5l18"),
 &"demo.enemy.penitent_knight": SubResource("Resource_s4l8"),
 &"demo.enemy.rat_king": SubResource("Resource_rat"),
 &"demo.enemy.shaman": SubResource("Resource_shaman"),
@@ -1199,6 +1502,7 @@ looks = Dictionary[StringName, ExtResource("1_avbba")]({
 &"demo.enemy.toad": SubResource("Resource_toad"),
 &"demo.enemy.vault_sentry": SubResource("Resource_s4l22"),
 &"demo.enemy.vein_weaver": SubResource("Resource_s3l8"),
+&"demo.enemy.void_wraith": SubResource("Resource_s5l12"),
 &"demo.enemy.wisp": SubResource("Resource_wisp")
 })
 tag_rules = Array[ExtResource("5_m0vw3")]([])

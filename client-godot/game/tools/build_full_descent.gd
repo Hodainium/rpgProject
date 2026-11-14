@@ -354,7 +354,7 @@ func _enemies_and_encounters() -> void:
 	_brained("void_wraith", "Void Wraith", Color.MIDNIGHT_BLUE, _stats_of(800, 440, 160, 130, 60), ["chill_touch", "fade"],
 		[&"Enemy.Type.Wraith", &"Drain.Ice", &"Resist.Physical"], _pattern([&"Ability.Chilltouch", &"Ability.Chilltouch",
 		&"Ability.Fade"]), [])
-	_brained("abyssal_hulk", "Abyssal Hulk", Color.BLACK, _stats_of(1800, 480, 360, 80, 200), ["abyss_crush", "tremor"],
+	_brained("abyssal_hulk", "Guardian", Color.BLACK, _stats_of(1800, 480, 360, 80, 200), ["abyss_crush", "tremor"],
 		[&"Enemy.Type.Hulk", &"Weakness.Fire"], _pattern([&"Ability.Abysscrush", &"Ability.Tremor"]), [])
 	_phase_set("nameless_two", [&"State.Phase.Two"], [], ["haste"])
 	_phase_set("nameless_three", [&"State.Phase.Three"], [], ["ward", "defense_up"])

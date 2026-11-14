@@ -306,7 +306,7 @@ weights as built: `runs/descent.tres` `rarity_weights_x100`.
 | Bound Demon | Coven | drain Fire, weak Ice | Hellfire (Fire, Burn), Rend (Physical, Bleed) |
 | High Witch (boss) | Coven | resist Ice, weak Fire | Hex All, Dispel, Doom; phases at 60% (Ward each turn) and 25% (Haste, Hellfire unlocked); TacticalBrain ult Black Mass (all, Ice) |
 | Void Wraith | Void | drain Ice, resist Physical | Chill Touch (Ice, Freeze 40%), Fade (Defense Up) |
-| Abyssal Hulk | Void | weak Fire | Crush (Physical, heavy toughness), Quake (all) |
+| Abyssal Hulk (shown as "Guardian" since 2026-11-13, spec `cube-style` Set 5) | Void | weak Fire | Crush (Physical, heavy toughness), Quake (all) |
 | The Nameless (final boss) | Void | resist Physical and Ice, weak Fire | Unmake (single, huge), Entropy (all, Bleed and Slow), Silence (Stun 50%); phases at 66% and 33%, each clearing its debuffs; ult Oblivion (all, huge) (no mirror) |
 
 Encounters: Coven 3 (cultists, demon and cultist, elite demon), Void 3 (wraiths, hulk and wraith, elite hulk). Boss

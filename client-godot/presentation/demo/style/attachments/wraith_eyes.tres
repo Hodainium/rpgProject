@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.055
+segments = 16
+position = Vector3(0.13, 0.04, 0)
+rotation_degrees = Vector3(0, 0, 18)
+scale = Vector3(1.4, 0.6, 0.4)
+color = Color(0.55, 0.85, 1, 1)
+emission = 3.5
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.055
+segments = 16
+position = Vector3(-0.13, 0.04, 0)
+rotation_degrees = Vector3(0, 0, -18)
+scale = Vector3(1.4, 0.6, 0.4)
+color = Color(0.55, 0.85, 1, 1)
+emission = 3.5
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.05
+segments = 16
+position = Vector3(0, -0.17, 0)
+scale = Vector3(0.8, 1.3, 0.3)
+color = Color(0.02, 0.02, 0.08, 1)
+roughness = 1
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Wraith eyes"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2")])
