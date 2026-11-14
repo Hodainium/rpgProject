@@ -427,6 +427,16 @@ its first faces read like the Bulwark's) with a bow; Bulwark A (stern eyes under
 (glowing ice eyes) with an ice staff; Pyromancer A (glowing ember eyes, gritted teeth) and Shatterweaver A (pink gem eyes), both
 empty-handed. Files: `face_<class>_<pick>.tres` and `item_*.tres` in `presentation/demo/style/attachments/`.
 
+### Floor-1 refresh (user, 2026-11-13)
+The round-2 enemies looked plain next to the later sets. The user asked for fangs on the Bat and a second look at the first
+floor's enemies; the Bat, Fire Imp, Knight and Golem (the ones still on their round-2 looks) got faces and one more detail each,
+and the user picked B for all four: **Bat** red eyes, a pug nose, two fangs and big pointed ears (wings kept); **Fire Imp**
+yellow slit eyes under a V of brows and a fanged grin, with a devil tail (horns kept); **Knight** a great-helm visor with a glowing
+cross slit and a red plume, the sword kept and the kite shield moved off the face to its Right; **Golem** amber eyes under a stone
+brow, a glowing crack of a mouth, and moss with two mushrooms on top (the rock surface kept). The Imp's tail is scaled to 70% so it stays clear
+of the row behind. Files: `bat_face`, `bat_ear`, `imp_face`, `knight_visor`, `knight_plume`, `golem_face`, `golem_moss` (enemy faces
+are named by unit, without the party's `_<pick>` suffix).
+
 ### Sets 2-5 and what the roll-out needed so far
 - Sets 3-5 above are first proposals. They are built under the design approach above, so expect faces, effects and combined
   details to be added while iterating.
