@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="1_fdmod"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="2_fdcmb"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_fdeff"]
+
+[sub_resource type="Resource" id="Resource_food2"]
+script = ExtResource("2_fdcmb")
+value_x100 = 800
+attribute_name = "max_hp"
+operation = 1
+
+[resource]
+script = ExtResource("3_fdeff")
+policy = 2
+modifiers = Array[ExtResource("1_fdmod")]([SubResource("Resource_food2")])

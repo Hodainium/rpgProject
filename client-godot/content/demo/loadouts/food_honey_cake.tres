@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="AbilitySet" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_fdeff"]
+[ext_resource type="Resource" path="res://content/demo/effects/food_honey_cake_bonus.tres" id="2_fdbon"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_fdset"]
+
+[resource]
+script = ExtResource("3_fdset")
+effects = Array[ExtResource("1_fdeff")]([ExtResource("2_fdbon")])
+tags = Array[StringName]([&"Item.Food"])

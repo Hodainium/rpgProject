@@ -2,14 +2,21 @@
 
 [ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_yal1k"]
 [ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_sp7n4"]
-[ext_resource type="PackedScene" path="res://content/demo/abilities/hearty_feast.tscn" id="3_07q2p"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="3_fdpty"]
+[ext_resource type="Resource" path="res://content/demo/effects/food_heal_25.tres" id="4_fdhea"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/food_hearty_feast.tres" id="5_fdset"]
+
+[sub_resource type="Resource" id="Resource_fdpick"]
+script = ExtResource("3_fdpty")
+effect = ExtResource("4_fdhea")
 
 [resource]
 script = ExtResource("2_sp7n4")
 id = &"demo.item.hearty_feast"
 display_name = "Hearty Feast"
-description = "The party heals 25% of max HP."
+description = "On pickup: the party heals 25% of max HP. The party gets +5% max HP."
 tags = Array[StringName]([&"Pool.Food", &"Item.Rarity.Rare", &"Card.Set.Core"])
 price = 6
-kind = 1
-use_ability = ExtResource("3_07q2p")
+grants = ExtResource("5_fdset")
+applies_to = 1
+on_pickup = Array[ExtResource("1_yal1k")]([SubResource("Resource_fdpick")])

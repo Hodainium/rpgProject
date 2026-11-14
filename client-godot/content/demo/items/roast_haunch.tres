@@ -2,14 +2,20 @@
 
 [ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_nedlj"]
 [ext_resource type="Script" path="res://game/defs/item_definition.gd" id="2_bodwq"]
-[ext_resource type="PackedScene" path="res://content/demo/abilities/roast_haunch.tscn" id="3_onnjg"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_holder_effect.gd" id="3_fdhld"]
+[ext_resource type="Resource" path="res://content/demo/effects/food_heal_30.tres" id="4_fdhea"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/food_roast_haunch.tres" id="5_fdset"]
+
+[sub_resource type="Resource" id="Resource_fdpick"]
+script = ExtResource("3_fdhld")
+effect = ExtResource("4_fdhea")
 
 [resource]
 script = ExtResource("2_bodwq")
 id = &"demo.item.roast_haunch"
 display_name = "Roast Haunch"
-description = "One ally heals 30% of max HP."
+description = "On pickup: heal 30% of max HP. +8% max HP."
 tags = Array[StringName]([&"Pool.Food", &"Item.Rarity.Common", &"Card.Set.Core"])
 price = 3
-kind = 1
-use_ability = ExtResource("3_onnjg")
+grants = ExtResource("5_fdset")
+on_pickup = Array[ExtResource("1_nedlj")]([SubResource("Resource_fdpick")])
