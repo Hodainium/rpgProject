@@ -245,7 +245,7 @@ iterations. Every detail is data: primitive attachments (3.3), a surface (`UnitL
 **Design approach (evolved during Set P, Set 1 and Set 2, user, 2026-11-13; memory `cube-style-design-lessons`):**
 - **Start simple, combine freely.** A proposal starts from one signature detail, but combined details are fine and often chosen
   (A and B together, plus a face). The original "one detail per cube" rule is relaxed.
-- **Party:** headwear (never a held item) plus a **floor effect** in the class's theme under the cube (fire, bubbles, frost, holy
+- **Party:** headwear, a centred face and, since the party pass, sometimes a held item plus a **floor effect** in the class's theme under the cube (fire, bubbles, frost, holy
   glow, runes, golden glow, cracks). **Enemies:** a signature detail, often a **face** (eyes, muzzle, skull, tongue), plus an effect
   or surface where it fits.
 - **See-through bodies** are allowed for jelly and spirit creatures (an alpha surface with both faces drawn and a colour override
@@ -255,7 +255,7 @@ iterations. Every detail is data: primitive attachments (3.3), a surface (`UnitL
   The battle camera sees enemies from the side, so front details lean toward the camera side and tails swing sideways.
 - **Effects:** each unit gets its own (a party effect is reused on an enemy only when the user asks); pulses go clearly from light
   to dark; every shader uniform a track animates is set in the layer's `shader_params`.
-- **Held items and long shapes (Set 2):** a held item sits on the unit's own Left (the camera side in battle) and clear of the body;
+- **Held items and long shapes (Set 2):** a held item sits on the unit's camera side in battle: an enemy's own Left, a party member's own Right and clear of the body;
   a ladle's handle rises from its bowl's rim, not through it; a hammer's head runs along the unit's facing (Z), so its long side
   shows from the battle camera. A gear stood on its side spins on its own axle (`UnitAttachment.spin_axis`, 3.3).
 - **Faces on the face plate:** small glowing eyes read best on a dark plate behind them (the Anvil Guard's visor, the Smelter's
@@ -412,6 +412,20 @@ smaller, still cyan ring behind the head. The Nameless: C (a second iteration), 
 disc in a glowing accretion ring with beads, turning on its own axle) and seven dark shards orbiting, with dark smoke rising from
 the floor and violet embers (`void_smoke`, the user's ask for a final boss). Rejected: the hoodless chanting face, the Hulk's
 faces and spikes, the crescent moon, the shroud, the turning void halo and the slit.
+
+### Party pass: faces and held items (user, 2026-11-13)
+After the enemy sets the party looked plain next to the enemies, which all have faces. The user chose **faces for every class**
+(the Ember Knight and Plaguewright keep their masks) and, for the first time, **held items** for the party (the earlier rule
+"the party never holds items" is lifted; not every class holds one). Faces are symmetric about the middle (the eye highlights are
+mirrored, each toward the outside). Items sit on the **Right** socket: facing +90, the party's own right is the side the battle
+camera sees (the enemies' camera side is their Left).
+
+**Picked:** Warrior B (heavy angry brows, gritted teeth) with a sword; Cleric B (amber eyes, soft gold brows, a smile) with a sun
+staff; Arcanist A (round spectacles, an "o" mouth) with a closed leather tome (an open book at its side did not make sense);
+Bard A (happy closed eyes, an open smile, blush) with a lute; Ranger D2 (round eyes, thin high brows, freckles, a small smile;
+its first faces read like the Bulwark's) with a bow; Bulwark A (stern eyes under a heavy brow) with a round shield; Cryomancer A
+(glowing ice eyes) with an ice staff; Pyromancer A (glowing ember eyes, gritted teeth) and Shatterweaver A (pink gem eyes), both
+empty-handed. Files: `face_<class>_<pick>.tres` and `item_*.tres` in `presentation/demo/style/attachments/`.
 
 ### Sets 2-5 and what the roll-out needed so far
 - Sets 3-5 above are first proposals. They are built under the design approach above, so expect faces, effects and combined
