@@ -376,8 +376,8 @@ same flesh, beating in magenta twice as fast (`speed` 1). The beat is the floor 
 **Picked (Set 4, approved 2026-11-13):** Choir Seraph: B, two pairs of small feathered wings (scalloped extruded outlines, each
 pair flapping at its own speed), with a singing face (closed eyes, a round open mouth, blush) and soft light drifting down
 (`seraph_down`). Penitent Knight: A and B, the crown of thorns, a linen blindfold with two matching blood stains where the eyes are,
-each with a drip, and a brass censer swinging front to back on its chain. Hallowed Judge: A and B, the gold balance scales (beam
-along the facing), a barrister's curled wig, the mitre on top of it and stern gold eyes under a V of grey brows. Gilded Mimic: B, a
+each with a drip, and a brass censer swinging front to back on its chain. (Replaced with Set 4b: no religious symbols, a spiked iron band and a swinging iron lantern; see below.) Hallowed Judge: A and B, the gold balance scales (beam
+along the facing), a barrister's curled wig, the mitre on top of it (its gold cross removed with Set 4b) and stern gold eyes under a V of grey brows. Gilded Mimic: B, a
 chest (iron straps and a lock on the face), the lid open about 60° and chomping on its hinge (`FLAP` on a pivot turned so its axis
 is the hinge), a row of teeth on the lid and on the front edge, eyes glowing inside and a centred tongue. Vault Sentry: B, the lens
 eye, a halberd (blade along the facing) and a steel crest (the crest symmetric front to back). The Collector: B, a monocle with its chain, a
