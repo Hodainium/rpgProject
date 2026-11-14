@@ -65,6 +65,9 @@ static func create(parent: Node, id: StringName, unit_side: int, unit_slot: int,
 
 	unit.asc = CombatASC.new()
 	unit.asc.name = "AbilitySystemComponent"
+	# Playtest-fixes B22: a field battle is a bookkeeping copy of the party; building it re-applies every gear and level effect,
+	# which must not play cues on the party's views. Battle opens them around an explicit field action.
+	unit.asc.cues_closed = parent is Battle and (parent as Battle).field_mode
 	var sets: Array[AttributeSet] = [unit_def.attribute_set.new()]
 	unit.asc.attribute_sets = sets
 	unit.add_child(unit.asc)

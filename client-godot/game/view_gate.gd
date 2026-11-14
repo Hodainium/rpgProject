@@ -19,13 +19,59 @@ signal holds_released
 var _holds: Dictionary = {}
 var _next_hold: int = 0
 
+## Playtest-fixes B18: battle pacing (presentation only; the headless verifier and replays never use a ViewGate). An action
+## (any ability that is not a triggered passive) stays on screen at least `min_action_seconds`, then `pause_seconds` pass
+## before the battle goes on, both in game time, so the battle speed (Engine.time_scale) scales them. Its hits still land on
+## the animation's `execute` keys; only the end waits. 0 turns either off. Set from the Settings by GameMain.
+const SETTING_MIN_ACTION: String = "battle_min_action"
+const SETTING_PAUSE: String = "battle_pause"
+const DEFAULT_MIN_ACTION: float = 1.0
+const DEFAULT_PAUSE: float = 0.4
+var min_action_seconds: float = DEFAULT_MIN_ACTION
+var pause_seconds: float = DEFAULT_PAUSE
+var _paced: bool = false
+var _pace_id: int = 0
+var _began_usec: int = 0
+
 
 func begin_ability(unit_id: StringName, ability: BattleAbility, sequence: Array[StringName]) -> void:
 	super(unit_id, ability, sequence)
+	_pace_id += 1
+	_paced = not skip_all and not ability.is_triggered() and (min_action_seconds > 0.0 or pause_seconds > 0.0)
+	_began_usec = Time.get_ticks_usec()
 	if skip_all:
 		release_finished()
 		return
 	ability_began.emit(unit_id, ability)
+
+
+## The animation ended: every execution not yet released resolves now; a paced action then waits out its minimum time and
+## the pause before the battle goes on (cut short by skip() or skip_all).
+func release_finished() -> void:
+	if not _paced or _finished:
+		super()
+		return
+	_paced = false
+	var id := _pace_id
+	_released = _sequence.size()
+	released.emit()
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null:
+		var shown := (Time.get_ticks_usec() - _began_usec) / 1000000.0 * Engine.time_scale
+		var wait := maxf(min_action_seconds - shown, 0.0) + pause_seconds
+		var waited := 0.0
+		while waited < wait and id == _pace_id and not skip_all:
+			await tree.process_frame
+			waited += tree.root.get_process_delta_time()
+	if id == _pace_id:
+		super()
+
+
+## Skips the rest of the action, its pacing included.
+func skip() -> void:
+	_pace_id += 1
+	_paced = false
+	super()
 
 
 ## A view starts holding the battle's end (an enemy fading out). Returns the id to release with end_hold().

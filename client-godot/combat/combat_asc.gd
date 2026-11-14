@@ -52,6 +52,18 @@ func _unsuppress_effect(active_effect: ActiveGameplayEffect) -> void:
 	super(active_effect)
 
 
+## Playtest-fixes B22: true once the battle has ended. Freeing the battle removes every unit's effects, and GodotGAS would play
+## each one's removal cue (the stat arrows over the party after a win). Presentation only: cues are never in a hash, and the
+## headless runners suppress them anyway. Persistent cues are still ended.
+var cues_closed: bool = false
+
+
+func execute_cue(tag: StringName, payload: Dictionary = {}) -> void:
+	if cues_closed:
+		return
+	super(tag, payload)
+
+
 ## Removes the cue nodes that are already freed from `active_effect`'s persistent cues.
 static func drop_freed_cues(active_effect: ActiveGameplayEffect) -> void:
 	for index in range(active_effect.active_cues.size() - 1, -1, -1):

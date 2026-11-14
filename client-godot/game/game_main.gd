@@ -636,6 +636,9 @@ func _on_battle_started(battle: Battle) -> void:
 func _on_battle_requested(_snapshot: Dictionary) -> void:
 	recorder = ActionRecorder.new()
 	gate = ViewGate.new()
+	# Playtest-fixes B18: the battle pacing, from the Settings (the console's `pace` changes them).
+	gate.min_action_seconds = float(load_setting("settings", ViewGate.SETTING_MIN_ACTION, ViewGate.DEFAULT_MIN_ACTION))
+	gate.pause_seconds = float(load_setting("settings", ViewGate.SETTING_PAUSE, ViewGate.DEFAULT_PAUSE))
 	_apply_auto()
 	battle_prepared.emit(recorder, gate)
 	if skip_animations:

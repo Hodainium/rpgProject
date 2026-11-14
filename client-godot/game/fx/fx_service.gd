@@ -352,6 +352,9 @@ func stop_handle(handle: FxHandle, fade: float) -> void:
 		var node := handle.instance.nodes[index]
 		match handle.states[index]:
 			FxHandle.LayerState.RUNNING:
+				if not is_instance_valid(node):  # playtest-fixes B19: its node left with its anchor (a unit view freed)
+					handle.states[index] = FxHandle.LayerState.DONE
+					continue
 				layer.stop(node, fade)
 				wait = maxf(wait, layer.tail(node))
 			FxHandle.LayerState.PENDING:
