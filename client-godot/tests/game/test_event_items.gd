@@ -253,12 +253,16 @@ func test_validator_choose_outside_event() -> void:
 	var reward: EncounterDefinition = fixtures().encounters[&"fixture.encounter.pack"].duplicate()
 	var rewards: Array[RunOutcome] = [_gift(whetstone, GiveItem.Recipient.CHOOSE)]
 	reward.rewards = rewards  # a new array: duplicate() shares the cached fixture's
-	check(codes.call(fixtures().overlay([reward])).has("give_choose_outside_event"),
-		"CHOOSE in an encounter reward is an error (D3)")
-	var fine: Array = codes.call(fixtures().overlay([
+	var hooked: ItemDefinition = whetstone.duplicate()
+	hooked.id = &"fixture.item.choose_hook"
+	hooked.on_room_cleared = [_gift(whetstone, GiveItem.Recipient.CHOOSE)] as Array[RunOutcome]
+	check(codes.call(fixtures().overlay([hooked])).has("give_choose_outside_event"),
+		"CHOOSE in an item hook is an error (D3)")
+	var fine: Array = codes.call(fixtures().overlay([reward,
 		_chest("fixture.chest.choose", [_gift(whetstone, GiveItem.Recipient.CHOOSE)]),
 		_event("fixture.event.choose", [_gift(whetstone, GiveItem.Recipient.CHOOSE)])]))
-	check(not fine.has("give_choose_outside_event"), "CHOOSE in a chest or an event is fine")
+	check(not fine.has("give_choose_outside_event"),
+		"CHOOSE in a chest, an event or an encounter reward is fine (user, 2026-11-13)")
 
 
 func test_bot_gives_pending_gifts() -> void:
