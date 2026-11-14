@@ -1,0 +1,108 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 6
+radius_bottom = 0.012
+radius_top = 0.008
+curve = PackedVector3Array(0.1, 0, 0.22, 0.12, 0.28, 0.34, 0.32, 0.42, 0.3)
+segments = 14
+color = Color(0.4, 0.35, 0.5, 1)
+roughness = 0.6
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.0285
+segments = 8
+position = Vector3(0.1282, 0.1554, 0.2776)
+scale = Vector3(1.6, 0.35, 0.5)
+color = Color(0.7, 0.66, 0.82, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.027
+segments = 8
+position = Vector3(0.1448, 0.2016, 0.2904)
+scale = Vector3(1.6, 0.35, 0.5)
+color = Color(0.7, 0.66, 0.82, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.0255
+segments = 8
+position = Vector3(0.165, 0.245, 0.3)
+scale = Vector3(1.6, 0.35, 0.5)
+color = Color(0.7, 0.66, 0.82, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.024
+segments = 8
+position = Vector3(0.1888, 0.2856, 0.3064)
+scale = Vector3(1.6, 0.35, 0.5)
+color = Color(0.7, 0.66, 0.82, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.0225
+segments = 8
+position = Vector3(0.2162, 0.3234, 0.3096)
+scale = Vector3(1.6, 0.35, 0.5)
+color = Color(0.7, 0.66, 0.82, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.021
+segments = 8
+position = Vector3(0.2472, 0.3584, 0.3096)
+scale = Vector3(1.6, 0.35, 0.5)
+color = Color(0.7, 0.66, 0.82, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p7"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.0195
+segments = 8
+position = Vector3(0.2818, 0.3906, 0.3064)
+scale = Vector3(1.6, 0.35, 0.5)
+color = Color(0.7, 0.66, 0.82, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_p8"]
+script = ExtResource("1_part")
+kind = 2
+radius_bottom = 0.018
+segments = 8
+position = Vector3(0.32, 0.42, 0.3)
+scale = Vector3(1.6, 0.35, 0.5)
+color = Color(0.7, 0.66, 0.82, 1)
+roughness = 0.9
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Moth antenna"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6"), SubResource("Resource_p7"), SubResource("Resource_p8")])

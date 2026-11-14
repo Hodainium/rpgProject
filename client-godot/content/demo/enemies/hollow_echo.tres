@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/echo_strike.tscn" id="1_2i3pb"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/strike.tscn" id="2_5kfbm"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/resound.tscn" id="3_7tlgm"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="4_poa5d"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="5_t31a8"]
+[ext_resource type="Resource" path="res://content/demo/items/hearty_feast.tres" id="6_hpwkr"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="7_0cgxn"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="8_0prfo"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="9_vqpug"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="10_oit4q"]
+
+[sub_resource type="Resource" id="Resource_ylce2"]
+script = ExtResource("5_t31a8")
+pattern = Array[StringName]([&"Ability.Echostrike", &"Ability.Strike", &"Ability.Echostrike"])
+
+[resource]
+script = ExtResource("9_vqpug")
+drop_item = ExtResource("6_hpwkr")
+drop_chance_x100 = 400
+id = &"demo.enemy.hollow_echo"
+attribute_set = ExtResource("4_poa5d")
+abilities = Array[PackedScene]([ExtResource("1_2i3pb"), ExtResource("2_5kfbm"), ExtResource("3_7tlgm")])
+brain = SubResource("Resource_ylce2")
+display_name = "Hollow Echo"
+display_color = Color(0.46666667, 0.53333336, 0.6, 1)
+tags = Array[StringName]([&"Enemy.Type.Echo", &"Resist.Fire", &"Weakness.Ice"])
+stats_x100 = Dictionary[String, int]({
+"atk": 33000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 22000,
+"energy": 0,
+"hp": 70000,
+"max_hp": 70000,
+"max_toughness": 10000,
+"spd": 11500,
+"toughness": 10000,
+"weakness_dmg": 15000
+})

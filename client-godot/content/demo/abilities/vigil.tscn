@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_qrjfi"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_iuyvw"]
+[ext_resource type="Resource" path="res://content/demo/effects/vigil_heal.tres" id="3_2o4pl"]
+[ext_resource type="Resource" path="res://content/demo/effects/cleanse.tres" id="4_orlrm"]
+[ext_resource type="Animation" path="res://content/demo/animations/vigil.tres" id="5_qw60e"]
+
+[sub_resource type="Resource" id="Resource_op2vd"]
+script = ExtResource("2_iuyvw")
+id = &"heal"
+effect = ExtResource("3_2o4pl")
+
+[sub_resource type="Resource" id="Resource_8djuk"]
+script = ExtResource("2_iuyvw")
+id = &"cleanse"
+effect = ExtResource("4_orlrm")
+
+[node name="Vigil" type="Node" unique_id=1770265087]
+script = ExtResource("1_qrjfi")
+targeting = 4
+executions = Array[ExtResource("2_iuyvw")]([SubResource("Resource_op2vd"), SubResource("Resource_8djuk")])
+animation = ExtResource("5_qw60e")
+ability_tag = &"Ability.Vigil"

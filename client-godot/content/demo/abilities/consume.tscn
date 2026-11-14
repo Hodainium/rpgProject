@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_gm68n"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_o85o5"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_ebdx0"]
+[ext_resource type="Animation" path="res://content/demo/animations/consume.tres" id="4_r5omr"]
+
+[sub_resource type="Resource" id="Resource_0f0ig"]
+script = ExtResource("2_o85o5")
+id = &"consume"
+effect = ExtResource("3_ebdx0")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 12000
+
+[node name="Consume" type="Node" unique_id=213322607]
+script = ExtResource("1_gm68n")
+asset_tags = Array[StringName]([&"Ability.Type.Consume"])
+executions = Array[ExtResource("2_o85o5")]([SubResource("Resource_0f0ig")])
+animation = ExtResource("4_r5omr")
+ability_tag = &"Ability.Consume"

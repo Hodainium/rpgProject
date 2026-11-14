@@ -1,0 +1,87 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_binding"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_particles"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="4_param"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="5_def"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/star_sheet.png" id="10_tex"]
+[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/shard_sheet.png" id="11_tex"]
+
+[sub_resource type="Resource" id="Resource_glints_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_glints"]
+offsets = PackedFloat32Array(0, 0.3, 0.5, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_glints"]
+script = ExtResource("3_particles")
+size_min = 0.12
+size_max = 0.2
+spread = 180
+speed_min = 0
+speed_max = 0.05
+spin_min = -60
+spin_max = 60
+emission_radius = 0.7
+lifetime = 1.2
+explosiveness = 0
+gravity = Vector3(0, 0, 0)
+amount = 14
+color_ramp = SubResource("Gradient_glints")
+texture = ExtResource("10_tex")
+id = &"glints"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_glints_color")])
+
+[sub_resource type="Resource" id="Resource_slivers_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_slivers"]
+offsets = PackedFloat32Array(0, 0.25, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_slivers"]
+script = ExtResource("3_particles")
+size_min = 0.06
+size_max = 0.1
+spread = 30
+speed_min = 0.05
+speed_max = 0.12
+spin_min = -90
+spin_max = 90
+emission_ring_radius = 0.6
+lifetime = 2.6
+explosiveness = 0
+gravity = Vector3(0, 0.1, 0)
+emission_offset = Vector3(0, -0.3, 0)
+amount = 10
+color_ramp = SubResource("Gradient_slivers")
+texture = ExtResource("11_tex")
+h_frames = 4
+v_frames = 2
+random_frame = true
+id = &"slivers"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_slivers_color")])
+
+[sub_resource type="Resource" id="Resource_param_color"]
+script = ExtResource("4_param")
+name = &"color"
+kind = 3
+default_value = Color(0.75, 0.95, 1, 1)
+description = "Colour."
+
+[resource]
+script = ExtResource("5_def")
+id = &"fx.prism_glints"
+display_name = "Prism glints"
+params = Array[ExtResource("4_param")]([SubResource("Resource_param_color")])
+layers = Array[ExtResource("1_layer")]([SubResource("Resource_glints"), SubResource("Resource_slivers")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "Glints flashing round a unit in light and a few drifting glass slivers (the Glass Saint's look, Set 4b)."

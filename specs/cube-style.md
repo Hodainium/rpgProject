@@ -234,7 +234,7 @@ demo registry:
 
 Plus the existing suites unchanged: `tools/godot_tests.sh` and `tools/dotnet_test.sh`.
 
-## 6a. Round 4: the roll-out design sheet (in progress; Set P, Set 1 and Set 2 done 2026-11-13)
+## 6a. Round 4: the roll-out design sheet (in progress; Sets P, 1-5, 4b, 5b, the party pass and the floor-1 refresh done 2026-11-13; Set K next)
 
 The looks for the 36 units that had none (round 2 dressed Warrior, Cleric, Arcanist, Bard, Bat, Fire Imp, Knight, Lich, Golem).
 Each unit gets a first proposal (**A**) and an alternative (**B**); the user picks A, B, a mix, or a change, usually over several
@@ -376,8 +376,8 @@ same flesh, beating in magenta twice as fast (`speed` 1). The beat is the floor 
 **Picked (Set 4, approved 2026-11-13):** Choir Seraph: B, two pairs of small feathered wings (scalloped extruded outlines, each
 pair flapping at its own speed), with a singing face (closed eyes, a round open mouth, blush) and soft light drifting down
 (`seraph_down`). Penitent Knight: A and B, the crown of thorns, a linen blindfold with two matching blood stains where the eyes are,
-each with a drip, and a brass censer swinging front to back on its chain. Hallowed Judge: A and B, the gold balance scales (beam
-along the facing), a barrister's curled wig, the mitre on top of it and stern gold eyes under a V of grey brows. Gilded Mimic: B, a
+each with a drip, and a brass censer swinging front to back on its chain. (Replaced with Set 4b: no religious symbols, a spiked iron band and a swinging iron lantern; see below.) Hallowed Judge: A and B, the gold balance scales (beam
+along the facing), a barrister's curled wig, the mitre on top of it (its gold cross removed with Set 4b) and stern gold eyes under a V of grey brows. Gilded Mimic: B, a
 chest (iron straps and a lock on the face), the lid open about 60° and chomping on its hinge (`FLAP` on a pivot turned so its axis
 is the hinge), a row of teeth on the lid and on the front edge, eyes glowing inside and a centred tongue. Vault Sentry: B, the lens
 eye, a halberd (blade along the facing) and a steel crest (the crest symmetric front to back). The Collector: B, a monocle with its chain, a
@@ -412,6 +412,45 @@ smaller, still cyan ring behind the head. The Nameless: C (a second iteration), 
 disc in a glowing accretion ring with beads, turning on its own axle) and seven dark shards orbiting, with dark smoke rising from
 the floor and violet embers (`void_smoke`, the user's ask for a final boss). Rejected: the hoodless chanting face, the Hulk's
 faces and spikes, the crescent moon, the shroud, the turning void halo and the slit.
+
+### Set 4b: Cathedral and Vault, the route enemies (6; spec `route-enemies` 3.1, 3.2)
+Built with the lessons of Sets 1-5 from the start: every unit has a centred face, A and B share their parts so a mix is one
+step, and the two elites (`Enemy.Rank.Elite`) are more ornate than the regulars and get a looping effect of their own.
+| Unit | Colour | A | B |
+|---|---|---|---|
+| Bell Ringer | tan | A bronze bell hanging from a wooden yoke on its head, swinging (`FLAP`), and a monk's face: wide eyes, a round open "dong" mouth | A brown monk's cowl and a hand bell held on the camera side (clapper showing), the same face |
+| Candle Acolyte | cream | A crown of three candles with wax drips and glowing flames, serene closed eyes, warm motes rising (`votive_glow`) | A pale hood with a red trim and a brass candlestick held on the camera side, the same face and motes |
+| Glass Saint (elite) | pale cyan | **Surface:** stained glass (`stained_glass`: coloured panes in dark lead lines, glossy, opaque), a halo of glass shards behind the head, a serene face with glowing eyes, prismatic glints (`prism_glints`) | **Surface:** clear glass (`saint_clear`, see-through 50%) with a gold rose-window halo (ring, spokes, coloured panes), the same face and glints |
+| Tally Clerk | tan | A green accountant's eyeshade, round spectacles over a pursed mouth, a quill behind the ear | A wooden abacus held on the camera side (rows of coloured beads), the same spectacles and mouth |
+| Vault Gargoyle | slate grey | **Surface:** stone (`stone`, tinted), folded stone wings (a jagged outline, mirrored, still), two short horns, glowing eyes under a stone brow (its Stone Gaze) | The stone surface, a rain-spout face: a gaping mouth with fangs, curled horns, the same glowing eyes |
+| Hoard Drake (elite) | gold | A drake's head on the cube: swept-back horns, a snout with nostrils and fangs, slit eyes, a row of back spines and small wings flapping slowly, embers rising (`drake_embers`) | **Surface:** gold scales (`gold_scales`), the same horns and face, a tail along its side and a heap of coins round its base, the same embers |
+
+### Set 5b: Coven and Void, the route enemies (6; spec `route-enemies` 3.4, 3.5)
+| Unit | Colour | A | B |
+|---|---|---|---|
+| Hex Doll | orchid | A voodoo doll's face: two mismatched button eyes (one a stitched X), a stitched mouth; three pins with coloured heads in its top | **Surface:** burlap (`burlap`), stitched seams down the edges and a yarn tuft on top, the same face |
+| Coven Familiar | dark slate blue | A black cat: ears, glowing green slit eyes, a pink nose and whiskers, a tail curling up from its side; icy omen motes (`omen_motes`) | A raven: a beak, a feather crest and small black wings flapping, the same eyes and motes |
+| Hag Sister (elite) | olive | A ragged shawl hood (no hat, so she reads apart from the High Witch) with grey hair strands, one bulging eye and one squint, a warty hooked nose and a crooked grin; green brew steam (`brew_steam`) | The same face and hood with a gnarled staff held on the camera side, a little cauldron hanging from it; the same steam |
+| Null Moth | lavender | Two pairs of moth wings (rounded outlines with eye spots, `FLAP`), feathery antennae, big dark compound eyes | A fluffy fur collar, the same antennae and eyes, pale dust drifting down (`moth_dust`) |
+| Hollow Echo | slate grey | A hollow ivory mask on its face (empty dark eye holes, a wailing mouth) and two faint echo rings round the body, tilted, turning (`SPIN`) | A see-through grey body (`echo_clear`, 50%) with the mask, and ripples drifting outward (`echo_ripples`) |
+| Void Devourer (elite) | dark teal | A giant round maw over the face (two rings of teeth round a black void with a teal glow inside), a row of small glowing eyes above it, tendrils curling from its sides | A vertical split maw (teeth on both lips, the teal glow), spikes along the top, motes pulled inward into it (`devour_pull`, negative radial acceleration) |
+
+**Picked (Sets 4b and 5b, approved 2026-11-13):** Bell Ringer A (the bell swinging front to back under its yoke). Candle Acolyte
+A. Glass Saint B (see-through `saint_clear`, the rose window, `prism_glints`). Tally Clerk A and B (the eyeshade with its quill and
+the abacus). Vault Gargoyle A. Hoard Drake A (`drake_embers`). Hex Doll A. Coven Familiar A (its tail starts off the back face
+and stays behind the body until it is past its side; `omen_motes`). Hag Sister B (the staff with its cauldron, `brew_steam`). Null
+Moth A, its wings at 95% of the first proposal. Hollow Echo A. Void Devourer A, its tendrils at 85% (`devour_pull`). Not used:
+the B props and surfaces of the other units (`stained_glass`, `gold_scales`, `burlap`, `echo_clear`, `moth_dust`, `echo_ripples`).
+
+**No unit intersects its neighbours (user, 2026-11-13):** enemy lanes are 2.2 apart and rows 1.8, so every look keeps its
+footprint (body, attachments at every point of their motion) within 0.9 of the unit's centre to the sides and front to back.
+Measured on every enemy at its battle facing (the review tools' `overlap` command, exact mesh vertices sampled over the motion);
+the Null Moth's wings, the Devourer's tendrils and the Bat's wings (1.4 to 1.1) were scaled down to fit. The Vein Weaver's legs
+reach 0.91, accepted.
+
+**No religious symbols (user, 2026-11-13):** the Penitent Knight lost its crown of thorns and censer: a rusted iron band with
+sixteen outward spikes (a spiked collar, not an upright crown) and a swinging iron lantern, the blood-stained blindfold kept
+(an iron cage helm with a ball and chain was the other proposal). The Hallowed Judge's mitre lost its gold cross (bands kept).
 
 ### Party pass: faces and held items (user, 2026-11-13)
 After the enemy sets the party looked plain next to the enemies, which all have faces. The user chose **faces for every class**

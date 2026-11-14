@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/stone_gaze.tscn" id="1_dtgq8"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/brace.tscn" id="2_smi7q"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_x6css"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="4_2lnov"]
+[ext_resource type="Resource" path="res://content/demo/items/hearty_feast.tres" id="5_pcxft"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="6_ex5bf"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="7_qbvok"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="8_yy4mp"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="9_3te24"]
+
+[sub_resource type="Resource" id="Resource_x01ik"]
+script = ExtResource("4_2lnov")
+pattern = Array[StringName]([&"Ability.Stonegaze", &"Ability.Brace", &"Ability.Stonegaze"])
+
+[resource]
+script = ExtResource("8_yy4mp")
+drop_item = ExtResource("5_pcxft")
+drop_chance_x100 = 400
+id = &"demo.enemy.vault_gargoyle"
+attribute_set = ExtResource("3_x6css")
+abilities = Array[PackedScene]([ExtResource("1_dtgq8"), ExtResource("2_smi7q")])
+brain = SubResource("Resource_x01ik")
+display_name = "Vault Gargoyle"
+display_color = Color(0.4392157, 0.5019608, 0.5647059, 1)
+tags = Array[StringName]([&"Enemy.Type.Gargoyle", &"Resist.Physical", &"Weakness.Ice"])
+stats_x100 = Dictionary[String, int]({
+"atk": 34000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 36000,
+"energy": 0,
+"hp": 90000,
+"max_hp": 90000,
+"max_toughness": 14000,
+"spd": 9000,
+"toughness": 14000,
+"weakness_dmg": 15000
+})

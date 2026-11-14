@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_hnvhv"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_c8yrq"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_5k7c6"]
+[ext_resource type="Animation" path="res://content/demo/animations/echo_strike.tres" id="4_voyvn"]
+
+[sub_resource type="Resource" id="Resource_32wsx"]
+script = ExtResource("2_c8yrq")
+id = &"strike"
+effect = ExtResource("3_5k7c6")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+
+[sub_resource type="Resource" id="Resource_u2ufv"]
+script = ExtResource("2_c8yrq")
+id = &"echo"
+effect = ExtResource("3_5k7c6")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+
+[node name="EchoStrike" type="Node" unique_id=1703584981]
+script = ExtResource("1_hnvhv")
+executions = Array[ExtResource("2_c8yrq")]([SubResource("Resource_32wsx"), SubResource("Resource_u2ufv")])
+animation = ExtResource("4_voyvn")
+ability_tag = &"Ability.Echostrike"

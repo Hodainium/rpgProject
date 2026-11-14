@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/smite.tscn" id="1_giopl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/prism_ray.tscn" id="2_k8p40"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/stained_ward.tscn" id="3_hoyq0"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="4_rbml2"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="5_nlwxm"]
+[ext_resource type="Resource" path="res://content/demo/items/halo.tres" id="6_ssqp0"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="7_v6i6c"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="8_l2q1l"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/glass_saint_cracked.tres" id="9_0lojb"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="10_gctlo"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="11_ugimy"]
+
+[sub_resource type="Resource" id="Resource_7r1be"]
+script = ExtResource("5_nlwxm")
+pattern = Array[StringName]([&"Ability.Prismray", &"Ability.Stainedward", &"Ability.Smite", &"Ability.Shardrain"])
+
+[sub_resource type="Resource" id="Resource_cofbi"]
+script = ExtResource("8_l2q1l")
+ability_set = ExtResource("9_0lojb")
+hp_below_x100 = 5000
+
+[resource]
+script = ExtResource("10_gctlo")
+phases = Array[ExtResource("8_l2q1l")]([SubResource("Resource_cofbi")])
+drop_item = ExtResource("6_ssqp0")
+drop_chance_x100 = 2500
+id = &"demo.enemy.glass_saint"
+attribute_set = ExtResource("4_rbml2")
+abilities = Array[PackedScene]([ExtResource("1_giopl"), ExtResource("2_k8p40"), ExtResource("3_hoyq0")])
+brain = SubResource("Resource_7r1be")
+display_name = "Glass Saint"
+display_color = Color(0.8784314, 1, 1, 1)
+tags = Array[StringName]([&"Enemy.Type.Saint", &"Enemy.Rank.Elite", &"Resist.Ice", &"Resist.Fire", &"Weakness.Physical"])
+stats_x100 = Dictionary[String, int]({
+"atk": 38000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 26000,
+"energy": 0,
+"hp": 260000,
+"max_hp": 260000,
+"max_toughness": 24000,
+"spd": 10000,
+"toughness": 24000,
+"weakness_dmg": 15000
+})

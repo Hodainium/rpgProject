@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bite.tscn" id="1_t00c8"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/gilded_breath.tscn" id="2_sw0xy"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hoard_greed.tscn" id="3_ojd8p"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="4_4uh7f"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="5_068sr"]
+[ext_resource type="Resource" path="res://content/demo/items/golden_idol.tres" id="6_jvlcd"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="7_sp5r4"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="8_jhy5f"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/hoard_drake_fury.tres" id="9_45h0b"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="10_xsg52"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="11_u1vk2"]
+
+[sub_resource type="Resource" id="Resource_2v11a"]
+script = ExtResource("5_068sr")
+pattern = Array[StringName]([&"Ability.Bite", &"Ability.Gildedbreath", &"Ability.Hoardgreed", &"Ability.Furybreath"])
+
+[sub_resource type="Resource" id="Resource_4bfxw"]
+script = ExtResource("8_jhy5f")
+ability_set = ExtResource("9_45h0b")
+hp_below_x100 = 5000
+
+[resource]
+script = ExtResource("10_xsg52")
+phases = Array[ExtResource("8_jhy5f")]([SubResource("Resource_4bfxw")])
+drop_item = ExtResource("6_jvlcd")
+drop_chance_x100 = 2500
+id = &"demo.enemy.hoard_drake"
+attribute_set = ExtResource("4_4uh7f")
+abilities = Array[PackedScene]([ExtResource("1_t00c8"), ExtResource("2_sw0xy"), ExtResource("3_ojd8p")])
+brain = SubResource("Resource_2v11a")
+display_name = "Hoard Drake"
+display_color = Color(0.85490197, 0.64705884, 0.1254902, 1)
+tags = Array[StringName]([&"Enemy.Type.Drake", &"Enemy.Rank.Elite", &"Resist.Fire", &"Weakness.Ice"])
+stats_x100 = Dictionary[String, int]({
+"atk": 42000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 24000,
+"energy": 0,
+"hp": 300000,
+"max_hp": 300000,
+"max_toughness": 22000,
+"spd": 11500,
+"toughness": 22000,
+"weakness_dmg": 15000
+})

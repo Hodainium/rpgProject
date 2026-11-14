@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AbilitySet" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bitter_boil.tscn" id="1_55ybf"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_ul0md"]
+[ext_resource type="Resource" path="res://content/demo/effects/haste.tres" id="3_bqc11"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_pyccj"]
+
+[resource]
+script = ExtResource("4_pyccj")
+abilities = Array[PackedScene]([ExtResource("1_55ybf")])
+effects = Array[ExtResource("2_ul0md")]([ExtResource("3_bqc11")])
+tags = Array[StringName]([&"State.Phase.Two"])

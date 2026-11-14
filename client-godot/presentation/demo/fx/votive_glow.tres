@@ -1,0 +1,51 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_binding"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="3_particles"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="4_param"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="5_def"]
+
+[sub_resource type="Resource" id="Resource_motes_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_motes"]
+offsets = PackedFloat32Array(0, 0.25, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_motes"]
+script = ExtResource("3_particles")
+size_min = 0.06
+size_max = 0.1
+spread = 40
+speed_min = 0.08
+speed_max = 0.2
+damping = 0.1
+emission_ring_radius = 0.62
+emission_offset = Vector3(0, -0.2, 0)
+lifetime = 2.4
+explosiveness = 0
+gravity = Vector3(0, 0.15, 0)
+amount = 26
+color_ramp = SubResource("Gradient_motes")
+id = &"motes"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_motes_color")])
+
+[sub_resource type="Resource" id="Resource_param_color"]
+script = ExtResource("4_param")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.72, 0.32, 1)
+description = "Colour."
+
+[resource]
+script = ExtResource("5_def")
+id = &"fx.votive_glow"
+display_name = "Votive glow"
+params = Array[ExtResource("4_param")]([SubResource("Resource_param_color")])
+layers = Array[ExtResource("1_layer")]([SubResource("Resource_motes")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "Warm candle motes rising slowly round a unit (the Candle Acolyte's look, spec cube-style 6a Set 4b)."

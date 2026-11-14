@@ -32,29 +32,7 @@ metallic = 0.85
 roughness = 0.3
 tintable = false
 
-[sub_resource type="Resource" id="Resource_p3"]
-script = ExtResource("1_part")
-kind = 0
-size = Vector3(0.05, 0.16, 0.02)
-position = Vector3(0, 0.38, 0.235)
-color = Color(0.95, 0.72, 0.25, 1)
-metallic = 0.85
-roughness = 0.3
-emission = 0.6
-tintable = false
-
-[sub_resource type="Resource" id="Resource_p4"]
-script = ExtResource("1_part")
-kind = 0
-size = Vector3(0.12, 0.05, 0.02)
-position = Vector3(0, 0.41, 0.235)
-color = Color(0.95, 0.72, 0.25, 1)
-metallic = 0.85
-roughness = 0.3
-emission = 0.6
-tintable = false
-
 [resource]
 script = ExtResource("2_shape")
 display_name = "Mitre"
-parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4")])
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2")])

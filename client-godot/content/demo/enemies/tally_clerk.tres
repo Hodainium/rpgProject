@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/levy.tscn" id="1_vi0px"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/dispel.tscn" id="2_kyvwq"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_n6xud"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="4_7lycd"]
+[ext_resource type="Resource" path="res://content/demo/items/roast_haunch.tres" id="5_oy5yi"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="6_a3v17"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="7_adb0g"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="8_sdymq"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="9_ba3nj"]
+
+[sub_resource type="Resource" id="Resource_k2dwj"]
+script = ExtResource("4_7lycd")
+pattern = Array[StringName]([&"Ability.Levy", &"Ability.Levy", &"Ability.Dispel"])
+
+[resource]
+script = ExtResource("8_sdymq")
+drop_item = ExtResource("5_oy5yi")
+drop_chance_x100 = 500
+id = &"demo.enemy.tally_clerk"
+attribute_set = ExtResource("3_n6xud")
+abilities = Array[PackedScene]([ExtResource("1_vi0px"), ExtResource("2_kyvwq")])
+brain = SubResource("Resource_k2dwj")
+display_name = "Tally Clerk"
+display_color = Color(0.8235294, 0.7058824, 0.54901963, 1)
+tags = Array[StringName]([&"Enemy.Type.Clerk", &"Weakness.Fire"])
+stats_x100 = Dictionary[String, int]({
+"atk": 28000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 15000,
+"energy": 0,
+"hp": 46000,
+"max_hp": 46000,
+"max_toughness": 6000,
+"spd": 13500,
+"toughness": 6000,
+"weakness_dmg": 15000
+})

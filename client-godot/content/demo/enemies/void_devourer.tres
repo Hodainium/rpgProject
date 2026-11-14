@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/tremor.tscn" id="1_vesqs"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/consume.tscn" id="2_ikjra"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/gravity_well.tscn" id="3_0rw16"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/gorge.tscn" id="4_scmae"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="5_q6sln"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="6_g2fr8"]
+[ext_resource type="Resource" path="res://content/demo/items/vampire_fang.tres" id="7_4hwki"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="8_084em"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="9_5gf0a"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/void_devourer_starving.tres" id="10_q22es"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="11_3v8rc"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="12_tjhuv"]
+
+[sub_resource type="Resource" id="Resource_lic1v"]
+script = ExtResource("6_g2fr8")
+pattern = Array[StringName]([&"Ability.Gravitywell", &"Ability.Consume", &"Ability.Tremor", &"Ability.Ravenousmaw"])
+
+[sub_resource type="Resource" id="Resource_tx335"]
+script = ExtResource("9_5gf0a")
+ability_set = ExtResource("10_q22es")
+hp_below_x100 = 5000
+
+[resource]
+script = ExtResource("11_3v8rc")
+phases = Array[ExtResource("9_5gf0a")]([SubResource("Resource_tx335")])
+drop_item = ExtResource("7_4hwki")
+drop_chance_x100 = 2500
+id = &"demo.enemy.void_devourer"
+attribute_set = ExtResource("5_q6sln")
+abilities = Array[PackedScene]([ExtResource("1_vesqs"), ExtResource("2_ikjra"), ExtResource("3_0rw16"), ExtResource("4_scmae")])
+brain = SubResource("Resource_lic1v")
+display_name = "Void Devourer"
+display_color = Color(0.18431373, 0.30980393, 0.30980393, 1)
+tags = Array[StringName]([&"Enemy.Type.Devourer", &"Enemy.Rank.Elite", &"Resist.Ice", &"Weakness.Physical"])
+stats_x100 = Dictionary[String, int]({
+"atk": 43000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 25000,
+"energy": 0,
+"hp": 310000,
+"max_hp": 310000,
+"max_toughness": 23000,
+"spd": 10000,
+"toughness": 23000,
+"weakness_dmg": 15000
+})

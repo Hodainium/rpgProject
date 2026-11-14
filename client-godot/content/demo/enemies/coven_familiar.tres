@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ill_omen.tscn" id="1_cq0je"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bite.tscn" id="2_bfu57"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_6akgx"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="4_ar67e"]
+[ext_resource type="Resource" path="res://content/demo/items/rations.tres" id="5_u80ji"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="6_xlug7"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="7_l5x0m"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="8_am0jo"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="9_rvreh"]
+
+[sub_resource type="Resource" id="Resource_nmvtj"]
+script = ExtResource("4_ar67e")
+pattern = Array[StringName]([&"Ability.Illomen", &"Ability.Bite", &"Ability.Bite"])
+
+[resource]
+script = ExtResource("8_am0jo")
+drop_item = ExtResource("5_u80ji")
+drop_chance_x100 = 500
+id = &"demo.enemy.coven_familiar"
+attribute_set = ExtResource("3_6akgx")
+abilities = Array[PackedScene]([ExtResource("1_cq0je"), ExtResource("2_bfu57")])
+brain = SubResource("Resource_nmvtj")
+display_name = "Coven Familiar"
+display_color = Color(0.28235295, 0.23921569, 0.54509807, 1)
+tags = Array[StringName]([&"Enemy.Type.Familiar", &"Resist.Ice", &"Weakness.Fire"])
+stats_x100 = Dictionary[String, int]({
+"atk": 28000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 12000,
+"energy": 0,
+"hp": 42000,
+"max_hp": 42000,
+"max_toughness": 5000,
+"spd": 14500,
+"toughness": 5000,
+"weakness_dmg": 15000
+})
