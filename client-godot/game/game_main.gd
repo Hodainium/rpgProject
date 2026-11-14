@@ -360,7 +360,11 @@ func _new_run() -> void:
 	run.action_committed.connect(save_local_run)
 	run.battle_requested.connect(_on_battle_requested)
 	run.battle_started.connect(_on_battle_started)
-	run.battle_finished.connect(func(_outcome): battle_messages = null)
+	run.battle_finished.connect(func(_outcome):
+		battle_messages = null
+		if battle_tag_cues != null:  # playtest-fixes B22: the battle's teardown removes tags; no recover/stand-up looks after it
+			battle_tag_cues.detach()
+			battle_tag_cues = null)
 	run.run_ended.connect(func(_status):
 		delete_local_save()
 		set_mode("end"))
@@ -636,6 +640,8 @@ func _on_battle_started(battle: Battle) -> void:
 func _on_battle_requested(_snapshot: Dictionary) -> void:
 	recorder = ActionRecorder.new()
 	gate = ViewGate.new()
+	# Playtest-fixes B18: the battle pacing, from the Settings (the console's `pace` changes them).
+	ViewGate.apply_settings(gate)
 	_apply_auto()
 	battle_prepared.emit(recorder, gate)
 	if skip_animations:

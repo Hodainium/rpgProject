@@ -102,6 +102,41 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   reproduce with a window run (`--manual`, a weakness hit with a debuff roll), find which sources draw, then offset or merge
   them (an Honkai-style stack that pushes earlier numbers up, or one label per hit).
 
+- **B16. A spinning ability turns back the other way when it ends** (reported 2026-11-13, a long-standing bug). After an
+  ability that spins the cube 0 → 360°, the cube turned 360 → 0 back the other way. Cause: 54 ability animations spin with a
+  `Body:rotation` track ending on 2π; the montage's 0.1 s fade-out blends the angle by plain lerp toward rest (0), so the
+  fade itself is a full turn backwards. Not gimbal lock. Godot 4.7.2's shortest-path interpolation (`LINEAR_ANGLE`) works on
+  float tracks only (checked: a `Vector3` track falls back to plain lerp), so the fix rewrites the track instead.
+- **B17. Passives with nothing to show hold the battle, sometimes for half a second** (reported 2026-11-13). Measured in a
+  window run (Golem and Bog fights on the player's Auto): the bookkeeping passives (Ult Charge, Ult Charge Hit, SP Gain,
+  Hunter's Instinct, Kindling, Encore, Quarry) took 0, 50 or about 530 ms at random with nothing on screen. Their animations
+  only set `Body:visible` and fire the `execute` key the battle needs (an ability's hits land on its animation's keys), yet the
+  view played them as a montage and waited; a montage shorter than the OneShot's 0.1 s fades (0.05 s) was often never seen
+  active, so it sat on the 0.5 s safety timer.
+- **B18. Auto battles run too fast and unevenly** (reported 2026-11-13). Nothing spaced the actions out: each lasted exactly
+  its animation (0.05–1.2 s, median 0.5 s) and the next actor started in the same frame (measured gaps: 0 ms). The user asked
+  for a slower default and a faster option (decisions 2026-11-13: speeds 1× / 2× / 3×, pacing on every battle, 1.0 s minimum
+  per action and a 0.4 s pause, both in the Settings).
+- **B19. A damage number raised a script error** (seen 2026-11-13 during the B18 measurement). `FxNumberPopCue` stopped the
+  oldest number on a unit while that number's node had already left with its anchor; `FxService.stop_handle` passed the freed
+  node to `FxTextLayer.stop` (`previously freed`). Tests and dev runs fail on any script error.
+
+- **B20. The battle shows another room's walls; the doors move when it ends** (reported 2026-11-14: a boss fight in a room
+  with several doors). Entering a room by a click starts its battle in the same frame, before the room view's queued rebuild
+  runs; the rebuild then saw a battle on and skipped everything, walls included, so the fight stood in the previous room's
+  box. The console's `enter` happened to resume after the rebuild, which is why scripted runs never showed it.
+
+- **B21. Cubes blink when they act, and passives spin at the start of a battle** (reported 2026-11-14). 86 ability animations
+  (the Arcanist's Arcane Bolt and Spellweave among them) flash `Body:visible` off and on as their cast, so the actor vanished for
+  a moment (filmed: the Ranger gone during Mark Prey); the user wants a blink only when a cube is hit. And 15 battle-start
+  passives share `oath_warrior.tres`, a spin, so every unit with one spun in turn as the battle began (the Cleric twice: two
+  such passives); Shield Wall spun at every turn start. Decision (user): passives never animate; a follow-up attack is an attack.
+- **B22. Damage numbers over the party after every battle** (reported 2026-11-14). Freeing the battle removes every unit's
+  effects (GodotGAS `cleanup`), which changes HP and max HP: `hp_changed` reached the message bridge, still attached, and the
+  number effects popped on the party; each removed effect also played its removal cue. Field battles (the party's bookkeeping
+  copies built after a fight for stats and XP) re-applied every gear and level effect on setup and played those cues on the
+  party's cubes too.
+
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved. B9 and B10 only show the state of the client's existing calls (no new request, field or header); they are the
 player-facing side of the offline-first retries in `server-authority` 2.1–2.4.
@@ -196,6 +231,55 @@ No effect file changes: the defaults apply to every effect. A layer can set its 
 turns the fade off). What stays: an effect still shows through a unit less than its bias (about 0.7) in front of it, as before
 (units overlapping in formation).
 
+### Fix for B16 (system code)
+| File | Change |
+|---|---|
+| `game/view/unit_animator.gd` | `unwound(animation)` (static, cached): a `rotation` / `rotation_degrees` value track that leaves half a turn is resampled at 60 Hz through its own interpolation (easing kept) and wrapped into ±half a turn; where an axis crosses half a turn, two keys 0.1 ms apart carry the wrap. Same pose at every moment, and the ends sit at rest, so the fades turn nothing. `play()` plays `unwound()` of the ability's animation. Your animation files are unchanged. |
+
+### Fix for B17 (system code)
+| File | Change |
+|---|---|
+| `game/view/unit_animator.gd` | A triggered passive whose animation shows nothing releases the gate at once (its keys resolve in order, as headless): no montage, no wait (first as `shows_anything`, replaced by B21's `plays_nothing`: no passive animates except a follow-up attack). `SAFETY_SECONDS` 0.5 → 0.05: a montage ends at its length, on a timer on the same scaled clock, so a short one never waits for a safety; the 0.05 s lets the tree reach a key at the montage's very end first (review fix). |
+
+### Fix for B18 (system code; your UI files with your OK)
+| File | Change |
+|---|---|
+| `game/view_gate.gd` | Pacing: an action (any ability that is not a triggered passive) or a follow-up attack stays on screen at least `min_action_seconds` (1.0) and then `pause_seconds` (0.4) pass, in game time (the minimum on a scene timer, so a speed change mid-action counts at once; review fix). Its hits still land on the `execute` keys; only the end waits. `ViewGate.apply_settings` loads both. `skip()` and `skip_all` cut it short; 0 turns either off. |
+| `game/game_main.gd` | Each battle's gate takes the two values from the Settings (`battle_min_action`, `battle_pause`). |
+| `game/dev/commands/pace.gd` (new) | `pace [<min> [<pause>]]`: shows or sets them (saved; the current battle takes them at once). |
+| `presentation/demo/ui/settings.tscn`, `settings.gd` | Rows "Action time (s)" (0–3, step 0.1) and "Pause between actions (s)" (0–2); a change applies to the battle on screen. Speeds `[1, 2]` → `[1, 2, 3]`. |
+| `presentation/demo/ui/command_panel.gd` | Speeds `[1, 2]` → `[1, 2, 3]`. |
+
+Measured after (same two fights): every action 1.4 s (an animation up to 1.0 s held to 1.0, then the pause); the invisible
+passives 0–2 ms (were 0–530 ms).
+
+### Fix for B19 (system code)
+| File | Change |
+|---|---|
+| `game/fx/fx_service.gd` | `_gone(handle)`: `stop_handle`, `set_handle_param` and `_requalify` finish a handle whose anchor or instance nodes left (a unit view freed) instead of reaching its freed nodes, as `advance` already did (review fix); `stop_handle` also skips a running layer whose node is gone. |
+
+### Fix for B20 (your file, with your OK)
+| File | Change |
+|---|---|
+| `presentation/demo/room_view_3d.gd` | `_sync_box(run)`: the walls, floor and mood of the current room, rebuilt when the room changed (the code `_build` had inline). `_build` calls it, and so does `_on_battle_started`, so a battle always stands in its own room; the props and the party still wait for the battle's end. |
+
+### Fix for B21 (system code)
+| File | Change |
+|---|---|
+| `game/view/unit_animator.gd` | `plays_nothing(ability)`: a triggered passive that is not `Ability.Type.FollowUp` plays nothing (its keys resolve at once, as headless); replaces the B17 rule. `without_blinks(animation)` (cached): ability animations are played without their `visible` value tracks; one that then moves nothing gets the set's `cast` hop merged in like any keys-only animation. The hit reaction keeps its own flash. Your animation files are unchanged. |
+
+### Fix for B22 (system code)
+| File | Change |
+|---|---|
+| `game/messages/battle_messages.gd` | After `Message.Battle.Ended` nothing more is broadcast. |
+| `game/game_main.gd` | The battle's `FxTagCues` (Broken, Downed looks) are detached at `battle_finished`, before the teardown removes the tags (review fix). |
+| `game/fx/fx_cue_notify.gd` | A cue on a unit whose cues are closed plays nothing: GodotGAS spawns persistent cues through `GameplayCueManager.add_persistent_cue`, past `execute_cue` (review fix). |
+| `combat/combat_asc.gd` | `cues_closed`: `execute_cue` does nothing while it is set (persistent cues are still ended). Presentation only: cues are never in a hash. |
+| `combat/battle.gd` | Closes every unit's cues when the battle ends and when the Battle node is deleted (before its units clean up); a field battle's cues are open only inside `perform` / `apply_to_units` (a heal on the map, eating food). |
+| `combat/battle_unit.gd` | A field battle's units start with cues closed. |
+
+What stays: the status loops a fight leaves on the party fade out over about a second after it (their particles live out).
+
 ## 5. Observability
 N/A: no server metrics.
 
@@ -250,6 +334,19 @@ N/A: no server metrics.
   disc cut flat at the floor) and `battle/u_sanct_3_1.00s.png`; the first version in `after_fade/` (the ring fades, but every
   effect shows through the cubes); the fix in `after_fade2/`: the disc fades into the floor, the cubes in front of the
   Pyromancer's burst and of Sanctuary's circles hide them.
+- **B16:** `test_battle_pacing::test_a_spin_stays_within_half_a_turn_and_keeps_its_motion` (1, 2 and −1 turns: every key within
+  about half a turn, start and end at rest, the same pose as the original every 10 ms; a small turn is played as it is).
+- **B17:** `test_battle_pacing::test_an_invisible_passive_takes_no_screen_time` (and B21's tests); `test_animation_sets` still passes
+  (a stuck montage is released at its length).
+- **B18:** `test_battle_pacing::test_the_gate_paces_actions_and_skips_cut_it_short` (an action waits its minimum and the pause in
+  game time with its hits released at once; skip, skip_all, a triggered passive and 0/0 do not wait), `test_the_pace_command`.
+- **B20, seen** (no automated test builds the room view): a window run on seed 3 entering room 39 with the rebuild still queued when
+  the battle starts (the click timing); `H:/claudeOutShots/2026-11-14 battle doors/click/click_mid.png` shows room 39's walls
+  (doors west and east, none south; the start room has one south) during the fight.
+- **B21:** `test_battle_pacing::test_passives_play_nothing_but_follow_ups_do`, `test_casts_never_blink`. **Seen:** the battle-start film
+  (`H:/claudeOutShots/2026-11-14 battle start film/after/`): the Ranger hops through Mark Prey instead of vanishing.
+- **B22:** `test_battle_pacing::test_a_finished_battle_tears_down_silently` (a fixture battle with the bridge: the end is broadcast,
+  every unit's cues are closed, freeing it broadcasts nothing more). **Seen:** no damage number in the frames after a win (`after2/`).
 - **Unchanged:** `test_demo_ui_policy`, the existing explore HUD and gear tests, and `validate_content.tscn`
   (`UIPolicyCheck`) still pass.
 - **Visual check:** the window run from section 1 again, with new screenshots of Use Item (Potion hovered), Use Ability,

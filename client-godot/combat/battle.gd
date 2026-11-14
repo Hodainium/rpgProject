@@ -591,7 +591,18 @@ func run(controller: Object) -> void:
 		final_hash = state_hash()
 		_trace_point("end")
 	BattleLog.line(self, "ended: %s%s" % [outcome, " (%s)" % runner_error if runner_error != "" else ""])
+	for unit in _units:  # playtest-fixes B22: the teardown after this plays no removal cues
+		unit.asc.cues_closed = true
 	battle_ended.emit(outcome, final_hash)
+
+
+## Playtest-fixes B22: a battle (a fight or a field battle) is deleted before its units' ability system components, which then
+## remove every effect and would play its removal cue; close their cues first. Presentation only.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		for unit in _units:
+			if unit != null and is_instance_valid(unit.asc):
+				unit.asc.cues_closed = true
 
 
 ## Spec item-pass 3.2 (One More): the unit acts again at once, outside the turn order. It gets its own turn number (so
@@ -1114,12 +1125,23 @@ func _activate(actor: BattleUnit, ability: BattleAbility, target: BattleUnit) ->
 ## Field mode: applies one effect to each listed unit (event outcomes such as heals or revives), then settles deaths
 ## and revives. Effects come from content .tres files, never built in code.
 func apply_to_units(effect: GameplayEffect, unit_ids: Array[StringName]) -> void:
+	_field_cues(true)
 	for id in unit_ids:
 		var unit := unit_by_id(id)
 		if unit != null:
 			unit.asc.apply_gameplay_effect(effect, unit.asc, unit.effect_level)
 	_check_revives()
 	_check_deaths()
+	_field_cues(false)
+
+
+## Playtest-fixes B22: a field battle's cues are open only while it carries out an explicit action (perform, apply_to_units),
+## so a heal on the map still shows and the bookkeeping around it does not. Fights are untouched.
+func _field_cues(open: bool) -> void:
+	if not field_mode:
+		return
+	for unit in _units:
+		unit.asc.cues_closed = not open
 
 
 ## Field mode: one out-of-battle action (spec game-skeleton 3.4). Returns [] on success, else [reason, detail].
@@ -1134,11 +1156,15 @@ func perform(actor_id: StringName, ability_tag: StringName, target_id: StringNam
 	var problem := validate_action(actor, {"ability": ability_tag, "target": target_id})
 	if not problem.is_empty():
 		return problem
-	if not await _activate(actor, ability, unit_by_id(target_id)):
+	_field_cues(true)
+	var activated := await _activate(actor, ability, unit_by_id(target_id))
+	if not activated:
+		_field_cues(false)
 		return ["IllegalAbility", "%s failed to activate" % ability_tag]
 	await _drain_triggers()
 	_check_revives()
 	_check_deaths()
+	_field_cues(false)
 	return []
 
 
