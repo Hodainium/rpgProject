@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_l8kgj"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_26gjn"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_5k8g8"]
+[ext_resource type="Resource" path="res://content/demo/effects/stun.tres" id="4_nedbl"]
+[ext_resource type="Animation" path="res://content/demo/animations/stone_gaze.tres" id="5_msq0m"]
+
+[sub_resource type="Resource" id="Resource_x71qb"]
+script = ExtResource("2_26gjn")
+id = &"gaze"
+effect = ExtResource("3_5k8g8")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_q7dhu"]
+script = ExtResource("2_26gjn")
+id = &"stun"
+effect = ExtResource("4_nedbl")
+chance_x100 = 4500
+
+[node name="StoneGaze" type="Node" unique_id=642673064]
+script = ExtResource("1_l8kgj")
+executions = Array[ExtResource("2_26gjn")]([SubResource("Resource_x71qb"), SubResource("Resource_q7dhu")])
+animation = ExtResource("5_msq0m")
+ability_tag = &"Ability.Stonegaze"

@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hag_hex.tscn" id="1_2tgjd"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/boil_over.tscn" id="2_rwg7c"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/cauldron_brew.tscn" id="3_ekjny"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="4_irx5i"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="5_b30rb"]
+[ext_resource type="Resource" path="res://content/demo/items/witchs_eye.tres" id="6_sy65j"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="7_kfxo4"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="8_pp38y"]
+[ext_resource type="Resource" path="res://content/demo/loadouts/hag_sister_bitter.tres" id="9_6sh6x"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="10_uarnt"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="11_dbf0l"]
+
+[sub_resource type="Resource" id="Resource_2r504"]
+script = ExtResource("5_b30rb")
+pattern = Array[StringName]([&"Ability.Boilover", &"Ability.Haghex", &"Ability.Cauldronbrew", &"Ability.Bitterboil"])
+
+[sub_resource type="Resource" id="Resource_63vpa"]
+script = ExtResource("8_pp38y")
+ability_set = ExtResource("9_6sh6x")
+hp_below_x100 = 5000
+
+[resource]
+script = ExtResource("10_uarnt")
+phases = Array[ExtResource("8_pp38y")]([SubResource("Resource_63vpa")])
+drop_item = ExtResource("6_sy65j")
+drop_chance_x100 = 2500
+id = &"demo.enemy.hag_sister"
+attribute_set = ExtResource("4_irx5i")
+abilities = Array[PackedScene]([ExtResource("1_2tgjd"), ExtResource("2_rwg7c"), ExtResource("3_ekjny")])
+brain = SubResource("Resource_2r504")
+display_name = "Hag Sister"
+display_color = Color(0.33333334, 0.41960785, 0.18431373, 1)
+tags = Array[StringName]([&"Enemy.Type.Hag", &"Enemy.Rank.Elite", &"Resist.Fire", &"Weakness.Physical"])
+stats_x100 = Dictionary[String, int]({
+"atk": 39000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 22000,
+"energy": 0,
+"hp": 270000,
+"max_hp": 270000,
+"max_toughness": 20000,
+"spd": 10500,
+"toughness": 20000,
+"weakness_dmg": 15000
+})

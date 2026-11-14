@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_l05iu"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_fof02"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_poiup"]
+[ext_resource type="Resource" path="res://content/demo/enemies/hoard_drake.tres" id="4_67p3r"]
+[ext_resource type="Resource" path="res://content/demo/enemies/tally_clerk.tres" id="5_h2n66"]
+
+[sub_resource type="Resource" id="Resource_dbmjy"]
+script = ExtResource("3_poiup")
+enemy = ExtResource("4_67p3r")
+
+[sub_resource type="Resource" id="Resource_h0iwq"]
+script = ExtResource("3_poiup")
+enemy = ExtResource("5_h2n66")
+
+[resource]
+script = ExtResource("2_fof02")
+id = &"demo.encounter.drake_lair"
+display_name = "Drake lair"
+tags = Array[StringName]([&"Chapter.Vault"])
+slots = Array[ExtResource("3_poiup")]([SubResource("Resource_dbmjy"), SubResource("Resource_h0iwq")])
+weight_x100 = 40

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AbilitySet" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/fury_breath.tscn" id="1_6vj2r"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_ymyp8"]
+[ext_resource type="Resource" path="res://content/demo/effects/haste.tres" id="3_5j62i"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_1cddp"]
+
+[resource]
+script = ExtResource("4_1cddp")
+abilities = Array[PackedScene]([ExtResource("1_6vj2r")])
+effects = Array[ExtResource("2_ymyp8")]([ExtResource("3_5j62i")])
+tags = Array[StringName]([&"State.Phase.Two"])

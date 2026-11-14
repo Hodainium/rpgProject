@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_hfj1r"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_bdks0"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_y80mb"]
+[ext_resource type="Animation" path="res://content/demo/animations/resound.tres" id="4_wmxfo"]
+
+[sub_resource type="Resource" id="Resource_wk36f"]
+script = ExtResource("2_bdks0")
+id = &"resound"
+effect = ExtResource("3_y80mb")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 4000
+
+[node name="Resound" type="Node" unique_id=1559842825]
+script = ExtResource("1_hfj1r")
+executions = Array[ExtResource("2_bdks0")]([SubResource("Resource_wk36f")])
+animation = ExtResource("4_wmxfo")
+ability_tag = &"Ability.Passive.Resound"
+trigger_event_tag = &"Event.Damage.Taken.Weakness"

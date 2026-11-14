@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_o2jdb"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_7msn0"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_wrjtw"]
+[ext_resource type="Resource" path="res://content/demo/effects/weaken.tres" id="4_dlo4d"]
+[ext_resource type="Animation" path="res://content/demo/animations/dim_wings.tres" id="5_sh3tg"]
+
+[sub_resource type="Resource" id="Resource_yohl2"]
+script = ExtResource("2_7msn0")
+id = &"wings"
+effect = ExtResource("3_wrjtw")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 4000
+
+[sub_resource type="Resource" id="Resource_yiehf"]
+script = ExtResource("2_7msn0")
+id = &"weaken"
+effect = ExtResource("4_dlo4d")
+chance_x100 = 4000
+
+[node name="DimWings" type="Node" unique_id=1823824502]
+script = ExtResource("1_o2jdb")
+targeting = 1
+executions = Array[ExtResource("2_7msn0")]([SubResource("Resource_yohl2"), SubResource("Resource_yiehf")])
+animation = ExtResource("5_sh3tg")
+ability_tag = &"Ability.Dimwings"

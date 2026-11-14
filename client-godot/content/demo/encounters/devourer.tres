@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_pesyq"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_2jti1"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_y4yko"]
+[ext_resource type="Resource" path="res://content/demo/enemies/void_devourer.tres" id="4_j7j1e"]
+[ext_resource type="Resource" path="res://content/demo/enemies/null_moth.tres" id="5_m8tj2"]
+
+[sub_resource type="Resource" id="Resource_d8s26"]
+script = ExtResource("3_y4yko")
+enemy = ExtResource("4_j7j1e")
+
+[sub_resource type="Resource" id="Resource_7axt3"]
+script = ExtResource("3_y4yko")
+enemy = ExtResource("5_m8tj2")
+
+[resource]
+script = ExtResource("2_2jti1")
+id = &"demo.encounter.devourer"
+display_name = "Devourer"
+tags = Array[StringName]([&"Chapter.Void"])
+slots = Array[ExtResource("3_y4yko")]([SubResource("Resource_d8s26"), SubResource("Resource_7axt3")])
+weight_x100 = 40

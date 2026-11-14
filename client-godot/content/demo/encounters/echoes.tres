@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_nicy1"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_x1sjp"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_tbg4g"]
+[ext_resource type="Resource" path="res://content/demo/enemies/hollow_echo.tres" id="4_ynpoa"]
+[ext_resource type="Resource" path="res://content/demo/enemies/void_wraith.tres" id="5_l1mhu"]
+
+[sub_resource type="Resource" id="Resource_xc1hs"]
+script = ExtResource("3_tbg4g")
+enemy = ExtResource("4_ynpoa")
+
+[sub_resource type="Resource" id="Resource_ryrb7"]
+script = ExtResource("3_tbg4g")
+enemy = ExtResource("5_l1mhu")
+
+[resource]
+script = ExtResource("2_x1sjp")
+id = &"demo.encounter.echoes"
+display_name = "Echoes"
+tags = Array[StringName]([&"Chapter.Void"])
+slots = Array[ExtResource("3_tbg4g")]([SubResource("Resource_xc1hs"), SubResource("Resource_ryrb7")])

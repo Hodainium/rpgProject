@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_v846v"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_cjmui"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_jjcvp"]
+[ext_resource type="Resource" path="res://content/demo/enemies/hag_sister.tres" id="4_go8ae"]
+[ext_resource type="Resource" path="res://content/demo/enemies/coven_familiar.tres" id="5_fxqed"]
+
+[sub_resource type="Resource" id="Resource_v82rt"]
+script = ExtResource("3_jjcvp")
+enemy = ExtResource("4_go8ae")
+
+[sub_resource type="Resource" id="Resource_kpi2l"]
+script = ExtResource("3_jjcvp")
+enemy = ExtResource("5_fxqed")
+
+[resource]
+script = ExtResource("2_cjmui")
+id = &"demo.encounter.hag_sister"
+display_name = "Hag sister"
+tags = Array[StringName]([&"Chapter.Coven"])
+slots = Array[ExtResource("3_jjcvp")]([SubResource("Resource_v82rt"), SubResource("Resource_kpi2l")])
+weight_x100 = 40

@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_eaa6e"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_54mus"]
+[ext_resource type="Resource" path="res://content/demo/effects/rally.tres" id="3_nkwqs"]
+[ext_resource type="Resource" path="res://content/demo/effects/hoard_greed_heal.tres" id="4_uqhkn"]
+[ext_resource type="Animation" path="res://content/demo/animations/hoard_greed.tres" id="5_5ynyu"]
+
+[sub_resource type="Resource" id="Resource_1crte"]
+script = ExtResource("2_54mus")
+id = &"rally"
+effect = ExtResource("3_nkwqs")
+
+[sub_resource type="Resource" id="Resource_731g6"]
+script = ExtResource("2_54mus")
+id = &"heal"
+effect = ExtResource("4_uqhkn")
+
+[node name="HoardGreed" type="Node" unique_id=1051840961]
+script = ExtResource("1_eaa6e")
+targeting = 5
+executions = Array[ExtResource("2_54mus")]([SubResource("Resource_1crte"), SubResource("Resource_731g6")])
+animation = ExtResource("5_5ynyu")
+ability_tag = &"Ability.Hoardgreed"

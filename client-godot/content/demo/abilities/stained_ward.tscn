@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_8frhh"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_geih4"]
+[ext_resource type="Resource" path="res://content/demo/effects/ward.tres" id="3_13fvb"]
+[ext_resource type="Animation" path="res://content/demo/animations/stained_ward.tres" id="4_jy5da"]
+
+[sub_resource type="Resource" id="Resource_goofh"]
+script = ExtResource("2_geih4")
+id = &"ward"
+effect = ExtResource("3_13fvb")
+
+[node name="StainedWard" type="Node" unique_id=456018304]
+script = ExtResource("1_8frhh")
+targeting = 4
+executions = Array[ExtResource("2_geih4")]([SubResource("Resource_goofh")])
+animation = ExtResource("4_jy5da")
+ability_tag = &"Ability.Stainedward"

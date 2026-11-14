@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_qaaod"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_rsnj7"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_1rmc4"]
+[ext_resource type="Resource" path="res://content/demo/enemies/vault_gargoyle.tres" id="4_h31dq"]
+[ext_resource type="Resource" path="res://content/demo/enemies/vault_sentry.tres" id="5_uwpm6"]
+
+[sub_resource type="Resource" id="Resource_2po7i"]
+script = ExtResource("3_1rmc4")
+enemy = ExtResource("4_h31dq")
+
+[sub_resource type="Resource" id="Resource_t0fwe"]
+script = ExtResource("3_1rmc4")
+enemy = ExtResource("5_uwpm6")
+
+[resource]
+script = ExtResource("2_rsnj7")
+id = &"demo.encounter.gargoyle_watch"
+display_name = "Gargoyle watch"
+tags = Array[StringName]([&"Chapter.Vault"])
+slots = Array[ExtResource("3_1rmc4")]([SubResource("Resource_2po7i"), SubResource("Resource_t0fwe")])

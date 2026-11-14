@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/toll.tscn" id="1_6o6j5"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/strike.tscn" id="2_bollb"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_sgqfv"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="4_8ji1g"]
+[ext_resource type="Resource" path="res://content/demo/items/rations.tres" id="5_iqmmd"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="6_g16u2"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="7_2mgmk"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="8_d5jxu"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="9_iw66j"]
+
+[sub_resource type="Resource" id="Resource_ajc30"]
+script = ExtResource("4_8ji1g")
+pattern = Array[StringName]([&"Ability.Toll", &"Ability.Strike", &"Ability.Strike"])
+
+[resource]
+script = ExtResource("8_d5jxu")
+drop_item = ExtResource("5_iqmmd")
+drop_chance_x100 = 500
+id = &"demo.enemy.bell_ringer"
+attribute_set = ExtResource("3_sgqfv")
+abilities = Array[PackedScene]([ExtResource("1_6o6j5"), ExtResource("2_bollb")])
+brain = SubResource("Resource_ajc30")
+display_name = "Bell Ringer"
+display_color = Color(0.87058824, 0.72156864, 0.5294118, 1)
+tags = Array[StringName]([&"Enemy.Type.Ringer", &"Weakness.Fire"])
+stats_x100 = Dictionary[String, int]({
+"atk": 30000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 18000,
+"energy": 0,
+"hp": 64000,
+"max_hp": 64000,
+"max_toughness": 8000,
+"spd": 11000,
+"toughness": 8000,
+"weakness_dmg": 15000
+})

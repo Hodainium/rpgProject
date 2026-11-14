@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_uonms"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_itc1f"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_fwewu"]
+[ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="4_cwyxr"]
+[ext_resource type="Animation" path="res://content/demo/animations/prism_ray.tres" id="5_r0ng4"]
+
+[sub_resource type="Resource" id="Resource_pu88p"]
+script = ExtResource("2_itc1f")
+id = &"ray"
+effect = ExtResource("3_fwewu")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 7000
+
+[sub_resource type="Resource" id="Resource_660h5"]
+script = ExtResource("2_itc1f")
+id = &"expose"
+effect = ExtResource("4_cwyxr")
+chance_x100 = 4000
+
+[node name="PrismRay" type="Node" unique_id=396268465]
+script = ExtResource("1_uonms")
+targeting = 1
+executions = Array[ExtResource("2_itc1f")]([SubResource("Resource_pu88p"), SubResource("Resource_660h5")])
+animation = ExtResource("5_r0ng4")
+ability_tag = &"Ability.Prismray"

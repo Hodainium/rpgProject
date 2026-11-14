@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_v8x7g"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_sef7n"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_06rwy"]
+[ext_resource type="Resource" path="res://content/demo/enemies/hex_doll.tres" id="4_0ihst"]
+[ext_resource type="Resource" path="res://content/demo/enemies/cultist.tres" id="5_ek1iy"]
+
+[sub_resource type="Resource" id="Resource_77nop"]
+script = ExtResource("3_06rwy")
+enemy = ExtResource("4_0ihst")
+
+[sub_resource type="Resource" id="Resource_wrjgp"]
+script = ExtResource("3_06rwy")
+enemy = ExtResource("4_0ihst")
+
+[sub_resource type="Resource" id="Resource_5qlmh"]
+script = ExtResource("3_06rwy")
+enemy = ExtResource("5_ek1iy")
+
+[resource]
+script = ExtResource("2_sef7n")
+id = &"demo.encounter.doll_circle"
+display_name = "Doll circle"
+tags = Array[StringName]([&"Chapter.Coven"])
+slots = Array[ExtResource("3_06rwy")]([SubResource("Resource_77nop"), SubResource("Resource_wrjgp"), SubResource("Resource_5qlmh")])

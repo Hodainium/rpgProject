@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_6bvx8"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_is43o"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_obq7m"]
+[ext_resource type="Animation" path="res://content/demo/animations/ravenous_maw.tres" id="4_g1wot"]
+
+[sub_resource type="Resource" id="Resource_m3it1"]
+script = ExtResource("2_is43o")
+id = &"consume"
+effect = ExtResource("3_obq7m")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 12000
+
+[node name="RavenousMaw" type="Node" unique_id=1947232007]
+script = ExtResource("1_6bvx8")
+asset_tags = Array[StringName]([&"Ability.Type.Consume"])
+executions = Array[ExtResource("2_is43o")]([SubResource("Resource_m3it1")])
+animation = ExtResource("4_g1wot")
+ability_tag = &"Ability.Ravenousmaw"

@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_5vcd5"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_5uu71"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_eefy6"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="4_wvgue"]
+[ext_resource type="Animation" path="res://content/demo/animations/boil_over.tres" id="5_gmja6"]
+
+[sub_resource type="Resource" id="Resource_ydr4c"]
+script = ExtResource("2_5uu71")
+id = &"boil"
+effect = ExtResource("3_eefy6")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 6500
+
+[sub_resource type="Resource" id="Resource_meaig"]
+script = ExtResource("2_5uu71")
+id = &"burn"
+effect = ExtResource("4_wvgue")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 4500
+chance_x100 = 5000
+
+[node name="BoilOver" type="Node" unique_id=671560217]
+script = ExtResource("1_5vcd5")
+targeting = 1
+executions = Array[ExtResource("2_5uu71")]([SubResource("Resource_ydr4c"), SubResource("Resource_meaig")])
+animation = ExtResource("5_gmja6")
+ability_tag = &"Ability.Boilover"

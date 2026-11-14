@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_2ujiv"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="2_f3163"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="3_7dxpr"]
+[ext_resource type="Resource" path="res://content/demo/enemies/tally_clerk.tres" id="4_vx81c"]
+[ext_resource type="Resource" path="res://content/demo/enemies/gilded_mimic.tres" id="5_4bu48"]
+
+[sub_resource type="Resource" id="Resource_jvtaj"]
+script = ExtResource("3_7dxpr")
+enemy = ExtResource("4_vx81c")
+
+[sub_resource type="Resource" id="Resource_wmuf5"]
+script = ExtResource("3_7dxpr")
+enemy = ExtResource("4_vx81c")
+
+[sub_resource type="Resource" id="Resource_6mval"]
+script = ExtResource("3_7dxpr")
+enemy = ExtResource("5_4bu48")
+
+[resource]
+script = ExtResource("2_f3163")
+id = &"demo.encounter.counting_house"
+display_name = "Counting house"
+tags = Array[StringName]([&"Chapter.Vault"])
+slots = Array[ExtResource("3_7dxpr")]([SubResource("Resource_jvtaj"), SubResource("Resource_wmuf5"), SubResource("Resource_6mval")])

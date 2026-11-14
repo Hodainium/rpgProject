@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_8tm2g"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_pvy24"]
+[ext_resource type="Resource" path="res://content/demo/effects/gravity_pull.tres" id="3_nnlik"]
+[ext_resource type="Resource" path="res://content/demo/effects/slow.tres" id="4_0lt8y"]
+[ext_resource type="Animation" path="res://content/demo/animations/gravity_well.tres" id="5_ngj0c"]
+
+[sub_resource type="Resource" id="Resource_nhdtg"]
+script = ExtResource("2_pvy24")
+id = &"pull"
+effect = ExtResource("3_nnlik")
+delay_x100 = 2500
+
+[sub_resource type="Resource" id="Resource_0r1gd"]
+script = ExtResource("2_pvy24")
+id = &"slow"
+effect = ExtResource("4_0lt8y")
+chance_x100 = 4000
+
+[node name="GravityWell" type="Node" unique_id=385953778]
+script = ExtResource("1_8tm2g")
+targeting = 1
+executions = Array[ExtResource("2_pvy24")]([SubResource("Resource_nhdtg"), SubResource("Resource_0r1gd")])
+animation = ExtResource("5_ngj0c")
+ability_tag = &"Ability.Gravitywell"

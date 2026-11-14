@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_h7ann"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_djhfo"]
+[ext_resource type="Resource" path="res://content/demo/effects/gorge_heal.tres" id="3_jlwxy"]
+[ext_resource type="Animation" path="res://content/demo/animations/gorge.tres" id="4_hth03"]
+
+[sub_resource type="Resource" id="Resource_7ckq7"]
+script = ExtResource("2_djhfo")
+id = &"gorge"
+effect = ExtResource("3_jlwxy")
+
+[node name="Gorge" type="Node" unique_id=1081531781]
+script = ExtResource("1_h7ann")
+targeting = 5
+executions = Array[ExtResource("2_djhfo")]([SubResource("Resource_7ckq7")])
+animation = ExtResource("4_hth03")
+ability_tag = &"Ability.Passive.Gorge"
+trigger_event_tag = &"Event.Ability.Used.Consume"

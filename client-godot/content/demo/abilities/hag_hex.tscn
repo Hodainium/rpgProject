@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_8fa4a"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_2ojyg"]
+[ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="3_adpbn"]
+[ext_resource type="Resource" path="res://content/demo/effects/weaken.tres" id="4_v8nnj"]
+[ext_resource type="Animation" path="res://content/demo/animations/hag_hex.tres" id="5_fi3m8"]
+
+[sub_resource type="Resource" id="Resource_xsdi8"]
+script = ExtResource("2_2ojyg")
+id = &"hex"
+effect = ExtResource("3_adpbn")
+chance_x100 = 5000
+
+[sub_resource type="Resource" id="Resource_xlage"]
+script = ExtResource("2_2ojyg")
+id = &"weaken"
+effect = ExtResource("4_v8nnj")
+chance_x100 = 5000
+
+[node name="HagHex" type="Node" unique_id=2134043508]
+script = ExtResource("1_8fa4a")
+targeting = 1
+executions = Array[ExtResource("2_2ojyg")]([SubResource("Resource_xsdi8"), SubResource("Resource_xlage")])
+animation = ExtResource("5_fi3m8")
+ability_tag = &"Ability.Haghex"
