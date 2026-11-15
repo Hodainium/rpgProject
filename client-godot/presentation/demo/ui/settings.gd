@@ -7,21 +7,24 @@ extends UIScreen
 ## Spec main-menu M7: shown instead of the switch while a run is playing.
 @export var run_note: String = "Switch modes from the main menu"
 
+var _pacing_changed: bool = false
+
 
 func bind(context: UIContext) -> void:
 	for speed in speeds:
 		%Speed.add_item(speed_format % int(speed))
 	%Speed.select(maxi(speeds.find(float(GameMain.load_setting("settings", "battle_speed", speeds[0]))), 0))
 	%Speed.item_selected.connect(func(index): GameMain.save_setting("settings", "battle_speed", speeds[index]))
-	# Playtest-fixes B18: the battle pacing at 1× (the speed scales it); the next action of a battle already on uses it.
-	%MinAction.value = float(GameMain.load_setting("settings", ViewGate.SETTING_MIN_ACTION, ViewGate.DEFAULT_MIN_ACTION))
+	# Playtest-fixes B18: the battle pacing at 1× (the speed scales it). A change applies to the battle on screen at once;
+	# it is saved once, when this screen closes (on_deactivated), not on every step of the field.
+	%MinAction.value = ViewGate.saved_min_action()
+	%Pause.value = ViewGate.saved_pause()
 	%MinAction.value_changed.connect(func(value):
-		GameMain.save_setting("settings", ViewGate.SETTING_MIN_ACTION, value)
+		_pacing_changed = true
 		if context.main.gate != null:
 			context.main.gate.min_action_seconds = value)
-	%Pause.value = float(GameMain.load_setting("settings", ViewGate.SETTING_PAUSE, ViewGate.DEFAULT_PAUSE))
 	%Pause.value_changed.connect(func(value):
-		GameMain.save_setting("settings", ViewGate.SETTING_PAUSE, value)
+		_pacing_changed = true
 		if context.main.gate != null:
 			context.main.gate.pause_seconds = value)
 	%Skip.button_pressed = GameMain.load_setting("settings", "skip_animations", false)
@@ -53,6 +56,13 @@ func bind(context: UIContext) -> void:
 		%ServerNote.text = ""
 		refresh())
 	context.main.server_changed.connect(_on_server_changed)
+
+
+## Playtest-fixes B18: the pacing fields are saved when the screen is closed or covered, and only if they changed.
+func on_deactivated() -> void:
+	if _pacing_changed:
+		_pacing_changed = false
+		ViewGate.save_pacing(%MinAction.value, %Pause.value)
 
 
 func _on_server_changed(_link: ServerLink) -> void:
