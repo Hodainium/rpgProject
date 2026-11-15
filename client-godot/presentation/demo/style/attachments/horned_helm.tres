@@ -6,8 +6,9 @@
 [sub_resource type="Resource" id="Resource_dome"]
 script = ExtResource("1_part")
 kind = 5
-profile = PackedVector2Array(0, 0, 0.34, 0, 0.33, 0.12, 0.27, 0.23, 0.15, 0.3, 0, 0.32)
-segments = 28
+profile = PackedVector2Array(0, 0, 0.34, 0, 0.339, 0.0314, 0.3361, 0.0624, 0.3311, 0.0929, 0.3242, 0.1225, 0.3153, 0.1508, 0.3044, 0.1778, 0.2913, 0.203, 0.2762, 0.2263, 0.2588, 0.2474, 0.239, 0.2661, 0.2165, 0.2822, 0.1911, 0.2956, 0.1619, 0.3062, 0.1275, 0.3139, 0.0844, 0.3185, 0, 0.32)
+segments = 64
+smooth = true
 color = Color(0.56, 0.43, 0.22, 1)
 metallic = 0.5
 roughness = 0.35
