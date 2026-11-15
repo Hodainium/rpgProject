@@ -161,6 +161,29 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   (each member's `equipmentIds` in a battle's conditions, which the verifier compares: a `ConditionsMismatch` waiting to
   happen), and harmlessly in `ContentIndex.challenges_for`, `CardCatalog` and two more sorts.
 
+- **B25. Thin edges shimmer; no anti-aliasing** (reported 2026-11-15 in the Lich redesign's live window, fixed 2026-11-15). The
+  redesigned Lich's thin horizontal gold trims flickered while it stood idle. After two rounds of moving coplanar faces apart,
+  the flicker stayed on the horizontal edges only: the project had no anti-aliasing at all (no MSAA, FXAA or TAA), so a thin
+  line on a bobbing unit jumps between pixel rows. The same window with 4× MSAA was clean (user: "window 2 fixed it"). The user
+  asked for anti-aliasing as a graphics setting: an "Anti-aliasing" row (Off, FXAA, MSAA 2×, 4×, 8×), **MSAA 4× by default**,
+  applied at once and at boot. Then (same day) a **fullscreen toggle**, and Settings split into **Graphics** and **Audio**
+  sub-menus opened by buttons: Graphics holds Visual effects (moved from Settings), Anti-aliasing and Fullscreen; Audio is a
+  placeholder until 5e `audio-pass` adds the volume sliders (user's choice). The battle rows came off Settings (user: "I don't
+  want the player to be able to adjust any of those settings. What we have during a battle in the battle menu is sufficient"):
+  Battle speed, Action time, Pause between actions, Skip battle animations, Start battles on Auto, Auto casts ultimates. The
+  game still reads their saved keys (`battle_speed`, `skip_animations`, `auto_battle`, `auto_ults`, `battle_min_action`,
+  `battle_pause`), but nothing a player can reach writes them any more: the battle HUD's speed, Skip and Auto buttons apply to
+  the session only, as before, and only the dev console (`pace`, `auto`) still saves. A new player therefore always starts on
+  the defaults (1×, no skip, Auto off, Auto casts ults, 1.0 s / 0.4 s); a file saved earlier keeps its values (the user's own
+  file holds only `auto_battle=false`, the default; checked 2026-11-15). `specs/auto-battle.md` A1/A2's two Settings rows and
+  B18's pacing rows are gone with this.
+  Code review (2026-11-15): MSAA 4× is now the default, while spec `vfx-stencil`'s claims were probed with MSAA off. The probe
+  gained `--msaa 2|4|8` and was run both ways on the pinned build: K1 (fails), K2, K5 (partly), K6 and K7 give the same verdicts
+  at 4×, which are the ones the over-own-unit stencil relies on; only K4 differs (with MSAA no compositor can copy the main
+  stencil at all, a path the design never uses). A pipeline is compiled per sample count, so changing the anti-aliasing during a
+  session makes the stencil prepare draw its copies again (`FxStencilShaders.forget_prepared`; the next prepare, at run or battle
+  start, redraws them).
+
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved. B9 and B10 only show the state of the client's existing calls (no new request, field or header); they are the
 player-facing side of the offline-first retries in `server-authority` 2.1–2.4.
@@ -304,6 +327,24 @@ passives 0–2 ms (were 0–530 ms).
 
 What stays: the status loops a fight leaves on the party fade out over about a second after it (their particles live out).
 
+### Fix for B25 (system code; the Settings screens with your OK)
+| File | Change |
+|---|---|
+| `game/view/graphics_settings.gd` (new) | `GraphicsSettings`: anti-aliasing modes `off`, `fxaa`, `msaa_2x`, `msaa_4x`, `msaa_8x` (default `msaa_4x`), saved as `anti_aliasing`; `apply_aa(viewport, mode)` (MSAA on `msaa_3d`, FXAA on `screen_space_aa`), `set_aa` (apply and save; nothing saved for an unknown mode), `saved_aa`, `current_aa`. Fullscreen saved as `fullscreen` (default off): `apply_fullscreen`, `set_fullscreen`, `saved_fullscreen`, `is_fullscreen` (nothing headless). `apply_saved(viewport)`: the boot rule, anti-aliasing always, fullscreen only when saved on, so a window started with `--fullscreen` (the playtest launches) is never turned back into a window. All in `user://game_main.cfg` [settings]. Presentation only. |
+| `game/game_main.gd` | `_ready` calls `GraphicsSettings.apply_saved`; fullscreen only when GameMain is the main scene (the game's own window), so `dev_run` windows, previews and release checks stay windowed. |
+| `game/fx/fx_stencil_shaders.gd` | `forget_prepared()`: every copy counts as not drawn again; `GraphicsSettings.apply_aa` calls it when the sample count changes. |
+| `game/fx/fx_stage.gd` | A hybrid card stage's SubViewport takes the player's MSAA (`GraphicsSettings.msaa_of(saved_aa())`) instead of a fixed 4×. |
+| `game/tools/fx_stencil_probe.gd` | `--msaa 2\|4\|8`: every probe scene at that sample count (recorded in `findings.json` as `engine.msaa_3d`). |
+| `game/ui/ui_push_button.gd` | `same_layer`: open on the layer of the screen the button sits in (`target_layer()`: its UIScreen's stack), so a sub-menu follows Settings onto the Menu layer (main menu) or GameMenu (run menu); falls back to `layer` outside a stack and on a stack that never pops (a HUD panel on the Game layer), so the screen can always be closed. |
+| `game/dev/commands/graphics.gd` (new) | Console `graphics [aa <mode> \| fullscreen on\|off]`: shows both settings, or applies and saves one (the Graphics screen). |
+| `presentation/demo/ui/graphics_settings.tscn` + `.gd` (new) | The Graphics screen: Visual effects (moved from Settings), Anti-aliasing, Fullscreen, Back. |
+| `presentation/demo/ui/audio_settings.tscn` (new) | The Audio screen: a note ("Volume settings come with the audio pass.") and Back; 5e fills it. |
+| `presentation/demo/ui/settings.tscn`, `settings.gd` | The "Visual effects" row and its code move to Graphics; in their place two buttons, Graphics and Audio (`UIPushButton`, `same_layer`). The six battle rows (speed, action time, pause, skip, start on Auto, Auto casts ultimates) and their code are removed; Settings keeps the two buttons and the Server section. |
+| `game/view_gate.gd`, `tests/game/test_battle_pacing.gd` | Comments and a message no longer name the Settings screen's pacing rows. |
+| `tests/game/test_fx.gd` | The quality selector test opens the Graphics screen. |
+
+Cost: MSAA 4× renders the 3D at four samples per pixel on the edges; Off or FXAA are there for weak GPUs.
+
 ### Fix for B24 (system code)
 | File | Change |
 |---|---|
@@ -409,6 +450,10 @@ N/A: no server metrics.
 - **B24:** `test_run_authority::test_worn_pieces_hash_in_name_order`, `test_battle_conditions_list_gear_in_name_order`,
   `test_determinism_guard` (the guard and its shapes); the rejected step replayed windowed and headless now reaches identical state
   and hashes at every action (seq 183-190); the card catalog rebuilds unchanged.
+- **B25:** `test_graphics_settings` (every mode applies to a viewport and reads back, an unknown mode changes and saves nothing,
+  the Graphics screen's rows (anti-aliasing with the saved mode, fullscreen, the moved quality selector), Settings opening Graphics
+  and Audio on its own layer from the main menu and inside a run and Back returning to it, a push button outside a stack, the
+  console's `graphics`; the tests never write the player's settings file), `test_fx::test_the_graphics_screen_has_the_effects_quality_selector`. **Seen:** the Lich's live window with and without 4× MSAA (the gold edges stop flickering).
 - **Unchanged:** `test_demo_ui_policy`, the existing explore HUD and gear tests, and `validate_content.tscn`
   (`UIPolicyCheck`) still pass.
 - **Visual check:** the window run from section 1 again, with new screenshots of Use Item (Potion hovered), Use Ability,

@@ -1,7 +1,10 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://presentation/demo/ui/settings.gd" id="1_settings"]
 [ext_resource type="Script" path="res://game/ui/ui_back_button.gd" id="2_back"]
+[ext_resource type="Script" path="res://game/ui/ui_push_button.gd" id="3_push"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/graphics_settings.tscn" id="4_graphics"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/audio_settings.tscn" id="5_audio"]
 
 [node name="Settings" type="CenterContainer"]
 anchors_preset = 15
@@ -32,72 +35,26 @@ layout_mode = 2
 theme_type_variation = &"Title"
 text = "Settings"
 
-[node name="SpeedRow" type="HBoxContainer" parent="Panel/Margin/Box"]
+[node name="MenuButtons" type="HBoxContainer" parent="Panel/Margin/Box"]
 layout_mode = 2
 
-[node name="SpeedLabel" type="Label" parent="Panel/Margin/Box/SpeedRow"]
+[node name="Graphics" type="Button" parent="Panel/Margin/Box/MenuButtons"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Battle speed"
+text = "Graphics"
+script = ExtResource("3_push")
+screen = ExtResource("4_graphics")
+same_layer = true
 
-[node name="Speed" type="OptionButton" parent="Panel/Margin/Box/SpeedRow"]
+[node name="Audio" type="Button" parent="Panel/Margin/Box/MenuButtons"]
 unique_name_in_owner = true
-layout_mode = 2
-
-[node name="MinActionRow" type="HBoxContainer" parent="Panel/Margin/Box"]
-layout_mode = 2
-
-[node name="MinActionLabel" type="Label" parent="Panel/Margin/Box/MinActionRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Action time (s)"
-
-[node name="MinAction" type="SpinBox" parent="Panel/Margin/Box/MinActionRow"]
-unique_name_in_owner = true
-layout_mode = 2
-max_value = 3.0
-step = 0.1
-
-[node name="PauseRow" type="HBoxContainer" parent="Panel/Margin/Box"]
-layout_mode = 2
-
-[node name="PauseLabel" type="Label" parent="Panel/Margin/Box/PauseRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Pause between actions (s)"
-
-[node name="Pause" type="SpinBox" parent="Panel/Margin/Box/PauseRow"]
-unique_name_in_owner = true
-layout_mode = 2
-max_value = 2.0
-step = 0.1
-
-[node name="Skip" type="CheckBox" parent="Panel/Margin/Box"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Skip battle animations"
-
-[node name="AutoBattle" type="CheckBox" parent="Panel/Margin/Box"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Start battles on Auto"
-
-[node name="AutoUlts" type="CheckBox" parent="Panel/Margin/Box"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Auto casts ultimates"
-
-[node name="FxRow" type="HBoxContainer" parent="Panel/Margin/Box"]
-layout_mode = 2
-
-[node name="FxLabel" type="Label" parent="Panel/Margin/Box/FxRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Visual effects"
-
-[node name="FxQuality" type="OptionButton" parent="Panel/Margin/Box/FxRow"]
-unique_name_in_owner = true
-layout_mode = 2
+text = "Audio"
+script = ExtResource("3_push")
+screen = ExtResource("5_audio")
+same_layer = true
 
 [node name="ServerTitle" type="Label" parent="Panel/Margin/Box"]
 layout_mode = 2

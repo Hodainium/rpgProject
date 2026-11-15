@@ -1,7 +1,8 @@
 ## Spec vfx-stencil 1.4 and 3.7, probe part 1: tests the documented stencil claims on the Godot build we run, before anything is
 ## built on them. Windowed (needs a GPU); every claim gets small scenes of its own in SubViewports, rendered, read back by pixel
 ## and logged. Writes findings.json and one PNG per scene into --out.
-##   godot --path client-godot res://game/tools/fx_stencil_probe.tscn -- --out <dir>
+##   godot --path client-godot res://game/tools/fx_stencil_probe.tscn -- --out <dir> [--msaa 2|4|8]
+## `--msaa` runs every scene with that MSAA sample count (playtest-fixes B25: the game now defaults to 4×); default off.
 ## Claims (spec 1.4): K1 writers are drawn in the transparent pass, K2 opaque readers fail, K4 no shader or compositor reads stencil,
 ## K5 the reference is a literal in shader code, K6 no masks, K7 writes happen where the depth test passes (or fails).
 ## K3 (experimental) is not a runtime fact; the findings note checks it in the 4.7.2 source. Probe only: nothing ships it.
@@ -47,6 +48,7 @@ class ProbeLogger extends Logger:
 var _out_dir := ""
 var _logger := ProbeLogger.new()
 var _findings: Dictionary = {}
+var _msaa: int = Viewport.MSAA_DISABLED
 
 
 func _ready() -> void:
@@ -54,12 +56,16 @@ func _ready() -> void:
 	var at := args.find("--out")
 	_out_dir = args[at + 1] if at >= 0 and at + 1 < args.size() else OS.get_user_data_dir().path_join("stencil_probe")
 	DirAccess.make_dir_recursive_absolute(_out_dir)
+	var msaa_at := args.find("--msaa")
+	if msaa_at >= 0 and msaa_at + 1 < args.size():
+		_msaa = {"2": Viewport.MSAA_2X, "4": Viewport.MSAA_4X, "8": Viewport.MSAA_8X}.get(args[msaa_at + 1], Viewport.MSAA_DISABLED)
 	OS.add_logger(_logger)
 	_findings["engine"] = {
 		"version": Engine.get_version_info()["string"],
 		"rendering_method": RenderingServer.get_current_rendering_method(),
 		"driver": RenderingServer.get_current_rendering_driver_name(),
 		"adapter": RenderingServer.get_video_adapter_name(),
+		"msaa_3d": _msaa,
 	}
 	await _k1()
 	await _k2()
@@ -301,7 +307,7 @@ func _cell(label: String) -> Dictionary:
 	var viewport := SubViewport.new()
 	viewport.size = CELL
 	viewport.own_world_3d = true
-	viewport.msaa_3d = Viewport.MSAA_DISABLED
+	viewport.msaa_3d = _msaa
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(viewport)
 	_logger.take()  # what this scene's shaders say from here on is this scene's

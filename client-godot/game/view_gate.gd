@@ -34,8 +34,8 @@ var _pace_id: int = 0
 var _min_timer: SceneTreeTimer  # the action's minimum time, on the scaled clock (a speed change mid-action counts at once)
 
 
-## The pacing as saved in the Settings (the defaults when unset). The only code that names the two keys: GameMain, the
-## console's `pace` and the Settings screen all go through these.
+## The pacing as saved in the Settings file (the defaults when unset). The only code that names the two keys: GameMain and the
+## console's `pace` go through these (the Settings screen's pacing rows were removed, playtest-fixes B25).
 static func saved_min_action() -> float:
 	return float(GameMain.load_setting("settings", SETTING_MIN_ACTION, DEFAULT_MIN_ACTION))
 
@@ -44,7 +44,7 @@ static func saved_pause() -> float:
 	return float(GameMain.load_setting("settings", SETTING_PAUSE, DEFAULT_PAUSE))
 
 
-## Saves both values (one call writes the Settings file per value; the Settings screen calls it once, when it closes).
+## Saves both values (one call writes the Settings file per value).
 static func save_pacing(min_action: float, pause: float) -> void:
 	GameMain.save_setting("settings", SETTING_MIN_ACTION, min_action)
 	GameMain.save_setting("settings", SETTING_PAUSE, pause)

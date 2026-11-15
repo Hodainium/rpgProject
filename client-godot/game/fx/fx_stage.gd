@@ -29,7 +29,7 @@ func _init() -> void:
 	viewport.name = "Viewport"
 	viewport.transparent_bg = true
 	viewport.own_world_3d = true
-	viewport.msaa_3d = Viewport.MSAA_4X
+	viewport.msaa_3d = GraphicsSettings.msaa_of(GraphicsSettings.saved_aa())  # playtest-fixes B25: the player's anti-aliasing
 	viewport.handle_input_locally = false
 	viewport.size = Vector2i(1280, 720)
 	container.add_child(viewport)
