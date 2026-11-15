@@ -321,6 +321,18 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
+[sub_resource type="StyleBoxFlat" id="tile_leftover"]
+bg_color = Color(0.4196, 0.298, 0.0784, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.8863, 0.5412, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [sub_resource type="StyleBoxFlat" id="tile_unexplored"]
 bg_color = Color(0.0706, 0.102, 0.3529, 1)
 border_width_left = 1
@@ -509,6 +521,9 @@ MapTile/styles/focus = SubResource("button_focus")
 MapTileUnexplored/base_type = &"MapTile"
 MapTileUnexplored/styles/normal = SubResource("tile_unexplored")
 MapTileUnexplored/styles/disabled = SubResource("tile_unexplored")
+MapTileLeftover/base_type = &"MapTile"
+MapTileLeftover/styles/normal = SubResource("tile_leftover")
+MapTileLeftover/styles/disabled = SubResource("tile_leftover")
 MapTileHere/base_type = &"MapTile"
 MapTileHere/colors/font_color = Color(0.102, 0.0745, 0, 1)
 MapTileHere/colors/font_disabled_color = Color(0.102, 0.0745, 0, 1)

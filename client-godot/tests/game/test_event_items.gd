@@ -201,46 +201,37 @@ func test_first_still_gives_and_toasts() -> void:
 	eq(_taken().size(), 1, "an event item toasts like a pickup (D2)")
 
 
-# --- Chests (D5) ----------------------------------------------------------------------------------------------------
+# --- Chests (spec floor-chests: no gift; the items land beside the chest) -----------------------------------------------
 
-func test_chest_always_asks() -> void:
+func test_chest_items_land_beside_it() -> void:
 	var whetstone := _item("whetstone")
 	var crest := _item("crest")
 	var coins := GainCoins.new()
 	coins.amount = 3
 	var chest := _chest("fixture.chest.gifts", [_gift(whetstone, GiveItem.Recipient.FIRST),
-		_gift(crest, GiveItem.Recipient.FIRST), coins])
+		_gift(crest, GiveItem.Recipient.CHOOSE), coins])
 	var run := _run([chest])
 	run.give_chest(chest)
 	run.give_chest(chest)
+	var before := run.state.coins
 	eq(run.open_chest(0), "", "open the chest")
-	eq(run.state.pending_gifts, [whetstone.id, crest.id] as Array[StringName],
-		"both items wait for a holder even though they say FIRST (D5)")
+	eq(run.state.pending_gifts, [] as Array[StringName], "nothing waits for a holder: the items are on the floor")
+	eq(run.chest_pickups(run.state.current_cell, 0).map(func(pickup: Dictionary) -> StringName: return pickup["item"]),
+		[whetstone.id, crest.id], "both items beside the chest, whatever their recipient")
+	eq(run.state.coins, before + 3, "the coins are given at once")
 	var opened := _heard.filter(func(entry) -> bool: return entry[0] == GameplayMessageRouter.RUN_CHEST_OPENED)
 	eq(opened.size(), 1, "the chest toast came at once")
-	check(str(opened[0][2]["description"]).contains(whetstone.display_name)
-		and str(opened[0][2]["description"]).contains(crest.display_name), "and lists both items")
+	check(str(opened[0][2]["description"]).contains("3 coins") and str(opened[0][2]["description"]).contains("2 inside"),
+		"it lists the coins and how many items are inside (%s)" % opened[0][2]["description"])
 	eq(_taken().size(), 0, "no item toast yet")
-	check(run.open_chest(0).begins_with("choose who gets"), "the next chest waits too")
-	eq(run.give_to(3), "", "the whetstone to the rogue")
-	eq(run.give_to(2), "", "the crest to the medic")
-	eq([_holder(run, whetstone), _holder(run, crest)], [3, 2], "each went where it was given")
+	eq(run.open_chest(1), "", "the next chest opens at once: nothing blocks it")
+	var put_out := run.chest_pickups(run.state.current_cell, 0)
+	eq(run.take(put_out[0]["placement"], 3), "", "the whetstone to the rogue")
+	eq(run.take(put_out[1]["placement"], 2), "", "the crest to the medic")
+	eq([_holder(run, whetstone), _holder(run, crest)], [3, 2], "each went where it was taken")
 	eq(_taken().map(func(entry) -> String: return entry[1]), [String(whetstone.id), String(crest.id)],
-		"one item toast after each pick, in order")
-
-
-func test_chest_one_holder_toasts_after_the_chest() -> void:
-	var whetstone := _item("whetstone")
-	var chest := _chest("fixture.chest.single", [_gift(whetstone, GiveItem.Recipient.FIRST)])
-	var run := _run([chest])
-	run.state.member(2)["alive"] = false
-	run.state.member(3)["alive"] = false
-	run.give_chest(chest)
-	run.open_chest(0)
-	eq(run.state.pending_gifts.size(), 0, "one possible holder: given at once (D4)")
-	eq(_heard.map(func(entry) -> StringName: return entry[0]),
-		[GameplayMessageRouter.RUN_CHEST_OPENED, GameplayMessageRouter.RUN_ITEM_TAKEN],
-		"the chest toast first, then the item's (D2)")
+		"one item toast per take, in order")
+	eq(run.run_log.filter(func(entry) -> bool: return entry["type"] == "take").size(), 2, "logged as take")
 
 
 # --- Validator and bots ---------------------------------------------------------------------------------------------
@@ -262,15 +253,16 @@ func test_validator_choose_outside_event() -> void:
 		_chest("fixture.chest.choose", [_gift(whetstone, GiveItem.Recipient.CHOOSE)]),
 		_event("fixture.event.choose", [_gift(whetstone, GiveItem.Recipient.CHOOSE)])]))
 	check(not fine.has("give_choose_outside_event"),
-		"CHOOSE in a chest, an event or an encounter reward is fine (user, 2026-11-13)")
+		"CHOOSE in a chest, an event or an encounter reward is no error (user, 2026-11-13)")
+	check(fine.has("chest_recipient_ignored"), "in a chest it is only a warning: the item lands beside it (spec floor-chests)")
 
 
 func test_bot_gives_pending_gifts() -> void:
 	var whetstone := _item("whetstone")
-	var chest := _chest("fixture.chest.bot", [_gift(whetstone, GiveItem.Recipient.CHOOSE)])
-	var run := _run([chest])
-	run.give_chest(chest)
-	run.open_chest(0)
+	var event := _event("fixture.event.bot", [_gift(whetstone, GiveItem.Recipient.CHOOSE)])
+	var run := _run([event])
+	_open(run, event)
+	run.choose(0)
 	eq(run.state.pending_gifts.size(), 1, "a gift waits")
 	await RunPlayer.play(run, 1)
 	eq(run.state.pending_gifts.size(), 0, "the bot gave it")

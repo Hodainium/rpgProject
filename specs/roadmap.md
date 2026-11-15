@@ -37,6 +37,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5a4. `cube-style` | 🟨 In progress (`specs/cube-style.md`, an art experiment in rounds with user gates; round 1, the stage moods, done (PR #26); round 2, attachments as data, done; round 4, the roll-out: Sets P, 1, 2, 3, 4, 5, the party pass and the floor-1 refresh done and merged 2026-11-13 (PRs #34-#41); Sets 4b and 5b (the 12 `route-enemies` enemies) merged 2026-11-13 (PR #42); Set K (keys, armor icons, chests), the last set, approved 2026-11-14 (`feat/cube-style-set-k`); next 5a5 `floor-chests`) | |
 | 5a4b. `route-enemies` | ✅ Done, playtested 2026-11-14 (`specs/route-enemies.md`; one elite and two regulars more on each ending-route chapter, 12 encounters, drops obey the card pool; smart 4-member 31.3% → 29.3%; merged in PR #43, looks in cube-style Sets 4b and 5b; open: the gate has never run with a card pool, so replaced drops are unmeasured) | 2026-11-14 |
 | 5a4c. `food-items` | ✅ Done, playtested 2026-11-14 (`specs/food-items.md`, synced; food becomes passive: the holder heals on pickup and keeps a max HP or max SP bonus; the player chooses who gets every drop (the last boss drops nothing; encounter rewards may be CHOOSE); smart 4-member 29.3% → 31.0%; merged in PR #44; open: `GiveItem` / `RemoveItem` inside an item hook ignore the holder (the Mystery Box), older code) | 2026-11-14 |
+| 5a5. `floor-chests` | ✅ Done, playtested 2026-11-15 (smart 4-member 31.0% → 31.3%); spec written 2026-11-14 (`specs/floor-chests.md`; a chest stays in its room and opens there like a shop, its items and armor pop out onto the floor as pickups beside the open chest; the map tints rooms with something left in them; reviewed and decided 2026-11-14) | |
 | 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |
@@ -194,6 +195,7 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   5b merged (PR #42), Set K next; `playtest-fixes` B16–B22 (battle pacing) merged (PR #45).
 - 2026-11-14: cube-style Set K (the shop key, rarity-tinted armor icons, the three chest states) approved and built; the
   roll-out's last set. Next: 5a5 `floor-chests`.
+- 2026-11-14: 5a5 `floor-chests` spec written and reviewed: rewards pop out onto the floor instead of waiting in a filled chest; the map tint added (user).
 
 
 ## Design tuning: any time, not just in breaks
@@ -644,7 +646,7 @@ slot holds an item for a price; taking them is a separate choice, so the player 
 like an unbought shop item). Only items and armor wait in the chest; a reward that is not an item (keys, coins, a golden key, a
 map reveal) is given as soon as the chest opens (user, 2026-11-13). The chest shows open and filled while it holds something, open and empty after. A rule change: the
 room holds the chest and its pickups (run state and hash), `open_chest` names the room's chest, the bots and the console follow,
-and the run goldens are re-recorded. It reuses the shop's pickup path, so most of the machinery exists. The 3D chest (closed, open and filled, open and empty) is drawn in 5a4 `cube-style` (Set K).
+and the run goldens are re-recorded. It reuses the shop's pickup path, so most of the machinery exists. The 3D chest (closed, open and filled, open and empty) is drawn in 5a4 `cube-style` (Set K). **Review (user, 2026-11-14):** the rewards pop out of the chest onto the floor next to it (the chest stays, open and empty; the filled state is not used), old saves are refused, a chest with no room is a validator error, `open_chest` reports its offers (`OfferSource.Chest`), and the map tints a room holding a closed chest or a free untaken pickup.
 
 ### 5b. `card-ui`
 Added 2026-11-09, right after slice 5. The screens for the card system, built on the UI framework and the FF7 theme:

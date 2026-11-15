@@ -29,6 +29,8 @@ static func item(cell: Dictionary, size: float, show_name: bool, action: Callabl
 	if not cell["shown"]:
 		return {"tile": "empty", "size": size}
 	var kind: String = cell["kind"]
-	return {"tile": "here" if cell["here"] else ("visited" if cell["visited"] else "unexplored"),
+	# Spec floor-chests D5: a visited room with a closed chest or a free untaken pickup gets its own tile.
+	return {"tile": "here" if cell["here"] else ("leftover" if cell.get("leftover", false) else (
+			"visited" if cell["visited"] else "unexplored")),
 		"icon": null if cell["here"] else icon(kind), "name": NAMES.get(kind, ""), "show_name": show_name,
 		"size": size, "action": action, "hover": hover, "disabled": not action.is_valid()}

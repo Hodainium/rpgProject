@@ -51,6 +51,26 @@ public class RunAuthorityTests(StackFixture stack)
     }
 
     [Fact]
+    public async Task Actions_OpenChestWithChestOffers_Stored()
+    {
+        // Spec floor-chests 3.1: open_chest names its room and reports what the chest put out (OfferSource.Chest).
+        await using var factory = await ApiFactory.RunsAsync(stack);
+        var client = await ClientAsync(factory, "alice");
+        var run = await client.StartRunAsync(Start, Ct);
+        var open = new RunActionRequest(3, new RunAction("open_chest", 0, Cell: 1, ChestId: "fixture.chest.crate", Serial: 0,
+            CoinsAfter: 3, Offers: [new ItemOffer(2000, "fixture.item.tonic", 0, OfferSource.Chest),
+                new ItemOffer(2001, "fixture.equipment.crate_helm", 0, OfferSource.Chest, ItemKind.Equipment)]),
+            "h3", RunLog.PlayedAt);
+
+        var ack = await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2), open), Ct);
+
+        Assert.Equal(3, ack.LastSeq);
+        Assert.Equal(1L, await ScalarAsync(factory,
+            $"SELECT count(*) FROM run_actions WHERE run_id = '{run.RunId}' AND seq = 3" +
+            " AND action @> '{\"type\": \"open_chest\", \"cell\": 1, \"offers\": [{\"source\": \"Chest\"}]}'"));
+    }
+
+    [Fact]
     public async Task Actions_BatchRetry_IsIdempotent()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);

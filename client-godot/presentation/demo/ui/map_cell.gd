@@ -1,5 +1,5 @@
 ## Spec ff7-ui 2.11 (shared component): one room of the minimap, the Tab view and the big map. Item keys: "tile"
-## ("here", "visited", "unexplored", "empty"), "icon" (a Texture2D or null), "name" (shown under the icon when
+## ("here", "visited", "leftover" (spec floor-chests D5), "unexplored", "empty"), "icon" (a Texture2D or null), "name" (shown under the icon when
 ## "show_name"), "size" (px), "action" and "hover" (Callables), "disabled".
 extends Button
 
@@ -17,8 +17,8 @@ func set_item(item: Dictionary, _ctx: UIContext) -> void:
 	var side := float(item.get("size", 22))
 	custom_minimum_size = Vector2(side, side)
 	var tile: String = item.get("tile", "empty")
-	theme_type_variation = {"here": &"MapTileHere", "visited": &"MapTile", "unexplored": &"MapTileUnexplored"}.get(
-		tile, &"MapTileEmpty")
+	theme_type_variation = {"here": &"MapTileHere", "visited": &"MapTile", "leftover": &"MapTileLeftover",
+		"unexplored": &"MapTileUnexplored"}.get(tile, &"MapTileEmpty")
 	%Icon.texture = item.get("icon", null)
 	%Icon.visible = %Icon.texture != null
 	%Icon.custom_minimum_size = Vector2(side, side) * (0.42 if item.get("show_name", false) else 0.62)

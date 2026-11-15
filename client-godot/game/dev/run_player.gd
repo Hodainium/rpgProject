@@ -16,7 +16,7 @@
 class_name RunPlayer
 extends RefCounted
 
-const RUN_CASES: Array[String] = ["chest_no_key", "chest_index", "locked_no_key", "swap_not_worn", "swap_self",
+const RUN_CASES: Array[String] = ["chest_no_key", "chest_missing", "locked_no_key", "swap_not_worn", "swap_self",
 	"move_not_held", "move_full", "give_nothing"]
 const TREASURE_TAG: StringName = &"Room.Type.Treasure"
 
@@ -51,10 +51,8 @@ static func play(run: RunController, max_steps: int = 400, battle: Callable = Ca
 				return "stuck"
 			run.choose(picked)
 			continue
+		_open_chests(run)  # spec floor-chests: open the room's chests first, then take what they put out with the rest
 		_take_pickups(run)
-		_open_chests(run)
-		if not run.state.pending_gifts.is_empty():
-			continue  # spec event-items: a chest's item waits for its holder first
 		_wear_gear(run)
 		if not chaos.is_empty():
 			try_illegal(run, chaos)
@@ -110,8 +108,8 @@ static func _locked_target(run: RunController) -> int:
 	return other
 
 
-## Opens every chest it can: Wooden ones always; one that costs a key only while a key is left over after the floor's
-## locked rooms (or for free: golden key, Run.Chest.NoKey).
+## Opens every chest in the current room it can (spec floor-chests): Wooden ones always; one that costs a key only while a key
+## is left over after the floor's locked rooms (or for free: golden key, Run.Chest.NoKey).
 static func _open_chests(run: RunController) -> void:
 	var opened := true
 	while opened and run.state.status == RunState.ACTIVE and run.runner_error == "":
@@ -120,12 +118,12 @@ static func _open_chests(run: RunController) -> void:
 		for index in run.state.map.cells:
 			if run.room_locked(index):
 				locked += 1
-		for chest in run.chests():
+		for chest in run.room_chests():
 			if not chest["can_open"]:
 				continue
 			if chest["needs_key"] and not chest["free"] and run.state.keys <= locked:
 				continue
-			if run.open_chest(chest["index"]) == "":
+			if run.open_chest(chest["serial"]) == "":
 				opened = true
 				break
 
@@ -181,11 +179,11 @@ static func _illegal_action(run: RunController, case: String) -> Callable:
 	match case:
 		"chest_no_key":
 			if state.keys == 0:
-				for chest in run.chests():
-					if chest["needs_key"] and not chest["free"]:
-						return run.open_chest.bind(chest["index"])
-		"chest_index":
-			return run.open_chest.bind(state.chests.size())
+				for chest in run.room_chests():
+					if chest["needs_key"] and not chest["free"] and not chest["opened"]:
+						return run.open_chest.bind(chest["serial"])
+		"chest_missing":
+			return run.open_chest.bind(state.chest_serial)  # spec floor-chests: no chest has this serial yet
 		"locked_no_key":
 			if state.keys == 0 and not state.golden_key:
 				for index in state.map.sorted_indices():
@@ -253,6 +251,12 @@ static func _take_pickups(run: RunController) -> void:
 			continue
 		if pickup.get("kind", "") == FloorGenerator.EQUIPMENT_KIND:
 			run.take(pickup["placement"], run.state.party[0]["slot"])  # armor goes to the armor inventory (item-pass 3.5)
+			continue
+		if pickup.has("chest"):
+			# Spec floor-chests 3.5: a chest's item goes where a gift would (food to the lowest HP share, spec food-items).
+			var holder := gift_holder(run, run.content.items[pickup["item"]])
+			if holder != 0:
+				run.take(pickup["placement"], holder)
 			continue
 		for member in run.state.party:
 			if run.can_hold(member["slot"], run.content.items[pickup["item"]]) == "":

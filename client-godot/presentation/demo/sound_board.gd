@@ -20,6 +20,7 @@ func setup(main: GameMain) -> void:
 	GameplayMessages.listen(GameplayMessageRouter.BATTLE_STARTED, func(_c, _m): play("BattleStart"))
 	GameplayMessages.listen(GameplayMessageRouter.BATTLE_UNIT_DIED, func(_c, _m): play("Death"))
 	GameplayMessages.listen(GameplayMessageRouter.RUN_ITEM_TAKEN, func(_c, _m): play("Item"))
+	GameplayMessages.listen(GameplayMessageRouter.RUN_CHEST_OPENED, func(_c, _m): play("Item"))  # spec floor-chests: Open sounds
 	GameplayMessages.listen(GameplayMessageRouter.UI_REFUSED, func(_c, _m): play("Refused"))
 
 

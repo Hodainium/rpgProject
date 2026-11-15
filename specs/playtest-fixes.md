@@ -136,6 +136,15 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   number effects popped on the party; each removed effect also played its removal cue. Field battles (the party's bookkeeping
   copies built after a fight for stats and XP) re-applied every gear and level effect on setup and played those cues on the
   party's cubes too.
+- **B23. The Collector's top hat flickers while it has Ward** (reported 2026-11-15, open: pending fix). Ward's look
+  `fx.status_skin` is a fresnel shell (`FxFresnelLayer`, `game/fx/shaders/material/fresnel_overlay.gdshader`: additive,
+  `depth_draw_never`) on the cube body only, pushed out by `grow 0.03`. Its top face ends exactly at the top of the hat's brim
+  (`presentation/demo/style/attachments/collector_hat.tres`: a brim 0.03 tall standing on the body), so the two coplanar
+  surfaces z-fight and the glow flickers across the brim. Found by replaying the run's server checkpoint in a window and
+  stopping each live effect on the Collector in turn (`fx.status_skin`, `fx.stat_arrows`, `fx.gold_hoard`; shots in
+  `H:\claudeOutShots\2026-11-15 collector-hat\`). Any attachment whose top sits `grow` above its body would flicker the same
+  way under a skin status. Proposed fix (system code): push the shell's depth slightly away from the camera in the shader, so
+  a surface at the same depth always wins and the glow can never z-fight with an attachment; check it in a window with Ward on.
 
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved. B9 and B10 only show the state of the client's existing calls (no new request, field or header); they are the

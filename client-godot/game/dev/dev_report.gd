@@ -29,8 +29,10 @@ static func state_of(run: RunController) -> Dictionary:
 		# Spec keys-and-gear 3.5: keys and chests, only on runs that have them (older reports are unchanged).
 		data["keys"] = state.keys
 		data["goldenKey"] = state.golden_key
-		data["chests"] = run.chests().map(func(chest: Dictionary) -> Dictionary: return {"number": chest["index"] + 1,
-			"chest": String(chest["chest"]), "needsKey": chest["needs_key"], "canOpen": chest["can_open"]})
+		# Spec floor-chests: the current room's chests (by serial), with what they still hold on the floor.
+		data["chests"] = run.room_chests().map(func(chest: Dictionary) -> Dictionary: return {"serial": chest["serial"],
+			"chest": String(chest["chest"]), "opened": chest["opened"], "inside": chest["inside"],
+			"needsKey": chest["needs_key"], "canOpen": chest["can_open"]})
 	if state.seeds().server_mode():
 		# Spec dev-tools E3: server mode only, so local reports are unchanged.
 		var floor_seeds := {}
@@ -73,7 +75,8 @@ static func state_text(run: RunController) -> String:
 		lines.append("  armor inventory [%s]" % ", ".join(data["armor"]))
 	if data.has("keys"):
 		lines.append("  keys %d%s  chests [%s]" % [data["keys"], " + golden key" if data["goldenKey"] else "",
-			", ".join(data["chests"].map(func(chest: Dictionary) -> String: return "%d:%s" % [chest["number"], chest["chest"]]))])
+			", ".join(data["chests"].map(func(chest: Dictionary) -> String: return "%d:%s%s" % [chest["serial"], chest["chest"],
+				" open, %d inside" % chest["inside"] if chest["opened"] else ""]))])
 	if data["battle"]:
 		lines.append("  in battle")
 	if not data["event"].is_empty():

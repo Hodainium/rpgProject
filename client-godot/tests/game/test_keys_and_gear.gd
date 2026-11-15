@@ -72,7 +72,8 @@ func test_runs_without_keys_hash_as_before() -> void:
 	check(not run.run_summary().has("keysFound"), "no key counters in its summary")
 	check(not DevReport.state_of(run).has("keys"), "nor in its state report")
 	run._clear_room(KeysWorld.normal(run), true)
-	eq([run.state.keys, run.state.chests.size()], [0, 0], "chance 0: no key or chest drops")
+	eq([run.state.keys, run.state.chest_serial], [0, 0], "chance 0: no key or chest drops")
+	check(not run.state.map.cells[KeysWorld.normal(run)].has("chests"), "and no room gets a chests list")
 
 
 func test_key_and_chest_drops() -> void:
@@ -84,11 +85,12 @@ func test_key_and_chest_drops() -> void:
 		var cell := KeysWorld.normal(run)
 		run._clear_room(cell, true)
 		eq(run.state.keys, 1, "a cleared room drops a key (100% here)")
-		eq(run.state.chests.size(), 1, "and a chest")
+		var held: Array = run.state.map.cells[cell].get("chests", [])
+		eq(held.size(), 1, "and a chest, in the room just cleared (spec floor-chests)")
 		eq([keys.size(), keys[0].data["targetName"]], [1, "a key"], "Message.Run.KeyFound: 'a key'")
 		eq(chests.size(), 1, "Message.Run.ChestFound")
-		check("\n".join(run.state.canonical_lines()).contains("keys=1|golden=0|chests="), "keys and chests are hashed")
-		found.append([run.state.chests[0]["chest"], run.state.run_hash()])
+		check("\n".join(run.state.canonical_lines()).contains("keys=1|golden=0|serial=1"), "keys and the chest serial are hashed")
+		found.append([held[0]["chest"] if not held.is_empty() else &"", run.state.run_hash()])
 		run._clear_room(run.state.map.boss, true)
 		eq(run.state.keys, 1, "the boss room drops no key (D2)")
 		_handles.map(func(handle): handle.unregister())
@@ -123,10 +125,10 @@ func test_outcomes_and_conditions() -> void:
 	var give := GiveChest.new()
 	give.chest = _chest("crate")
 	give.apply(run)
-	eq(run.state.chests.map(func(held: Dictionary) -> StringName: return held["chest"]), [&"fixture.chest.crate"],
-		"GiveChest puts the chest in the inventory")
+	eq(run.room_chests().map(func(held: Dictionary) -> StringName: return held["chest"]), [&"fixture.chest.crate"],
+		"GiveChest drops the chest in the current room (spec floor-chests)")
 	GiveChest.new().apply(run)
-	eq(run.state.chests.size(), 1, "a GiveChest without a chest does nothing")
+	eq(run.room_chests().size(), 1, "a GiveChest without a chest does nothing")
 	# PartyHpAtLeast: every living member has at least that share of max HP; the dead don't count.
 	var half := PartyHpAtLeast.new()
 	half.percent = 50
@@ -161,7 +163,7 @@ func test_golden_key() -> void:
 	eq(_go(run, vault), "", "a golden key opens a locked room")
 	eq([run.run_log[-1]["unlock"], run.state.keys], ["golden", 0], "for free, logged as golden")
 	run.give_chest(_chest("strongbox"))
-	eq(run.open_chest(0), "", "and a chest that needs a key")
+	eq(run.open_chest(run.state.chest_serial - 1), "", "and a chest that needs a key")
 	run.dev_boss_done()
 	run.next_floor()
 	check(not run.state.golden_key, "it is gone after the stairs")
@@ -216,41 +218,48 @@ func test_chest_contents_are_the_chests_own() -> void:
 	for later in [false, true]:
 		var run := _keyed()
 		run.give_chest(_chest("crate"))
-		if later:
-			run.dev_boss_done()
-			run.next_floor()
+		if later:  # other things happen first: the contents come from the chest's own stream only
+			run.add_coins(4)
+			run.give_golden_key()
+			run.give_chest(_chest("strongbox"))
 		var opened := _hear(GameplayMessageRouter.RUN_CHEST_OPENED)
 		eq(run.open_chest(0), "", "a free chest opens")
-		eq([run.state.chests.size(), run.run_log[-1]["type"], run.run_log[-1]["serial"]], [0, "open_chest", 0],
-			"it is gone and logged with its serial")
-		eq(run.state.armor.size(), 1, "one piece of crate gear, into the bag")
-		check(opened[0].data["description"].contains(fixtures().equipment[run.state.armor[0]].display_name),
-			"the toast lists what came out")
-		pieces.append(run.state.armor[0])
+		eq([run.room_chests()[0]["opened"], run.run_log[-1]["type"], run.run_log[-1]["serial"], run.run_log[-1]["cell"]],
+			[true, "open_chest", 0, run.state.current_cell], "it stays, open, and is logged with its serial and room")
+		var put_out := run.chest_pickups(run.state.current_cell, 0)
+		eq([put_out.size(), put_out[0].get("kind", "") if not put_out.is_empty() else "", run.state.armor.size()],
+			[1, FloorGenerator.EQUIPMENT_KIND, 0], "one piece of crate gear, on the floor beside it (not in the bag yet)")
+		check(opened[0].data["description"].contains("1 inside"), "the toast says something is inside")
+		if not put_out.is_empty():
+			eq(run.take(put_out[0]["placement"], 0), "", "taken like a pedestal's armor")
+		eq(run.state.armor.size(), 1, "now in the bag")
+		pieces.append(run.state.armor[0] if not run.state.armor.is_empty() else &"")
 		_handles.map(func(handle): handle.unregister())
 		_handles.clear()
-	eq(pieces[0], pieces[1], "the same chest gives the same piece on another floor")
+	eq(pieces[0], pieces[1], "the same chest gives the same piece, opened early or late")
 	# prefer_open_slot: the knight wears a weapon, nobody wears a head piece; crate gear is a dagger or a hood.
 	var run := _keyed()
 	run.state.party[1]["equipment"][&"Fixture.Equipment.Slot.Weapon"] = &"fixture.equipment.blade"
 	run.state.party[2]["equipment"][&"Fixture.Equipment.Slot.Weapon"] = &"fixture.equipment.blade"
 	run.give_chest(_chest("crate"))
 	run.open_chest(0)
-	eq(run.state.armor, [&"fixture.equipment.hood"], "a piece for a slot someone has empty comes first")
+	eq(run.chest_pickups(run.state.current_cell, 0).map(func(pickup: Dictionary) -> StringName: return pickup["item"]),
+		[&"fixture.equipment.hood"], "a piece for a slot someone has empty comes first")
 
 
 func test_chest_refusals_and_keys() -> void:
 	var run := _keyed()
 	run.give_chest(_chest("strongbox"))
 	eq(_refused(run, run.open_chest.bind(0), "a strongbox with no key"), "Locked: you need a key", "the reason")
-	_refused(run, run.open_chest.bind(3), "a chest number past the end")
+	_refused(run, run.open_chest.bind(3), "a serial that is not in this room")
 	run.pending_battle = {"cell": run.state.current_cell}
 	_refused(run, run.open_chest.bind(0), "a chest during a battle")
 	run.pending_battle = {}
 	run.add_keys(1)
 	eq(run.open_chest(0), "", "a key opens it")
-	check(run.state.keys == 0 and run.state.coins >= 2 and run.state.coins <= 3, "one key spent, 2-3 coins (got %d)"
+	check(run.state.keys == 0 and run.state.coins >= 2 and run.state.coins <= 3, "one key spent, 2-3 coins at once (got %d)"
 		% run.state.coins)
+	eq(_refused(run, run.open_chest.bind(0), "an open chest"), "already open", "the reason")
 	var lockpicked := _keyed()
 	lockpicked.give_item(_item("lockpick"), null, null)
 	lockpicked.give_chest(_chest("strongbox"))
@@ -260,9 +269,10 @@ func test_chest_refusals_and_keys() -> void:
 	eq(doubled.state.keys, 2, "the warden key gives two keys on pickup")
 	doubled.give_chest(_chest("crate"))
 	doubled.open_chest(0)
-	eq(doubled.state.armor.size(), 2, "Run.Chest.Double: the crate rolls twice")
+	eq(doubled.chest_pickups(doubled.state.current_cell, 0).size(), 2, "Run.Chest.Double: the crate rolls twice, both beside it")
 	var summary := doubled.run_summary()
-	eq([summary["chestsOpened"], summary["keysFound"]], [1, 2], "the summary counts chests and keys")
+	eq([summary["chestsOpened"], summary["keysFound"], summary.get("chestItemsLeft", 0)], [1, 2, 2],
+		"the summary counts chests, keys and chest items left")
 
 
 # --- Gear swap and item moves ---------------------------------------------------------------------------------------
@@ -444,7 +454,7 @@ func test_chaos_refuses_run_actions() -> void:
 			"refused": refused}
 		await RunPlayer.play(run, 400, Callable(), chaos)
 	eq(violations, [], "every illegal run action is refused cleanly")
-	for case in ["chest_index", "swap_self", "move_full"]:
+	for case in ["chest_missing", "swap_self", "move_full"]:
 		check(refused.get(case, 0) > 0, "chaos tried %s (%s)" % [case, refused])
 	check(refused.size() >= 4, "and most of the other cases (%s)" % refused)
 	# A refusal that changes state is caught.
@@ -456,7 +466,7 @@ func test_chaos_refuses_run_actions() -> void:
 	for attempt in 20:
 		RunPlayer.try_illegal(leaky, {"rng": RunSeeds.rng(attempt, "x"), "illegal_x100": 10000, "violations": caught,
 			"refused": {}})
-	check(caught.any(func(violation: Dictionary) -> bool: return violation["case"] == "chest_index"),
+	check(caught.any(func(violation: Dictionary) -> bool: return violation["case"] == "chest_missing"),
 		"a refusal that changes the run is a violation (%s)" % [caught])
 	if not caught.is_empty():
 		for key in ["seed", "floor", "battle", "encounter", "invariant", "detail"]:
@@ -465,7 +475,7 @@ func test_chaos_refuses_run_actions() -> void:
 
 ## A run whose open_chest leaks a coin while refusing (an injected bug for the chaos check).
 class LeakyRun extends RunController:
-	func open_chest(_index: int) -> String:
+	func open_chest(_serial: int) -> String:
 		state.coins += 1
 		return "refused, but leaked"
 

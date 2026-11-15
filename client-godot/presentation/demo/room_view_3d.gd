@@ -32,6 +32,16 @@ var _camera: Camera3D
 
 ## Spec cube-style 3.9: how long the camera takes to move between the exploration and the battle framing.
 const CAMERA_SECONDS: float = 0.45
+## Spec floor-chests D4: the lid swinging up, and each pickup's jump out of the chest (staggered, on an arc this high).
+const LID_SECONDS: float = 0.4
+const POP_SECONDS: float = 0.5
+const POP_STAGGER: float = 0.15
+const POP_HEIGHT: float = 0.8
+## The serial of the chest that just opened (its next build pops its pickups out), else -1, and the frame it opened on.
+var _popping: int = -1
+var _popping_frame: int = 0
+## A pop-out is played only by a build this many frames after the open, at most (a fresh open, never a stale one).
+const POP_FRAMES: int = 3
 
 
 func setup(main: GameMain) -> void:
@@ -55,6 +65,7 @@ func setup(main: GameMain) -> void:
 	main.run_changed.connect(_bind)
 	main.battle_prepared.connect(_on_battle_prepared)
 	main.mode_changed.connect(_on_mode)
+	GameplayMessages.listen(GameplayMessageRouter.RUN_CHEST_OPENED, _on_chest_opened)  # spec floor-chests D4: the pop-out
 	visible = false
 
 
@@ -136,6 +147,7 @@ func _build() -> void:
 	for child in _props_root.get_children():
 		child.queue_free()
 	if room == null:
+		_build_chests(run, data, null)  # spec floor-chests: a room with no definition still shows its chests
 		return
 	for number in room.placements.size():
 		var placement: RoomPlacement = room.placements[number]
@@ -155,6 +167,113 @@ func _build() -> void:
 							continue  # spec cube-style Set K: a key or an armor piece drawn by the style registry
 						var title := item.display_name if item != null else (piece.display_name if piece != null else "?")
 						_prop(placement.cell, Color.GOLD if piece == null else Color.SILVER, title + price, item)
+	_build_chests(run, data, room)
+
+
+## Spec floor-chests 2.6: the room's chests on free floor tiles (not a placement, not a door lane, not under the party; nearest
+## the room's centre first), closed or open and empty, and what an open chest put out on the free tiles around it. A chest that
+## has just opened (Message.Run.ChestOpened) swings its lid up and its pickups jump out of it onto their tiles. View only.
+func _build_chests(run: RunController, data: Dictionary, room: RoomDefinition) -> void:
+	var chests: Array = data.get("chests", [])
+	if chests.is_empty():
+		_popping = -1
+		return
+	var taken := {}
+	if room != null:
+		for placement in room.placements:
+			if placement != null:
+				taken[placement.cell] = true
+	for spot in UnitStyle.battle_positions(true, run.state.party.size()):  # the party's formation, out of battle too
+		taken[_cell_of(spot)] = true
+	for member in run.state.party:  # with no formation the party stands on its spawn cells, or these fallbacks
+		taken[Vector2i(2, int(member["slot"]) + 1)] = true
+	if Engine.get_process_frames() - _popping_frame > POP_FRAMES:
+		_popping = -1  # stale: not a build right after the open
+	var centre := Vector2i(COLUMNS / 2, ROWS / 2)
+	var free: Array[Vector2i] = []
+	for y in ROWS:
+		for x in COLUMNS:
+			var cell := Vector2i(x, y)
+			if x != centre.x and y != centre.y and not taken.has(cell):  # the door lanes cross at the centre
+				free.append(cell)
+	var registry := UnitStyle.registry()
+	for held in chests:
+		var at := _nearest(free, centre)
+		if at == Vector2i(-1, -1):
+			break
+		free.erase(at)
+		var chest: ChestDefinition = run.content.chests.get(held["chest"])
+		var title := chest.display_name if chest != null else String(held["chest"])
+		var popping: bool = held["opened"] and int(held["serial"]) == _popping
+		var look: ChestLook = registry.chest_look(held["chest"]) if registry != null else null
+		if look != null:
+			var view := PropView.chest(look, ChestLook.State.OPEN_EMPTY if held["opened"] else ChestLook.State.CLOSED,
+				title)
+			view.position = _world(at) + FLOOR_TOP
+			_props_root.add_child(view)
+			if popping and view.lid_pivot != null:  # the lid swings up from closed
+				var open_x := view.lid_pivot.rotation_degrees.x
+				view.lid_pivot.rotation_degrees.x = 0.0
+				view.create_tween().tween_property(view.lid_pivot, ^"rotation_degrees:x", open_x, LID_SECONDS)
+		else:
+			_prop(at, Color.SADDLE_BROWN, title + ("" if held["opened"] else " (closed)"))
+		var order := 0
+		for pickup in run.chest_pickups(run.state.current_cell, int(held["serial"])):
+			if pickup["taken"]:
+				continue
+			var tile := _nearest(free, at)
+			if tile == Vector2i(-1, -1):
+				break
+			free.erase(tile)
+			var before := _props_root.get_child_count()
+			var item: ItemDefinition = run.content.items.get(pickup["item"])
+			var piece: EquipmentDefinition = run.content.equipment.get(pickup["item"])
+			if not _styled_prop(tile, pickup, piece, ""):
+				var name_text := item.display_name if item != null else (piece.display_name if piece != null else "?")
+				_prop(tile, Color.GOLD if piece == null else Color.SILVER, name_text, item)
+			if popping:
+				for index in range(before, _props_root.get_child_count()):
+					_pop_out(_props_root.get_child(index), _world(at) + FLOOR_TOP, order)
+			order += 1
+	_popping = -1
+
+
+## Spec floor-chests D4: `node` jumps from inside the chest at `from` to where it stands now, on an arc, `order` places late.
+func _pop_out(node: Node3D, from: Vector3, order: int) -> void:
+	var to := node.position
+	var start := Vector3(from.x, to.y + 0.3, from.z)  # inside the chest, a little above its floor
+	node.position = start
+	node.scale = Vector3.ONE * 0.2
+	var tween := node.create_tween()
+	tween.tween_interval(LID_SECONDS * 0.5 + order * POP_STAGGER)
+	tween.tween_method(func(t: float) -> void:
+		node.position = start.lerp(to, t) + Vector3(0, sin(t * PI) * POP_HEIGHT, 0)
+		node.scale = Vector3.ONE * lerpf(0.2, 1.0, minf(t * 2.0, 1.0)), 0.0, 1.0, POP_SECONDS)
+
+
+## The free tile nearest `to` (ties: the row nearer the camera, then the lower column, so nothing hides behind a chest), or
+## (-1, -1) when none is left.
+func _nearest(free: Array[Vector2i], to: Vector2i) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var best_distance := 1 << 30
+	for cell in free:
+		var distance := (cell - to).length_squared()
+		if distance < best_distance or (distance == best_distance and cell.y > best.y):
+			best = cell
+			best_distance = distance
+	return best
+
+
+## The room cell nearest a world position (the inverse of _world).
+func _cell_of(position: Vector3) -> Vector2i:
+	return Vector2i(roundi(position.x + (COLUMNS - 1) / 2.0), roundi(position.z + (ROWS - 1) / 2.0))
+
+
+## Only an open the player just made pops (the next build, within a few frames): a replayed open_chest (a resume tail, a conflict
+## rebuild) or one whose build waits for a battle shows the chest already open.
+func _on_chest_opened(_channel: StringName, message: VerbMessage) -> void:
+	_popping = int(message.data.get("serial", -1))
+	_popping_frame = Engine.get_process_frames()
 
 
 ## Spec cube-style 3.10: the party stands in its formation out of battle too (slot order), else on the room's spawn cells. Each
