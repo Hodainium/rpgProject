@@ -1,0 +1,14 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/hit.resisted_1.wav" id="1_3lsg2"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/hit.resisted_2.wav" id="2_o1w55"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/hit.resisted_3.wav" id="3_ptupk"]
+
+[resource]
+resource_name = "hit.resisted"
+random_pitch = 1.06
+random_volume_offset_db = 1.0
+streams_count = 3
+stream_0/stream = ExtResource("1_3lsg2")
+stream_1/stream = ExtResource("2_o1w55")
+stream_2/stream = ExtResource("3_ptupk")

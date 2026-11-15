@@ -1,0 +1,101 @@
+[gd_resource type="Resource" script_class="FxRuleSet" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_listener.gd" id="1_i07x7"]
+[ext_resource type="Script" path="res://game/fx/fx_rule_set.gd" id="2_hmpkj"]
+
+[sub_resource type="Resource" id="Resource_df40h"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Damage"
+cue = &"Cue.Sfx.Hit.Physical"
+anchor_rule = 2
+require_tags = Array[StringName]([&"Damage.Type.Physical"])
+exclude_tags = Array[StringName]([&"Hit.Drained"])
+
+[sub_resource type="Resource" id="Resource_i8bsb"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Damage"
+cue = &"Cue.Sfx.Hit.Fire"
+anchor_rule = 2
+require_tags = Array[StringName]([&"Damage.Type.Fire"])
+exclude_tags = Array[StringName]([&"Hit.Drained"])
+
+[sub_resource type="Resource" id="Resource_4xdu7"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Damage"
+cue = &"Cue.Sfx.Hit.Ice"
+anchor_rule = 2
+require_tags = Array[StringName]([&"Damage.Type.Ice"])
+exclude_tags = Array[StringName]([&"Hit.Drained"])
+
+[sub_resource type="Resource" id="Resource_021ym"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Damage"
+cue = &"Cue.Sfx.Hit.Crit"
+anchor_rule = 2
+require_tags = Array[StringName]([&"Hit.Critical"])
+
+[sub_resource type="Resource" id="Resource_jp8oy"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Damage"
+cue = &"Cue.Sfx.Hit.Weakness"
+anchor_rule = 2
+require_tags = Array[StringName]([&"Hit.Weakness"])
+
+[sub_resource type="Resource" id="Resource_60y17"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Damage"
+cue = &"Cue.Sfx.Hit.Resisted"
+anchor_rule = 2
+require_tags = Array[StringName]([&"Hit.Resisted"])
+
+[sub_resource type="Resource" id="Resource_351vd"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Drained"
+cue = &"Cue.Sfx.Hit.Drained"
+anchor_rule = 2
+
+[sub_resource type="Resource" id="Resource_6tn32"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Broken"
+cue = &"Cue.Sfx.Break"
+anchor_rule = 2
+
+[sub_resource type="Resource" id="Resource_y6rvv"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Recovered"
+cue = &"Cue.Sfx.Recovered"
+anchor_rule = 2
+
+[sub_resource type="Resource" id="Resource_7y2bw"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Downed"
+cue = &"Cue.Sfx.Downed"
+anchor_rule = 2
+
+[sub_resource type="Resource" id="Resource_kb18y"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Phase"
+cue = &"Cue.Sfx.PhaseShift"
+anchor_rule = 2
+
+[sub_resource type="Resource" id="Resource_cw0by"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.OneMore"
+cue = &"Cue.Sfx.OneMore"
+anchor_rule = 2
+
+[sub_resource type="Resource" id="Resource_tqkke"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.UnitDied"
+cue = &"Cue.Sfx.Death"
+anchor_rule = 2
+
+[sub_resource type="Resource" id="Resource_x7h4t"]
+script = ExtResource("1_i07x7")
+channel = &"Message.Battle.Resisted"
+cue = &"Cue.Sfx.Resisted"
+anchor_rule = 2
+
+[resource]
+script = ExtResource("2_hmpkj")
+rules = Array[ExtResource("1_i07x7")]([SubResource("Resource_df40h"), SubResource("Resource_i8bsb"), SubResource("Resource_4xdu7"), SubResource("Resource_021ym"), SubResource("Resource_jp8oy"), SubResource("Resource_60y17"), SubResource("Resource_351vd"), SubResource("Resource_6tn32"), SubResource("Resource_y6rvv"), SubResource("Resource_7y2bw"), SubResource("Resource_kb18y"), SubResource("Resource_cw0by"), SubResource("Resource_tqkke"), SubResource("Resource_x7h4t")])

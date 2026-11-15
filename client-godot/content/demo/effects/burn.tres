@@ -22,4 +22,5 @@ duration_turns = 2
 executions = Array[ExtResource("1_f60l8")]([SubResource("Resource_g2lhe")])
 granted_tags = Array[StringName]([&"Status.Debuff.Burn"])
 persistent_cue_tags = Array[StringName]([&"Cue.Fx.Status.Burn"])
-periodic_cue_tags = Array[StringName]([&"Cue.Fx.Tick.Burn"])
+application_cue_tags = Array[StringName]([&"Cue.Sfx.Apply.Debuff"])
+periodic_cue_tags = Array[StringName]([&"Cue.Fx.Tick.Burn", &"Cue.Sfx.Tick.Burn"])

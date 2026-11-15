@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_5dctg"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/apply.buff.tres" id="2_grc7l"]
+
+[node name="SfxApplyBuff" type="Node" unique_id=415460814]
+script = ExtResource("1_5dctg")
+sound = ExtResource("2_grc7l")
+max_voices = 2

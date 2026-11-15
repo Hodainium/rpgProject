@@ -1,0 +1,14 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/tick.burn_1.wav" id="1_auf2j"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/tick.burn_2.wav" id="2_bsm5k"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/tick.burn_3.wav" id="3_vpcxq"]
+
+[resource]
+resource_name = "tick.burn"
+random_pitch = 1.04
+random_volume_offset_db = 0.5
+streams_count = 3
+stream_0/stream = ExtResource("1_auf2j")
+stream_1/stream = ExtResource("2_bsm5k")
+stream_2/stream = ExtResource("3_vpcxq")

@@ -1,6 +1,6 @@
 [gd_resource type="Animation" format=3]
 
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Buff.wav" id="1_rt2xv"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ult.bastion.tres" id="1_rt2xv"]
 
 [resource]
 resource_name = "bastion"
@@ -58,5 +58,5 @@ tracks/3/keys = {
 "times": PackedFloat32Array(0),
 "transitions": PackedFloat32Array(1),
 "update": 1,
-"values": [-2.0]
+"values": [0.0]
 }

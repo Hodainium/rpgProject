@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_gjoy5"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/phase_shift.tres" id="2_tohi4"]
+
+[node name="SfxPhaseShift" type="Node" unique_id=277467744]
+script = ExtResource("1_gjoy5")
+sound = ExtResource("2_tohi4")
+max_voices = 1

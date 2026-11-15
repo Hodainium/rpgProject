@@ -1,0 +1,14 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/hit.ice_1.wav" id="1_idmn8"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/hit.ice_2.wav" id="2_m7bms"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/hit.ice_3.wav" id="3_4hiba"]
+
+[resource]
+resource_name = "hit.ice"
+random_pitch = 1.06
+random_volume_offset_db = 1.0
+streams_count = 3
+stream_0/stream = ExtResource("1_idmn8")
+stream_1/stream = ExtResource("2_m7bms")
+stream_2/stream = ExtResource("3_4hiba")

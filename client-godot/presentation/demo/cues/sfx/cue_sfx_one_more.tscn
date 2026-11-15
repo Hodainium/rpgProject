@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_w2fof"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/one_more.tres" id="2_6vda4"]
+
+[node name="SfxOneMore" type="Node" unique_id=385692272]
+script = ExtResource("1_w2fof")
+sound = ExtResource("2_6vda4")
+max_voices = 1

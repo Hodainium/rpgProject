@@ -19,4 +19,4 @@ duration_turns = 3
 modifiers = Array[ExtResource("2_hpcif")]([SubResource("Resource_spd")])
 granted_tags = Array[StringName]([&"Status.Buff.Haste"])
 persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.Haste"])
-application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff", &"Cue.Sfx.Apply.Buff"])

@@ -34,6 +34,7 @@ script = ExtResource("3_sock")
 role = &"Base"
 
 [node name="Audio" type="AudioStreamPlayer" parent="."]
+bus = &"Sfx"
 
 [node name="Label" type="Label3D" parent="." unique_id=1244796314]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)

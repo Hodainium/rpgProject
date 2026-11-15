@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_87vg2"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/tick.burn.tres" id="2_g5rm6"]
+
+[node name="SfxTickBurn" type="Node" unique_id=602934758]
+script = ExtResource("1_87vg2")
+sound = ExtResource("2_g5rm6")
+max_voices = 2

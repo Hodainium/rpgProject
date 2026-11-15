@@ -26,4 +26,5 @@ duration_turns = 3
 modifiers = Array[ExtResource("2_ajy4t")]([SubResource("Resource_p3fly")])
 granted_tags = Array[StringName]([&"Status.Debuff.Poison"])
 persistent_cue_tags = Array[StringName]([&"Cue.Fx.Status.Poison"])
-periodic_cue_tags = Array[StringName]([&"Cue.Fx.Tick.Poison"])
+application_cue_tags = Array[StringName]([&"Cue.Sfx.Apply.Debuff"])
+periodic_cue_tags = Array[StringName]([&"Cue.Fx.Tick.Poison", &"Cue.Sfx.Tick.Poison"])

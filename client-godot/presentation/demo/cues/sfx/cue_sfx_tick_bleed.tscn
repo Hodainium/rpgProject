@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_sn548"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/tick.bleed.tres" id="2_8nugo"]
+
+[node name="SfxTickBleed" type="Node" unique_id=875884214]
+script = ExtResource("1_sn548")
+sound = ExtResource("2_8nugo")
+max_voices = 2

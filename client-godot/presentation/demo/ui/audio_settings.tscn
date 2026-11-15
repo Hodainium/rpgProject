@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://game/ui/ui_screen.gd" id="1_screen"]
+[ext_resource type="Script" path="res://presentation/demo/ui/audio_settings.gd" id="1_screen"]
 [ext_resource type="Script" path="res://game/ui/ui_back_button.gd" id="2_back"]
 
 [node name="AudioSettings" type="CenterContainer"]
@@ -32,12 +32,50 @@ layout_mode = 2
 theme_type_variation = &"Title"
 text = "Audio"
 
-[node name="Note" type="Label" parent="Panel/Margin/Box"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(320, 0)
+[node name="MasterRow" type="HBoxContainer" parent="Panel/Margin/Box"]
 layout_mode = 2
-text = "Volume settings come with the audio pass."
-autowrap_mode = 3
+
+[node name="MasterLabel" type="Label" parent="Panel/Margin/Box/MasterRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Master"
+
+[node name="MasterVolume" type="HSlider" parent="Panel/Margin/Box/MasterRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_vertical = 4
+value = 100.0
+
+[node name="SfxRow" type="HBoxContainer" parent="Panel/Margin/Box"]
+layout_mode = 2
+
+[node name="SfxLabel" type="Label" parent="Panel/Margin/Box/SfxRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Effects"
+
+[node name="SfxVolume" type="HSlider" parent="Panel/Margin/Box/SfxRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_vertical = 4
+value = 100.0
+
+[node name="UiRow" type="HBoxContainer" parent="Panel/Margin/Box"]
+layout_mode = 2
+
+[node name="UiLabel" type="Label" parent="Panel/Margin/Box/UiRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Interface"
+
+[node name="UiVolume" type="HSlider" parent="Panel/Margin/Box/UiRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_vertical = 4
+value = 100.0
 
 [node name="Back" type="Button" parent="Panel/Margin/Box"]
 layout_mode = 2

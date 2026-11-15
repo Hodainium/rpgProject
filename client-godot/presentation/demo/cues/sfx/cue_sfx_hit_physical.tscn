@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_w8g5k"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/hit.physical.tres" id="2_snusc"]
+
+[node name="SfxHitPhysical" type="Node" unique_id=210672555]
+script = ExtResource("1_w8g5k")
+sound = ExtResource("2_snusc")

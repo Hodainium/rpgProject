@@ -1,46 +1,86 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://presentation/demo/sound_board.gd" id="1_board"]
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Cursor1.wav" id="2_hover"]
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Decision1.wav" id="3_confirm"]
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Cancel1.wav" id="4_back"]
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Buzzer1.wav" id="5_refused"]
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Item1.wav" id="6_item"]
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Move.wav" id="7_move"]
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Combat1.wav" id="8_battle"]
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Collapse1.wav" id="9_death"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ui.cursor.tres" id="2_hover"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ui.confirm.tres" id="3_confirm"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ui.back.tres" id="4_back"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ui.refused.tres" id="5_refused"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/run.item.tres" id="6_item"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/run.move.tres" id="7_move"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/battle.start.tres" id="8_battle"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ui.popup.tres" id="9_popup"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ui.decline.tres" id="10_decline"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ui.menu_open.tres" id="11_menu_open"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ui.menu_close.tres" id="12_menu_close"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ui.advance.tres" id="13_advance"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/run.coin.tres" id="14_coin"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/run.key.tres" id="15_key"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/run.level_up.tres" id="16_level_up"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/run.floor.tres" id="18_floor"]
 
 [node name="SoundBoard" type="Node"]
 script = ExtResource("1_board")
 
 [node name="Hover" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("2_hover")
-volume_db = -2.5
+bus = &"Ui"
 
 [node name="Confirm" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("3_confirm")
-volume_db = -4.5
+bus = &"Ui"
 
 [node name="Back" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("4_back")
-volume_db = -9.0
+bus = &"Ui"
 
 [node name="Refused" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("5_refused")
-volume_db = -3.0
+bus = &"Ui"
+
+[node name="PopupOpen" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("9_popup")
+bus = &"Ui"
+
+[node name="PopupNo" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("10_decline")
+bus = &"Ui"
+
+[node name="MenuOpen" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("11_menu_open")
+bus = &"Ui"
+
+[node name="MenuClose" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("12_menu_close")
+bus = &"Ui"
+
+[node name="Advance" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("13_advance")
+bus = &"Ui"
 
 [node name="Item" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("6_item")
-volume_db = 10.5
+bus = &"Ui"
+
+[node name="Coin" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("14_coin")
+bus = &"Ui"
+
+[node name="Key" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("15_key")
+bus = &"Ui"
+
+[node name="LevelUp" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("16_level_up")
+bus = &"Ui"
 
 [node name="Move" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("7_move")
-volume_db = -1.5
+bus = &"Ui"
+
+[node name="Floor" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("18_floor")
+bus = &"Ui"
 
 [node name="BattleStart" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("8_battle")
-volume_db = 1.0
-
-[node name="Death" type="AudioStreamPlayer" parent="."]
-stream = ExtResource("9_death")
-volume_db = -2.0
+bus = &"Ui"

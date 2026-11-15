@@ -1,6 +1,6 @@
 [gd_resource type="Animation" format=3]
 
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Attack2.wav" id="1_atggm"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ult.execute.tres" id="1_atggm"]
 
 [resource]
 resource_name = "execute"
