@@ -466,6 +466,19 @@ its first faces read like the Bulwark's) with a bow; Bulwark A (stern eyes under
 (glowing ice eyes) with an ice staff; Pyromancer A (glowing ember eyes, gritted teeth) and Shatterweaver A (pink gem eyes), both
 empty-handed. Files: `face_<class>_<pick>.tres` and `item_*.tres` in `presentation/demo/style/attachments/`.
 
+### Lich redesign (user, 2026-11-15; the slice's last item)
+The Lich wore only round 2's gold crown. Proposals: **A, the Lich King** (a bone skull face, a tall dark-iron crown with green
+gems, a spiked high collar, a floating phylactery, `soul_wisps`) and **B, the Hooded Archlich** (a tattered pointed hood with a
+skeletal jaw, a bone staff with a violet orb, orbiting soul flames, `grave_mist`). **Picked:** A with B's staff and a cloak over
+the whole cube like B's hood; of two cloaks (tattered with a hood shadow, royal) the **royal mantle** (deep purple, a gold hem, a
+gold-trimmed rim round the face, green gem clasps), its spiked collar grown out of the mantle's top edges in the same cloth (a
+rolled edge hides the seam; the first, separate collar looked stuck on). The phylactery was removed (the staff is enough), and the
+staff's little skull faces the unit's front like the Lich's own face (turning the whole face to the camera side was tried and
+rejected: in battle the Lich must face the party). Files: `lich_mantle`, `lich_skull`, `lich_crown`,
+`bone_staff` (HELD) and the effect `soul_wisps`; `crown.tres` stays (the Rat King wears it).
+Found on the way: thin horizontal gold trims shimmered on the idling unit; coplanar faces (the crown's band on the mantle top,
+trim corners) were moved apart, and the rest was aliasing: the project had no anti-aliasing (`playtest-fixes` B25 adds it).
+
 ### Floor-1 refresh (user, 2026-11-13)
 The round-2 enemies looked plain next to the later sets. The user asked for fangs on the Bat and a second look at the first
 floor's enemies; the Bat, Fire Imp, Knight and Golem (the ones still on their round-2 looks) got faces and one more detail each,
