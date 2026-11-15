@@ -42,7 +42,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
 | 5b3. `floor-rooms` | ⬜ Not started (added 2026-11-15: bigger floors, a challenge room (three waves, an item reward), an armory (armor or a weapon) on every floor, item rooms give items only; before 5c) | 2026-11-15 |
 | 5c. `card-balance` | ⬜ Not started | |
-| 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |
+| 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; its own slice after 5b3 `floor-rooms`, before 5c (user, 2026-11-15)) | 2026-11-09 |
 | 6. `observability` | ⬜ Not started | |
 | 7. `live-dashboard` | ⬜ Not started | |
 | 7b. `data-retention` | ⬜ Not started | |
@@ -203,6 +203,7 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-11-15: the Lich redesign approved; 5a4 `cube-style` done. Next: 5e `audio-pass`.
 - 2026-11-15: 5e `audio-pass` built and playtested (user: "I loved the playtest"); next: 5b `card-ui`.
 - 2026-11-15: added 5b3 `floor-rooms` before 5c (user); 5c also gets more player agency over items and more keys (user).
+- 2026-11-15: 5d `unique-events` moved before 5c, after 5b3 (user: it will change the balance before the last tweaks). Order: 5b, 5b2, 5b3, 5d, 5c.
 
 
 ## Design tuning: any time, not just in breaks
@@ -689,7 +690,7 @@ aura effect with a `color` and a tier parameter, not one per rarity. Keys and ar
 their own 3D icons in 5a4 `cube-style` (Set K). Presentation only.
 
 ### 5b3. `floor-rooms`
-Added 2026-11-15 at the user's request, **its own slice before 5c `card-balance`** (the room changes first, the balance on top).
+Added 2026-11-15 at the user's request, **its own slice before 5c `card-balance`** (the room changes first, then 5d `unique-events`, then the balance on top).
 The user's playtest note: players barely get the chance to find items, and the floors are too small. Room changes:
 - **Bigger floors**: more rooms per floor (the floor generator's room counts per chapter or floor).
 - **A challenge room on every floor**: three waves of enemies, one after another; it **has a chance to spawn** on a floor
@@ -706,10 +707,11 @@ Added 2026-11-09, after 5b. The game balancing pass for cards: retune the win-ra
 and craft costs and refunds, and the gem income per run against them. Also here (decided 2026-11-09): **four new Food items** (Food holds 4, all core, today; this takes it to 8). Also here (decided 2026-11-09): **more events** in the demo content, so slice 5d's one-event-per-run rule rarely runs a chapter dry. Design break 3 (card feel) belongs here. Also here (user, 2026-11-15): **more player agency over items** (players barely get the chance to find items today) and **more keys in a run** (keys are very scarce), measured on top of 5b3 `floor-rooms`.
 
 ### 5d. `unique-events`
-Added 2026-11-09, next to 5c (the gate moves, so both are measured together). Spec `specs/unique-events.md`: an event picked
+Added 2026-11-09, next to 5c (the gate moves, so both are measured together). **Order (user, 2026-11-15):** its own slice
+after 5b3 `floor-rooms` and **before 5c `card-balance`**, since it changes the balance before the last tweaks. Spec `specs/unique-events.md`: an event picked
 from a chapter's event query appears at most once per run (seen = placed on a floor, so it holds inside a floor too; an exhausted
 pool gives an empty room; fixed room events and the rest stop stay repeatable), and a named item the run already saw becomes a
-food item (like Isaac's drops), so no route hands out a second copy (pool picks already did not). Decided 2026-11-09; implemented together with 5c. Client only; the run hash gains `events_seen=`
+food item (like Isaac's drops), so no route hands out a second copy (pool picks already did not). Decided 2026-11-09; implemented before 5c (user, 2026-11-15). Client only; the run hash gains `events_seen=`
 when not empty, so the committed run goldens may change and the balance gate is re-measured.
 
 ### 5e. `audio-pass`
