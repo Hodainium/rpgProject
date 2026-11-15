@@ -1,6 +1,6 @@
 # Spec: floor-chests (a chest stays in the room where it dropped and opens there, like a shop)
 
-Status: spec written 2026-11-14; the user's review answered Q1-Q5 the same day (section 7), ready for `/implement`. Slice: roadmap 5a5, after 5a4
+Status: built 2026-11-14, playtested 2026-11-15 (not yet synced: see the implementation notes in the PR); the user's review answered Q1-Q5 on 2026-11-14 (section 7). Slice: roadmap 5a5, after 5a4
 `cube-style` (its Set K drew the three chest states) and before 5e `audio-pass`.
 
 ## 1. Purpose & enterprise mapping
