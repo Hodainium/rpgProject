@@ -1,0 +1,1 @@
+{"seq":7,"action":{"type":"open_chest","floor":1,"cell":9,"chestId":"demo.chest.gilded","serial":2,"coinsAfter":12,"offers":[{"placement":2000,"itemId":"demo.item.whetstone","price":0,"source":"Chest","kind":"Item"},{"placement":2001,"itemId":"demo.equipment.iron_sword","price":0,"source":"Chest","kind":"Equipment"}]},"stateHash":"aa07","playedAt":"2026-10-27T12:03:04+00:00"}

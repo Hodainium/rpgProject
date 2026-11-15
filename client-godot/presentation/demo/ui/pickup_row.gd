@@ -16,9 +16,15 @@ signal taken(problem: String)
 @export var price_item_format: String = "  costs a %s: %s"
 @export var take_text: String = "Take"
 @export var buy_text: String = "Buy"
+## Spec floor-chests 2.6: a closed chest's button, free or for a key.
+@export var open_text: String = "Open"
+@export var open_key_text: String = "Open · 1 key"
+## A chest's item, after its name.
+@export var from_chest_format: String = "  from the %s"
 
 var _run: RunController
 var _placement: int = 0
+var _chest_serial: int = -1
 
 
 func _ready() -> void:
@@ -30,6 +36,21 @@ func set_item(item: Dictionary, _ctx: UIContext) -> void:
 	var pickup: Dictionary = item["pickup"]
 	var thing: Resource = item["thing"]
 	_placement = pickup["placement"]
+	_chest_serial = -1
+	if item.has("chest"):  # spec floor-chests: a closed chest; Open pays its key
+		var chest: Dictionary = item["chest"]
+		_chest_serial = chest["serial"]
+		%Name.theme_type_variation = &""
+		%Name.text = thing.display_name
+		%Name.tooltip_text = thing.description
+		%Description.text = thing.description
+		%Description.visible = thing.description != ""
+		%Take.text = open_key_text if chest["needs_key"] and not chest["free"] else open_text
+		%Take.disabled = not chest["can_open"]
+		%GiveTo.visible = false
+		%GiveTo.clear()
+		return
+	%Take.disabled = false
 	var name_text: String = thing.display_name
 	if item["equipment"]:
 		name_text += slot_format % String(thing.slot).get_slice(".", 2)
@@ -42,7 +63,8 @@ func set_item(item: Dictionary, _ctx: UIContext) -> void:
 			name_text = rarity_format % tier + name_text
 			%Name.theme_type_variation = StringName(rarity_variation_prefix + tier)
 			break
-	%Name.text = name_text + _price(pickup)
+	var chest_name: String = item.get("chest_name", "")
+	%Name.text = name_text + _price(pickup) + (from_chest_format % chest_name if chest_name != "" else "")
 	%Name.tooltip_text = thing.description
 	%Description.text = thing.description
 	%Description.visible = thing.description != ""
@@ -68,5 +90,8 @@ func _price(pickup: Dictionary) -> String:
 
 
 func _take() -> void:
+	if _chest_serial >= 0:
+		taken.emit(_run.open_chest(_chest_serial))
+		return
 	var slot: int = %GiveTo.get_item_id(%GiveTo.selected) if %GiveTo.visible and %GiveTo.selected >= 0 else 0
 	taken.emit(_run.take(_placement, slot))

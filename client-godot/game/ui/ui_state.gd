@@ -65,7 +65,9 @@ static func _run_tags(run: RunController, state: RunState, tags: Array[StringNam
 		return
 	tags.append(MAP)
 	var cell: Dictionary = state.map.cells.get(state.current_cell, {})
-	if cell.get("cleared", false) and cell.get("pickups", []).any(func(pickup) -> bool: return not pickup["taken"]):
+	# Spec floor-chests: a closed chest in the room also shows the pickup panel (its OPEN row).
+	if cell.get("cleared", false) and (cell.get("pickups", []).any(func(pickup) -> bool: return not pickup["taken"])
+			or cell.get("chests", []).any(func(held) -> bool: return not held["opened"])):
 		tags.append(PICKUP)
 	if state.boss_cleared and not run.is_last_floor() and state.status == RunState.ACTIVE and not state.sandbox:
 		tags.append(STAIRS)

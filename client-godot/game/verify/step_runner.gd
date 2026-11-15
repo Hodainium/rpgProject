@@ -137,9 +137,15 @@ static func validate(request: Dictionary) -> String:
 				or not item["action"]["battle"]["actionLog"].get("actions") is Array \
 				or not item["action"]["battle"].get("battleId") is String):
 			return "action %d is a battle without its conditions, id and action log" % index
+		if item["action"]["type"] == "open_chest" and not (_number(item["action"].get("cell")) and _number(item["action"].get("serial"))):
+			return "action %d is an open_chest without its cell and serial" % index  # spec floor-chests
 	if str(request["kind"]) == "End" and not request.get("endRunHash") is String:
 		return "an End step needs endRunHash"
 	return ""
+
+
+static func _number(value: Variant) -> bool:
+	return value is float or value is int
 
 
 # --- The genesis step (2.0) -----------------------------------------------------------------------------------------------

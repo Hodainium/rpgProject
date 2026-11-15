@@ -6,7 +6,7 @@ extends DevCommand
 func _init() -> void:
 	name = "giveto"
 	usage = "giveto <slot>"
-	help = "Gives the waiting item (from an event or a chest) to party member <slot>."
+	help = "Gives the waiting item (from an event or a reward) to party member <slot>."
 	cheat = false
 	arg_kinds.assign(["slot"])
 

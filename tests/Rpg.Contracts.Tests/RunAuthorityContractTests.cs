@@ -40,6 +40,14 @@ public class RunAuthorityContractTests
                     Kind: ItemKind.Item, CharacterId: "warrior", Price: 15, CoinsAfter: 0), "aa03", Played),
             ])
         },
+        {
+            // Spec floor-chests 3.1: open_chest names its room and reports what the chest put out.
+            "run-action-open-chest.json", new RunActionRequest(7, new RunAction("open_chest", 1, Cell: 9,
+                ChestId: "demo.chest.gilded", Serial: 2, CoinsAfter: 12,
+                Offers: [new ItemOffer(2000, "demo.item.whetstone", 0, OfferSource.Chest),
+                         new ItemOffer(2001, "demo.equipment.iron_sword", 0, OfferSource.Chest, ItemKind.Equipment)]),
+                "aa07", Played)
+        },
         { "run-action-ack.json", new RunActionAck(42) },
         { "run-end-request.json", new RunEndRequest(43, RunEndStatus.Won, "bb43", Snapshot) },
         { "run-end-response.json", new RunEndResponse(RunId, RunStatus.Verifying) },

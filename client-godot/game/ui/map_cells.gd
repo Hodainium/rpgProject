@@ -5,7 +5,8 @@ class_name MapCells
 extends RefCounted
 
 
-## One Dictionary per grid cell in index order: {"index", "shown", "here", "visited", "kind", "enterable", "locked"}.
+## One Dictionary per grid cell in index order: {"index", "shown", "here", "visited", "kind", "enterable", "locked",
+## "leftover"}. "leftover" (spec floor-chests D5): a visited room still holding a closed chest or a free untaken pickup.
 ## "kind" is the room type the map may show: "boss", "event", the special room's tag end ("Treasure", "Shop",
 ## "Altar"), "lock" while the room is locked (keys-and-gear), or "" (a plain room, the start room, or a type not known
 ## yet).
@@ -24,10 +25,22 @@ static func of(run: RunController) -> Array[Dictionary]:
 			cell["kind"] = _kind(data)
 		# Spec keys-and-gear 2.2: a locked room shows the lock ("LOCKED", "Locked (needs a key)") until a key opens it.
 		cell["locked"] = shown and run.room_locked(index)
+		cell["leftover"] = cell["visited"] and has_leftover(data)
 		if cell["locked"]:
 			cell["kind"] = "lock"
 		cells.append(cell)
 	return cells
+
+
+## Spec floor-chests D5: a closed chest, or a free untaken pickup (a chest's item, a pedestal); a shop's priced stock never counts.
+static func has_leftover(data: Dictionary) -> bool:
+	for held in data.get("chests", []):
+		if not held["opened"]:
+			return true
+	for pickup in data.get("pickups", []):
+		if not pickup["taken"] and int(pickup["price"]) == 0 and not pickup.has("priceItem"):
+			return true
+	return false
 
 
 static func _kind(data: Dictionary) -> String:

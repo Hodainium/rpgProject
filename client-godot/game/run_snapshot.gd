@@ -50,10 +50,7 @@ static func capture(run: RunController) -> Dictionary:
 			"fieldActions": state.field_actions_on_floor, "gifts": state.gifts_on_floor,
 			"event": _plain(state.event), "pendingGifts": _strings(state.pending_gifts), "status": state.status,
 			"dev": state.dev, "sandbox": state.sandbox, "revealed": state.revealed, "revealEvents": state.reveal_events,
-			"keys": state.keys, "goldenKey": state.golden_key,
-			"chests": state.chests.map(func(chest: Dictionary) -> Dictionary:
-				return {"chest": String(chest["chest"]), "serial": chest["serial"]}),
-			"chestSerial": state.chest_serial, "devCommands": state.dev_commands,
+			"keys": state.keys, "goldenKey": state.golden_key, "chestSerial": state.chest_serial, "devCommands": state.dev_commands,
 		},
 		"map": _map(state.map) if state.map != null else null,
 		"pendingBattle": _plain(run.pending_battle) if not run.pending_battle.is_empty() else null,
@@ -74,6 +71,8 @@ static func restore(run: RunController, content_index: ContentIndex, snapshot: D
 		return "unknown snapshot schema %s" % snapshot.get("schemaVersion")
 	var data: Dictionary = _ints(snapshot)
 	var saved: Dictionary = data["run"]
+	if saved.has("chests"):
+		return OLD_SAVE_PROBLEM  # spec floor-chests Q1
 	run.content = content_index
 	if not content_index.problems.is_empty():
 		return "content problems: " + "; ".join(content_index.problems)
@@ -118,8 +117,6 @@ static func restore(run: RunController, content_index: ContentIndex, snapshot: D
 	state.reveal_events = saved["revealEvents"]
 	state.keys = saved["keys"]
 	state.golden_key = saved["goldenKey"]
-	for chest in saved["chests"]:
-		state.chests.append({"chest": StringName(chest["chest"]), "serial": chest["serial"]})
 	state.chest_serial = saved["chestSerial"]
 	state.dev_commands = saved["devCommands"]
 	state.map = _load_map(data["map"]) if data["map"] != null else null
@@ -147,7 +144,9 @@ static func restore(run: RunController, content_index: ContentIndex, snapshot: D
 const TOP_KEYS: Array[String] = ["schemaVersion", "run", "map", "pendingBattle", "waitingFloor", "requestedFloors", "log", "tally"]
 const RUN_KEYS: Array[String] = ["runId", "runSeed", "floorSeeds", "structure", "party", "coins", "seenItems", "armor", "floor",
 	"chapter", "currentCell", "bossCleared", "fieldActions", "gifts", "event", "pendingGifts", "status", "dev", "sandbox", "revealed",
-	"revealEvents", "keys", "goldenKey", "chests", "chestSerial", "devCommands"]
+	"revealEvents", "keys", "goldenKey", "chestSerial", "devCommands"]
+## Spec floor-chests (Q1): a save from before floor chests holds a chest inventory here; it is refused, never migrated.
+const OLD_SAVE_PROBLEM: String = "a save from an older build (it holds chests outside a room)"
 const MEMBER_KEYS: Array[String] = ["slot", "character", "level", "xp", "hp", "mp", "energy", "alive", "skills", "items", "useSlots",
 	"equipment"]
 const CELL_KEYS: Array[String] = ["index", "cell", "role", "special_tag", "room", "doors", "content", "pickups", "visited", "cleared"]
@@ -163,6 +162,8 @@ static func shape_problem(saved: Variant) -> String:
 			return "the snapshot has no \"%s\"" % key
 	if not saved["run"] is Dictionary:
 		return "snapshot.run must be an object"
+	if saved["run"].has("chests"):
+		return OLD_SAVE_PROBLEM
 	for key in RUN_KEYS:
 		if not saved["run"].has(key):
 			return "snapshot.run has no \"%s\"" % key
@@ -187,6 +188,12 @@ static func shape_problem(saved: Variant) -> String:
 			for key in CELL_KEYS:
 				if not cell.has(key):
 					return "a map cell has no \"%s\"" % key
+			if cell.has("chests"):  # spec floor-chests: optional, but whole when present
+				if not cell["chests"] is Array:
+					return "a map cell's chests must be an array"
+				for held in cell["chests"]:
+					if not held is Dictionary or not held.has("chest") or not held.has("serial") or not held.has("opened"):
+						return "a map cell's chest needs chest, serial and opened"
 	return ""
 
 
@@ -219,6 +226,9 @@ static func _load_map(saved: Dictionary) -> FloorMap:
 		}
 		if cell.has("opened"):
 			data["opened"] = cell["opened"]
+		if cell.has("chests"):  # spec floor-chests: only in a cell that ever held a chest
+			data["chests"] = cell["chests"].map(func(held: Dictionary) -> Dictionary:
+				return {"chest": StringName(held["chest"]), "serial": held["serial"], "opened": held["opened"]})
 		map.cells[int(cell["index"])] = data
 	return map
 

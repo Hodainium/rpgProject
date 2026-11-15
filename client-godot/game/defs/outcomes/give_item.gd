@@ -1,5 +1,5 @@
 ## Gives a fixed item, or one picked from a pool (seeded), to a character, or else to the member `recipient` names.
-## Spec event-items: in a chest every item is CHOOSE, whatever is set here.
+## Spec floor-chests: in a chest the item lands on the floor beside it, whatever recipient and character say.
 @tool
 class_name GiveItem
 extends RunOutcome
@@ -7,7 +7,7 @@ extends RunOutcome
 enum Recipient {
 	FIRST,  ## The first living member who can hold it.
 	RANDOM,  ## A seeded pick among the living members who can hold it.
-	CHOOSE,  ## The player picks (a logged give_to); only in an event choice or a chest.
+	CHOOSE,  ## The player picks (a logged give_to); only in an event choice or an encounter reward.
 }
 
 @export var item: ItemDefinition

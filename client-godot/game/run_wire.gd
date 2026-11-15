@@ -57,6 +57,8 @@ static func action(run: RunController, entry: Dictionary, conditions: Dictionary
 			fields["slot"] = entry["slot"]
 		"battle":
 			fields["cell"] = entry["cell"]
+		"open_chest":
+			fields["cell"] = entry["cell"]  # spec floor-chests: the chest's room
 	match type:
 		"take", "buy":
 			var pickup := _pickup(state, int(entry["cell"]), int(entry["placement"]))
@@ -100,6 +102,14 @@ static func action(run: RunController, entry: Dictionary, conditions: Dictionary
 	fields["coinsAfter"] = state.coins
 	if type == "enter_room":
 		fields["offers"] = offers(state, int(entry["cell"]))
+	if type == "open_chest":
+		# Spec floor-chests 3.1: what the chest put out, as Chest offers (none: the field is left out).
+		var placements := run.chest_pickups(int(entry["cell"]), int(entry["serial"])).map(
+			func(pickup: Dictionary) -> int: return int(pickup["placement"]))
+		var put_out := offers(state, int(entry["cell"])).filter(func(offer: Dictionary) -> bool:
+			return placements.has(int(offer["placement"])))
+		if not put_out.is_empty():
+			fields["offers"] = put_out
 	if type == "battle":
 		fields["battle"] = {"battleId": entry["battleId"], "conditions": conditions, "actionLog": entry["actionLog"]}
 	# The record's field order: type, floor, then the optional fields as RunAction declares them.
@@ -119,7 +129,9 @@ static func offers(state: RunState, cell: int) -> Array:
 	for pickup in data.get("pickups", []):
 		var kind := str(pickup.get("kind", ""))
 		var source := "Other"
-		if data["role"] == FloorMap.ROLE_BOSS:
+		if pickup.has("chest"):
+			source = "Chest"  # spec floor-chests 3.1
+		elif data["role"] == FloorMap.ROLE_BOSS:
 			source = "BossReward"
 		elif int(pickup["price"]) > 0 or pickup.has("priceItem"):
 			source = "Shop"
@@ -160,10 +172,9 @@ static func apply(run: RunController, wire: Dictionary) -> String:
 		"give_to":
 			return run.give_to(int(wire["slot"]))
 		"open_chest":
-			for index in run.state.chests.size():
-				if int(run.state.chests[index]["serial"]) == int(wire["serial"]):
-					return run.open_chest(index)
-			return "no chest with serial %d" % int(wire["serial"])
+			if int(wire.get("cell", -1)) != run.state.current_cell:  # a wire with no cell is refused, never a script error
+				return "chest %d is not in this room" % int(wire["serial"])
+			return run.open_chest(int(wire["serial"]))
 		"battle":
 			var battle: Dictionary = wire["battle"]
 			var expected: String = str(run.battle_snapshot()["battleId"]) if not run.pending_battle.is_empty() else ""

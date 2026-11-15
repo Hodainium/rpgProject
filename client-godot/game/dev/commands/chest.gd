@@ -1,11 +1,11 @@
-## Cheat (spec keys-and-gear 3.2): puts a chest in the chest inventory.
+## Cheat (spec keys-and-gear 3.2, floor-chests 2.1): drops a chest in the current room.
 extends DevCommand
 
 
 func _init() -> void:
 	name = "chest"
 	usage = "chest <chest>"
-	help = "Puts <chest> (an id or res:// path) in the party's chest inventory; open it with `open`."
+	help = "Drops <chest> (an id or res:// path) in the current room; open it with `open <serial>`."
 	cheat = true
 	arg_kinds.assign(["chest"])
 
@@ -17,4 +17,4 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 	if chest == null:
 		return ctx.fail(ctx.error if ctx.error != "" else "not a chest")
 	var error := ctx.run.dev_chest(chest)
-	return ctx.fail(error) if error != "" else "chest %d: %s" % [ctx.run.state.chests.size(), chest.id]
+	return ctx.fail(error) if error != "" else "chest %d: %s" % [ctx.run.state.chest_serial - 1, chest.id]

@@ -80,8 +80,8 @@ var _directive_encounter: EncounterDefinition
 ## Spec keys-and-gear 2.3: while a chest opens, its stream (gifts by query draw from it) and what came out.
 var _chest_rng: RandomNumberGenerator
 var _chest_gifts := PackedStringArray()
-## Spec event-items D2: [slot, item] given while a chest opens; their toasts follow the chest's own.
-var _chest_toasts: Array = []
+## Spec floor-chests 2.2: the serial of the chest opening now (-1 = none): its items and armor become pickups beside it.
+var _opening_chest: int = -1
 ## Spec event-items: RANDOM recipients drawn in the current action (the k in "floor/<n>/recipient/<cell>/<k>").
 var _recipient_draws: int = 0
 ## Spec server-authority 2.1 (server mode): the floor enter_floor() waits on until its seed arrives
@@ -107,6 +107,8 @@ var _battle_conditions: Dictionary = {}
 const KEYS_DOUBLE_TAG: StringName = &"Run.Keys.Double"
 const CHEST_DOUBLE_TAG: StringName = &"Run.Chest.Double"
 const CHEST_NO_KEY_TAG: StringName = &"Run.Chest.NoKey"
+## Spec floor-chests 2.2: a chest's pickups are numbered from here in their cell (1000+ is the dev spawn).
+const CHEST_PLACEMENT: int = 2000
 
 
 # --- Run and floors -------------------------------------------------------------------------------------------------
@@ -367,6 +369,7 @@ func _reset_floor(floor_index: int, chapter: ChapterDefinition) -> void:
 ## content plays when it is entered).
 func _install_floor(map: FloorMap, pools: Dictionary, clear_start: bool) -> void:
 	state.seen_items.assign(pools["seen"])
+	_tally_left_behind(state.map)  # spec floor-chests 2.4: what the floor being left still held (once the new one exists)
 	state.map = map
 	state.current_cell = state.map.start
 	state.map.cells[state.map.start]["visited"] = true
@@ -486,7 +489,11 @@ func run_summary() -> Dictionary:
 		summary["keysFound"] = _tally.get("keysFound", 0)
 		summary["keysSpent"] = _tally.get("keysSpent", 0)
 		summary["chestsOpened"] = _tally.get("chestsOpened", 0)
-		summary["chestsLeft"] = state.chests.size()
+		var left := _left_on(state.map)  # spec floor-chests 3.3: closed chests left behind and on this floor
+		summary["chestsLeft"] = int(_tally.get("chestsLeftBehind", 0)) + left[0]
+		var items_left := int(_tally.get("chestItemsLeftBehind", 0)) + left[1]
+		if items_left > 0:
+			summary["chestItemsLeft"] = items_left
 		var skipped := 0
 		for index in state.map.cells if state.map != null else {}:
 			if room_locked(index):
@@ -989,7 +996,7 @@ func _drop_keys_and_chests(index: int) -> void:
 		if RunSeeds.roll(chest_rng, structure.chest_drop_chance_x100):
 			var drop: ChestDrop = RunSeeds.pick_weighted(chest_rng, structure.chest_drops)
 			if drop != null and drop.chest != null:
-				give_chest(drop.chest)
+				give_chest(drop.chest, index)  # spec floor-chests: in the room just cleared
 
 
 ## Adds (or, negative, takes) keys, kept within 0-99.
@@ -1013,74 +1020,122 @@ func give_golden_key() -> void:
 	party_changed.emit()
 
 
-func give_chest(chest: ChestDefinition) -> void:
+## Spec floor-chests 2.1: a chest lands closed in room `at` (default the current room: GiveChest, the `chest` cheat; a room-clear
+## drop names the room cleared); the cell
+## gets a "chests" list on its first chest only, so rooms that never hold one hash as before. Outside a room (the rest stop
+## between floors, which the validator forbids: give_chest_outside_room) it is lost with an error.
+func give_chest(chest: ChestDefinition, at: int = -1) -> void:
 	if chest == null:
 		return
-	state.chests.append({"chest": chest.id, "serial": state.chest_serial})
+	if at < 0:
+		at = state.current_cell
+	if state.map == null or not state.map.cells.has(at) or state.event.has("rest_to"):
+		push_error("RunController: %s has no room to land in (give_chest_outside_room)" % chest.id)
+		_warn("%s has no room to land in; it is lost" % chest.id)
+		return
+	var cell: Dictionary = state.map.cells[at]
+	if not cell.has("chests"):
+		cell["chests"] = []
+	cell["chests"].append({"chest": chest.id, "serial": state.chest_serial, "opened": false})
 	state.chest_serial += 1
 	if _chest_rng != null:
 		_chest_gifts.append(chest.display_name)
 	_send(GameplayMessageRouter.RUN_CHEST_FOUND, &"Verb.Drop", &"", chest.id, 0, [],
-		{"targetName": chest.display_name, "description": chest.description})
+		{"targetName": chest.display_name, "description": chest.description, "cell": at, "serial": state.chest_serial - 1})
 	party_changed.emit()
+	pickups_shown.emit(at)
 
 
-## For screens and bots (read-only): the chest inventory in order: [{"index", "chest", "name", "description",
-## "needs_key", "free", "can_open", "why"}]. "why" is the refusal open_chest() would give ("" when it can open).
-func chests() -> Array[Dictionary]:
+## For screens and bots (read-only, spec floor-chests 3.3): the current room's chests in serial order: [{"serial", "chest",
+## "name", "description", "opened", "filled" (an untaken pickup of it is left), "inside" (how many), "needs_key", "free",
+## "can_open", "why"}]. "why" is the refusal open_chest() would give ("" when it can open).
+func room_chests() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	if state == null:
+	if state == null or state.map == null or not state.map.cells.has(state.current_cell):
 		return result
-	for index in state.chests.size():
-		var chest: ChestDefinition = content.chests.get(state.chests[index]["chest"])
-		var why := _chest_problem(index)
-		result.append({"index": index, "chest": state.chests[index]["chest"],
-			"name": chest.display_name if chest != null else String(state.chests[index]["chest"]),
-			"description": chest.description if chest != null else "", "needs_key": chest != null and chest.needs_key,
+	var data: Dictionary = state.map.cells[state.current_cell]
+	for held in data.get("chests", []):
+		var chest: ChestDefinition = content.chests.get(held["chest"])
+		var why := _chest_problem(int(held["serial"]))
+		var inside := chest_pickups(state.current_cell, int(held["serial"])).filter(
+			func(pickup: Dictionary) -> bool: return not pickup["taken"]).size()
+		result.append({"serial": int(held["serial"]), "chest": held["chest"],
+			"name": chest.display_name if chest != null else String(held["chest"]),
+			"description": chest.description if chest != null else "", "opened": held["opened"], "filled": inside > 0,
+			"inside": inside, "needs_key": chest != null and chest.needs_key,
 			"free": chest == null or not chest.needs_key or state.golden_key or _has_modifier(CHEST_NO_KEY_TAG),
 			"can_open": why == "", "why": why})
 	return result
 
 
-func _chest_problem(index: int) -> String:
+## The pickups chest `serial` put out in `cell` (taken ones too), in placement order.
+func chest_pickups(cell: int, serial: int) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if state == null or state.map == null or not state.map.cells.has(cell):
+		return result
+	for pickup in state.map.cells[cell]["pickups"]:
+		if pickup.has("chest") and int(pickup["chest"]) == serial:
+			result.append(pickup)
+	return result
+
+
+func _room_chest(serial: int) -> Dictionary:
+	if state.map == null or not state.map.cells.has(state.current_cell):
+		return {}
+	for held in state.map.cells[state.current_cell].get("chests", []):
+		if int(held["serial"]) == serial:
+			return held
+	return {}
+
+
+func _chest_problem(serial: int) -> String:
 	if not _active() or not pending_battle.is_empty() or not state.event.is_empty():
 		return "not now"
 	if _gift_block() != "":
 		return _gift_block()
-	if index < 0 or index >= state.chests.size():
-		return "no chest %d" % (index + 1)
-	var chest: ChestDefinition = content.chests.get(state.chests[index]["chest"])
+	var held := _room_chest(serial)
+	if held.is_empty():
+		return "no chest %d here" % serial
+	if held["opened"]:
+		return "already open"
+	if not state.map.cells[state.current_cell]["cleared"]:
+		return "clear the room first"
+	var chest: ChestDefinition = content.chests.get(held["chest"])
 	if chest == null:
-		return "unknown chest %s" % state.chests[index]["chest"]
+		return "unknown chest %s" % held["chest"]
 	if chest.needs_key and not state.golden_key and not _has_modifier(CHEST_NO_KEY_TAG) and state.keys <= 0:
 		return "Locked: you need a key"
 	return ""
 
 
-## Opens the chest at `index` (0-based) on the map: pays its key, picks a reward from the chest's own stream "chest/<serial>"
-## (twice with Run.Chest.Double) and runs its outcomes. Logged. Returns "" or why not (nothing changes then).
-func open_chest(index: int) -> String:
-	return _commit_after(_do_open_chest(index))
+## Spec floor-chests 2.2: opens the current room's chest `serial` like a shop: pays its key, picks its rewards from the chest's
+## own stream "chest/<serial>" (twice with Run.Chest.Double) and runs their outcomes; an item or armor piece becomes a free
+## pickup on the floor beside the chest (taken with take()), anything else is given now. Logged. "" or why not (nothing
+## changes then).
+func open_chest(serial: int) -> String:
+	return _commit_after(_do_open_chest(serial))
 
 
-func _do_open_chest(index: int) -> String:
-	var problem := _chest_problem(index)
+func _do_open_chest(serial: int) -> String:
+	var problem := _chest_problem(serial)
 	if problem != "":
 		return problem
-	var held: Dictionary = state.chests[index]
+	var held := _room_chest(serial)
 	var chest: ChestDefinition = content.chests[held["chest"]]
-	run_log.append({"type": "open_chest", "floor": state.floor_index, "chest": String(chest.id), "serial": held["serial"]})
-	state.chests.remove_at(index)
+	var cell := state.current_cell
+	run_log.append({"type": "open_chest", "floor": state.floor_index, "cell": cell, "chest": String(chest.id),
+		"serial": serial})
+	held["opened"] = true
 	if chest.needs_key and not state.golden_key and not _has_modifier(CHEST_NO_KEY_TAG):
 		state.keys -= 1
 		_tally["keysSpent"] = int(_tally.get("keysSpent", 0)) + 1
 	_tally["chestsOpened"] = int(_tally.get("chestsOpened", 0)) + 1
 	var outer_rng := _chest_rng
 	var outer_gifts := _chest_gifts
-	var outer_toasts := _chest_toasts
-	_chest_rng = state.seeds().run_rng("chest/%d" % held["serial"])
+	var outer_opening := _opening_chest
+	_chest_rng = state.seeds().run_rng("chest/%d" % serial)
 	_chest_gifts = PackedStringArray()
-	_chest_toasts = []
+	_opening_chest = serial
 	_recipient_draws = 0
 	for roll in 2 if _has_modifier(CHEST_DOUBLE_TAG) else 1:
 		var reward: ChestReward = RunSeeds.pick_weighted(_chest_rng, chest.rewards)
@@ -1092,17 +1147,56 @@ func _do_open_chest(index: int) -> String:
 				if outcome != null and _active():
 					outcome.apply(self)
 	var gifts := _chest_gifts
-	var toasts := _chest_toasts
 	_chest_rng = outer_rng
 	_chest_gifts = outer_gifts
-	_chest_toasts = outer_toasts
+	_opening_chest = outer_opening
 	_directive = ""  # event directives mean nothing in a chest
+	var inside := chest_pickups(cell, serial).size()
+	if inside > 0:
+		gifts.append("%d inside" % inside)
 	_send(GameplayMessageRouter.RUN_CHEST_OPENED, &"Verb.Use", &"", chest.id, 0, [],
-		{"targetName": chest.display_name, "description": ", ".join(gifts) if not gifts.is_empty() else "Empty!"})
-	for given in toasts:  # spec event-items D2: each given item's toast after the chest's
-		_send_taken("gift", given[0], given[1], {"price": 0})
+		{"targetName": chest.display_name, "description": ", ".join(gifts) if not gifts.is_empty() else "Empty!",
+			"cell": cell, "serial": serial, "inside": inside})
 	party_changed.emit()
+	pickups_shown.emit(cell)
 	return runner_error
+
+
+## Spec floor-chests 2.2: while chest `_opening_chest` opens, an item or armor piece it gives becomes a free pickup on the floor
+## of its room, numbered from CHEST_PLACEMENT (unique in the cell), carrying the chest's serial.
+func _chest_pickup(thing: Resource) -> void:
+	var data: Dictionary = state.map.cells[state.current_cell]
+	var number: int = CHEST_PLACEMENT + data["pickups"].filter(func(pickup: Dictionary) -> bool: return pickup.has("chest")).size()
+	var entry := FloorGenerator.pickup_entry(number, thing, 0)
+	entry["chest"] = _opening_chest
+	data["pickups"].append(entry)
+	if not state.seen_items.has(thing.id):
+		state.seen_items.append(thing.id)  # as a gift was: later pool picks never offer it again
+
+
+## Spec floor-chests 3.3: closed chests and untaken chest pickups on `map`, counted into the tally when its floor is left.
+func _tally_left_behind(map: FloorMap) -> void:
+	var counts := _left_on(map)
+	if counts[0] > 0:
+		_tally["chestsLeftBehind"] = int(_tally.get("chestsLeftBehind", 0)) + counts[0]
+	if counts[1] > 0:
+		_tally["chestItemsLeftBehind"] = int(_tally.get("chestItemsLeftBehind", 0)) + counts[1]
+
+
+## Closed chests and untaken chest pickups on `map`: [closed, items].
+static func _left_on(map: FloorMap) -> Array[int]:
+	var counts: Array[int] = [0, 0]
+	if map == null:
+		return counts
+	for index in map.cells:
+		var data: Dictionary = map.cells[index]
+		for held in data.get("chests", []):
+			if not held["opened"]:
+				counts[0] += 1
+		for pickup in data["pickups"]:
+			if pickup.has("chest") and not pickup["taken"]:
+				counts[1] += 1
+	return counts
 
 
 ## True when a held item or worn piece carries the run modifier tag `tag`.
@@ -1810,7 +1904,8 @@ func apply_member_effect(effect: GameplayEffect, slots: Array, include_dead: boo
 
 
 ## Gives `item` (or one picked from `query`) to `character`, or else to the member `recipient` names (spec event-items:
-## FIRST, RANDOM, or CHOOSE, which waits for give_to; in a chest every item is CHOOSE). A given item toasts.
+## FIRST, RANDOM, or CHOOSE, which waits for give_to). A given item toasts. While a chest opens (spec floor-chests) the item
+## becomes a pickup beside the chest instead, whatever `recipient` and `character` say.
 func give_item(item: ItemDefinition, query: GameplayTagQuery, character: CharacterDefinition,
 		recipient: int = GiveItem.Recipient.FIRST) -> void:
 	if item == null:
@@ -1822,10 +1917,10 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 		item = generator.pick_item(null, query, gift_rng, _pools())
 		if item == null:
 			return
-	if _chest_rng != null:
-		recipient = GiveItem.Recipient.CHOOSE  # spec event-items D5: a chest always lets the player pick
-		character = null
-	elif _choose_off and recipient == GiveItem.Recipient.CHOOSE:
+	if _opening_chest >= 0:
+		_chest_pickup(item)  # spec floor-chests 2.2: it waits on the floor beside the chest; the taker is chosen at take()
+		return
+	if _choose_off and recipient == GiveItem.Recipient.CHOOSE:
 		recipient = GiveItem.Recipient.FIRST  # the battle that wins the run: no pick can follow
 	var holders: Array[int] = []
 	for member in state.party:
@@ -1836,8 +1931,6 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 		slot = state.member_slot(character.id)
 	elif holders.size() > 1 and recipient == GiveItem.Recipient.CHOOSE:
 		state.pending_gifts.append(item.id)  # spec event-items: the player picks with give_to
-		if _chest_rng != null:
-			_chest_gifts.append(item.display_name)
 		party_changed.emit()
 		return
 	elif not holders.is_empty() and recipient == GiveItem.Recipient.RANDOM:
@@ -1891,15 +1984,10 @@ func _gift_block() -> String:
 	return "choose who gets %s first" % (item.display_name if item != null else String(state.pending_gifts[0]))
 
 
-## Gives `item` to the member in `slot` and toasts it (Message.Run.ItemTaken); in a chest the toast waits for the
-## chest's own one (spec event-items D2).
+## Gives `item` to the member in `slot` and toasts it (Message.Run.ItemTaken).
 func _give_to(slot: int, item: ItemDefinition) -> void:
 	_receive_item(slot, item)
-	if _chest_rng != null:
-		_chest_gifts.append(item.display_name)
-		_chest_toasts.append([slot, item])
-	else:
-		_send_taken("gift", slot, item, {"price": 0})
+	_send_taken("gift", slot, item, {"price": 0})
 
 
 func remove_item(item: ItemDefinition) -> void:
@@ -1915,10 +2003,12 @@ func remove_item(item: ItemDefinition) -> void:
 
 ## Spec playable-demo 3.7 (D9): armor from outcomes goes to the armor inventory; nothing is worn on its own.
 func give_equipment(piece: EquipmentDefinition) -> void:
-	if piece != null:
-		_receive_equipment(piece)
-		if _chest_rng != null:
-			_chest_gifts.append(piece.display_name)
+	if piece == null:
+		return
+	if _opening_chest >= 0:
+		_chest_pickup(piece)  # spec floor-chests 2.2: on the floor beside the chest, like a pedestal's armor
+		return
+	_receive_equipment(piece)
 
 
 ## Spec keys-and-gear 3.2: a pooled piece matching `query` (GiveEquipment with no fixed piece), from the chest's stream
@@ -2042,6 +2132,8 @@ func dev_chest(chest: ChestDefinition) -> String:
 		return "no run"
 	if chest == null or not content.chests.has(chest.id):
 		return "that chest is not in the content index"
+	if state.map == null or state.event.has("rest_to"):
+		return "no room here for a chest"  # spec floor-chests 2.1
 	dev_log("chest", [chest.id])
 	give_chest(chest)
 	return ""
@@ -2149,7 +2241,8 @@ func dev_spawn_item(item: Resource, pool_tag: StringName, price: int) -> String:
 		if item == null:
 			return "no item in the pool %s" % pool_tag
 	var data: Dictionary = state.map.cells[state.current_cell]
-	var number: int = 1000 + data["pickups"].filter(func(pickup) -> bool: return pickup["placement"] >= 1000).size()
+	var number: int = 1000 + data["pickups"].filter(func(pickup) -> bool:
+		return pickup["placement"] >= 1000 and pickup["placement"] < CHEST_PLACEMENT).size()  # chest pickups have their own range
 	data["pickups"].append(FloorGenerator.pickup_entry(number, item, maxi(price, 0)))
 	state.seen_items.append(item.id)
 	if data["cleared"]:
@@ -2429,6 +2522,8 @@ func _send_taken(kind: String, slot: int, item: Resource, pickup: Dictionary) ->
 			data["rarity"] = String(tag).trim_prefix("Item.Rarity.")
 	if pickup.has("priceItem"):
 		data["priceItem"] = String(pickup["priceItem"])
+	if pickup.has("chest"):
+		data["chest"] = int(pickup["chest"])  # spec floor-chests 2.3: taken from a chest
 	if kind == "gift":
 		data["source"] = "gift"  # spec event-items: from an event, a reward or a chest
 	_send(GameplayMessageRouter.RUN_ITEM_TAKEN, &"Verb.Buy" if kind == "buy" else &"Verb.Take",

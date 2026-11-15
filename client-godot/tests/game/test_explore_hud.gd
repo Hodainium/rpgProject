@@ -200,22 +200,36 @@ func test_keys_line() -> void:
 	eq(menu.get_node("%Keys").text, "Keys: 2 + golden key", "it follows the run")
 
 
-func test_use_item_lists_chests() -> void:
+## Spec floor-chests 2.6: the room's closed chests are rows of the pickup panel (Open, Open · 1 key); an open chest's armor
+## follows as an ordinary row, "from the Crate"; the Use Item screen lists no chest any more.
+func test_pickup_panel_opens_chests() -> void:
 	var game := await _keyed_game()
 	var run := game.run
 	run.give_chest(run.content.chests[&"fixture.chest.crate"])
 	run.give_chest(run.content.chests[&"fixture.chest.strongbox"])
+	await _frames(3)
+	var panel := _find(game, "PickupPanel")
+	check(panel != null, "a closed chest shows the pickup panel")
+	if panel == null:
+		return
+	var rows: Array = panel.get_node("%Rows").get_children().filter(func(row) -> bool: return row.visible)
+	eq(rows.map(func(row) -> Array: return [row.get_node("%Name").text, row.get_node("%Take").text,
+		row.get_node("%Take").disabled]), [["Crate", "Open", false], ["Strongbox", "Open · 1 key", true]],
+		"a free chest, then one that needs a key, greyed with no key")
+	rows[0].get_node("%Take").pressed.emit()
+	await _frames(3)
+	eq([run.run_log[-1]["type"], run.state.armor.size()], ["open_chest", 0], "Open is one logged open_chest; the gear is not taken yet")
+	rows = panel.get_node("%Rows").get_children().filter(func(row) -> bool: return row.visible)
+	var gear = rows.filter(func(row) -> bool: return row.get_node("%Name").text.ends_with("from the Crate"))
+	eq(gear.size(), 1, "its armor is a row, from the Crate (got %s)" % [rows.map(func(row): return row.get_node("%Name").text)])
+	if not gear.is_empty():
+		gear[0].get_node("%Take").pressed.emit()
+		await _frames(2)
+		eq(run.state.armor.size(), 1, "taken into the bag")
 	var use = game.ui.push(&"UI.Layer.GameMenu", load("res://presentation/demo/ui/use_screen.tscn"), {"mode": "item"})
 	await _frames(2)
-	var entries: Array = use.get_node("%Pool").get_children()
-	eq([entries[0].get_node("%Name").text, entries[0].get_node("%Detail").text, entries[0].disabled],
-		["Crate", "OPEN", false], "a free chest first, OPEN")
-	eq([entries[1].get_node("%Name").text, entries[1].get_node("%Detail").text, entries[1].disabled],
-		["Strongbox", "OPEN · 1 KEY", true], "a chest that needs a key, greyed with no key")
-	entries[0].pressed.emit()
-	await _frames(2)
-	eq([run.state.chests.size(), run.state.armor.size(), run.run_log[-1]["type"]], [1, 1, "open_chest"],
-		"pressing OPEN opens it: one logged action, its gear in the bag")
+	check(use.get_node("%Pool").get_children().all(func(entry) -> bool: return entry.get_node("%Name").text != "Strongbox"),
+		"the Use Item screen lists no chest")
 
 
 func test_pickup_panel_sells_keys() -> void:
@@ -335,22 +349,16 @@ func test_floor_toast_slides_as_one() -> void:
 	host_panel.hold(&"show_floor_info", false)
 
 
-## Spec event-items: the Give to panel (a Modal screen while UI.State.Run.Gift) for a chest's item: it names the item,
-## lists the party, a press gives it (logged give_to) and the panel goes away.
+## Spec event-items: the Give to panel (a Modal screen while UI.State.Run.Gift) for an event's CHOOSE item: it names the item,
+## lists the party, a press gives it (logged give_to) and the panel goes away. (A chest's item lands beside it since spec
+## floor-chests, so the gift comes from an event here.)
 func test_gift_panel() -> void:
 	var game := await _game()
 	var run := game.run
 	var gift := GiveItem.new()
 	gift.item = run.content.items[&"fixture.item.whetstone"]
-	var reward := ChestReward.new()
-	reward.outcomes.assign([gift])
-	var chest := ChestDefinition.new()
-	chest.id = &"fixture.chest.gift_test"
-	chest.display_name = "Gift test"
-	chest.rewards.assign([reward])
-	run.content = run.content.overlay([chest])
-	run.give_chest(chest)
-	eq(run.open_chest(0), "", "open the chest")
+	gift.recipient = GiveItem.Recipient.CHOOSE
+	gift.apply(run)
 	await _frames(3)
 	var panel := _find(game, "GiftPanel")
 	check(panel != null, "the Give to panel shows")

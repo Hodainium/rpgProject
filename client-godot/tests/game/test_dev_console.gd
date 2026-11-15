@@ -287,9 +287,11 @@ func test_console_keys_and_chests() -> void:
 	await _ok(session, "chest fixture.chest.strongbox")
 	await _ok(session, "chest fixture.chest.crate")
 	var listed: String = (await _ok(session, "chests"))["text"]
-	check(listed.contains("1. Strongbox (1 key)") and listed.contains("2. Crate"), "chests lists them: %s" % listed)
-	await _ok(session, "open 1")
-	eq([run.state.keys, run.state.chests.size()], [1, 1], "the strongbox cost a key")
+	check(listed.contains("0. Strongbox closed (1 key)") and listed.contains("1. Crate closed"),
+		"chests lists this room's chests by serial (spec floor-chests): %s" % listed)
+	await _ok(session, "open 0")
+	eq([run.state.keys, run.room_chests()[0]["opened"]], [1, true], "the strongbox cost a key and stays, open")
+	check(not (await _run(session, "open 0"))["ok"], "an open chest does not open again")
 	await _ok(session, "goldkey")
 	check(run.state.golden_key, "golden key cheat")
 	check(not (await _run(session, "open 5"))["ok"], "no chest 5")
@@ -298,7 +300,7 @@ func test_console_keys_and_chests() -> void:
 	await _ok(session, "move fixture.item.feather 2")
 	eq(run.state.holder_of(&"fixture.item.feather"), 2, "move")
 	var state: Dictionary = JSON.parse_string((await _ok(session, "state json"))["text"])
-	eq([int(state["keys"]), state["goldenKey"], state["chests"].size()], [1, true, 1], "state json shows keys and chests")
+	eq([int(state["keys"]), state["goldenKey"], state["chests"].size()], [1, true, 2], "state json shows keys and the room's chests")
 
 
 func test_dev_script_runner_opens_chests() -> void:
@@ -308,12 +310,14 @@ func test_dev_script_runner_opens_chests() -> void:
 	_write(SCRATCH + "chests.txt", "new %s 7
 chest fixture.chest.crate
 chests
-open 1
+open 0
+take 2000
 state
 " % PARTY)
-	eq(_runner(script, out), 0, "the runner opens a chest headless")
+	eq(_runner(script, out), 0, "the runner opens a chest headless and takes what it put out")
 	var state: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(out))
-	eq(state["chests"], [], "the chest is gone")
+	eq(state["chests"].map(func(chest: Dictionary) -> Array: return [chest["opened"], int(chest["inside"])]), [[true, 0]],
+		"the chest stays, open and empty")
 	eq(state["armor"].size(), 1, "its gear is in the bag")
 
 
@@ -402,7 +406,7 @@ func test_tool_parity() -> void:
 		"gameplay message log (spec gameplay-messages)": "messages", "battle panel Auto (spec auto-battle)": "auto",
 		"Tab: big minimap and the floor toast (spec ff7-ui)": "tab",
 		"gear screen SWAP (spec keys-and-gear)": "swap", "gear screen Item Slot MOVE / SWAP": "move",
-		"Use Item OPEN a chest": "open", "chest list": "chests", "Give to panel (spec event-items)": "giveto",
+		"pickup panel OPEN a chest (spec floor-chests)": "open", "chest list": "chests", "Give to panel (spec event-items)": "giveto",
 		"effects gallery and inspector preview (spec vfx-framework)": "fx",
 		"Settings battle pacing rows (playtest-fixes B18)": "pace"}
 	for action in pairs:

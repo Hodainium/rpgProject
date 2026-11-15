@@ -924,7 +924,7 @@ func _check_event(event: EventDefinition) -> void:
 
 
 ## `can_choose`: the outcome runs in an event choice, a chest or an encounter reward, where the player can pick an
-## item's holder.
+## item's holder (in a chest at take(), spec floor-chests).
 ## `item_hook`: the outcome runs in an item's on_pickup / on_floor_start / on_room_cleared, where it has a holder.
 func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition, can_choose: bool = false,
 		item_hook: bool = false) -> void:
@@ -934,7 +934,7 @@ func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition, 
 	if outcome is GiveItem and outcome.recipient == GiveItem.Recipient.CHOOSE and not can_choose:
 		# Spec event-items D3: no screen can ask who gets it in an item hook (encounter rewards may, user 2026-11-13).
 		_error("give_choose_outside_event", where,
-			"GiveItem recipient CHOOSE only works in an event choice, a chest or an encounter reward")
+			"GiveItem recipient CHOOSE only works in an event choice or an encounter reward")
 	if outcome == null:
 		_error("dangling_ref", where, "an empty outcome entry")
 	elif outcome is GiveItem and outcome.item == null and outcome.item_query == null:
@@ -1011,7 +1011,12 @@ func _check_chest(chest: ChestDefinition) -> void:
 			_error("bad_chest", where, "%s's reward %d has no outcomes or bad rolls (%d-%d)" % [chest.id, index,
 				reward.rolls_min, reward.rolls_max])
 		for outcome_index in reward.outcomes.size():
-			_check_outcome(reward.outcomes[outcome_index], "%s::outcomes[%d]" % [where, outcome_index], null, true)
+			var outcome: RunOutcome = reward.outcomes[outcome_index]
+			_check_outcome(outcome, "%s::outcomes[%d]" % [where, outcome_index], null, true)
+			if outcome is GiveItem and (outcome.recipient != GiveItem.Recipient.FIRST or outcome.character != null):
+				# Spec floor-chests 3.4: a chest's item lands beside it and the taker is picked at take().
+				_warning("chest_recipient_ignored", "%s::outcomes[%d]" % [where, outcome_index],
+					"%s's item lands beside the chest; its recipient and character are ignored" % chest.id)
 
 
 func _check_run(structure: RunStructure, generate_seeds: int) -> void:
@@ -1035,6 +1040,10 @@ func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 			for choice in (page.choices if page != null else []):
 				if choice != null and choice.outcomes.any(func(outcome) -> bool: return outcome is StartEncounter):
 					_error("rest_event_encounter", path + "::rest_event", "%s starts an encounter; a rest stop has no room" % structure.rest_event.id)
+				if choice != null and choice.outcomes.any(func(outcome) -> bool: return outcome is GiveChest):
+					# Spec floor-chests 2.1 (Q2): a chest lands in the current room, and a rest stop has none.
+					_error("give_chest_outside_room", path + "::rest_event",
+						"%s gives a chest; a rest stop has no room for it to land in" % structure.rest_event.id)
 	if structure.floors.is_empty():
 		_error("dangling_ref", path + "::floors", "%s has no floors" % structure.id)
 	for floor_index in structure.floors.size():

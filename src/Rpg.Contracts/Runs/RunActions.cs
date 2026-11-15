@@ -35,13 +35,14 @@ public sealed record RunActionRequest(int Seq, RunAction Action, string StateHas
 /// <param name="ToSlot">move_item: the receiver.</param>
 /// <param name="SwapItemId">move_item: the item sent back the other way, if any.</param>
 /// <param name="ChestId">open_chest: the chest (spec keys-and-gear).</param>
-/// <param name="Serial">open_chest: the chest's serial.</param>
+/// <param name="Serial">open_chest: the chest's run-wide serial; the chest stands in <c>Cell</c> (spec floor-chests).</param>
 /// <param name="Unlock">enter_room: "key" or "golden" when a lock opened.</param>
 /// <param name="Chapter">next_floor: the chapter picked on a CHOICE slot (playable-demo 3.8).</param>
 /// <param name="Price">buy: coins paid.</param>
 /// <param name="PriceItemId">buy: the curse item paid with, if any (<c>RoomPlacement.price_item</c>).</param>
 /// <param name="CoinsAfter">Every action: the run's coins afterwards.</param>
-/// <param name="Offers">enter_room: every pickup on offer in that room.</param>
+/// <param name="Offers">enter_room: every pickup on offer in that room; open_chest: what the chest put out (Source
+/// Chest, spec floor-chests).</param>
 /// <param name="Battle">battle: what was played.</param>
 public sealed record RunAction(
     string Type,
@@ -97,7 +98,8 @@ public sealed record BattleSubmission(string BattleId, BattleSnapshot Conditions
 public sealed record ItemOffer(int Placement, string ItemId, int Price, OfferSource Source,
     ItemKind Kind = ItemKind.Item);
 
-public enum OfferSource { Treasure, Shop, BossReward, Other }
+/// <summary>Where an offer came from. Chest (spec floor-chests): a chest's item or armor, on the floor beside it.</summary>
+public enum OfferSource { Treasure, Shop, BossReward, Other, Chest }
 
 /// <summary>item-pass: pedestals and shelves offer armor; keys-and-gear: shops sell keys.</summary>
 public enum ItemKind { Item, Equipment, Keys }
