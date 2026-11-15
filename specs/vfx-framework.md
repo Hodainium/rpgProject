@@ -1,6 +1,6 @@
 # Spec: vfx-framework (slice 5a, before 5b `card-ui`)
 
-Status: **built 2026-11-09, awaiting the user's review** (decisions F1-F7 settled; section 8 lists where the build differs from this text) · Date: 2026-11-09 · Roadmap: new slice 5a, between 5 `card-collection` and
+Status: **done, accepted by the user 2026-11-15** (built 2026-11-09) (decisions F1-F7 settled; section 8 lists where the build differs from this text) · Date: 2026-11-09 · Roadmap: new slice 5a, between 5 `card-collection` and
 5b `card-ui` (the roadmap entry is added when this spec is approved).
 Model: Unreal's **Niagara system assets** (reusable effects with exposed, tunable user parameters) triggered from
 **GameplayCues** (Lyra's `GameplayCueNotify` pattern). Builds on `specs/gameplay-messages.md` (the bus effects can
