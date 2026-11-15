@@ -27,4 +27,5 @@ tintable = false
 [resource]
 script = ExtResource("2_shape")
 display_name = "Guardian ring"
+role = 2
 parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1")])

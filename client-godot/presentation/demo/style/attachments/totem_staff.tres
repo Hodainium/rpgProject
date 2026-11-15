@@ -67,4 +67,5 @@ tintable = false
 [resource]
 script = ExtResource("2_shape")
 display_name = "Totem staff"
+role = 1
 parts = Array[ExtResource("1_part")]([SubResource("Resource_staff"), SubResource("Resource_skull"), SubResource("Resource_eye_l"), SubResource("Resource_eye_r"), SubResource("Resource_feather_a"), SubResource("Resource_feather_b")])

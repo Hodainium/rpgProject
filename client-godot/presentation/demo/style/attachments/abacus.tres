@@ -314,4 +314,5 @@ tintable = false
 [resource]
 script = ExtResource("2_shape")
 display_name = "Abacus"
+role = 1
 parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6"), SubResource("Resource_p7"), SubResource("Resource_p8"), SubResource("Resource_p9"), SubResource("Resource_p10"), SubResource("Resource_p11"), SubResource("Resource_p12"), SubResource("Resource_p13"), SubResource("Resource_p14"), SubResource("Resource_p15"), SubResource("Resource_p16"), SubResource("Resource_p17"), SubResource("Resource_p18"), SubResource("Resource_p19"), SubResource("Resource_p20"), SubResource("Resource_p21"), SubResource("Resource_p22"), SubResource("Resource_p23"), SubResource("Resource_p24"), SubResource("Resource_p25"), SubResource("Resource_p26"), SubResource("Resource_p27")])

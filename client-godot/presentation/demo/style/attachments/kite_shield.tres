@@ -25,4 +25,5 @@ tintable = false
 [resource]
 script = ExtResource("2_shield")
 display_name = "Kite shield"
+role = 1
 parts = Array[ExtResource("1_shield")]([SubResource("Resource_face"), SubResource("Resource_boss")])

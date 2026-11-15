@@ -64,4 +64,5 @@ tintable = false
 [resource]
 script = ExtResource("2_ax0ko")
 display_name = "Sword"
+role = 1
 parts = Array[ExtResource("1_va324")]([SubResource("Resource_rkxh4"), SubResource("Resource_e1nw7"), SubResource("Resource_3fe7g"), SubResource("Resource_8dh81"), SubResource("Resource_rjd5v")])

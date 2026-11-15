@@ -116,4 +116,5 @@ tintable = false
 [resource]
 script = ExtResource("2_shape")
 display_name = "Staff and cauldron"
+role = 1
 parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6"), SubResource("Resource_p7"), SubResource("Resource_p8"), SubResource("Resource_p9")])
