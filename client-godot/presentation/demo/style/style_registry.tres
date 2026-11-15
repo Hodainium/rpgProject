@@ -190,6 +190,11 @@
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/props/chest_inside_empty.tres" id="setk_14"]
 [ext_resource type="Script" path="res://game/view/chest_look.gd" id="setk_15"]
 [ext_resource type="Script" path="res://game/view/prop_style.gd" id="setk_16"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/lich_mantle.tres" id="lich_1"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/lich_skull.tres" id="lich_2"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/lich_crown.tres" id="lich_3"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bone_staff.tres" id="lich_4"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/soul_wisps.tres" id="lich_6"]
 
 [sub_resource type="Resource" id="Resource_f1a1"]
 script = ExtResource("2_b37kx")
@@ -869,13 +874,32 @@ script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_jh0p1"), SubResource("Resource_pf_bard"), SubResource("Resource_pi_bard")])
 effect = ExtResource("31_golden")
 
-[sub_resource type="Resource" id="Resource_fun37"]
+[sub_resource type="Resource" id="Resource_lich_mantle"]
 script = ExtResource("2_b37kx")
-shape = ExtResource("12_p1ca3")
+shape = ExtResource("lich_1")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_lich_skull"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("lich_2")
+socket = &"Front"
+scale = Vector3(1.1, 1.1, 1.1)
+
+[sub_resource type="Resource" id="Resource_lich_crown"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("lich_3")
+offset = Vector3(0, 0.062, 0)
+
+[sub_resource type="Resource" id="Resource_lich_staff"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("lich_4")
+socket = &"Left"
+offset = Vector3(0.2, 0, 0)
 
 [sub_resource type="Resource" id="Resource_q38xi"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_fun37")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_lich_mantle"), SubResource("Resource_lich_skull"), SubResource("Resource_lich_crown"), SubResource("Resource_lich_staff")])
+effect = ExtResource("lich_6")
 
 [sub_resource type="Resource" id="Resource_partyform"]
 script = ExtResource("16_form")
