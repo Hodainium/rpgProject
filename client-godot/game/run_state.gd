@@ -198,7 +198,9 @@ func canonical_lines() -> PackedStringArray:
 			slots.append("%s:%d" % [use_slot["item"], use_slot["cooldown"]])
 		var gear := PackedStringArray()
 		var slot_tags: Array = entry["equipment"].keys()
-		slot_tags.sort()
+		# By name: a plain sort() orders StringNames by their interned pointer, which differs between processes (a windowed game and
+		# the headless verifier), so two worn pieces could hash in either order and every later step was rejected (2002).
+		slot_tags.sort_custom(func(a, b) -> bool: return String(a) < String(b))
 		for tag in slot_tags:
 			gear.append("%s=%s" % [tag, entry["equipment"][tag]])
 		var line := "member=%d|%s|%d|%s|%s|%s|%d|%s|%s|%s|%s" % [entry["slot"], entry["character"], entry["level"],

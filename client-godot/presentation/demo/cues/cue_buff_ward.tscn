@@ -22,7 +22,7 @@ value = 0.12
 [sub_resource type="Resource" id="Resource_svda1"]
 script = ExtResource("3_1uqpf")
 param = &"grow"
-value = 0.03
+value = 0.0305
 
 [sub_resource type="Resource" id="Resource_pimc8"]
 script = ExtResource("3_1uqpf")

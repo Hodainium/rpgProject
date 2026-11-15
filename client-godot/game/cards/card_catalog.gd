@@ -32,7 +32,7 @@ static func cards(content: ContentIndex) -> Array[Dictionary]:
 			found.append(_card(String(id), KIND_ITEM, _rarity(entry.tags), entry.tags, pools))
 	for id in content.characters:
 		found.append(_card(String(id), KIND_CHARACTER, MYTHIC, content.characters[id].tags, []))
-	found.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["id"] < b["id"])
+	found.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["id"] < b["id"])  # sort-ok: "id" holds a String
 	return found
 
 
@@ -87,9 +87,9 @@ static func problems(content: ContentIndex) -> Array:
 			found.append(["card_rarity_mismatch", card["id"], "%s is an item and cannot be Mythic (characters only)" % card["id"]])
 		if card["kind"] == KIND_CHARACTER and card["core"]:
 			core_characters.append(StringName(card["id"]))
-	core_characters.sort()
+	core_characters.sort_custom(func(a, b) -> bool: return String(a) < String(b))  # by name, not by StringName pointer
 	var starters := rules.starter_characters.duplicate()
-	starters.sort()
+	starters.sort_custom(func(a, b) -> bool: return String(a) < String(b))
 	if core_characters != starters:
 		found.append(["core_character_count", "", "the core characters are %s, the starter characters are %s" % [core_characters, starters]])
 	for pool in _used_pools(content):
@@ -171,5 +171,5 @@ static func _used_pools(content: ContentIndex) -> Array[StringName]:
 	var pools: Array[StringName] = []
 	for pool in seen:
 		pools.append(StringName(pool))
-	pools.sort()
+	pools.sort_custom(func(a, b) -> bool: return String(a) < String(b))  # by name: the catalog file must come out the same every time
 	return pools

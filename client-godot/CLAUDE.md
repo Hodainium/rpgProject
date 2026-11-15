@@ -122,6 +122,17 @@ from C#.**
   (`floor/<n>/...`), never the battle RNG or global `randi()`.
 - **Contract JSON goes through `WireJson.stringify`:** Godot parses every JSON number as a float; `WireJson` writes whole
   numbers as integers so the C# records can read them.
+- **Never order `StringName`s by pointer (found 2026-11-15, playtest-fixes B24).** `Array.sort()`, `min()`/`max()` and `a < b` on
+  `StringName`s compare their interned pointers, not their text, and the pointer order depends on which names a process created
+  first: a windowed client and the headless verifier get different orders. Anything that is hashed, uploaded, compared by the
+  verifier or decides play (run and battle state, snapshots, battle conditions, logs, facts, picks) must sort by name:
+  `sort_custom(func(a, b) -> bool: return String(a) < String(b))`, or sort `String`s. Dictionary keys of tags and ids are
+  `StringName`s, so `dict.keys()` then `sort()` is the usual trap. It shows up as a 2002 (`StateHashMismatch` or
+  `ConditionsMismatch`) that replays fine headless and only fails against a real client (a member wearing two pieces hashed
+  in either order, rejected at every equip and rolled back). `test_determinism_guard::test_no_pointer_ordered_sorts` fails on a
+  plain `.sort()` in `combat/` or `game/` unless the array is typed as strings or numbers or the line says `# sort-ok: <why>`.
+  When adding a feature: no new pointer sort, and check a new hashed or uploaded field by running the same actions windowed and
+  headless (the B24 repro: a scratch command loading a step request into the game) when in doubt.
 
 ## 4. Running tests and replays
 - **Headless Godot must always exit:** run it through `../tools/watch.sh` (liveness every 30 s; killed with exit 124

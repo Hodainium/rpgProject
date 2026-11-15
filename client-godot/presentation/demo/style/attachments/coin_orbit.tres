@@ -23,4 +23,5 @@ tintable = false
 [resource]
 script = ExtResource("2_shape")
 display_name = "Orbiting coins"
+role = 2
 parts = Array[ExtResource("1_part")]([SubResource("Resource_p0")])

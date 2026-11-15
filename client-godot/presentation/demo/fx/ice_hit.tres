@@ -110,7 +110,7 @@ param = &"color"
 [sub_resource type="Resource" id="Resource_lvot7"]
 script = ExtResource("10_wl4vk")
 fill = 0.18
-grow = 0.012
+grow = 0.0125
 noise_scale = 5.0
 intensity = 1.6
 seconds = 0.7

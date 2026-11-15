@@ -848,3 +848,168 @@ func test_validator_attachment_codes() -> void:
 	for code in ["style_attachment_shape_missing", "style_socket_unknown", "style_part_invalid", "style_effect_not_looping",
 			"style_spin_axis_unused"]:
 		check(codes.has(code), "%s is reported: %s" % [code, codes])
+
+
+# --- Playtest-fixes B23: worn attachments share the unit's overlays; skin shells never tie with a face ---------------------------
+
+func _role_shape(role: int, size := Vector3(0.2, 0.03, 0.2), y := 0.015) -> AttachmentShape:
+	var part := _part(AttachmentPart.Kind.BOX)
+	part.size = size
+	part.position = Vector3(0, y, 0)
+	var shape := _shape([part])
+	shape.role = role
+	return shape
+
+
+func test_worn_attachments_share_the_units_overlays() -> void:
+	var registry := _registry()
+	var look := UnitLook.new()
+	look.attachments.append(_attachment(_role_shape(AttachmentShape.Role.WORN), &"Top"))  # a hat
+	look.attachments.append(_attachment(_role_shape(AttachmentShape.Role.HELD), &"Right"))  # a sword
+	look.attachments.append(_attachment(_role_shape(AttachmentShape.Role.LOOSE), &"Center"))  # orbiting coins
+	var strapped := _attachment(_role_shape(AttachmentShape.Role.HELD), &"Back")  # a held shape worn on this unit
+	strapped.role_override = UnitAttachment.RoleOverride.WORN
+	look.attachments.append(strapped)
+	var dropped := _attachment(_role_shape(AttachmentShape.Role.WORN), &"Left")
+	dropped.role_override = UnitAttachment.RoleOverride.LOOSE
+	look.attachments.append(dropped)
+	registry.looks[&"u.dressed"] = look
+	UnitStyle.use(registry, "test")
+	var view: UnitAnimator = UnitAnimator.instantiate_for(_unit(&"u.dressed"), load(PROBE_VIEW) as PackedScene)
+	host.add_child(view)
+	eq(look.attachments.map(func(a: UnitAttachment) -> int: return a.role()), [AttachmentShape.Role.WORN, AttachmentShape.Role.HELD,
+		AttachmentShape.Role.LOOSE, AttachmentShape.Role.WORN, AttachmentShape.Role.LOOSE], "roles: the shape's, or the override")
+	eq(AttachmentShape.new().role, AttachmentShape.Role.WORN, "a shape is worn unless it says otherwise")
+	var covered := view.overlay_meshes()
+	eq(covered.size(), 2, "the overlay covers the worn hat and the strapped shape, not the sword, coins or dropped piece")
+	# A flash on the unit lands on every covered mesh and comes off them all.
+	var service := FxService.new()
+	service.enabled = true
+	service.manual_clock = true
+	host.add_child(service)
+	var flash := FxMeshFlashLayer.new()
+	flash.id = &"flash"
+	flash.seconds = 0.4
+	var def := FxDefinition.new()
+	def.id = &"fx.flash"
+	def.space = FxDefinition.Space.WORLD_3D
+	def.layers.assign([flash])
+	service.register(def)
+	var handle := service.play(def, FxAnchor.node3d(view))
+	var all_meshes := view.attachments_node().find_children("*", "MeshInstance3D", true, false)
+	var lit := all_meshes.filter(func(mesh: MeshInstance3D) -> bool: return mesh.material_overlay != null)
+	eq(lit.size(), 2, "lit: exactly the worn meshes")
+	check(covered.all(func(mesh: GeometryInstance3D) -> bool: return mesh.material_overlay != null), "every covered mesh glows")
+	service.advance(0.6)
+	check(not handle.is_playing() and all_meshes.all(func(mesh: MeshInstance3D) -> bool: return mesh.material_overlay == null),
+		"and every overlay comes off when it ends")
+	service.free()
+	view.queue_free()
+
+
+func test_skin_ties_are_found_on_flat_faces_only() -> void:
+	var grows := {0.03: PackedStringArray(["Cue.Test.Ward"])}
+	var brim := _attachment(_role_shape(AttachmentShape.Role.WORN), &"Top")  # a brim 0.03 tall on the body: its top at 0.03
+	var ties := StyleValidator.attachment_skin_ties(brim, grows)
+	eq(str(ties.map(func(tie: Dictionary) -> Array: return [tie["part"], tie["distance"]])), str([[0, 0.03]]), "a brim top at a shell's grow ties")
+	check(StyleValidator.attachment_skin_ties(brim, {0.0305: PackedStringArray(["off the grid"])}).is_empty(),
+		"half a thousandth off is cleanly apart")
+	brim.offset = Vector3(0, -0.004, 0)
+	check(StyleValidator.attachment_skin_ties(brim, grows).is_empty(), "a hat set a hair lower does not tie")
+	var tilted := _attachment(_role_shape(AttachmentShape.Role.WORN), &"Top")
+	tilted.rotation_degrees = Vector3(0, 0, 30)
+	check(StyleValidator.attachment_skin_ties(tilted, grows).is_empty(), "a tilted part has no face flat against the shell")
+	var eye := _attachment(_role_shape(AttachmentShape.Role.WORN, Vector3(0.1, 0.1, 0.03), 0.0), &"Front")
+	eye.shape.parts[0].position = Vector3(0, 0, 0.015)  # standing on the front face, 0.03 deep
+	eq(StyleValidator.attachment_skin_ties(eye, grows).size(), 1, "on the Front socket, the face's front at 0.03 ties")
+	var round_eye := _attachment(_shape([_part(AttachmentPart.Kind.CYLINDER)]), &"Front")
+	round_eye.shape.parts[0].height = 0.06  # centred: it reaches 0.03 sideways, but its round side faces the shell
+	check(StyleValidator.attachment_skin_ties(round_eye, grows).is_empty(), "a cylinder's round side never ties")
+	round_eye.rotation_degrees = Vector3(90, 0, 0)  # its cap now faces the camera, at 0.03
+	eq(StyleValidator.attachment_skin_ties(round_eye, grows).size(), 1, "its cap does once it faces the shell")
+	var registry := _registry()
+	var look := UnitLook.new()
+	look.attachments.append(brim)
+	look.attachments.append(_attachment(_role_shape(AttachmentShape.Role.WORN), &"Top"))
+	registry.looks[&"u.hatted"] = look
+	var issues := StyleValidator.skin_tie_problems(registry, grows, "test")
+	eq(issues.map(func(issue: ValidationIssue) -> String: return issue.code), ["style_attachment_skin_tie"], "one warning, for the tied brim")
+	check(issues[0].severity == ValidationIssue.WARNING and issues[0].message.contains("Cue.Test.Ward"), "a warning naming the skin")
+
+
+func test_skin_grows_come_from_effects_and_cues() -> void:
+	var shell := FxFresnelLayer.new()
+	shell.id = &"skin"
+	shell.grow = 0.02
+	var bound := FxBinding.new()
+	bound.property = "grow"
+	bound.param = &"grow"
+	shell.bindings.append(bound)
+	var param := FxParam.new()
+	param.name = &"grow"
+	param.default_value = 0.0105
+	var def := FxDefinition.new()
+	def.id = &"fx.test_skin"
+	def.layers.assign([shell])
+	def.params.assign([param])
+	var registry := FxRegistry.new()
+	registry.definitions.append(def)
+	var grows := FxValidator.skin_grows(registry, null)
+	eq(str(grows.keys().map(func(key) -> float: return snappedf(float(key), 0.0001))), str([0.02, 0.0105]), "the layer's own grow and its bound default")
+
+
+## The demo's looks, effects and cues: no attachment face sits where a skin's shell lies (the B23 grows are off the round-number grid).
+func test_demo_looks_have_no_skin_ties() -> void:
+	if skip_in_export():
+		return
+	var grows := FxValidator.skin_grows(load("res://presentation/demo/fx/fx_registry.tres") as FxRegistry,
+		load("res://godot_gas/cue_registry.tres") as GameplayCueRegistry)
+	check(not grows.is_empty(), "the demo has skins")
+	var issues := StyleValidator.skin_tie_problems(load(UnitStyle.DEFAULT_REGISTRY) as StyleRegistry, grows, "demo")
+	eq(issues.map(func(issue: ValidationIssue) -> String: return issue.message), [], "no attachment face ties with a skin")
+
+
+## Review fixes (B23): the negative-axis sockets are checked too, and a running overlay covers the new worn meshes after a restyle.
+func test_back_and_right_faces_are_checked_too() -> void:
+	var grows := {0.03: PackedStringArray(["Cue.Test.Ward"])}
+	var pack := _attachment(_role_shape(AttachmentShape.Role.WORN, Vector3(0.2, 0.2, 0.03), 0.0), &"Back")
+	pack.shape.parts[0].position = Vector3(0, 0, -0.015)  # on the back face, its far face 0.03 behind it
+	eq(StyleValidator.attachment_skin_ties(pack, grows).size(), 1, "a back face at 0.03 ties")
+	var shield := _attachment(_role_shape(AttachmentShape.Role.HELD, Vector3(0.03, 0.2, 0.2), 0.0), &"Right")
+	shield.shape.parts[0].position = Vector3(-0.015, 0, 0)  # Right is -X
+	eq(StyleValidator.attachment_skin_ties(shield, grows).size(), 1, "so does one on the Right socket")
+
+
+func test_a_restyle_keeps_a_running_skin_on_the_new_hat() -> void:
+	var registry := _registry()
+	var look := UnitLook.new()
+	look.attachments.append(_attachment(_role_shape(AttachmentShape.Role.WORN), &"Top"))
+	registry.looks[&"u.hatted"] = look
+	UnitStyle.use(registry, "test")
+	var view: UnitAnimator = UnitAnimator.instantiate_for(_unit(&"u.hatted"), load(PROBE_VIEW) as PackedScene)
+	host.add_child(view)
+	var service := FxService.new()
+	service.enabled = true
+	service.manual_clock = true
+	host.add_child(service)
+	var skin := FxMeshFlashLayer.new()
+	skin.id = &"skin"
+	skin.loop = true
+	skin.seconds = 1.0
+	var def := FxDefinition.new()
+	def.id = &"fx.skin_loop"
+	def.space = FxDefinition.Space.WORLD_3D
+	def.layers.assign([skin])
+	service.register(def)
+	var handle := service.play(def, FxAnchor.node3d(view))
+	service.advance(0.1)
+	view.restyle()  # the attachments are rebuilt: new hat meshes
+	service.advance(0.1)
+	check(view.overlay_meshes().all(func(mesh: GeometryInstance3D) -> bool: return mesh.material_overlay != null),
+		"the new hat wears the running skin too")
+	handle.stop(0.0)
+	service.advance(0.1)
+	check(view.overlay_meshes().all(func(mesh: GeometryInstance3D) -> bool: return mesh.material_overlay == null),
+		"and loses it when the skin ends")
+	service.free()
+	view.queue_free()

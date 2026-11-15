@@ -91,4 +91,5 @@ emission = 0.9
 [resource]
 script = ExtResource("2_shape")
 display_name = "Orbiting gem shards"
+role = 2
 parts = Array[ExtResource("1_part")]([SubResource("Resource_a"), SubResource("Resource_b"), SubResource("Resource_c"), SubResource("Resource_d"), SubResource("Resource_e"), SubResource("Resource_f"), SubResource("Resource_g")])

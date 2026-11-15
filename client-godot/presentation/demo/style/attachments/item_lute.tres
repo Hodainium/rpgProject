@@ -57,4 +57,5 @@ tintable = false
 [resource]
 script = ExtResource("2_shape")
 display_name = "Lute"
+role = 1
 parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4")])

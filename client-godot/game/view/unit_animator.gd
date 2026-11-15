@@ -52,6 +52,10 @@ var _look_fx_source: FxDefinition
 var _look_fx_ready: bool = false
 ## Meta key on each attachment mesh: the part's own material, repainted from on a stencil change or a death.
 const STYLE_PAINT: StringName = &"style_paint"
+## Playtest-fixes B23: the meshes of WORN attachments (overlay_meshes), collected when the attachments are built, and a count that
+## goes up with every rebuild, so a running overlay effect notices new meshes (FxMeshFlashLayer covers them too).
+var _worn_meshes: Array[GeometryInstance3D] = []
+var worn_generation: int = 0
 ## Spec vfx-content-pass 3.6: the unit's radius for effects (world units). 0 = derived from its mesh's bounding sphere.
 @export var fx_radius: float = 0.0
 ## The battle unit this view shows ("P1", "E2"), set by the room view; the effects system finds a unit's view by it
@@ -191,6 +195,20 @@ func attachments_node() -> Node3D:
 	return _attachments
 
 
+## Playtest-fixes B23: the meshes an overlay effect drawn on the unit covers (a status skin, a hit flash): the body, then every mesh
+## of a WORN attachment (a hat, a mask, a face); held and loose pieces stay plain. The body is left out when it is not a mesh (a test
+## probe's plain node); empty when there is nothing to cover. No tree walk: the worn meshes are kept when the attachments are built.
+func overlay_meshes() -> Array[GeometryInstance3D]:
+	var meshes: Array[GeometryInstance3D] = []
+	var body := get_node_or_null(^"Body") as GeometryInstance3D
+	if body != null:
+		meshes.append(body)
+	for mesh in _worn_meshes:
+		if is_instance_valid(mesh) and not mesh.is_queued_for_deletion():
+			meshes.append(mesh)
+	return meshes
+
+
 ## Spec cube-style 3.3: (re)builds the look's attachments at their sockets, then paints them (_repaint_attachments). Called at ready
 ## and on restyle(); a new stencil value or a death only repaints.
 func _build_attachments() -> void:
@@ -198,6 +216,8 @@ func _build_attachments() -> void:
 		_attachments.free()
 		_attachments = null
 	_motion = null
+	_worn_meshes.clear()
+	worn_generation += 1
 	if look == null or look.attachments.is_empty():
 		_sync_look_effect()
 		return
@@ -214,7 +234,11 @@ func _build_attachments() -> void:
 				push_warning("style: unit '%s' lists an attachment with no shape (style check)" % definition_id)
 			continue
 		var pivots: Array = []
-		_attachments.add_child(attachment.build(_socket_on_body(attachment.socket), pivots))
+		var built := attachment.build(_socket_on_body(attachment.socket), pivots)
+		_attachments.add_child(built)
+		if attachment.role() == AttachmentShape.Role.WORN:
+			for mesh in built.find_children("*", "MeshInstance3D", true, false):
+				_worn_meshes.append(mesh)
 		if attachment.motion != UnitAttachment.Motion.NONE:
 			_motion.moving.append([attachment, pivots])
 	for mesh in _attachments.find_children("*", "MeshInstance3D", true, false):

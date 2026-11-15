@@ -91,7 +91,7 @@ description = "How much of the body glows besides the rim."
 [sub_resource type="Resource" id="Resource_mhwwx"]
 script = ExtResource("5_gl75e")
 name = &"grow"
-default_value = 0.01
+default_value = 0.0105
 max_value = 0.2
 description = "World units the shell is pushed out."
 

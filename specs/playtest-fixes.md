@@ -136,15 +136,30 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   number effects popped on the party; each removed effect also played its removal cue. Field battles (the party's bookkeeping
   copies built after a fight for stats and XP) re-applied every gear and level effect on setup and played those cues on the
   party's cubes too.
-- **B23. The Collector's top hat flickers while it has Ward** (reported 2026-11-15, open: pending fix). Ward's look
+- **B23. The Collector's top hat flickers while it has Ward** (reported 2026-11-15, fixed 2026-11-15). Ward's look
   `fx.status_skin` is a fresnel shell (`FxFresnelLayer`, `game/fx/shaders/material/fresnel_overlay.gdshader`: additive,
   `depth_draw_never`) on the cube body only, pushed out by `grow 0.03`. Its top face ends exactly at the top of the hat's brim
   (`presentation/demo/style/attachments/collector_hat.tres`: a brim 0.03 tall standing on the body), so the two coplanar
   surfaces z-fight and the glow flickers across the brim. Found by replaying the run's server checkpoint in a window and
   stopping each live effect on the Collector in turn (`fx.status_skin`, `fx.stat_arrows`, `fx.gold_hoard`; shots in
   `H:\claudeOutShots\2026-11-15 collector-hat\`). Any attachment whose top sits `grow` above its body would flicker the same
-  way under a skin status. Proposed fix (system code): push the shell's depth slightly away from the camera in the shader, so
-  a surface at the same depth always wins and the glow can never z-fight with an attachment; check it in a window with Ward on.
+  way under a skin status: a check over every look found 51 exact ties in about 40 shapes, the Bard's top hat, the Bell Ringer's
+  yoke, the Sentry's crest and the Mimic's jaw on top, and about 35 face details (eyes, mouths, visors) on the front, because parts
+  are built from round sizes (0.01, 0.015, 0.03) and so were the skins' `grow` values. Options weighed with the user: a depth
+  push in the shader (built, then undone: the user preferred no rendering workaround), moving the hats and faces (about 45 look
+  edits), or taking the skins off the round-number grid (chosen). The user also chose that effects drawn on a unit cover what it
+  wears, as status overlays do in most games.
+
+- **B24. A server run is rolled back again and again on floor 10** (reported 2026-11-15, fixed 2026-11-15). The verifier
+  rejected the same step twice (2002 `StateHashMismatch` at the `equip` of a bought Mage Robe), and each rejection rolled the run
+  back to the floor's checkpoint. Not cheating and not the floor-chest or B23 work: the run hash listed a member's worn pieces
+  in an order that depends on the process. `RunState.canonical_lines` sorted the equipment slot names with a plain `sort()`,
+  and Godot orders `StringName`s by their interned pointer, not their text; a windowed game creates names in a different order
+  than the headless verifier, so a member wearing two or more pieces hashed differently on each side. Found by rebuilding the
+  rejected step request from Postgres and playing it in the game with a window (it reaches the client's hash) and headless (the
+  verifier's), then diffing the hashed lines: only the gear order differed. The same mistake in `RunController.party_capture`
+  (each member's `equipmentIds` in a battle's conditions, which the verifier compares: a `ConditionsMismatch` waiting to
+  happen), and harmlessly in `ContentIndex.challenges_for`, `CardCatalog` and two more sorts.
 
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved. B9 and B10 only show the state of the client's existing calls (no new request, field or header); they are the
@@ -289,6 +304,34 @@ passives 0–2 ms (were 0–530 ms).
 
 What stays: the status loops a fight leaves on the party fade out over about a second after it (their particles live out).
 
+### Fix for B24 (system code)
+| File | Change |
+|---|---|
+| `game/run_state.gd` | The hashed gear line sorts slot names by name (`String(a) < String(b)`). |
+| `game/run_controller.gd` | `party_capture` lists `equipmentIds` in slot-name order. |
+| `combat/content_index.gd`, `combat/battle_unit.gd`, `game/cards/card_catalog.gd`, `game/cards/card_core_pass.gd` | The same by-name sort (challenge order, stat application order, catalog and checks: no change for plain strings, stable for StringNames). |
+| `tests/game/test_determinism_guard.gd` | New guard: a plain `.sort()` in `combat/` or `game/` (not dev, tools, UI, effects or views) fails unless the array is typed as strings or numbers or the line says `# sort-ok: <why>`. |
+| `client-godot/CLAUDE.md` section 3 | The rule, for every new feature. |
+
+A run started before the fix cannot be finished after it: its verified checkpoints were hashed the old way.
+
+### Fix for B23 (system code; your effect, cue and attachment files with your OK)
+| File | Change |
+|---|---|
+| `game/view/attachment_shape.gd` | `role`: `WORN` (the default: hats, masks, faces, horns, wings), `HELD` (in hand), `LOOSE` (floating, orbiting). |
+| `game/view/unit_attachment.gd` | `role_override` (`SHAPE` = the shape's role) and `role()`. |
+| `game/view/unit_animator.gd` | Keeps the meshes of WORN attachments when it builds them, and `worn_generation`; `overlay_meshes()`: the body and every worn mesh (no tree walk). |
+| `game/fx/layers/fx_mesh_flash_layer.gd` | The overlay (and `FxFresnelLayer`'s shell) goes on every mesh `overlay_meshes()` names, one material for all, each mesh's old overlay put back; anything that is not a unit view keeps the first mesh. A running overlay also covers the new worn meshes when the view rebuilds its attachments (a restyle: `UnitAnimator.worn_generation`). All 26 overlay effects (status skins, hit flashes and other fresnel looks) now cover worn pieces; the death fade (`DeathFadeDriver`) fades the whole view as before, whatever the role. |
+| `game/dev/fx_validator.gd` | `skin_grows`: every shell distance the effects and cue scenes use. |
+| `game/dev/style_validator.gd` | `skin_tie_problems` / `attachment_skin_ties`: warning `style_attachment_skin_tie` for any attachment's outward face (box faces, cylinder caps; quarter turns only; Top, Front, Back, Left, Right) at a skin's `grow` off the body, within 0.0002. In `validate_content.tscn`. Known limits: Center and Base, prisms, lathes, tubes and extruded outlines are not checked, nor the side sockets of a registry that turns units by other than quarter turns; grows set at run time (a payload, tags, a curve track) are not collected. The demo uses none of these for skins today. |
+| 12 effects in `presentation/demo/fx/` (`poison_tick`, `absolute_zero_strike`, `broken_state`, `frozen`, `ice_hit`, `pandemic_strike`, `burning`, `drain_absorb`, `fire_hit`, `overheat_strike`, `phase_shift`, `combustion_strike`), `status_skin`'s `grow` default, and 13 cue scenes in `presentation/demo/cues/` | `grow` + 0.0005 (0.008 → 0.0085, 0.01 → 0.0105, 0.012 → 0.0125, 0.015 → 0.0155, 0.02 → 0.0205, 0.025 → 0.0255, 0.03 → 0.0305): off the round-number grid parts are built on, so no shell lands on a face. |
+| 27 shapes in `presentation/demo/style/attachments/` | `role = 1` (HELD): `item_bow`, `item_ice_staff`, `item_lute`, `item_round_shield`, `item_spellbook`, `item_sun_staff`, `item_sword`, `sword`, `kite_shield`, `halberd`, `forge_hammer`, `smith_hammer`, `hag_staff`, `totem_staff`, `ritual_dagger`, `smelter_ladle`, `penitent_lantern`, `judge_scales`, `abacus`; `role = 2` (LOOSE): `coin_orbit`, `shard_orbit`, `void_shards`, `echo_rings`, `halo`, `guardian_halo`, `rose_window`, `ringer_bell`. |
+
+What changes on screen: hats, helms, masks, faces, horns and wings glow, burn, freeze and flash with the body; weapons, items in
+hand, halos and orbiting pieces stay plain. The shells keep their look (0.0005 is far below a pixel). Cost, the Collector fight
+with the party's statuses on: 673 → 726 draw calls, frame time unchanged at 16.4 ms (vsync-capped at 60 fps). Presentation only:
+no hash, snapshot, replay or golden.
+
 ## 5. Observability
 N/A: no server metrics.
 
@@ -356,6 +399,16 @@ N/A: no server metrics.
   (`H:/claudeOutShots/2026-11-14 battle start film/after/`): the Ranger hops through Mark Prey instead of vanishing.
 - **B22:** `test_battle_pacing::test_a_finished_battle_tears_down_silently` (a fixture battle with the bridge: the end is broadcast,
   every unit's cues are closed, freeing it broadcasts nothing more). **Seen:** no damage number in the frames after a win (`after2/`).
+- **B23:** `test_cube_style::test_worn_attachments_share_the_units_overlays` (roles and overrides; a flash covers exactly the
+  worn meshes and comes off them all), `test_skin_ties_are_found_on_flat_faces_only` (a brim and a face at a grow tie; half a
+  thousandth off, a hat set lower, a tilted part and a cylinder's round side do not), `test_skin_grows_come_from_effects_and_cues`,
+  `test_demo_looks_have_no_skin_ties` (the demo's looks against its effects and cues; 51 ties before the grow change, 0 after);
+  `validate_content.tscn` 0 errors, 0 warnings. **Seen:** the run's server checkpoint replayed in a window, before and after
+  (`H:\claudeOutShots\2026-11-15 collector-hat\wrap\collector_sheet.png`, `party_sheet.png`): the hats glow with Ward, the lute,
+  shield, halo and coins stay plain, the brim is steady.
+- **B24:** `test_run_authority::test_worn_pieces_hash_in_name_order`, `test_battle_conditions_list_gear_in_name_order`,
+  `test_determinism_guard` (the guard and its shapes); the rejected step replayed windowed and headless now reaches identical state
+  and hashes at every action (seq 183-190); the card catalog rebuilds unchanged.
 - **Unchanged:** `test_demo_ui_policy`, the existing explore HUD and gear tests, and `validate_content.tscn`
   (`UIPolicyCheck`) still pass.
 - **Visual check:** the window run from section 1 again, with new screenshots of Use Item (Potion hovered), Use Ability,

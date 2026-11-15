@@ -60,7 +60,7 @@ static func propose(content: ContentIndex, expansion_tag: StringName = &"Card.Se
 			overshoot[pool] = counts[pool] - int(targets[StringName(pool)])
 	short.sort()
 	var ids: Array = core_items.keys()
-	ids.sort()
+	ids.sort_custom(func(a, b) -> bool: return String(a) < String(b))  # by name, never by StringName pointer (B24)
 	var starters: Array = []
 	if rules != null:
 		for id in rules.starter_characters:

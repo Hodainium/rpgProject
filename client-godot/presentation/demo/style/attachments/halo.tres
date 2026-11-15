@@ -18,4 +18,5 @@ emission = 2.5
 [resource]
 script = ExtResource("2_7tgqx")
 display_name = "Halo"
+role = 2
 parts = Array[ExtResource("1_32l3w")]([SubResource("Resource_jpfcw")])
