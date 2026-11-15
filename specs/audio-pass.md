@@ -1,6 +1,6 @@
 # Spec: audio-pass (slice 5e, after 5a4 `cube-style`, before 5b `card-ui`)
 
-Status: **approved, ready for `/implement`** (all decisions D0–D8 as recommended, user, 2026-11-15) · Date: 2026-11-15 · Roadmap: slice 5e (listed, "Not started").
+Status: **done, playtested 2026-11-15** (all decisions D0–D8 as recommended, user, 2026-11-15; section 9 is the as-built record) · Date: 2026-11-15 · Roadmap: slice 5e.
 Builds on `specs/vfx-framework.md` (the GodotGAS cue bridge, `FxListener`'s cue route, `FxRuleSet`), `specs/vfx-content-pass.md`
 (the message → cue route for per-hit variants, the cue families), `specs/animation-sets.md` (ability montages on `UnitAnimator`),
 `specs/ff7-ui.md` and `specs/ui-framework.md` (the Settings screens), `specs/playtest-fixes.md` B21 (passives never animate)

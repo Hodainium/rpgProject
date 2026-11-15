@@ -38,6 +38,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5a4b. `route-enemies` | ✅ Done, playtested 2026-11-14 (`specs/route-enemies.md`; one elite and two regulars more on each ending-route chapter, 12 encounters, drops obey the card pool; smart 4-member 31.3% → 29.3%; merged in PR #43, looks in cube-style Sets 4b and 5b; open: the gate has never run with a card pool, so replaced drops are unmeasured) | 2026-11-14 |
 | 5a4c. `food-items` | ✅ Done, playtested 2026-11-14 (`specs/food-items.md`, synced; food becomes passive: the holder heals on pickup and keeps a max HP or max SP bonus; the player chooses who gets every drop (the last boss drops nothing; encounter rewards may be CHOOSE); smart 4-member 29.3% → 31.0%; merged in PR #44; open: `GiveItem` / `RemoveItem` inside an item hook ignore the holder (the Mystery Box), older code) | 2026-11-14 |
 | 5a5. `floor-chests` | ✅ Done, playtested 2026-11-15 (smart 4-member 31.0% → 31.3%); spec written 2026-11-14 (`specs/floor-chests.md`; a chest stays in its room and opens there like a shop, its items and armor pop out onto the floor as pickups beside the open chest; the map tints rooms with something left in them; reviewed and decided 2026-11-14) | |
+| 5e. `audio-pass` | ✅ Done, playtested 2026-11-15 (`specs/audio-pass.md`; one balanced sound bank from the EasyRPG RTP sounds (credited), Pixel Combat and Retro Menu FX, Retro Anime for two ults; every move, status, battle moment, menu and run event sounds; Master / Effects / Interface sliders; `CREDITS.md` and a Credits screen) | 2026-11-15 |
 | 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |
@@ -199,6 +200,7 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-11-15: 5a5 `floor-chests` done (PR #48). 5a `vfx-framework` marked done (user). 5a4 `cube-style`: one item left, a Lich
   redesign (its own chat), then 5e `audio-pass` (user).
 - 2026-11-15: the Lich redesign approved; 5a4 `cube-style` done. Next: 5e `audio-pass`.
+- 2026-11-15: 5e `audio-pass` built and playtested (user: "I loved the playtest"); next: 5b `card-ui`.
 
 
 ## Design tuning: any time, not just in breaks
