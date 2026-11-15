@@ -1,8 +1,6 @@
 {
   "permissions": {
     "ask": [
-      "Edit(./client-godot/content/**)",
-      "Edit(./client-godot/presentation/**)",
       "Edit(./client-godot/godot_gas/**)",
       "Edit(./client-godot/addons/GodotGAS/**)"
     ],

@@ -17,12 +17,13 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
 | `tests/fixtures/` | System (Claude) | Frozen test-only content for system tests. Never references `content/`. |
 | `addons/GodotGAS/` | Vendored | Never edited by anyone; upgrade only by replacing the whole addon. **Approved on-disk patches (2026-10-26, user), each marked "rpgProject patch" in the file:** `effects/gameplay_effect.gd` `overflow_effects` is `Array[Resource]`, not `Array[GameplayEffect]` (Godot 4.7.2 leaks a script at exit that @exports a typed array of its own class); `managers/gameplay_cue_manager.gd` and `utilities/project_settings.gd` reach `EditorInterface` through `Engine.get_singleton` (a bare editor class name fails to parse in export templates, so the cue manager autoload broke every export). **Patches 3 and 4 (2026-11-09, user, spec `vfx-framework`; Unreal's soft cue references and `ShouldSuppressGameplayCues`):** `cues/gameplay_cue_entry.gd` stores its scene as `scene_ref` (a UID or path, `@export_storage`) and keeps `scene` as a getter/setter property over it, so a saved registry loads no cue scene and the dashboard still works (an older registry that stored the scene still loads); `managers/gameplay_cue_manager.gd` loads a cue's scene on first use (`_scene_for`, `preload_cue` for a background load, `has_cue`, `register_cue`, `unregister_cue`) and has `suppress_cues` (execute_cue does nothing, add_persistent_cue returns null), which `FxManager` sets in headless processes so the verifier loads no cue scene and makes no cue node per hit. Patch 4 also stamps each cue node with its tag's registration generation, so a node still playing when its cue is replaced or removed is freed when it finishes instead of re-entering the pool (review fix 2026-11-09, the user's OK). Marked "rpgProject patch" in both files. `test_godotgas_patches` fails when an upgrade brings any of these four back; re-apply the patch then, or drop it once upstream has it. No other addon edits without the user's OK. |
 
-- `content/`, `presentation/` and `godot_gas/` have `ask` permission rules: every edit there prompts the user.
-  Create files there only when a spec needs them or the user asks, and edit them with minimal `Edit`s.
+- `godot_gas/` has an `ask` permission rule: every edit there prompts the user. `content/` and `presentation/` no longer do
+  (the user removed those two rules, 2026-11-15), so the protocol below is Claude's own discipline there, not a prompt.
+  Create files in these folders only when a spec needs them or the user asks, and edit them with minimal `Edit`s.
 - **Standing permission for `content/` (user, 2026-11-06):** Claude may create and edit files in `content/` whenever the work
-  calls for it (a spec, or exercising a system feature with real content), not only when asked file by file. The `ask` rule
-  stays: every `Edit`/`Write` there still prompts, an existing file is still shown in chat as `old → new` first, and after the
-  work Claude lists every path created and every value it picked. `presentation/` and `godot_gas/` keep the stricter rule above.
+  calls for it (a spec, or exercising a system feature with real content), not only when asked file by file. An existing file
+  is still shown in chat as `old → new` first, and after the work Claude lists every path created and every value it picked.
+  `presentation/` and `godot_gas/` keep the stricter rule above.
 - **Design help on request:** when the user asks Claude to create abilities, effects, rooms, encounters or other content:
   - New files: fine. List every path created, and every value Claude picked (so the user knows what to playtest).
   - Existing files: **always ask first, in chat**, before changing anything, even when the request implies the change.
@@ -33,7 +34,7 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
     commit as `design:` only when asked.
   - Reason: small tuning changes cause hard-to-find bugs and need extensive playtesting. Never replace a whole file with `Write`, and never
   remove values, functions, nodes or cues you didn't add in this task. **Never change these folders through shell
-  commands** (sed, mv, rm, redirection, or scripts), which would bypass the permission prompt.
+  commands** (sed, mv, rm, redirection, or scripts): only `Edit`/`Write`, so every change shows as a reviewable diff.
 - **Builders only create new files (user, 2026-11-09), with one additive exception:** a builder never re-saves or rewrites an existing design file. The one exception, approved by the user the same day ("change files and their dependent registries in the same stroke"), is the effect registry through `game/tools/registry_patch.gd` (`RegistryPatch.add_missing_effects()`): a text patch that only appends an `ext_resource` line and the new entry to `definitions` / `rule_sets`, never touches or removes an existing line, and prints what it added. It is not for anything else (tag cues, the cue registry and every other existing design file still go through `Edit`). `FxValidator.sync_problems` (in `validate_content.tscn` and `test_vfx_content`) fails when a registry is missing a file, whoever forgot it.
 - **One approved exception:** `game/tools/build_demo.tscn` (spec `game-skeleton` 3.8) writes the example set through
   `ResourceSaver` into `content/demo/` and `presentation/demo/` only, and never overwrites an existing file. Run it
