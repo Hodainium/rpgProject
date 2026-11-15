@@ -98,6 +98,9 @@ var _loading_save: bool = false
 
 func _ready() -> void:
 	add_to_group("game_main")
+	# Playtest-fixes B25: the saved graphics settings (anti-aliasing, MSAA 4× unless the player picked another; fullscreen when
+	# saved on, and only when this is the game's own window, not a tool scene holding a GameMain). Headless draws nothing.
+	GraphicsSettings.apply_saved(get_viewport(), get_tree().current_scene == self)
 	var settings := ConfigFile.new()
 	if settings.load(SETTINGS_PATH) == OK:
 		content_root = settings.get_value("game", "content_root", content_root)

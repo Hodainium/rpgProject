@@ -166,7 +166,7 @@ func test_the_pace_command() -> void:
 	var console := DevConsole.new()
 	console.keep_history = false
 	console.load_commands(false)
-	check(console.commands.has("pace"), "the Settings rows have the console command pace")
+	check(console.commands.has("pace"), "the pacing has the console command pace")
 	var result: Dictionary = await console.execute("pace -1")
 	check(not result["ok"], "a negative time is refused")
 

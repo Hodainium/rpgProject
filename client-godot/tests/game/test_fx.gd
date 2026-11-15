@@ -1241,17 +1241,18 @@ func test_registering_a_cue_again_frees_its_pooled_nodes() -> void:
 	manager.unregister_cue(tag)
 
 
-# --- The Settings quality selector and the inspector's Preview button -----------------------------------------------------
+# --- The Graphics quality selector and the inspector's Preview button -----------------------------------------------------
 
-func test_the_settings_screen_has_the_effects_quality_selector() -> void:
+## Playtest-fixes B25: the selector moved from Settings to its Graphics screen.
+func test_the_graphics_screen_has_the_effects_quality_selector() -> void:
 	var game: GameMain = load("res://game/game_main.tscn").instantiate()
 	game.skip_animations = true
 	host.add_child(game)
 	_nodes.append(game)
 	game.content_root = FIXTURES
 	game.load_content()
-	var screen := game.ui.push(&"UI.Layer.Menu", load("res://presentation/demo/ui/settings.tscn"))
-	check(screen != null, "the Settings screen opens")
+	var screen := game.ui.push(&"UI.Layer.Menu", load("res://presentation/demo/ui/graphics_settings.tscn"))
+	check(screen != null, "the Graphics screen opens")
 	if screen == null:
 		return
 	var picker := screen.get_node_or_null("%FxQuality") as OptionButton
