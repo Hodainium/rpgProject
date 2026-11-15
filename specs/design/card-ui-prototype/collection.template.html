@@ -1,0 +1,641 @@
+<title>Card Collection Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Cinzel:wght@700;900&display=swap">
+<style>
+/* Layout: the game's menu bar on top, one screen at a time (Collection, Shop, Open packs) in FF7 navy windows on a dark table.
+   Single dark look on purpose: it is a game screen. */
+:root {
+  color-scheme: dark;
+  --table: #0d0f18; --ink: #eef0f8; --ink-dim: #a9aec6; --gold: #ffe28a; --navy: #1b2577; --navy-2: #0b1046;
+  --edge: rgba(216,219,230,.7);
+  --r-common: #cfd3dc; --r-rare: #3e8cff; --r-epic: #b05cff; --r-legendary: #ff9d24; --r-mythic: #ff4f86;
+  --el-fire: #ff6a2b; --el-ice: #6fd8ff; --el-physical: #e6d3a6; --el-void: #e040fb; --el-food: #8fd16a;
+  --font-ui: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --font-name: "Cinzel", Georgia, serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--table); }
+body { background: radial-gradient(1200px 700px at 50% -20%, #1d2240, var(--table) 70%) var(--table); color: var(--ink);
+  font-family: var(--font-ui); font-size: 15px; margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 32px; }
+button { font: 600 14px var(--font-ui); color: var(--ink); cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, .cell:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.win { background: linear-gradient(180deg, #2a37a0, var(--navy) 30%, var(--navy-2)); border: 2px solid var(--edge); border-radius: 8px;
+  box-shadow: 0 0 0 1px #000, 0 12px 30px rgba(0,0,0,.5); }
+.btn { background: linear-gradient(#2c3990, var(--navy-2)); border: 1px solid var(--edge); border-radius: 5px; padding: 7px 14px; }
+.btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.gold { background: linear-gradient(#ffe9a3, #c99a3a); color: #2a1a05; border-color: #fff3c4; }
+.btn.gold:hover:not(:disabled) { color: #000; }
+.app { max-width: 1280px; margin: 0 auto; display: grid; gap: 14px; }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 8px 12px; }
+.top .title { font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 13px; color: var(--ink-dim); }
+.nav { display: flex; gap: 8px; flex-wrap: wrap; }
+.nav .btn[aria-current="page"] { border-color: var(--gold); color: var(--gold); }
+.wallet { margin-left: auto; display: flex; gap: 14px; font-variant-numeric: tabular-nums; font-weight: 700; }
+.wallet span { display: inline-flex; gap: 6px; align-items: center; }
+.gem-ic, .dust-ic { display: inline-block; width: 18px; height: 18px; flex: none; }
+.gem-ic { color: #7fd6ff; } .dust-ic { color: #c9a6ff; }
+.note { color: var(--ink-dim); font-size: 13px; margin: 0; }
+[hidden] { display: none !important; }
+
+/* ---------- Collection ---------- */
+.coll { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; }
+@media (max-width: 900px) { .coll { grid-template-columns: minmax(0, 1fr); } }
+.book { padding: 14px; display: grid; gap: 12px; min-width: 0; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { background: rgba(0,0,0,.25); border: 1px solid rgba(216,219,230,.35); border-radius: 4px; padding: 5px 11px; font-size: 13px; }
+.tab[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: rgba(255,226,138,.08); }
+.pagehead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pagehead h2 { margin: 0; font: 900 20px var(--font-name); letter-spacing: .04em; }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 14px; justify-items: center; min-height: 560px; align-content: start; }
+@media (max-width: 700px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cell { position: relative; width: 187px; height: 262px; max-width: 100%; border-radius: 14px; cursor: pointer; perspective: 900px; }
+.cell .scale { position: absolute; left: 0; top: 0; width: 220px; height: 308px; transform: scale(.85); transform-origin: top left; }
+.empty { grid-column: 1 / -1; align-self: center; text-align: center; color: var(--ink-dim); }
+.bar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.rgem { width: 22px; height: 22px; transform: rotate(45deg); border: 2px solid #000; cursor: pointer; padding: 0; opacity: .35; }
+.rgem[aria-pressed="true"] { opacity: 1; box-shadow: 0 0 8px currentColor; }
+.bar input[type="search"], .bar select { font: 14px var(--font-ui); color: var(--ink); background: rgba(0,0,0,.35); border: 1px solid rgba(216,219,230,.4); border-radius: 4px; padding: 6px 8px; min-width: 0; }
+.bar input[type="search"] { flex: 1 1 140px; }
+.pager { display: flex; align-items: center; gap: 8px; margin-left: auto; font-variant-numeric: tabular-nums; }
+.side { padding: 14px; display: grid; gap: 12px; align-content: start; }
+.side h3 { margin: 0; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
+.stat-line { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.legend-row { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ink-dim); }
+.legend-row i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; flex: none; }
+
+/* ---------- Card face (Look A) ---------- */
+.tilt { width: 220px; height: 308px; position: relative; transform-style: preserve-3d; transition: transform .2s ease-out; border-radius: 16px; }
+.inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .55s cubic-bezier(.2,.7,.2,1); }
+.flipped .inner { transform: rotateY(180deg); }
+.face, .back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 16px; }
+.back { transform: rotateY(180deg); }
+.facedown .inner { transform: rotateY(180deg); }
+svg.ic { width: 100%; height: 100%; display: block; fill: currentColor; }
+.ca { --rar: var(--r-common); --el: var(--el-physical); --m1: #8d93a3; --m2: #4a4f5e; }
+.ca.r-rare { --rar: var(--r-rare); --m1: #b9cbe6; --m2: #47618c; }
+.ca.r-epic { --rar: var(--r-epic); --m1: #c9a6e8; --m2: #5a3482; }
+.ca.r-legendary { --rar: var(--r-legendary); --m1: #ffe08a; --m2: #9a6212; }
+.ca.r-mythic { --rar: var(--r-mythic); --m1: #ffc2d4; --m2: #8a1f4a; }
+.ca.el-fire { --el: var(--el-fire); } .ca.el-ice { --el: var(--el-ice); } .ca.el-void { --el: var(--el-void); } .ca.el-food { --el: var(--el-food); }
+.ca .face { background: linear-gradient(150deg, var(--m1), var(--m2) 55%, var(--m1)); box-shadow: 0 8px 18px rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.6); }
+.ca.r-mythic .face { background: linear-gradient(120deg, #ffd1de, #b23a78, #6b3fd1, #ffb36b, #ff4f86); background-size: 300% 300%; animation: prism 8s linear infinite; }
+@keyframes prism { to { background-position: 300% 0; } }
+.ca.r-epic .face { box-shadow: 0 8px 18px rgba(0,0,0,.55), 0 0 14px rgba(176,92,255,.55); }
+.ca.corrupted .face { background: linear-gradient(150deg, #3a1446, #12061a 55%, #4a1658); box-shadow: 0 8px 18px rgba(0,0,0,.6), 0 0 0 2px var(--el-void), 0 0 18px rgba(224,64,251,.5); }
+.ca .stone { position: absolute; inset: 7px; border-radius: 11px;
+  background: radial-gradient(circle at 20% 15%, rgba(255,255,255,.07) 0 2px, transparent 3px) 0 0 / 23px 19px,
+    radial-gradient(circle at 70% 60%, rgba(0,0,0,.18) 0 2px, transparent 3px) 0 0 / 17px 23px, linear-gradient(170deg, #4a5068, #2e3247 70%, #383d55);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.5), inset 0 0 18px rgba(0,0,0,.45); }
+.ca.corrupted .stone { background: linear-gradient(115deg, transparent 47%, rgba(224,64,251,.5) 48%, transparent 49.5%),
+  linear-gradient(60deg, transparent 62%, rgba(224,64,251,.35) 63%, transparent 64%), linear-gradient(170deg, #2a1433, #120818 70%, #24102c); }
+.ca .art { position: absolute; left: 15%; width: 70%; top: 6.5%; height: 45%; overflow: hidden; border: 4px solid var(--m1);
+  box-shadow: 0 0 0 2px rgba(0,0,0,.55), inset 0 0 22px rgba(0,0,0,.7);
+  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--el) 55%, #fff 0%), color-mix(in srgb, var(--el) 30%, #10121c) 45%, #0c0d16 100%);
+  display: grid; place-items: center; }
+.ca.k-character .art { border-radius: 50% / 50%; }
+.ca.k-item .art { border-radius: 50% 50% 10px 10px / 34% 34% 10px 10px; }
+.ca.k-equipment .art { border-radius: 50%; left: 20%; width: 60%; top: 8%; height: 41%; }
+.ca .glyph { width: 62%; height: auto; aspect-ratio: 1; color: color-mix(in srgb, var(--el) 70%, #fff); filter: drop-shadow(0 0 8px var(--el)) drop-shadow(0 2px 2px rgba(0,0,0,.8)); }
+.ca .portrait { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ca .noportrait { color: var(--ink-dim); font-size: 10px; text-align: center; letter-spacing: .08em; text-transform: uppercase; padding: 0 14px; }
+.ca .crest { position: absolute; left: 50%; top: -6.5%; width: 34%; transform: translateX(-50%); color: var(--m1); filter: drop-shadow(0 2px 2px rgba(0,0,0,.7)); }
+.ca .ribbon { position: absolute; left: 3%; width: 94%; top: 45%; height: 15%; overflow: visible; }
+.ca .ribbon path.band { fill: url(#ribbonFill); stroke: rgba(0,0,0,.6); stroke-width: 1.2; }
+.ca.corrupted .ribbon path.band { fill: url(#ribbonVoid); }
+.ca .ribbon text { font-family: var(--font-name); font-weight: 900; font-size: 15px; fill: #fff; paint-order: stroke; stroke: #1a1410; stroke-width: 3.2px; }
+.ca .gem { position: absolute; left: 50%; top: 60%; width: 15px; height: 15px; transform: translate(-50%, -50%) rotate(45deg);
+  background: linear-gradient(135deg, #fff, var(--rar) 45%, color-mix(in srgb, var(--rar) 60%, #000)); border: 1.5px solid rgba(0,0,0,.65); box-shadow: 0 0 10px var(--rar); z-index: 2; }
+.ca .plaque { position: absolute; left: 11%; right: 11%; top: 61%; bottom: 13%; border-radius: 6px; background: linear-gradient(#e2dccd, #c9c0aa); color: #29241b;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.45), inset 0 2px 8px rgba(0,0,0,.25); display: grid; place-items: center; padding: 10px 9px 6px; text-align: center;
+  font-size: 11px; line-height: 1.3; font-weight: 600; overflow: hidden; }
+.ca.corrupted .plaque { background: linear-gradient(#2b1734, #1a0c22); color: #f2d9fb; box-shadow: inset 0 0 0 1px rgba(224,64,251,.6); }
+.ca .plaque p { margin: 0; text-wrap: balance; }
+.ca .setmark { position: absolute; right: 5px; bottom: 3px; width: 14px; opacity: .35; color: #29241b; }
+.ca.corrupted .setmark { color: #f2d9fb; }
+.ca .typebar { position: absolute; left: 50%; bottom: 5.6%; transform: translateX(-50%); white-space: nowrap; font-size: 9px; letter-spacing: .08em;
+  text-transform: uppercase; font-weight: 700; color: #f3ead2; background: linear-gradient(#5b5240, #3a3427); border: 1px solid rgba(0,0,0,.6); border-radius: 3px; padding: 1px 8px; }
+.ca .core { position: absolute; right: 9%; top: 2.2%; z-index: 3; font: 700 8.5px var(--font-ui); letter-spacing: .14em; color: #1b2133;
+  background: linear-gradient(#f4f1e4, #bfb9a3); border: 1px solid rgba(0,0,0,.6); border-radius: 0 0 4px 4px; padding: 1px 5px 2px; }
+.ca .foil { position: absolute; inset: 0; border-radius: 16px; pointer-events: none; mix-blend-mode: color-dodge; opacity: .5;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,240,200,.55) 45%, rgba(160,220,255,.45) 50%, transparent 65%) -200% 0 / 250% 100% no-repeat; animation: foil 4.5s ease-in-out infinite; }
+@keyframes foil { 60%, 100% { background-position: 200% 0; } }
+.glare { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .2s;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgba(255,255,255,.28), transparent 45%); mix-blend-mode: overlay; }
+.tilt:hover .glare { opacity: 1; }
+.cardback { background: linear-gradient(160deg, #26318a, var(--navy-2) 70%); border: 5px solid #c9a24a; box-shadow: 0 8px 18px rgba(0,0,0,.55), inset 0 0 0 2px #0a0d30;
+  display: grid; place-items: center; overflow: hidden; }
+.cardback::before { content: ""; position: absolute; inset: 14px; border: 1px solid rgba(255,226,138,.35); border-radius: 8px;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.04) 0 6px, transparent 6px 14px), repeating-linear-gradient(-45deg, rgba(255,255,255,.04) 0 6px, transparent 6px 14px); }
+.cardback .emblem { position: relative; width: 46%; aspect-ratio: 1; transform: rotate(45deg); border: 3px solid var(--gold); background: radial-gradient(circle, #3b48b8, #0e1450); display: grid; place-items: center; }
+.cardback .emblem .ei { width: 62%; transform: rotate(-45deg); color: var(--gold); }
+/* states */
+.missing .face { filter: grayscale(1) brightness(1.3) contrast(.85); }
+.missing .face::after { content: ""; position: absolute; inset: 0; border-radius: 16px; background: rgba(110,170,255,.38); mix-blend-mode: color; }
+.missing .tilt { opacity: .8; }
+.chip { position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%); z-index: 5; white-space: nowrap; font: 700 11px var(--font-ui); letter-spacing: .05em;
+  padding: 2px 9px; border-radius: 4px; background: linear-gradient(#25307f, var(--navy-2)); border: 1px solid var(--gold); color: var(--gold); }
+.chip.lock { border-color: #9fb4ff; color: #dfe6ff; }
+.newbadge { position: absolute; right: -6px; top: -8px; z-index: 6; font: 700 12px var(--font-ui); color: #2a1600; background: radial-gradient(circle, #fff6c8, #ffc23d);
+  padding: 7px 8px; border-radius: 50%; box-shadow: 0 0 14px #ffc23d; transform: rotate(12deg); }
+
+/* ---------- Detail ---------- */
+.modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(4,6,18,.72); backdrop-filter: blur(6px);
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); overflow: auto; }
+.detail { display: grid; grid-template-columns: auto minmax(0, 300px); gap: 24px; align-items: center; }
+@media (max-width: 760px) { .detail { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
+.bigcard { width: 330px; height: 462px; position: relative; }
+.bigcard .scale { position: absolute; left: 0; top: 0; transform: scale(1.5); transform-origin: top left; }
+.info { padding: 16px; display: grid; gap: 10px; }
+.info h3 { margin: 0; font: 900 20px var(--font-name); }
+.info dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; }
+.info dt { color: var(--ink-dim); } .info dd { margin: 0; }
+.craftbar { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: stretch; }
+.craftbar .btn { display: grid; gap: 2px; justify-items: center; padding: 8px 10px; }
+.craftbar small { font-size: 12px; font-variant-numeric: tabular-nums; }
+.plus { color: #8fe08f; } .minus { color: #ff8a8a; }
+.vial { display: grid; place-items: center; font-weight: 700; font-variant-numeric: tabular-nums; padding: 0 6px; }
+.pop { padding: 18px; max-width: 420px; display: grid; gap: 14px; }
+.pop p { margin: 0; line-height: 1.45; }
+.pop .row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* ---------- Shop ---------- */
+.shop { padding: 18px; display: grid; gap: 16px; }
+.offer { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: center; }
+@media (max-width: 640px) { .offer { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
+.offer h3 { margin: 0 0 4px; font: 900 22px var(--font-name); }
+.buyrow { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.odds { display: grid; grid-template-columns: auto auto; gap: 2px 18px; font-size: 13px; font-variant-numeric: tabular-nums; justify-content: start; }
+
+/* ---------- Pack ---------- */
+.pack { width: 150px; aspect-ratio: 5 / 7.6; position: relative; filter: drop-shadow(0 10px 14px rgba(0,0,0,.6)); }
+.pack .body { position: absolute; inset: 0; clip-path: polygon(0 3%, 5% 0, 10% 3%, 15% 0, 20% 3%, 25% 0, 30% 3%, 35% 0, 40% 3%, 45% 0, 50% 3%, 55% 0, 60% 3%, 65% 0, 70% 3%, 75% 0, 80% 3%, 85% 0, 90% 3%, 95% 0, 100% 3%, 100% 97%, 95% 100%, 90% 97%, 85% 100%, 80% 97%, 75% 100%, 70% 97%, 65% 100%, 60% 97%, 55% 100%, 50% 97%, 45% 100%, 40% 97%, 35% 100%, 30% 97%, 25% 100%, 20% 97%, 15% 100%, 10% 97%, 5% 100%, 0 97%);
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.35) 47%, transparent 58%) -150% 0 / 250% 100% no-repeat, linear-gradient(160deg, #6a2d8c, #22103a 60%, #4a1d6a); animation: foil 5s ease-in-out infinite; }
+.pack .band { position: absolute; left: 0; right: 0; top: 56%; height: 16%; background: linear-gradient(#ffe28a, #b8862b); display: grid; place-items: center;
+  font: 700 12px var(--font-ui); letter-spacing: .16em; color: #2a1a05; text-transform: uppercase; }
+.pack .sig { position: absolute; left: 50%; top: 18%; width: 44%; transform: translateX(-50%); color: var(--gold); filter: drop-shadow(0 0 10px rgba(255,226,138,.7)); }
+.pack .count { position: absolute; right: -10px; top: -10px; font: 700 15px var(--font-ui); color: #fff; background: #1b2577; border: 2px solid var(--gold); min-width: 30px; height: 30px;
+  border-radius: 6px; display: grid; place-items: center; padding: 0 5px; }
+.opener { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 14px; }
+@media (max-width: 760px) { .opener { grid-template-columns: minmax(0, 1fr); } }
+.packcol { padding: 16px; display: grid; gap: 14px; justify-items: center; align-content: start; }
+.packbtn { background: none; border: 0; padding: 0; position: relative; }
+.packbtn:disabled { cursor: not-allowed; opacity: .4; }
+.pity { font-size: 12px; color: var(--ink-dim); text-align: center; line-height: 1.5; }
+.stage { position: relative; min-height: 660px; overflow: hidden; padding: 0; perspective: 1200px; }
+.stage .socket { position: absolute; left: 50%; top: 50%; width: 230px; height: 230px; transform: translate(-50%, -50%); border-radius: 50%;
+  border: 3px solid rgba(255,226,138,.35); box-shadow: inset 0 0 40px rgba(0,0,0,.6), 0 0 30px rgba(59,72,184,.4); display: grid; place-items: center; color: var(--ink-dim); font-size: 13px; text-align: center; }
+.stage .hint { position: absolute; left: 0; right: 0; top: 14px; text-align: center; color: var(--ink-dim); font-size: 13px; }
+.flying { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(1.1); z-index: 3; }
+.flying.shake { animation: shake .55s ease-in-out; }
+@keyframes shake { 20% { transform: translate(-52%, -50%) rotate(-4deg) scale(1.12); } 40% { transform: translate(-48%, -50%) rotate(4deg) scale(1.14); }
+  60% { transform: translate(-52%, -50%) rotate(-5deg) scale(1.16); } 80% { transform: translate(-48%, -50%) rotate(5deg) scale(1.18); } }
+.burst { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; border-radius: 50%; transform: translate(-50%, -50%); z-index: 4; pointer-events: none;
+  background: radial-gradient(circle, #fff, rgba(255,226,138,.9) 30%, rgba(176,92,255,.5) 55%, transparent 70%); animation: burst .7s ease-out forwards; }
+@keyframes burst { to { width: 900px; height: 900px; opacity: 0; } }
+.slotcard { position: absolute; width: 187px; height: 262px; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.3); opacity: 0;
+  transition: left .5s cubic-bezier(.2,.8,.2,1), top .5s cubic-bezier(.2,.8,.2,1), transform .5s, opacity .3s; cursor: pointer; z-index: 2; }
+.slotcard.out { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.slotcard .scale { position: absolute; left: 0; top: 0; transform: scale(.85); transform-origin: top left; width: 220px; height: 308px; }
+.slotcard:hover:not(.shown) .scale { transform: scale(.85) translateY(-6px); }
+.tell { position: absolute; inset: -6px; border-radius: 20px; pointer-events: none; opacity: 0; transition: opacity .3s; }
+.slotcard.out:not(.shown) .tell { opacity: 1; animation: tellpulse 1.6s ease-in-out infinite; }
+.tell.t1 { box-shadow: 0 0 22px 6px var(--r-rare); } .tell.t2 { box-shadow: 0 0 26px 8px var(--r-epic); }
+.tell.t3 { box-shadow: 0 0 34px 10px var(--r-legendary); } .tell.t4 { box-shadow: 0 0 40px 12px var(--r-mythic); }
+.tell.pity { outline: 3px solid var(--gold); outline-offset: 2px; border-radius: 18px; }
+@keyframes tellpulse { 50% { filter: brightness(1.4); } }
+.flash { position: absolute; inset: -40px; border-radius: 30px; pointer-events: none; z-index: 3; animation: flash .7s ease-out forwards; }
+@keyframes flash { from { opacity: .95; transform: scale(.9); } to { opacity: 0; transform: scale(1.25); } }
+.label { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); white-space: nowrap; text-align: center; font: 700 13px var(--font-ui); letter-spacing: .05em;
+  text-shadow: 0 2px 4px #000; opacity: 0; transition: opacity .3s; }
+.shown .label { opacity: 1; }
+.label small { display: block; font-size: 11px; color: var(--ink); font-weight: 600; }
+.stage .done { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 6; }
+.stage .reveal { position: absolute; right: 14px; bottom: 14px; z-index: 6; }
+.shakeall { animation: stageshake .4s; }
+@keyframes stageshake { 25% { transform: translate(4px, -2px); } 50% { transform: translate(-4px, 2px); } 75% { transform: translate(3px, 1px); } }
+footer { color: var(--ink-dim); font-size: 12px; }
+footer a { color: var(--gold); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="ribbonFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9caa0"/><stop offset="1" stop-color="#9c8858"/></linearGradient>
+  <linearGradient id="ribbonVoid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a3a8e"/><stop offset="1" stop-color="#3a1446"/></linearGradient>
+</defs></svg>
+
+<div class="app">
+  <div class="top win">
+    <span class="title">Prototype · slice 5b</span>
+    <nav class="nav" aria-label="Screens">
+      <button class="btn" type="button" data-screen="collection" id="nav-collection">Collection</button>
+      <button class="btn" type="button" data-screen="shop" id="nav-shop">Shop</button>
+      <button class="btn" type="button" data-screen="packs" id="nav-packs">Open packs <span id="nav-packcount"></span></button>
+    </nav>
+    <div class="wallet" aria-label="Wallet">
+      <span title="Gems"><span class="gem-ic" id="ic-gem"></span><span id="w-gems">0</span></span>
+      <span title="Dust"><span class="dust-ic" id="ic-dust"></span><span id="w-dust">0</span></span>
+    </div>
+  </div>
+
+  <!-- Collection -->
+  <section id="s-collection" class="coll" aria-label="Collection">
+    <div class="book win">
+      <div class="tabs" role="group" aria-label="Set">
+        <button class="tab" type="button" data-set="all" aria-pressed="true">All sets</button>
+        <button class="tab" type="button" data-set="core" aria-pressed="false">Core</button>
+        <button class="tab" type="button" data-set="descent" aria-pressed="false">The Descent</button>
+        <span style="width:12px"></span>
+        <button class="tab" type="button" data-kind="all" aria-pressed="true">All</button>
+        <button class="tab" type="button" data-kind="character" aria-pressed="false">Characters</button>
+        <button class="tab" type="button" data-kind="item" aria-pressed="false">Items</button>
+        <button class="tab" type="button" data-kind="equipment" aria-pressed="false">Armor</button>
+      </div>
+      <div class="pagehead"><h2 id="pagetitle">All cards</h2><span class="note" id="pagecount"></span></div>
+      <div class="grid" id="grid"></div>
+      <div class="bar">
+        <span class="note">Rarity</span>
+        <span id="rgems" class="bar" role="group" aria-label="Rarity"></span>
+        <label class="note" for="pool">Pool</label>
+        <select id="pool"><option value="">Any</option><option>Treasure</option><option>Shop</option><option>Boss</option><option>Void</option><option>Food</option><option>Chest</option></select>
+        <button class="tab" type="button" id="f-owned" aria-pressed="true">Owned</button>
+        <button class="tab" type="button" id="f-missing" aria-pressed="true">Missing</button>
+        <input type="search" id="search" placeholder="Search cards" aria-label="Search cards">
+        <div class="pager"><button class="btn" type="button" id="prev" aria-label="Previous page">◀</button><span id="pageno">1 / 1</span><button class="btn" type="button" id="next" aria-label="Next page">▶</button></div>
+      </div>
+    </div>
+    <aside class="side win">
+      <h3>Crafting</h3>
+      <p class="note">Click a card to dust it or create it. Dust comes only from cards; core cards cannot be dusted.</p>
+      <div class="stat-line"><span>Owned</span><b id="c-owned"></b></div>
+      <div class="stat-line"><span>Dust</span><b id="c-dust"></b></div>
+      <h3>States</h3>
+      <div class="legend-row"><i style="background:#c9b991"></i>Owned</div>
+      <div class="legend-row"><i style="background:#8fb4ff;opacity:.7"></i>Missing (ghosted)</div>
+      <div class="legend-row"><i style="background:#1b2577;border:1px solid #9fb4ff"></i>In your active run</div>
+      <div class="legend-row"><i style="background:#ffc23d"></i>New</div>
+      <h3>Active run</h3>
+      <p class="note" id="runline"></p>
+    </aside>
+  </section>
+
+  <!-- Shop -->
+  <section id="s-shop" class="shop win" aria-label="Shop" hidden>
+    <div class="offer">
+      <div class="pack" id="shop-pack"></div>
+      <div>
+        <h3>The Descent</h3>
+        <p class="note">5 cards from the Descent set. At least one Rare or better in every pack. Packs you buy wait in Open packs.</p>
+        <div class="buyrow">
+          <button class="btn gold" type="button" id="buy1">Buy 1 · 100 gems</button>
+          <button class="btn gold" type="button" id="buy5">Buy 5 · 500 gems</button>
+          <button class="btn" type="button" id="addgems">Prototype: +300 gems</button>
+        </div>
+        <p class="note" id="shopmsg" style="margin-top:10px"></p>
+      </div>
+    </div>
+    <div>
+      <p class="note" style="margin-bottom:6px">Odds per card (before the Rare guarantee and pity)</p>
+      <div class="odds"><span>Common</span><span>72.10%</span><span>Rare</span><span>22.00%</span><span>Epic</span><span>4.50%</span><span>Legendary</span><span>1.00%</span><span>Mythic</span><span>0.40%</span></div>
+    </div>
+  </section>
+
+  <!-- Open packs -->
+  <section id="s-packs" class="opener" aria-label="Open packs" hidden>
+    <div class="packcol win">
+      <button class="packbtn" type="button" id="packbtn" aria-label="Open a Descent pack"><div class="pack" id="col-pack"></div></button>
+      <div class="pity" id="pity"></div>
+      <button class="btn" type="button" id="gotoshop">Shop</button>
+    </div>
+    <div class="stage win" id="stage">
+      <div class="hint" id="stagehint">Click a pack to open it</div>
+      <div class="socket" id="socket">Pack socket</div>
+    </div>
+  </section>
+
+  <footer>Prototype for layout and flow; the real screens are Godot (3D stage, our shaders). Data: the real demo catalog (160 cards), a made-up account.
+    Portraits rendered so far: Warrior, Bulwark. Icons by <span id="authors"></span> from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, CC BY 3.0.</footer>
+</div>
+
+<div class="modal" id="modal" hidden></div>
+
+<script>
+const DATA = /*DATA*/{};
+const PORTRAITS = { "demo.character.warrior": "/*WARRIOR*/", "demo.character.bulwark": "/*BULWARK*/" };
+const ICONS = DATA.icons;
+const icon = (k, cls = "ic") => `<svg class="${cls}" viewBox="0 0 512 512" aria-hidden="true">${(ICONS[k] || []).map(d => `<path d="${d}"/>`).join("")}</svg>`;
+const RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", mythic: "Mythic" };
+const ORDER = ["common", "rare", "epic", "legendary", "mythic"];
+const COLOR = { common: "var(--r-common)", rare: "var(--r-rare)", epic: "var(--r-epic)", legendary: "var(--r-legendary)", mythic: "var(--r-mythic)" };
+const RATES = { common: [5, 40], rare: [20, 100], epic: [100, 400], legendary: [400, 1600], mythic: [800, 3200] };
+const CARDS = DATA.cards;
+const byId = Object.fromEntries(CARDS.map(c => [c.id, c]));
+document.getElementById("authors").textContent = DATA.authors.join(", ");
+document.getElementById("ic-gem").innerHTML = icon("cut-diamond");
+document.getElementById("ic-dust").innerHTML = icon("sparkles");
+
+// A made-up account: every core card, about a third of the Descent set (a fixed pick), one card held by the active run.
+let seed = 7;
+const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+const state = { gems: 340, dust: 520, packs: 2, owned: new Set(), locked: new Set(), seen: new Set(), runActive: true,
+  pity: { epic: 5, legendary: 10, mythic: 15 }, opened: 0 };
+CARDS.forEach(c => { if (c.core || rnd() < 0.33) state.owned.add(c.id); });
+const lockedCard = CARDS.find(c => !c.core && state.owned.has(c.id) && c.rarity === "epic");
+if (lockedCard) state.locked.add(lockedCard.id);
+CARDS.forEach(c => state.seen.add(c.id));
+
+// ---------- card face ----------
+let uid = 0;
+function face(c, extra = "") {
+  const id = `rb${uid++}`;
+  const long = c.name.length > 15;
+  const art = c.kind === "character"
+    ? (PORTRAITS[c.id] ? `<img class="portrait" src="${PORTRAITS[c.id]}" alt="">` : `<span class="noportrait">Portrait not rendered yet</span>`)
+    : icon(c.icon, "ic glyph");
+  const rich = c.rarity === "legendary" || c.rarity === "mythic";
+  return `<div class="face">
+    <div class="stone"></div>${rich ? `<div class="crest">${icon("crown")}</div>` : ""}
+    <div class="art">${art}</div>
+    <svg class="ribbon" viewBox="0 0 200 34" aria-hidden="true"><path class="band" d="M4 12 Q100 -2 196 12 L192 30 Q100 16 8 30 Z"/>
+      <path id="${id}" d="M14 25 Q100 10 186 25" fill="none"/>
+      <text text-anchor="middle"${long ? ' textLength="170" lengthAdjust="spacingAndGlyphs"' : ""}><textPath href="#${id}" startOffset="50%">${c.name}</textPath></text></svg>
+    <div class="gem"></div>
+    <div class="plaque"><p>${c.text}</p><div class="setmark">${icon(c.set === "core" ? "cube" : "stairs")}</div></div>
+    <div class="typebar">${c.type}</div>
+    ${c.core ? `<div class="core">CORE</div>` : ""}${rich ? `<div class="foil"></div>` : ""}<div class="glare"></div>${extra}</div>`;
+}
+const back = () => `<div class="back cardback"><div class="emblem"><div class="ei">${icon("cube")}</div></div></div>`;
+const cls = c => `ca k-${c.kind} r-${c.rarity} el-${c.el}${c.corrupted ? " corrupted" : ""}`;
+const cardHTML = (c, extra = "") => `<div class="tilt ${cls(c)}"><div class="inner">${face(c, extra)}${back()}</div></div>`;
+function tiltable(root) {
+  root.querySelectorAll(".tilt").forEach(t => {
+    t.addEventListener("pointermove", e => {
+      const r = t.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      t.style.transform = `rotateX(${(0.5 - y) * 14}deg) rotateY(${(x - 0.5) * 18}deg)`;
+      t.querySelectorAll(".glare").forEach(g => { g.style.setProperty("--gx", `${x * 100}%`); g.style.setProperty("--gy", `${y * 100}%`); });
+    });
+    t.addEventListener("pointerleave", () => { t.style.transform = ""; });
+  });
+}
+
+// ---------- wallet and nav ----------
+function wallet() {
+  document.getElementById("w-gems").textContent = state.gems;
+  document.getElementById("w-dust").textContent = state.dust;
+  document.getElementById("c-dust").textContent = state.dust;
+  document.getElementById("c-owned").textContent = `${state.owned.size} / ${CARDS.length}`;
+  document.getElementById("nav-packcount").textContent = state.packs ? `(${state.packs})` : "";
+  document.getElementById("runline").textContent = state.runActive
+    ? `A run is active. ${lockedCard ? lockedCard.name : "One card"} was owned when it started, so it cannot be dusted until the run ends.`
+    : "No active run.";
+}
+function show(screen) {
+  ["collection", "shop", "packs"].forEach(s => {
+    document.getElementById(`s-${s}`).hidden = s !== screen;
+    document.getElementById(`nav-${s}`).setAttribute("aria-current", s === screen ? "page" : "false");
+  });
+  if (screen === "collection") renderGrid();
+  if (screen === "packs") renderPackCol();
+}
+document.querySelectorAll("[data-screen]").forEach(b => b.addEventListener("click", () => show(b.dataset.screen)));
+document.getElementById("gotoshop").addEventListener("click", () => show("shop"));
+
+// ---------- collection ----------
+const f = { set: "all", kind: "all", rarities: new Set(ORDER), pool: "", owned: true, missing: true, q: "", page: 0 };
+const PER = 8;
+document.getElementById("rgems").innerHTML = ORDER.map(r =>
+  `<button class="rgem" type="button" data-r="${r}" aria-pressed="true" aria-label="${RARITY[r]}" title="${RARITY[r]}" style="background:${COLOR[r]};color:${COLOR[r]}"></button>`).join("");
+document.querySelectorAll("[data-set]").forEach(b => b.addEventListener("click", () => { f.set = b.dataset.set; f.page = 0; press("[data-set]", b); renderGrid(); }));
+document.querySelectorAll("[data-kind]").forEach(b => b.addEventListener("click", () => { f.kind = b.dataset.kind; f.page = 0; press("[data-kind]", b); renderGrid(); }));
+document.querySelectorAll(".rgem").forEach(b => b.addEventListener("click", () => {
+  const r = b.dataset.r; f.rarities.has(r) ? f.rarities.delete(r) : f.rarities.add(r); b.setAttribute("aria-pressed", String(f.rarities.has(r))); f.page = 0; renderGrid(); }));
+document.getElementById("pool").addEventListener("change", e => { f.pool = e.target.value; f.page = 0; renderGrid(); });
+["owned", "missing"].forEach(k => document.getElementById(`f-${k}`).addEventListener("click", e => {
+  f[k] = !f[k]; e.currentTarget.setAttribute("aria-pressed", String(f[k])); f.page = 0; renderGrid(); }));
+document.getElementById("search").addEventListener("input", e => { f.q = e.target.value.trim().toLowerCase(); f.page = 0; renderGrid(); });
+document.getElementById("prev").addEventListener("click", () => { f.page--; renderGrid(); });
+document.getElementById("next").addEventListener("click", () => { f.page++; renderGrid(); });
+function press(sel, on) { document.querySelectorAll(sel).forEach(b => b.setAttribute("aria-pressed", String(b === on))); }
+const KIND_ORDER = { character: 0, item: 1, equipment: 2 };
+function filtered() {
+  return CARDS.filter(c => (f.set === "all" || c.set === f.set) && (f.kind === "all" || c.kind === f.kind) && f.rarities.has(c.rarity)
+      && (!f.pool || c.pools.includes(f.pool)) && (state.owned.has(c.id) ? f.owned : f.missing)
+      && (!f.q || (c.name + " " + c.text).toLowerCase().includes(f.q)))
+    .sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || ORDER.indexOf(a.rarity) - ORDER.indexOf(b.rarity) || a.name.localeCompare(b.name));
+}
+function renderGrid() {
+  const list = filtered();
+  const pages = Math.max(1, Math.ceil(list.length / PER));
+  f.page = Math.min(Math.max(0, f.page), pages - 1);
+  const slice = list.slice(f.page * PER, f.page * PER + PER);
+  document.getElementById("pageno").textContent = `${f.page + 1} / ${pages}`;
+  document.getElementById("prev").disabled = f.page === 0;
+  document.getElementById("next").disabled = f.page >= pages - 1;
+  document.getElementById("pagecount").textContent = `${list.length} cards`;
+  document.getElementById("pagetitle").textContent = { all: "All cards", core: "Core set", descent: "The Descent" }[f.set];
+  const grid = document.getElementById("grid");
+  grid.innerHTML = slice.length ? slice.map(c => {
+    const owned = state.owned.has(c.id), locked = state.locked.has(c.id), isNew = owned && !state.seen.has(c.id);
+    const chip = !owned ? (c.core ? "" : `<span class="chip">Craft · ${RATES[c.rarity][1]}</span>`) : locked ? `<span class="chip lock">In your run</span>` : "";
+    return `<div class="cell ${owned ? "" : "missing"}" tabindex="0" role="button" data-id="${c.id}" aria-label="${c.name}">
+      <div class="scale">${cardHTML(c)}</div>${chip}${isNew ? `<span class="newbadge">NEW</span>` : ""}</div>`;
+  }).join("") : `<p class="empty">No card matches these filters.</p>`;
+  tiltable(grid);
+  grid.querySelectorAll(".cell").forEach(cell => {
+    const open = () => detail(cell.dataset.id);
+    cell.addEventListener("click", open);
+    cell.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+    cell.addEventListener("pointerenter", () => setTimeout(() => { if (cell.matches(":hover")) { state.seen.add(cell.dataset.id); cell.querySelector(".newbadge")?.remove(); } }, 500));
+  });
+  wallet();
+}
+
+// ---------- detail, dust and craft ----------
+const modal = document.getElementById("modal");
+function closeModal() { modal.hidden = true; modal.innerHTML = ""; renderGrid(); }
+modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !modal.hidden) closeModal(); });
+function detail(id, message = "") {
+  const c = byId[id];
+  state.seen.add(id);
+  const owned = state.owned.has(id), locked = state.locked.has(id);
+  const [dv, cc] = RATES[c.rarity];
+  const bar = c.core
+    ? `<p class="note">Core: every account owns it. It is always in the pools and cannot be dusted or crafted.</p>`
+    : `<div class="craftbar">
+        <button class="btn" type="button" id="dustbtn" ${owned ? "" : "disabled"}>Dust<small class="plus">+${dv}</small></button>
+        <div class="vial"><span class="dust-ic" style="width:22px;height:22px;margin-right:6px">${icon("sparkles")}</span>${state.dust}</div>
+        <button class="btn" type="button" id="craftbtn" ${!owned && state.dust >= cc ? "" : "disabled"}>Create<small class="minus">-${cc}</small></button>
+      </div>`;
+  modal.innerHTML = `<div class="detail">
+    <div class="bigcard ${owned ? "" : "missing"}"><div class="scale">${cardHTML(c)}</div></div>
+    <div class="info win">
+      <h3>${c.name}</h3>
+      <dl><dt>Rarity</dt><dd style="color:${COLOR[c.rarity]}">${RARITY[c.rarity]}</dd>
+        <dt>Set</dt><dd>${c.set === "core" ? "Core" : "The Descent"}</dd>
+        <dt>Found in</dt><dd>${c.pools.length ? c.pools.join(", ") : (c.kind === "character" ? "Party pick" : "—")}</dd>
+        <dt>Status</dt><dd>${c.core ? "Core" : owned ? (locked ? "Owned · in your active run" : "Owned") : "Not owned"}</dd></dl>
+      ${bar}
+      <p class="note" id="dmsg" role="status">${message}</p>
+      <button class="btn" type="button" id="closebtn">Back</button>
+    </div></div>`;
+  modal.hidden = false;
+  tiltable(modal);
+  document.getElementById("closebtn").addEventListener("click", closeModal);
+  document.getElementById("dustbtn")?.addEventListener("click", () => dust(c));
+  document.getElementById("craftbtn")?.addEventListener("click", () => craft(c));
+  document.getElementById("closebtn").focus();
+}
+function popup(text, yes, no, onYes) {
+  const box = document.createElement("div");
+  box.className = "modal";
+  box.innerHTML = `<div class="pop win" role="dialog" aria-modal="true"><p>${text}</p><div class="row">
+    ${no ? `<button class="btn" type="button" data-a="no">${no}</button>` : ""}<button class="btn gold" type="button" data-a="yes">${yes}</button></div></div>`;
+  document.body.appendChild(box);
+  box.querySelector('[data-a="yes"]').focus();
+  box.addEventListener("click", e => {
+    const a = e.target.dataset?.a;
+    if (!a) return;
+    box.remove();
+    if (a === "yes" && onYes) onYes();
+  });
+}
+function dust(c) {
+  if (state.locked.has(c.id) && state.runActive) {
+    popup(`<b>${c.name}</b> is in your active run (floor 4). You owned it when the run started, so it can be dusted only after the run ends.<br><br>Cancel that run to dust it now?`,
+      "Cancel run", "Keep run", () => { state.runActive = false; state.locked.clear(); doDust(c); });
+    return;
+  }
+  popup(`Dust <b>${c.name}</b> for ${RATES[c.rarity][0]} dust?`, "Dust", "Cancel", () => doDust(c));
+}
+function doDust(c) { state.owned.delete(c.id); state.dust += RATES[c.rarity][0]; wallet(); detail(c.id, `Dusted: +${RATES[c.rarity][0]} dust.`); }
+function craft(c) {
+  const cost = RATES[c.rarity][1];
+  const go = () => { state.dust -= cost; state.owned.add(c.id); state.seen.delete(c.id); wallet(); detail(c.id, `Created: ${c.name} is yours.`); };
+  if (c.rarity === "legendary" || c.rarity === "mythic") popup(`Create <b>${c.name}</b> for ${cost} dust?`, "Create", "Cancel", go); else go();
+}
+
+// ---------- shop ----------
+const packArt = (count = "") => `<div class="body"></div><div class="sig">${icon("stairs")}</div><div class="band">The Descent</div>${count !== "" ? `<div class="count">${count}</div>` : ""}`;
+document.getElementById("shop-pack").innerHTML = packArt();
+function buy(n) {
+  const cost = 100 * n, msg = document.getElementById("shopmsg");
+  if (state.gems < cost) { msg.textContent = `Not enough gems: ${cost} needed, you have ${state.gems}.`; return; }
+  state.gems -= cost; state.packs += n; wallet();
+  msg.textContent = `Bought ${n} pack${n > 1 ? "s" : ""}. You have ${state.packs} waiting in Open packs.`;
+}
+document.getElementById("buy1").addEventListener("click", () => buy(1));
+document.getElementById("buy5").addEventListener("click", () => buy(5));
+document.getElementById("addgems").addEventListener("click", () => { state.gems += 300; wallet(); });
+
+// ---------- open packs ----------
+const PITY = { epic: 10, legendary: 20, mythic: 30 };
+function renderPackCol() {
+  document.getElementById("col-pack").innerHTML = packArt(state.packs);
+  document.getElementById("packbtn").disabled = state.packs === 0 || busy;
+  document.getElementById("pity").innerHTML = state.packs === 0 ? "No packs. Buy them in the Shop." :
+    `Guaranteed within: <br>Epic ${PITY.epic - state.pity.epic} · Legendary ${PITY.legendary - state.pity.legendary} · Mythic ${PITY.mythic - state.pity.mythic} packs`;
+  wallet();
+}
+const ODDS = [["common", 7210], ["rare", 2200], ["epic", 450], ["legendary", 100], ["mythic", 40]];
+const PACKABLE = CARDS.filter(c => !c.core && c.set === "descent");
+function rollRarity(allowed = ORDER) {
+  const odds = ODDS.filter(([r]) => allowed.includes(r)), total = odds.reduce((s, [, w]) => s + w, 0);
+  let x = Math.random() * total;
+  for (const [r, w] of odds) { if ((x -= w) < 0) return r; }
+  return odds[odds.length - 1][0];
+}
+const cardOf = r => { const pool = PACKABLE.filter(c => c.rarity === r); return pool[Math.floor(Math.random() * pool.length)]; };
+function drawPack() {
+  const slots = Array.from({ length: 5 }, () => ({ rarity: rollRarity(), pity: false }));
+  for (const r of ["mythic", "legendary", "epic"]) {
+    if (state.pity[r] + 1 >= PITY[r] && !slots.some(s => s.rarity === r)) {
+      const low = slots.map((s, i) => [ORDER.indexOf(s.rarity), i]).filter(([, i]) => !slots[i].pity).sort((a, b) => a[0] - b[0])[0];
+      slots[low[1]] = { rarity: r, pity: true };
+    }
+  }
+  if (!slots.some(s => ORDER.indexOf(s.rarity) >= 1)) {
+    const i = slots.map(s => s.pity).lastIndexOf(false);
+    slots[i] = { rarity: rollRarity(["rare", "epic", "legendary", "mythic"]), pity: false };
+  }
+  for (const r of ["epic", "legendary", "mythic"]) state.pity[r] = slots.some(s => s.rarity === r) ? 0 : state.pity[r] + 1;
+  const seenInPack = new Set();
+  return slots.map(s => {
+    const c = cardOf(s.rarity);
+    const dup = state.owned.has(c.id) || seenInPack.has(c.id);
+    seenInPack.add(c.id);
+    if (dup) state.dust += RATES[c.rarity][0]; else { state.owned.add(c.id); state.seen.delete(c.id); }
+    return { card: c, dup, pity: s.pity, tier: ORDER.indexOf(s.rarity) };
+  });
+}
+const SPOTS = [[24, 30], [50, 24], [76, 30], [36, 74], [64, 74]];
+let busy = false;
+document.getElementById("packbtn").addEventListener("click", openPack);
+function openPack() {
+  if (busy || state.packs === 0) return;
+  busy = true; state.packs--; renderPackCol();
+  const stage = document.getElementById("stage");
+  stage.querySelectorAll(".slotcard, .done, .reveal, .flying, .burst").forEach(n => n.remove());
+  document.getElementById("socket").hidden = true;
+  document.getElementById("stagehint").textContent = "";
+  const fly = document.createElement("div");
+  fly.className = "pack flying"; fly.innerHTML = packArt();
+  stage.appendChild(fly);
+  requestAnimationFrame(() => fly.classList.add("shake"));
+  const result = drawPack();
+  setTimeout(() => {
+    fly.remove();
+    const b = document.createElement("div"); b.className = "burst"; stage.appendChild(b);
+    setTimeout(() => b.remove(), 750);
+    stage.classList.add("shakeall"); setTimeout(() => stage.classList.remove("shakeall"), 420);
+    result.forEach((r, i) => {
+      const el = document.createElement("div");
+      el.className = "slotcard"; el.tabIndex = 0; el.setAttribute("role", "button"); el.setAttribute("aria-label", `Face-down card ${i + 1}`);
+      el.innerHTML = `<div class="tell ${r.tier ? "t" + r.tier : ""} ${r.pity ? "pity" : ""}"></div>
+        <div class="scale"><div class="tilt facedown ${cls(r.card)}"><div class="inner">${face(r.card)}${back()}</div></div></div>
+        <div class="label" style="color:${COLOR[r.card.rarity]}">${RARITY[r.card.rarity]}${r.tier >= 3 ? "!" : ""}<small>${r.dup ? `Duplicate · +${RATES[r.card.rarity][0]} dust` : "NEW"}${r.pity ? " · Guaranteed" : ""}</small></div>`;
+      stage.appendChild(el);
+      setTimeout(() => { el.classList.add("out"); el.style.left = SPOTS[i][0] + "%"; el.style.top = SPOTS[i][1] + "%"; }, 60 * i + 30);
+      const flip = () => reveal(el, r);
+      el.addEventListener("click", flip);
+      el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } });
+    });
+    const all = document.createElement("button");
+    all.className = "btn reveal"; all.type = "button"; all.textContent = "Reveal all";
+    all.addEventListener("click", () => stage.querySelectorAll(".slotcard:not(.shown)").forEach((el, k) => setTimeout(() => el.click(), 120 * k)));
+    stage.appendChild(all);
+    document.getElementById("stagehint").textContent = "Click a card to flip it";
+  }, 650);
+}
+function reveal(el, r) {
+  if (el.classList.contains("shown")) return;
+  el.classList.add("shown");
+  el.querySelector(".tilt").classList.remove("facedown");
+  if (r.tier >= 1) {
+    const fl = document.createElement("div"); fl.className = "flash";
+    fl.style.boxShadow = `0 0 ${30 + r.tier * 20}px ${10 + r.tier * 8}px ${COLOR[r.card.rarity]}`;
+    el.appendChild(fl); setTimeout(() => fl.remove(), 750);
+  }
+  if (r.tier >= 3) { const st = document.getElementById("stage"); st.classList.add("shakeall"); setTimeout(() => st.classList.remove("shakeall"), 420); }
+  const stage = document.getElementById("stage");
+  if (!stage.querySelector(".slotcard:not(.shown)")) {
+    stage.querySelector(".reveal")?.remove();
+    const done = document.createElement("button");
+    done.className = "btn gold done"; done.type = "button"; done.textContent = "Done";
+    done.addEventListener("click", () => {
+      stage.querySelectorAll(".slotcard, .done").forEach(n => n.remove());
+      document.getElementById("socket").hidden = false;
+      document.getElementById("stagehint").textContent = state.packs ? "Click a pack to open it" : "No packs left. Buy more in the Shop.";
+      busy = false; renderPackCol();
+    });
+    stage.appendChild(done);
+    document.getElementById("stagehint").textContent = "";
+    wallet();
+  }
+}
+
+wallet();
+show("collection");
+</script>

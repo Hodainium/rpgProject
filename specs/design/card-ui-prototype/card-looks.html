@@ -1,0 +1,407 @@
+<title>Card Look Proposals</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Cinzel:wght@700;900&display=swap">
+<style>
+/* Layout: a dark tavern table; each look is a row of real demo cards, hover tilts, click flips. Single dark look on purpose. */
+:root {
+  color-scheme: dark;
+  --table: #12131c;          /* page ground */
+  --table-2: #1a1c2a;        /* section plate */
+  --ink: #e9e6dc;            /* text */
+  --ink-dim: #a4a3ae;
+  --gold: #ffe28a;           /* FF7 theme border gold */
+  --navy: #1b2577;           /* FF7 window blue */
+  --navy-2: #0b1046;
+  --r-common: #cfd3dc; --r-rare: #3e8cff; --r-epic: #b05cff; --r-legendary: #ff9d24; --r-mythic: #ff4f86;
+  --el-fire: #ff6a2b; --el-ice: #6fd8ff; --el-physical: #e6d3a6; --el-void: #e040fb; --el-food: #8fd16a;
+  --font-ui: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --font-name: "Cinzel", "Georgia", serif;
+}
+body.name-chakra { --font-name: "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--table); }
+body {
+  background: radial-gradient(1200px 600px at 50% -10%, #23263a 0%, var(--table) 60%) var(--table);
+  color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 36px; }
+header { display: grid; gap: 10px; }
+h1 { font-family: var(--font-ui); font-weight: 700; font-size: 28px; margin: 0; letter-spacing: .02em; text-wrap: balance; }
+h1 span { color: var(--gold); }
+.lede { margin: 0; color: var(--ink-dim); max-width: 70ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.controls button {
+  font: 600 13px var(--font-ui); color: var(--ink); background: linear-gradient(#25307f, var(--navy-2));
+  border: 1px solid rgba(216,219,230,.55); border-radius: 4px; padding: 6px 12px; cursor: pointer;
+}
+.controls button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+.controls button:focus-visible, .tilt:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+section { background: var(--table-2); border: 1px solid #2c2f44; border-radius: 10px; padding: 22px max(16px, 2vw) 28px; display: grid; gap: 18px; }
+section h2 { margin: 0; font-size: 20px; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+section h2 small { font-size: 13px; color: var(--ink-dim); font-weight: 400; }
+.pill { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--gold); color: var(--gold); }
+.note { margin: 0; color: var(--ink-dim); font-size: 14px; max-width: 80ch; }
+h3 { margin: 6px 0 0; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; }
+.row { display: flex; flex-wrap: wrap; gap: 26px 22px; justify-content: center; perspective: 1100px; }
+.slot { display: grid; gap: 22px; justify-items: center; width: 220px; max-width: 100%; }
+.caption { font-size: 12px; color: var(--ink-dim); text-align: center; min-height: 2.6em; }
+.caption b { color: var(--ink); font-weight: 600; }
+
+/* ---------- shared card mechanics ---------- */
+.tilt { width: 220px; max-width: 100%; aspect-ratio: 5 / 7; position: relative; transform-style: preserve-3d;
+  transition: transform .25s ease-out; cursor: pointer; border-radius: 16px; }
+.inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.2,.7,.2,1); }
+.tilt.flipped .inner { transform: rotateY(180deg); }
+.face, .back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 16px; }
+.back { transform: rotateY(180deg); }
+.glare { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .2s;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgba(255,255,255,.28), rgba(255,255,255,0) 45%); mix-blend-mode: overlay; }
+.tilt:hover .glare { opacity: 1; }
+svg.ic { width: 100%; height: 100%; display: block; fill: currentColor; }
+
+/* ---------- Look A: Tavern (Hearthstone-leaning) ---------- */
+.ca { --rar: var(--r-common); --el: var(--el-physical); --m1: #8d93a3; --m2: #4a4f5e; }
+.ca.r-rare { --rar: var(--r-rare); --m1: #b9cbe6; --m2: #47618c; }
+.ca.r-epic { --rar: var(--r-epic); --m1: #c9a6e8; --m2: #5a3482; }
+.ca.r-legendary { --rar: var(--r-legendary); --m1: #ffe08a; --m2: #9a6212; }
+.ca.r-mythic { --rar: var(--r-mythic); --m1: #ffc2d4; --m2: #8a1f4a; }
+.ca.el-fire { --el: var(--el-fire); } .ca.el-ice { --el: var(--el-ice); } .ca.el-void { --el: var(--el-void); } .ca.el-food { --el: var(--el-food); }
+.ca .face {
+  background: linear-gradient(150deg, var(--m1), var(--m2) 55%, var(--m1));
+  box-shadow: 0 10px 24px rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.6);
+}
+.ca.r-mythic .face { background: linear-gradient(120deg, #ffd1de, #b23a78, #6b3fd1, #ffb36b, #ff4f86); background-size: 300% 300%; animation: prism 8s linear infinite; }
+@keyframes prism { to { background-position: 300% 0; } }
+.ca.r-epic .tilt-shadow, .ca.r-epic .face { box-shadow: 0 10px 24px rgba(0,0,0,.55), 0 0 18px rgba(176,92,255,.55); animation: aura 2.6s ease-in-out infinite; }
+@keyframes aura { 50% { box-shadow: 0 10px 24px rgba(0,0,0,.55), 0 0 30px rgba(176,92,255,.9); } }
+.ca.corrupted .face { background: linear-gradient(150deg, #3a1446, #12061a 55%, #4a1658); box-shadow: 0 10px 24px rgba(0,0,0,.6), 0 0 0 2px var(--el-void), 0 0 22px rgba(224,64,251,.55); }
+.ca .stone { position: absolute; inset: 7px; border-radius: 11px;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255,255,255,.07) 0 2px, transparent 3px) 0 0 / 23px 19px,
+    radial-gradient(circle at 70% 60%, rgba(0,0,0,.18) 0 2px, transparent 3px) 0 0 / 17px 23px,
+    linear-gradient(170deg, #4a5068, #2e3247 70%, #383d55);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.5), inset 0 0 18px rgba(0,0,0,.45); }
+.ca.corrupted .stone { background:
+    linear-gradient(115deg, transparent 47%, rgba(224,64,251,.5) 48%, transparent 49.5%) ,
+    linear-gradient(60deg, transparent 62%, rgba(224,64,251,.35) 63%, transparent 64%),
+    linear-gradient(170deg, #2a1433, #120818 70%, #24102c); }
+.ca .art { position: absolute; left: 15%; width: 70%; top: 6.5%; height: 45%; overflow: hidden;
+  border: 4px solid var(--m1); box-shadow: 0 0 0 2px rgba(0,0,0,.55), inset 0 0 22px rgba(0,0,0,.7);
+  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--el) 55%, #fff 0%) 0%, color-mix(in srgb, var(--el) 30%, #10121c) 45%, #0c0d16 100%);
+  display: grid; place-items: center; }
+.ca.k-character .art { border-radius: 50% / 50%; }
+.ca.k-item .art { border-radius: 50% 50% 10px 10px / 34% 34% 10px 10px; }
+.ca.k-equipment .art { border-radius: 50%; left: 20%; width: 60%; top: 8%; height: 41%; }
+.ca .glyph { width: 62%; height: auto; aspect-ratio: 1; color: color-mix(in srgb, var(--el) 70%, #fff); filter: drop-shadow(0 0 8px var(--el)) drop-shadow(0 2px 2px rgba(0,0,0,.8)); }
+.portrait { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ca .cube { width: 74%; animation: sway 6s ease-in-out infinite; filter: drop-shadow(0 6px 6px rgba(0,0,0,.6)); }
+@keyframes sway { 50% { transform: translateY(-4px) rotate(-2deg); } }
+.ca .crest { position: absolute; left: 50%; top: -6.5%; width: 34%; transform: translateX(-50%); color: var(--m1);
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.7)); }
+.ca .ribbon { position: absolute; left: 3%; width: 94%; top: 45%; height: 15%; overflow: visible; }
+.ca .ribbon path.band { fill: url(#ribbonFill); stroke: rgba(0,0,0,.6); stroke-width: 1.2; }
+.ca.corrupted .ribbon path.band { fill: url(#ribbonVoid); }
+.ca .ribbon text { font-family: var(--font-name); font-weight: 900; font-size: 15px; fill: #fff; paint-order: stroke; stroke: #1a1410; stroke-width: 3.2px; letter-spacing: .02em; }
+body.name-chakra .ca .ribbon text { font-weight: 700; font-size: 15px; letter-spacing: .04em; text-transform: uppercase; }
+.ca .gem { position: absolute; left: 50%; top: 60%; width: 15px; height: 15px; transform: translate(-50%, -50%) rotate(45deg);
+  background: linear-gradient(135deg, #fff, var(--rar) 45%, color-mix(in srgb, var(--rar) 60%, #000)); border: 1.5px solid rgba(0,0,0,.65);
+  box-shadow: 0 0 10px var(--rar); z-index: 2; }
+.ca.r-common .gem { box-shadow: none; }
+.ca .plaque { position: absolute; left: 11%; right: 11%; top: 61%; bottom: 13%; border-radius: 6px;
+  background: linear-gradient(#e2dccd, #c9c0aa); color: #29241b; box-shadow: inset 0 0 0 1px rgba(0,0,0,.45), inset 0 2px 8px rgba(0,0,0,.25);
+  display: grid; place-items: center; padding: 10px 9px 6px; text-align: center; font-size: 11.5px; line-height: 1.32; font-weight: 600; }
+.ca.corrupted .plaque { background: linear-gradient(#2b1734, #1a0c22); color: #f2d9fb; box-shadow: inset 0 0 0 1px rgba(224,64,251,.6); }
+.ca .plaque p { margin: 0; text-wrap: balance; }
+.ca .setmark { position: absolute; right: 5px; bottom: 3px; width: 14px; opacity: .35; color: #29241b; }
+.ca.corrupted .setmark { color: #f2d9fb; }
+.ca .typebar { position: absolute; left: 50%; bottom: 5.6%; transform: translateX(-50%); white-space: nowrap;
+  font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; font-weight: 700; color: #f3ead2;
+  background: linear-gradient(#5b5240, #3a3427); border: 1px solid rgba(0,0,0,.6); border-radius: 3px; padding: 1px 9px; }
+.ca .badge { position: absolute; left: -5%; top: -3%; width: 25%; aspect-ratio: 1; z-index: 3; display: grid; place-items: center;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%);
+  background: linear-gradient(140deg, #fff, var(--el) 40%, color-mix(in srgb, var(--el) 45%, #000)); }
+.ca .badge::before { content: ""; position: absolute; inset: 3px; clip-path: inherit; background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--el) 70%, #fff), color-mix(in srgb, var(--el) 50%, #111)); }
+.ca .badge .bi { position: relative; width: 58%; color: #fff; filter: drop-shadow(0 1px 1px rgba(0,0,0,.8)); }
+.ca .stat { position: absolute; bottom: -2%; width: 23%; aspect-ratio: 1; z-index: 3; display: grid; place-items: center;
+  font: 700 17px var(--font-ui); color: #fff; text-shadow: 0 0 3px #000, 0 2px 2px #000; }
+.ca .stat.atk { left: -4%; } .ca .stat.hp { right: -4%; }
+.ca .stat .bg { position: absolute; inset: 0; color: #ffcf3a; filter: drop-shadow(0 2px 3px rgba(0,0,0,.7)); }
+.ca .stat.hp .bg { color: #e2343a; }
+.ca .stat span { position: relative; font-size: 15px; }
+.ca .core { position: absolute; right: 9%; top: 2.2%; z-index: 3; font: 700 8.5px var(--font-ui); letter-spacing: .14em; color: #1b2133;
+  background: linear-gradient(#f4f1e4, #bfb9a3); border: 1px solid rgba(0,0,0,.6); border-radius: 0 0 4px 4px; padding: 1px 5px 2px; }
+.ca .foil { position: absolute; inset: 0; border-radius: 16px; pointer-events: none; mix-blend-mode: color-dodge; opacity: .55;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,240,200,.55) 45%, rgba(160,220,255,.45) 50%, transparent 65%) -200% 0 / 250% 100% no-repeat;
+  animation: foil 4.5s ease-in-out infinite; }
+@keyframes foil { 60%, 100% { background-position: 200% 0; } }
+
+/* collection states */
+.state-missing .face { filter: grayscale(1) brightness(1.35) contrast(.85); }
+.state-missing .face::after { content: ""; position: absolute; inset: 0; border-radius: 16px; background: rgba(110,170,255,.38); mix-blend-mode: color; }
+.state-missing .ghost { position: absolute; inset: 0; border-radius: 16px; box-shadow: 0 0 0 2px rgba(150,200,255,.75), 0 0 24px rgba(120,180,255,.6); pointer-events: none; }
+.tag-chip { position: absolute; left: 50%; transform: translateX(-50%); bottom: -14px; z-index: 5; white-space: nowrap;
+  font: 700 11px var(--font-ui); letter-spacing: .06em; padding: 3px 10px; border-radius: 4px;
+  background: linear-gradient(#25307f, var(--navy-2)); border: 1px solid var(--gold); color: var(--gold); }
+.lockover { position: absolute; inset: 0; border-radius: 16px; background: rgba(8,10,24,.45); display: grid; place-items: center; z-index: 4; }
+.lockover .li { width: 30%; color: #dfe4f2; filter: drop-shadow(0 2px 6px #000); }
+.newburst { position: absolute; right: -8px; top: -10px; z-index: 6; font: 700 13px var(--font-ui); color: #2a1600; letter-spacing: .06em;
+  background: radial-gradient(circle, #fff6c8, #ffc23d); padding: 8px 9px; border-radius: 50%; box-shadow: 0 0 16px #ffc23d; transform: rotate(12deg); }
+
+/* card back and pack */
+.cardback { background: linear-gradient(160deg, #26318a, var(--navy-2) 70%); border: 5px solid #c9a24a;
+  box-shadow: 0 10px 24px rgba(0,0,0,.55), inset 0 0 0 2px #0a0d30, inset 0 0 0 5px rgba(255,226,138,.35);
+  display: grid; place-items: center; overflow: hidden; }
+.cardback::before { content: ""; position: absolute; inset: 14px; border: 1px solid rgba(255,226,138,.35); border-radius: 8px;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.04) 0 6px, transparent 6px 14px), repeating-linear-gradient(-45deg, rgba(255,255,255,.04) 0 6px, transparent 6px 14px); }
+.cardback .emblem { position: relative; width: 46%; aspect-ratio: 1; transform: rotate(45deg); border: 3px solid var(--gold);
+  background: radial-gradient(circle, #3b48b8, #0e1450); display: grid; place-items: center; box-shadow: 0 0 22px rgba(255,226,138,.35); }
+.cardback .emblem .ei { width: 62%; transform: rotate(-45deg); color: var(--gold); }
+.pack { width: 200px; aspect-ratio: 5 / 7.6; position: relative; filter: drop-shadow(0 12px 18px rgba(0,0,0,.6)); animation: bob 4s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-6px) rotate(-1.5deg); } }
+.pack .body { position: absolute; inset: 0; clip-path: polygon(0 3%, 5% 0, 10% 3%, 15% 0, 20% 3%, 25% 0, 30% 3%, 35% 0, 40% 3%, 45% 0, 50% 3%, 55% 0, 60% 3%, 65% 0, 70% 3%, 75% 0, 80% 3%, 85% 0, 90% 3%, 95% 0, 100% 3%, 100% 97%, 95% 100%, 90% 97%, 85% 100%, 80% 97%, 75% 100%, 70% 97%, 65% 100%, 60% 97%, 55% 100%, 50% 97%, 45% 100%, 40% 97%, 35% 100%, 30% 97%, 25% 100%, 20% 97%, 15% 100%, 10% 97%, 5% 100%, 0 97%);
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.35) 47%, transparent 58%) -150% 0 / 250% 100% no-repeat, linear-gradient(160deg, #6a2d8c, #22103a 60%, #4a1d6a);
+  animation: foil 5s ease-in-out infinite; }
+.pack .band { position: absolute; left: 0; right: 0; top: 56%; height: 16%; background: linear-gradient(#ffe28a, #b8862b); box-shadow: 0 2px 6px rgba(0,0,0,.6);
+  display: grid; place-items: center; font: 700 15px var(--font-ui); letter-spacing: .18em; color: #2a1a05; text-transform: uppercase; }
+.pack .sig { position: absolute; left: 50%; top: 18%; width: 44%; transform: translateX(-50%); color: var(--gold); filter: drop-shadow(0 0 10px rgba(255,226,138,.7)); }
+.pack .count { position: absolute; right: 10%; top: 6%; font: 700 12px var(--font-ui); color: #fff; background: #1b2577; border: 1px solid var(--gold); padding: 1px 6px; border-radius: 3px; }
+
+/* ---------- Look B: Grimoire (MTG-leaning) ---------- */
+.cb { --el: var(--el-physical); --fr1: #d9c79c; --fr2: #8a7448; --rar: var(--r-common); }
+.cb.el-fire { --fr1: #f2a07b; --fr2: #9a2f14; } .cb.el-ice { --fr1: #a9dcf2; --fr2: #2a6c94; } .cb.el-void { --fr1: #9c6fb0; --fr2: #2a1236; }
+.cb.r-rare { --rar: var(--r-rare); } .cb.r-epic { --rar: var(--r-epic); } .cb.r-legendary { --rar: var(--r-legendary); } .cb.r-mythic { --rar: var(--r-mythic); }
+.cb .face { background: #0d0d10; padding: 10px; box-shadow: 0 10px 24px rgba(0,0,0,.55); border-radius: 12px; }
+.cb .frame { position: absolute; inset: 9px; border-radius: 6px; background: linear-gradient(160deg, var(--fr1), var(--fr2)); display: grid; grid-template-rows: auto 1fr auto auto; padding: 6px; gap: 5px; }
+.cb .bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; background: linear-gradient(#f3ead4, #cdbf9c); border-radius: 10px / 50%;
+  border: 1px solid rgba(0,0,0,.55); padding: 2px 8px; font: 700 12.5px var(--font-name); color: #1b160d; box-shadow: 0 1px 2px rgba(0,0,0,.5); min-width: 0; }
+.cb .bar .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cb .bar .rs { width: 16px; flex: none; color: var(--rar); filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000); }
+.cb .pic { border: 2px solid rgba(0,0,0,.6); background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--fr1) 70%, #fff), var(--fr2) 60%, #0c0c12); display: grid; place-items: center; min-height: 0; overflow: hidden; }
+.cb .pic .glyph { width: 46%; height: auto; aspect-ratio: 1; color: #fff; filter: drop-shadow(0 2px 4px rgba(0,0,0,.8)); }
+.cb .pic .cube { width: 56%; }
+.cb .text { background: linear-gradient(#f4eedd, #ddd1b3); border: 1px solid rgba(0,0,0,.5); border-radius: 2px; padding: 6px 7px; font-size: 11px; line-height: 1.32; color: #1b160d; min-height: 64px; }
+.cb .pt { justify-self: end; margin-top: -14px; font: 700 12px var(--font-ui); color: #1b160d; background: linear-gradient(#f3ead4, #cdbf9c); border: 1px solid rgba(0,0,0,.6); border-radius: 4px; padding: 0 7px; }
+
+/* ---------- Look C: Window (FF7 theme) ---------- */
+.cc { --rar: var(--r-common); --el: var(--el-physical); }
+.cc.r-rare { --rar: var(--r-rare); } .cc.r-epic { --rar: var(--r-epic); } .cc.r-legendary { --rar: var(--r-legendary); } .cc.r-mythic { --rar: var(--r-mythic); }
+.cc.el-fire { --el: var(--el-fire); } .cc.el-ice { --el: var(--el-ice); } .cc.el-void { --el: var(--el-void); }
+.cc .face { background: linear-gradient(180deg, #2a37a0, var(--navy) 35%, var(--navy-2)); border: 2px solid rgba(216,219,230,.8); border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.55), 0 0 0 1px #000, 0 0 16px color-mix(in srgb, var(--rar) 55%, transparent); padding: 12px; display: grid; grid-template-rows: auto auto 1fr auto; gap: 8px; }
+.cc .nm { font: 700 15px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: #fff; text-shadow: 1px 1px 0 #000; }
+.cc .line { height: 3px; background: linear-gradient(90deg, var(--rar), transparent); }
+.cc .pic { border: 1px solid rgba(216,219,230,.5); border-radius: 4px; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--el) 40%, #1b2577), #070a2a 75%); display: grid; place-items: center; min-height: 0; overflow: hidden; }
+.cc .pic .glyph { width: 46%; height: auto; aspect-ratio: 1; color: color-mix(in srgb, var(--el) 60%, #fff); filter: drop-shadow(0 0 8px var(--el)); }
+.cc .pic .cube { width: 56%; }
+.cc .text { font-size: 12px; line-height: 1.35; color: #e9ecf7; min-height: 4em; }
+.cc .ft { display: flex; justify-content: space-between; gap: 6px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--rar); font-weight: 700; }
+.cc .ft span:last-child { color: #c9cde0; }
+
+/* legend */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--ink-dim); }
+.legend i { display: inline-block; width: 12px; height: 12px; transform: rotate(45deg); margin-right: 6px; vertical-align: -1px; border: 1px solid #000; }
+footer { color: var(--ink-dim); font-size: 12px; }
+footer a { color: var(--gold); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="ribbonFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9caa0"/><stop offset="1" stop-color="#9c8858"/></linearGradient>
+    <linearGradient id="ribbonVoid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a3a8e"/><stop offset="1" stop-color="#3a1446"/></linearGradient>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <h1>Card looks <span>· slice 5b</span></h1>
+    <p class="lede">Real demo cards in three looks. Hover a card to tilt it, click to flip it to its back. Look A follows Hearthstone,
+      as you asked; B and C are there to compare. Art is never drawn: a character shows a prerendered still of its in-game cube (the Warrior here; the others follow once the
+      portrait studio is approved), an item shows its game-icons glyph tinted by element.</p>
+    <div class="controls" role="group" aria-label="Card name font">
+      <span class="note">Card name font:</span>
+      <button type="button" id="font-cinzel" aria-pressed="true">Cinzel (fantasy serif, new)</button>
+      <button type="button" id="font-chakra" aria-pressed="false">Chakra Petch (our UI font)</button>
+    </div>
+  </header>
+
+  <section aria-labelledby="la">
+    <h2 id="la">Look A · Tavern <span class="pill">Favourite · built in engine</span> <small>Hearthstone layout: oval art for characters, arched art for items, round art for armor and weapons</small></h2>
+    <p class="note">Frame metal by rarity (iron, silver, violet, gold, prismatic rose for Mythic characters), a rarity gem under the name,
+      and a Magic-style type line under the text naming the card's kind. Epic glows, Legendary and Mythic carry a crown crest and a moving foil. Corrupted (Void) cards get a cracked black frame with the magenta outline from the RoR-style floor items.</p>
+    <div class="row" id="rowA"></div>
+    <h3>Collection states</h3>
+    <div class="row" id="rowStates"></div>
+    <h3>Card back and pack</h3>
+    <div class="row" id="rowBack"></div>
+  </section>
+
+  <section aria-labelledby="lb">
+    <h2 id="lb">Look B · Grimoire <span class="pill">Built in engine</span> <small>Magic layout: name bar on top, full-width art, rules box, frame colour by element, rarity as the set symbol's colour</small></h2>
+    <div class="row" id="rowB"></div>
+  </section>
+
+  <section aria-labelledby="lc">
+    <h2 id="lc">Look C · Window <small>The FF7 window theme as a card: closest to today's screens, least like a collectible</small></h2>
+    <div class="row" id="rowC"></div>
+  </section>
+
+  <section aria-labelledby="lr">
+    <h2 id="lr">Rarity colours <small>shared by every look, the pack flashes and the 5b2 floor items</small></h2>
+    <div class="legend">
+      <span><i style="background:var(--r-common)"></i>Common</span>
+      <span><i style="background:var(--r-rare)"></i>Rare</span>
+      <span><i style="background:var(--r-epic)"></i>Epic</span>
+      <span><i style="background:var(--r-legendary)"></i>Legendary</span>
+      <span><i style="background:var(--r-mythic)"></i>Mythic (characters only)</span>
+      <span><i style="background:var(--el-void)"></i>Corrupted outline (Void pool)</span>
+    </div>
+  </section>
+
+  <footer>Icons: Lorc, Delapouite, Skoll, Carl Olsen and Willdabeast from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, CC BY 3.0.
+    Mock-up in HTML for approval; the real cards are built in Godot (3D stage, our shaders).</footer>
+</div>
+
+<script>
+const ICONS = {"lantern":["M256.53 19.094c-28.53 0-51.842 23.313-51.842 51.843 0 13.565 5.28 25.95 13.875 35.22l-110.532 78.53h296.814l-110.594-78.25c8.755-9.297 14.156-21.8 14.156-35.5 0-28.53-23.344-51.843-51.875-51.843zm0 18.687c18.432 0 33.19 14.727 33.19 33.157 0 9.792-4.177 18.538-10.845 24.594l-22.72-16.06-22.25 15.81c-6.497-6.044-10.53-14.687-10.53-24.343 0-18.43 14.726-33.156 33.156-33.156zM96.44 204l3.343 11.875 65.376 232.75 1.906 6.813h178.876l1.937-6.813 65.375-232.75L416.594 204H96.437zm24.656 18.688h270.812L331.78 436.75H181.25l-60.156-214.063zm146.187 16.687c29.012 47.73-76.807 70.517-60.155 133.75 11.2 25 29.146 41.394 50.22 42.03 48.84 0 73.57-53.528 60.75-99.842-4.847 24.07-24.934 34.845-34.876 22.375-24.115-30.248 36.436-56.768-15.94-98.313zM127.25 473.72v18.686h258.594V473.72H127.25z"],"seal":["M283.406 26c-31.262-.124-67.23 14.174-87.406 24.813-14.187 7.48-63.924 37.248-106.594 45.5-55.05 10.643-86.878 63.63-54.594 90.156 53.676 44.1 55.533 101.236 15.844 143.186-43.832 46.33 1.16 113.166 63.844 105.625 62.685-7.54 89.117.543 121.03 32.44 41.408 41.38 131.457 24.757 153.595-32.595 10.275-26.614 24.304-56.372 58.594-68.563 40.316-14.328 52.335-59.373 26.217-90.625-19.376-23.183-21.61-47.184 4.875-95.468 21.756-39.664 4.657-83.827-55.937-80.44-45.002 2.515-64.425-27.456-97.156-59.374C314.866 30.074 299.78 26.066 283.405 26zm-20.312 76.188c87.992 0 159.53 71.508 159.53 159.5 0 87.994-71.538 159.53-159.53 159.53s-159.53-71.536-159.53-159.53c0-87.995 71.538-159.5 159.53-159.5zm0 18.687c-77.892 0-140.813 62.918-140.813 140.813 0 77.894 62.922 140.843 140.814 140.843 77.89 0 140.844-62.948 140.844-140.842 0-77.892-62.953-140.813-140.844-140.813zm-9.344 19.188h18.688v12.562l32.218 9.78-32 9.72h-.78v97.47H253.75V172.53l-33.344-10.124 33.344-10.125v-12.218zm-51.875 40.343c9.892-.023 20.71 2.28 32.313 7.156v20.594c-14.94-7.682-27.267-9.843-36.657-8.844-11.21 1.194-18.696 6.513-23.468 14.125-9.34 14.902-7.106 39.607 13.907 56.157h-25.657c-14.936-20.91-15.937-47.15-4.063-66.094 7.603-12.13 20.8-20.992 37.313-22.75 2.064-.22 4.16-.34 6.312-.344zm122.438 0c2.153.005 4.28.124 6.343.344 16.513 1.758 29.71 10.62 37.313 22.75 11.872 18.944 10.872 45.183-4.064 66.094H338.22c21.01-16.55 23.245-41.255 13.905-56.156-4.77-7.613-12.258-12.932-23.47-14.125-9.69-1.032-22.498 1.294-38.092 9.593v-20.75c12.145-5.308 23.443-7.774 33.75-7.75zm-71.438 16.875c.052.034.104.063.156.095l-.155.25v-.344zm-81.563 91h183.563v18.44h-34.28v17.81h34.28v18.69H171.312v-18.69h36.47v-17.81h-36.47v-18.44zm55.157 18.44v17.81h27.28v-17.81h-27.28zm45.968 0v17.81h29.468v-17.81h-29.47zm-9.157 50.03c7.64 0 13.845 6.204 13.845 13.844s-6.204 13.844-13.844 13.844-13.842-6.204-13.842-13.844 6.203-13.844 13.843-13.844zM457 410.5c-7.208.234-14.82 2.62-21.5 7.688-34.04 25.825-9.88 74.987 31.938 40.437 32.292-26.678 13.11-48.89-10.438-48.125z"],"fangs":["M169.57 106.12c-1.882-14.48-28.184-30.424-41.092-30.424-2.54 0-4.56.612-5.773 1.974-21.81 24.385 14.225 81.262 14.225 81.262s35.746-28.785 32.64-52.812zm128.832 60.524s34.315-54.186 13.544-77.36c-1.155-1.292-3.083-1.88-5.496-1.88-12.308 0-37.352 15.183-39.142 28.98-2.967 22.78 31.094 50.26 31.094 50.26zm-53.724-50.352c-1.79-13.798-26.845-28.98-39.14-28.98-2.414 0-4.343.588-5.497 1.88-20.782 23.22 13.544 77.36 13.544 77.36s34.06-27.387 31.094-50.26zM58.128 58.896a16.544 16.544 0 0 0-1.664.08c-87.75 8.937 11.373 286.056 40.55 304.484 0 0-16.984-151.636 2.795-244.236 7.238-34.107-24.006-60.328-41.683-60.328zm397.394.08a16.465 16.465 0 0 0-1.663-.08c-17.678 0-48.968 26.198-41.682 60.328 19.778 92.6 2.794 244.236 2.794 244.236 29.223-18.416 128.312-295.535 40.55-304.483zm-72.013 16.72c-12.92 0-39.258 15.945-41.094 30.424-3.106 23.97 32.652 52.823 32.652 52.823s36.024-56.888 14.225-81.26c-1.224-1.375-3.244-1.987-5.784-1.987zm-148.3 348.98c-2.032-11.37-25.598-35.353-25.598-35.353s-20.54 23.97-20.32 33.727c0 2.147-1.155 23.092 2.03 26 2.876 2.645 12.84 4.043 22.62 4.043 9.468 0 18.75-1.305 21.268-4.042 2.31-2.47.335-22.733 0-24.373zm-60.04-24.35c-12.065-20.69-19.155-51.01-23.092-73.733-3.094-17.966-4.19-31.174-4.19-31.174-15.127 11.81-44.292 137.675 2.54 137.675a30.07 30.07 0 0 0 4.952-.428c4.62-.762 10.46-4.295 15.01-9.236 5.935-6.43 9.456-15.17 4.78-23.103zm188.85-104.93s-1.006 12.03-3.777 28.738c-3.81 22.965-10.98 54.74-23.485 76.204-3.764 6.466-2.136 13.417 1.744 19.236 4.618 6.86 12.308 12.135 18.035 13.082 1.636.279 3.293.421 4.953.427 46.912-.046 17.677-125.91 2.563-137.734zm-41.406 127.7c.22-9.757-20.32-33.726-20.32-33.726s-23.532 23.935-25.518 35.307c-.254 1.444-2.563 21.592 0 24.386 2.564 2.794 11.812 4.04 21.268 4.04 9.78 0 19.744-1.396 22.62-4.04 4.387-4.088 1.962-25.286 1.985-26.002z"],"pentacle":["M486 203.652H310.111L256 37.113l-54.111 166.539H26l142.22 103.623-54.462 167.612L256 371.24l142.242 103.646-54.473-167.612zm-85.995 28.008-65.335 47.596-15.46-47.596h80.795zM256 127.708l24.658 75.91H231.33zM111.995 231.66h80.795l-15.45 47.596zm55.097 169.713 24.932-76.743 40.194 29.29zm34.041-104.762 21.1-64.951h67.524l21.099 64.95-54.867 39.977zm143.731 104.762-65.082-47.454 40.194-29.29zm-37.983-264.359-10.424-32.092a183.269 183.269 0 0 1 114.322 81.21H376.43a155.293 155.293 0 0 0-69.55-49.118zM129 371.328l-10.413 32.049a182.425 182.425 0 0 1-43.918-142.581l26.684 19.435v2.847A153.804 153.804 0 0 0 129 371.284zm177.104 58.108 26.64 19.413a182.447 182.447 0 0 1-153.51 0l26.64-19.413a154.79 154.79 0 0 0 100.23 0zM135.569 186.133h-34.348a183.269 183.269 0 0 1 114.322-81.21l-10.424 32.091a155.293 155.293 0 0 0-69.55 49.119zm303.12 96.955a181.922 181.922 0 0 1-45.276 120.245L383 371.285a153.804 153.804 0 0 0 27.68-88.197v-2.846l26.683-19.446a183.685 183.685 0 0 1 1.325 22.292z"],"meat":["M440.156 98.063c-4.05-.11-8.044 1.117-11.656 4-1.542 1.23-3.1 2.884-4.47 4.75-22.9 31.22-48.278 57.33-75.186 81-8.76 14.692 10.695 44.406 25.594 44.406 34.144-12.928 69.617-22.516 106.75-26.314 42.628-4.358 17.688-68.134-26.25-45.47 30.3-22.666 7.094-61.79-14.782-62.374zM310.47 108.156c-6.167-.108-12.215 1.172-17.595 4.28a30.82 30.82 0 0 0-4.406 3.095c-.038-.056-.09-.13-.126-.186-79.912 66.402-116.334 73.468-158.22 86.844-6.886 2.2-12.27 7.18-16.5 15.5s-6.892 19.843-7.343 33.125c-.9 26.563 6.935 59.927 23.72 89.03 16.72 28.99 43.37 53.946 67.656 67.126 12.143 6.59 23.682 10.167 32.375 10.436 8.694.27 13.915-1.95 17.782-7.375 30.986-43.45 89.343-69.052 156.157-92.25-.005-.006.003-.023 0-.03a31.008 31.008 0 0 0 5.842-2.594c8.2-4.738 13.535-12.897 16.282-22.125 2.747-9.227 3.22-19.75 2.03-31.25-.953-9.233-3.033-19.127-6.155-29.374-5.916 1.366-11.628 3.157-17.908 5.47 2.835 9.25 4.69 17.978 5.5 25.81 1.007 9.74.403 18.06-1.375 24.033-1.777 5.972-4.412 9.338-7.718 11.25-3.308 1.91-7.543 2.505-13.595 1.06-6.052-1.443-13.55-5.07-21.47-10.81-15.838-11.482-33.334-31.223-47.624-56-14.29-24.78-22.61-49.838-24.624-69.314-1.006-9.738-.403-18.027 1.375-24 1.78-5.973 4.414-9.37 7.72-11.28 1.653-.957 3.52-1.58 5.75-1.782.557-.05 1.147-.067 1.75-.063 1.81.014 3.824.272 6.094.814 6.05 1.444 13.518 5.04 21.437 10.78 8.218 5.957 16.884 14.166 25.314 24.126 5.07-4.055 9.34-8.25 13.406-13.188-8.97-10.46-18.366-19.26-27.75-26.062-9.354-6.78-18.733-11.61-28.094-13.844a46.242 46.242 0 0 0-7.03-1.125 43.882 43.882 0 0 0-2.657-.124zm7.967 34.188c-.438.024-.86.063-1.28.125-17.327 2.54-14.97 36.035 5.03 74.56 20 38.528 50.52 67.576 67.844 65.032 5.995-.88 9.263-5.687 10.658-12.875-1.67 2.187-3.847 3.484-6.72 3.907-15.316 2.248-42.316-23.093-60-57.156-17.682-34.064-19.254-63.91-3.937-66.157 3.638-.53 7.69.417 12.345 2.782-8.68-6.8-17.353-10.583-23.938-10.218zM102 325.124c-16.555 1.844-35.304 3.26-57.063 4.376-49.128 2.523-25.555 71.576 30.094 52.22-49.365 29.9 3.86 86.927 26.97 46.75 10.362-18.016 21.88-33.79 34.375-47.814-8.42-9.644-16.078-20.224-22.563-31.47a200.715 200.715 0 0 1-11.812-24.06z"],"chain":["M174.688 61.094 144.125 78.75 43.53 136.813l-10.124 5.843-10.718 6.188-5.47 3.156 65.407 113.375 2.03-1.156 4.97-2.876 9.188-5.313V256l55.874-32.438-8.625 195.938-.156 3.22-1.125 24.03h222.126l-.125-2.688-.31-7.343-.783-17.22-8.593-195.53 55.22 32.06-.033.033 13.283 7.656.843.5 2.063 1.186L493.874 152l-5.47-3.156-10.717-6.188-94.438-54.5-16.28-9.406-22.408-12.938-8.156-4.687c-11.456 23.492-43.573 40.594-81.156 40.594-37.564 0-69.075-17.103-80.53-40.595l-.032-.03zm-17.313 31.562c38.33 35.412 91.103 46.482 137.03 34.563l-7.717 14.25 13.125 24.25 13.125-24.25-9.22-17.032c18.97-6.366 36.472-16.805 50.876-31.25l113.75 65.656-46.72 81L392 222.624l12.156-22.468-13.125-24.25-13.124 24.25L389.186 221l-19.31-11.22-33.563-19.874.5 8.5-12.938-23.906-13.156 24.25L323.874 223l12.97-23.97 1.467 24.626h.032l2.187 49.406-10.655-19.656-13.125 24.25L326.688 296h-60.22l9-16.625-13.124-24.25-13.125 24.25 9 16.625h-88l3.405-77.25h-.03l1.155-28.875-33.53 19.875-51.75 30.063-46.72-80.97 114.625-66.187zm4.563 16.78-13.125 24.25 13.125 24.25 13.125-24.25-13.125-24.25zm270.093 39.626-13.124 24.25 13.125 24.25 13.126-24.25-13.125-24.25zM128.69 166.72l-13.125 24.25 13.124 24.25 13.125-24.25-13.125-24.25zm113.843 38.186-13.124 24.25 13.125 24.25 13.126-24.25-13.125-24.25zm55.876 19.813-13.125 24.25 13.126 24.25 13.125-24.25-13.124-24.25zm-99.72 9.186-13.124 24.25 13.125 24.25 13.157-24.25-13.156-24.25zm142.22 47.625.625 14.47h-8.467l7.843-14.47zM169.47 312.97h172.81l.876 19.967H168.594l.875-19.968zm-1.626 36.936H207l-10.844 19.97 13.156 24.25 13.125-24.25-10.812-19.97h120.563l-11.563 21.375 13.125 24.25L345 374.75l1.97 44.75h-53.44l8.095-14.97-13.125-24.25-13.125 24.25 8.094 14.97H164.78l3.064-69.594zm167.47 0h8.592l.75 17.28-9.344-17.28z"],"sword":["m491.844 22.533-83.42 14.865L196.572 249.25c3.262 4.815 5.37 10.72 5.37 16.932 0 5.863-1.71 11.35-4.643 15.996a52.936 52.936 0 0 0-16.027-2.477c-15.724 0-29.904 6.89-39.69 17.796l-9.112-9.113 17.237-17.237a545.915 545.915 0 0 1-13.19-17.6l-19.443 19.44-13.215-13.215 21.828-21.827a548.134 548.134 0 0 1-12.792-20.068L72.093 258.68l58.314 58.314a52.94 52.94 0 0 0-2.49 16.063 52.86 52.86 0 0 0 4.592 21.564l-72.14 72.14-14.56-14.56L21.013 437l14.558 14.56-8.607 8.608 27.246 27.246 8.606-8.61 14.56 14.56 24.798-24.8-14.557-14.556 72.158-72.16a52.885 52.885 0 0 0 21.498 4.562 52.94 52.94 0 0 0 16.063-2.49l58.363 58.363L296.5 401.48a548.745 548.745 0 0 1-20.068-12.793l-21.83 21.83L241.39 397.3l19.442-19.44a550.258 550.258 0 0 1-17.603-13.194l-17.238 17.238-9.16-9.16c10.905-9.785 17.795-23.965 17.795-39.69 0-5.346-.806-10.51-2.285-15.39 4.703-3.04 10.288-4.817 16.265-4.816 6.21 0 11.776 1.77 16.52 4.955L476.98 105.95l14.864-83.417zm-66.227 53.012 13.215 13.215-191.684 191.68-13.214-13.213L425.617 75.545zM181.273 298.39c19.257 0 34.665 15.41 34.665 34.665 0 19.256-15.408 34.666-34.665 34.666-19.256 0-34.666-15.41-34.666-34.665s15.41-34.666 34.666-34.666z"],"flame":["M245.05 15.514c34.29 48.815-23.535 320.54-90.302 136.72C106.796 325.11 38.956 332.518 38.876 252.55c-71.6 79.31 43.824 220.767 87.376 243.935h52.127c-45.92-40.016-76.784-78-82.176-135.968 47.312 9.423 71.855 20.96 81.263-62.048 60.736 86.59 100.944-49.376 137.184-107.12-1.647 40.32-3.343 93.456 22.848 129.888 8.736 12.143 33.232 16.11 54.736 15.807-9.92 16.08-44.848 69.376-17.008 89.2 27.84 19.824 33.072-.384 25.856 16.176-13.264 20.88-22.992 39.375-59.072 54.063h56.064c59.44-18.72 111.807-91.663 94.607-135.535-22.015 18.657-43.774 30.897-61.294 29.537 49.12-72.08 37.84-145.903 14.752-221.342-20.224 72.383-33.488 82.495-54.576 99.52 29.104-68.657-85.44-214.448-146.51-253.15z"],"snow":["M316.28 19.063 211.19 47.25l36.625 67.78-61.25 16.44L184 54.53 80.437 82.313 52.47 186.72l77 2.186L113 250.344l-67.875-36.22L17.22 318.19l75.843 75.843 40.593-65.56 45.25 45.25-65.562 40.624 76.53 76.53 103.782-27.812-36.5-68.03 61.53-16.47 2.377 77.157 104.687-28.064 27.97-104.437-77.158-2.376L393 259.47l68.03 36.5 27.908-104.22-77-77.03-40.47 65.718-44.624-44.657 65.406-40.75-75.97-75.968zM253.19 125l11.53 21.344-22.874 69.72-54.094-49.095-.813-24.19 66.25-17.78zm64.062 16.75 48.28 48.313-13 21.125-71.81 15.062 15.467-71.375 21.063-13.125zm-176.438 47.47 23.75.686 48.938 54.656-69.563 22.282L123 255.656l17.813-66.437zm221.094 53.56 21.125 11.345-17.78 66.375-23.97-.75-48.5-53.938 69.126-23.03zm-139.25 41.5-14.625 71.376-19.53 12.094-48.875-48.906 12.094-19.5 70.936-15.063zm40.438 11.064 54.5 48.344.72 23.53-66.533 17.844-11.124-20.75 22.438-68.968z"],"crown":["m408.256 119.46-37.7 52.165 19.57 44.426 34.8-37.214-16.67-59.375zm86.074 12.513L384.44 249.498 334.01 135.02l-75.162 132.947-86.948-131.78-33.334 114.122L17.922 132.83l39.3 127.6c1.945-.348 3.94-.54 5.98-.54 18.812 0 34.26 15.452 34.26 34.262 0 13.823-8.346 25.822-20.235 31.22l5.337 17.33c12.425 25.466 71.863 45.152 176.582 47.206 110.805 2.174 178.12-17.54 189.854-47.207h-.002l4.357-20.26c-16.836-2.114-30.02-16.612-30.02-33.986 0-18.81 15.45-34.262 34.263-34.262 3.513 0 6.91.54 10.11 1.54l26.622-123.762zm-391.77 2.04 1.22 56.337 25.56 24.89 9.592-32.842-36.37-48.386zm150.585 2.91-24.483 51.36 28.955 43.885 24.922-44.08-29.395-51.166zm204.453 135.962c-8.712 0-15.575 6.862-15.575 15.572 0 8.71 6.863 15.574 15.575 15.574s15.572-6.863 15.572-15.573-6.86-15.572-15.572-15.572zM63.2 278.58c-8.71 0-15.573 6.864-15.573 15.574s6.862 15.573 15.574 15.573c8.713 0 15.573-6.862 15.573-15.573 0-8.71-6.86-15.574-15.572-15.574zm130.33 17.842c18.812 0 34.26 15.45 34.26 34.262 0 18.81-15.448 34.26-34.26 34.26-18.813 0-34.262-15.45-34.262-34.26s15.45-34.262 34.26-34.262zm131.234 0c18.812 0 34.26 15.45 34.26 34.262 0 18.81-15.448 34.26-34.26 34.26-18.813 0-34.262-15.45-34.262-34.26s15.45-34.262 34.262-34.262zm-131.235 18.69c-8.713 0-15.573 6.86-15.573 15.572 0 8.71 6.86 15.574 15.572 15.574 8.71 0 15.572-6.864 15.572-15.574s-6.86-15.573-15.573-15.573zm131.234 0c-8.712 0-15.573 6.86-15.573 15.572 0 8.71 6.862 15.574 15.574 15.574s15.574-6.864 15.574-15.574-6.862-15.573-15.574-15.573z"],"lock":["M254.28 17.313c-81.048 0-146.624 65.484-146.624 146.406V236h49.594v-69.094c0-53.658 43.47-97.187 97.03-97.187 53.563 0 97.032 44.744 97.032 97.186V236h49.594v-72.28c0-78.856-65.717-146.407-146.625-146.407zM85.157 254.688c-14.61 22.827-22.844 49.148-22.844 76.78 0 88.358 84.97 161.5 191.97 161.5 106.998 0 191.968-73.142 191.968-161.5 0-27.635-8.26-53.95-22.875-76.78H85.155zM254 278.625c22.34 0 40.875 17.94 40.875 40.28 0 16.756-10.6 31.23-25.125 37.376l32.72 98.126h-96.376l32.125-98.125c-14.526-6.145-24.532-20.62-24.532-37.374 0-22.338 17.972-40.28 40.312-40.28z"],"lens":["M333.78 20.188c-39.97 0-79.96 15.212-110.405 45.656-58.667 58.667-60.796 152.72-6.406 213.97l-15.782 15.748 13.25 13.25 15.75-15.78c61.248 54.39 155.3 52.26 213.968-6.407 60.887-60.886 60.888-159.894 0-220.78C413.713 35.4 373.753 20.187 333.78 20.187zm0 18.562c35.15 0 70.285 13.44 97.158 40.313 53.745 53.745 53.744 140.6 0 194.343-51.526 51.526-133.46 53.643-187.5 6.375l.218-.217c-2.35-2.05-4.668-4.17-6.906-6.407-2.207-2.206-4.288-4.496-6.313-6.812l-.218.22c-47.27-54.04-45.152-135.976 6.374-187.502C263.467 52.19 298.63 38.75 333.78 38.75zm0 18.813c-30.31 0-60.63 11.6-83.81 34.78-46.362 46.362-46.362 121.234 0 167.594 10.14 10.142 21.632 18.077 33.905 23.782-24.91-19.087-40.97-49.133-40.97-82.94 0-15.323 3.292-29.888 9.22-43-4.165 20.485.44 40.88 14.47 54.907 24.583 24.585 68.744 20.318 98.624-9.562 29.88-29.88 34.146-74.04 9.56-98.625a52.379 52.379 0 0 0-7.655-6.313c45.13 8.648 79.954 46.345 84.25 92.876 4.44-35.07-6.82-71.726-33.813-98.72-23.18-23.18-53.47-34.78-83.78-34.78zM176.907 297.688 42.094 432.5l34.562 34.563L211.47 332.25l-34.564-34.563zM40 456.813 24 472.78 37.22 486l15.968-16L40 456.812z"],"stairs":["M64 448v-64h64v-64h64v-64h64v-64h64v-64h64V64h64v384z"],"cube":["M256 24.585 51.47 118.989 256 213.394l204.53-94.405zM38.998 133.054v258.353L247 487.415V229.063zm434.004 0L265 229.062v258.353l208.002-96.008z"],"drop":["M263.844 40.344C234.1 213.202 145.594 248.03 145.594 369.22c0 60.804 60.106 105.5 118.25 105.5 59.45 0 115.937-41.803 115.937-99.533 0-116.332-85.2-162.312-115.936-334.843zm-58.28 217.094c-27.963 75.53-5.105 154.567 54.25 179.375 15.185 6.348 31.724 7.714 47.905 6.28-116.134 49.787-185.836-79.816-102.158-185.656z"],"fist":["M215.75 21.063c-1.306 0-2.582.045-3.813.125a43.537 43.537 0 0 0-5.5.718L171.47 82.5a53.02 53.02 0 0 1 13.31-1.688c21.424 0 39.93 12.778 48.407 31.094l39.188-67.844c-4.546-5.766-14.702-13.066-26.97-17.53-9.74-3.546-20.516-5.473-29.655-5.47zm85.72 17.53c-1.583-.03-3.07.047-4.47.188l-44.53 77.157a52.952 52.952 0 0 1 15.218-2.25c20.817 0 38.924 12.05 47.718 29.532l43.156-74.782c-4.125-6.924-13.916-15.663-25.78-21.532-10.44-5.163-22.204-8.138-31.313-8.312zm-162.5 29.344c-10.902.22-21.355 4.083-32.5 12.22C96.044 87.766 85.3 99.3 74.187 114.5L122 130.78l34.656-60.03c-5.398-1.782-10.563-2.693-15.5-2.813-.73-.017-1.46-.014-2.187 0zM370.312 85.5 325.5 163.156c5.325-1.817 11.015-2.844 16.938-2.844 20.334 0 38.045 11.61 46.906 28.532l36.97-64c-3.564-8.5-12.897-19.255-24.19-27.03C391.22 90.3 378.678 85.84 370.313 85.5zm-185.532 14c-19.27 0-34.718 15.448-34.718 34.75s15.45 34.75 34.72 34.75 34.687-15.445 34.687-34.75c0-19.302-15.418-34.75-34.69-34.75zM58.53 128.938C48.27 179.428 49.268 231.032 64.595 275c.186.536.372 1.06.562 1.594l.188-.22 7.125 10.22c.872 1.25 1.81 2.52 2.78 3.78-.837-41.212 10.51-89.245 37.438-143L58.53 128.94zm209.157 3.437c-19.27 0-34.687 15.416-34.687 34.72 0 19.3 15.417 34.75 34.688 34.75 19.27 0 34.718-15.446 34.718-34.75 0-19.304-15.448-34.72-34.72-34.72zm169.282 12.688-41.783 72.375c-.048.614-.087 1.235-.156 1.843a49.492 49.492 0 0 1 13.44-1.874c21.296 0 39.572 13.55 46.717 32.438l36.532-63.25c-3.43-8.86-12.62-20.092-23.783-28.313-10.62-7.82-22.842-12.6-30.968-13.218zm-303.72 3.218C99.888 212.04 89.896 266.26 95.344 308.876c.133 1.044.286 2.063.437 3.094 20.05 17.924 47.18 35.918 76.25 51.717 40.17 21.83 84.096 39.88 118.064 50.125 42.028-15.246 84.304-46.497 119.156-96.468-.26.004-.52.03-.78.03-27.474 0-49.94-22.483-49.94-49.968 0-1.24.068-2.468.158-3.687a52.551 52.551 0 0 1-16.25 2.592c-28.306 0-51.592-22.493-52.907-50.5a52.87 52.87 0 0 1-21.842 4.72c-25.675 0-47.22-18.35-52.25-42.595-8.685 6.134-19.27 9.75-30.657 9.75-24.53 0-45.332-16.764-51.53-39.406zM342.438 179c-19.033 0-34.282 15.25-34.282 34.313 0 19.063 15.25 34.312 34.28 34.312 19.034 0 34.252-15.246 34.252-34.313 0-19.063-15.218-34.312-34.25-34.312zm66.03 57.125c-17.362 0-31.25 13.888-31.25 31.28 0 17.394 13.888 31.283 31.25 31.283 17.364 0 31.25-13.886 31.25-31.282 0-17.393-13.886-31.28-31.25-31.28zM64.907 307.25a505.784 505.784 0 0 0-20.344 28.47c3.222 9.158 10.11 19.44 20.657 29.967 13.9 13.877 33.814 28.027 57.81 41.063 41.59 22.59 95.45 41.855 152.032 52.53a312.392 312.392 0 0 0 8.22-28.25c-35.365-10.748-79.208-28.665-120.188-50.936-39.39-21.407-75.667-46.16-98.188-72.844zM32.72 354.563c-4.446 7.515-8.483 14.866-12.126 22.093 1.467 9.07 7.963 20.19 19.593 31.72 12.248 12.14 29.84 24.596 51.094 36.062 41.084 22.16 95.78 40.72 152.22 49.187h17.375a304.144 304.144 0 0 0 7.47-16.563c-57.277-11.12-111.46-30.63-154.25-53.875-25.16-13.666-46.376-28.622-62.064-44.28-7.912-7.9-14.49-16.006-19.31-24.344zm-14.47 57.53v34.094c1.047 2.302 3.192 5.48 6.875 8.97 5.26 4.982 13.178 10.427 22.844 15.53 18.88 9.97 44.434 18.675 70.624 22.938H161c-28.807-9.095-55.546-20.318-78.594-32.75-22.413-12.09-41.336-25.303-55.375-39.22-3.173-3.145-6.107-6.326-8.78-9.56zm0 61.782v19.75h34.344c-4.66-2.048-9.133-4.183-13.344-6.406-7.93-4.19-15.012-8.627-21-13.345z"]};
+const icon = (k, cls = "ic") => `<svg class="${cls}" viewBox="0 0 512 512" aria-hidden="true">${(ICONS[k] || []).map(d => `<path d="${d}"/>`).join("")}</svg>`;
+
+// The demo content's own cards (names, texts, tags, stats from content/demo).
+const CARDS = [
+  { id: "warrior", kind: "character", name: "Warrior", rarity: "mythic", set: "core", core: true, el: "physical",
+    type: "Character — Damage dealer", text: "Cleave hits a crowd, Execute finishes a wounded foe, Provoke pulls enemies onto him.",
+    portrait: "data:image/jpeg;base64,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" },
+  { id: "seal", kind: "item", name: "Executioner's Seal", rarity: "legendary", set: "core", core: true, el: "physical", icon: "seal",
+    type: "Item — Passive · Treasure", text: "Critical hits trigger a follow-up: 50% ATK Physical." },
+  { id: "lantern", kind: "item", name: "Frost Lantern", rarity: "epic", set: "descent", el: "ice", icon: "lantern",
+    type: "Item — Passive · Treasure", text: "Ice damage has a 25% chance to Freeze the target." },
+  { id: "blade", kind: "equipment", name: "Headsman's Blade", rarity: "epic", set: "descent", el: "physical", icon: "sword",
+    type: "Armor — Weapon", text: "+60 ATK, +40% damage to Broken enemies." },
+  { id: "lens", kind: "item", name: "Analyzer Lens", rarity: "rare", set: "descent", el: "physical", icon: "lens",
+    type: "Item — Usable · 2 battles", text: "An enemy becomes weak to Physical for 2 turns." },
+  { id: "rations", kind: "item", name: "Rations", rarity: "common", set: "core", core: true, el: "food", icon: "meat",
+    type: "Item — Food", text: "On pickup: heal 15% of max HP. +40 max HP." },
+  { id: "sigil", kind: "item", name: "Corrupted Sigil", rarity: "epic", set: "core", core: true, el: "void", icon: "pentacle", corrupted: true,
+    type: "Item — Passive · Void", text: "Your abilities cost 50% less SP, but your basic attacks give no SP." },
+];
+const EL_ICON = { physical: "fist", fire: "flame", ice: "snow", void: "pentacle", food: "meat" };
+const RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", mythic: "Mythic" };
+let uid = 0;
+
+function cubeArt(c) {
+  const hat = c.hat === "flame"
+    ? `<g transform="translate(30 -6) scale(.078)" fill="#ffcf5a" style="filter:drop-shadow(0 0 4px #ff6a2b)">${(ICONS.flame || []).map(d => `<path d="${d}"/>`).join("")}</g>`
+    : `<path d="M22 31 L50 17 L78 31 L50 45 Z" fill="#5d6578" stroke="#2a2f3c" stroke-width="1"/><path d="M47 9 Q52 2 58 10 L53 25 L47 23 Z" fill="#c8323a" stroke="#4a0f12" stroke-width="1"/>`;
+  return `<svg class="cube" viewBox="0 0 100 100" aria-hidden="true">
+    <ellipse cx="50" cy="90" rx="26" ry="5" fill="rgba(0,0,0,.45)"/>
+    <polygon points="50,20 80,35 50,50 20,35" fill="${c.top}" stroke="#0007" stroke-width=".8"/>
+    <polygon points="20,35 50,50 50,86 20,71" fill="${c.left}" stroke="#0007" stroke-width=".8"/>
+    <polygon points="50,50 80,35 80,71 50,86" fill="${c.right}" stroke="#0007" stroke-width=".8"/>
+    <polygon points="27,52 33,55 33,61 27,58" fill="#14161f"/><polygon points="38,57 44,60 44,66 38,63" fill="#14161f"/>
+    <polygon points="29,53.5 31,54.5 31,56.5 29,55.5" fill="#fff"/><polygon points="40,58.5 42,59.5 42,61.5 40,60.5" fill="#fff"/>
+    ${hat}
+  </svg>`;
+}
+const artOf = c => c.kind === "character" ? `<img class="portrait" src="${c.portrait}" alt="">` : icon(c.icon, "ic glyph");
+
+function backFace() {
+  return `<div class="back cardback"><div class="emblem"><div class="ei">${icon("cube")}</div></div></div>`;
+}
+
+function lookA(c, extra = "") {
+  const id = `rb${uid++}`;
+  const long = c.name.length > 15;
+  const crest = (c.rarity === "legendary" || c.rarity === "mythic") ? `<div class="crest">${icon("crown")}</div>` : "";
+  const foil = (c.rarity === "legendary" || c.rarity === "mythic") ? `<div class="foil"></div>` : "";
+  return `<div class="face">
+      <div class="stone"></div>
+      ${crest}
+      <div class="art">${artOf(c)}</div>
+      <svg class="ribbon" viewBox="0 0 200 34" aria-hidden="true">
+        <path class="band" d="M4 12 Q100 -2 196 12 L192 30 Q100 16 8 30 Z"/>
+        <path id="${id}" d="M14 25 Q100 10 186 25" fill="none"/>
+        <text text-anchor="middle"${long ? ' textLength="168" lengthAdjust="spacingAndGlyphs"' : ""}><textPath href="#${id}" startOffset="50%">${c.name}</textPath></text>
+      </svg>
+      <div class="gem" title="${RARITY[c.rarity]}"></div>
+      <div class="plaque"><p>${c.text}</p><div class="setmark">${icon(c.set === "core" ? "cube" : "stairs")}</div></div>
+      <div class="typebar">${c.type}</div>
+      ${c.core ? `<div class="core">CORE</div>` : ""}
+      ${foil}
+      <div class="glare"></div>
+      ${extra}
+    </div>`;
+}
+function lookB(c) {
+  return `<div class="face"><div class="frame">
+      <div class="bar"><span class="nm">${c.name}</span><span class="rs" title="${RARITY[c.rarity]}">${icon(c.set === "core" ? "cube" : "stairs")}</span></div>
+      <div class="pic">${artOf(c)}</div>
+      <div class="bar" style="font-family:var(--font-ui);font-size:10.5px"><span class="nm">${c.type}</span></div>
+      <div class="text">${c.text}</div>
+    </div><div class="glare"></div></div>`;
+}
+function lookC(c) {
+  return `<div class="face">
+      <div class="nm">${c.name}</div><div class="line"></div>
+      <div class="pic">${artOf(c)}</div>
+      <div><div class="text">${c.text}</div>
+      <div class="ft"><span>${RARITY[c.rarity]}${c.core ? " · Core" : ""}</span><span>${c.type}</span></div></div>
+      <div class="glare"></div></div>`;
+}
+
+function mount(rowId, items) {
+  const row = document.getElementById(rowId);
+  row.innerHTML = items.map(({ cls, face, caption, after = "" }) => `
+    <div class="slot"><div class="tilt ${cls}" tabindex="0" role="button" aria-label="Flip card">
+      <div class="inner">${face}${backFace()}</div>${after}</div>
+      <div class="caption">${caption}</div></div>`).join("");
+}
+const clsA = c => `ca k-${c.kind} r-${c.rarity} el-${c.el}${c.corrupted ? " corrupted" : ""}`;
+const capOf = c => `<b>${RARITY[c.rarity]}</b> · ${c.kind === "character" ? "character" : c.kind === "equipment" ? "armor" : "item"} · ${c.core ? "core set" : "Descent set"}`;
+
+mount("rowA", CARDS.map(c => ({ cls: clsA(c), face: lookA(c), caption: capOf(c) })));
+const byId = Object.fromEntries(CARDS.map(c => [c.id, c]));
+mount("rowStates", [
+  { cls: clsA(byId.lantern), face: lookA(byId.lantern), caption: "<b>Owned</b> · dusting it gives 100 dust" },
+  { cls: clsA(byId.lantern) + " state-missing", face: lookA(byId.lantern, `<div class="ghost"></div>`), caption: "<b>Not owned</b> · ghosted, like Hearthstone's craft view",
+    after: `<div class="tag-chip">Craft · 400 dust</div>` },
+  { cls: clsA(byId.blade), face: lookA(byId.blade, `<div class="lockover"><div class="li">${icon("lock")}</div></div>`), caption: "<b>Locked by your run</b> · dust offers to cancel the run",
+    after: `<div class="tag-chip">In your active run</div>` },
+  { cls: clsA(byId.seal), face: lookA(byId.seal), caption: "<b>New</b> · first seen since the last visit", after: `<div class="newburst">NEW</div>` },
+]);
+document.getElementById("rowBack").innerHTML = `
+  <div class="slot"><div class="tilt ca" tabindex="0" role="button" aria-label="Card back"><div class="inner"><div class="face cardback"><div class="emblem"><div class="ei">${icon("cube")}</div></div><div class="glare"></div></div></div></div>
+    <div class="caption"><b>Card back</b> · FF7 navy and gold, the cube emblem</div></div>
+  <div class="slot"><div class="pack"><div class="body"></div><div class="sig">${icon("stairs")}</div><div class="band">The Descent</div><div class="count">5 cards</div></div>
+    <div class="caption"><b>Descent pack</b> · foil sweep; it bursts open on the 3D stage</div></div>`;
+const four = ["warrior", "seal", "lantern", "sigil"].map(k => byId[k]);
+mount("rowB", four.map(c => ({ cls: `cb r-${c.rarity} el-${c.el}`, face: lookB(c), caption: capOf(c) })));
+mount("rowC", four.map(c => ({ cls: `cc r-${c.rarity} el-${c.el}`, face: lookC(c), caption: capOf(c) })));
+
+// Tilt with a moving glare, click flips.
+const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+document.querySelectorAll(".tilt").forEach(t => {
+  t.addEventListener("pointermove", e => {
+    if (still) return;
+    const r = t.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    t.style.transform = `rotateX(${(0.5 - y) * 18}deg) rotateY(${(x - 0.5) * 22}deg) translateZ(10px)`;
+    t.querySelectorAll(".glare").forEach(g => { g.style.setProperty("--gx", `${x * 100}%`); g.style.setProperty("--gy", `${y * 100}%`); });
+  });
+  t.addEventListener("pointerleave", () => { t.style.transform = ""; });
+  const flip = () => t.classList.toggle("flipped");
+  t.addEventListener("click", flip);
+  t.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } });
+});
+const setFont = chakra => {
+  document.body.classList.toggle("name-chakra", chakra);
+  document.getElementById("font-chakra").setAttribute("aria-pressed", String(chakra));
+  document.getElementById("font-cinzel").setAttribute("aria-pressed", String(!chakra));
+};
+document.getElementById("font-cinzel").addEventListener("click", () => setFont(false));
+document.getElementById("font-chakra").addEventListener("click", () => setFont(true));
+</script>

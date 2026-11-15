@@ -1,0 +1,23 @@
+new demo.character.warrior 7
+portrait demo.character.warrior 0 ffc27a
+shot warrior 3
+portrait demo.character.cleric 0 fff1c4
+shot cleric 3
+portrait demo.character.arcanist 0 b07cff
+shot arcanist 3
+portrait demo.character.bard 0 ffd35a
+shot bard 3
+portrait demo.character.ranger 0 7ee08a
+shot ranger 3
+portrait demo.character.bulwark 0 8fb4ff
+shot bulwark 3
+portrait demo.character.cryomancer 0 6fd8ff
+shot cryomancer 3
+portrait demo.character.pyromancer 0 ff6a2b
+shot pyromancer 3
+portrait demo.character.ember_knight 0 ff8a3a
+shot ember_knight 3
+portrait demo.character.shatterweaver 0 ff7ad0
+shot shatterweaver 3
+portrait demo.character.plaguewright 0 9be05a
+shot plaguewright 3

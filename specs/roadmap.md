@@ -39,7 +39,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5a4c. `food-items` | ✅ Done, playtested 2026-11-14 (`specs/food-items.md`, synced; food becomes passive: the holder heals on pickup and keeps a max HP or max SP bonus; the player chooses who gets every drop (the last boss drops nothing; encounter rewards may be CHOOSE); smart 4-member 29.3% → 31.0%; merged in PR #44; open: `GiveItem` / `RemoveItem` inside an item hook ignore the holder (the Mystery Box), older code) | 2026-11-14 |
 | 5a5. `floor-chests` | ✅ Done, playtested 2026-11-15 (smart 4-member 31.0% → 31.3%); spec written 2026-11-14 (`specs/floor-chests.md`; a chest stays in its room and opens there like a shop, its items and armor pop out onto the floor as pickups beside the open chest; the map tints rooms with something left in them; reviewed and decided 2026-11-14) | |
 | 5e. `audio-pass` | ✅ Done, playtested 2026-11-15 (`specs/audio-pass.md`; one balanced sound bank from the EasyRPG RTP sounds (credited), Pixel Combat and Retro Menu FX, Retro Anime for two ults; every move, status, battle moment, menu and run event sounds; Master / Effects / Interface sliders; `CREDITS.md` and a Credits screen) | 2026-11-15 |
-| 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
+| 5b0. `pack-shop` | 📝 Spec written 2026-11-15 (`specs/pack-shop.md`; packs bought in a shop and owned unopened, open spends an owned pack; server half only, before 5b) | 2026-11-15 |
+| 5b. `card-ui` | 📝 Spec written 2026-11-15 (`specs/card-ui.md`; screens to the approved browser prototype in `specs/design/card-ui-prototype/`; card faces A and B both built, picked in the engine; game-icons item art, prerendered cube portraits; after 5b0) | 2026-11-15 |
 | 5b3. `floor-rooms` | ⬜ Not started (added 2026-11-15: bigger floors, a challenge room (three waves, an item reward), an armory (armor or a weapon) on every floor, item rooms give items only; before 5c) | 2026-11-15 |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; its own slice after 5b3 `floor-rooms`, before 5c (user, 2026-11-15)) | 2026-11-09 |
@@ -205,6 +206,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-11-15: added 5b3 `floor-rooms` before 5c (user); 5c also gets more player agency over items and more keys (user).
 - 2026-11-15: 5d `unique-events` moved before 5c, after 5b3 (user: it will change the balance before the last tweaks). Order: 5b, 5b2, 5b3, 5d, 5c.
 - 2026-11-15: "more events" moved from 5c into 5d (user), so the once-per-run rule never runs a chapter dry.
+- 2026-11-15: 5b `card-ui` specced; the user approved the browser prototype of the screens. Packs are bought in a separate Shop and
+  owned unopened, as in Hearthstone (user), so the server half becomes its own sub-slice **5b0 `pack-shop`**, built first.
+  Order: 5b0, 5b, 5b2, 5b3, 5d, 5c.
 
 
 ## Design tuning: any time, not just in breaks
@@ -656,6 +660,13 @@ like an unbought shop item). Only items and armor wait in the chest; a reward th
 map reveal) is given as soon as the chest opens (user, 2026-11-13). The chest shows open and filled while it holds something, open and empty after. A rule change: the
 room holds the chest and its pickups (run state and hash), `open_chest` names the room's chest, the bots and the console follow,
 and the run goldens are re-recorded. It reuses the shop's pickup path, so most of the machinery exists. The 3D chest (closed, open and filled, open and empty) is drawn in 5a4 `cube-style` (Set K). **Review (user, 2026-11-14):** the rewards pop out of the chest onto the floor next to it (the chest stays, open and empty; the filled state is not used), old saves are refused, a chest with no room is a validator error, `open_chest` reports its offers (`OfferSource.Chest`), and the map tints a room holding a closed chest or a free untaken pickup.
+
+### 5b0. `pack-shop`
+Added 2026-11-15 at the user's request, split out of 5b `card-ui` and built before it. Hearthstone's pack model: packs are bought
+with gems in a shop and owned unopened; opening spends one owned pack (today an open charges gems). Server half only: the pack
+inventory and its ledger, `POST /packs/{id}/buy`, open spending an owned pack (409 1411 when there is none), the owned packs in the
+collection, the `PackPurchased` event, metrics and tests, plus `ServerLink.buy_pack` and the console's `packs buy`. The Shop and
+Open packs screens are 5b. Spec: `specs/pack-shop.md`.
 
 ### 5b. `card-ui`
 Added 2026-11-09, right after slice 5. The screens for the card system, built on the UI framework and the FF7 theme:
