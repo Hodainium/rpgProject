@@ -9,7 +9,6 @@
 extends Node
 
 const CONTENT: String = "res://content/demo/"
-const SOUNDS: String = "res://presentation/audio/rtp/"
 const SCREENS: String = "res://presentation/demo/"
 const ALLOWED_ROOTS: Array[String] = [CONTENT, SCREENS]
 const GENERATED_SET: String = "res://godot_gas/attributes/unit_attribute_set.gd"
@@ -153,33 +152,33 @@ func _abilities() -> void:
 	var physical := [&"Damage.Type.Physical"]
 	var ice := [&"Damage.Type.Ice"]
 	_ability("strike", "Ability.Strike", B.SINGLE_ENEMY, [_row("hit", "damage", D.SCALED, 100, T.ALL, physical)],
-		_jump(0.7), [[0.35, "hit"]], {"sound": ["Attack2", 0.1, -12.0]})
+		_jump(0.7), [[0.35, "hit"]], {"sound": ["Attack2", 0.1]})
 	_ability("ice_blast", "Ability.Iceblast", B.BLAST_ENEMY,
 		[_row("blast", "damage", D.SCALED, 120, T.PRIMARY, ice), _row("chill", "damage", D.SCALED, 50, T.ADJACENT, ice)],
-		_spin(0.8), [[0.5, "blast"], [0.55, "chill"]], {"cost": "mp_cost_ice", "sound": ["Ice1", 0.0, 16.5]})
+		_spin(0.8), [[0.5, "blast"], [0.55, "chill"]], {"cost": "mp_cost_ice", "sound": ["Ice1", 0.0]})
 	_ability("bite", "Ability.Bite", B.SINGLE_ENEMY, [_row("bite", "damage", D.SCALED, 100, T.ALL, physical)],
-		_flash(0.5), [[0.3, "bite"]], {"sound": ["Blow2", 0.05, -13.5]})
+		_flash(0.5), [[0.3, "bite"]], {"sound": ["Blow2", 0.05]})
 	var crush := _jump(1.0)
 	_add_spin(crush, 1.0)
 	_ability("crush", "Ability.Crush", B.BLAST_ENEMY,
 		[_row("crush", "damage", D.SCALED, 90, T.PRIMARY, physical), _row("quake", "damage", D.SCALED, 40, T.ADJACENT, physical)],
-		crush, [[0.6, "crush"], [0.62, "quake"]], {"sound": ["Earth6", 0.3, -3.5]})
+		crush, [[0.6, "crush"], [0.62, "quake"]], {"sound": ["Earth6", 0.3]})
 	_ability("heal", "Ability.Heal", B.SINGLE_ALLY, [_row("heal", "heal", D.USE_EFFECT, 0, T.ALL)],
-		_flash(0.6), [[0.3, "heal"]], {"cost": "mp_cost_heal", "sound": ["Recovery5", 0.0, 4.5]})
+		_flash(0.6), [[0.3, "heal"]], {"cost": "mp_cost_heal", "sound": ["Recovery5", 0.0]})
 	_ability("phoenix_feather", "Ability.Item.Revive", B.SINGLE_DEAD_ALLY,
-		[_row("revive", "revive", D.USE_EFFECT, 0, T.ALL)], _spin(0.8), [[0.5, "revive"]], {"sound": ["Raise2", 0.0, 0.0]})
+		[_row("revive", "revive", D.USE_EFFECT, 0, T.ALL)], _spin(0.8), [[0.5, "revive"]], {"sound": ["Raise2", 0.0]})
 	_ability("potion", "Ability.Item.Potion", B.ALL_ALLIES, [_row("heal", "potion_heal", D.USE_EFFECT, 0, T.ALL)],
-		_jump(0.5), [[0.3, "heal"]], {"sound": ["Recovery7", 0.0, 1.5]})
+		_jump(0.5), [[0.3, "heal"]], {"sound": ["Recovery7", 0.0]})
 	_ability("frost_ember", "Ability.Passive.Frostember", B.SINGLE_ENEMY,
 		[_row("burn", "damage", D.FLAT, 60, T.ALL, [&"Damage.Type.Fire"])], _flash(0.4), [[0.2, "burn"]],
-		{"trigger": &"Event.Damage.Dealt.Ice", "sound": ["Fire1", 0.0, -3.5]})
+		{"trigger": &"Event.Damage.Dealt.Ice", "sound": ["Fire1", 0.0]})
 	# Oath Stone (Birthright-like): one item, a different battle-start effect per holder, chosen by character tag.
 	_ability("oath_warrior", "Ability.Oath.Warrior", B.SELF, [_row("oath", "whetstone", D.USE_EFFECT, 0, T.ALL)],
 		_spin(0.6), [[0.3, "oath"]], {"trigger": &"Event.Battle.Start", "query": _query([&"Character.Warrior"]),
-		"sound": ["Buff", 0.0, 2.0]})
+		"sound": ["Buff", 0.0]})
 	_ability("oath_cleric", "Ability.Oath.Cleric", B.ALL_ALLIES, [_row("oath", "potion_heal", D.USE_EFFECT, 0, T.ALL)],
 		_flash(0.6), [[0.3, "oath"]], {"trigger": &"Event.Battle.Start", "query": _query([&"Character.Cleric"]),
-		"sound": ["Holy3", 0.0, -6.5]})
+		"sound": ["Holy3", 0.0]})
 	# Ults: the cost is ult charge (energy), so GAS blocks them until the bar is full and empties it on use. The
 	# charge listener is a triggered passive on Event.Ability.Used (sent by the battle after each action).
 	_ability("ult_charge", "Ability.Passive.Ultcharge.Action", B.SELF, [_row("charge", "ult_charge", D.USE_EFFECT, 0, T.ALL)],
@@ -190,9 +189,9 @@ func _abilities() -> void:
 	var cleave := _jump(1.2)
 	_add_spin(cleave, 1.2)
 	_ability("cleave", "Ability.Ult.Cleave", B.ALL_ENEMIES, [_row("cleave", "damage", D.SCALED, 200, T.ALL, physical)],
-		cleave, [[0.7, "cleave"]], {"cost": "ult_cost", "sound": ["Explosion1", 0.5, 2.5]})
+		cleave, [[0.7, "cleave"]], {"cost": "ult_cost", "sound": ["Explosion1", 0.5]})
 	_ability("sanctuary", "Ability.Ult.Sanctuary", B.ALL_ALLIES, [_row("bless", "sanctuary_heal", D.USE_EFFECT, 0, T.ALL)],
-		_spin(1.0), [[0.6, "bless"]], {"cost": "ult_cost", "sound": ["Holy5", 0.2, -4.0]})
+		_spin(1.0), [[0.6, "bless"]], {"cost": "ult_cost", "sound": ["Holy5", 0.2]})
 
 
 func _row(id: String, effect_name: String, mode: ExecutionRow.DamageMode, typed: float, targets: ExecutionRow.Targets,
@@ -211,8 +210,8 @@ func _row(id: String, effect_name: String, mode: ExecutionRow.DamageMode, typed:
 
 
 ## extras: "cost": effect name, "query": GameplayTagQuery, "trigger": StringName, "asset_tags": Array (e.g.
-## Ability.Type.FollowUp), "sound": [file in SOUNDS without .wav, time, volume dB] (an audio track on the cube's Audio
-## node plus its volume).
+## Ability.Type.FollowUp), "sound": [EasyRPG file name without .wav, time] (an audio track on the cube's Audio node playing the
+## bank entry rtp.<name>; spec audio-pass: the bank carries the level, so there is no volume).
 func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, rows: Array, animation: Animation,
 		execute_keys: Array, extras: Dictionary = {}) -> void:
 	var track := animation.add_track(Animation.TYPE_METHOD)
@@ -220,14 +219,17 @@ func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, row
 	for key in execute_keys:
 		animation.track_insert_key(track, key[0], {"method": &"execute", "args": [StringName(key[1])]})
 	if extras.has("sound"):
+		# Spec audio-pass: the track plays the bank entry rtp.<name> at 0 dB (the bank carries the level).
+		# A sound the bank does not hold (it keeps only what the game uses) is skipped with a warning: run
+		# game/tools/build_audio_pass.tscn afterwards to give the move its class's sound.
 		var sound: Array = extras["sound"]
-		var audio := animation.add_track(Animation.TYPE_AUDIO)
-		animation.track_set_path(audio, NodePath("Audio"))
-		animation.audio_track_insert_key(audio, sound[1], load(SOUNDS + sound[0] + ".wav"))
-		var level := animation.add_track(Animation.TYPE_VALUE)
-		animation.track_set_path(level, NodePath("Audio:volume_db"))
-		animation.value_track_set_update_mode(level, Animation.UPDATE_DISCRETE)
-		animation.track_insert_key(level, 0.0, float(sound[2]))
+		var entry := SfxBank.bank_path("rtp." + String(sound[0]).to_lower())
+		if ResourceLoader.exists(entry):
+			var audio := animation.add_track(Animation.TYPE_AUDIO)
+			animation.track_set_path(audio, NodePath("Audio"))
+			animation.audio_track_insert_key(audio, sound[1], load(entry))
+		else:
+			push_warning("build_demo: %s: no bank entry %s; no sound (run build_audio_pass)" % [name, entry])
 	animation.resource_name = name
 	_save("animations/" + name, animation)
 	var path := CONTENT + "abilities/%s.tscn" % name

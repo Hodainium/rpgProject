@@ -560,6 +560,7 @@ func _do_enter_room(index: int) -> String:
 			_tally["keysSpent"] = int(_tally.get("keysSpent", 0)) + 1
 		state.map.cells[index]["opened"] = true
 		party_changed.emit()
+		_send(GameplayMessageRouter.RUN_ROOM_UNLOCKED, &"Verb.Enter", &"", &"room", index, [], {"key": entry["unlock"]})
 	run_log.append(entry)
 	_enter_cell(index)
 	return ""
@@ -715,6 +716,7 @@ func gain_levels(count: int, character: CharacterDefinition) -> void:
 ## Raises each member's level to what its XP has reached (levels never fall); several at once is fine.
 func _check_levels() -> void:
 	var curve: Array[int] = structure.xp_to_level
+	var gained := 0
 	for member in state.party:
 		var level := 1
 		for threshold in curve:
@@ -724,12 +726,15 @@ func _check_levels() -> void:
 			var character: UnitDefinition = content.units.get(member["character"])
 			var shown := character.display_name if character != null else String(member["character"])
 			var before := int(member["level"])
+			gained += level - before
 			member["level"] = level
 			_notify("%s reaches level %d" % [shown, level])
 			_send(GameplayMessageRouter.RUN_LEVEL_UP, &"Verb.LevelUp", &"", StringName("slot:%d" % member["slot"]), level,
 				[], {"targetName": shown})
 			if character != null:
 				_announce_skills(member, character, shown, before, level)
+	if gained > 0:
+		_send(GameplayMessageRouter.RUN_LEVELS_GAINED, &"Verb.LevelUp", &"", &"party", gained)
 	party_changed.emit()
 
 
@@ -1864,6 +1869,8 @@ func _refresh_party(full: bool) -> void:
 func add_coins(amount: int) -> void:
 	var before := state.coins
 	state.coins = maxi(state.coins + amount, 0)
+	if state.coins > before:
+		_send(GameplayMessageRouter.RUN_COINS_GAINED, &"Verb.Take", &"", &"coins", state.coins - before)
 	if _chest_rng != null and amount > 0:
 		_chest_gifts.append("%d coin%s" % [amount, "" if amount == 1 else "s"])
 	if not _tally.is_empty():
@@ -2404,14 +2411,30 @@ func load_snapshot(content_index: ContentIndex, saved: Dictionary, card_pool: Va
 	return ""
 
 
+## True while announce_resumed re-sends signals for things that already happened (a Continue, a resume, a rebuild): presentation
+## listeners that react to changes (the sound board's coin, key and page sounds; spec audio-pass) stay quiet meanwhile.
+var announcing: bool = false
+## A replay of actions that already happened (ServerLink's resume tail) sends no gameplay message, except its errors and its run-end
+## (diagnostics), and SfxCue plays nothing for its battles' units: toasts and sounds are for the player's run, not for its rebuild
+## (spec audio-pass review). Messages and cues are presentation only, so nothing else changes.
+var silent: bool = false
+
+
 ## After load_snapshot: the signals a run that just got here would have sent (the floor, the room and what waits in
 ## it: a battle, an event page, pickups). A floor waiting for a seed that is already known is entered now.
 func announce_resumed() -> void:
+	announcing = true
+	_announce_resumed()
+	announcing = false
+
+
+func _announce_resumed() -> void:
 	run_started.emit()
 	if not _waiting_floor.is_empty():
 		var waiting := _waiting_floor
 		if state.floor_seeds.has(int(waiting["floor"])):
 			_waiting_floor = {}
+			announcing = false  # entering the waiting floor is a new action, not a re-announcement
 			enter_floor(int(waiting["floor"]), waiting["choice"])
 		else:
 			_notify("Connecting…")
@@ -2501,10 +2524,14 @@ func _warn(text: String) -> void:
 ## here is read back by the run, so run logs and hashes never depend on who listens.
 func _send(channel: StringName, verb: StringName, instigator: StringName, target: StringName, amount: int = 0,
 		tags: Array = [], data: Dictionary = {}) -> void:
+	if silent and channel != GameplayMessageRouter.RUN_ENDED:
+		return
 	GameplayMessages.broadcast(channel, VerbMessage.make(verb, instigator, target, amount, tags, data))
 
 
 func _notify(text: String, tags: Array = []) -> void:
+	if silent and not tags.has(&"Notification.Error"):
+		return
 	GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION, NotificationMessage.make(text, tags))
 
 

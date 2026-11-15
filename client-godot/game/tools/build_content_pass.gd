@@ -139,20 +139,20 @@ func _abilities_and_kits() -> void:
 	# Party skills (added to the Warrior and the Cleric by hand, with your approval).
 	_ability("provoke", "Ability.Provoke", B.SELF, [_row("taunt", "taunt", D.USE_EFFECT, 0, T.ALL),
 		_row("guard", "defense_up", D.USE_EFFECT, 0, T.ALL)], _jump(0.6), [[0.25, "taunt"], [0.3, "guard"]],
-		{"sound": ["Buff", 0.0, -4.0]})
+		{"sound": ["Buff", 0.0]})
 	_ability("purify", "Ability.Purify", B.ALL_ALLIES, [_row("cleanse", "cleanse", D.USE_EFFECT, 0, T.ALL),
 		_row("regen", "regen", D.USE_EFFECT, 0, T.ALL)], _flash(0.6), [[0.3, "cleanse"], [0.35, "regen"]],
-		{"cost": "mp_cost_heal", "sound": ["Recovery5", 0.1, -4.0]})
+		{"cost": "mp_cost_heal", "sound": ["Recovery5", 0.1]})
 	# Break effects (HSR, spec D2): on the breaker, one per damage type, triggered by Event.Damage.Dealt.Break.<Type>.
 	_ability("break_physical", "Ability.Passive.Break.Physical", B.SINGLE_ENEMY,
 		[_row("burst", "damage", D.SCALED, 100, T.ALL, physical), _row("bleed", "bleed", D.USE_EFFECT, 0, T.ALL)],
-		_flash(0.4), [[0.15, "burst"], [0.2, "bleed"]], {"trigger": &"Event.Damage.Dealt.Break.Physical", "sound": ["Blow4", 0.1, -6.0]})
+		_flash(0.4), [[0.15, "burst"], [0.2, "bleed"]], {"trigger": &"Event.Damage.Dealt.Break.Physical", "sound": ["Blow4", 0.1]})
 	_ability("break_fire", "Ability.Passive.Break.Fire", B.SINGLE_ENEMY,
 		[_row("burst", "damage", D.SCALED, 50, T.ALL, fire), _row("burn", "burn", D.FLAT, 40, T.ALL, fire)],
-		_flash(0.4), [[0.15, "burst"], [0.2, "burn"]], {"trigger": &"Event.Damage.Dealt.Break.Fire", "sound": ["Fire2", 0.1, -6.0]})
+		_flash(0.4), [[0.15, "burst"], [0.2, "burn"]], {"trigger": &"Event.Damage.Dealt.Break.Fire", "sound": ["Fire2", 0.1]})
 	_ability("break_ice", "Ability.Passive.Break.Ice", B.SINGLE_ENEMY,
 		[_row("burst", "damage", D.SCALED, 50, T.ALL, ice), _chance(_row("freeze", "freeze", D.USE_EFFECT, 0, T.ALL), 65)],
-		_flash(0.4), [[0.15, "burst"], [0.2, "freeze"]], {"trigger": &"Event.Damage.Dealt.Break.Ice", "sound": ["Ice2", 0.1, -6.0]})
+		_flash(0.4), [[0.15, "burst"], [0.2, "freeze"]], {"trigger": &"Event.Damage.Dealt.Break.Ice", "sound": ["Ice2", 0.1]})
 	# Item and armor passives.
 	_ability("frost_lantern", "Ability.Passive.Frostlantern", B.SINGLE_ENEMY,
 		[_chance(_row("freeze", "freeze", D.USE_EFFECT, 0, T.ALL), 25)], _flash(0.3), [[0.15, "freeze"]],
@@ -161,7 +161,7 @@ func _abilities_and_kits() -> void:
 		_flash(0.3), [[0.15, "bleed"]], {"trigger": &"Event.Damage.Dealt.Critical"})
 	_ability("toxic_echo", "Ability.Passive.Toxicecho", B.SINGLE_ENEMY,
 		[_row("echo", "toxic_echo_damage", D.SCALED, 30, T.ALL, physical)], _jump(0.5), [[0.25, "echo"]],
-		{"trigger": &"Event.Damage.Dealt.Weakness", "asset_tags": FOLLOW_UP, "sound": ["Attack1", 0.2, -10.0]})
+		{"trigger": &"Event.Damage.Dealt.Weakness", "asset_tags": FOLLOW_UP, "sound": ["Attack1", 0.2]})
 	_ability("overcharge_coil", "Ability.Passive.Overcharge", B.SELF, [_row("refund", "overcharge_refund", D.USE_EFFECT, 0, T.ALL)],
 		_still(0.05), [[0.0, "refund"]], {"trigger": &"Event.Ability.Used.Ultimate"})
 	_ability("interrupters_badge", "Ability.Passive.Interrupter", B.SELF,
@@ -184,25 +184,25 @@ func _abilities_and_kits() -> void:
 		_jump(0.4), [[0.2, "ward"]], {"trigger": &"Event.Battle.Start"})
 	# Usable items.
 	_ability("plague_flask", "Ability.Item.Plague", B.ALL_ENEMIES, [_row("poison", "poison", D.USE_EFFECT, 0, T.ALL)],
-		_jump(0.6), [[0.3, "poison"], [0.4, "poison"]], {"sound": ["Poison", 0.2, -4.0]})
+		_jump(0.6), [[0.3, "poison"], [0.4, "poison"]], {"sound": ["Poison", 0.2]})
 	_ability("purifying_bell", "Ability.Item.Bell", B.ALL_ALLIES, [_row("cleanse", "cleanse", D.USE_EFFECT, 0, T.ALL)],
-		_spin(0.6), [[0.3, "cleanse"]], {"sound": ["Chime1", 0.0, -4.0]})
+		_spin(0.6), [[0.3, "cleanse"]], {"sound": ["Chime1", 0.0]})
 	# Enemy moves.
 	_ability("fire_bolt", "Ability.Firebolt", B.SINGLE_ENEMY, [_row("bolt", "damage", D.SCALED, 100, T.ALL, fire),
 		_chance(_row("burn", "burn", D.FLAT, 30, T.ALL, fire), 100)], _jump(0.6), [[0.3, "bolt"], [0.35, "burn"]],
-		{"sound": ["Fire1", 0.2, -8.0]})
+		{"sound": ["Fire1", 0.2]})
 	_ability("spit", "Ability.Spit", B.SINGLE_ENEMY, [_row("spit", "damage", D.SCALED, 80, T.ALL, physical),
 		_chance(_row("poison", "poison", D.USE_EFFECT, 0, T.ALL), 100)], _jump(0.6), [[0.3, "spit"], [0.35, "poison"]])
 	_ability("chill", "Ability.Chill", B.SINGLE_ENEMY, [_row("chill", "damage", D.SCALED, 60, T.ALL, ice),
 		_chance(_row("slow", "slow", D.USE_EFFECT, 0, T.ALL), 100)], _flash(0.5), [[0.25, "chill"], [0.3, "slow"]])
 	_ability("freeze_touch", "Ability.Freezetouch", B.SINGLE_ENEMY, [_row("touch", "damage", D.SCALED, 50, T.ALL, ice),
 		_chance(_row("freeze", "freeze", D.USE_EFFECT, 0, T.ALL), 50)], _flash(0.5), [[0.25, "touch"], [0.3, "freeze"]],
-		{"sound": ["Ice5", 0.2, -8.0]})
+		{"sound": ["Ice5", 0.2]})
 	var bash := _row("bash", "damage", D.SCALED, 90, T.ALL, physical)
 	bash.toughness_x100 = Fixed.from_typed(30)
 	_ability("shield_bash", "Ability.Shieldbash", B.SINGLE_ENEMY, [bash,
 		_chance(_row("stun", "stun", D.USE_EFFECT, 0, T.ALL), 40)], _jump(0.6), [[0.3, "bash"], [0.35, "stun"]],
-		{"sound": ["Blow4", 0.2, -6.0]})
+		{"sound": ["Blow4", 0.2]})
 	_ability("hex", "Ability.Hex", B.SINGLE_ENEMY, [_chance(_row("hex", "vulnerable", D.USE_EFFECT, 0, T.ALL), 100)],
 		_flash(0.5), [[0.3, "hex"]])
 	_ability("mend", "Ability.Mend", B.SINGLE_ALLY, [_row("regen", "regen", D.USE_EFFECT, 0, T.ALL)], _flash(0.5), [[0.3, "regen"]])
@@ -214,18 +214,18 @@ func _abilities_and_kits() -> void:
 	blast.toughness_x100 = Fixed.from_typed(30)
 	_ability("bleed_blast", "Ability.Bleedblast", B.BLAST_ENEMY, [blast, _row("splash", "damage", D.SCALED, 40, T.ADJACENT, physical),
 		_chance(_row("bleed", "bleed", D.USE_EFFECT, 0, T.PRIMARY), 100)], _jump(0.7), [[0.3, "blast"], [0.32, "splash"],
-		[0.4, "bleed"]], {"query": phase_1, "sound": ["Attack2", 0.2, -6.0]})
+		[0.4, "bleed"]], {"query": phase_1, "sound": ["Attack2", 0.2]})
 	_ability("hex_all", "Ability.Hexall", B.ALL_ENEMIES, [_chance(_row("hex", "vulnerable", D.USE_EFFECT, 0, T.ALL), 100),
 		_chance(_row("weaken", "weaken", D.USE_EFFECT, 0, T.ALL), 100)], _spin(0.7), [[0.3, "hex"], [0.4, "weaken"]],
 		{"query": phase_2})
 	var doom := _row("doom", "damage", D.SCALED, 180, T.ALL, physical)
 	doom.toughness_x100 = Fixed.from_typed(30)
 	_ability("doom", "Ability.Doom", B.SINGLE_ENEMY, [doom], _jump(0.8), [[0.4, "doom"]],
-		{"query": _query([&"State.Phase.Three"]), "sound": ["Explosion1", 0.3, -4.0]})
+		{"query": _query([&"State.Phase.Three"]), "sound": ["Explosion1", 0.3]})
 	_ability("death_ray", "Ability.Ult.Deathray", B.SINGLE_ENEMY, [_row("ray", "damage", D.SCALED, 200, T.ALL, ice)],
-		_spin(1.0), [[0.6, "ray"]], ult.merged({"sound": ["Ice5", 0.5, -2.0]}))
+		_spin(1.0), [[0.6, "ray"]], ult.merged({"sound": ["Ice5", 0.5]}))
 	_ability("rockfall", "Ability.Rockfall", B.ALL_ENEMIES, [_row("rocks", "damage", D.SCALED, 70, T.ALL, physical)],
-		_jump(0.8), [[0.4, "rocks"]], {"query": _query([&"State.Phase.Two"]), "sound": ["Explosion1", 0.3, -6.0]})
+		_jump(0.8), [[0.4, "rocks"]], {"query": _query([&"State.Phase.Two"]), "sound": ["Explosion1", 0.3]})
 	# The Golem's phase 2 (granted by its phase, by hand with your approval): State.Phase.Two opens Rockfall.
 	var golem_phase := AbilitySet.new()
 	golem_phase.tags.assign([&"State.Phase.Two"])

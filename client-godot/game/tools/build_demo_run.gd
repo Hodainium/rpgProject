@@ -65,7 +65,7 @@ func _crypt() -> void:
 	snare.delay_x100 = Fixed.from_typed(30)                       # the target's next turn 30% later
 	_ability("entangle_lash", "Ability.Entanglelash", BattleAbility.Targeting.SINGLE_ENEMY,
 		[_row("lash", "damage", D.SCALED, 60, T.ALL, [&"Damage.Type.Physical"]), snare], _jump(0.6),
-		[[0.3, "lash"], [0.35, "snare"]], {"sound": ["Attack1", 0.2, -8.0]})
+		[[0.3, "lash"], [0.35, "snare"]], {"sound": ["Attack1", 0.2]})
 	var bound := _built_encounter("bound_dead", "Bound dead", [CRYPT], [["toad", false], ["shaman", false], ["toad", false]])
 	bound.slots[0].grants = _granting_set([], [_r["abilities/entangle_lash"]])
 	var lasher := PatternBrain.new()

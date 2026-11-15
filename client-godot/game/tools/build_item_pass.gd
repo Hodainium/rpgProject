@@ -136,64 +136,64 @@ func _item_abilities() -> void:
 	var fire := [&"Damage.Type.Fire"]
 	# Triggered passives.
 	_ability("thorn_mail", "Ability.Passive.Thornmail", B.SINGLE_ENEMY, [_row("thorns", "damage", D.FLAT, 60, T.ALL, physical)],
-		_flash(0.4), [[0.2, "thorns"]], {"trigger": &"Event.Damage.Taken", "sound": ["Blow4", 0.1, -6.0]})
+		_flash(0.4), [[0.2, "thorns"]], {"trigger": &"Event.Damage.Taken", "sound": ["Blow4", 0.1]})
 	_ability("vampire_fang", "Ability.Passive.Vampirefang", B.SELF, [_row("drain", "vampire_heal", D.USE_EFFECT, 0, T.ALL)],
 		_still(0.05), [[0.0, "drain"]], {"trigger": &"Event.Damage.Dealt"})
 	_ability("cinder_glove", "Ability.Passive.Cinderglove", B.SINGLE_ENEMY, [_row("ignite", "burn", D.FLAT, 40, T.ALL, fire)],
-		_flash(0.4), [[0.2, "ignite"]], {"trigger": &"Event.Damage.Dealt.Fire", "sound": ["Fire2", 0.0, -6.0]})
+		_flash(0.4), [[0.2, "ignite"]], {"trigger": &"Event.Damage.Dealt.Fire", "sound": ["Fire2", 0.0]})
 	_ability("battle_horn", "Ability.Passive.Battlehorn", B.SELF, [_row("charge", "battle_horn_charge", D.USE_EFFECT, 0, T.ALL)],
-		_jump(0.5), [[0.2, "charge"]], {"trigger": &"Event.Battle.Start", "sound": ["Buff", 0.0, 0.0]})
+		_jump(0.5), [[0.2, "charge"]], {"trigger": &"Event.Battle.Start", "sound": ["Buff", 0.0]})
 	_ability("hourglass", "Ability.Passive.Hourglass", B.SELF, [_row("mend", "hourglass_heal", D.USE_EFFECT, 0, T.ALL)],
 		_still(0.05), [[0.0, "mend"]], {"trigger": &"Event.Turn.Start"})
 	_ability("frost_needle", "Ability.Passive.Frostneedle", B.SINGLE_ENEMY, [_row("needle", "damage", D.FLAT, 30, T.ALL, ice)],
-		_flash(0.4), [[0.2, "needle"]], {"trigger": &"Event.Damage.Dealt.Physical", "sound": ["Ice2", 0.0, -6.0]})
+		_flash(0.4), [[0.2, "needle"]], {"trigger": &"Event.Damage.Dealt.Physical", "sound": ["Ice2", 0.0]})
 	_ability("bounty_mark", "Ability.Passive.Bountymark", B.SELF, [_row("bounty", "bounty_reward", D.USE_EFFECT, 0, T.ALL)],
-		_spin(0.5), [[0.25, "bounty"]], {"trigger": &"Event.Unit.Killed", "sound": ["Item1", 0.0, 0.0]})
+		_spin(0.5), [[0.25, "bounty"]], {"trigger": &"Event.Unit.Killed", "sound": ["Item1", 0.0]})
 	_ability("sharp_eye", "Ability.Passive.Sharpeye", B.SELF, [_row("charge", "sharp_eye_charge", D.USE_EFFECT, 0, T.ALL)],
 		_still(0.05), [[0.0, "charge"]], {"trigger": &"Event.Damage.Dealt.Critical"})
 	_ability("executioners_seal", "Ability.Passive.Executioner", B.SINGLE_ENEMY,
 		[_row("execute", "damage", D.SCALED, 50, T.ALL, physical)], _jump(0.6), [[0.3, "execute"]],
-		{"trigger": &"Event.Damage.Dealt.Critical", "asset_tags": FOLLOW_UP, "sound": ["Attack1", 0.2, -8.0]})
+		{"trigger": &"Event.Damage.Dealt.Critical", "asset_tags": FOLLOW_UP, "sound": ["Attack1", 0.2]})
 	_ability("hunters_mark", "Ability.Passive.Huntersmark", B.SINGLE_ENEMY,
 		[_row("shot", "damage", D.SCALED, 40, T.ALL, physical)], _jump(0.6), [[0.3, "shot"]],
-		{"trigger": &"Event.Damage.Dealt.Weakness", "asset_tags": FOLLOW_UP, "sound": ["Shot1", 0.2, -8.0]})
+		{"trigger": &"Event.Damage.Dealt.Weakness", "asset_tags": FOLLOW_UP, "sound": ["Shot1", 0.2]})
 	_ability("scholars_tome", "Ability.Passive.Scholarstome", B.SELF, [_row("insight", "scholars_insight", D.USE_EFFECT, 0, T.ALL)],
 		_still(0.05), [[0.0, "insight"]], {"trigger": &"Event.Damage.Dealt.Weakness"})
 	_ability("momentum_charm", "Ability.Passive.Momentum", B.SELF, [_row("charge", "momentum_charge", D.USE_EFFECT, 0, T.ALL)],
 		_still(0.05), [[0.0, "charge"]], {"trigger": &"Event.Attack.FollowUp"})
 	_ability("glass_heart", "Ability.Passive.Glassheart", B.SELF, [_row("mend", "glass_heart_heal", D.USE_EFFECT, 0, T.ALL)],
-		_flash(0.4), [[0.2, "mend"]], {"trigger": &"Event.Damage.Taken.Critical", "sound": ["Recovery5", 0.0, -6.0]})
+		_flash(0.4), [[0.2, "mend"]], {"trigger": &"Event.Damage.Taken.Critical", "sound": ["Recovery5", 0.0]})
 	_ability("breakers_oath", "Ability.Passive.Breakersoath", B.SELF,
 		[_row("charge", "breakers_charge", D.USE_EFFECT, 0, T.ALL), _row("fury", "breakers_fury", D.USE_EFFECT, 0, T.ALL)],
-		_spin(0.6), [[0.2, "charge"], [0.3, "fury"]], {"trigger": &"Event.Damage.Dealt.Break", "sound": ["Buff", 0.0, 0.0]})
+		_spin(0.6), [[0.2, "charge"], [0.3, "fury"]], {"trigger": &"Event.Damage.Dealt.Break", "sound": ["Buff", 0.0]})
 	_ability("encore_ribbon", "Ability.Passive.Encore", B.SELF, [_row("mend", "encore_heal", D.USE_EFFECT, 0, T.ALL)],
-		_jump(0.5), [[0.2, "mend"]], {"trigger": &"Event.Battle.OneMore", "sound": ["Chime1", 0.0, -4.0]})
+		_jump(0.5), [[0.2, "mend"]], {"trigger": &"Event.Battle.OneMore", "sound": ["Chime1", 0.0]})
 	# Armor passives.
 	_ability("hunters_gloves", "Ability.Passive.Huntersgloves", B.SELF, [_row("charge", "gloves_charge", D.USE_EFFECT, 0, T.ALL)],
 		_still(0.05), [[0.0, "charge"]], {"trigger": &"Event.Damage.Dealt.Weakness"})
 	_ability("duelists_band", "Ability.Passive.Duelistsband", B.SINGLE_ENEMY,
 		[_row("riposte", "damage", D.SCALED, 30, T.ALL, physical)], _jump(0.5), [[0.25, "riposte"]],
-		{"trigger": &"Event.Damage.Dealt.Critical", "asset_tags": FOLLOW_UP, "sound": ["Attack2", 0.1, -10.0]})
+		{"trigger": &"Event.Damage.Dealt.Critical", "asset_tags": FOLLOW_UP, "sound": ["Attack2", 0.1]})
 	_ability("ember_pendant", "Ability.Passive.Emberpendant", B.SINGLE_ENEMY,
 		[_row("expose", "exposed_fire", D.USE_EFFECT, 0, T.ALL)], _flash(0.3), [[0.15, "expose"]],
-		{"trigger": &"Event.Damage.Dealt.Fire", "sound": ["Fire1", 0.0, -8.0]})
+		{"trigger": &"Event.Damage.Dealt.Fire", "sound": ["Fire1", 0.0]})
 	# Usable items.
 	var fire_blast := _row("blast", "damage", D.FLAT, 300, T.ALL, fire)
 	fire_blast.toughness_x100 = Fixed.from_typed(60)
 	_ability("fire_bomb", "Ability.Item.Firebomb", B.BLAST_ENEMY, [fire_blast], _jump(0.6), [[0.35, "blast"]],
-		{"sound": ["Explosion1", 0.3, -4.0]})
+		{"sound": ["Explosion1", 0.3]})
 	var frost_blast := _row("blast", "damage", D.FLAT, 250, T.ALL, ice)
 	frost_blast.toughness_x100 = Fixed.from_typed(60)
 	_ability("frost_bomb", "Ability.Item.Frostbomb", B.BLAST_ENEMY, [frost_blast], _spin(0.6), [[0.35, "blast"]],
-		{"sound": ["Ice5", 0.3, -4.0]})
+		{"sound": ["Ice5", 0.3]})
 	_ability("ether", "Ability.Item.Ether", B.SINGLE_ALLY, [_row("restore", "ether_mp", D.USE_EFFECT, 0, T.ALL)],
-		_flash(0.5), [[0.3, "restore"]], {"sound": ["Recovery8", 0.0, 0.0]})
+		_flash(0.5), [[0.3, "restore"]], {"sound": ["Recovery8", 0.0]})
 	_ability("rally_horn", "Ability.Item.Rally", B.ALL_ALLIES, [_row("rally", "rally", D.USE_EFFECT, 0, T.ALL)],
-		_jump(0.6), [[0.3, "rally"]], {"sound": ["Song", 0.0, -4.0]})
+		_jump(0.6), [[0.3, "rally"]], {"sound": ["Song", 0.0]})
 	_ability("smelling_salts", "Ability.Item.Salts", B.SINGLE_DEAD_ALLY, [_row("revive", "salts_revive", D.USE_EFFECT, 0, T.ALL)],
-		_spin(0.6), [[0.4, "revive"]], {"sound": ["Raise2", 0.0, -2.0]})
+		_spin(0.6), [[0.4, "revive"]], {"sound": ["Raise2", 0.0]})
 	_ability("analyzer_lens", "Ability.Item.Analyzer", B.SINGLE_ENEMY, [_row("expose", "exposed_physical", D.USE_EFFECT, 0, T.ALL)],
-		_flash(0.5), [[0.3, "expose"]], {"sound": ["Flash1", 0.0, -6.0]})
+		_flash(0.5), [[0.3, "expose"]], {"sound": ["Flash1", 0.0]})
 
 
 # --- Items -------------------------------------------------------------------------------------------------------------

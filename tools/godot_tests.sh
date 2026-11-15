@@ -31,6 +31,14 @@ for (( i = 0; i < jobs; i++ )); do
 		--shard "$i/$jobs" "$@" > "$logs/watch$i.log" 2>&1 &
 	pids+=($!)
 done
+# Spec audio-pass 6.15: the committed sound bank against its manifest (format, loudness, length, licences), beside the shards.
+audio_pid=""
+if [[ -z $build ]] && command -v python > /dev/null && command -v ffmpeg > /dev/null; then
+	"$root/tools/watch.sh" --idle 120 --timeout 300 --log "$logs/audio.log" --name audio -- 		python -I "$root/tools/audio_import.py" --check > "$logs/audio_watch.log" 2>&1 &
+	audio_pid=$!
+elif [[ -z $build ]]; then
+	echo "sound bank check skipped: python or ffmpeg is not on PATH (tools/audio_import.py --check)"
+fi
 status=0
 for (( i = 0; i < jobs; i++ )); do
 	wait "${pids[$i]}"; code=$?
@@ -47,6 +55,10 @@ for (( i = 0; i < jobs; i++ )); do
 	skipped=$(( skipped + $(echo "$line" | grep -oE '[0-9]+ skipped' | cut -d' ' -f1 || echo 0) ))
 	grep -A8 '^  FAIL' "$logs/shard$i.log" | grep -E '^  FAIL|^          ' | tr -d '\r'
 done
+if [[ -n $audio_pid ]]; then
+	if wait "$audio_pid"; then echo "sound bank: $(tail -1 "$logs/audio.log")"
+	else echo "sound bank check failed (tools/audio_import.py --check):"; cat "$logs/audio.log"; status=1; fi
+fi
 echo "$passed passed, $failed failed$( (( skipped > 0 )) && echo ", $skipped skipped") ($jobs shards, $(( $(date +%s) - start ))s, logs in $logs)"
 (( failed > 0 || passed == 0 )) && status=1
 exit $status

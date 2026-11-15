@@ -75,15 +75,15 @@ func _route_moves() -> void:
 	var consume := {"asset_tags": [CONSUME_TYPE]}
 	# The Silent Cathedral.
 	_ability("toll", "Ability.Toll", B.ALL_ENEMIES, [_delayed(_row("toll", "damage", D.SCALED, 50, T.ALL, physical), 20)],
-		_spin(0.7), [[0.35, "toll"]], {"sound": ["Chime1", 0.2, -4.0]})
+		_spin(0.7), [[0.35, "toll"]], {"sound": ["Chime1", 0.2]})
 	_ability("votive_flame", "Ability.Votiveflame", B.SINGLE_ENEMY, [_row("flame", "damage", D.SCALED, 110, T.ALL, fire),
 		_chance(_row("burn", "burn", D.FLAT, 50, T.ALL, fire), 60)], _flash(0.5), [[0.25, "flame"], [0.3, "burn"]],
-		{"sound": ["Fire1", 0.2, -8.0]})
+		{"sound": ["Fire1", 0.2]})
 	_ability("vigil", "Ability.Vigil", B.ALL_ALLIES, [_row("heal", "vigil_heal", D.USE_EFFECT, 0, T.ALL),
 		_row("cleanse", "cleanse", D.USE_EFFECT, 0, T.ALL)], _flash(0.6), [[0.3, "heal"], [0.35, "cleanse"]])
 	_ability("prism_ray", "Ability.Prismray", B.ALL_ENEMIES, [_row("ray", "damage", D.SCALED, 70, T.ALL, ice),
 		_chance(_row("expose", "vulnerable", D.USE_EFFECT, 0, T.ALL), 40)], _spin(0.8), [[0.4, "ray"], [0.45, "expose"]],
-		{"sound": ["Ice2", 0.3, -6.0]})
+		{"sound": ["Ice2", 0.3]})
 	_ability("stained_ward", "Ability.Stainedward", B.ALL_ALLIES, [_row("ward", "ward", D.USE_EFFECT, 0, T.ALL)], _flash(0.5),
 		[[0.25, "ward"]])
 	_ability("shard_rain", "Ability.Shardrain", B.ALL_ENEMIES, [_row("shards", "damage", D.SCALED, 60, T.ALL, physical),
@@ -95,11 +95,11 @@ func _route_moves() -> void:
 		_chance(_row("stun", "stun", D.USE_EFFECT, 0, T.ALL), 45)], _flash(0.6), [[0.3, "gaze"], [0.35, "stun"]])
 	_ability("gilded_breath", "Ability.Gildedbreath", B.ALL_ENEMIES, [_row("breath", "damage", D.SCALED, 75, T.ALL, fire),
 		_chance(_row("burn", "burn", D.FLAT, 50, T.ALL, fire), 50)], _spin(0.8), [[0.4, "breath"], [0.45, "burn"]],
-		{"sound": ["Fire2", 0.3, -6.0]})
+		{"sound": ["Fire2", 0.3]})
 	# The Hoard Drake's phase copy of Gilded Breath, its pattern's fourth step (a step it lacks falls back to Bite).
 	_ability("fury_breath", "Ability.Furybreath", B.ALL_ENEMIES, [_row("breath", "damage", D.SCALED, 75, T.ALL, fire),
 		_chance(_row("burn", "burn", D.FLAT, 50, T.ALL, fire), 50)], _spin(0.8), [[0.4, "breath"], [0.45, "burn"]],
-		{"sound": ["Fire2", 0.3, -6.0]})
+		{"sound": ["Fire2", 0.3]})
 	_ability("hoard_greed", "Ability.Hoardgreed", B.SELF, [_row("rally", "rally", D.USE_EFFECT, 0, T.ALL),
 		_row("heal", "hoard_greed_heal", D.USE_EFFECT, 0, T.ALL)], _flash(0.5), [[0.25, "rally"], [0.3, "heal"]])
 	# The Black Coven.
@@ -112,10 +112,10 @@ func _route_moves() -> void:
 		_chance(_row("weaken", "weaken", D.USE_EFFECT, 0, T.ALL), 50)], _flash(0.6), [[0.3, "hex"], [0.35, "weaken"]])
 	_ability("boil_over", "Ability.Boilover", B.ALL_ENEMIES, [_row("boil", "damage", D.SCALED, 65, T.ALL, fire),
 		_chance(_row("burn", "burn", D.FLAT, 45, T.ALL, fire), 50)], _spin(0.8), [[0.4, "boil"], [0.45, "burn"]],
-		{"sound": ["Fire2", 0.3, -6.0]})
+		{"sound": ["Fire2", 0.3]})
 	_ability("bitter_boil", "Ability.Bitterboil", B.ALL_ENEMIES, [_row("boil", "damage", D.SCALED, 65, T.ALL, fire),
 		_chance(_row("burn", "burn", D.FLAT, 45, T.ALL, fire), 50)], _spin(0.8), [[0.4, "boil"], [0.45, "burn"]],
-		{"sound": ["Fire2", 0.3, -6.0]})
+		{"sound": ["Fire2", 0.3]})
 	_ability("cauldron_brew", "Ability.Cauldronbrew", B.ALL_ALLIES, [_row("heal", "cauldron_brew_heal", D.USE_EFFECT, 0, T.ALL),
 		_row("rally", "rally", D.USE_EFFECT, 0, T.ALL)], _flash(0.6), [[0.3, "heal"], [0.35, "rally"]])
 	# The Void.
@@ -127,10 +127,10 @@ func _route_moves() -> void:
 	_passive("resound", "Ability.Passive.Resound", B.SINGLE_ENEMY, [["resound", "damage", D.SCALED, 40, physical]],
 		&"Event.Damage.Taken.Weakness")
 	_ability("consume", "Ability.Consume", B.SINGLE_ENEMY, [_row("consume", "damage", D.SCALED, 120, T.ALL, physical)],
-		_jump(0.8), [[0.4, "consume"]], consume.merged({"sound": ["Blow4", 0.3, -4.0]}))
+		_jump(0.8), [[0.4, "consume"]], consume.merged({"sound": ["Blow4", 0.3]}))
 	# The Void Devourer's phase copy of Consume (it heals through Gorge too).
 	_ability("ravenous_maw", "Ability.Ravenousmaw", B.SINGLE_ENEMY, [_row("consume", "damage", D.SCALED, 120, T.ALL, physical)],
-		_jump(0.8), [[0.4, "consume"]], consume.merged({"sound": ["Blow4", 0.3, -4.0]}))
+		_jump(0.8), [[0.4, "consume"]], consume.merged({"sound": ["Blow4", 0.3]}))
 	_passive("gorge", "Ability.Passive.Gorge", B.SELF, [["gorge", "gorge_heal", D.USE_EFFECT, 0]], &"Event.Ability.Used.Consume")
 	# Gravity Well: no damage; its delay rides an empty instant effect that always lands.
 	_ability("gravity_well", "Ability.Gravitywell", B.ALL_ENEMIES, [_delayed(_row("pull", "gravity_pull", D.USE_EFFECT, 0,

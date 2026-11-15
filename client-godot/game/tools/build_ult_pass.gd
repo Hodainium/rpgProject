@@ -42,9 +42,9 @@ func _ults() -> void:
 	var execute_animation := _jump(1.0)
 	_add_spin(execute_animation, 1.0)
 	_ability("execute", "Ability.Ult.Execute", B.SINGLE_ENEMY, [execute], execute_animation, [[0.6, "execute"]],
-		ult.merged({"sound": ["Attack2", 0.5, 0.0]}))
+		ult.merged({"sound": ["Attack2", 0.5]}))
 	_ability("resurrection", "Ability.Ult.Resurrection", B.SINGLE_DEAD_ALLY,
 		[_row("raise", "resurrection_revive", D.USE_EFFECT, 0, T.ALL)], _spin(1.0), [[0.6, "raise"]],
-		ult.merged({"sound": ["Raise2", 0.2, 0.0]}))
+		ult.merged({"sound": ["Raise2", 0.2]}))
 	_ability("quake", "Ability.Ult.Quake", B.ALL_ENEMIES, [_row("quake", "damage", D.SCALED, 150, T.ALL, physical)],
-		_jump(1.2), [[0.8, "quake"]], ult.merged({"sound": ["Earth6", 0.7, 0.0]}))
+		_jump(1.2), [[0.8, "quake"]], ult.merged({"sound": ["Earth6", 0.7]}))
