@@ -101,6 +101,7 @@ func _ready() -> void:
 	# Playtest-fixes B25: the saved graphics settings (anti-aliasing, MSAA 4× unless the player picked another; fullscreen when
 	# saved on, and only when this is the game's own window, not a tool scene holding a GameMain). Headless draws nothing.
 	GraphicsSettings.apply_saved(get_viewport(), get_tree().current_scene == self)
+	AudioSettings.apply_saved()  # spec audio-pass 3.3: the player's bus volumes (Master, Effects, Interface)
 	var settings := ConfigFile.new()
 	if settings.load(SETTINGS_PATH) == OK:
 		content_root = settings.get_value("game", "content_root", content_root)

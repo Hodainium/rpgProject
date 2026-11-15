@@ -22,4 +22,4 @@ duration_turns = 3
 modifiers = Array[ExtResource("2_mjy7m")]([SubResource("Resource_knm5s"), SubResource("Resource_50hin")])
 granted_tags = Array[StringName]([&"Status.Buff.Fracture"])
 persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.Fracture"])
-application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff"])
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff", &"Cue.Sfx.Apply.Buff"])

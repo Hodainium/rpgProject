@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_c24e2"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/revive.tres" id="2_celjw"]
+
+[node name="SfxRevive" type="Node" unique_id=1743368856]
+script = ExtResource("1_c24e2")
+sound = ExtResource("2_celjw")
+max_voices = 2

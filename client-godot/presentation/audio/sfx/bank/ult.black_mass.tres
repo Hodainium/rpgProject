@@ -1,0 +1,9 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/easyrpg/ult.black_mass.wav" id="1_7p0d1"]
+
+[resource]
+resource_name = "ult.black_mass"
+playback_mode = 2
+streams_count = 1
+stream_0/stream = ExtResource("1_7p0d1")

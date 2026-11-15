@@ -3,11 +3,6 @@
 [ext_resource type="Script" uid="uid://c31mycy3sv3aq" path="res://addons/GodotGAS/cues/gameplay_cue_entry.gd" id="1_eumo4"]
 [ext_resource type="Script" uid="uid://dkt21eabd45kx" path="res://addons/GodotGAS/cues/gameplay_cue_registry.gd" id="2_bcoe5"]
 
-[sub_resource type="Resource" id="Resource_hit"]
-script = ExtResource("1_eumo4")
-tag = &"Cue.Sfx.Hit"
-scene_ref = "res://presentation/demo/cues/hit_cue.tscn"
-
 [sub_resource type="Resource" id="Resource_spark"]
 script = ExtResource("1_eumo4")
 tag = &"Cue.Fx.HitSpark"
@@ -418,6 +413,126 @@ script = ExtResource("1_eumo4")
 tag = &"Cue.Fx.Number"
 scene_ref = "res://presentation/demo/cues/cue_number.tscn"
 
+[sub_resource type="Resource" id="Resource_sfx_hit_physical"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Hit.Physical"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_hit_physical.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_hit_fire"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Hit.Fire"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_hit_fire.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_hit_ice"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Hit.Ice"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_hit_ice.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_hit_crit"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Hit.Crit"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_hit_crit.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_hit_weakness"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Hit.Weakness"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_hit_weakness.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_hit_resisted"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Hit.Resisted"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_hit_resisted.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_hit_drained"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Hit.Drained"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_hit_drained.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_break"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Break"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_break.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_recovered"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Recovered"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_recovered.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_tick_poison"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Tick.Poison"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_tick_poison.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_tick_bleed"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Tick.Bleed"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_tick_bleed.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_tick_burn"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Tick.Burn"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_tick_burn.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_status_control"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Status.Control"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_status_control.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_apply_buff"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Apply.Buff"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_apply_buff.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_apply_debuff"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Apply.Debuff"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_apply_debuff.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_cleanse"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Cleanse"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_cleanse.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_heal"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Heal"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_heal.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_revive"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Revive"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_revive.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_death"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Death"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_death.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_downed"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Downed"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_downed.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_phase_shift"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.PhaseShift"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_phase_shift.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_one_more"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.OneMore"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_one_more.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_resisted"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Resisted"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_resisted.tscn"
+
+[sub_resource type="Resource" id="Resource_sfx_overtime"]
+script = ExtResource("1_eumo4")
+tag = &"Cue.Sfx.Overtime"
+scene_ref = "res://presentation/demo/cues/sfx/cue_sfx_overtime.tscn"
+
 [resource]
 script = ExtResource("2_bcoe5")
-entries = Array[ExtResource("1_eumo4")]([SubResource("Resource_hit"), SubResource("Resource_spark"), SubResource("Resource_heal"), SubResource("Resource_break"), SubResource("Resource_aura"), SubResource("Resource_st_poison"), SubResource("Resource_st_bleed"), SubResource("Resource_st_burn"), SubResource("Resource_st_freeze"), SubResource("Resource_st_stun"), SubResource("Resource_st_entangle"), SubResource("Resource_st_slow"), SubResource("Resource_tick_poison"), SubResource("Resource_tick_bleed"), SubResource("Resource_tick_burn"), SubResource("Resource_buff_attack_up"), SubResource("Resource_buff_defense_up"), SubResource("Resource_buff_haste"), SubResource("Resource_buff_regen"), SubResource("Resource_buff_ward"), SubResource("Resource_buff_taunt"), SubResource("Resource_buff_fury"), SubResource("Resource_buff_enrage"), SubResource("Resource_buff_finale"), SubResource("Resource_buff_fracture"), SubResource("Resource_buff_malady"), SubResource("Resource_buff_combustion"), SubResource("Resource_debuff_attack_down"), SubResource("Resource_debuff_defense_down"), SubResource("Resource_debuff_weaken"), SubResource("Resource_debuff_vulnerable"), SubResource("Resource_debuff_exhausted"), SubResource("Resource_debuff_exposed"), SubResource("Resource_apply_buff"), SubResource("Resource_apply_debuff"), SubResource("Resource_cleanse"), SubResource("Resource_ult_absolutezero"), SubResource("Resource_ult_bastion"), SubResource("Resource_ult_blackmass"), SubResource("Resource_ult_cleave"), SubResource("Resource_ult_combustion"), SubResource("Resource_ult_crucible"), SubResource("Resource_ult_deathray"), SubResource("Resource_ult_execute"), SubResource("Resource_ult_finale"), SubResource("Resource_ult_judgement"), SubResource("Resource_ult_liquidate"), SubResource("Resource_ult_meteor"), SubResource("Resource_ult_oblivion"), SubResource("Resource_ult_ossuary"), SubResource("Resource_ult_overheat"), SubResource("Resource_ult_pandemic"), SubResource("Resource_ult_quake"), SubResource("Resource_ult_rainofarrows"), SubResource("Resource_ult_resurrection"), SubResource("Resource_ult_sanctuary"), SubResource("Resource_ult_shatterchorus"), SubResource("Resource_ult_supernova"), SubResource("Resource_ult_systole"), SubResource("Resource_ult_twinbeat"), SubResource("Resource_hit_fire"), SubResource("Resource_hit_ice"), SubResource("Resource_hit_physical"), SubResource("Resource_revive"), SubResource("Resource_death"), SubResource("Resource_state_broken"), SubResource("Resource_recovered"), SubResource("Resource_state_downed"), SubResource("Resource_phase_shift"), SubResource("Resource_one_more"), SubResource("Resource_proc_crit"), SubResource("Resource_proc_weakness"), SubResource("Resource_proc_fire"), SubResource("Resource_proc_ice"), SubResource("Resource_proc_break"), SubResource("Resource_proc_physical"), SubResource("Resource_proc_taken"), SubResource("Resource_proc_kill"), SubResource("Resource_proc_ult"), SubResource("Resource_drain_fire"), SubResource("Resource_drain_ice"), SubResource("Resource_drain_physical"), SubResource("Resource_number")])
+entries = Array[ExtResource("1_eumo4")]([SubResource("Resource_spark"), SubResource("Resource_heal"), SubResource("Resource_break"), SubResource("Resource_aura"), SubResource("Resource_st_poison"), SubResource("Resource_st_bleed"), SubResource("Resource_st_burn"), SubResource("Resource_st_freeze"), SubResource("Resource_st_stun"), SubResource("Resource_st_entangle"), SubResource("Resource_st_slow"), SubResource("Resource_tick_poison"), SubResource("Resource_tick_bleed"), SubResource("Resource_tick_burn"), SubResource("Resource_buff_attack_up"), SubResource("Resource_buff_defense_up"), SubResource("Resource_buff_haste"), SubResource("Resource_buff_regen"), SubResource("Resource_buff_ward"), SubResource("Resource_buff_taunt"), SubResource("Resource_buff_fury"), SubResource("Resource_buff_enrage"), SubResource("Resource_buff_finale"), SubResource("Resource_buff_fracture"), SubResource("Resource_buff_malady"), SubResource("Resource_buff_combustion"), SubResource("Resource_debuff_attack_down"), SubResource("Resource_debuff_defense_down"), SubResource("Resource_debuff_weaken"), SubResource("Resource_debuff_vulnerable"), SubResource("Resource_debuff_exhausted"), SubResource("Resource_debuff_exposed"), SubResource("Resource_apply_buff"), SubResource("Resource_apply_debuff"), SubResource("Resource_cleanse"), SubResource("Resource_ult_absolutezero"), SubResource("Resource_ult_bastion"), SubResource("Resource_ult_blackmass"), SubResource("Resource_ult_cleave"), SubResource("Resource_ult_combustion"), SubResource("Resource_ult_crucible"), SubResource("Resource_ult_deathray"), SubResource("Resource_ult_execute"), SubResource("Resource_ult_finale"), SubResource("Resource_ult_judgement"), SubResource("Resource_ult_liquidate"), SubResource("Resource_ult_meteor"), SubResource("Resource_ult_oblivion"), SubResource("Resource_ult_ossuary"), SubResource("Resource_ult_overheat"), SubResource("Resource_ult_pandemic"), SubResource("Resource_ult_quake"), SubResource("Resource_ult_rainofarrows"), SubResource("Resource_ult_resurrection"), SubResource("Resource_ult_sanctuary"), SubResource("Resource_ult_shatterchorus"), SubResource("Resource_ult_supernova"), SubResource("Resource_ult_systole"), SubResource("Resource_ult_twinbeat"), SubResource("Resource_hit_fire"), SubResource("Resource_hit_ice"), SubResource("Resource_hit_physical"), SubResource("Resource_revive"), SubResource("Resource_death"), SubResource("Resource_state_broken"), SubResource("Resource_recovered"), SubResource("Resource_state_downed"), SubResource("Resource_phase_shift"), SubResource("Resource_one_more"), SubResource("Resource_proc_crit"), SubResource("Resource_proc_weakness"), SubResource("Resource_proc_fire"), SubResource("Resource_proc_ice"), SubResource("Resource_proc_break"), SubResource("Resource_proc_physical"), SubResource("Resource_proc_taken"), SubResource("Resource_proc_kill"), SubResource("Resource_proc_ult"), SubResource("Resource_drain_fire"), SubResource("Resource_drain_ice"), SubResource("Resource_drain_physical"), SubResource("Resource_number"), SubResource("Resource_sfx_hit_physical"), SubResource("Resource_sfx_hit_fire"), SubResource("Resource_sfx_hit_ice"), SubResource("Resource_sfx_hit_crit"), SubResource("Resource_sfx_hit_weakness"), SubResource("Resource_sfx_hit_resisted"), SubResource("Resource_sfx_hit_drained"), SubResource("Resource_sfx_break"), SubResource("Resource_sfx_recovered"), SubResource("Resource_sfx_tick_poison"), SubResource("Resource_sfx_tick_bleed"), SubResource("Resource_sfx_tick_burn"), SubResource("Resource_sfx_status_control"), SubResource("Resource_sfx_apply_buff"), SubResource("Resource_sfx_apply_debuff"), SubResource("Resource_sfx_cleanse"), SubResource("Resource_sfx_heal"), SubResource("Resource_sfx_revive"), SubResource("Resource_sfx_death"), SubResource("Resource_sfx_downed"), SubResource("Resource_sfx_phase_shift"), SubResource("Resource_sfx_one_more"), SubResource("Resource_sfx_resisted"), SubResource("Resource_sfx_overtime")])

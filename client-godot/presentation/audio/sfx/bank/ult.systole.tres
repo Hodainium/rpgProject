@@ -1,0 +1,9 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/easyrpg/ult.systole.wav" id="1_aawyj"]
+
+[resource]
+resource_name = "ult.systole"
+playback_mode = 2
+streams_count = 1
+stream_0/stream = ExtResource("1_aawyj")

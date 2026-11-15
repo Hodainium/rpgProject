@@ -1,0 +1,1895 @@
+{
+ "comment": "Spec audio-pass 3.1. One row per bank entry; tools/audio_import.py converts the takes into presentation/audio/sfx/<pack>/ and writes 'measured'; game/tools/build_audio_bank.tscn makes bank/<id>.tres. Sources live outside the repo (--source).",
+ "format": {
+  "sample_rate": 44100,
+  "bits": 16,
+  "channels": 1
+ },
+ "targets": {
+  "ui": -22,
+  "run": -20,
+  "cast": -19,
+  "impact": -17,
+  "status": -23,
+  "moment": -19,
+  "signature": -15
+ },
+ "max_ms": {
+  "ui": 350,
+  "run": 600,
+  "cast": 1500,
+  "impact": 600,
+  "status": 700,
+  "moment": 1200,
+  "signature": 3000
+ },
+ "tolerance_db": 1.5,
+ "peak_ceiling_db": -1.0,
+ "reserved_allow": [
+  "ult.death_ray",
+  "ult.oblivion"
+ ],
+ "silent": [],
+ "packs": {
+  "easyrpg": {
+   "folder": "easyrpg",
+   "title": "EasyRPG RTP (Sound)",
+   "author": "EasyRPG project contributors (per file: see the EasyRPG RTP AUTHORS.md)",
+   "url": "https://github.com/EasyRPG/RTP",
+   "licence": "CC-BY-4.0",
+   "licence_note": "The repository is CC BY 4.0; per file, lumiscosity's sounds are CC BY 4.0 and the others CC0 (AUTHORS.md).",
+   "file_authors": {
+    "Absorb1.wav": {
+     "author": "null-painter-error [cc0]",
+     "url": "https://null-painter-error.itch.io/"
+    },
+    "Absorb2.wav": {
+     "author": "Gadesx [CC0]",
+     "url": "https://community.easyrpg.org/t/some-sfx-and-maybe-future-content/1079"
+    },
+    "Attack1.wav": {
+     "author": "null-painter-error [cc0]",
+     "url": "https://null-painter-error.itch.io/"
+    },
+    "Attack2.wav": {
+     "author": "null-painter-error [cc0]",
+     "url": "https://null-painter-error.itch.io/"
+    },
+    "Barrier.wav": {
+     "author": "JosephSeraph [CC0]",
+     "url": "https://twitter.com/SeraphCircle"
+    },
+    "Barrier1.wav": {
+     "author": "Gadesx [CC0]",
+     "url": "https://community.easyrpg.org/t/some-sfx-and-maybe-future-content/1079"
+    },
+    "Blow2.wav": {
+     "author": "null-painter-error [cc0]",
+     "url": "https://null-painter-error.itch.io/"
+    },
+    "Blow4.wav": {
+     "author": "Gadesx [CC0]",
+     "url": "https://community.easyrpg.org/t/some-sfx-and-maybe-future-content/1079"
+    },
+    "Buff.wav": {
+     "author": "JosephSeraph [CC0]",
+     "url": "https://twitter.com/SeraphCircle"
+    },
+    "Chime1.wav": {
+     "author": "JosephSeraph [CC0]",
+     "url": "https://twitter.com/SeraphCircle"
+    },
+    "Chime2.wav": {
+     "author": "JosephSeraph [CC0]",
+     "url": "https://twitter.com/SeraphCircle"
+    },
+    "Clock.wav": {
+     "author": "lavendersiren [CC0]",
+     "url": "https://jingloria.wertercatt.com/dungeoncrashers/index.html"
+    },
+    "Collapse1.wav": {
+     "author": "Gadesx [CC0]",
+     "url": "https://community.easyrpg.org/t/some-sfx-and-maybe-future-content/1079"
+    },
+    "Damage2.wav": {
+     "author": "Gadesx [CC0]",
+     "url": "https://community.easyrpg.org/t/some-sfx-and-maybe-future-content/1079"
+    },
+    "Darkness3.wav": {
+     "author": "Gadesx [CC0]",
+     "url": "https://community.easyrpg.org/t/some-sfx-and-maybe-future-content/1079"
+    },
+    "Darkness4.wav": {
+     "author": "Gadesx [CC0]",
+     "url": "https://community.easyrpg.org/t/some-sfx-and-maybe-future-content/1079"
+    },
+    "Darkness5.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Debuff.wav": {
+     "author": "JosephSeraph [CC0]",
+     "url": "https://twitter.com/SeraphCircle"
+    },
+    "Earth6.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Earth8.wav": {
+     "author": "lavendersiren [CC0]",
+     "url": "https://jingloria.wertercatt.com/dungeoncrashers/index.html"
+    },
+    "Explosion1.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Fall1.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Fire1.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Fire2.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Fire3.wav": {
+     "author": "JosephSeraph [CC0]",
+     "url": "https://twitter.com/SeraphCircle"
+    },
+    "Fire5.wav": {
+     "author": "nightskypatr0l [CC0]",
+     "url": "https://stanleycommz.carrd.co/"
+    },
+    "Fire7.wav": {
+     "author": "JosephSeraph [CC0]",
+     "url": "https://twitter.com/SeraphCircle"
+    },
+    "Flash1.wav": {
+     "author": "null-painter-error [cc0]",
+     "url": "https://null-painter-error.itch.io/"
+    },
+    "Flash3.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Holy3.wav": {
+     "author": "null-painter-error [cc0]",
+     "url": "https://null-painter-error.itch.io/"
+    },
+    "Holy5.wav": {
+     "author": "null-painter-error [cc0]",
+     "url": "https://null-painter-error.itch.io/"
+    },
+    "Ice1.wav": {
+     "author": "nightskypatr0l [CC0]",
+     "url": "https://stanleycommz.carrd.co/"
+    },
+    "Ice2.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Ice5.wav": {
+     "author": "nightskypatr0l [CC0]",
+     "url": "https://stanleycommz.carrd.co/"
+    },
+    "Ice6.wav": {
+     "author": "Gadesx [CC0]",
+     "url": "https://community.easyrpg.org/t/some-sfx-and-maybe-future-content/1079"
+    },
+    "Ice7.wav": {
+     "author": "JosephSeraph [CC0]",
+     "url": "https://twitter.com/SeraphCircle"
+    },
+    "Item1.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Knock.wav": {
+     "author": "nightskypatr0l [CC0]",
+     "url": "https://stanleycommz.carrd.co/"
+    },
+    "Magic1.wav": {
+     "author": "Gadesx [CC0]",
+     "url": "https://community.easyrpg.org/t/some-sfx-and-maybe-future-content/1079"
+    },
+    "Poison.wav": {
+     "author": "JosephSeraph [CC0]",
+     "url": "https://twitter.com/SeraphCircle"
+    },
+    "Raise2.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Recovery5.wav": {
+     "author": "Gadesx [CC0]",
+     "url": "https://community.easyrpg.org/t/some-sfx-and-maybe-future-content/1079"
+    },
+    "Recovery7.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Recovery8.wav": {
+     "author": "Gadesx [CC0]",
+     "url": "https://community.easyrpg.org/t/some-sfx-and-maybe-future-content/1079"
+    },
+    "Shot1.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Shot2.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Shot3.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    },
+    "Song.wav": {
+     "author": "lumiscosity [CC-BY]",
+     "url": "https://lumiscosity.neocities.org/"
+    }
+   }
+  },
+  "pixel": {
+   "folder": "pixel",
+   "title": "FREE Pixel Combat SFX",
+   "author": "Helton Yan, Beto Bezerra",
+   "url": "https://heltonyan.itch.io/pixelcombat",
+   "licence": "CC-BY-4.0"
+  },
+  "retromenu": {
+   "folder": "returoMenu",
+   "title": "Retro Menu FX",
+   "author": "NSFRL (Taylor Nickens)",
+   "url": "https://nsfrl.itch.io/retro-menu-sound-fx",
+   "licence": "CC0-1.0",
+   "licence_note": "Stated on the itch.io page: \"NSFRL's Retro Effects by Taylor Nickens is marked CC0 1.0 Universal.\" The download carries no licence file."
+  },
+  "retroanime": {
+   "folder": "shonen",
+   "title": "FREE Retro Anime Sound Effects",
+   "author": "Helton Yan",
+   "url": "https://heltonyan.itch.io/retroanimesfx",
+   "licence": "CC-BY-4.0",
+   "reserved": true,
+   "reserved_note": "Only over-the-top ults (spec audio-pass 3.4): Death Ray and Oblivion."
+  }
+ },
+ "entries": [
+  {
+   "id": "ui.cursor",
+   "pack": "retromenu",
+   "takes": [
+    "Select_Up - Softer.wav"
+   ],
+   "category": "ui",
+   "measured": [
+    {
+     "loudness": -22.0,
+     "peak_db": -10.0,
+     "ms": 124
+    }
+   ]
+  },
+  {
+   "id": "ui.confirm",
+   "pack": "retromenu",
+   "takes": [
+    "Select_Confirm - Softer.wav"
+   ],
+   "category": "ui",
+   "measured": [
+    {
+     "loudness": -22.0,
+     "peak_db": -10.8,
+     "ms": 150
+    }
+   ]
+  },
+  {
+   "id": "ui.back",
+   "pack": "retromenu",
+   "takes": [
+    "Select_GoBack - Softer.wav"
+   ],
+   "category": "ui",
+   "measured": [
+    {
+     "loudness": -22.0,
+     "peak_db": -9.7,
+     "ms": 124
+    }
+   ]
+  },
+  {
+   "id": "ui.refused",
+   "pack": "retromenu",
+   "takes": [
+    "Select_Unable - Softer.wav"
+   ],
+   "category": "ui",
+   "measured": [
+    {
+     "loudness": -22.0,
+     "peak_db": -9.2,
+     "ms": 161
+    }
+   ]
+  },
+  {
+   "id": "ui.popup",
+   "pack": "retromenu",
+   "takes": [
+    "Select_AreYouSure - Softer.wav"
+   ],
+   "category": "ui",
+   "measured": [
+    {
+     "loudness": -22.0,
+     "peak_db": -9.5,
+     "ms": 144
+    }
+   ]
+  },
+  {
+   "id": "ui.decline",
+   "pack": "retromenu",
+   "takes": [
+    "Select_Decline - Softer.wav"
+   ],
+   "category": "ui",
+   "measured": [
+    {
+     "loudness": -22.0,
+     "peak_db": -10.0,
+     "ms": 130
+    }
+   ]
+  },
+  {
+   "id": "ui.menu_open",
+   "pack": "retromenu",
+   "takes": [
+    "Select_Pause - Softer.wav"
+   ],
+   "category": "ui",
+   "measured": [
+    {
+     "loudness": -22.0,
+     "peak_db": -9.4,
+     "ms": 78
+    }
+   ]
+  },
+  {
+   "id": "ui.menu_close",
+   "pack": "retromenu",
+   "takes": [
+    "Select_Unpause - Softer.wav"
+   ],
+   "category": "ui",
+   "measured": [
+    {
+     "loudness": -22.0,
+     "peak_db": -9.9,
+     "ms": 93
+    }
+   ]
+  },
+  {
+   "id": "ui.advance",
+   "pack": "retromenu",
+   "takes": [
+    "Select_Advance - Softer.wav"
+   ],
+   "category": "ui",
+   "measured": [
+    {
+     "loudness": -22.0,
+     "peak_db": -9.9,
+     "ms": 124
+    }
+   ]
+  },
+  {
+   "id": "run.item",
+   "pack": "retromenu",
+   "takes": [
+    "Select_ConfirmBIG - Softer.wav"
+   ],
+   "category": "run",
+   "measured": [
+    {
+     "loudness": -20.0,
+     "peak_db": -8.0,
+     "ms": 332
+    }
+   ]
+  },
+  {
+   "id": "run.coin",
+   "pack": "pixel",
+   "takes": [
+    "DSGNTonl_USABLE-Magic Coin_HY_PC-001.wav"
+   ],
+   "category": "run",
+   "measured": [
+    {
+     "loudness": -20.0,
+     "peak_db": -4.6,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "run.key",
+   "pack": "pixel",
+   "takes": [
+    "UIMisc_INTERFACE-Lock_HY_PC-001.wav"
+   ],
+   "category": "run",
+   "measured": [
+    {
+     "loudness": -20.0,
+     "peak_db": -2.6,
+     "ms": 380
+    }
+   ]
+  },
+  {
+   "id": "run.level_up",
+   "pack": "pixel",
+   "takes": [
+    "DSGNSynth_BUFF-Stats Up_HY_PC-001.wav"
+   ],
+   "category": "run",
+   "measured": [
+    {
+     "loudness": -20.0,
+     "peak_db": -5.4,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "run.move",
+   "pack": "pixel",
+   "takes": [
+    "FEETMisc_STEP-Boots on Concrete Dungeon_HY_PC-001.wav",
+    "FEETMisc_STEP-Boots on Concrete Dungeon_HY_PC-002.wav",
+    "FEETMisc_STEP-Boots on Concrete Dungeon_HY_PC-003.wav"
+   ],
+   "category": "run",
+   "measured": [
+    {
+     "loudness": -20.1,
+     "peak_db": -2.0,
+     "ms": 600
+    },
+    {
+     "loudness": -20.3,
+     "peak_db": -2.0,
+     "ms": 600
+    },
+    {
+     "loudness": -20.0,
+     "peak_db": -2.0,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "run.floor",
+   "pack": "pixel",
+   "takes": [
+    "DSGNMisc_MOVEMENT-Whoosh Sweep_HY_PC-001.wav"
+   ],
+   "category": "run",
+   "measured": [
+    {
+     "loudness": -20.0,
+     "peak_db": -5.1,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "battle.start",
+   "pack": "pixel",
+   "takes": [
+    "DSGNMisc_MOVEMENT-Phase Swish_HY_PC-001.wav"
+   ],
+   "category": "run",
+   "measured": [
+    {
+     "loudness": -20.0,
+     "peak_db": -3.9,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "hit.physical",
+   "pack": "easyrpg",
+   "takes": [
+    "Damage2.wav"
+   ],
+   "category": "impact",
+   "measured": [
+    {
+     "loudness": -17.0,
+     "peak_db": -5.9,
+     "ms": 539
+    }
+   ]
+  },
+  {
+   "id": "hit.fire",
+   "pack": "pixel",
+   "takes": [
+    "DSGNImpt_EXPLOSION-Fire Hit_HY_PC-001.wav",
+    "DSGNImpt_EXPLOSION-Fire Hit_HY_PC-002.wav",
+    "DSGNImpt_EXPLOSION-Fire Hit_HY_PC-003.wav"
+   ],
+   "category": "impact",
+   "measured": [
+    {
+     "loudness": -17.1,
+     "peak_db": -2.8,
+     "ms": 600
+    },
+    {
+     "loudness": -17.0,
+     "peak_db": -3.5,
+     "ms": 600
+    },
+    {
+     "loudness": -17.0,
+     "peak_db": -3.2,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "hit.ice",
+   "pack": "pixel",
+   "takes": [
+    "DSGNTonl_SKILL IMPACT-Energy Crystal_HY_PC-001.wav",
+    "DSGNTonl_SKILL IMPACT-Energy Crystal_HY_PC-002.wav",
+    "DSGNTonl_SKILL IMPACT-Energy Crystal_HY_PC-003.wav"
+   ],
+   "category": "impact",
+   "measured": [
+    {
+     "loudness": -17.2,
+     "peak_db": -1.8,
+     "ms": 600
+    },
+    {
+     "loudness": -17.3,
+     "peak_db": -1.0,
+     "ms": 600
+    },
+    {
+     "loudness": -17.2,
+     "peak_db": -1.5,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "hit.crit",
+   "pack": "pixel",
+   "takes": [
+    "DSGNMisc_SKILL IMPACT-Critical Strike_HY_PC-001.wav",
+    "DSGNMisc_SKILL IMPACT-Critical Strike_HY_PC-002.wav",
+    "DSGNMisc_SKILL IMPACT-Critical Strike_HY_PC-003.wav"
+   ],
+   "category": "impact",
+   "measured": [
+    {
+     "loudness": -17.0,
+     "peak_db": -5.0,
+     "ms": 600
+    },
+    {
+     "loudness": -17.0,
+     "peak_db": -3.7,
+     "ms": 600
+    },
+    {
+     "loudness": -17.0,
+     "peak_db": -5.7,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "hit.weakness",
+   "pack": "pixel",
+   "takes": [
+    "DSGNTonl_SKILL IMPACT-Energetic Impact_HY_PC-001.wav",
+    "DSGNTonl_SKILL IMPACT-Energetic Impact_HY_PC-002.wav",
+    "DSGNTonl_SKILL IMPACT-Energetic Impact_HY_PC-003.wav"
+   ],
+   "category": "impact",
+   "measured": [
+    {
+     "loudness": -17.0,
+     "peak_db": -2.7,
+     "ms": 600
+    },
+    {
+     "loudness": -17.1,
+     "peak_db": -2.0,
+     "ms": 600
+    },
+    {
+     "loudness": -17.0,
+     "peak_db": -3.9,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "hit.resisted",
+   "pack": "pixel",
+   "takes": [
+    "DSGNTonl_SKILL IMPACT-Deflected Hit_HY_PC-001.wav",
+    "DSGNTonl_SKILL IMPACT-Deflected Hit_HY_PC-002.wav",
+    "DSGNTonl_SKILL IMPACT-Deflected Hit_HY_PC-003.wav"
+   ],
+   "category": "impact",
+   "measured": [
+    {
+     "loudness": -17.3,
+     "peak_db": -2.0,
+     "ms": 600
+    },
+    {
+     "loudness": -17.0,
+     "peak_db": -2.2,
+     "ms": 600
+    },
+    {
+     "loudness": -17.0,
+     "peak_db": -2.7,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "hit.drained",
+   "pack": "easyrpg",
+   "takes": [
+    "Absorb1.wav"
+   ],
+   "category": "impact",
+   "measured": [
+    {
+     "loudness": -17.0,
+     "peak_db": -12.3,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "break",
+   "pack": "pixel",
+   "takes": [
+    "DSGNMisc_SKILL IMPACT-Glassy Sprites_HY_PC-001.wav",
+    "DSGNMisc_SKILL IMPACT-Glassy Sprites_HY_PC-002.wav",
+    "DSGNMisc_SKILL IMPACT-Glassy Sprites_HY_PC-003.wav"
+   ],
+   "category": "impact",
+   "measured": [
+    {
+     "loudness": -17.4,
+     "peak_db": -1.5,
+     "ms": 600
+    },
+    {
+     "loudness": -17.3,
+     "peak_db": -1.9,
+     "ms": 600
+    },
+    {
+     "loudness": -17.5,
+     "peak_db": -1.2,
+     "ms": 600
+    }
+   ]
+  },
+  {
+   "id": "tick.poison",
+   "pack": "pixel",
+   "takes": [
+    "DSGNMisc_CAST-Bubblewrap_HY_PC-001.wav",
+    "DSGNMisc_CAST-Bubblewrap_HY_PC-002.wav",
+    "DSGNMisc_CAST-Bubblewrap_HY_PC-003.wav"
+   ],
+   "category": "status",
+   "measured": [
+    {
+     "loudness": -23.0,
+     "peak_db": -9.8,
+     "ms": 689
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -9.4,
+     "ms": 682
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -10.2,
+     "ms": 700
+    }
+   ]
+  },
+  {
+   "id": "tick.bleed",
+   "pack": "pixel",
+   "takes": [
+    "DSGNMisc_HIT-Gore Pierce_HY_PC-001.wav",
+    "DSGNMisc_HIT-Gore Pierce_HY_PC-002.wav",
+    "DSGNMisc_HIT-Gore Pierce_HY_PC-003.wav"
+   ],
+   "category": "status",
+   "measured": [
+    {
+     "loudness": -23.0,
+     "peak_db": -10.0,
+     "ms": 600
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -10.2,
+     "ms": 581
+    },
+    {
+     "loudness": -23.1,
+     "peak_db": -9.8,
+     "ms": 632
+    }
+   ]
+  },
+  {
+   "id": "tick.burn",
+   "pack": "pixel",
+   "takes": [
+    "DSGNImpt_EXPLOSION-Small Flare_HY_PC-001.wav",
+    "DSGNImpt_EXPLOSION-Small Flare_HY_PC-002.wav",
+    "DSGNImpt_EXPLOSION-Small Flare_HY_PC-003.wav"
+   ],
+   "category": "status",
+   "measured": [
+    {
+     "loudness": -23.0,
+     "peak_db": -8.3,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -9.8,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -7.1,
+     "ms": 700
+    }
+   ]
+  },
+  {
+   "id": "status.control",
+   "pack": "pixel",
+   "takes": [
+    "DSGNSynth_BUFF-Turn Locked_HY_PC-001.wav",
+    "DSGNSynth_BUFF-Turn Locked_HY_PC-002.wav",
+    "DSGNSynth_BUFF-Turn Locked_HY_PC-003.wav"
+   ],
+   "category": "status",
+   "measured": [
+    {
+     "loudness": -23.0,
+     "peak_db": -9.5,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -8.9,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -10.6,
+     "ms": 700
+    }
+   ]
+  },
+  {
+   "id": "apply.buff",
+   "pack": "pixel",
+   "takes": [
+    "DSGNSynth_BUFF-Generic Buff_HY_PC-001.wav",
+    "DSGNSynth_BUFF-Generic Buff_HY_PC-002.wav",
+    "DSGNSynth_BUFF-Generic Buff_HY_PC-003.wav"
+   ],
+   "category": "status",
+   "measured": [
+    {
+     "loudness": -23.0,
+     "peak_db": -14.4,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -14.0,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -12.6,
+     "ms": 700
+    }
+   ]
+  },
+  {
+   "id": "apply.debuff",
+   "pack": "pixel",
+   "takes": [
+    "DSGNSynth_BUFF-Enemy Debuff_HY_PC-001.wav",
+    "DSGNSynth_BUFF-Enemy Debuff_HY_PC-002.wav",
+    "DSGNSynth_BUFF-Enemy Debuff_HY_PC-003.wav"
+   ],
+   "category": "status",
+   "measured": [
+    {
+     "loudness": -23.0,
+     "peak_db": -8.1,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -7.1,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -9.8,
+     "ms": 700
+    }
+   ]
+  },
+  {
+   "id": "cleanse",
+   "pack": "pixel",
+   "takes": [
+    "MAGAngl_BUFF-Shimmer Tone_HY_PC-001.wav",
+    "MAGAngl_BUFF-Shimmer Tone_HY_PC-002.wav",
+    "MAGAngl_BUFF-Shimmer Tone_HY_PC-003.wav"
+   ],
+   "category": "status",
+   "measured": [
+    {
+     "loudness": -23.0,
+     "peak_db": -14.1,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -12.0,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -12.9,
+     "ms": 700
+    }
+   ]
+  },
+  {
+   "id": "heal",
+   "pack": "pixel",
+   "takes": [
+    "MAGAngl_BUFF-Simple Heal_HY_PC-001.wav",
+    "MAGAngl_BUFF-Simple Heal_HY_PC-002.wav",
+    "MAGAngl_BUFF-Simple Heal_HY_PC-003.wav"
+   ],
+   "category": "status",
+   "measured": [
+    {
+     "loudness": -23.0,
+     "peak_db": -11.7,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -14.3,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -12.5,
+     "ms": 700
+    }
+   ]
+  },
+  {
+   "id": "resisted",
+   "pack": "pixel",
+   "takes": [
+    "DSGNSynth_BUFF-Failed Buff_HY_PC-001.wav",
+    "DSGNSynth_BUFF-Failed Buff_HY_PC-002.wav",
+    "DSGNSynth_BUFF-Failed Buff_HY_PC-003.wav"
+   ],
+   "category": "status",
+   "measured": [
+    {
+     "loudness": -23.0,
+     "peak_db": -5.6,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -2.1,
+     "ms": 700
+    },
+    {
+     "loudness": -23.0,
+     "peak_db": -5.4,
+     "ms": 700
+    }
+   ]
+  },
+  {
+   "id": "recovered",
+   "pack": "pixel",
+   "takes": [
+    "MAGAngl_BUFF-Effect Success_HY_PC-001.wav"
+   ],
+   "category": "moment",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -3.4,
+     "ms": 1200
+    }
+   ]
+  },
+  {
+   "id": "revive",
+   "pack": "pixel",
+   "takes": [
+    "MAGAngl_BUFF-Healing Gusts_HY_PC-001.wav"
+   ],
+   "category": "moment",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -3.5,
+     "ms": 1200
+    }
+   ]
+  },
+  {
+   "id": "death",
+   "pack": "easyrpg",
+   "takes": [
+    "Collapse1.wav"
+   ],
+   "category": "moment",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -6.5,
+     "ms": 1200
+    }
+   ]
+  },
+  {
+   "id": "downed",
+   "pack": "easyrpg",
+   "takes": [
+    "Fall1.wav"
+   ],
+   "category": "moment",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -13.4,
+     "ms": 943
+    }
+   ]
+  },
+  {
+   "id": "phase_shift",
+   "pack": "pixel",
+   "takes": [
+    "MAGSpel_CAST-High Powering Up_HY_PC-001.wav"
+   ],
+   "category": "moment",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -8.1,
+     "ms": 1200
+    }
+   ]
+  },
+  {
+   "id": "one_more",
+   "pack": "pixel",
+   "takes": [
+    "MAGSpel_CAST-Skill Ready_HY_PC-001.wav"
+   ],
+   "category": "moment",
+   "measured": [
+    {
+     "loudness": -19.2,
+     "peak_db": -2.0,
+     "ms": 868
+    }
+   ]
+  },
+  {
+   "id": "overtime",
+   "pack": "easyrpg",
+   "takes": [
+    "Clock.wav"
+   ],
+   "category": "moment",
+   "measured": [
+    {
+     "loudness": -19.5,
+     "peak_db": -1.8,
+     "ms": 298
+    }
+   ]
+  },
+  {
+   "id": "rtp.attack1",
+   "pack": "easyrpg",
+   "takes": [
+    "Attack1.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -10.1,
+     "ms": 777
+    }
+   ]
+  },
+  {
+   "id": "rtp.attack2",
+   "pack": "easyrpg",
+   "takes": [
+    "Attack2.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -11.7,
+     "ms": 258
+    }
+   ]
+  },
+  {
+   "id": "rtp.barrier",
+   "pack": "easyrpg",
+   "takes": [
+    "Barrier.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -10.1,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.blow2",
+   "pack": "easyrpg",
+   "takes": [
+    "Blow2.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -6.3,
+     "ms": 116
+    }
+   ]
+  },
+  {
+   "id": "rtp.blow4",
+   "pack": "easyrpg",
+   "takes": [
+    "Blow4.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -8.1,
+     "ms": 591
+    }
+   ]
+  },
+  {
+   "id": "rtp.buff",
+   "pack": "easyrpg",
+   "takes": [
+    "Buff.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -10.2,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.chime1",
+   "pack": "easyrpg",
+   "takes": [
+    "Chime1.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -8.6,
+     "ms": 1376
+    }
+   ]
+  },
+  {
+   "id": "rtp.chime2",
+   "pack": "easyrpg",
+   "takes": [
+    "Chime2.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -9.4,
+     "ms": 1449
+    }
+   ]
+  },
+  {
+   "id": "rtp.darkness3",
+   "pack": "easyrpg",
+   "takes": [
+    "Darkness3.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -6.1,
+     "ms": 774
+    }
+   ]
+  },
+  {
+   "id": "rtp.debuff",
+   "pack": "easyrpg",
+   "takes": [
+    "Debuff.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -7.9,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.earth6",
+   "pack": "easyrpg",
+   "takes": [
+    "Earth6.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.1,
+     "peak_db": -4.1,
+     "ms": 1354
+    }
+   ]
+  },
+  {
+   "id": "rtp.explosion1",
+   "pack": "easyrpg",
+   "takes": [
+    "Explosion1.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -11.5,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.fire1",
+   "pack": "easyrpg",
+   "takes": [
+    "Fire1.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -8.2,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.fire2",
+   "pack": "easyrpg",
+   "takes": [
+    "Fire2.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -9.6,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.fire3",
+   "pack": "easyrpg",
+   "takes": [
+    "Fire3.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -6.6,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.flash1",
+   "pack": "easyrpg",
+   "takes": [
+    "Flash1.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -13.5,
+     "ms": 588
+    }
+   ]
+  },
+  {
+   "id": "rtp.flash3",
+   "pack": "easyrpg",
+   "takes": [
+    "Flash3.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.1,
+     "peak_db": -8.4,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.holy3",
+   "pack": "easyrpg",
+   "takes": [
+    "Holy3.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -15.9,
+     "ms": 897
+    }
+   ]
+  },
+  {
+   "id": "rtp.ice1",
+   "pack": "easyrpg",
+   "takes": [
+    "Ice1.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -10.0,
+     "ms": 680
+    }
+   ]
+  },
+  {
+   "id": "rtp.ice2",
+   "pack": "easyrpg",
+   "takes": [
+    "Ice2.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -5.6,
+     "ms": 773
+    }
+   ]
+  },
+  {
+   "id": "rtp.ice5",
+   "pack": "easyrpg",
+   "takes": [
+    "Ice5.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -6.4,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.ice6",
+   "pack": "easyrpg",
+   "takes": [
+    "Ice6.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -8.3,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.item1",
+   "pack": "easyrpg",
+   "takes": [
+    "Item1.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -8.2,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.magic1",
+   "pack": "easyrpg",
+   "takes": [
+    "Magic1.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -14.1,
+     "ms": 586
+    }
+   ]
+  },
+  {
+   "id": "rtp.poison",
+   "pack": "easyrpg",
+   "takes": [
+    "Poison.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -6.6,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.raise2",
+   "pack": "easyrpg",
+   "takes": [
+    "Raise2.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -7.8,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.recovery5",
+   "pack": "easyrpg",
+   "takes": [
+    "Recovery5.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -7.9,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.recovery7",
+   "pack": "easyrpg",
+   "takes": [
+    "Recovery7.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -7.8,
+     "ms": 1014
+    }
+   ]
+  },
+  {
+   "id": "rtp.recovery8",
+   "pack": "easyrpg",
+   "takes": [
+    "Recovery8.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -10.2,
+     "ms": 1500
+    }
+   ]
+  },
+  {
+   "id": "rtp.shot1",
+   "pack": "easyrpg",
+   "takes": [
+    "Shot1.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -13.9,
+     "ms": 560
+    }
+   ]
+  },
+  {
+   "id": "rtp.shot2",
+   "pack": "easyrpg",
+   "takes": [
+    "Shot2.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -6.0,
+     "ms": 375
+    }
+   ]
+  },
+  {
+   "id": "rtp.song",
+   "pack": "easyrpg",
+   "takes": [
+    "Song.wav"
+   ],
+   "category": "cast",
+   "measured": [
+    {
+     "loudness": -19.0,
+     "peak_db": -8.4,
+     "ms": 883
+    }
+   ]
+  },
+  {
+   "id": "ult.absolute_zero",
+   "pack": "easyrpg",
+   "takes": [
+    "Ice5.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -2.4,
+     "ms": 2483
+    }
+   ]
+  },
+  {
+   "id": "ult.bastion",
+   "pack": "easyrpg",
+   "takes": [
+    "Barrier1.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -2.6,
+     "ms": 596
+    }
+   ]
+  },
+  {
+   "id": "ult.cleave",
+   "pack": "easyrpg",
+   "takes": [
+    "Explosion1.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -7.5,
+     "ms": 1839
+    }
+   ]
+  },
+  {
+   "id": "ult.complete_combustion",
+   "pack": "easyrpg",
+   "takes": [
+    "Fire2.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -5.6,
+     "ms": 1654
+    }
+   ]
+  },
+  {
+   "id": "ult.execute",
+   "pack": "easyrpg",
+   "takes": [
+    "Attack2.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -7.7,
+     "ms": 258
+    }
+   ]
+  },
+  {
+   "id": "ult.finale",
+   "pack": "easyrpg",
+   "takes": [
+    "Song.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -4.4,
+     "ms": 883
+    }
+   ]
+  },
+  {
+   "id": "ult.meteor",
+   "pack": "easyrpg",
+   "takes": [
+    "Earth8.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.5,
+     "peak_db": -1.9,
+     "ms": 519
+    }
+   ]
+  },
+  {
+   "id": "ult.pandemic",
+   "pack": "easyrpg",
+   "takes": [
+    "Poison.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -2.6,
+     "ms": 2002
+    }
+   ]
+  },
+  {
+   "id": "ult.rain_of_arrows",
+   "pack": "easyrpg",
+   "takes": [
+    "Shot3.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -6.5,
+     "ms": 628
+    }
+   ]
+  },
+  {
+   "id": "ult.resurrection",
+   "pack": "easyrpg",
+   "takes": [
+    "Raise2.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -3.8,
+     "ms": 1739
+    }
+   ]
+  },
+  {
+   "id": "ult.sanctuary",
+   "pack": "easyrpg",
+   "takes": [
+    "Holy5.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -10.0,
+     "ms": 941
+    }
+   ]
+  },
+  {
+   "id": "ult.shatter_chorus",
+   "pack": "easyrpg",
+   "takes": [
+    "Ice7.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -6.2,
+     "ms": 1686
+    }
+   ]
+  },
+  {
+   "id": "ult.supernova",
+   "pack": "easyrpg",
+   "takes": [
+    "Flash3.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -4.4,
+     "ms": 2863
+    }
+   ]
+  },
+  {
+   "id": "ult.ossuary",
+   "pack": "easyrpg",
+   "takes": [
+    "Darkness5.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -2.9,
+     "ms": 1324
+    }
+   ]
+  },
+  {
+   "id": "ult.overheat",
+   "pack": "easyrpg",
+   "takes": [
+    "Fire5.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -2.6,
+     "ms": 1934
+    }
+   ]
+  },
+  {
+   "id": "ult.liquidate",
+   "pack": "pixel",
+   "takes": [
+    "DSGNTonl_SKILL IMPACT-Coin Laser_HY_PC-001.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.1,
+     "peak_db": -1.1,
+     "ms": 709
+    }
+   ]
+  },
+  {
+   "id": "ult.crucible",
+   "pack": "easyrpg",
+   "takes": [
+    "Fire7.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -2.8,
+     "ms": 2303
+    }
+   ]
+  },
+  {
+   "id": "ult.quake",
+   "pack": "easyrpg",
+   "takes": [
+    "Earth6.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.2,
+     "peak_db": -2.0,
+     "ms": 1354
+    }
+   ]
+  },
+  {
+   "id": "ult.judgement",
+   "pack": "easyrpg",
+   "takes": [
+    "Flash1.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -9.5,
+     "ms": 588
+    }
+   ]
+  },
+  {
+   "id": "ult.twin_beat",
+   "pack": "easyrpg",
+   "takes": [
+    "Knock.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.9,
+     "peak_db": -2.0,
+     "ms": 348
+    }
+   ]
+  },
+  {
+   "id": "ult.black_mass",
+   "pack": "easyrpg",
+   "takes": [
+    "Darkness4.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -2.9,
+     "ms": 780
+    }
+   ]
+  },
+  {
+   "id": "ult.systole",
+   "pack": "easyrpg",
+   "takes": [
+    "Absorb2.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -4.4,
+     "ms": 3000
+    }
+   ]
+  },
+  {
+   "id": "ult.death_ray",
+   "pack": "retroanime",
+   "takes": [
+    "MAGSpel_Anime Ability Release 1.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -5.3,
+     "ms": 3000
+    }
+   ]
+  },
+  {
+   "id": "ult.oblivion",
+   "pack": "retroanime",
+   "takes": [
+    "EXPLDsgn_Anime Explosion 6.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -4.2,
+     "ms": 3000
+    }
+   ]
+  }
+ ]
+}

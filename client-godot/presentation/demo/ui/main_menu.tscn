@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://presentation/demo/ui/main_menu.gd" id="1_menu"]
 [ext_resource type="Script" path="res://game/ui/ui_push_button.gd" id="2_push"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/title_menu.tscn" id="3_title"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/settings.tscn" id="4_settings"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/credits.tscn" id="5_credits"]
 
 [node name="MainMenu" type="CenterContainer"]
 anchors_preset = 15
@@ -74,6 +75,12 @@ layout_mode = 2
 text = "Settings"
 script = ExtResource("2_push")
 screen = ExtResource("4_settings")
+
+[node name="Credits" type="Button" parent="Panel/Margin/Box"]
+layout_mode = 2
+text = "Credits"
+script = ExtResource("2_push")
+screen = ExtResource("5_credits")
 
 [node name="Quit" type="Button" parent="Panel/Margin/Box"]
 unique_name_in_owner = true

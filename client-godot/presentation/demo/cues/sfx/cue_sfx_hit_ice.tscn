@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_hdb56"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/hit.ice.tres" id="2_hh4gy"]
+
+[node name="SfxHitIce" type="Node" unique_id=307620101]
+script = ExtResource("1_hdb56")
+sound = ExtResource("2_hh4gy")

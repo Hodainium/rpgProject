@@ -1,0 +1,9 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/phase_shift.wav" id="1_yb7pj"]
+
+[resource]
+resource_name = "phase_shift"
+playback_mode = 2
+streams_count = 1
+stream_0/stream = ExtResource("1_yb7pj")

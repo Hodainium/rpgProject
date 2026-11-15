@@ -21,6 +21,11 @@ func after_each() -> void:
 	super()
 
 
+## The visual cues of a cue list (spec audio-pass adds Cue.Sfx.* sound cues beside them; those are test_audio_pass's).
+func _visual(tags: Array) -> Array:
+	return tags.filter(func(tag): return not String(tag).begins_with("Cue.Sfx."))
+
+
 func _service() -> FxService:
 	var service := FxService.new()
 	service.enabled = true
@@ -432,7 +437,7 @@ func test_dot_and_control_statuses_name_their_cues_and_the_cues_exist() -> void:
 		var status := load("res://content/demo/effects/%s.tres" % file) as GameplayEffect
 		var wanted: Array = STATUS_CUES[file]
 		eq(status.persistent_cue_tags, [StringName(wanted[0])], "%s shows its look while it lasts" % file)
-		eq(status.periodic_cue_tags, [StringName(wanted[1])] if wanted[1] != "" else [], "%s ticks as intended" % file)
+		eq(_visual(status.periodic_cue_tags), [StringName(wanted[1])] if wanted[1] != "" else [], "%s ticks as intended" % file)
 		for tag in [wanted[0], wanted[1]]:
 			if tag == "":
 				continue
@@ -519,9 +524,9 @@ func test_stat_statuses_and_cleanse_name_their_cues_and_the_cues_exist() -> void
 		var status := load("res://content/demo/effects/%s.tres" % file) as GameplayEffect
 		var wanted: Array = STAT_CUES[file]
 		eq(status.persistent_cue_tags, [StringName(wanted[0])], "%s wears its look while it lasts" % file)
-		eq(status.application_cue_tags, [StringName(wanted[1])] if wanted[1] != "" else [], "%s pulses when it lands as intended" % file)
+		eq(_visual(status.application_cue_tags), [StringName(wanted[1])] if wanted[1] != "" else [], "%s pulses when it lands as intended" % file)
 	for file in ["cleanse", "dispel"]:
-		eq((load("res://content/demo/effects/%s.tres" % file) as GameplayEffect).application_cue_tags, [&"Cue.Fx.Cleanse"], "%s sparkles" % file)
+		eq(_visual((load("res://content/demo/effects/%s.tres" % file) as GameplayEffect).application_cue_tags), [&"Cue.Fx.Cleanse"], "%s sparkles" % file)
 	var tags := {}
 	for file in STAT_CUES:
 		tags[STAT_CUES[file][0]] = true
@@ -614,10 +619,10 @@ func test_heals_and_revives_are_cues_on_their_effects() -> void:
 	var heals := ["heal", "heal_2", "holy_heal", "medic_heal", "potion_heal", "stew_heal", "hourglass_heal", "heartstring_heal", "encore_heal",
 		"glass_heart_heal", "vampire_heal", "corrupted_vampire_heal", "mirror_heal", "mimic_mend", "sanctuary_heal", "food_heal_15", "food_heal_25", "food_heal_30"]
 	for file in heals:
-		eq((load("res://content/demo/effects/%s.tres" % file) as GameplayEffect).application_cue_tags, [&"Cue.Fx.Heal"], "%s glows" % file)
+		eq(_visual((load("res://content/demo/effects/%s.tres" % file) as GameplayEffect).application_cue_tags), [&"Cue.Fx.Heal"], "%s glows" % file)
 	for file in ["revive", "resurrection_revive", "salts_revive", "second_heart_revive"]:
-		eq((load("res://content/demo/effects/%s.tres" % file) as GameplayEffect).application_cue_tags, [&"Cue.Fx.Revive"], "%s rises" % file)
-	eq((load("res://content/demo/effects/regen.tres") as GameplayEffect).periodic_cue_tags, [&"Cue.Fx.Heal"], "regen glows on every tick")
+		eq(_visual((load("res://content/demo/effects/%s.tres" % file) as GameplayEffect).application_cue_tags), [&"Cue.Fx.Revive"], "%s rises" % file)
+	eq(_visual((load("res://content/demo/effects/regen.tres") as GameplayEffect).periodic_cue_tags), [&"Cue.Fx.Heal"], "regen glows on every tick")
 	for tag in [&"Cue.Fx.Heal", &"Cue.Fx.Revive", &"Cue.Fx.Hit.Fire", &"Cue.Fx.Hit.Ice", &"Cue.Fx.Hit.Physical"]:
 		check(GameplayCueManager.has_cue(tag), "%s is in the cue registry" % tag)
 
@@ -936,12 +941,13 @@ func test_a_drained_hit_shows_what_was_absorbed() -> void:
 
 # --- Gaps closed after the spec sync (what the first test plan promised and no test pinned) -------------------------------------------
 
-## The generic spark is gone for good: the damage effect is the hit sound, and every look comes from the hit's own cue.
-func test_the_damage_effect_lists_only_the_hit_sound() -> void:
+## The generic spark is gone for good, and since spec audio-pass the generic hit sound too: every look and every impact sound comes
+## from the hit's own cue (by damage type, through the message route), so the damage effect lists no cue at all.
+func test_the_damage_effect_lists_no_generic_cue() -> void:
 	if skip_in_export():
 		return
 	var damage := load("res://content/demo/effects/damage.tres") as GameplayEffect
-	eq(damage.application_cue_tags, [&"Cue.Sfx.Hit"], "damage.tres plays the hit sound and nothing else (no Cue.Fx.HitSpark)")
+	eq(damage.application_cue_tags, [], "damage.tres lists no cue (no Cue.Fx.HitSpark, no Cue.Sfx.Hit)")
 
 
 ## A looping look dies with the unit: death drops every temporary effect, and a persistent cue ends with its effect.

@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_3mi53"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/break.tres" id="2_y1w1d"]
+
+[node name="SfxBreak" type="Node" unique_id=797944843]
+script = ExtResource("1_3mi53")
+sound = ExtResource("2_y1w1d")
+max_voices = 2

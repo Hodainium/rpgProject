@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_ntxe6"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/downed.tres" id="2_4q3jw"]
+
+[node name="SfxDowned" type="Node" unique_id=144129830]
+script = ExtResource("1_ntxe6")
+sound = ExtResource("2_4q3jw")
+max_voices = 2

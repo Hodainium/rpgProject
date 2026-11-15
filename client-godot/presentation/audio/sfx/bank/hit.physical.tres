@@ -1,0 +1,11 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/easyrpg/hit.physical.wav" id="1_6smvw"]
+
+[resource]
+resource_name = "hit.physical"
+playback_mode = 2
+random_pitch = 1.06
+random_volume_offset_db = 1.0
+streams_count = 1
+stream_0/stream = ExtResource("1_6smvw")

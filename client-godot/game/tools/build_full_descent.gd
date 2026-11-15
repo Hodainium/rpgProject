@@ -89,21 +89,21 @@ func _enemy_moves() -> void:
 	# The Cellar's and the Crypt's second bosses.
 	_ability("gnaw", "Ability.Gnaw", B.SINGLE_ENEMY, [_row("bite", "damage", D.SCALED, 110, T.ALL, physical),
 		_chance(_row("bleed", "bleed", D.USE_EFFECT, 0, T.ALL), 60)], _jump(0.5), [[0.25, "bite"], [0.3, "bleed"]],
-		{"sound": ["Bite", 0.2, -8.0]})
+		{"sound": ["Bite", 0.2]})
 	_ability("swarm", "Ability.Swarm", B.ALL_ENEMIES, [_row("swarm", "damage", D.SCALED, 50, T.ALL, physical)], _spin(0.7),
 		[[0.35, "swarm"]], phase_two)
 	_ability("bone_wall", "Ability.Bonewall", B.SELF, [_row("guard", "defense_up", D.USE_EFFECT, 0, T.ALL),
 		_row("taunt", "taunt", D.USE_EFFECT, 0, T.ALL)], _jump(0.6), [[0.25, "guard"], [0.3, "taunt"]])
 	_ability("ossuary", "Ability.Ult.Ossuary", B.ALL_ENEMIES, [_row("bones", "damage", D.SCALED, 120, T.ALL, physical)],
-		_spin(1.0), [[0.5, "bones"]], ult.merged({"sound": ["Explosion1", 0.4, -4.0]}))
+		_spin(1.0), [[0.5, "bones"]], ult.merged({"sound": ["Explosion1", 0.4]}))
 	# The Ember Forge.
 	_ability("searing_bite", "Ability.Searingbite", B.SINGLE_ENEMY, [_row("bite", "damage", D.SCALED, 100, T.ALL, fire),
 		_chance(_row("burn", "burn", D.FLAT, 40, T.ALL, fire), 100)], _jump(0.5), [[0.25, "bite"], [0.3, "burn"]],
-		{"sound": ["Fire1", 0.2, -8.0]})
+		{"sound": ["Fire1", 0.2]})
 	var hammer := _row("hammer", "damage", D.SCALED, 120, T.ALL, physical)
 	hammer.toughness_x100 = Fixed.from_typed(40)
 	_ability("hammer_down", "Ability.Hammerdown", B.SINGLE_ENEMY, [hammer], _jump(0.7), [[0.35, "hammer"]],
-		{"sound": ["Blow4", 0.3, -6.0]})
+		{"sound": ["Blow4", 0.3]})
 	_ability("brace", "Ability.Brace", B.SELF, [_row("brace", "defense_up", D.USE_EFFECT, 0, T.ALL)], _still(0.4), [[0.2, "brace"]])
 	_ability("stoke", "Ability.Stoke", B.ALL_ALLIES, [_row("stoke", "rally", D.USE_EFFECT, 0, T.ALL)], _flash(0.5), [[0.25, "stoke"]])
 	_ability("slag", "Ability.Slag", B.SINGLE_ENEMY, [_row("slag", "damage", D.SCALED, 80, T.ALL, fire),
@@ -114,7 +114,7 @@ func _enemy_moves() -> void:
 	_ability("meltdown", "Ability.Meltdown", B.ALL_ENEMIES, [_row("melt", "damage", D.SCALED, 90, T.ALL, fire),
 		_chance(_row("burn", "burn", D.FLAT, 50, T.ALL, fire), 100)], _spin(0.8), [[0.4, "melt"], [0.45, "burn"]], phase_three)
 	_ability("crucible", "Ability.Ult.Crucible", B.ALL_ENEMIES, [_row("crucible", "damage", D.SCALED, 150, T.ALL, fire)],
-		_spin(1.0), [[0.5, "crucible"]], ult.merged({"sound": ["Fire2", 0.4, -2.0]}))
+		_spin(1.0), [[0.5, "crucible"]], ult.merged({"sound": ["Fire2", 0.4]}))
 	var piston := _row("piston", "damage", D.SCALED, 140, T.ALL, physical)
 	piston.toughness_x100 = Fixed.from_typed(30)
 	_ability("piston", "Ability.Piston", B.SINGLE_ENEMY, [piston], _jump(0.7), [[0.35, "piston"]])
@@ -126,7 +126,7 @@ func _enemy_moves() -> void:
 	_ability("bile", "Ability.Bile", B.SINGLE_ENEMY, [_chance(_row("poison", "poison", D.USE_EFFECT, 0, T.ALL), 100),
 		_chance(_row("poison_again", "poison", D.USE_EFFECT, 0, T.ALL), 100)], _flash(0.5), [[0.25, "poison"], [0.3, "poison_again"]])
 	_ability("devour", "Ability.Devour", B.SINGLE_ENEMY, [_row("devour", "damage", D.SCALED, 180, T.ALL, physical)], _jump(0.8),
-		[[0.4, "devour"]], {"sound": ["Bite", 0.3, -4.0]})
+		[[0.4, "devour"]], {"sound": ["Bite", 0.3]})
 	_ability("hemorrhage", "Ability.Hemorrhage", B.ALL_ENEMIES, [_row("cut", "damage", D.SCALED, 40, T.ALL, physical),
 		_chance(_row("bleed", "bleed", D.USE_EFFECT, 0, T.ALL), 50)], _spin(0.6), [[0.3, "cut"], [0.35, "bleed"]])
 	_ability("pulse", "Ability.Pulse", B.ALL_ENEMIES, [_row("pulse", "damage", D.SCALED, 70, T.ALL, physical)], _flash(0.6),
@@ -140,14 +140,14 @@ func _enemy_moves() -> void:
 		_jump(0.9), [[0.45, "beat"]], ult)
 	# The Silent Cathedral.
 	_ability("hymn", "Ability.Hymn", B.ALL_ALLIES, [_row("regen", "regen", D.USE_EFFECT, 0, T.ALL)], _flash(0.6), [[0.3, "regen"]],
-		{"sound": ["Chime1", 0.1, -6.0]})
+		{"sound": ["Chime1", 0.1]})
 	_ability("bless", "Ability.Bless", B.SINGLE_ALLY, [_row("ward", "ward", D.USE_EFFECT, 0, T.ALL)], _flash(0.5), [[0.25, "ward"]])
 	_ability("smite", "Ability.Smite", B.SINGLE_ENEMY, [_row("smite", "damage", D.SCALED, 150, T.ALL, physical)], _jump(0.7),
-		[[0.35, "smite"]], {"sound": ["Flash1", 0.3, -4.0]})
+		[[0.35, "smite"]], {"sound": ["Flash1", 0.3]})
 	_ability("purify_self", "Ability.Purifyself", B.SELF, [_row("cleanse", "cleanse", D.USE_EFFECT, 0, T.ALL)], _flash(0.5),
 		[[0.25, "cleanse"]])
 	_ability("judgement", "Ability.Ult.Judgement", B.SINGLE_ENEMY, [_row("judge", "damage", D.SCALED, 260, T.ALL, physical)],
-		_spin(1.0), [[0.5, "judge"]], ult.merged({"sound": ["Flash1", 0.4, -2.0]}))
+		_spin(1.0), [[0.5, "judge"]], ult.merged({"sound": ["Flash1", 0.4]}))
 	# The Vault.
 	_ability("snap", "Ability.Snap", B.SINGLE_ENEMY, [_row("snap", "damage", D.SCALED, 120, T.ALL, physical)], _jump(0.5), [[0.25, "snap"]])
 	_ability("lockdown", "Ability.Lockdown", B.SINGLE_ENEMY, [_row("lock", "damage", D.SCALED, 80, T.ALL, ice),
@@ -157,17 +157,17 @@ func _enemy_moves() -> void:
 	_ability("gilded_ray", "Ability.Gildedray", B.ALL_ENEMIES, [_row("ray", "damage", D.SCALED, 90, T.ALL, ice)], _spin(0.8),
 		[[0.4, "ray"]])
 	_ability("liquidate", "Ability.Ult.Liquidate", B.SINGLE_ENEMY, [_row("liquidate", "damage", D.SCALED, 300, T.ALL, physical)],
-		_spin(1.0), [[0.5, "liquidate"]], ult.merged({"sound": ["Explosion1", 0.4, -2.0]}))
+		_spin(1.0), [[0.5, "liquidate"]], ult.merged({"sound": ["Explosion1", 0.4]}))
 	# The Black Coven.
 	_ability("curse", "Ability.Curse", B.SINGLE_ENEMY, [_chance(_row("weaken", "weaken", D.USE_EFFECT, 0, T.ALL), 100)],
 		_flash(0.5), [[0.25, "weaken"]])
 	_ability("hellfire", "Ability.Hellfire", B.SINGLE_ENEMY, [_row("fire", "damage", D.SCALED, 120, T.ALL, fire),
 		_chance(_row("burn", "burn", D.FLAT, 60, T.ALL, fire), 100)], _jump(0.6), [[0.3, "fire"], [0.35, "burn"]],
-		{"sound": ["Fire2", 0.2, -6.0]})
+		{"sound": ["Fire2", 0.2]})
 	_ability("rend", "Ability.Rend", B.SINGLE_ENEMY, [_row("rend", "damage", D.SCALED, 110, T.ALL, physical),
 		_chance(_row("bleed", "bleed", D.USE_EFFECT, 0, T.ALL), 100)], _jump(0.6), [[0.3, "rend"], [0.35, "bleed"]])
 	_ability("witch_bolt", "Ability.Witchbolt", B.SINGLE_ENEMY, [_row("bolt", "damage", D.SCALED, 110, T.ALL, ice)], _flash(0.5),
-		[[0.25, "bolt"]], {"sound": ["Ice2", 0.2, -8.0]})
+		[[0.25, "bolt"]], {"sound": ["Ice2", 0.2]})
 	_ability("black_mass", "Ability.Ult.Blackmass", B.ALL_ENEMIES, [_row("mass", "damage", D.SCALED, 150, T.ALL, ice)],
 		_spin(1.0), [[0.5, "mass"]], ult)
 	# The Void.
@@ -180,14 +180,14 @@ func _enemy_moves() -> void:
 	_ability("tremor", "Ability.Tremor", B.ALL_ENEMIES, [_row("tremor", "damage", D.SCALED, 70, T.ALL, physical)], _jump(0.7),
 		[[0.35, "tremor"]])
 	_ability("unmake", "Ability.Unmake", B.SINGLE_ENEMY, [_row("unmake", "damage", D.SCALED, 250, T.ALL, physical)], _spin(0.9),
-		[[0.45, "unmake"]], {"sound": ["Explosion1", 0.3, -4.0]})
+		[[0.45, "unmake"]], {"sound": ["Explosion1", 0.3]})
 	_ability("entropy", "Ability.Entropy", B.ALL_ENEMIES, [_row("decay", "damage", D.SCALED, 50, T.ALL, physical),
 		_chance(_row("bleed", "bleed", D.USE_EFFECT, 0, T.ALL), 100), _chance(_row("slow", "slow", D.USE_EFFECT, 0, T.ALL), 100)],
 		_spin(0.8), [[0.3, "decay"], [0.35, "bleed"], [0.4, "slow"]])
 	_ability("silence", "Ability.Silence", B.SINGLE_ENEMY, [_row("hush", "damage", D.SCALED, 60, T.ALL, ice),
 		_chance(_row("stun", "stun", D.USE_EFFECT, 0, T.ALL), 50)], _flash(0.6), [[0.3, "hush"], [0.35, "stun"]])
 	_ability("oblivion", "Ability.Ult.Oblivion", B.ALL_ENEMIES, [_row("void", "damage", D.SCALED, 220, T.ALL, physical)],
-		_spin(1.2), [[0.6, "void"]], ult.merged({"sound": ["Explosion1", 0.5, -2.0]}))
+		_spin(1.2), [[0.6, "void"]], ult.merged({"sound": ["Explosion1", 0.5]}))
 
 
 # --- Enemies, bosses and encounters --------------------------------------------------------------------------------------
@@ -401,7 +401,7 @@ func _themed_items() -> void:
 	_described("bellows", "Bellows", [t, s, RARE], 7, _ability_set(["bellows"], []), "Breaking an enemy gives +15 ult charge.")
 	var quench := _row("quench", "damage", D.FLAT, 150, ExecutionRow.Targets.ALL, ice)
 	quench.toughness_x100 = Fixed.from_typed(30)
-	_ability("quench_flask", "Ability.Item.Quench", B.ALL_ENEMIES, [quench], _spin(0.6), [[0.3, "quench"]], {"sound": ["Ice5", 0.2, -4.0]})
+	_ability("quench_flask", "Ability.Item.Quench", B.ALL_ENEMIES, [quench], _spin(0.6), [[0.3, "quench"]], {"sound": ["Ice5", 0.2]})
 	_usable("quench_flask", "Quench Flask", [s, COMMON], 4, "quench_flask", consumable, 1, "All enemies: 150 Ice damage.")
 	_passive("ember_heart", "Ability.Passive.Emberheart", B.SINGLE_ENEMY, [["flare", "damage", D.FLAT, 50, fire]], &"Event.Damage.Dealt.Fire")
 	_described("ember_heart", "Ember Heart", [t, EPIC], 9, _ability_set(["ember_heart"], []), "Fire hits deal 50 more Fire damage.")
@@ -429,7 +429,7 @@ func _themed_items() -> void:
 	_piece("vein_cloak", "Vein Cloak", "Body", [b, t, RARE], 7, _ability_set([], ["vein_cloak"]), "+150 max HP, immune to Bleed.")
 	_save("effects/second_heart_revive", _percent_of_max(50))
 	_ability("second_heart", "Ability.Item.Secondheart", B.SINGLE_DEAD_ALLY, [_row("revive", "second_heart_revive", D.USE_EFFECT, 0,
-		ExecutionRow.Targets.ALL)], _spin(0.6), [[0.4, "revive"]], {"sound": ["Raise2", 0.0, -2.0]})
+		ExecutionRow.Targets.ALL)], _spin(0.6), [[0.4, "revive"]], {"sound": ["Raise2", 0.0]})
 	_usable("second_heart", "Second Heart", [b, LEGENDARY], 12, "second_heart", consumable, 1, "Revive an ally with 50% HP (once).")
 	# The Silent Cathedral (boss rewards and the Vault).
 	_save("effects/halo", _infinite({"heal_mult": 10}, false))

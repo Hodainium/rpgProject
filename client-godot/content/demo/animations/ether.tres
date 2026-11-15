@@ -1,6 +1,6 @@
 [gd_resource type="Animation" format=3]
 
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Recovery8.wav" id="1_50xjn"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/rtp.recovery8.tres" id="1_50xjn"]
 
 [resource]
 resource_name = "ether"

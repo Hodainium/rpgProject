@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_kp3h6"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/hit.drained.tres" id="2_72ki3"]
+
+[node name="SfxHitDrained" type="Node" unique_id=1912037598]
+script = ExtResource("1_kp3h6")
+sound = ExtResource("2_72ki3")
+max_voices = 2

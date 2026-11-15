@@ -807,7 +807,8 @@ func test_shipped_effects_are_valid_and_play_at_every_tier() -> void:
 
 
 func test_proof_cues_are_registered_with_gas() -> void:
-	for tag in [&"Cue.Sfx.Hit", &"Cue.Fx.HitSpark", &"Cue.Fx.Heal", &"Cue.Fx.Break", &"Cue.Fx.Aura"]:
+	# Spec audio-pass: the proof set's Cue.Sfx.Hit became the per-type Cue.Sfx.Hit.* sound cues (test_audio_pass checks them).
+	for tag in [&"Cue.Sfx.Hit.Physical", &"Cue.Fx.HitSpark", &"Cue.Fx.Heal", &"Cue.Fx.Break", &"Cue.Fx.Aura"]:
 		check(GameplayCueManager.has_cue(tag), "%s is in the cue registry" % tag)
 	for tag in [&"Cue.Fx.HitSpark", &"Cue.Fx.Heal", &"Cue.Fx.Break", &"Cue.Fx.Aura"]:
 		var scene: PackedScene = GameplayCueManager._scene_for(tag)

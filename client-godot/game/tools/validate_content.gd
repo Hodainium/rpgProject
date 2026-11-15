@@ -36,6 +36,9 @@ func _ready() -> void:
 		for variant in StyleValidator.registries_under(UnitStyle.DEFAULT_REGISTRY.get_base_dir().path_join("variants")):
 			issues.append_array(StyleValidator.validate(load(variant) as StyleRegistry, content, variant))
 			issues.append_array(StyleValidator.skin_tie_problems(load(variant) as StyleRegistry, grows, variant))
+	# Spec audio-pass 4: the sound bank (presentation, like the effects registry).
+	if root == "res://content/":
+		issues.append_array(AudioValidator.validate())
 	print("validate_content: ", root)
 	print(ContentValidator.report(issues))
 	get_tree().quit(3 if ContentValidator.error_count(issues) > 0 else 0)

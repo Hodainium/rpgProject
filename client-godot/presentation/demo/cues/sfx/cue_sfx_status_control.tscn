@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_bwvnq"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/status.control.tres" id="2_rbiey"]
+
+[node name="SfxStatusControl" type="Node" unique_id=1904795911]
+script = ExtResource("1_bwvnq")
+sound = ExtResource("2_rbiey")
+max_voices = 2

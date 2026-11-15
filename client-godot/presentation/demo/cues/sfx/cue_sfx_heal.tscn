@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_ywj5v"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/heal.tres" id="2_xyxb4"]
+
+[node name="SfxHeal" type="Node" unique_id=1710282277]
+script = ExtResource("1_ywj5v")
+sound = ExtResource("2_xyxb4")
+max_voices = 2

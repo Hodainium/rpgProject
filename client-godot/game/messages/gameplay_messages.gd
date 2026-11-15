@@ -28,6 +28,11 @@ const RUN_CHEST_OPENED: StringName = &"Message.Run.ChestOpened"
 ## Spec skill-points D18: a level-up reached a level skill (target: "slot:<n>"; magnitude: the level; data
 ## "targetName" (the character), "skillName", "skillTag", "replacesTag").
 const RUN_SKILL_LEARNED: StringName = &"Message.Run.SkillLearned"
+## Spec audio-pass: coins gained (magnitude: how many), a locked room opened with a key (magnitude: its cell), and one message
+## per action that raised any member's level (magnitude: the levels gained in all; LevelUp still comes per member).
+const RUN_COINS_GAINED: StringName = &"Message.Run.CoinsGained"
+const RUN_ROOM_UNLOCKED: StringName = &"Message.Run.RoomUnlocked"
+const RUN_LEVELS_GAINED: StringName = &"Message.Run.LevelsGained"
 const BATTLE_STARTED: StringName = &"Message.Battle.Started"
 const BATTLE_ENDED: StringName = &"Message.Battle.Ended"
 const BATTLE_DAMAGE: StringName = &"Message.Battle.Damage"
@@ -60,7 +65,7 @@ const DEV_FX: StringName = &"Message.Dev.Fx"
 
 ## Every channel and verb the code sends (the tag checkpoint, sync_tags.tscn, checks them against the registry).
 const CHANNELS: Array[StringName] = [NOTIFICATION, RUN_STARTED, RUN_ENDED, RUN_FLOOR_ENTERED, RUN_LEVEL_UP,
-	RUN_ITEM_TAKEN, RUN_ITEM_DROPPED, RUN_CHOICE, RUN_KEY_FOUND, RUN_CHEST_FOUND, RUN_CHEST_OPENED, RUN_SKILL_LEARNED, BATTLE_STARTED, BATTLE_ENDED, BATTLE_DAMAGE, BATTLE_HP_CHANGED, BATTLE_BROKEN,
+	RUN_ITEM_TAKEN, RUN_ITEM_DROPPED, RUN_CHOICE, RUN_KEY_FOUND, RUN_CHEST_FOUND, RUN_CHEST_OPENED, RUN_SKILL_LEARNED, RUN_COINS_GAINED, RUN_ROOM_UNLOCKED, RUN_LEVELS_GAINED, BATTLE_STARTED, BATTLE_ENDED, BATTLE_DAMAGE, BATTLE_HP_CHANGED, BATTLE_BROKEN,
 	BATTLE_RECOVERED, BATTLE_DOWNED, BATTLE_ONE_MORE, BATTLE_INTERRUPT, BATTLE_PHASE, BATTLE_RESISTED, BATTLE_DRAINED,
 	BATTLE_TURN_SKIPPED, BATTLE_UNIT_DIED, BATTLE_ABILITY_USED, BATTLE_TRIGGER, UI_REFUSED, UI_HINT, UI_ULT_PRESSED, DEV_FX]
 const VERBS: Array[StringName] = [&"Verb.Start", &"Verb.Win", &"Verb.Lose", &"Verb.Stop", &"Verb.Enter",

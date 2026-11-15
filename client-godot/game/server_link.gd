@@ -627,6 +627,7 @@ func _resume_from_server(run: RunController, content_index: ContentIndex) -> Str
 		return "resume: the server has no start state for run %s yet" % _run_id
 	var replay := RunController.new()
 	replay.name = "ResumeReplay"
+	replay.silent = true  # the tail already happened: no toasts, no sounds
 	add_child(replay)
 	var card_pool: Variant = data.get("cardPool")  # spec card-collection 2.5: the server's own pool for this run, or null
 	var error := replay.load_snapshot(content_index, data["snapshot"], card_pool)

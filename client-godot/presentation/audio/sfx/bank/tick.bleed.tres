@@ -1,0 +1,14 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/tick.bleed_1.wav" id="1_mh7s6"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/tick.bleed_2.wav" id="2_icaqh"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/tick.bleed_3.wav" id="3_cq2ee"]
+
+[resource]
+resource_name = "tick.bleed"
+random_pitch = 1.04
+random_volume_offset_db = 0.5
+streams_count = 3
+stream_0/stream = ExtResource("1_mh7s6")
+stream_1/stream = ExtResource("2_icaqh")
+stream_2/stream = ExtResource("3_cq2ee")

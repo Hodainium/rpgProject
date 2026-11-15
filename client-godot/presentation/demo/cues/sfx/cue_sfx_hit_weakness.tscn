@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_sgmit"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/hit.weakness.tres" id="2_snuln"]
+
+[node name="SfxHitWeakness" type="Node" unique_id=682424679]
+script = ExtResource("1_sgmit")
+sound = ExtResource("2_snuln")
+max_voices = 2

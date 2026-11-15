@@ -1,0 +1,13 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/run.move_1.wav" id="1_slwu5"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/run.move_2.wav" id="2_k5yh5"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/run.move_3.wav" id="3_xskhi"]
+
+[resource]
+resource_name = "run.move"
+random_pitch = 1.02
+streams_count = 3
+stream_0/stream = ExtResource("1_slwu5")
+stream_1/stream = ExtResource("2_k5yh5")
+stream_2/stream = ExtResource("3_xskhi")

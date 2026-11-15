@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/audio/sfx_cue.gd" id="1_tldwq"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/hit.resisted.tres" id="2_85vsx"]
+
+[node name="SfxHitResisted" type="Node" unique_id=1025812123]
+script = ExtResource("1_tldwq")
+sound = ExtResource("2_85vsx")
+max_voices = 2

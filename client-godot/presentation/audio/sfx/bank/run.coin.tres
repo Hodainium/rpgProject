@@ -1,0 +1,10 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/run.coin.wav" id="1_xb1oh"]
+
+[resource]
+resource_name = "run.coin"
+playback_mode = 2
+random_pitch = 1.02
+streams_count = 1
+stream_0/stream = ExtResource("1_xb1oh")

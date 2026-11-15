@@ -1,0 +1,3 @@
+{"targets": {"ui": -22}, "max_ms": {"ui": 350}, "format": {"sample_rate": 44100, "bits": 16, "channels": 1}, "tolerance_db": 1.5, "peak_ceiling_db": -1.0, "reserved_allow": [],
+ "packs": {"sa": {"folder": "sa", "title": "A share-alike pack", "author": "x", "url": "x", "licence": "CC-BY-SA-4.0"}},
+ "entries": [{"id": "ui.one", "pack": "sa", "takes": ["one.wav"], "category": "ui"}]}

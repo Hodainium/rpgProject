@@ -1,0 +1,10 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/run.floor.wav" id="1_lji2d"]
+
+[resource]
+resource_name = "run.floor"
+playback_mode = 2
+random_pitch = 1.02
+streams_count = 1
+stream_0/stream = ExtResource("1_lji2d")

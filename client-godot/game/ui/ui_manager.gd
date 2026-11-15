@@ -7,6 +7,8 @@ extends Node
 
 ## A layer's stack changed (push, pop, remove, clear).
 signal stack_changed(layer: StringName)
+## A yes/no dialog opened (confirm()); the sound board plays its pop-up sound on it (spec audio-pass 3.5).
+signal confirm_opened
 
 ## The layer whose screens are menus over the run (spec ff7-ui 2.12: while one is open the state has UI.State.Run.Menu).
 const GAME_MENU: StringName = &"UI.Layer.GameMenu"
@@ -185,6 +187,7 @@ func confirm(text: String, yes_label: String = "Yes", no_label: String = "No") -
 			remove(dialog)
 		_problem("the confirm_scene's root must extend UIConfirm")
 		return false
+	confirm_opened.emit()
 	var answer: bool = await dialog.decided
 	remove(dialog)
 	return answer

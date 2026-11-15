@@ -1,0 +1,14 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/apply.debuff_1.wav" id="1_ddbio"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/apply.debuff_2.wav" id="2_fuujm"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/apply.debuff_3.wav" id="3_tuhd1"]
+
+[resource]
+resource_name = "apply.debuff"
+random_pitch = 1.04
+random_volume_offset_db = 0.5
+streams_count = 3
+stream_0/stream = ExtResource("1_ddbio")
+stream_1/stream = ExtResource("2_fuujm")
+stream_2/stream = ExtResource("3_tuhd1")

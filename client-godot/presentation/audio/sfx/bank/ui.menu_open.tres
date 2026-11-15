@@ -1,0 +1,9 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/retromenu/ui.menu_open.wav" id="1_2sl0h"]
+
+[resource]
+resource_name = "ui.menu_open"
+playback_mode = 2
+streams_count = 1
+stream_0/stream = ExtResource("1_2sl0h")

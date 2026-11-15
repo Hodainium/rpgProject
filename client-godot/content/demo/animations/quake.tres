@@ -1,6 +1,6 @@
 [gd_resource type="Animation" format=3]
 
-[ext_resource type="AudioStream" path="res://presentation/audio/rtp/Earth6.wav" id="1_ctvkd"]
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/bank/ult.quake.tres" id="1_ctvkd"]
 
 [resource]
 resource_name = "quake"
