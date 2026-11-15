@@ -18,6 +18,9 @@ enum Kind { BOX, CYLINDER, SPHERE, TORUS, PRISM, LATHE, TUBE, EXTRUDE }
 @export var curve: PackedVector3Array = PackedVector3Array()
 ## Sides of round shapes, steps along a tube.
 @export_range(3, 128) var segments: int = 24
+## LATHE: smooth shading across the profile and around the axis (a round dome, no visible facets); corners sharper than 60
+## degrees stay sharp (a dome's flat base). Off = one flat normal per face, as every lathe had before (playtest-fixes).
+@export var smooth: bool = false
 
 @export var position: Vector3 = Vector3.ZERO
 @export var rotation_degrees: Vector3 = Vector3.ZERO
@@ -37,7 +40,7 @@ enum Kind { BOX, CYLINDER, SPHERE, TORUS, PRISM, LATHE, TUBE, EXTRUDE }
 
 ## What decides the mesh (not placement or material): the cache key.
 func mesh_key() -> String:
-	return var_to_str([kind, size, radius_bottom, radius_top, height, profile, curve, segments])
+	return var_to_str([kind, size, radius_bottom, radius_top, height, profile, curve, segments, smooth])
 
 
 ## A problem that keeps the mesh from being built, or "" (the validator's style_part_invalid).

@@ -59,7 +59,7 @@ static func _build(part: AttachmentPart) -> Mesh:
 			prism.size = part.size
 			return prism
 		AttachmentPart.Kind.LATHE:
-			return lathe(part.profile, part.segments)
+			return lathe(part.profile, part.segments, part.smooth)
 		AttachmentPart.Kind.TUBE:
 			return tube(bezier(part.curve[0], part.curve[1], part.curve[2], part.segments), part.radius_bottom, part.radius_top,
 				maxi(6, part.segments / 2))
@@ -106,11 +106,16 @@ static func _edge_out(outline: PackedVector2Array, p: Vector2, q: Vector2) -> Ve
 	return -normal if Geometry2D.is_polygon_clockwise(outline) else normal
 
 
-## A closed profile (x = radius, y = height) spun around Y.
-static func lathe(profile: PackedVector2Array, sides: int) -> ArrayMesh:
+## A closed profile (x = radius, y = height) spun around Y. `smooth`: each vertex takes the normal of the profile at that point
+## (the two edges meeting there averaged, unless they meet at more than SMOOTH_CORNER_DEGREES) turned to its own angle, so the
+## surface shades round; otherwise one flat normal per face.
+static func lathe(profile: PackedVector2Array, sides: int, smooth := false) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var count := profile.size()
+	if smooth:
+		_smooth_lathe(st, profile, sides)
+		return st.commit()
 	for s in sides:
 		var a0 := TAU * s / sides
 		var a1 := TAU * (s + 1) / sides
@@ -129,6 +134,53 @@ static func lathe(profile: PackedVector2Array, sides: int) -> ArrayMesh:
 			_tri(st, p0, p1, q0, out)
 			_tri(st, p1, q1, q0, out)
 	return st.commit()
+
+
+const SMOOTH_CORNER_DEGREES := 60.0
+
+
+## The smooth lathe: per edge of the profile, a band of quads around Y whose vertex normals come from the profile's normal at
+## each end of the edge (averaged with the neighbouring edge unless the corner is sharp), turned to the vertex's own angle.
+static func _smooth_lathe(st: SurfaceTool, profile: PackedVector2Array, sides: int) -> void:
+	var count := profile.size()
+	var edges := count if count > 2 else 1  # two points: one open surface
+	var normals: Array[Vector2] = []
+	for k in edges:
+		normals.append(_edge_out(profile, profile[k], profile[(k + 1) % count]).normalized())
+	var cos_corner := cos(deg_to_rad(SMOOTH_CORNER_DEGREES))
+	for k in edges:
+		var own := normals[k]
+		if own == Vector2.ZERO:
+			continue  # a zero-length edge
+		var n_start := _blend(own, normals[(k - 1 + edges) % edges] if edges > 1 else Vector2.ZERO, cos_corner)
+		var n_end := _blend(own, normals[(k + 1) % edges] if edges > 1 else Vector2.ZERO, cos_corner)
+		var p := profile[k]
+		var q := profile[(k + 1) % count]
+		if is_zero_approx(p.x) and is_zero_approx(q.x):
+			continue  # an edge along the axis spins into nothing (zero-area triangles with sideways normals)
+		for s in sides:
+			var a0 := TAU * s / sides
+			var a1 := TAU * (s + 1) / sides
+			var p0 := _spin(p, a0)
+			var p1 := _spin(p, a1)
+			var q0 := _spin(q, a0)
+			var q1 := _spin(q, a1)
+			var mid := (a0 + a1) * 0.5
+			var out := Vector3(cos(mid) * own.x, own.y, sin(mid) * own.x)
+			_tri(st, p0, p1, q0, out, _spin(n_start, a0), _spin(n_start, a1), _spin(n_end, a0))
+			_tri(st, p1, q1, q0, out, _spin(n_start, a1), _spin(n_end, a1), _spin(n_end, a0))
+
+
+## A profile point or normal (x = radius, y = height) turned to angle `a` around Y.
+static func _spin(v: Vector2, a: float) -> Vector3:
+	return Vector3(cos(a) * v.x, v.y, sin(a) * v.x)
+
+
+## The edge's normal averaged with its neighbour's when the corner between them is gentler than the limit; else its own.
+static func _blend(own: Vector2, other: Vector2, cos_corner: float) -> Vector2:
+	if other == Vector2.ZERO or own.dot(other) < cos_corner:
+		return own
+	return (own + other).normalized()
 
 
 ## A tube along `points` tapering from r0 to r1, smooth normals, its start capped.

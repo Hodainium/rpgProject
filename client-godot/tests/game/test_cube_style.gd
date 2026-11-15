@@ -405,6 +405,43 @@ func test_every_part_kind_builds_and_caches_its_mesh() -> void:
 	check(flat_torus.problem() != "" and AttachmentMesh.mesh_for(flat_torus) == null, "a torus with equal radii builds nothing")
 
 
+## A smooth lathe shades a dome round (each vertex's normal points away from the sphere's centre) and keeps its flat base
+## sharp; the default stays one flat normal per face; `smooth` is part of the cache key.
+func test_smooth_lathe_shades_a_dome_round() -> void:
+	var dome := PackedVector2Array([Vector2(0, 0), Vector2(0.3, 0)])
+	for i in range(1, 17):
+		var t := deg_to_rad(90.0 * i / 16.0)
+		dome.append(Vector2(0.3 * cos(t) if i < 16 else 0.0, 0.3 * sin(t)))
+	var smooth := AttachmentMesh.lathe(dome, 32, true)
+	var arrays := smooth.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var worst := 1.0
+	var base_down := true
+	for v in vertices.size():
+		var p := vertices[v]
+		var n := normals[v]
+		if p.y > 0.001:  # on the dome: the normal is the sphere's
+			worst = minf(worst, n.dot(p.normalized()))
+		elif p.length() < 0.299:  # inside the base disc: straight down
+			base_down = base_down and n.dot(Vector3.DOWN) > 0.999
+	check(worst > 0.98, "every dome vertex faces away from the centre (worst dot %.3f)" % worst)
+	check(base_down, "the flat base stays flat: the 90 degree rim is not smoothed")
+	var flat := AttachmentMesh.lathe(dome, 32)
+	var flat_normals: PackedVector3Array = flat.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
+	var faces_flat := true
+	for f in range(0, flat_normals.size(), 3):
+		faces_flat = faces_flat and flat_normals[f].is_equal_approx(flat_normals[f + 1]) \
+			and flat_normals[f].is_equal_approx(flat_normals[f + 2])
+	check(faces_flat, "without smooth every face keeps one flat normal, as before")
+	var part := AttachmentPart.new()
+	part.kind = AttachmentPart.Kind.LATHE
+	part.profile = dome
+	var key := part.mesh_key()
+	part.smooth = true
+	check(part.mesh_key() != key, "smooth is part of the mesh cache key")
+
+
 func test_wall_blocks_are_bevelled_by_the_mood() -> void:
 	var size := Vector3(1, 0.6, 1)
 	var mesh := AttachmentMesh.bevel_box(size, 0.06) as ArrayMesh
