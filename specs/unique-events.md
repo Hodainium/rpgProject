@@ -1,7 +1,7 @@
 # Spec: unique-events (slice 5d)
 
-Status: **spec written 2026-11-09, decisions confirmed by the user the same day (section 7); implemented together with 5c.** A small client-side slice, next to 5c `card-balance` (it moves the
-win-rate gate, so the two retunes are measured together). Found while reviewing slice 5: "items and events should be
+Status: **spec written 2026-11-09, decisions confirmed by the user the same day (section 7); its own slice after 5b3 `floor-rooms`, before 5c (user, 2026-11-15).** A small client-side slice before 5c `card-balance` (it moves the
+win-rate gate, so 5c measures the balance with it in place). Found while reviewing slice 5: "items and events should be
 obtainable once per run, like Isaac". Builds on `specs/game-skeleton.md` (the floor generator and pools),
 `specs/playable-demo.md` (events, `rest_event`) and `specs/run-verify.md` (the run hash covers what decides play).
 
@@ -113,12 +113,13 @@ in memory like `card_world.gd`):
 
 **Decided by the user, 2026-11-09:**
 1. Seen = placed, not entered (needed for uniqueness inside a floor).
-2. An exhausted event pool gives an empty room, not a repeat and not an error. To make that rare, **slice 5c adds more events**
-   to the demo content (each chapter's event query should match well more events than the rooms its floors can ask for;
-   the `event_pool_short` validator warning is how 5c finds the chapters that need them).
+2. An exhausted event pool gives an empty room, not a repeat and not an error. To make that rare, **this slice adds more events**
+   to the demo content (moved here from 5c, user 2026-11-15; each chapter's event query should match well more events than the
+   rooms its floors can ask for; the `event_pool_short` validator warning finds the chapters that need them).
 3. Fixed events and the rest stop stay repeatable.
 4. A named item already seen is replaced by **a food item, like Isaac's drops** (section 2.3), not by the fallback item.
-5. It lands together with 5c: the gate moves, and the balance pass is the place to re-measure it.
+5. It lands before 5c (user, 2026-11-15; first decided as "together with 5c"): the gate moves, and the balance pass that follows
+   re-measures it.
 
 **Open:** should an *entered* event that the player flees (if an event can be left) count as seen? Today events cannot be left
 mid-choice, so no.
