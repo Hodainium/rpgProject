@@ -693,7 +693,7 @@ func _side_candidates(actor: BattleUnit, ability: BattleAbility) -> Array[Battle
 	for unit in _units:
 		if unit.alive != want_dead and (unit.side != actor.side) == opposing:
 			result.append(unit)
-	result.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)
+	result.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)  # sort-ok: slot is an int
 	return result
 
 
@@ -782,7 +782,7 @@ func _ult_window(controller: Object) -> void:
 	for unit in _units:
 		if not unit.is_party() and not unit.ultimate_abilities().is_empty():
 			enemies.append(unit)
-	enemies.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)
+	enemies.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)  # sort-ok: slot is an int
 	for enemy in enemies:
 		if not is_running():
 			return

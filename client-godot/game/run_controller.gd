@@ -890,7 +890,7 @@ func party_capture(full: bool) -> Array:
 	var members: Array = []
 	for member in state.party:
 		var gear: Array = member["equipment"].keys()
-		gear.sort()
+		gear.sort_custom(func(a, b) -> bool: return String(a) < String(b))  # by name: StringNames sort by pointer, which differs between processes (2002 ConditionsMismatch)
 		var equipment_ids: Array = []
 		for tag in gear:
 			equipment_ids.append(String(member["equipment"][tag]))

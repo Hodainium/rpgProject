@@ -537,3 +537,33 @@ func test_a_resume_that_finds_no_start_state_in_time_fails_loudly() -> void:
 	var error: String = await link.resume_into(_add(RunController.new()), fixtures(), {"runId": RUN_ID, "status": "Active", "lastSeq": 0})
 	check(error.contains("no start state"), "it says so: %s" % error)
 	eq(bridge.of("Resume").size(), 3, "after the attempts it was given")
+
+
+## A member's worn pieces hash in slot-name order, whatever order the StringNames were created in. A plain sort() orders StringNames
+## by their interned pointer, which differs between the windowed game and the headless verifier: a run whose member wore two pieces
+## was rejected (2002) at the equip and rolled back again and again (playtest 2026-11-15).
+func test_worn_pieces_hash_in_name_order() -> void:
+	var run := start_run(host, "7")
+	_nodes.append(run)
+	var zeta := StringName("Test.Hash.Slot.Zeta%d" % Time.get_ticks_usec())  # interned first
+	var alpha := StringName("Test.Hash.Slot.Alpha%d" % Time.get_ticks_usec())
+	var member: Dictionary = run.state.party[0]
+	member["equipment"] = {zeta: &"fixture.equipment.blade", alpha: &"fixture.equipment.hood"}
+	var line := Array(run.state.canonical_lines()).filter(func(l: String) -> bool: return l.begins_with("member=%d|" % member["slot"]))[0] as String
+	check(line.find(String(alpha)) < line.find(String(zeta)), "Alpha before Zeta in the hashed gear line: %s" % line.get_slice("|", 10))
+	var other := run.state.run_hash()
+	member["equipment"] = {alpha: &"fixture.equipment.hood", zeta: &"fixture.equipment.blade"}
+	eq(run.state.run_hash(), other, "the same pieces hash the same in any insertion order")
+
+
+## The same for a battle's conditions: each member's equipmentIds come in slot-name order, so the verifier rebuilds exactly what the
+## client uploaded (a pointer-ordered list was a ConditionsMismatch waiting to happen).
+func test_battle_conditions_list_gear_in_name_order() -> void:
+	var run := start_run(host, "7")
+	_nodes.append(run)
+	var member: Dictionary = run.state.party[0]
+	member["equipment"] = {&"Fixture.Equipment.Slot.Weapon": &"fixture.equipment.blade", &"Fixture.Equipment.Slot.Head": &"fixture.equipment.hood"}
+	var ids: Array = run.party_capture(false)[0]["equipmentIds"]
+	eq(ids, ["fixture.equipment.hood", "fixture.equipment.blade"], "Head before Weapon, by slot name")
+	member["equipment"] = {&"Fixture.Equipment.Slot.Head": &"fixture.equipment.hood", &"Fixture.Equipment.Slot.Weapon": &"fixture.equipment.blade"}
+	eq(run.party_capture(false)[0]["equipmentIds"], ids, "whatever order the slots were filled in")

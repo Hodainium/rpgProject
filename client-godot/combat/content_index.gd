@@ -111,7 +111,7 @@ func _table_for(resource: Resource) -> Array:
 func challenges_for(encounter_id: String) -> Array[ChallengeDefinition]:
 	var found: Array[ChallengeDefinition] = []
 	var ids: Array = challenges.keys()
-	ids.sort()
+	ids.sort_custom(func(a, b) -> bool: return String(a) < String(b))  # by name, not by StringName pointer (the same order on every verifier)
 	for id in ids:
 		var challenge: ChallengeDefinition = challenges[id]
 		if str(challenge.encounter_id) == encounter_id:

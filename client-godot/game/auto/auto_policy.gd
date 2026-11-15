@@ -281,7 +281,7 @@ func _cleanse(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -
 		if not has_role(ability, ROLE_CLEANSE) or ability.targets_enemies():
 			continue
 		var candidates := battle.target_candidates(unit, ability) if ability.needs_target() else _reached(battle, unit, ability)
-		candidates.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)
+		candidates.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)  # sort-ok: slot is an int
 		for ally in candidates:
 			if _afflicted(ally):
 				return {"ability": ability.ability_tag, "target": ally.unit_id if ability.needs_target() else &""}
@@ -297,7 +297,7 @@ func _buff(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -> D
 		if tags.is_empty():
 			continue
 		var candidates := battle.target_candidates(unit, ability) if ability.needs_target() else _reached(battle, unit, ability)
-		candidates.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)
+		candidates.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)  # sort-ok: slot is an int
 		for ally in candidates:
 			if tags.any(func(tag: StringName) -> bool: return not ally.asc.has_tag_exact(tag)):
 				return {"ability": ability.ability_tag, "target": ally.unit_id if ability.needs_target() else &""}
@@ -487,7 +487,7 @@ static func _enemies_of(battle: Battle, unit: BattleUnit) -> Array[BattleUnit]:
 	for other in battle.units():
 		if other.alive and other.is_party() != unit.is_party():
 			result.append(other)
-	result.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)
+	result.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)  # sort-ok: slot is an int
 	return result
 
 
@@ -504,7 +504,7 @@ static func _party(battle: Battle) -> Array[BattleUnit]:
 	for unit in battle.units():
 		if unit.is_party() and unit.alive:
 			result.append(unit)
-	result.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)
+	result.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)  # sort-ok: slot is an int
 	return result
 
 

@@ -133,7 +133,7 @@ func _apply_stats(overrides: Dictionary) -> void:
 	var maxima: Dictionary[String, float] = {}
 	var others: Dictionary[String, float] = {}
 	var names := stats.keys()
-	names.sort()
+	names.sort_custom(func(a, b) -> bool: return String(a) < String(b))  # by name, never by StringName pointer (B24)
 	for attribute_name in names:
 		var value := float(stats[attribute_name])
 		if String(attribute_name).begins_with("max_"):
@@ -207,7 +207,7 @@ func statuses() -> Array[Dictionary]:
 				var turn_based := effect.policy == GameplayEffect.DurationPolicy.TURN_BASED
 				result.append({"tag": String(tag), "turns": active_effect.spec.remaining_turns if turn_based else -1,
 					"stacks": active_effect.stack_count})
-	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["tag"] < b["tag"])
+	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["tag"] < b["tag"])  # sort-ok: "tag" holds a String
 	return result
 
 
