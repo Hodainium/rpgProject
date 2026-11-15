@@ -234,7 +234,7 @@ demo registry:
 
 Plus the existing suites unchanged: `tools/godot_tests.sh` and `tools/dotnet_test.sh`.
 
-## 6a. Round 4: the roll-out design sheet (in progress; Sets P, 1-5, 4b, 5b, the party pass and the floor-1 refresh done 2026-11-13; Set K next)
+## 6a. Round 4: the roll-out design sheet (in progress; Sets P, 1-5, 4b, 5b, the party pass and the floor-1 refresh done 2026-11-13; Set K done 2026-11-14)
 
 The looks for the 36 units that had none (round 2 dressed Warrior, Cleric, Arcanist, Bard, Bat, Fire Imp, Knight, Lich, Golem).
 Each unit gets a first proposal (**A**) and an alternative (**B**); the user picks A, B, a mix, or a change, usually over several
@@ -509,6 +509,35 @@ for it.
 The content's slots are Weapon, Head, Body, Arms, Legs and Accessory (there is no Feet slot: a boot stands for Legs). The icons are
 `AttachmentShape`s too, picked by a slot-tag → shape map in `StyleRegistry` (GAS-first: the tag the piece already has). Items stay
 as today until slice 5b2 `item-cards` (floating cards on the floor, after `card-ui`). Event "?" props stay as they are.
+
+**Picked (Set K, approved 2026-11-14):** A for all three, after sizing in the live window: the gold key (1.15×), the armor icons
+smaller than first built (sword 0.85×, helm 0.78×, breastplate 0.85×, gauntlet 1.05×, boot 0.88×, ring 0.72×, its gem lifted
+onto the band), the sparkles as plain soft dots in the rarity's colour (no star texture), and the chests with the filled state.
+Also asked the same day: the Cleric's `holy_ground` motes are white dots (no star texture, no longer bound to the glow's colour).
+
+**Built (2026-11-14; branch `feat/cube-style-set-k`).** System code in `game/view/`:
+- `PropLook` (one `AttachmentShape` floating above the cell: offset, rotation, scale, `spin_speed`, `bob_amount` / `bob_speed`,
+  `outline` width and `outline_color`, a looping `effect` + `effect_params`, `label_height`), `ChestLook` (`body`, `lid` modelled
+  closed with its hinge at its origin, `hinge`, `open_degrees`, `filled_inside`, `empty_inside`, `filled_effect` + params, an
+  optional tint; `State` CLOSED / OPEN_FILLED / OPEN_EMPTY), `PropStyle` (`key`, `armor_by_slot` by `Equipment.Slot.*` tag,
+  `armor_default`, `rarity_colors` by `Item.Rarity.*` tag, `chests` by chest id, `chest_default`), on `StyleRegistry.props`;
+  `key_look()`, `armor_look(slot)`, `rarity_color(tags)`, `chest_look(id)` each resolve through the base chain on their own.
+- `PropView` (a Node3D on the floor: the shape on a turning, bobbing holder; tintable parts in the prop's colour; the outline as
+  an inverted-hull `next_pass` (`StandardMaterial3D.grow`, front faces culled, unshaded); its `effect` with `color` filled in from
+  the prop's colour, playing while the prop is visible and effects are on; a `Base` `FxSocket` just above the floor; a label).
+  `PropView.chest(look, state, text)` draws the three states; 5a5 can turn `lid_pivot` to animate the lid.
+- `RoomView3D` draws a shop key and an armor piece through the registry (no look = today's cube); items and event props unchanged.
+- Dev: console `style props` lays out every prop look in the current room (the key, each chest in its three states, an icon per
+  slot in each rarity); validator `style_prop_shape_missing`, `style_prop_slot_unknown`, `style_prop_rarity_unknown`,
+  `style_prop_chest_unknown`, `style_rarity_color_missing` (warning), plus `style_effect_not_looping` / `style_part_invalid` on
+  prop shapes; `tests/game/test_cube_props.gd`.
+- Data: shapes in `presentation/demo/style/attachments/props/` (the key, helm, breastplate, gauntlet, greave-and-boot, ring with
+  a gem, chest body / lid / inside filled / inside empty; the weapon reuses `sword`), the effect `fx.loot_glow` (a floor glow and
+  rising soft dots, one `color` parameter; also the filled chest's glow, in gold), all in the main registry's `props`. B (a
+  skeleton key, one loot bag for every piece, no filled chest) was reviewed as a variant and deleted after the pick.
+- Lookups (code review): a slot's or chest's own look anywhere in the base chain wins over a nearer default; a piece with no
+  mapped rarity keeps its shape's colours and its effect's default colour; a chest never overrides its effect's `color`;
+  `style props` refuses during a battle. The outline width is in the shape's units (it scales with the prop).
 
 **No props during a fight (user, 2026-11-13; fixed the same day):** an event or room that starts a battle kept its props on the
 stage (the event's cyan "?" cube sat in the middle of the fight). `RoomView3D` hides its props when a battle starts; the rebuild
