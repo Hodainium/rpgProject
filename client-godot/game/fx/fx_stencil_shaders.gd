@@ -111,6 +111,12 @@ static func cached_count() -> int:
 	return count
 
 
+## Playtest-fixes B25: the window's MSAA sample count changed, and the renderer compiles a pipeline per sample count: every copy
+## counts as not drawn again, so the next prepare (run start, battle start) draws them for the new count. The copies are kept.
+static func forget_prepared() -> void:
+	_prepared.clear()
+
+
 ## Drops every copy and counter. FxManager calls it at shutdown so no shader is leaked.
 static func clear() -> void:
 	_cache.clear()
