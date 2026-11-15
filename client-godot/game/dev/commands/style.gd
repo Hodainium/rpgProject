@@ -6,7 +6,7 @@ extends DevCommand
 
 func _init() -> void:
 	name = "style"
-	usage = "style list | show <unit> | mood [<chapter>|off] | registry [<res://path>|default|off] | camera [explore|battle] | reload | check | death [test <unit>|all]"
+	usage = "style list | show <unit> | mood [<chapter>|off] | registry [<res://path>|default|off] | camera [explore|battle] | reload | check | death [test <unit>|all] | props"
 	help = "Cube style (spec cube-style): list the looks, show one unit's, show a chapter's mood everywhere, use a variant registry, move the camera, reload, check."
 	cheat = false
 	arg_kinds.assign(["style_op", "text"])
@@ -109,6 +109,21 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 			if played.is_empty():
 				return ctx.fail("no enemy view '%s' (style death test <E1..>|all, in a battle)" % which)
 			return "death fade: %s" % ", ".join(played)
+		"props":
+			# Spec cube-style 6a Set K: the pickup looks (key, armor icons per slot and rarity, chest states) laid out in the room.
+			if registry == null:
+				return ctx.fail("no style registry in use")
+			if ctx.game == null or not ctx.game.is_inside_tree():
+				return ctx.fail("no views (headless)")
+			if ctx.run != null and ctx.run.current_battle != null:
+				return ctx.fail("not during a battle (no props on a fight's stage)")
+			for node in ctx.game.get_tree().get_nodes_in_group(&"style_listeners"):
+				if node.has_method("show_prop_showcase"):
+					var placed: PackedStringArray = node.show_prop_showcase(ctx.content)
+					return "props: %d shown
+  %s" % [placed.size(), "
+  ".join(placed)] if not placed.is_empty() else "props: the registry has no prop looks"
+			return ctx.fail("no room view")
 		"check":
 			if registry == null:
 				return "no style registry in use"

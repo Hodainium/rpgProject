@@ -35,6 +35,53 @@ extends Resource
 @export var boss_death: DeathFade
 
 
+## Spec cube-style 6a Set K: the pickups' looks (key, armor icons, chests); null = the base's, else today's cubes.
+@export var props: PropStyle
+
+
+## The shop key's look through the base chain, or null (today's cube).
+func key_look() -> PropLook:
+	for registry in chain():
+		if registry.props != null and registry.props.key != null:
+			return registry.props.key
+	return null
+
+
+## The icon of an armor piece in `slot`: a look for the slot anywhere in the base chain (nearest first), else the nearest default;
+## null = today's cube. So a variant that sets only a default never hides its base's slot looks.
+func armor_look(slot: StringName) -> PropLook:
+	for registry in chain():
+		if registry.props != null and registry.props.armor_by_slot.get(slot) != null:
+			return registry.props.armor_by_slot[slot]
+	for registry in chain():
+		if registry.props != null and registry.props.armor_default != null:
+			return registry.props.armor_default
+	return null
+
+
+## The colour of the first Item.Rarity.* tag in `tags` that a registry maps, through the base chain; `fallback` when none does
+## (pass null to learn that none did).
+func rarity_color(tags: Array, fallback: Variant = Color.WHITE) -> Variant:
+	for registry in chain():
+		if registry.props == null:
+			continue
+		for tag in tags:
+			if registry.props.rarity_colors.has(StringName(tag)):
+				return registry.props.rarity_colors[StringName(tag)]
+	return fallback
+
+
+## The look of chest `chest_id`: its own anywhere in the base chain (nearest first), else the nearest default, or null.
+func chest_look(chest_id: StringName) -> ChestLook:
+	for registry in chain():
+		if registry.props != null and registry.props.chests.get(chest_id) != null:
+			return registry.props.chests[chest_id]
+	for registry in chain():
+		if registry.props != null and registry.props.chest_default != null:
+			return registry.props.chest_default
+	return null
+
+
 ## The death fade for an enemy (boss = tagged Enemy.Boss), through the base chain, else the built-in default.
 func death_fade(boss: bool) -> DeathFade:
 	for registry in chain():

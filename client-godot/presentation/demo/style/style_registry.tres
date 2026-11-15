@@ -175,6 +175,21 @@
 [ext_resource type="Resource" path="res://presentation/demo/fx/devour_pull.tres" id="s4b_41"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/spiked_circlet.tres" id="s4p_1"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/penitent_lantern.tres" id="s4p_2"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/props/prop_key.tres" id="setk_2"]
+[ext_resource type="Script" path="res://game/view/prop_look.gd" id="setk_3"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/sword.tres" id="setk_4"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/loot_glow.tres" id="setk_5"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/props/prop_helm.tres" id="setk_6"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/props/prop_breastplate.tres" id="setk_7"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/props/prop_gauntlet.tres" id="setk_8"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/props/prop_boot.tres" id="setk_9"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/props/prop_ring.tres" id="setk_10"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/props/chest_body.tres" id="setk_11"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/props/chest_lid.tres" id="setk_12"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/props/chest_inside_filled.tres" id="setk_13"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/props/chest_inside_empty.tres" id="setk_14"]
+[ext_resource type="Script" path="res://game/view/chest_look.gd" id="setk_15"]
+[ext_resource type="Script" path="res://game/view/prop_style.gd" id="setk_16"]
 
 [sub_resource type="Resource" id="Resource_f1a1"]
 script = ExtResource("2_b37kx")
@@ -1807,6 +1822,124 @@ motion_amount = 14
 script = ExtResource("1_avbba")
 attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_s4pa1"), SubResource("Resource_s4pa2"), SubResource("Resource_s4pa3")])
 
+[sub_resource type="Resource" id="Resource_setk_1"]
+script = ExtResource("setk_3")
+shape = ExtResource("setk_2")
+offset = Vector3(0, 0.5, 0)
+scale = Vector3(1.15, 1.15, 1.15)
+spin_speed = 0.25
+bob_amount = 0.05
+
+[sub_resource type="Resource" id="Resource_setk_2"]
+script = ExtResource("setk_3")
+shape = ExtResource("setk_4")
+offset = Vector3(0, 0.4, 0)
+scale = Vector3(0.85, 0.85, 0.85)
+spin_speed = 0.25
+bob_amount = 0.05
+outline = 0.015
+effect = ExtResource("setk_5")
+
+[sub_resource type="Resource" id="Resource_setk_3"]
+script = ExtResource("setk_3")
+shape = ExtResource("setk_6")
+offset = Vector3(0, 0.45, 0)
+scale = Vector3(0.78, 0.78, 0.78)
+spin_speed = 0.25
+bob_amount = 0.05
+outline = 0.015
+effect = ExtResource("setk_5")
+
+[sub_resource type="Resource" id="Resource_setk_4"]
+script = ExtResource("setk_3")
+shape = ExtResource("setk_7")
+offset = Vector3(0, 0.46, 0)
+scale = Vector3(0.85, 0.85, 0.85)
+spin_speed = 0.25
+bob_amount = 0.05
+outline = 0.015
+effect = ExtResource("setk_5")
+
+[sub_resource type="Resource" id="Resource_setk_5"]
+script = ExtResource("setk_3")
+shape = ExtResource("setk_8")
+offset = Vector3(0, 0.5, 0)
+scale = Vector3(1.05, 1.05, 1.05)
+spin_speed = 0.25
+bob_amount = 0.05
+outline = 0.015
+effect = ExtResource("setk_5")
+
+[sub_resource type="Resource" id="Resource_setk_6"]
+script = ExtResource("setk_3")
+shape = ExtResource("setk_9")
+offset = Vector3(0, 0.46, 0)
+scale = Vector3(0.88, 0.88, 0.88)
+spin_speed = 0.25
+bob_amount = 0.05
+outline = 0.015
+effect = ExtResource("setk_5")
+
+[sub_resource type="Resource" id="Resource_setk_7"]
+script = ExtResource("setk_3")
+shape = ExtResource("setk_10")
+offset = Vector3(0, 0.38, 0)
+scale = Vector3(0.72, 0.72, 0.72)
+spin_speed = 0.25
+bob_amount = 0.05
+outline = 0.015
+effect = ExtResource("setk_5")
+
+[sub_resource type="Resource" id="Resource_setk_8"]
+script = ExtResource("setk_15")
+body = ExtResource("setk_11")
+lid = ExtResource("setk_12")
+hinge = Vector3(0, 0.38, -0.23)
+open_degrees = 105.0
+filled_inside = ExtResource("setk_13")
+empty_inside = ExtResource("setk_14")
+filled_effect = ExtResource("setk_5")
+filled_params = {
+"color": Color(1, 0.78, 0.32, 1)
+}
+
+[sub_resource type="Resource" id="Resource_setk_9"]
+script = ExtResource("setk_15")
+body = ExtResource("setk_11")
+lid = ExtResource("setk_12")
+hinge = Vector3(0, 0.38, -0.23)
+open_degrees = 105.0
+filled_inside = ExtResource("setk_13")
+empty_inside = ExtResource("setk_14")
+filled_effect = ExtResource("setk_5")
+filled_params = {
+"color": Color(1, 0.78, 0.32, 1)
+}
+use_tint = true
+tint = Color(1, 0.78, 0.32, 1)
+
+[sub_resource type="Resource" id="Resource_setk_10"]
+script = ExtResource("setk_16")
+rarity_colors = Dictionary[StringName, Color]({
+&"Item.Rarity.Common": Color(0.9, 0.9, 0.9, 1),
+&"Item.Rarity.Rare": Color(0.45, 0.7, 1, 1),
+&"Item.Rarity.Epic": Color(0.8, 0.5, 1, 1),
+&"Item.Rarity.Legendary": Color(1, 0.75, 0.3, 1)
+})
+key = SubResource("Resource_setk_1")
+armor_by_slot = Dictionary[StringName, ExtResource("setk_3")]({
+&"Equipment.Slot.Weapon": SubResource("Resource_setk_2"),
+&"Equipment.Slot.Head": SubResource("Resource_setk_3"),
+&"Equipment.Slot.Body": SubResource("Resource_setk_4"),
+&"Equipment.Slot.Arms": SubResource("Resource_setk_5"),
+&"Equipment.Slot.Legs": SubResource("Resource_setk_6"),
+&"Equipment.Slot.Accessory": SubResource("Resource_setk_7")
+})
+chests = Dictionary[StringName, ExtResource("setk_15")]({
+&"demo.chest.wooden": SubResource("Resource_setk_8"),
+&"demo.chest.gilded": SubResource("Resource_setk_9")
+})
+
 [resource]
 script = ExtResource("4_amh85")
 default_look = SubResource("Resource_h2uv3")
@@ -1883,3 +2016,4 @@ moods = Dictionary[StringName, ExtResource("3_wpew0")]({
 })
 party_formation = SubResource("Resource_partyform")
 enemy_formation = SubResource("Resource_enemyform")
+props = SubResource("Resource_setk_10")

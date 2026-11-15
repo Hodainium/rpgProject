@@ -6,7 +6,6 @@
 [ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="4_glow"]
 [ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_track"]
 [ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="6_particles"]
-[ext_resource type="Texture2D" path="res://presentation/demo/fx/textures/star_sheet.png" id="7_star"]
 [ext_resource type="Script" path="res://game/fx/fx_param.gd" id="8_param"]
 [ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="9_def"]
 
@@ -46,11 +45,6 @@ loop_period = 10.0
 bindings = Array[ExtResource("2_binding")]([SubResource("Resource_glow_color")])
 tracks = Array[ExtResource("5_track")]([SubResource("Resource_lie_flat")])
 
-[sub_resource type="Resource" id="Resource_motes_color"]
-script = ExtResource("2_binding")
-property = "process_material:color"
-param = &"color"
-
 [sub_resource type="Gradient" id="Gradient_motes"]
 offsets = PackedFloat32Array(0, 0.2, 0.75, 1)
 colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.8, 1, 1, 1, 0)
@@ -69,10 +63,8 @@ amount = 12
 lifetime = 1.8
 explosiveness = 0.0
 color_ramp = SubResource("Gradient_motes")
-texture = ExtResource("7_star")
 id = &"motes"
 loop = true
-bindings = Array[ExtResource("2_binding")]([SubResource("Resource_motes_color")])
 
 [sub_resource type="Resource" id="Resource_param_color"]
 script = ExtResource("8_param")
