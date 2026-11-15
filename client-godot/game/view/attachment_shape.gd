@@ -3,8 +3,14 @@
 class_name AttachmentShape
 extends Resource
 
+## Playtest-fixes B23: what the shape is to its wearer. WORN (a hat, a mask, a face) is part of the character, so overlay effects
+## drawn on the unit (FxMeshFlashLayer and FxFresnelLayer: status skins, hit flashes) cover it with the body; HELD (a weapon, a lute)
+## and LOOSE (orbiting coins) are not and stay plain. (The death fade, DeathFadeDriver, fades the whole view whatever the role.)
+enum Role { WORN, HELD, LOOSE }
+
 @export var display_name: String = ""
 @export var parts: Array[AttachmentPart] = []
+@export var role: Role = Role.WORN
 
 
 ## The shape's nodes: one MeshInstance3D per part (and per ring copy). `tint` (a Color or null) recolours tintable parts. A part that

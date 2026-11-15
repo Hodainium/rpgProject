@@ -178,3 +178,84 @@ static func validate(registry: StyleRegistry, content: ContentIndex, path: Strin
 				issues.append(ValidationIssue.new(ValidationIssue.WARNING, "style_unit_without_look", where,
 					"unit '%s' gets only the default look" % id))
 	return issues
+
+
+## Playtest-fixes B23: a skin status's shell (FxFresnelLayer) sits `grow` off every face of the unit; an attachment face at exactly that
+## distance from the body is coplanar with it and the two z-fight (the Collector's brim under Ward). Warns for every such face, in every
+## look this registry owns. `grows` is FxValidator.skin_grows. Checked: a part's outward face (the one turned away from the body; a
+## face turned toward it is never seen) on the Top, Front, Back, Left and Right sockets, for boxes and a cylinder's cap, with the part
+## and the attachment turned by whole quarter turns (anything else is not flat against the shell). Not checked (known limits): Center
+## and Base, prisms, lathes, tubes and extruded outlines, and the side sockets when the registry turns units by other than whole
+## quarter turns (a 45° facing puts their faces at an angle to the shell). Grows set at run time (a payload, a target's tags, a curve
+## track on `grow`) are not in `grows` (FxValidator.skin_grows lists only fixed values).
+const SKIN_TIE_TOLERANCE: float = 0.0002  # equal depths only: 0.001 apart is cleanly separated at the battle camera
+const SOCKET_AXES: Dictionary = {&"Top": Vector3.UP, &"Front": Vector3.BACK, &"Back": Vector3.FORWARD, &"Left": Vector3.RIGHT,
+	&"Right": Vector3.LEFT}
+
+
+static func skin_tie_problems(registry: StyleRegistry, grows: Dictionary, path: String = "") -> Array[ValidationIssue]:
+	var issues: Array[ValidationIssue] = []
+	if registry == null or grows.is_empty():
+		return issues
+	var square := is_equal_approx(fmod(registry.facing(), 90.0), 0.0)  # side faces stay flat against the shell only then
+	var where := path if path != "" else (registry.resource_path if registry.resource_path != "" else "style registry")
+	var owned: Dictionary = {"default_look": registry.default_look}
+	for id in registry.looks:
+		owned["looks[%s]" % id] = registry.looks[id]
+	for i in registry.tag_rules.size():
+		if registry.tag_rules[i] != null:
+			owned["tag_rules[%d].look" % i] = registry.tag_rules[i].look
+	for field in owned:
+		var look: UnitLook = owned[field]
+		if look == null:
+			continue
+		for i in look.attachments.size():
+			var attachment: UnitAttachment = look.attachments[i]
+			if attachment == null or attachment.shape == null or not SOCKET_AXES.has(attachment.socket):
+				continue
+			if not square and attachment.socket != &"Top":
+				continue
+			for tie in attachment_skin_ties(attachment, grows):
+				issues.append(ValidationIssue.new(ValidationIssue.WARNING, "style_attachment_skin_tie",
+					"%s::%s.attachments[%d]" % [where, field, i],
+					"%s: part %d ends %s off the body's %s face, where the shell of %s lies (grow %s): they flicker (playtest-fixes B23)"
+					% [attachment.shape.resource_path.get_file() if attachment.shape.resource_path != "" else attachment.shape.display_name,
+						tie["part"], tie["distance"], attachment.socket, ", ".join(tie["sources"]), tie["grow"]]))
+	return issues
+
+
+## The faces of `attachment` that sit at a skin's grow off the body: [{"part", "distance", "grow", "sources"}].
+static func attachment_skin_ties(attachment: UnitAttachment, grows: Dictionary) -> Array[Dictionary]:
+	var ties: Array[Dictionary] = []
+	var axis: Vector3 = SOCKET_AXES[attachment.socket]
+	var pivot := Transform3D(Basis.from_euler(attachment.rotation_degrees * PI / 180.0).scaled(attachment.scale), attachment.offset)
+	for index in attachment.shape.parts.size():
+		var part := attachment.shape.parts[index]
+		if part == null or not part.kind in [AttachmentPart.Kind.BOX, AttachmentPart.Kind.CYLINDER]:
+			continue
+		var mesh := AttachmentMesh.mesh_for(part)
+		if mesh == null:
+			continue
+		for placed in part.transforms():
+			var xform := pivot * placed
+			if not _quarter_turns(xform.basis):
+				continue
+			if part.kind == AttachmentPart.Kind.CYLINDER and absf(xform.basis.y.normalized().dot(axis)) < 0.999:
+				continue  # its caps do not face the shell: its round side touches it along a line, never flat
+			var box: AABB = xform * mesh.get_aabb()
+			# How far the outward face is from the body along the socket's axis (Back and Right point down -Z / -X, where the far face
+			# is the box's lowest corner, a negative coordinate made positive by the axis).
+			var reach: float = box.end.dot(axis) if axis.dot(Vector3.ONE) > 0.0 else box.position.dot(axis)
+			for grow in grows:
+				if absf(reach - float(grow)) <= SKIN_TIE_TOLERANCE:
+					ties.append({"part": index, "distance": snappedf(reach, 0.0001), "grow": grow, "sources": grows[grow]})
+	return ties
+
+
+## True when every axis of `basis` lies along a world axis (whole quarter turns, any scale), so its flat faces stay axis-aligned.
+static func _quarter_turns(basis: Basis) -> bool:
+	for column in [basis.x, basis.y, basis.z]:
+		var v: Vector3 = column.normalized()
+		if absf(absf(v.x) + absf(v.y) + absf(v.z) - 1.0) > 0.001:
+			return false
+	return true

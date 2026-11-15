@@ -4,6 +4,8 @@ class_name UnitAttachment
 extends Resource
 
 enum Motion { NONE, BOB, SPIN, FLAP }
+## Playtest-fixes B23: the shape's own role, or another one for this unit only (the same staff worn on a back, held in a hand).
+enum RoleOverride { SHAPE, WORN, HELD, LOOSE }
 
 const SOCKETS: Array[StringName] = [&"Center", &"Top", &"Base", &"Front", &"Back", &"Left", &"Right"]
 
@@ -26,6 +28,20 @@ const SOCKETS: Array[StringName] = [&"Center", &"Top", &"Base", &"Front", &"Back
 ## a stretched gear turns rigidly), so a gear stood on its side turns on its own axle. Zero (unset) = around the parent's up (Y),
 ## as before. Ignored by the other motions (the style check warns).
 @export var spin_axis: Vector3 = Vector3.ZERO
+## Playtest-fixes B23: SHAPE (the default) = the shape's role.
+@export var role_override: RoleOverride = RoleOverride.SHAPE
+
+
+## The role this attachment plays on its unit (an AttachmentShape.Role): the override, else the shape's, else WORN.
+func role() -> int:
+	match role_override:
+		RoleOverride.WORN:
+			return AttachmentShape.Role.WORN
+		RoleOverride.HELD:
+			return AttachmentShape.Role.HELD
+		RoleOverride.LOOSE:
+			return AttachmentShape.Role.LOOSE
+	return shape.role if shape != null else AttachmentShape.Role.WORN
 
 
 ## The attachment's nodes at `socket_position`: one pivot per copy (the mirrored one under a scale (-1, 1, 1) node), each holding the

@@ -192,3 +192,51 @@ static func _material_stencil_problems(path: String, text: String) -> Array[Vali
 				"a material uses stencil reference %d, a battle position's value (StencilIds 1-31); take one from another range" % reference))
 	return issues
 
+
+
+## Playtest-fixes B23: every distance a skin's shell sits off the unit (an FxFresnelLayer's `grow`: its own value, a bound parameter's
+## default, and every literal a cue scene binds to it), as {grow rounded to 0.0001: PackedStringArray of where it comes from}. An
+## attachment face at one of these distances z-fights with that shell (StyleValidator.skin_tie_problems). Loads the cue scenes.
+static func skin_grows(registry: FxRegistry, cue_registry: GameplayCueRegistry) -> Dictionary:
+	var grows := {}
+	var shells := {}  # FxDefinition -> true when it has a fresnel layer
+	for definition in _every_definition(registry) if registry != null else []:
+		if definition == null:
+			continue
+		for layer in definition.layers:
+			if not layer is FxFresnelLayer:
+				continue
+			shells[definition] = true
+			_add_grow(grows, (layer as FxFresnelLayer).grow, String(definition.id))
+			for binding in layer.bindings:
+				if binding != null and binding.property == "grow":
+					for param in definition.params:
+						if param != null and param.name == binding.param and (param.default_value is float or param.default_value is int):
+							_add_grow(grows, float(param.default_value) * binding.scale + binding.offset, String(definition.id))
+	for entry in cue_registry.entries if cue_registry != null else []:
+		var path := entry.scene_path() if entry != null else ""
+		if path == "" or not ResourceLoader.exists(path):
+			continue
+		var scene := load(path) as PackedScene
+		var cue: Node = scene.instantiate() if scene != null else null
+		if cue is FxCueNotify:
+			for pair in [[cue.fx, cue.bindings], [cue.target_fx, cue.target_bindings]]:
+				if pair[0] == null or not shells.has(pair[0]):
+					continue
+				for binding in pair[1]:
+					if binding != null and binding.param == &"grow" and binding.source == FxCueBinding.Source.LITERAL \
+							and (binding.value is float or binding.value is int):
+						_add_grow(grows, float(binding.value), "%s (%s)" % [String(entry.tag), String(pair[0].id)])
+		if cue != null:
+			cue.free()
+	return grows
+
+
+static func _add_grow(grows: Dictionary, grow: float, source: String) -> void:
+	if grow <= 0.0:
+		return
+	var key := snappedf(grow, 0.0001)
+	var sources: PackedStringArray = grows.get(key, PackedStringArray())
+	if not sources.has(source):
+		sources.append(source)
+	grows[key] = sources
