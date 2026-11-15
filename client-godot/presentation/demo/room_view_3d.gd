@@ -8,6 +8,8 @@ const ROWS: int = 7
 const FLOOR_SIZE: Vector3 = Vector3(COLUMNS + 2, 0.2, ROWS + 2)
 ## One wall block (placed 0.2 below the cells' height, so it stands on the floor's top at -0.5).
 const WALL_SIZE: Vector3 = Vector3(1, 0.6, 1)
+## The floor's top in cell space (spec cube-style Set K: a PropView's origin stands on it).
+const FLOOR_TOP: Vector3 = Vector3(0, -0.5, 0)
 
 var _main: GameMain
 var _room_root: Node3D
@@ -100,6 +102,8 @@ func _queue_build() -> void:
 
 
 func _build_now() -> void:
+	if not _build_queued:  # done early (`style props` builds a waiting rebuild first, so it cannot clear the showcase)
+		return
 	_build_queued = false
 	if _battle != null:  # a battle started in the same frame: its own views are up, the room waits
 		_celebrate = false
@@ -127,6 +131,7 @@ func _build() -> void:
 	_sync_box(run)
 	_free_views(func(id: StringName) -> bool: return not String(id).begins_with("P"))  # the battle's enemies (faded out)
 	_sync_party(room)
+	_units_root.visible = true  # `style props` hid it
 	_props_root.visible = true
 	for child in _props_root.get_children():
 		child.queue_free()
@@ -146,6 +151,8 @@ func _build() -> void:
 						var item: ItemDefinition = run.content.items.get(pickup["item"])
 						var piece: EquipmentDefinition = run.content.equipment.get(pickup["item"])  # armor (item-pass)
 						var price := " (%d)" % pickup["price"] if pickup["price"] > 0 else ""
+						if _styled_prop(placement.cell, pickup, piece, price):
+							continue  # spec cube-style Set K: a key or an armor piece drawn by the style registry
 						var title := item.display_name if item != null else (piece.display_name if piece != null else "?")
 						_prop(placement.cell, Color.GOLD if piece == null else Color.SILVER, title + price, item)
 
@@ -225,6 +232,7 @@ func _on_battle_started(battle: Battle) -> void:
 	# then waits for the battle), so the fight showed the previous room's walls and the doors moved when it ended.
 	_sync_box(_main.run)
 	_props_root.visible = false  # spec cube-style Set K: no pickup or event prop during a fight; the rebuild after it shows them
+	_units_root.visible = true  # `style props` may have hidden the party just before the fight
 	UnitStyle.battle_framing().tween_to(_camera, CAMERA_SECONDS)  # spec cube-style 3.9
 	var ids: Array[StringName] = []
 	for unit in battle.units():
@@ -366,6 +374,95 @@ func _wall(cell: Vector2i) -> void:
 	wall.set_meta(&"style_part", &"wall")
 	wall.position = _world(cell) + Vector3(0, -0.2, 0)
 	_box_root.add_child(wall)
+
+
+## Spec cube-style 6a Set K: a shop key or an armor piece as the style registry draws it (an armor icon by its slot, in its rarity's
+## colour); false when the registry has no look for it (today's cube then).
+func _styled_prop(cell: Vector2i, pickup: Dictionary, piece: EquipmentDefinition, price: String) -> bool:
+	var registry := UnitStyle.registry()
+	if registry == null:
+		return false
+	var view: PropView = null
+	if pickup.get("kind", "") == FloorGenerator.KEYS_KIND:
+		var look := registry.key_look()
+		var keys := int(pickup.get("keys", 1))
+		if look != null:
+			view = PropView.pickup(look, ("Key" if keys == 1 else "%d Keys" % keys) + price)
+	elif piece != null:
+		var look := registry.armor_look(piece.slot)
+		if look != null:
+			view = PropView.pickup(look, piece.display_name + price, registry.rarity_color(piece.tags, null))  # no rarity: own colours
+	if view == null:
+		return false
+	view.position = _world(cell) + FLOOR_TOP
+	_props_root.add_child(view)
+	return true
+
+
+## Spec cube-style 6a Set K (console `style props`): every prop look laid out in the current room until the next rebuild: the key,
+## an armor icon per slot in each rarity, and each chest in its three states. Returns what it placed, one line each.
+func show_prop_showcase(content: ContentIndex) -> PackedStringArray:  # empty in a battle or with no registry
+	var lines := PackedStringArray()
+	var registry := UnitStyle.registry()
+	if registry == null or _battle != null:  # never on a battle's stage (no props during a fight)
+		return lines
+	if _build_queued:
+		_build_now()  # a rebuild waiting for the end of the frame would clear the showcase
+	_props_root.visible = true
+	for child in _props_root.get_children():
+		child.queue_free()
+	var entries: Array = []  # [row, PropView, line]
+	var key := registry.key_look()
+	if key != null:
+		entries.append([0, PropView.pickup(key, "Key (15)"), "key"])
+	for chest_id in _chest_ids(content):
+		var look := registry.chest_look(chest_id)
+		var chest: ChestDefinition = content.chests.get(chest_id) if content != null else null
+		for state in ChestLook.STATE_NAMES.size():
+			if look != null:
+				var title := chest.display_name if chest != null and chest.display_name != "" else String(chest_id)
+				var text := title if state == ChestLook.State.CLOSED else ChestLook.STATE_NAMES[state]
+				entries.append([0, PropView.chest(look, state, text),
+					"chest %s %s" % [chest_id, ChestLook.STATE_NAMES[state]]])
+	var rarities: Array[StringName] = [&"Item.Rarity.Common", &"Item.Rarity.Rare", &"Item.Rarity.Epic", &"Item.Rarity.Legendary"]
+	for r in rarities.size():  # a row per rarity, a column per slot
+		for slot in _slots(content):
+			var look := registry.armor_look(slot)
+			if look != null:
+				var text := "%s %s" % [String(rarities[r]).get_slice(".", 2), String(slot).get_slice(".", 2)] if r == 0 else ""
+				entries.append([r + 1, PropView.pickup(look, text, registry.rarity_color([rarities[r]], look.outline_color)),
+					"armor %s %s" % [slot, rarities[r]]])
+	_units_root.visible = false  # the party would stand in the way; the next build shows it again
+	var per_row: Dictionary = {}
+	for entry in entries:
+		per_row[entry[0]] = per_row.get(entry[0], 0) + 1
+	var placed: Dictionary = {}
+	for entry in entries:
+		var index: int = placed.get(entry[0], 0)
+		placed[entry[0]] = index + 1
+		var view: PropView = entry[1]
+		var spread := 1.6 if entry[0] == 0 else 1.5
+		view.position = Vector3((index - (per_row[entry[0]] - 1) / 2.0) * spread, 0, -2.6 + entry[0] * 1.25) + FLOOR_TOP
+		_props_root.add_child(view)
+		lines.append(entry[2])
+	return lines
+
+
+func _chest_ids(content: ContentIndex) -> Array:
+	var ids: Array = content.chests.keys() if content != null else []
+	ids.sort()
+	return ids
+
+
+## The content's equipment slots in a fixed order (Weapon first), from the pieces it has.
+func _slots(content: ContentIndex) -> Array[StringName]:
+	var order: Array[StringName] = [&"Equipment.Slot.Weapon", &"Equipment.Slot.Head", &"Equipment.Slot.Body", &"Equipment.Slot.Arms",
+		&"Equipment.Slot.Legs", &"Equipment.Slot.Accessory"]
+	var found: Array[StringName] = []
+	for slot in order:
+		if content == null or content.equipment.values().any(func(e: EquipmentDefinition) -> bool: return e.slot == slot):
+			found.append(slot)
+	return found
 
 
 func _prop(cell: Vector2i, color: Color, text: String, item: ItemDefinition = null) -> void:
