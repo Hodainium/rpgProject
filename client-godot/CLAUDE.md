@@ -43,6 +43,16 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
   proof set of effects and their cue scenes through `ResourceSaver` into `presentation/demo/fx/` and `presentation/demo/cues/`
   only, never overwrites an existing file (`-- --force` rewrites this set's own files and discards tuning). The shader library
   and the framework are system code in `game/fx/`.
+- **Third approved builder pair (spec `audio-pass`, 2026-11-15, the user's go-ahead):** `game/tools/build_audio_bank.tscn` creates the
+  sound bank's files (new files only, `--force` rewrites its own): `presentation/audio/sfx/bank/*.tres`, `presentation/demo/cues/sfx/`,
+  `presentation/demo/fx/sfx_rules.tres` (added to the registry by `RegistryPatch`) and `default_bus_layout.tres`.
+  `game/tools/build_audio_pass.tscn [-- --dry-run]` is **the one builder that edits existing design files**, and only as narrow text
+  patches: an animation's audio track stream (→ a bank entry) and its `Audio:volume_db` key (→ 0 dB) in `content/demo/animations/`,
+  and the `Cue.Sfx.*` tags beside the visual cues in `content/demo/effects/`; each patched animation is reloaded and compared with the
+  original (length and every non-audio track, the `execute` keys combat reads) before it is written. Its report goes to
+  `../build/audio_pass_report.md`. The WAVs come from `../tools/audio_import.py` (Python + ffmpeg, outside Godot), which writes only
+  `presentation/audio/sfx/<pack>/`, the manifest's `measured` fields and `CREDITS.md`'s sound section. The cue registry still changes
+  only through `Edit`.
 - **Approved generators (2026-10-20):** `game/tools/generate_attributes.tscn` (the dashboard's attribute Generate,
   headless) and `game/tools/sync_tags.tscn` write GodotGAS's generated files in `godot_gas/` the way the dashboard
   does. Claude runs them after editing `attributes_draft.cfg` or the tag registry (each edit itself still prompts).

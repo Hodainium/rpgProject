@@ -52,7 +52,7 @@ packs (all forbid redistributing the raw files); CC BY-SA, GPL and NC packs (e.g
 
 **Formats.** Every committed file is **WAV, mono, 16-bit, 44.1 kHz**, trimmed of leading and trailing silence. Pixel Combat
 ships 96 kHz / 24-bit stereo at 2.1 GB, so only the picked files are converted and committed (the bank should stay around
-10–15 MB). Stereo only where it matters (a wide ult), decided per file. OGG only for music or anything longer than about 5 s;
+10–15 MB). The import always writes mono (stereo was left out: no sound needs it). OGG only for music or anything longer than about 5 s;
 this slice has neither.
 
 **Not in scope:** music (none is wanted), a music bus, per-item proc sounds (items and equipment get the sounds of the
@@ -334,3 +334,60 @@ D3 is decided as written: no end-of-battle or end-of-run sound (the option of a 
    resulting content and presentation edits committed as `design:` after the user listens)
 5. Move the EasyRPG files the bank uses into `presentation/audio/sfx/easyrpg/` (through the import, so they are loudness-matched
    too) and remove the rest of `presentation/audio/rtp/` (D0); validator rules; tests; the state table in `CLAUDE.md`; mark 5e in the roadmap.
+
+## 9. As built (2026-11-15), and where it differs from the text above (for the user's review)
+
+Built on `feat/audio-pass`: the manifest (96 entries, 128 takes, 11 MB) and `tools/audio_import.py`; `game/audio/` (`AudioSettings`,
+`SfxCue`, `SfxBank`); `game/tools/build_audio_bank.tscn` (bank `.tres`, the 24 `Cue.Sfx.*` scenes, `sfx_rules.tres`, the bus
+layout) and `game/tools/build_audio_pass.tscn` (228 files patched: 168 animations, 60 effects; report in `build/audio_pass_report.md`);
+`AudioValidator` in `validate_content.tscn`; the console `audio`; the Audio sliders; the Credits screen; `CREDITS.md`;
+`tests/game/test_audio_pass.gd` (30 tests); `tools/godot_tests.sh` also runs `audio_import.py --check` beside the shards. The EasyRPG files left the repo except the 48 the bank uses (converted copies).
+
+Differences from sections 1–8:
+1. **The `Audio:volume_db` key is set to 0 dB, not removed** (3.4). Removing a track would renumber the ones after it; a 0 dB key
+   is the same sound and a one-line change.
+2. **No backup folder.** The guard (3.4) reloads the original and the patched text in memory and compares length and every
+   non-audio track before writing; a file that fails is left alone. Test plan item 3 tests the guard on a probe animation.
+3. **The overtime clock plays on every overtime turn** (each application of `enrage.tres`), not only the first (3.5).
+4. **The audio pass is the one builder that edits existing design files** (user's go-ahead, 2026-11-15), as narrow text patches
+   only; recorded in `client-godot/CLAUDE.md` section 0 beside the other approved builders.
+5. **The Credits screen reads the manifest**, so the player and dev export presets now include
+   `presentation/audio/sfx/manifest.json` (they included no JSON before).
+6. **Unit death moved from the sound board to `Cue.Sfx.Death`** (on the unit, bus Sfx), as 3.5's table says; the board has no
+   `Death` player any more.
+7. **Three new run messages** (user, 2026-11-15, after review round 3): `RunController` sends `Message.Run.CoinsGained`
+   (`add_coins` when coins rise; magnitude = how many), `Message.Run.RoomUnlocked` (`enter_room` opening a lock; magnitude = the
+   cell, data `key`), and `Message.Run.LevelsGained` once per action that raised any level (magnitude = levels gained in all;
+   `LevelUp` and `SkillLearned` still come per member). The board plays Coin, Key (instead of Move for that room) and LevelUp
+   from them; it no longer reads coins, the run log or a time window. PopupOpen comes from `UIManager.confirm_opened`,
+   MenuOpen / MenuClose from `UIManager.stack_changed`, PopupNo from the confirm dialog's `%No` button, Advance from
+   `event_page_shown` after page 0 (no Use sound: see item 12). Key also plays on `Message.Run.KeyFound`.
+8. **Classification** reads the move's own name first (Silence is dark even with ice damage), then its role tags, then its damage
+   type, then its effects' names; the keyword lists are in `build_audio_pass.gd`. Every party move that already had a sound
+   kept it (mapped to `rtp.<name>`); the 24 ults each got their own entry (`ult.<id>`), so ten ults that shared Explosion1,
+   Fire2 or Ice5 now sound different.
+9. **Cue scenes live in `presentation/demo/cues/sfx/`**; their registration is checked by `AudioValidator` (`sfx_cue_unregistered`),
+   since `FxValidator.sync_problems` looks only at the top cue folder.
+10. **A sound cue plays on a voice under `/root/SfxVoices`, not under the cue** (review fix): the cue goes back to the pool at
+    once and the sound ends on its own `finished`, so a death sound at a battle's end is not cut when the unit's view is freed,
+    and no length is guessed from the randomizer (whose `get_length()` is 0 before its first play).
+11. **`RunController.announcing`** is true while `announce_resumed` re-sends signals on a Continue, a resume or a rebuild; the
+    sound board plays no coin, key or page sound meanwhile. `UIManager.confirm_opened` is the pop-up's signal; the board connects
+    to the UI deferred, after `GameMain` builds it.
+12. **No `Use` sound on the sound board** (review fix): a field item use sounds through its effect's own cue (`Cue.Sfx.Heal`,
+    `Revive`, `Apply.Buff`…; field battles play cues inside an explicit action), so the board's extra sound would have doubled it.
+    The `run.use` entry is gone.
+13. **`RunController.silent`**: ServerLink's resume replay (`ResumeReplay`) sends no gameplay message, so a server Continue or a
+    1103 / 1108 rebuild plays no toast and no sound for the tail it replays.
+14. **The audio pass keeps a bank entry that is already on an animation** (the user's tuning after the first pass is never
+    overwritten), except on an ult, which always gets its own `ult.<id>` signature back (a rebuild cannot leave it on a plain cast); `--reclassify a,b` classifies those animations again. Classification matches whole words of the move's name; a
+    poison, dark or debuff name wins over any damage type, then a physical hit sounds physical (shards, bites, shots, heavy blows),
+    then Fire / Ice, then roles and the effects' names. Only Echo Strike changed from the first pass (to the plain strike).
+15. `build_demo.gd` (and the builders on it) gives a new move the bank entry `rtp.<name>`, or no sound with a warning when the bank
+    does not hold that file; `build_audio_pass` then classifies it. The `sound` extra is `[file, time]`: its old volume argument
+    is removed from the API and from all 99 calls (the bank carries the level).
+16. Validator `sfx_persistent`: a `Cue.Sfx.*` tag in `persistent_cue_tags` is an error (GodotGAS turns `auto_destroy` off on the
+    pooled node for good).
+17. **Voices are pooled** per cue tag (at most `max_voices` players under `/root/SfxVoices`, reused when idle): a battle creates
+    no player per hit. A voice still marked busy after 10 s counts as free, so one that stopped without `finished` never blocks
+    its cue. The Audio screen saves a slider's value if the screen closes mid-drag; `audio play` uses the bus the game uses. Items 7, 15 and 17 close what review round 3 left open (user, 2026-11-15: "let's fix these").
