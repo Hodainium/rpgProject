@@ -1,0 +1,407 @@
+<title>Card Look Proposals</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Cinzel:wght@700;900&display=swap">
+<style>
+/* Layout: a dark tavern table; each look is a row of real demo cards, hover tilts, click flips. Single dark look on purpose. */
+:root {
+  color-scheme: dark;
+  --table: #12131c;          /* page ground */
+  --table-2: #1a1c2a;        /* section plate */
+  --ink: #e9e6dc;            /* text */
+  --ink-dim: #a4a3ae;
+  --gold: #ffe28a;           /* FF7 theme border gold */
+  --navy: #1b2577;           /* FF7 window blue */
+  --navy-2: #0b1046;
+  --r-common: #cfd3dc; --r-rare: #3e8cff; --r-epic: #b05cff; --r-legendary: #ff9d24; --r-mythic: #ff4f86;
+  --el-fire: #ff6a2b; --el-ice: #6fd8ff; --el-physical: #e6d3a6; --el-void: #e040fb; --el-food: #8fd16a;
+  --font-ui: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --font-name: "Cinzel", "Georgia", serif;
+}
+body.name-chakra { --font-name: "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--table); }
+body {
+  background: radial-gradient(1200px 600px at 50% -10%, #23263a 0%, var(--table) 60%) var(--table);
+  color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 36px; }
+header { display: grid; gap: 10px; }
+h1 { font-family: var(--font-ui); font-weight: 700; font-size: 28px; margin: 0; letter-spacing: .02em; text-wrap: balance; }
+h1 span { color: var(--gold); }
+.lede { margin: 0; color: var(--ink-dim); max-width: 70ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.controls button {
+  font: 600 13px var(--font-ui); color: var(--ink); background: linear-gradient(#25307f, var(--navy-2));
+  border: 1px solid rgba(216,219,230,.55); border-radius: 4px; padding: 6px 12px; cursor: pointer;
+}
+.controls button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+.controls button:focus-visible, .tilt:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+section { background: var(--table-2); border: 1px solid #2c2f44; border-radius: 10px; padding: 22px max(16px, 2vw) 28px; display: grid; gap: 18px; }
+section h2 { margin: 0; font-size: 20px; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+section h2 small { font-size: 13px; color: var(--ink-dim); font-weight: 400; }
+.pill { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--gold); color: var(--gold); }
+.note { margin: 0; color: var(--ink-dim); font-size: 14px; max-width: 80ch; }
+h3 { margin: 6px 0 0; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; }
+.row { display: flex; flex-wrap: wrap; gap: 26px 22px; justify-content: center; perspective: 1100px; }
+.slot { display: grid; gap: 22px; justify-items: center; width: 220px; max-width: 100%; }
+.caption { font-size: 12px; color: var(--ink-dim); text-align: center; min-height: 2.6em; }
+.caption b { color: var(--ink); font-weight: 600; }
+
+/* ---------- shared card mechanics ---------- */
+.tilt { width: 220px; max-width: 100%; aspect-ratio: 5 / 7; position: relative; transform-style: preserve-3d;
+  transition: transform .25s ease-out; cursor: pointer; border-radius: 16px; }
+.inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.2,.7,.2,1); }
+.tilt.flipped .inner { transform: rotateY(180deg); }
+.face, .back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 16px; }
+.back { transform: rotateY(180deg); }
+.glare { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .2s;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgba(255,255,255,.28), rgba(255,255,255,0) 45%); mix-blend-mode: overlay; }
+.tilt:hover .glare { opacity: 1; }
+svg.ic { width: 100%; height: 100%; display: block; fill: currentColor; }
+
+/* ---------- Look A: Tavern (Hearthstone-leaning) ---------- */
+.ca { --rar: var(--r-common); --el: var(--el-physical); --m1: #8d93a3; --m2: #4a4f5e; }
+.ca.r-rare { --rar: var(--r-rare); --m1: #b9cbe6; --m2: #47618c; }
+.ca.r-epic { --rar: var(--r-epic); --m1: #c9a6e8; --m2: #5a3482; }
+.ca.r-legendary { --rar: var(--r-legendary); --m1: #ffe08a; --m2: #9a6212; }
+.ca.r-mythic { --rar: var(--r-mythic); --m1: #ffc2d4; --m2: #8a1f4a; }
+.ca.el-fire { --el: var(--el-fire); } .ca.el-ice { --el: var(--el-ice); } .ca.el-void { --el: var(--el-void); } .ca.el-food { --el: var(--el-food); }
+.ca .face {
+  background: linear-gradient(150deg, var(--m1), var(--m2) 55%, var(--m1));
+  box-shadow: 0 10px 24px rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.6);
+}
+.ca.r-mythic .face { background: linear-gradient(120deg, #ffd1de, #b23a78, #6b3fd1, #ffb36b, #ff4f86); background-size: 300% 300%; animation: prism 8s linear infinite; }
+@keyframes prism { to { background-position: 300% 0; } }
+.ca.r-epic .tilt-shadow, .ca.r-epic .face { box-shadow: 0 10px 24px rgba(0,0,0,.55), 0 0 18px rgba(176,92,255,.55); animation: aura 2.6s ease-in-out infinite; }
+@keyframes aura { 50% { box-shadow: 0 10px 24px rgba(0,0,0,.55), 0 0 30px rgba(176,92,255,.9); } }
+.ca.corrupted .face { background: linear-gradient(150deg, #3a1446, #12061a 55%, #4a1658); box-shadow: 0 10px 24px rgba(0,0,0,.6), 0 0 0 2px var(--el-void), 0 0 22px rgba(224,64,251,.55); }
+.ca .stone { position: absolute; inset: 7px; border-radius: 11px;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255,255,255,.07) 0 2px, transparent 3px) 0 0 / 23px 19px,
+    radial-gradient(circle at 70% 60%, rgba(0,0,0,.18) 0 2px, transparent 3px) 0 0 / 17px 23px,
+    linear-gradient(170deg, #4a5068, #2e3247 70%, #383d55);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.5), inset 0 0 18px rgba(0,0,0,.45); }
+.ca.corrupted .stone { background:
+    linear-gradient(115deg, transparent 47%, rgba(224,64,251,.5) 48%, transparent 49.5%) ,
+    linear-gradient(60deg, transparent 62%, rgba(224,64,251,.35) 63%, transparent 64%),
+    linear-gradient(170deg, #2a1433, #120818 70%, #24102c); }
+.ca .art { position: absolute; left: 15%; width: 70%; top: 6.5%; height: 45%; overflow: hidden;
+  border: 4px solid var(--m1); box-shadow: 0 0 0 2px rgba(0,0,0,.55), inset 0 0 22px rgba(0,0,0,.7);
+  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--el) 55%, #fff 0%) 0%, color-mix(in srgb, var(--el) 30%, #10121c) 45%, #0c0d16 100%);
+  display: grid; place-items: center; }
+.ca.k-character .art { border-radius: 50% / 50%; }
+.ca.k-item .art { border-radius: 50% 50% 10px 10px / 34% 34% 10px 10px; }
+.ca.k-equipment .art { border-radius: 50%; left: 20%; width: 60%; top: 8%; height: 41%; }
+.ca .glyph { width: 62%; height: auto; aspect-ratio: 1; color: color-mix(in srgb, var(--el) 70%, #fff); filter: drop-shadow(0 0 8px var(--el)) drop-shadow(0 2px 2px rgba(0,0,0,.8)); }
+.portrait { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ca .cube { width: 74%; animation: sway 6s ease-in-out infinite; filter: drop-shadow(0 6px 6px rgba(0,0,0,.6)); }
+@keyframes sway { 50% { transform: translateY(-4px) rotate(-2deg); } }
+.ca .crest { position: absolute; left: 50%; top: -6.5%; width: 34%; transform: translateX(-50%); color: var(--m1);
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.7)); }
+.ca .ribbon { position: absolute; left: 3%; width: 94%; top: 45%; height: 15%; overflow: visible; }
+.ca .ribbon path.band { fill: url(#ribbonFill); stroke: rgba(0,0,0,.6); stroke-width: 1.2; }
+.ca.corrupted .ribbon path.band { fill: url(#ribbonVoid); }
+.ca .ribbon text { font-family: var(--font-name); font-weight: 900; font-size: 15px; fill: #fff; paint-order: stroke; stroke: #1a1410; stroke-width: 3.2px; letter-spacing: .02em; }
+body.name-chakra .ca .ribbon text { font-weight: 700; font-size: 15px; letter-spacing: .04em; text-transform: uppercase; }
+.ca .gem { position: absolute; left: 50%; top: 60%; width: 15px; height: 15px; transform: translate(-50%, -50%) rotate(45deg);
+  background: linear-gradient(135deg, #fff, var(--rar) 45%, color-mix(in srgb, var(--rar) 60%, #000)); border: 1.5px solid rgba(0,0,0,.65);
+  box-shadow: 0 0 10px var(--rar); z-index: 2; }
+.ca.r-common .gem { box-shadow: none; }
+.ca .plaque { position: absolute; left: 11%; right: 11%; top: 61%; bottom: 13%; border-radius: 6px;
+  background: linear-gradient(#e2dccd, #c9c0aa); color: #29241b; box-shadow: inset 0 0 0 1px rgba(0,0,0,.45), inset 0 2px 8px rgba(0,0,0,.25);
+  display: grid; place-items: center; padding: 10px 9px 6px; text-align: center; font-size: 11.5px; line-height: 1.32; font-weight: 600; }
+.ca.corrupted .plaque { background: linear-gradient(#2b1734, #1a0c22); color: #f2d9fb; box-shadow: inset 0 0 0 1px rgba(224,64,251,.6); }
+.ca .plaque p { margin: 0; text-wrap: balance; }
+.ca .setmark { position: absolute; right: 5px; bottom: 3px; width: 14px; opacity: .35; color: #29241b; }
+.ca.corrupted .setmark { color: #f2d9fb; }
+.ca .typebar { position: absolute; left: 50%; bottom: 5.6%; transform: translateX(-50%); white-space: nowrap;
+  font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; font-weight: 700; color: #f3ead2;
+  background: linear-gradient(#5b5240, #3a3427); border: 1px solid rgba(0,0,0,.6); border-radius: 3px; padding: 1px 9px; }
+.ca .badge { position: absolute; left: -5%; top: -3%; width: 25%; aspect-ratio: 1; z-index: 3; display: grid; place-items: center;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%);
+  background: linear-gradient(140deg, #fff, var(--el) 40%, color-mix(in srgb, var(--el) 45%, #000)); }
+.ca .badge::before { content: ""; position: absolute; inset: 3px; clip-path: inherit; background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--el) 70%, #fff), color-mix(in srgb, var(--el) 50%, #111)); }
+.ca .badge .bi { position: relative; width: 58%; color: #fff; filter: drop-shadow(0 1px 1px rgba(0,0,0,.8)); }
+.ca .stat { position: absolute; bottom: -2%; width: 23%; aspect-ratio: 1; z-index: 3; display: grid; place-items: center;
+  font: 700 17px var(--font-ui); color: #fff; text-shadow: 0 0 3px #000, 0 2px 2px #000; }
+.ca .stat.atk { left: -4%; } .ca .stat.hp { right: -4%; }
+.ca .stat .bg { position: absolute; inset: 0; color: #ffcf3a; filter: drop-shadow(0 2px 3px rgba(0,0,0,.7)); }
+.ca .stat.hp .bg { color: #e2343a; }
+.ca .stat span { position: relative; font-size: 15px; }
+.ca .core { position: absolute; right: 9%; top: 2.2%; z-index: 3; font: 700 8.5px var(--font-ui); letter-spacing: .14em; color: #1b2133;
+  background: linear-gradient(#f4f1e4, #bfb9a3); border: 1px solid rgba(0,0,0,.6); border-radius: 0 0 4px 4px; padding: 1px 5px 2px; }
+.ca .foil { position: absolute; inset: 0; border-radius: 16px; pointer-events: none; mix-blend-mode: color-dodge; opacity: .55;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,240,200,.55) 45%, rgba(160,220,255,.45) 50%, transparent 65%) -200% 0 / 250% 100% no-repeat;
+  animation: foil 4.5s ease-in-out infinite; }
+@keyframes foil { 60%, 100% { background-position: 200% 0; } }
+
+/* collection states */
+.state-missing .face { filter: grayscale(1) brightness(1.35) contrast(.85); }
+.state-missing .face::after { content: ""; position: absolute; inset: 0; border-radius: 16px; background: rgba(110,170,255,.38); mix-blend-mode: color; }
+.state-missing .ghost { position: absolute; inset: 0; border-radius: 16px; box-shadow: 0 0 0 2px rgba(150,200,255,.75), 0 0 24px rgba(120,180,255,.6); pointer-events: none; }
+.tag-chip { position: absolute; left: 50%; transform: translateX(-50%); bottom: -14px; z-index: 5; white-space: nowrap;
+  font: 700 11px var(--font-ui); letter-spacing: .06em; padding: 3px 10px; border-radius: 4px;
+  background: linear-gradient(#25307f, var(--navy-2)); border: 1px solid var(--gold); color: var(--gold); }
+.lockover { position: absolute; inset: 0; border-radius: 16px; background: rgba(8,10,24,.45); display: grid; place-items: center; z-index: 4; }
+.lockover .li { width: 30%; color: #dfe4f2; filter: drop-shadow(0 2px 6px #000); }
+.newburst { position: absolute; right: -8px; top: -10px; z-index: 6; font: 700 13px var(--font-ui); color: #2a1600; letter-spacing: .06em;
+  background: radial-gradient(circle, #fff6c8, #ffc23d); padding: 8px 9px; border-radius: 50%; box-shadow: 0 0 16px #ffc23d; transform: rotate(12deg); }
+
+/* card back and pack */
+.cardback { background: linear-gradient(160deg, #26318a, var(--navy-2) 70%); border: 5px solid #c9a24a;
+  box-shadow: 0 10px 24px rgba(0,0,0,.55), inset 0 0 0 2px #0a0d30, inset 0 0 0 5px rgba(255,226,138,.35);
+  display: grid; place-items: center; overflow: hidden; }
+.cardback::before { content: ""; position: absolute; inset: 14px; border: 1px solid rgba(255,226,138,.35); border-radius: 8px;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.04) 0 6px, transparent 6px 14px), repeating-linear-gradient(-45deg, rgba(255,255,255,.04) 0 6px, transparent 6px 14px); }
+.cardback .emblem { position: relative; width: 46%; aspect-ratio: 1; transform: rotate(45deg); border: 3px solid var(--gold);
+  background: radial-gradient(circle, #3b48b8, #0e1450); display: grid; place-items: center; box-shadow: 0 0 22px rgba(255,226,138,.35); }
+.cardback .emblem .ei { width: 62%; transform: rotate(-45deg); color: var(--gold); }
+.pack { width: 200px; aspect-ratio: 5 / 7.6; position: relative; filter: drop-shadow(0 12px 18px rgba(0,0,0,.6)); animation: bob 4s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-6px) rotate(-1.5deg); } }
+.pack .body { position: absolute; inset: 0; clip-path: polygon(0 3%, 5% 0, 10% 3%, 15% 0, 20% 3%, 25% 0, 30% 3%, 35% 0, 40% 3%, 45% 0, 50% 3%, 55% 0, 60% 3%, 65% 0, 70% 3%, 75% 0, 80% 3%, 85% 0, 90% 3%, 95% 0, 100% 3%, 100% 97%, 95% 100%, 90% 97%, 85% 100%, 80% 97%, 75% 100%, 70% 97%, 65% 100%, 60% 97%, 55% 100%, 50% 97%, 45% 100%, 40% 97%, 35% 100%, 30% 97%, 25% 100%, 20% 97%, 15% 100%, 10% 97%, 5% 100%, 0 97%);
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.35) 47%, transparent 58%) -150% 0 / 250% 100% no-repeat, linear-gradient(160deg, #6a2d8c, #22103a 60%, #4a1d6a);
+  animation: foil 5s ease-in-out infinite; }
+.pack .band { position: absolute; left: 0; right: 0; top: 56%; height: 16%; background: linear-gradient(#ffe28a, #b8862b); box-shadow: 0 2px 6px rgba(0,0,0,.6);
+  display: grid; place-items: center; font: 700 15px var(--font-ui); letter-spacing: .18em; color: #2a1a05; text-transform: uppercase; }
+.pack .sig { position: absolute; left: 50%; top: 18%; width: 44%; transform: translateX(-50%); color: var(--gold); filter: drop-shadow(0 0 10px rgba(255,226,138,.7)); }
+.pack .count { position: absolute; right: 10%; top: 6%; font: 700 12px var(--font-ui); color: #fff; background: #1b2577; border: 1px solid var(--gold); padding: 1px 6px; border-radius: 3px; }
+
+/* ---------- Look B: Grimoire (MTG-leaning) ---------- */
+.cb { --el: var(--el-physical); --fr1: #d9c79c; --fr2: #8a7448; --rar: var(--r-common); }
+.cb.el-fire { --fr1: #f2a07b; --fr2: #9a2f14; } .cb.el-ice { --fr1: #a9dcf2; --fr2: #2a6c94; } .cb.el-void { --fr1: #9c6fb0; --fr2: #2a1236; }
+.cb.r-rare { --rar: var(--r-rare); } .cb.r-epic { --rar: var(--r-epic); } .cb.r-legendary { --rar: var(--r-legendary); } .cb.r-mythic { --rar: var(--r-mythic); }
+.cb .face { background: #0d0d10; padding: 10px; box-shadow: 0 10px 24px rgba(0,0,0,.55); border-radius: 12px; }
+.cb .frame { position: absolute; inset: 9px; border-radius: 6px; background: linear-gradient(160deg, var(--fr1), var(--fr2)); display: grid; grid-template-rows: auto 1fr auto auto; padding: 6px; gap: 5px; }
+.cb .bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; background: linear-gradient(#f3ead4, #cdbf9c); border-radius: 10px / 50%;
+  border: 1px solid rgba(0,0,0,.55); padding: 2px 8px; font: 700 12.5px var(--font-name); color: #1b160d; box-shadow: 0 1px 2px rgba(0,0,0,.5); min-width: 0; }
+.cb .bar .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cb .bar .rs { width: 16px; flex: none; color: var(--rar); filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000); }
+.cb .pic { border: 2px solid rgba(0,0,0,.6); background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--fr1) 70%, #fff), var(--fr2) 60%, #0c0c12); display: grid; place-items: center; min-height: 0; overflow: hidden; }
+.cb .pic .glyph { width: 46%; height: auto; aspect-ratio: 1; color: #fff; filter: drop-shadow(0 2px 4px rgba(0,0,0,.8)); }
+.cb .pic .cube { width: 56%; }
+.cb .text { background: linear-gradient(#f4eedd, #ddd1b3); border: 1px solid rgba(0,0,0,.5); border-radius: 2px; padding: 6px 7px; font-size: 11px; line-height: 1.32; color: #1b160d; min-height: 64px; }
+.cb .pt { justify-self: end; margin-top: -14px; font: 700 12px var(--font-ui); color: #1b160d; background: linear-gradient(#f3ead4, #cdbf9c); border: 1px solid rgba(0,0,0,.6); border-radius: 4px; padding: 0 7px; }
+
+/* ---------- Look C: Window (FF7 theme) ---------- */
+.cc { --rar: var(--r-common); --el: var(--el-physical); }
+.cc.r-rare { --rar: var(--r-rare); } .cc.r-epic { --rar: var(--r-epic); } .cc.r-legendary { --rar: var(--r-legendary); } .cc.r-mythic { --rar: var(--r-mythic); }
+.cc.el-fire { --el: var(--el-fire); } .cc.el-ice { --el: var(--el-ice); } .cc.el-void { --el: var(--el-void); }
+.cc .face { background: linear-gradient(180deg, #2a37a0, var(--navy) 35%, var(--navy-2)); border: 2px solid rgba(216,219,230,.8); border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.55), 0 0 0 1px #000, 0 0 16px color-mix(in srgb, var(--rar) 55%, transparent); padding: 12px; display: grid; grid-template-rows: auto auto 1fr auto; gap: 8px; }
+.cc .nm { font: 700 15px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: #fff; text-shadow: 1px 1px 0 #000; }
+.cc .line { height: 3px; background: linear-gradient(90deg, var(--rar), transparent); }
+.cc .pic { border: 1px solid rgba(216,219,230,.5); border-radius: 4px; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--el) 40%, #1b2577), #070a2a 75%); display: grid; place-items: center; min-height: 0; overflow: hidden; }
+.cc .pic .glyph { width: 46%; height: auto; aspect-ratio: 1; color: color-mix(in srgb, var(--el) 60%, #fff); filter: drop-shadow(0 0 8px var(--el)); }
+.cc .pic .cube { width: 56%; }
+.cc .text { font-size: 12px; line-height: 1.35; color: #e9ecf7; min-height: 4em; }
+.cc .ft { display: flex; justify-content: space-between; gap: 6px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--rar); font-weight: 700; }
+.cc .ft span:last-child { color: #c9cde0; }
+
+/* legend */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--ink-dim); }
+.legend i { display: inline-block; width: 12px; height: 12px; transform: rotate(45deg); margin-right: 6px; vertical-align: -1px; border: 1px solid #000; }
+footer { color: var(--ink-dim); font-size: 12px; }
+footer a { color: var(--gold); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="ribbonFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9caa0"/><stop offset="1" stop-color="#9c8858"/></linearGradient>
+    <linearGradient id="ribbonVoid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a3a8e"/><stop offset="1" stop-color="#3a1446"/></linearGradient>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <h1>Card looks <span>· slice 5b</span></h1>
+    <p class="lede">Real demo cards in three looks. Hover a card to tilt it, click to flip it to its back. Look A follows Hearthstone,
+      as you asked; B and C are there to compare. Art is never drawn: a character shows a prerendered still of its in-game cube (the Warrior here; the others follow once the
+      portrait studio is approved), an item shows its game-icons glyph tinted by element.</p>
+    <div class="controls" role="group" aria-label="Card name font">
+      <span class="note">Card name font:</span>
+      <button type="button" id="font-cinzel" aria-pressed="true">Cinzel (fantasy serif, new)</button>
+      <button type="button" id="font-chakra" aria-pressed="false">Chakra Petch (our UI font)</button>
+    </div>
+  </header>
+
+  <section aria-labelledby="la">
+    <h2 id="la">Look A · Tavern <span class="pill">Favourite · built in engine</span> <small>Hearthstone layout: oval art for characters, arched art for items, round art for armor and weapons</small></h2>
+    <p class="note">Frame metal by rarity (iron, silver, violet, gold, prismatic rose for Mythic characters), a rarity gem under the name,
+      and a Magic-style type line under the text naming the card's kind. Epic glows, Legendary and Mythic carry a crown crest and a moving foil. Corrupted (Void) cards get a cracked black frame with the magenta outline from the RoR-style floor items.</p>
+    <div class="row" id="rowA"></div>
+    <h3>Collection states</h3>
+    <div class="row" id="rowStates"></div>
+    <h3>Card back and pack</h3>
+    <div class="row" id="rowBack"></div>
+  </section>
+
+  <section aria-labelledby="lb">
+    <h2 id="lb">Look B · Grimoire <span class="pill">Built in engine</span> <small>Magic layout: name bar on top, full-width art, rules box, frame colour by element, rarity as the set symbol's colour</small></h2>
+    <div class="row" id="rowB"></div>
+  </section>
+
+  <section aria-labelledby="lc">
+    <h2 id="lc">Look C · Window <small>The FF7 window theme as a card: closest to today's screens, least like a collectible</small></h2>
+    <div class="row" id="rowC"></div>
+  </section>
+
+  <section aria-labelledby="lr">
+    <h2 id="lr">Rarity colours <small>shared by every look, the pack flashes and the 5b2 floor items</small></h2>
+    <div class="legend">
+      <span><i style="background:var(--r-common)"></i>Common</span>
+      <span><i style="background:var(--r-rare)"></i>Rare</span>
+      <span><i style="background:var(--r-epic)"></i>Epic</span>
+      <span><i style="background:var(--r-legendary)"></i>Legendary</span>
+      <span><i style="background:var(--r-mythic)"></i>Mythic (characters only)</span>
+      <span><i style="background:var(--el-void)"></i>Corrupted outline (Void pool)</span>
+    </div>
+  </section>
+
+  <footer>Icons: Lorc, Delapouite, Skoll, Carl Olsen and Willdabeast from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, CC BY 3.0.
+    Mock-up in HTML for approval; the real cards are built in Godot (3D stage, our shaders).</footer>
+</div>
+
+<script>
+const ICONS = /*ICONS*/{};
+const icon = (k, cls = "ic") => `<svg class="${cls}" viewBox="0 0 512 512" aria-hidden="true">${(ICONS[k] || []).map(d => `<path d="${d}"/>`).join("")}</svg>`;
+
+// The demo content's own cards (names, texts, tags, stats from content/demo).
+const CARDS = [
+  { id: "warrior", kind: "character", name: "Warrior", rarity: "mythic", set: "core", core: true, el: "physical",
+    type: "Character — Damage dealer", text: "Cleave hits a crowd, Execute finishes a wounded foe, Provoke pulls enemies onto him.",
+    portrait: "/*WARRIOR*/" },
+  { id: "seal", kind: "item", name: "Executioner's Seal", rarity: "legendary", set: "core", core: true, el: "physical", icon: "seal",
+    type: "Item — Passive · Treasure", text: "Critical hits trigger a follow-up: 50% ATK Physical." },
+  { id: "lantern", kind: "item", name: "Frost Lantern", rarity: "epic", set: "descent", el: "ice", icon: "lantern",
+    type: "Item — Passive · Treasure", text: "Ice damage has a 25% chance to Freeze the target." },
+  { id: "blade", kind: "equipment", name: "Headsman's Blade", rarity: "epic", set: "descent", el: "physical", icon: "sword",
+    type: "Armor — Weapon", text: "+60 ATK, +40% damage to Broken enemies." },
+  { id: "lens", kind: "item", name: "Analyzer Lens", rarity: "rare", set: "descent", el: "physical", icon: "lens",
+    type: "Item — Usable · 2 battles", text: "An enemy becomes weak to Physical for 2 turns." },
+  { id: "rations", kind: "item", name: "Rations", rarity: "common", set: "core", core: true, el: "food", icon: "meat",
+    type: "Item — Food", text: "On pickup: heal 15% of max HP. +40 max HP." },
+  { id: "sigil", kind: "item", name: "Corrupted Sigil", rarity: "epic", set: "core", core: true, el: "void", icon: "pentacle", corrupted: true,
+    type: "Item — Passive · Void", text: "Your abilities cost 50% less SP, but your basic attacks give no SP." },
+];
+const EL_ICON = { physical: "fist", fire: "flame", ice: "snow", void: "pentacle", food: "meat" };
+const RARITY = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary", mythic: "Mythic" };
+let uid = 0;
+
+function cubeArt(c) {
+  const hat = c.hat === "flame"
+    ? `<g transform="translate(30 -6) scale(.078)" fill="#ffcf5a" style="filter:drop-shadow(0 0 4px #ff6a2b)">${(ICONS.flame || []).map(d => `<path d="${d}"/>`).join("")}</g>`
+    : `<path d="M22 31 L50 17 L78 31 L50 45 Z" fill="#5d6578" stroke="#2a2f3c" stroke-width="1"/><path d="M47 9 Q52 2 58 10 L53 25 L47 23 Z" fill="#c8323a" stroke="#4a0f12" stroke-width="1"/>`;
+  return `<svg class="cube" viewBox="0 0 100 100" aria-hidden="true">
+    <ellipse cx="50" cy="90" rx="26" ry="5" fill="rgba(0,0,0,.45)"/>
+    <polygon points="50,20 80,35 50,50 20,35" fill="${c.top}" stroke="#0007" stroke-width=".8"/>
+    <polygon points="20,35 50,50 50,86 20,71" fill="${c.left}" stroke="#0007" stroke-width=".8"/>
+    <polygon points="50,50 80,35 80,71 50,86" fill="${c.right}" stroke="#0007" stroke-width=".8"/>
+    <polygon points="27,52 33,55 33,61 27,58" fill="#14161f"/><polygon points="38,57 44,60 44,66 38,63" fill="#14161f"/>
+    <polygon points="29,53.5 31,54.5 31,56.5 29,55.5" fill="#fff"/><polygon points="40,58.5 42,59.5 42,61.5 40,60.5" fill="#fff"/>
+    ${hat}
+  </svg>`;
+}
+const artOf = c => c.kind === "character" ? `<img class="portrait" src="${c.portrait}" alt="">` : icon(c.icon, "ic glyph");
+
+function backFace() {
+  return `<div class="back cardback"><div class="emblem"><div class="ei">${icon("cube")}</div></div></div>`;
+}
+
+function lookA(c, extra = "") {
+  const id = `rb${uid++}`;
+  const long = c.name.length > 15;
+  const crest = (c.rarity === "legendary" || c.rarity === "mythic") ? `<div class="crest">${icon("crown")}</div>` : "";
+  const foil = (c.rarity === "legendary" || c.rarity === "mythic") ? `<div class="foil"></div>` : "";
+  return `<div class="face">
+      <div class="stone"></div>
+      ${crest}
+      <div class="art">${artOf(c)}</div>
+      <svg class="ribbon" viewBox="0 0 200 34" aria-hidden="true">
+        <path class="band" d="M4 12 Q100 -2 196 12 L192 30 Q100 16 8 30 Z"/>
+        <path id="${id}" d="M14 25 Q100 10 186 25" fill="none"/>
+        <text text-anchor="middle"${long ? ' textLength="168" lengthAdjust="spacingAndGlyphs"' : ""}><textPath href="#${id}" startOffset="50%">${c.name}</textPath></text>
+      </svg>
+      <div class="gem" title="${RARITY[c.rarity]}"></div>
+      <div class="plaque"><p>${c.text}</p><div class="setmark">${icon(c.set === "core" ? "cube" : "stairs")}</div></div>
+      <div class="typebar">${c.type}</div>
+      ${c.core ? `<div class="core">CORE</div>` : ""}
+      ${foil}
+      <div class="glare"></div>
+      ${extra}
+    </div>`;
+}
+function lookB(c) {
+  return `<div class="face"><div class="frame">
+      <div class="bar"><span class="nm">${c.name}</span><span class="rs" title="${RARITY[c.rarity]}">${icon(c.set === "core" ? "cube" : "stairs")}</span></div>
+      <div class="pic">${artOf(c)}</div>
+      <div class="bar" style="font-family:var(--font-ui);font-size:10.5px"><span class="nm">${c.type}</span></div>
+      <div class="text">${c.text}</div>
+    </div><div class="glare"></div></div>`;
+}
+function lookC(c) {
+  return `<div class="face">
+      <div class="nm">${c.name}</div><div class="line"></div>
+      <div class="pic">${artOf(c)}</div>
+      <div><div class="text">${c.text}</div>
+      <div class="ft"><span>${RARITY[c.rarity]}${c.core ? " · Core" : ""}</span><span>${c.type}</span></div></div>
+      <div class="glare"></div></div>`;
+}
+
+function mount(rowId, items) {
+  const row = document.getElementById(rowId);
+  row.innerHTML = items.map(({ cls, face, caption, after = "" }) => `
+    <div class="slot"><div class="tilt ${cls}" tabindex="0" role="button" aria-label="Flip card">
+      <div class="inner">${face}${backFace()}</div>${after}</div>
+      <div class="caption">${caption}</div></div>`).join("");
+}
+const clsA = c => `ca k-${c.kind} r-${c.rarity} el-${c.el}${c.corrupted ? " corrupted" : ""}`;
+const capOf = c => `<b>${RARITY[c.rarity]}</b> · ${c.kind === "character" ? "character" : c.kind === "equipment" ? "armor" : "item"} · ${c.core ? "core set" : "Descent set"}`;
+
+mount("rowA", CARDS.map(c => ({ cls: clsA(c), face: lookA(c), caption: capOf(c) })));
+const byId = Object.fromEntries(CARDS.map(c => [c.id, c]));
+mount("rowStates", [
+  { cls: clsA(byId.lantern), face: lookA(byId.lantern), caption: "<b>Owned</b> · dusting it gives 100 dust" },
+  { cls: clsA(byId.lantern) + " state-missing", face: lookA(byId.lantern, `<div class="ghost"></div>`), caption: "<b>Not owned</b> · ghosted, like Hearthstone's craft view",
+    after: `<div class="tag-chip">Craft · 400 dust</div>` },
+  { cls: clsA(byId.blade), face: lookA(byId.blade, `<div class="lockover"><div class="li">${icon("lock")}</div></div>`), caption: "<b>Locked by your run</b> · dust offers to cancel the run",
+    after: `<div class="tag-chip">In your active run</div>` },
+  { cls: clsA(byId.seal), face: lookA(byId.seal), caption: "<b>New</b> · first seen since the last visit", after: `<div class="newburst">NEW</div>` },
+]);
+document.getElementById("rowBack").innerHTML = `
+  <div class="slot"><div class="tilt ca" tabindex="0" role="button" aria-label="Card back"><div class="inner"><div class="face cardback"><div class="emblem"><div class="ei">${icon("cube")}</div></div><div class="glare"></div></div></div></div>
+    <div class="caption"><b>Card back</b> · FF7 navy and gold, the cube emblem</div></div>
+  <div class="slot"><div class="pack"><div class="body"></div><div class="sig">${icon("stairs")}</div><div class="band">The Descent</div><div class="count">5 cards</div></div>
+    <div class="caption"><b>Descent pack</b> · foil sweep; it bursts open on the 3D stage</div></div>`;
+const four = ["warrior", "seal", "lantern", "sigil"].map(k => byId[k]);
+mount("rowB", four.map(c => ({ cls: `cb r-${c.rarity} el-${c.el}`, face: lookB(c), caption: capOf(c) })));
+mount("rowC", four.map(c => ({ cls: `cc r-${c.rarity} el-${c.el}`, face: lookC(c), caption: capOf(c) })));
+
+// Tilt with a moving glare, click flips.
+const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+document.querySelectorAll(".tilt").forEach(t => {
+  t.addEventListener("pointermove", e => {
+    if (still) return;
+    const r = t.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    t.style.transform = `rotateX(${(0.5 - y) * 18}deg) rotateY(${(x - 0.5) * 22}deg) translateZ(10px)`;
+    t.querySelectorAll(".glare").forEach(g => { g.style.setProperty("--gx", `${x * 100}%`); g.style.setProperty("--gy", `${y * 100}%`); });
+  });
+  t.addEventListener("pointerleave", () => { t.style.transform = ""; });
+  const flip = () => t.classList.toggle("flipped");
+  t.addEventListener("click", flip);
+  t.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } });
+});
+const setFont = chakra => {
+  document.body.classList.toggle("name-chakra", chakra);
+  document.getElementById("font-chakra").setAttribute("aria-pressed", String(chakra));
+  document.getElementById("font-cinzel").setAttribute("aria-pressed", String(!chakra));
+};
+document.getElementById("font-cinzel").addEventListener("click", () => setFont(false));
+document.getElementById("font-chakra").addEventListener("click", () => setFont(true));
+</script>
