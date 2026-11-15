@@ -204,6 +204,7 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-11-15: 5e `audio-pass` built and playtested (user: "I loved the playtest"); next: 5b `card-ui`.
 - 2026-11-15: added 5b3 `floor-rooms` before 5c (user); 5c also gets more player agency over items and more keys (user).
 - 2026-11-15: 5d `unique-events` moved before 5c, after 5b3 (user: it will change the balance before the last tweaks). Order: 5b, 5b2, 5b3, 5d, 5c.
+- 2026-11-15: "more events" moved from 5c into 5d (user), so the once-per-run rule never runs a chapter dry.
 
 
 ## Design tuning: any time, not just in breaks
@@ -704,14 +705,15 @@ re-measured afterwards in 5c. Rooms need looks (the challenge room, the armory) 
 ### 5c. `card-balance`
 Added 2026-11-09, after 5b. The game balancing pass for cards: retune the win-rate gate on the core pool alone (30 / 30 / 21
 / 15 / 15 per room pool; the 31.8% figure was measured on the full item pool), then pack odds and prices in gems, dust
-and craft costs and refunds, and the gem income per run against them. Also here (decided 2026-11-09): **four new Food items** (Food holds 4, all core, today; this takes it to 8). Also here (decided 2026-11-09): **more events** in the demo content, so slice 5d's one-event-per-run rule rarely runs a chapter dry. Design break 3 (card feel) belongs here. Also here (user, 2026-11-15): **more player agency over items** (players barely get the chance to find items today) and **more keys in a run** (keys are very scarce), measured on top of 5b3 `floor-rooms`.
+and craft costs and refunds, and the gem income per run against them. Also here (decided 2026-11-09): **four new Food items** (Food holds 4, all core, today; this takes it to 8). Design break 3 (card feel) belongs here. Also here (user, 2026-11-15): **more player agency over items** (players barely get the chance to find items today) and **more keys in a run** (keys are very scarce), measured on top of 5b3 `floor-rooms`.
 
 ### 5d. `unique-events`
 Added 2026-11-09, next to 5c (the gate moves, so both are measured together). **Order (user, 2026-11-15):** its own slice
 after 5b3 `floor-rooms` and **before 5c `card-balance`**, since it changes the balance before the last tweaks. Spec `specs/unique-events.md`: an event picked
 from a chapter's event query appears at most once per run (seen = placed on a floor, so it holds inside a floor too; an exhausted
 pool gives an empty room; fixed room events and the rest stop stay repeatable), and a named item the run already saw becomes a
-food item (like Isaac's drops), so no route hands out a second copy (pool picks already did not). Decided 2026-11-09; implemented before 5c (user, 2026-11-15). Client only; the run hash gains `events_seen=`
+food item (like Isaac's drops), so no route hands out a second copy (pool picks already did not). Decided 2026-11-09; implemented before 5c (user, 2026-11-15). **More events** in the demo content come with it (moved here from
+5c, user 2026-11-15), so the one-event-per-run rule rarely runs a chapter dry. Client only; the run hash gains `events_seen=`
 when not empty, so the committed run goldens may change and the balance gate is re-measured.
 
 ### 5e. `audio-pass`
