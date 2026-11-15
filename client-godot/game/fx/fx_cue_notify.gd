@@ -40,6 +40,9 @@ func execute_cue(target: Node, payload: Dictionary = {}) -> void:
 	if service == null or (fx == null and target_fx == null) or not service.enabled:
 		_end_when_free()  # headless (the verifier): nothing to draw, and no work per hit
 		return
+	if target is BattleUnit and is_instance_valid((target as BattleUnit).asc) and (target as BattleUnit).asc.cues_closed:
+		_end_when_free()  # playtest-fixes B22: GodotGAS spawns persistent cues past execute_cue (a field battle, a teardown)
+		return
 	_target = target
 	_payload = payload
 	if not auto_destroy:

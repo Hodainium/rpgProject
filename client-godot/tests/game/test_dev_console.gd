@@ -403,7 +403,8 @@ func test_tool_parity() -> void:
 		"Tab: big minimap and the floor toast (spec ff7-ui)": "tab",
 		"gear screen SWAP (spec keys-and-gear)": "swap", "gear screen Item Slot MOVE / SWAP": "move",
 		"Use Item OPEN a chest": "open", "chest list": "chests", "Give to panel (spec event-items)": "giveto",
-		"effects gallery and inspector preview (spec vfx-framework)": "fx"}
+		"effects gallery and inspector preview (spec vfx-framework)": "fx",
+		"Settings battle pacing rows (playtest-fixes B18)": "pace"}
 	for action in pairs:
 		check(console.commands.has(pairs[action]), "%s has the command %s" % [action, pairs[action]])
 	# The inspector grid commits *_result() through undo/redo; the console applies the same functions.

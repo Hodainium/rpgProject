@@ -9,6 +9,9 @@ extends RefCounted
 var _battle: Battle
 var _encounter: StringName
 var _router: GameplayMessageRouter
+## Playtest-fixes B22: set once Message.Battle.Ended is sent. Tearing the battle down removes its units' effects, which changes
+## HP and stats; those are not things that happened, so nothing more is broadcast (the phantom damage numbers over the party).
+var _ended: bool = false
 
 
 ## Connects to `battle` (fought for `encounter_id`) and broadcasts Message.Battle.Started.
@@ -56,13 +59,14 @@ func attach(battle: Battle, encounter_id: StringName, router: GameplayMessageRou
 		_send(GameplayMessageRouter.BATTLE_UNIT_DIED, &"Verb.Die", &"", unit))
 	battle.battle_ended.connect(func(outcome: String, _hash):
 		_send(GameplayMessageRouter.BATTLE_ENDED, &"Verb.Win" if outcome == Battle.VICTORY else &"Verb.Lose", &"",
-			_encounter, 0, [], {"outcome": outcome}))
+			_encounter, 0, [], {"outcome": outcome})
+		_ended = true)
 	_send(GameplayMessageRouter.BATTLE_STARTED, &"Verb.Start", &"", _encounter)
 
 
 func _send(channel: StringName, verb: StringName, instigator: StringName, target: StringName, amount: int = 0,
 		tags: Array = [], extras: Dictionary = {}) -> void:
-	if _router == null or not is_instance_valid(_battle):
+	if _router == null or not is_instance_valid(_battle) or _ended:
 		return
 	var data := extras.duplicate()
 	if instigator != &"":

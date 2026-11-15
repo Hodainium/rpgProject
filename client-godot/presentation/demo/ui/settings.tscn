@@ -44,6 +44,34 @@ text = "Battle speed"
 unique_name_in_owner = true
 layout_mode = 2
 
+[node name="MinActionRow" type="HBoxContainer" parent="Panel/Margin/Box"]
+layout_mode = 2
+
+[node name="MinActionLabel" type="Label" parent="Panel/Margin/Box/MinActionRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Action time (s)"
+
+[node name="MinAction" type="SpinBox" parent="Panel/Margin/Box/MinActionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+max_value = 3.0
+step = 0.1
+
+[node name="PauseRow" type="HBoxContainer" parent="Panel/Margin/Box"]
+layout_mode = 2
+
+[node name="PauseLabel" type="Label" parent="Panel/Margin/Box/PauseRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Pause between actions (s)"
+
+[node name="Pause" type="SpinBox" parent="Panel/Margin/Box/PauseRow"]
+unique_name_in_owner = true
+layout_mode = 2
+max_value = 2.0
+step = 0.1
+
 [node name="Skip" type="CheckBox" parent="Panel/Margin/Box"]
 unique_name_in_owner = true
 layout_mode = 2

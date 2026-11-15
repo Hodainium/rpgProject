@@ -12,9 +12,11 @@ class_name UnitAnimator
 extends Node3D
 
 const MONTAGE: StringName = &"montage/current"
-## Extra time after an ability animation's length before the gate is released anyway (a broken or interrupted
-## animation never stalls the battle).
-const SAFETY_SECONDS: float = 0.5
+## Extra time after an ability animation's length before the gate is released anyway. 0 (playtest-fixes B17): the montage
+## ends at its length, read from a timer on the same scaled clock, because a montage shorter than the OneShot's fades (the
+## 0.05 s bookkeeping passives) was often never seen active and sat on a 0.5 s safety wait with nothing on screen. The few
+## hundredths left let the tree reach the montage's last frame first, so a key at its very end fires into this cast's gate.
+const SAFETY_SECONDS: float = 0.05
 const MONTAGE_FADE: float = 0.1
 ## Value-track properties that move a model; an ability animation with none of them gets the set's `cast` merged in.
 const MODEL_PROPERTIES: Array[String] = ["position", "rotation", "rotation_degrees", "scale", "transform",
@@ -86,6 +88,11 @@ var _montage_live: bool = false
 
 static var _shared_tree: AnimationNodeBlendTree
 static var _merged: Dictionary = {}  # "ability id:cast id" -> merged Animation
+static var _unwound: Dictionary = {}  # animation id -> the copy whose spins stay within half a turn (or the animation)
+
+## Playtest-fixes B16: a spin track is resampled this often, and its wrap jumps last this long.
+const UNWIND_RATE: float = 60.0
+const UNWIND_JUMP: float = 0.0001
 
 
 func _ready() -> void:
@@ -422,10 +429,13 @@ func play(ability: BattleAbility, gate: ClientGate) -> void:
 	if animation == null:
 		gate.release_finished()
 		return
+	if plays_nothing(ability):
+		gate.release_finished()  # playtest-fixes B17/B21: a passive never moves the cube; its keys resolve at once
+		return
 	_gate = gate
 	_cast_id += 1
 	_montage_live = false
-	var montage := _montage_for(animation)
+	var montage := _montage_for(unwound(without_blinks(animation)))
 	_swap(&"montage", montage)
 	tree.set("parameters/montage/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	var cast_id := _cast_id
@@ -624,6 +634,101 @@ func _record_rest(animation: Animation) -> void:
 	if added:  # re-adding the animation makes the mixer rebuild its track cache
 		library.remove_animation(&"RESET")
 		library.add_animation(&"RESET", reset)
+
+
+static var _blinkless: Dictionary = {}  # animation id -> the copy without `visible` tracks (or the animation)
+
+
+## Playtest-fixes B17, B21 (user, 2026-11-14: passives never animate): a triggered passive plays nothing on the cube (no
+## battle-start spin, no ult-charge flash); its `execute` keys resolve at once, as headless. A follow-up attack
+## (Ability.Type.FollowUp) is an attack and still plays.
+static func plays_nothing(ability: BattleAbility) -> bool:
+	return ability.is_triggered() and not ability.is_follow_up()
+
+
+## Playtest-fixes B21 (user, 2026-11-14: a cube never blinks when it acts, only when it is hit): the animation, or a copy
+## without its `visible` value tracks (86 ability animations flashed the body off and on as their cast). An animation that
+## then moves nothing gets the set's `cast` merged in like any keys-only one. The hit reaction keeps its own flash. Cached.
+static func without_blinks(animation: Animation) -> Animation:
+	var id := animation.get_instance_id()
+	if _blinkless.has(id):
+		return _blinkless[id]
+	var copy: Animation = null
+	for track in range(animation.get_track_count() - 1, -1, -1):
+		if animation.track_get_type(track) == Animation.TYPE_VALUE \
+				and String(animation.track_get_path(track).get_concatenated_subnames()) == "visible":
+			if copy == null:
+				copy = animation.duplicate()
+			copy.remove_track(track)
+	_blinkless[id] = copy if copy != null else animation
+	return _blinkless[id]
+
+
+## Playtest-fixes B16: the animation, or a copy whose `rotation` / `rotation_degrees` tracks stay within half a turn of rest.
+## The tree blends a montage in and out by plain lerp, so a spin ending on 360° turned all the way back during the fade-out.
+## Each such track is resampled (UNWIND_RATE, through the track's own interpolation, so its easing is kept) and wrapped; where
+## an axis crosses half a turn, two keys UNWIND_JUMP apart carry the wrap, so the motion is the same and the ends stay near
+## rest. (Godot 4.7.2's LINEAR_ANGLE interpolation works on float tracks only, not on a Vector3 rotation.) Cached.
+static func unwound(animation: Animation) -> Animation:
+	var id := animation.get_instance_id()
+	if _unwound.has(id):
+		return _unwound[id]
+	var copy: Animation = null
+	for track in animation.get_track_count():
+		if animation.track_get_type(track) != Animation.TYPE_VALUE \
+				or animation.track_get_interpolation_type(track) == Animation.INTERPOLATION_NEAREST \
+				or animation.value_track_get_update_mode(track) != Animation.UPDATE_CONTINUOUS:
+			continue
+		var property := String(animation.track_get_path(track).get_concatenated_subnames())
+		var turn := TAU if property == "rotation" else (360.0 if property == "rotation_degrees" else 0.0)
+		if turn == 0.0 or not _leaves_half_turn(animation, track, turn):
+			continue
+		if copy == null:
+			copy = animation.duplicate()
+		_rewrite_wrapped(copy, track, animation, turn)
+	_unwound[id] = copy if copy != null else animation
+	return _unwound[id]
+
+
+static func _leaves_half_turn(animation: Animation, track: int, turn: float) -> bool:
+	for index in animation.track_get_key_count(track):
+		var value: Variant = animation.track_get_key_value(track, index)
+		if not value is Vector3:
+			return false
+		var v: Vector3 = value
+		if absf(v.x) > turn / 2.0 or absf(v.y) > turn / 2.0 or absf(v.z) > turn / 2.0:
+			return true
+	return false
+
+
+static func _wrap_offset(v: Vector3, turn: float) -> Vector3:
+	return Vector3(roundf(v.x / turn), roundf(v.y / turn), roundf(v.z / turn)) * turn
+
+
+static func _rewrite_wrapped(copy: Animation, track: int, source: Animation, turn: float) -> void:
+	var first := source.track_get_key_time(track, 0)
+	var last := source.track_get_key_time(track, source.track_get_key_count(track) - 1)
+	var times: Array[float] = []
+	var steps := maxi(ceili((last - first) * UNWIND_RATE), 1)
+	for step in steps + 1:
+		times.append(first + (last - first) * step / steps)
+	while copy.track_get_key_count(track) > 0:
+		copy.track_remove_key(track, 0)
+	copy.track_set_interpolation_type(track, Animation.INTERPOLATION_LINEAR)
+	var start: Vector3 = source.value_track_interpolate(track, times[0])
+	var offset := _wrap_offset(start, turn)
+	copy.track_insert_key(track, times[0], start - offset)
+	for index in range(1, times.size()):
+		var at := times[index]
+		var value: Vector3 = source.value_track_interpolate(track, at)
+		var wanted := _wrap_offset(value, turn)
+		if wanted != offset:  # crosses half a turn inside this step: hold the old wrap up to the crossing, then jump
+			var cross := (times[index - 1] + at) / 2.0
+			var middle: Vector3 = source.value_track_interpolate(track, cross)
+			copy.track_insert_key(track, cross, middle - offset)
+			copy.track_insert_key(track, cross + UNWIND_JUMP, middle - wanted)
+			offset = wanted
+		copy.track_insert_key(track, at, value - offset)
 
 
 ## The ability's animation, or (when it doesn't move the model) a copy with the set's `cast` tracks merged in. A
