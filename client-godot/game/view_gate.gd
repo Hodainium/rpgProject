@@ -34,10 +34,26 @@ var _pace_id: int = 0
 var _min_timer: SceneTreeTimer  # the action's minimum time, on the scaled clock (a speed change mid-action counts at once)
 
 
-## Loads the pacing from the Settings into `gate` (GameMain for each battle, the console's `pace`).
+## The pacing as saved in the Settings (the defaults when unset). The only code that names the two keys: GameMain, the
+## console's `pace` and the Settings screen all go through these.
+static func saved_min_action() -> float:
+	return float(GameMain.load_setting("settings", SETTING_MIN_ACTION, DEFAULT_MIN_ACTION))
+
+
+static func saved_pause() -> float:
+	return float(GameMain.load_setting("settings", SETTING_PAUSE, DEFAULT_PAUSE))
+
+
+## Saves both values (one call writes the Settings file per value; the Settings screen calls it once, when it closes).
+static func save_pacing(min_action: float, pause: float) -> void:
+	GameMain.save_setting("settings", SETTING_MIN_ACTION, min_action)
+	GameMain.save_setting("settings", SETTING_PAUSE, pause)
+
+
+## Loads the saved pacing into `gate` (GameMain for each battle, the console's `pace`).
 static func apply_settings(gate: ViewGate) -> void:
-	gate.min_action_seconds = float(GameMain.load_setting("settings", SETTING_MIN_ACTION, DEFAULT_MIN_ACTION))
-	gate.pause_seconds = float(GameMain.load_setting("settings", SETTING_PAUSE, DEFAULT_PAUSE))
+	gate.min_action_seconds = saved_min_action()
+	gate.pause_seconds = saved_pause()
 
 
 func begin_ability(unit_id: StringName, ability: BattleAbility, sequence: Array[StringName]) -> void:

@@ -18,13 +18,9 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		if not arg.is_valid_float() or float(arg) < 0.0:
 			return ctx.fail("'%s' is not a number of seconds (0 or more)" % arg)
 		values.append(float(arg))
-	if values.size() > 0:
-		GameMain.save_setting("settings", ViewGate.SETTING_MIN_ACTION, values[0])
-	if values.size() > 1:
-		GameMain.save_setting("settings", ViewGate.SETTING_PAUSE, values[1])
-	var shown := ViewGate.new()
-	ViewGate.apply_settings(shown)
+	if not values.is_empty():
+		ViewGate.save_pacing(values[0], values[1] if values.size() > 1 else ViewGate.saved_pause())
 	if ctx.game != null and ctx.game.gate != null:
 		ViewGate.apply_settings(ctx.game.gate)
-	return "battle pace: an action at least %.2f s, then a %.2f s pause (at 1×)" % [shown.min_action_seconds,
-		shown.pause_seconds]
+	return "battle pace: an action at least %.2f s, then a %.2f s pause (at 1×)" % [ViewGate.saved_min_action(),
+		ViewGate.saved_pause()]

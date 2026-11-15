@@ -190,3 +190,14 @@ func test_a_finished_battle_tears_down_silently() -> void:
 	battle.free()
 	eq(heard.size(), at_end, "freeing it broadcasts nothing more (no phantom numbers, B22)")
 	router.free()
+
+
+## B18: one place reads the pacing keys; a gate loaded from the Settings holds what saved_min_action / saved_pause return
+## (read only: the Settings file is shared by the parallel shards and the player's game, so no test writes it).
+func test_the_gate_loads_the_saved_pacing() -> void:
+	var gate := ViewGate.new()
+	gate.min_action_seconds = -1.0
+	gate.pause_seconds = -1.0
+	ViewGate.apply_settings(gate)
+	eq(gate.min_action_seconds, ViewGate.saved_min_action(), "the minimum time from the Settings")
+	eq(gate.pause_seconds, ViewGate.saved_pause(), "the pause from the Settings")

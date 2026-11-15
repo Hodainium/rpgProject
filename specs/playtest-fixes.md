@@ -244,10 +244,10 @@ turns the fade off). What stays: an effect still shows through a unit less than 
 ### Fix for B18 (system code; your UI files with your OK)
 | File | Change |
 |---|---|
-| `game/view_gate.gd` | Pacing: an action (any ability that is not a triggered passive) or a follow-up attack stays on screen at least `min_action_seconds` (1.0) and then `pause_seconds` (0.4) pass, in game time (the minimum on a scene timer, so a speed change mid-action counts at once; review fix). Its hits still land on the `execute` keys; only the end waits. `ViewGate.apply_settings` loads both. `skip()` and `skip_all` cut it short; 0 turns either off. |
+| `game/view_gate.gd` | Pacing: an action (any ability that is not a triggered passive) or a follow-up attack stays on screen at least `min_action_seconds` (1.0) and then `pause_seconds` (0.4) pass, in game time (the minimum on a scene timer, so a speed change mid-action counts at once; review fix). Its hits still land on the `execute` keys; only the end waits. `ViewGate.saved_min_action` / `saved_pause` / `save_pacing` / `apply_settings` are the only code that names the two keys (GameMain, `pace` and the Settings screen use them). `skip()` and `skip_all` cut it short; 0 turns either off. |
 | `game/game_main.gd` | Each battle's gate takes the two values from the Settings (`battle_min_action`, `battle_pause`). |
 | `game/dev/commands/pace.gd` (new) | `pace [<min> [<pause>]]`: shows or sets them (saved; the current battle takes them at once). |
-| `presentation/demo/ui/settings.tscn`, `settings.gd` | Rows "Action time (s)" (0–3, step 0.1) and "Pause between actions (s)" (0–2); a change applies to the battle on screen. Speeds `[1, 2]` → `[1, 2, 3]`. |
+| `presentation/demo/ui/settings.tscn`, `settings.gd` | Rows "Action time (s)" (0–3, step 0.1) and "Pause between actions (s)" (0–2); a change applies to the battle on screen at once and is saved once, when the screen closes (`on_deactivated`, only if changed). Speeds `[1, 2]` → `[1, 2, 3]`. |
 | `presentation/demo/ui/command_panel.gd` | Speeds `[1, 2]` → `[1, 2, 3]`. |
 
 Measured after (same two fights): every action 1.4 s (an animation up to 1.0 s held to 1.0, then the pause); the invisible
