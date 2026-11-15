@@ -1,0 +1,92 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_binding"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_quad"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="4_glow"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_track"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="6_param"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="7_def"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="8_particles"]
+
+[sub_resource type="Resource" id="Resource_glow_color"]
+script = ExtResource("2_binding")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Curve" id="Curve_flat"]
+_limits = [-360.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_lie_flat"]
+script = ExtResource("5_track")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_flat")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_glow"]
+script = ExtResource("3_quad")
+shader = ExtResource("4_glow")
+shader_params = {
+"falloff": 2.6,
+"fade_out": 0.0,
+"intensity": 0.9,
+"pulse_amount": 0.35,
+"pulse_speed": 0.5
+}
+size = Vector2(0.75, 0.75)
+face_camera = false
+id = &"glow"
+space = 2
+socket = &"Base"
+loop = true
+loop_period = 10.0
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_glow_color")])
+tracks = Array[ExtResource("5_track")]([SubResource("Resource_lie_flat")])
+
+[sub_resource type="Resource" id="Resource_sparkle_color"]
+script = ExtResource("2_binding")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_sparkles"]
+offsets = PackedFloat32Array(0, 0.25, 0.6, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.6, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_sparkles"]
+script = ExtResource("8_particles")
+size_min = 0.07
+size_max = 0.13
+spread = 20
+speed_min = 0.12
+speed_max = 0.25
+spin_min = -60
+spin_max = 60
+emission_ring_radius = 0.28
+lifetime = 1.8
+explosiveness = 0
+gravity = Vector3(0, 0.05, 0)
+emission_offset = Vector3(0, 0.15, 0)
+amount = 8
+color_ramp = SubResource("Gradient_sparkles")
+id = &"sparkles"
+socket = &"Base"
+loop = true
+bindings = Array[ExtResource("2_binding")]([SubResource("Resource_sparkle_color")])
+
+[sub_resource type="Resource" id="Resource_param_color"]
+script = ExtResource("6_param")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.75, 0.3, 1)
+description = "Glow and sparkle colour (an armor piece's rarity)."
+
+[resource]
+script = ExtResource("7_def")
+id = &"fx.loot_glow"
+display_name = "Loot glow"
+params = Array[ExtResource("6_param")]([SubResource("Resource_param_color")])
+layers = Array[ExtResource("1_layer")]([SubResource("Resource_glow"), SubResource("Resource_sparkles")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "A soft glow on the floor under a pickup and a few sparkles rising, in one colour (armor in its rarity's hue, spec cube-style Set K)."
