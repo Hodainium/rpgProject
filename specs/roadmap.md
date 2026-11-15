@@ -40,6 +40,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5a5. `floor-chests` | ✅ Done, playtested 2026-11-15 (smart 4-member 31.0% → 31.3%); spec written 2026-11-14 (`specs/floor-chests.md`; a chest stays in its room and opens there like a shop, its items and armor pop out onto the floor as pickups beside the open chest; the map tints rooms with something left in them; reviewed and decided 2026-11-14) | |
 | 5e. `audio-pass` | ✅ Done, playtested 2026-11-15 (`specs/audio-pass.md`; one balanced sound bank from the EasyRPG RTP sounds (credited), Pixel Combat and Retro Menu FX, Retro Anime for two ults; every move, status, battle moment, menu and run event sounds; Master / Effects / Interface sliders; `CREDITS.md` and a Credits screen) | 2026-11-15 |
 | 5b. `card-ui` | ⬜ Not started (needs 5a; look decided, see its section) | |
+| 5b3. `floor-rooms` | ⬜ Not started (added 2026-11-15: bigger floors, a challenge room (three waves, an item reward), an armory (armor or a weapon) on every floor, item rooms give items only; before 5c) | 2026-11-15 |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; implemented with 5c) | 2026-11-09 |
 | 6. `observability` | ⬜ Not started | |
@@ -201,6 +202,7 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   redesign (its own chat), then 5e `audio-pass` (user).
 - 2026-11-15: the Lich redesign approved; 5a4 `cube-style` done. Next: 5e `audio-pass`.
 - 2026-11-15: 5e `audio-pass` built and playtested (user: "I loved the playtest"); next: 5b `card-ui`.
+- 2026-11-15: added 5b3 `floor-rooms` before 5c (user); 5c also gets more player agency over items and more keys (user).
 
 
 ## Design tuning: any time, not just in breaks
@@ -686,10 +688,22 @@ outline; Rare a glowing outline; Epic adds sparks; Legendary adds rising ribbon 
 aura effect with a `color` and a tier parameter, not one per rarity. Keys and armor pickups got
 their own 3D icons in 5a4 `cube-style` (Set K). Presentation only.
 
+### 5b3. `floor-rooms`
+Added 2026-11-15 at the user's request, **its own slice before 5c `card-balance`** (the room changes first, the balance on top).
+The user's playtest note: players barely get the chance to find items, and the floors are too small. Room changes:
+- **Bigger floors**: more rooms per floor (the floor generator's room counts per chapter or floor).
+- **A challenge room on every floor**: three waves of enemies, one after another; it **has a chance to spawn** on a floor
+  (user's words; the spec settles whether that chance is per floor or per wave), and clearing it **rewards an item**.
+- **An armory on every floor**: it gives an **armor piece or a weapon** (equipment only).
+- **Item rooms give items only** (today item rooms and pedestals draw from one pool with equipment; the armory takes over the
+  equipment).
+A rule change: the floor generator, the run hash and the run goldens change, the bots learn the new rooms, and the balance gate is
+re-measured afterwards in 5c. Rooms need looks (the challenge room, the armory) in the cube style.
+
 ### 5c. `card-balance`
 Added 2026-11-09, after 5b. The game balancing pass for cards: retune the win-rate gate on the core pool alone (30 / 30 / 21
 / 15 / 15 per room pool; the 31.8% figure was measured on the full item pool), then pack odds and prices in gems, dust
-and craft costs and refunds, and the gem income per run against them. Also here (decided 2026-11-09): **four new Food items** (Food holds 4, all core, today; this takes it to 8). Also here (decided 2026-11-09): **more events** in the demo content, so slice 5d's one-event-per-run rule rarely runs a chapter dry. Design break 3 (card feel) belongs here.
+and craft costs and refunds, and the gem income per run against them. Also here (decided 2026-11-09): **four new Food items** (Food holds 4, all core, today; this takes it to 8). Also here (decided 2026-11-09): **more events** in the demo content, so slice 5d's one-event-per-run rule rarely runs a chapter dry. Design break 3 (card feel) belongs here. Also here (user, 2026-11-15): **more player agency over items** (players barely get the chance to find items today) and **more keys in a run** (keys are very scarce), measured on top of 5b3 `floor-rooms`.
 
 ### 5d. `unique-events`
 Added 2026-11-09, next to 5c (the gate moves, so both are measured together). Spec `specs/unique-events.md`: an event picked
