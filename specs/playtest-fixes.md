@@ -183,6 +183,13 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   stencil at all, a path the design never uses). A pipeline is compiled per sample count, so changing the anti-aliasing during a
   session makes the stencil prepare draw its copies again (`FxStencilShaders.forget_prepared`; the next prepare, at run or battle
   start, redraws them).
+- **B26. The Warrior's and the Bulwark's helms show facets** (reported 2026-11-15 on the card portrait shots, fixed 2026-11-15).
+  A lathe part had one flat normal per face, so a dome showed its slices and bands as a grid; more slices only made the grid
+  finer. The user asked for the Bulwark's helm to be smoother and the Warrior's to be spherical with no grid. A lathe part gains
+  `smooth` (off by default, so no other look changes): each vertex takes the profile's normal at that point, averaged across
+  corners gentler than 60 degrees, so a dome shades round while its flat base stays sharp. Both helm domes use it, with a
+  16-point profile and 64 slices: the Warrior's kettle helm is a true half-sphere of its old size (radius and height 0.27), the
+  Bulwark's horned helm keeps its outline (0.34 wide, 0.32 high), its horns stay as they were.
 
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved. B9 and B10 only show the state of the client's existing calls (no new request, field or header); they are the
@@ -345,6 +352,15 @@ What stays: the status loops a fight leaves on the party fade out over about a s
 
 Cost: MSAA 4× renders the 3D at four samples per pixel on the edges; Off or FXAA are there for weak GPUs.
 
+### Fix for B26 (system code; the two helm files with your OK)
+| File | Change |
+|---|---|
+| `game/view/attachment_part.gd` | `smooth: bool` (LATHE only, default false), part of `mesh_key()`. |
+| `game/view/attachment_mesh.gd` | `lathe(profile, sides, smooth := false)`; `_smooth_lathe`: per-vertex normals from the profile, blended across corners under `SMOOTH_CORNER_DEGREES` (60), edges along the axis skipped (they spin into zero-area triangles). |
+| `presentation/demo/style/attachments/kettle_helm.tres` | Dome: profile 6 → 18 points (a half-sphere, radius 0.27), segments 32 → 64, `smooth = true`. |
+| `presentation/demo/style/attachments/horned_helm.tres` | Dome: profile 6 → 18 points on the same outline, segments 28 → 64, `smooth = true`. |
+| `tests/game/test_cube_style.gd` | `test_smooth_lathe_shades_a_dome_round`. |
+
 ### Fix for B24 (system code)
 | File | Change |
 |---|---|
@@ -450,6 +466,9 @@ N/A: no server metrics.
 - **B24:** `test_run_authority::test_worn_pieces_hash_in_name_order`, `test_battle_conditions_list_gear_in_name_order`,
   `test_determinism_guard` (the guard and its shapes); the rejected step replayed windowed and headless now reaches identical state
   and hashes at every action (seq 183-190); the card catalog rebuilds unchanged.
+- **B26:** `test_cube_style::test_smooth_lathe_shades_a_dome_round` (every dome vertex's normal within 0.98 of the sphere's, the
+  flat base still facing down, the default lathe still one normal per face, `smooth` in the cache key). **Seen:** both helms
+  round in the portrait shots (`H:\claudeOutShots\2026-11-15 card portraits\warrior.png`, `bulwark.png`).
 - **B25:** `test_graphics_settings` (every mode applies to a viewport and reads back, an unknown mode changes and saves nothing,
   the Graphics screen's rows (anti-aliasing with the saved mode, fullscreen, the moved quality selector), Settings opening Graphics
   and Audio on its own layer from the main menu and inside a run and Back returning to it, a push button outside a stack, the
