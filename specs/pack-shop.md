@@ -73,6 +73,44 @@ Postgres, inside the same read as the rest of the collection).
 No migration of money: nobody owns a pack before this slice, so `pack_inventory` starts empty. The e2e scenarios and tests that
 opened a pack with gems now buy one first.
 
+### 2.5 Openability and retiring with a refund (added 2026-11-15, the user)
+
+**One openability rule** (`CardRules.OpenProblem`): a pack can be opened when some rarity with odds above 0 still has an eligible
+card (non-core, not retired, in its sets; the draw spreads the odds over the rarities that have cards), and every rarity it can
+give (by its odds, a pity timer or a first-pack guarantee) has a card rate. It is checked when any pack-type version is saved,
+**retired versions too** (owned packs open with the latest version), at the buy (404 1408, not sold) and at the open (404 1408,
+the pack stays owned). Every pack holds 5 cards (`CardRules.CardsPerPack`; the user: "packs will always have 5 cards").
+
+**Retire with a refund.** When a pack type has to go, the admin saves a retired version with `refundUnopened: true` (only valid on a
+retired version, else 400 1401). Such a version skips the set and openability rules: nobody opens it, every unopened pack is
+refunded. A retired version may also keep a pack size other than 5 (it is never sold), so an old pack type can always be retired.
+
+**Pack types change only during maintenance** (the user, 2026-11-15: the server is taken down while card packs change). So there
+is no background job and no polling: a player's refunds are settled **at login** (the token issue; today `POST /auth/dev-token`)
+and **at the collection read** (`GET /cards/collection`, for a client whose token outlived the restart), for that player only:
+```
+Login / collection read → PackRefunds.RefundAsync(player): the player's pack_inventory rows with count > 0 whose type's latest
+  version is retired with refundUnopened; for each, ONE transaction:
+    1. pg_advisory_xact_lock(acct:<player>); re-read the latest version and the count (0: a second login already paid; skip)
+    2. amount = what the player paid for the packs left: opens spend the oldest packs first, so the n left are the newest
+       n bought; walk the player's 'buy' rows newest first, each unit at its version's price_gems. Units no buy row prices
+       (only a buy adds packs, so a damaged ledger) are never refunded for nothing nor taken away: the priced ones are paid,
+       the rest stay in the inventory with pack_inventory.refund_held = true (a support check), logins skip a held row until
+       operations clears the flag, an error log and rpg_pack_refund_failures_total{pack,reason="held"} tell them
+    3. pack_inventory count = 0; pack_ledger -n, reason 'refund', request_key = a UUID derived from (player, pack, version)
+       (unique on (player, reason, request_key): a second refund is impossible, and a player's own request keys never collide)
+    4. wallet_ledger +amount, reason 'pack_refund', key 'pack_refund:<player>:<pack>:<version>' (unique); wallet += amount
+    5. outbox PackRefunded (key = playerId)
+  then DEL wallet:{playerId}. A pack type that fails is logged and tried again next time; it never stops the others.
+```
+Postgres is a hard dependency of the game (the user): with it down the login answers 503 like every other endpoint. A refund that
+fails for one pack type (a data problem) does not stop the login; it is logged and tried again next time. Until
+the player signs in or reads the collection, an open of that pack is refused (404 1408, "being refunded") and the pack stays owned.
+**Held for a support check**, the collection lists the packs with `refundHeld: true` (`OwnedPackDto.RefundHeld`, left off the JSON
+otherwise) and the open refusal says the refund needs a support check, so the player is never told to wait for gems that will not
+come on their own.
+A type un-retired in the same maintenance window, before the player signs in, is not refunded.
+
 ## 3. Data contracts
 
 ### 3.1 C# records (`src/Rpg.Contracts/Cards/`, additive; `WhenWritingNull`)
@@ -80,7 +118,7 @@ opened a pack with gems now buy one first.
 ```csharp
 /// <summary>Body of POST /packs/{packId}/buy. Count 1..10 (Cards:MaxPacksPerBuy).</summary>
 public sealed record PackBuyRequest(Guid RequestKey, int Count);
-public sealed record PackBuyResponse(string PackId, int PackVersion, int Count, int GemsSpent, int Gems, int Owned);
+public sealed record PackBuyResponse(string PackId, int PackVersion, int Count, int GemsSpent, long Gems, int Owned);   // Gems: wallets are 64-bit (0010)
 
 /// <summary>Unopened packs the player owns, per pack type (0 counts are left out).</summary>
 public sealed record OwnedPackDto(string PackId, int Count);
@@ -93,12 +131,19 @@ public sealed record PackPurchasedPayload(string PlayerId, string PackId, int Pa
 ```
 `PackOpenedPayload.GemsSpent` is 0 from now on (the gems are on `PackPurchased`).
 
+Refunds (2.5): `PackTypeRequest` and `PackTypeResponse` gain `bool? RefundUnopened = null` (left off the JSON unless true, so the
+existing goldens and seed files are unchanged), and the event
+```csharp
+public sealed record PackRefundedPayload(string PlayerId, string PackId, int PackVersion, int Count, int GemsRefunded);
+```
+(`EventTypes.PackRefunded`, topic `rpg.economy.events`, key = playerId; `PackVersion` is the retirement version).
+
 Error code (`ApiErrors`): **1411 `NoPackOwned`** (409): an open with no unopened pack of that type.
 
 `Rpg.Client`: `BuyPackAsync(string packId, PackBuyRequest request)`. Godot: `ServerBridge.BuyPack(packId, json)` and
 `ServerLink.buy_pack(pack_id, count, key)` (data = `PackBuyResponse`).
 
-### 3.2 PostgreSQL: `Migrations/0009_pack_inventory.sql`
+### 3.2 PostgreSQL: `Migrations/0011_pack_inventory.sql` (0009 and 0010 were taken by review fixes)
 
 ```sql
 CREATE TABLE pack_inventory (
@@ -108,9 +153,12 @@ CREATE TABLE pack_inventory (
 CREATE TABLE pack_ledger (                      -- append-only: +n per buy, -1 per open
   id bigserial PRIMARY KEY, player_id uuid NOT NULL REFERENCES players(player_id), pack_id text NOT NULL,
   pack_version int NOT NULL, delta int NOT NULL CHECK (delta <> 0),
-  reason text NOT NULL CHECK (reason IN ('buy','open')),
+  reason text NOT NULL CHECK (reason IN ('buy','open','refund')),
   request_key uuid NOT NULL, opening_id uuid NULL, created_at timestamptz NOT NULL);
 CREATE INDEX pack_ledger_player ON pack_ledger (player_id, created_at);
+CREATE UNIQUE INDEX pack_ledger_request ON pack_ledger (player_id, reason, request_key);   -- one row per request or refund (reason: own key spaces)
+ALTER TABLE pack_types ADD COLUMN refund_unopened boolean NOT NULL DEFAULT false;
+-- account_requests.kind gains 'pack_buy'
 ```
 Invariant: `pack_inventory.count` equals the sum of the player's `pack_ledger.delta` for that pack (checked by a test). Both tables
 are written only inside the account transaction under `acct:<player>`, so a buy and an open of one player never interleave.
@@ -122,7 +170,7 @@ N/A: no Redis key (the inventory is not cached), no RabbitMQ queue. The event go
 
 ### 3.4 Configuration
 
-`Cards:MaxPacksPerBuy` (default 10). Prices stay on the pack types (`infra/economy/card_economy.json`, placeholder 100 gems; 5c
+`Cards:MaxPacksPerBuy` (default 10, checked at startup to be at least 1). Prices stay on the pack types (`infra/economy/card_economy.json`, placeholder 100 gems; 5c
 sets real prices).
 
 ## 4. Failure modes
@@ -139,17 +187,29 @@ sets real prices).
 | 8 | An owned pack with nothing left to draw | 404 1408; the pack stays owned | `CardCollectionTests.Undrawable_owned_pack_stays_owned` |
 | 9 | Redpanda down while buying (acceptance 3) | `PackPurchased` waits in the outbox and is published after the restart | e2e `card_redpanda_down` extended with a buy before the open |
 | 10 | Ledger and count disagree | Never: one transaction writes both | `CardCollectionTests.Inventory_equals_ledger_sum` after a mixed run of buys and opens |
+| 11 | A retirement (or any version) that packs could not be opened with | 400 1401 at the save, unless it refunds | `CardCollectionTests.Admin_ARetirementThatWouldTrapOwnedPacks_IsRefused` |
+| 12 | A pack type that became unopenable after its save (catalog, rates) | Not sold (404 1408); an owned one is refused and stays owned | `CardCollectionTests.APityOnlyRarity_NeedsACardRate_AtTheSaveTheBuyAndTheOpen` |
+| 13 | Retire with a refund | Each owner is paid what they paid for the packs left, once, at login or the collection read; counts 0; `PackRefunded`; opens refused until then | `CardCollectionTests.RetireWithRefund_PaysEachOwnerWhatTheyPaid_AtLoginOrTheCollectionRead` |
+| 14 | Two logins at once, a crash, a retry | Only uncommitted work repeats; the unique ledger keys stop a second payment | `CardCollectionTests.Refund_TwoLoginsAtOnce_PayOnce` |
+| 15 | The type is un-retired before the player signs in | That player keeps the packs and can open them | `CardCollectionTests.Refund_SkipsATypeUnretiredBeforeThePlayerSignsIn` |
+| 16 | `refundUnopened` on a version that is not retired | 400 1401 | `CardCollectionTests.RetireWithRefund_ARefundNeedsARetiredVersion` |
+| 17 | A player buys with the key their refund will derive | Refund rows have their own key space; the refund is paid | `CardCollectionTests.Refund_APlayersOwnKeyCannotBlockIt` |
+| 18 | Packs no buy row prices (a damaged ledger) | The priced ones paid; the rest kept and held (`refundHeld`), the open says "support check", later logins skip it, metric reason held | `CardCollectionTests.Refund_UnpricedPacks_AreHeldForASupportCheck_AndThePricedOnesPaid` |
+| 19 | Postgres down at login | 503, no token (Postgres is a hard dependency) | `CardCollectionTests.Login_WithPostgresUnreachable_Is503` |
 
-No verdicts, so no 2002; no queue, so no dead letters.
+No verdicts, so no 2002; no queue, so no dead letters (a refund that fails is retried at the player's next login or read).
 
 ## 5. Observability
 
 - `rpg_packs_bought_total{pack}` (counter of packs bought; `pack` is the pack type id, a handful of values, like the existing
   `rpg_packs_opened_total{pack}`).
 - `rpg_packs_owned` (gauge: unopened packs across all players, set by the existing monitor loop from `SUM(count)`).
-- `rpg_card_actions_refused_total{reason="no_pack_owned"}` (a new reason on the existing counter).
-- The buy runs inside the existing `rpg_account_action_duration_seconds{action="buy"}` histogram and the replay counter
-  `rpg_account_request_replays_total`.
+- `rpg_card_actions_refused_total{reason="NoPackOwned"}` (a new reason on the existing counter; the reasons are the failure names).
+- The buy runs inside the existing `rpg_account_action_duration_seconds{action="buy_pack"}` histogram (beside `open_pack`) and the
+  replay counter `rpg_account_request_replays_total`.
+- `rpg_packs_refunded_total{pack}` and `rpg_pack_refund_gems_total` (2.5); `rpg_pack_refund_failures_total{pack,reason}`
+  (reason `held`: packs waiting for a support check, `error`: a refund that failed and is retried at the next login), an alert
+  candidate.
 
 ## 6. Test plan
 
@@ -162,8 +222,11 @@ No verdicts, so no 2002; no queue, so no dead letters.
   `PackOpenResponse`, `PackPurchasedPayload`; `ApiErrors` 1411.
 - Migration test: `0009` applies on top of `0008` and on an empty database.
 - Metrics: `rpg_packs_bought_total` and the new refusal reason move as expected.
+- Refunds (rows 13-16): the amount at each buy's price with the oldest packs opened first, the ledger rows and event, a second run
+  paying nothing, an un-retired type skipped, the open refused while pending, the openability rule skipped for a refund version.
 
-**Godot** (`tests/game/test_cards.gd`, fake bridge): `ServerLink.buy_pack` sends the key and count and returns the response;
+**Godot** (`tests/game/test_cards.gd`, fake bridge): the console's `server pack-type ... retired=true refund=true` sends
+`refundUnopened`; `ServerLink.buy_pack` sends the key and count and returns the response;
 `packs buy` prints the key and the new count, retrying with the same key buys once; `packs` lists owned counts; the console's
 `packs open` refuses with the server's 1411 line when nothing is owned.
 
@@ -175,6 +238,9 @@ Both suites must pass (`tools/dotnet_test.sh`, `tools/godot_tests.sh`).
 ## 7. Decisions and what stays out
 
 - Hearthstone's model: buy, own, open (user, 2026-11-15). Up to 10 packs per buy; no discount for bulk (5c may add one).
-- An owned pack opens with the type's latest version even when retired; the price is the one at the buy.
-- **Stays out:** the screens (5b), real prices (5c), gifting or refunding packs, packs as rewards (a later slice can add a reason
+- An owned pack opens with the type's latest version even when retired; the price is the one at the buy (the user: packs always
+  hold 5 cards, so the newest version is right whenever it was bought).
+- A forced retirement refunds the unopened packs in gems (the user, 2026-11-15), at what each player paid; a refund version may
+  break the openability rule, since nobody opens it.
+- **Stays out:** the screens (5b), real prices (5c), gifting packs, refunds of opened packs, packs as rewards (a later slice can add a reason
   `reward` to `pack_ledger`), retention of `pack_ledger` (7b).
