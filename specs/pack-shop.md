@@ -87,17 +87,19 @@ refunded. A retired version may also keep a pack size other than 5 within the ol
 open with it), so an old pack type can always be retired.
 
 **Pack types change only during maintenance** (the user, 2026-11-15: the server is taken down while card packs change). So there
-is no background job and no polling: a player's refunds are settled **at login** (the token issue; today `POST /auth/dev-token`)
-and **at the collection read** (`GET /cards/collection`, for a client whose token outlived the restart), for that player only:
+is no background job and no polling: a player's refunds are settled **when they open the Open packs page** (the user: the one
+place they look for their packs), for that player only, through its own call, so the page can say where the packs went:
 ```
-Login / collection read → PackRefunds.RefundAsync(player): the player's pack_inventory rows with count > 0 whose type's latest
+Open packs page opens → POST /api/v1/packs/refunds (rate limited as `actions`; 200 PackRefundsResponse {refunded: [{packId, count,
+  gemsRefunded}]}, empty when nothing was due; the page shows "Your 3 Descent Packs were retired: +300 gems")
+  → PackRefunds.RefundAsync(player): the player's pack_inventory rows with count > 0, not held, whose type's latest
   version is retired with refundUnopened; for each, ONE transaction:
     1. pg_advisory_xact_lock(acct:<player>) and the shared lock on pack_type|<id> (the admin save holds it exclusively);
-       re-read the latest version and the count (0: a second login already paid; skip)
+       re-read the latest version and the count (0: a second visit already paid; skip)
     2. amount = what the player paid for the packs left: opens spend the oldest packs first, so the n left are the newest
        n bought; walk the player's 'buy' rows newest first, each unit at its version's price_gems. Units no buy row prices
        (only a buy adds packs, so a damaged ledger) are never refunded for nothing nor taken away: the priced ones are paid,
-       the rest stay in the inventory with pack_inventory.refund_held = true (a support check), logins skip a held row until
+       the rest stay in the inventory with pack_inventory.refund_held = true (a support check), visits skip a held row until
        operations clears the flag, an error log and rpg_pack_refund_failures_total{pack,reason="held"} tell them
     3. pack_inventory count -= the units paid; pack_ledger -n, reason 'refund', request_key = a UUID derived from (player,
        pack, version, units refunded before); the price walk skips those earlier units (a held refund cleared later, or a type
@@ -107,9 +109,10 @@ Login / collection read → PackRefunds.RefundAsync(player): the player's pack_i
     5. outbox PackRefunded (key = playerId)
   then DEL wallet:{playerId}. A pack type that fails is logged and tried again next time; it never stops the others.
 ```
-Postgres is a hard dependency of the game (the user): with it down the login answers 503 like every other endpoint. A refund that
-fails for one pack type (a data problem) does not stop the login; it is logged and tried again next time. Until
-the player signs in or reads the collection, an open of that pack is refused (404 1408, "being refunded") and the pack stays owned.
+Login and the collection read do not refund. Postgres is a hard dependency of the game (the user): with it down the login answers
+503 (it checks the database) like every other endpoint. A refund that fails for one pack type (a data problem) is logged and tried
+again on the next visit; the others are still paid. Until the player opens the Open packs page, an open of that pack is refused
+(404 1408, "its gems come back on the Open packs page") and the pack stays owned.
 **Held for a support check**, the collection lists the packs with `refundHeld: true` (`OwnedPackDto.RefundHeld`, left off the JSON
 otherwise) and the open refusal says the refund needs a support check, so the player is never told to wait for gems that will not
 come on their own.
@@ -135,7 +138,9 @@ public sealed record PackPurchasedPayload(string PlayerId, string PackId, int Pa
 ```
 `PackOpenedPayload.GemsSpent` is 0 from now on (the gems are on `PackPurchased`).
 
-Refunds (2.5): `PackTypeRequest` and `PackTypeResponse` gain `bool? RefundUnopened = null` (left off the JSON unless true, so the
+Refunds (2.5): `PackRefundsResponse(IReadOnlyList<PackRefundDto> Refunded)` and `PackRefundDto(string PackId, int Count,
+int GemsRefunded)` for `POST /packs/refunds` (`Rpg.Client.RefundPacksAsync`, `ServerBridge.RefundPacks`, `ServerLink.refund_packs`,
+console `packs refunds`); `PackTypeRequest` and `PackTypeResponse` gain `bool? RefundUnopened = null` (left off the JSON unless true, so the
 existing goldens and seed files are unchanged), and the event
 ```csharp
 public sealed record PackRefundedPayload(string PlayerId, string PackId, int PackVersion, int Count, int GemsRefunded);
@@ -193,15 +198,15 @@ sets real prices).
 | 10 | Ledger and count disagree | Never: one transaction writes both | `CardCollectionTests.Inventory_equals_ledger_sum` after a mixed run of buys and opens |
 | 11 | A retirement (or any version) that packs could not be opened with | 400 1401 at the save, unless it refunds | `CardCollectionTests.Admin_ARetirementThatWouldTrapOwnedPacks_IsRefused` |
 | 12 | A pack type that became unopenable after its save (catalog, rates) | Not sold (404 1408); an owned one is refused and stays owned | `CardCollectionTests.APityOnlyRarity_NeedsACardRate_AtTheSaveTheBuyAndTheOpen` |
-| 13 | Retire with a refund | Each owner is paid what they paid for the packs left, once, at login or the collection read; counts 0; `PackRefunded`; opens refused until then | `CardCollectionTests.RetireWithRefund_PaysEachOwnerWhatTheyPaid_AtLoginOrTheCollectionRead` |
-| 14 | Two logins at once, a crash, a retry | Only uncommitted work repeats; the unique ledger keys stop a second payment | `CardCollectionTests.Refund_TwoLoginsAtOnce_PayOnce` |
-| 15 | The type is un-retired before the player signs in | That player keeps the packs and can open them | `CardCollectionTests.Refund_SkipsATypeUnretiredBeforeThePlayerSignsIn` |
+| 13 | Retire with a refund | Each owner is paid what they paid for the packs left, once, when they open the Open packs page; counts 0; `PackRefunded`; opens refused until then | `CardCollectionTests.RetireWithRefund_PaysEachOwnerWhatTheyPaid_OnTheOpenPacksPage` |
+| 14 | Two visits at once, a crash, a retry | Only uncommitted work repeats; the unique ledger keys stop a second payment | `CardCollectionTests.Refund_TwoVisitsAtOnce_PayOnce` |
+| 15 | The type is un-retired before the player visits the page | That player keeps the packs and can open them | `CardCollectionTests.Refund_SkipsATypeUnretiredBeforeThePlayerVisits` |
 | 16 | `refundUnopened` on a version that is not retired | 400 1401 | `CardCollectionTests.RetireWithRefund_ARefundNeedsARetiredVersion` |
 | 17 | A player buys with the key their refund will derive | Refund rows have their own key space; the refund is paid | `CardCollectionTests.Refund_APlayersOwnKeyCannotBlockIt` |
-| 18 | Packs no buy row prices (a damaged ledger) | The priced ones paid; the rest kept and held (`refundHeld`), the open says "support check", later logins skip it, metric reason held | `CardCollectionTests.Refund_UnpricedPacks_AreHeldForASupportCheck_AndThePricedOnesPaid` |
+| 18 | Packs no buy row prices (a damaged ledger) | The priced ones paid; the rest kept and held (`refundHeld`), the open says "support check", later visits skip it, metric reason held | `CardCollectionTests.Refund_UnpricedPacks_AreHeldForASupportCheck_AndThePricedOnesPaid` |
 | 19 | Postgres down at login | 503, no token (Postgres is a hard dependency) | `CardCollectionTests.Login_WithPostgresUnreachable_Is503` |
 
-No verdicts, so no 2002; no queue, so no dead letters (a refund that fails is retried at the player's next login or read).
+No verdicts, so no 2002; no queue, so no dead letters (a refund that fails is retried on the player's next visit of the Open packs page).
 
 ## 5. Observability
 
@@ -212,7 +217,7 @@ No verdicts, so no 2002; no queue, so no dead letters (a refund that fails is re
 - The buy runs inside the existing `rpg_account_action_duration_seconds{action="buy_pack"}` histogram (beside `open_pack`) and the
   replay counter `rpg_account_request_replays_total`.
 - `rpg_packs_refunded_total{pack}` and `rpg_pack_refund_gems_total` (2.5); `rpg_pack_refund_failures_total{pack,reason}`
-  (reason `held`: packs waiting for a support check, `error`: a refund that failed and is retried at the next login), an alert
+  (reason `held`: packs waiting for a support check, `error`: a refund that failed and is retried on the next visit), an alert
   candidate.
 
 ## 6. Test plan

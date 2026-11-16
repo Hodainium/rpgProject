@@ -117,6 +117,8 @@ Main menu ── Shop ──▶ ShopScreen: ServerLink.get_packs() + get_collect
 
 ```
 Main menu ── Open packs ──▶ PackScreen
+  ServerLink.refund_packs() first (spec pack-shop 2.5: the one place refunds of retired packs are paid): each refunded entry
+                                               → a notice "Your 3 Descent Packs were retired: +300 gems" (gems total animates up)
   ServerLink.get_packs() + get_collection()  → left column: each pack type the player owns, with its count badge ("x 7");
                                                pity line per type ("Epic in 3 · Legendary in 12 · Mythic in 18 packs": PityPacks - missed),
                                                an Odds button (OddsPer10000 as percentages; slice 5 3.4b); no packs → "Buy packs in the Shop"
