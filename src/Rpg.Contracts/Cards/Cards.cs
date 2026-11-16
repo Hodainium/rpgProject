@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Rpg.Contracts.Cards;
 
 // Spec card-collection 3.1. Wire shapes only: the pack draw, the rates and every rule live on the server (Rpg.Economy).
@@ -38,9 +40,18 @@ public sealed record CardEconomySeed(IReadOnlyList<CardRateRequest> Rates, IRead
 /// <param name="Source">pack | craft.</param>
 public sealed record OwnedCardDto(string CardId, DateTimeOffset AcquiredAt, string Source, string? LockedByRunId);
 
-/// <summary>Core cards are implied (everyone owns them) and not listed in Owned. ActiveRunStatus: Active | Verifying.</summary>
+/// <summary>
+/// Core cards are implied (everyone owns them) and not listed in Owned. ActiveRunStatus: Active | Verifying.
+/// OwnedPacks (spec pack-shop 2.3): the unopened packs, sorted by pack id, zero counts left out; an empty list when none.
+/// </summary>
 public sealed record CollectionResponse(IReadOnlyList<OwnedCardDto> Owned, long Gems, long Dust, long Version, string? ActiveRunId,
-    string? ActiveRunStatus, IReadOnlyList<PityStateDto> Pity);
+    string? ActiveRunStatus, IReadOnlyList<PityStateDto> Pity, IReadOnlyList<OwnedPackDto> OwnedPacks);
+
+/// <summary>Unopened packs the player owns, per pack type (spec pack-shop 3.1; 0 counts are left out).</summary>
+/// <param name="RefundHeld">Spec pack-shop 2.5: true while the refund of these packs waits for a support check (null otherwise,
+/// left off the JSON).</param>
+public sealed record OwnedPackDto(string PackId, int Count,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? RefundHeld = null);
 
 /// <summary>The caller's counters for one pack type: packs opened since each tracked rarity last dropped.</summary>
 public sealed record PityStateDto(string PackId, IReadOnlyDictionary<string, int> MissedPacks);
@@ -58,22 +69,45 @@ public sealed record AccountActionRequest(Guid RequestKey);
 public sealed record PackCardDto(string CardId, string Rarity, bool Duplicate, int DustGained, bool Pity);
 
 /// <param name="DrawSeed">A decimal string (int64 is not safe as a JSON number in browsers).</param>
+/// <param name="GemsSpent">0 since spec pack-shop: an open spends an owned pack, the gems were spent at the buy.</param>
+/// <param name="PacksLeft">Unopened packs of this type the player still owns after this open (spec pack-shop 2.2).</param>
 public sealed record PackOpenResponse(string OpeningId, string PackId, int PackVersion, int GemsSpent,
-    IReadOnlyList<PackCardDto> Cards, long Gems, long Dust, string DrawSeed);
+    IReadOnlyList<PackCardDto> Cards, long Gems, long Dust, string DrawSeed, int PacksLeft);
+
+/// <summary>One pack type's unopened packs paid back in gems (spec pack-shop 2.5).</summary>
+public sealed record PackRefundDto(string PackId, int Count, int GemsRefunded);
+
+/// <summary>
+/// POST /packs/refunds, called by the Open packs page when it opens (spec pack-shop 2.5): the refunds this call paid, so the
+/// page can say where the packs went ("Your 3 Descent Packs were retired: +300 gems"); empty when nothing was due.
+/// </summary>
+public sealed record PackRefundsResponse(IReadOnlyList<PackRefundDto> Refunded);
+
+/// <summary>Body of POST /packs/{packId}/buy (spec pack-shop 3.1). Count 1..Cards:MaxPacksPerBuy (10).</summary>
+public sealed record PackBuyRequest(Guid RequestKey, int Count);
+
+/// <param name="Gems">The balance after the buy.</param>
+/// <param name="Owned">Unopened packs of this type the player owns after the buy.</param>
+public sealed record PackBuyResponse(string PackId, int PackVersion, int Count, int GemsSpent, long Gems, int Owned);
 
 public sealed record DustResponse(string CardId, int DustGained, int RateVersion, long Dust);
 
 public sealed record CraftResponse(string CardId, int DustSpent, int RateVersion, long Dust);
 
 // Admin (economy-admin role).
+/// <param name="RefundUnopened">Spec pack-shop 2.5: on a retired version only; every unopened pack is refunded in gems, and the
+/// version may break the openability rule (nobody opens it). Null (left off the JSON) = false.</param>
 public sealed record PackTypeRequest(string PackId, string Name, int PriceGems, int CardCount,
     IReadOnlyDictionary<string, int> OddsPer10000, IReadOnlyList<string> SetIds, bool Retired,
-    IReadOnlyDictionary<string, int> PityPacks, IReadOnlyDictionary<string, int> FirstGuarantees, string? MinRarityPerPack);
+    IReadOnlyDictionary<string, int> PityPacks, IReadOnlyDictionary<string, int> FirstGuarantees, string? MinRarityPerPack,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? RefundUnopened = null);
 
+/// <param name="RefundUnopened">True on a retire-with-refund version; null otherwise (left off the JSON).</param>
 public sealed record PackTypeResponse(string PackId, string Name, int Version, int PriceGems, int CardCount,
     IReadOnlyDictionary<string, int> OddsPer10000, IReadOnlyList<string> SetIds, bool Retired,
     IReadOnlyDictionary<string, int> PityPacks, IReadOnlyDictionary<string, int> FirstGuarantees, string? MinRarityPerPack,
-    DateTimeOffset EffectiveFrom, string CreatedBy);
+    DateTimeOffset EffectiveFrom, string CreatedBy,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? RefundUnopened = null);
 
 public sealed record PackTypeListResponse(IReadOnlyList<PackTypeResponse> PackTypes);
 

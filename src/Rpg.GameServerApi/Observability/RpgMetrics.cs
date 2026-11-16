@@ -48,6 +48,11 @@ public sealed class RpgMetrics
     private long _gemsPending = -1;
     // Spec card-collection 5.
     private readonly Counter<long> _packsOpened;
+    private readonly Counter<long> _packsBought;   // spec pack-shop 5
+    private readonly Counter<long> _packsRefunded;
+    private readonly Counter<long> _packRefundGems;
+    private readonly Counter<long> _packRefundFailures;
+    private long _packsOwned = -1;
     private readonly Counter<long> _packCards;
     private readonly Counter<long> _packPity;
     private readonly Counter<long> _cardsDusted;
@@ -133,6 +138,17 @@ public sealed class RpgMetrics
         _walletReads = meter.CreateCounter<long>("rpg.wallet_reads", description: "Wallet reads by where the answer came from.");
         // Spec card-collection 5. Labels are small fixed sets: never a card or character id; `pack` is a configured pack type.
         _packsOpened = meter.CreateCounter<long>("rpg.packs_opened", description: "Packs opened, by pack type.");
+        _packsBought = meter.CreateCounter<long>("rpg.packs_bought", description: "Packs bought, by pack type (spec pack-shop 5).");
+        _packsRefunded = meter.CreateCounter<long>("rpg.packs_refunded",
+            description: "Unopened packs paid back in gems when their type was retired with a refund, by pack type (spec pack-shop 2.5).");
+        _packRefundGems = meter.CreateCounter<long>("rpg.pack_refund_gems", description: "Gems paid back for refunded packs.");
+        _packRefundFailures = meter.CreateCounter<long>("rpg.pack_refund_failures",
+            description: "Refunds not paid, by pack type and reason: held (packs no buy row prices, waiting for a support check) or error.");
+        meter.CreateObservableGauge("rpg.packs_owned",
+            () => Interlocked.Read(ref _packsOwned) is var count and >= 0
+                ? [new Measurement<long>(count)]
+                : Array.Empty<Measurement<long>>(),
+            description: "Unopened packs across all players (SUM of pack_inventory.count), recomputed from Postgres every Monitors:Interval.");
         _packCards = meter.CreateCounter<long>("rpg.pack_cards", description: "Cards drawn from packs, by rarity and whether they were duplicates.");
         _packPity = meter.CreateCounter<long>("rpg.pack_pity_triggers", description: "Cards forced by a pity timer, by rarity.");
         _cardsDusted = meter.CreateCounter<long>("rpg.cards_dusted", description: "Cards dusted.");
@@ -283,10 +299,27 @@ public sealed class RpgMetrics
     public void WalletRead(string source) => _walletReads.Add(1, new KeyValuePair<string, object?>("source", source));
 
     // Spec card-collection 5.
-    public void PackOpened(string pack, int gems)
+    /// <summary>Spec pack-shop: the gems are spent at the buy, so an open adds no gems.</summary>
+    public void PackOpened(string pack) => _packsOpened.Add(1, new KeyValuePair<string, object?>("pack", pack));
+
+    /// <summary>Spec pack-shop 5: packs bought and the gems they cost.</summary>
+    public void PacksBought(string pack, int count, int gems)
     {
-        _packsOpened.Add(1, new KeyValuePair<string, object?>("pack", pack));
+        _packsBought.Add(count, new KeyValuePair<string, object?>("pack", pack));
         _gemsSpent.Add(gems, new KeyValuePair<string, object?>("reason", "pack"));
+    }
+
+    public void SetPacksOwned(long count) => Interlocked.Exchange(ref _packsOwned, count);
+
+    /// <summary>Spec pack-shop 2.5: a refund not paid. reason: held | error.</summary>
+    public void PackRefundFailed(string pack, string reason) => _packRefundFailures.Add(1,
+        new KeyValuePair<string, object?>("pack", pack), new KeyValuePair<string, object?>("reason", reason));
+
+    /// <summary>Spec pack-shop 2.5: one player's refund.</summary>
+    public void PacksRefunded(string pack, int count, int gems)
+    {
+        _packsRefunded.Add(count, new KeyValuePair<string, object?>("pack", pack));
+        _packRefundGems.Add(gems);
     }
 
     public void PackCard(string rarity, bool duplicate, bool pity, int dust)

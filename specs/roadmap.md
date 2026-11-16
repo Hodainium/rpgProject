@@ -39,7 +39,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5a4c. `food-items` | ✅ Done, playtested 2026-11-14 (`specs/food-items.md`, synced; food becomes passive: the holder heals on pickup and keeps a max HP or max SP bonus; the player chooses who gets every drop (the last boss drops nothing; encounter rewards may be CHOOSE); smart 4-member 29.3% → 31.0%; merged in PR #44; open: `GiveItem` / `RemoveItem` inside an item hook ignore the holder (the Mystery Box), older code) | 2026-11-14 |
 | 5a5. `floor-chests` | ✅ Done, playtested 2026-11-15 (smart 4-member 31.0% → 31.3%); spec written 2026-11-14 (`specs/floor-chests.md`; a chest stays in its room and opens there like a shop, its items and armor pop out onto the floor as pickups beside the open chest; the map tints rooms with something left in them; reviewed and decided 2026-11-14) | |
 | 5e. `audio-pass` | ✅ Done, playtested 2026-11-15 (`specs/audio-pass.md`; one balanced sound bank from the EasyRPG RTP sounds (credited), Pixel Combat and Retro Menu FX, Retro Anime for two ults; every move, status, battle moment, menu and run event sounds; Master / Effects / Interface sliders; `CREDITS.md` and a Credits screen) | 2026-11-15 |
-| 5b0. `pack-shop` | 📝 Spec written 2026-11-15 (`specs/pack-shop.md`; packs bought in a shop and owned unopened, open spends an owned pack; server half only, before 5b) | 2026-11-15 |
+| 5b0. `pack-shop` | ✅ Built 2026-11-15, on `feat/pack-shop` (`specs/pack-shop.md`; packs bought in a shop and owned unopened, open spends an owned pack, 5 cards per pack, one openability rule, retire with a refund settled at login (no polling; unpriced packs held for a support check), Postgres down = 503 at login; console `packs buy`; 595 .NET, 932 Godot, the four card e2e scenarios) | 2026-11-15 |
 | 5b. `card-ui` | 📝 Spec written 2026-11-15 (`specs/card-ui.md`; screens to the approved browser prototype in `specs/design/card-ui-prototype/`; card faces A and B both built, picked in the engine; game-icons item art, prerendered cube portraits; after 5b0) | 2026-11-15 |
 | 5b3. `floor-rooms` | ⬜ Not started (added 2026-11-15: bigger floors, a challenge room (three waves, an item reward), an armory (armor or a weapon) on every floor, item rooms give items only; before 5c) | 2026-11-15 |
 | 5c. `card-balance` | ⬜ Not started | |
@@ -209,6 +209,7 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-11-15: 5b `card-ui` specced; the user approved the browser prototype of the screens. Packs are bought in a separate Shop and
   owned unopened, as in Hearthstone (user), so the server half becomes its own sub-slice **5b0 `pack-shop`**, built first.
   Order: 5b0, 5b, 5b2, 5b3, 5d, 5c.
+- 2026-11-15: 5b0 `pack-shop` built, with the openability rule, 5-card packs and retire-with-refund (user); next: 5b `card-ui`.
 
 
 ## Design tuning: any time, not just in breaks

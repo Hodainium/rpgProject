@@ -102,12 +102,15 @@ builder.Services.AddOptions<EconomyOptions>().BindConfiguration(EconomyOptions.S
 builder.Services.AddHostedService<RewardRuleSeeder>();
 builder.Services.AddSingleton<WalletStore>();
 // Spec card-collection: the card catalog, the account's cards, pack opening, dust and craft.
-builder.Services.AddOptions<CardOptions>().BindConfiguration(CardOptions.Section);
+builder.Services.AddOptions<CardOptions>().BindConfiguration(CardOptions.Section)
+    .Validate(o => o.MaxPacksPerBuy >= 1, "Cards:MaxPacksPerBuy must be at least 1 (spec pack-shop 3.4).")
+    .ValidateOnStart();
 builder.Services.AddSingleton<Rpg.Economy.Cards.CardStore>();
 builder.Services.AddSingleton<CatalogCache>();
 builder.Services.AddSingleton<CardSeedState>();
 builder.Services.AddHostedService<CardSeeder>();
 builder.Services.AddHostedService<CardsOwnedMonitor>();
+builder.Services.AddSingleton<PackRefunds>();   // spec pack-shop 2.5: POST /packs/refunds (the Open packs page), no timer
 builder.Services.AddSingleton<WalletCache>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddHostedService<PresenceMonitor>();

@@ -110,10 +110,28 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
     public Task<CollectionResponse> GetCollectionAsync(CancellationToken ct = default) =>
         RequiredAsync<CollectionResponse>(HttpMethod.Get, "api/v1/cards/collection", null, ct);
 
-    /// <summary>POST /api/v1/packs/{packId}/open: spends gems. Retrying with the same key returns the same cards.</summary>
+    /// <summary>
+    /// POST /api/v1/packs/{packId}/open: spends one owned pack (409 1411 when there is none). Retrying with the same key returns
+    /// the same cards.
+    /// </summary>
     public Task<PackOpenResponse> OpenPackAsync(string packId, Guid requestKey, CancellationToken ct = default) =>
         RequiredAsync<PackOpenResponse>(HttpMethod.Post, $"api/v1/packs/{Uri.EscapeDataString(packId)}/open",
             JsonContent.Create(new AccountActionRequest(requestKey), options: RpgJson.Options), ct);
+
+    /// <summary>
+    /// POST /api/v1/packs/refunds (spec pack-shop 2.5): the Open packs page's call when it opens. Pays back unopened packs of a
+    /// type retired with a refund and returns what it paid.
+    /// </summary>
+    public Task<PackRefundsResponse> RefundPacksAsync(CancellationToken ct = default) =>
+        RequiredAsync<PackRefundsResponse>(HttpMethod.Post, "api/v1/packs/refunds", null, ct);
+
+    /// <summary>
+    /// POST /api/v1/packs/{packId}/buy (spec pack-shop 2.1): spends gems for 1..10 unopened packs. Retrying with the same key
+    /// returns the stored response and buys once.
+    /// </summary>
+    public Task<PackBuyResponse> BuyPackAsync(string packId, PackBuyRequest request, CancellationToken ct = default) =>
+        RequiredAsync<PackBuyResponse>(HttpMethod.Post, $"api/v1/packs/{Uri.EscapeDataString(packId)}/buy",
+            JsonContent.Create(request, options: RpgJson.Options), ct);
 
     /// <summary>POST /api/v1/cards/{cardId}/dust: removes the card for dust (409 1403 while the active run holds it).</summary>
     public Task<DustResponse> DustCardAsync(string cardId, Guid requestKey, CancellationToken ct = default) =>

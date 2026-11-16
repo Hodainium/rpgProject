@@ -25,8 +25,9 @@ public static class ApiErrors
     public const int CardAlreadyOwned = 1405;         // 409: craft of a card already held
     public const int CardNotOwned = 1406;             // 409: dust of a card not held
     public const int RequestKeyReused = 1407;         // 409: the key was used for a different action or body
-    public const int PackUnavailable = 1408;          // 404: unknown or retired pack type
+    public const int PackUnavailable = 1408;          // 404: buy of an unknown or retired pack type; open of a type that cannot be opened right now or is being refunded (the pack stays owned)
     public const int CharacterLocked = 1409;          // 400: run start with a character the account does not own
     public const int RunVerifying = 1410;             // 409: abandon refused, a won run is waiting for its verdict
+    public const int NoPackOwned = 1411;              // 409: an open with no unopened pack of that type (spec pack-shop 3.1)
     public const int RateLimited = 1201;              // 429 + Retry-After
 }

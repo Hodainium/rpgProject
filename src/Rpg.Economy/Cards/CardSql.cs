@@ -11,7 +11,7 @@ namespace Rpg.Economy.Cards;
 /// <summary>Small Npgsql helpers shared by the card store files (spec card-collection 3).</summary>
 internal static class CardSql
 {
-    public static NpgsqlCommand Cmd(NpgsqlConnection connection, NpgsqlTransaction transaction, string sql, params object?[] values)
+    public static NpgsqlCommand Cmd(NpgsqlConnection connection, NpgsqlTransaction? transaction, string sql, params object?[] values)
     {
         var command = new NpgsqlCommand(sql, connection, transaction);
         foreach (var value in values)
@@ -87,12 +87,12 @@ internal static class CardSql
     }
 
     private const string PackColumns =
-        "pack_id, name, version, price_gems, card_count, odds::text, set_ids, retired, pity::text, first_guarantees::text, min_rarity, effective_from, created_by";
+        "pack_id, name, version, price_gems, card_count, odds::text, set_ids, retired, pity::text, first_guarantees::text, min_rarity, effective_from, created_by, refund_unopened";
 
     private static PackType ReadPack(NpgsqlDataReader reader) => new(reader.GetString(0), reader.GetString(1), reader.GetInt32(2),
         reader.GetInt32(3), reader.GetInt32(4), IntMap(reader.GetString(5)), reader.GetFieldValue<string[]>(6), reader.GetBoolean(7),
         IntMap(reader.GetString(8)), IntMap(reader.GetString(9)), reader.IsDBNull(10) ? null : reader.GetString(10),
-        reader.GetFieldValue<DateTimeOffset>(11), reader.GetString(12));
+        reader.GetFieldValue<DateTimeOffset>(11), reader.GetString(12), reader.GetBoolean(13));
 
     public static async Task<PackType?> LatestPackAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, string packId,
         CancellationToken ct)

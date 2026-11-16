@@ -96,8 +96,9 @@ public sealed class DevTokenIssuer(IOptions<AuthOptions> options, TimeProvider c
 public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this WebApplication app) =>
-        app.MapPost("/api/v1/auth/dev-token", (DevTokenRequest? request, DevTokenIssuer issuer,
-            IOptions<AuthOptions> options, IHostEnvironment environment, RpgMetrics metrics) =>
+        app.MapPost("/api/v1/auth/dev-token", async (DevTokenRequest? request, DevTokenIssuer issuer,
+            IOptions<AuthOptions> options, IHostEnvironment environment, RpgMetrics metrics, Npgsql.NpgsqlDataSource dataSource,
+            CancellationToken ct) =>
         {
             // Off outside Development whatever the configuration says; 404, as if the route did not exist.
             if (!options.Value.DevTokens || !environment.IsDevelopment())
@@ -109,6 +110,13 @@ public static class AuthEndpoints
             {
                 return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Bad player name",
                     detail: $"playerName takes 1–{DevTokenIssuer.MaxNameLength} letters, digits, '-', '_' or '.'.");
+            }
+
+            // Postgres is a hard dependency of the game (the user, 2026-11-15): with it unreachable, no token (503, the
+            // PostgresUnavailableHandler), since nothing the player could do next would work.
+            await using (var ping = dataSource.CreateCommand("SELECT 1"))
+            {
+                await ping.ExecuteScalarAsync(ct);
             }
 
             metrics.DevTokenIssued();

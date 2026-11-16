@@ -24,6 +24,9 @@ public sealed class CardOptions
 
     /// <summary><c>infra/economy/card_economy.json</c>: placeholder rates and packs, filled only where no row exists.</summary>
     public string? SeedFile { get; set; }
+
+    /// <summary>The most packs one buy may ask for (spec pack-shop 3.4).</summary>
+    public int MaxPacksPerBuy { get; set; } = 10;
 }
 
 /// <summary>
