@@ -152,10 +152,10 @@ static func _smooth_lathe(st: SurfaceTool, profile: PackedVector2Array, sides: i
 		var own := normals[k]
 		if own == Vector2.ZERO:
 			continue  # a zero-length edge
-		var n_start := _blend(own, normals[(k - 1 + edges) % edges] if edges > 1 else Vector2.ZERO, cos_corner)
-		var n_end := _blend(own, normals[(k + 1) % edges] if edges > 1 else Vector2.ZERO, cos_corner)
 		var p := profile[k]
 		var q := profile[(k + 1) % count]
+		var n_start := _on_axis(p, _blend(own, normals[(k - 1 + edges) % edges] if edges > 1 else Vector2.ZERO, cos_corner))
+		var n_end := _on_axis(q, _blend(own, normals[(k + 1) % edges] if edges > 1 else Vector2.ZERO, cos_corner))
 		if is_zero_approx(p.x) and is_zero_approx(q.x):
 			continue  # an edge along the axis spins into nothing (zero-area triangles with sideways normals)
 		for s in sides:
@@ -174,6 +174,14 @@ static func _smooth_lathe(st: SurfaceTool, profile: PackedVector2Array, sides: i
 ## A profile point or normal (x = radius, y = height) turned to angle `a` around Y.
 static func _spin(v: Vector2, a: float) -> Vector3:
 	return Vector3(cos(a) * v.x, v.y, sin(a) * v.x)
+
+
+## A vertex on the spin axis (a dome's apex or pole) is one point shared by every side: its normal is straight along the axis.
+## Without this it keeps its last edge's tilted normal, turned to each side's angle, and the tip shades as a star.
+static func _on_axis(point: Vector2, normal: Vector2) -> Vector2:
+	if is_zero_approx(point.x) and not is_zero_approx(normal.y):
+		return Vector2(0.0, signf(normal.y))
+	return normal
 
 
 ## The edge's normal averaged with its neighbour's when the corner between them is gentler than the limit; else its own.

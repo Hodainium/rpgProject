@@ -360,6 +360,7 @@ Cost: MSAA 4× renders the 3D at four samples per pixel on the edges; Off or FXA
 | `presentation/demo/style/attachments/kettle_helm.tres` | Dome: profile 6 → 18 points (a half-sphere, radius 0.27), segments 32 → 64, `smooth = true`. |
 | `presentation/demo/style/attachments/horned_helm.tres` | Dome: profile 6 → 18 points on the same outline, segments 28 → 64, `smooth = true`. |
 | `tests/game/test_cube_style.gd` | `test_smooth_lathe_shades_a_dome_round`. |
+| `game/view/attachment_mesh.gd` (follow-up, 2026-11-15, found by the pack-shop review) | `_on_axis`: a vertex on the spin axis (a dome's apex) points straight along the axis. It kept its last edge's tilted normal turned to each side's angle, so the tip of a smooth dome shaded as a small star. |
 
 ### Fix for B24 (system code)
 | File | Change |
@@ -467,7 +468,8 @@ N/A: no server metrics.
   `test_determinism_guard` (the guard and its shapes); the rejected step replayed windowed and headless now reaches identical state
   and hashes at every action (seq 183-190); the card catalog rebuilds unchanged.
 - **B26:** `test_cube_style::test_smooth_lathe_shades_a_dome_round` (every dome vertex's normal within 0.98 of the sphere's, the
-  flat base still facing down, the default lathe still one normal per face, `smooth` in the cache key). **Seen:** both helms
+  flat base still facing down, the default lathe still one normal per face, `smooth` in the cache key; the follow-up: every apex
+  vertex within 0.00001 of straight up). **Seen:** both helms
   round in the portrait shots (`H:\claudeOutShots\2026-11-15 card portraits\warrior.png`, `bulwark.png`).
 - **B25:** `test_graphics_settings` (every mode applies to a viewport and reads back, an unknown mode changes and saves nothing,
   the Graphics screen's rows (anti-aliasing with the saved mode, fullscreen, the moved quality selector), Settings opening Graphics
