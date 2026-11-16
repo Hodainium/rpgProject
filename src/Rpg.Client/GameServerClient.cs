@@ -119,6 +119,13 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
             JsonContent.Create(new AccountActionRequest(requestKey), options: RpgJson.Options), ct);
 
     /// <summary>
+    /// POST /api/v1/packs/refunds (spec pack-shop 2.5): the Open packs page's call when it opens. Pays back unopened packs of a
+    /// type retired with a refund and returns what it paid.
+    /// </summary>
+    public Task<PackRefundsResponse> RefundPacksAsync(CancellationToken ct = default) =>
+        RequiredAsync<PackRefundsResponse>(HttpMethod.Post, "api/v1/packs/refunds", null, ct);
+
+    /// <summary>
     /// POST /api/v1/packs/{packId}/buy (spec pack-shop 2.1): spends gems for 1..10 unopened packs. Retrying with the same key
     /// returns the stored response and buys once.
     /// </summary>

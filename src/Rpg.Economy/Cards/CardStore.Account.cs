@@ -145,12 +145,12 @@ public sealed partial class CardStore
 
         if (pack.Refunding)
         {
-            // Spec pack-shop 2.5: the type was retired with a refund; the pack stays owned until the next login or collection
-            // read pays it back, or, held for a support check, until operations settles it.
+            // Spec pack-shop 2.5: the type was retired with a refund; the pack stays owned until the Open packs page pays it back,
+            // or, held for a support check, until operations settles it.
             return CardResult<PackOpenResponse>.Fail(CardFailure.PackUnavailable,
                 await RefundHeldAsync(connection, transaction, playerId, packId, ct)
                     ? $"Pack '{packId}' was retired; refunding the packs you still hold needs a support check."
-                    : $"Pack '{packId}' was retired and is being refunded: its gems come back when you sign in or open your collection.");
+                    : $"Pack '{packId}' was retired and is being refunded: its gems come back on the Open packs page.");
         }
 
         var rates = await LatestRatesAsync(connection, transaction, ct);

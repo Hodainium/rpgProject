@@ -74,6 +74,15 @@ public sealed record PackCardDto(string CardId, string Rarity, bool Duplicate, i
 public sealed record PackOpenResponse(string OpeningId, string PackId, int PackVersion, int GemsSpent,
     IReadOnlyList<PackCardDto> Cards, long Gems, long Dust, string DrawSeed, int PacksLeft);
 
+/// <summary>One pack type's unopened packs paid back in gems (spec pack-shop 2.5).</summary>
+public sealed record PackRefundDto(string PackId, int Count, int GemsRefunded);
+
+/// <summary>
+/// POST /packs/refunds, called by the Open packs page when it opens (spec pack-shop 2.5): the refunds this call paid, so the
+/// page can say where the packs went ("Your 3 Descent Packs were retired: +300 gems"); empty when nothing was due.
+/// </summary>
+public sealed record PackRefundsResponse(IReadOnlyList<PackRefundDto> Refunded);
+
 /// <summary>Body of POST /packs/{packId}/buy (spec pack-shop 3.1). Count 1..Cards:MaxPacksPerBuy (10).</summary>
 public sealed record PackBuyRequest(Guid RequestKey, int Count);
 

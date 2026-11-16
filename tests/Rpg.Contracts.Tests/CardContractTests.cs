@@ -74,6 +74,7 @@ public class CardContractTests
         { "card-pack-buy-response.json", new PackBuyResponse("descent-pack", 2, 3, 300, 20, 3) },
         { "card-owned-pack.json", new OwnedPackDto("descent-pack", 3) },
         { "card-owned-pack-held.json", new OwnedPackDto("descent-pack", 2, RefundHeld: true) },
+        { "card-pack-refunds-response.json", new PackRefundsResponse([new PackRefundDto("descent-pack", 3, 300)]) },
         { "card-dust-response.json", new DustResponse("item.hex_charm", 20, 1, 340) },
         { "card-craft-response.json", new CraftResponse("hero.cryomancer", 3200, 1, 140) },
         { "card-pack-type-request.json", PackRequest() },

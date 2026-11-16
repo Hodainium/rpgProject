@@ -5,8 +5,8 @@ extends DevCommand
 
 func _init() -> void:
 	name = "packs"
-	usage = "packs [buy <pack id> [count] [key] | open <pack id> [key] | pity]"
-	help = "Server mode. No argument: the packs on sale (price, size, odds, pity rules) and how many unopened ones the account owns. buy <pack id> [count] [key]: spends gems for unopened packs (1 to the server's Cards:MaxPacksPerBuy, 10 by default; the server checks the count); pass the same count and key again to retry without paying twice. open <pack id> [key]: spends one owned pack and shows the cards (a duplicate becomes dust); refused with 1411 when none is owned; the same key retries. pity: the packs since each rarity last dropped (Hearthstone-style timers: the Nth pack holds one). The account lives on the server; local mode has none."
+	usage = "packs [buy <pack id> [count] [key] | open <pack id> [key] | refunds | pity]"
+	help = "Server mode. No argument: the packs on sale (price, size, odds, pity rules) and how many unopened ones the account owns. buy <pack id> [count] [key]: spends gems for unopened packs (1 to the server's Cards:MaxPacksPerBuy, 10 by default; the server checks the count); pass the same count and key again to retry without paying twice. open <pack id> [key]: spends one owned pack and shows the cards (a duplicate becomes dust); refused with 1411 when none is owned; the same key retries. refunds: what the Open packs page does when it opens: pays back unopened packs of a type retired with a refund and says what it paid. pity: the packs since each rarity last dropped (Hearthstone-style timers: the Nth pack holds one). The account lives on the server; local mode has none."
 	cheat = false
 
 
@@ -38,6 +38,14 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		if not answer["ok"]:
 			return ctx.fail("POST packs/%s/open: %s (key %s)" % [args[1], ServerLink.describe(answer["error"]), key])
 		return _describe_opening(answer["data"], key)
+	if args.size() > 0 and args[0] == "refunds":
+		var refunds: Dictionary = await link.refund_packs()
+		if not refunds["ok"]:
+			return ctx.fail("POST packs/refunds: " + ServerLink.describe(refunds["error"]))
+		var paid := PackedStringArray()
+		for entry in refunds["data"].get("refunded", []):
+			paid.append("refunded %d x %s: +%d gems" % [int(entry["count"]), entry["packId"], int(entry["gemsRefunded"])])
+		return "\n".join(paid) if not paid.is_empty() else "no refunds due"
 	if args.size() > 0 and args[0] == "pity":
 		var collection: Dictionary = await link.get_collection()
 		if not collection["ok"]:

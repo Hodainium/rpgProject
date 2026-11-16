@@ -828,14 +828,14 @@ public class CardCollectionTests(StackFixture stack)
 
     // ---- retiring with a refund (spec pack-shop 2.5) -----------------------------------------------------------------
 
-    /// <summary>A login: the dev token issue, which settles the player's refunds (spec pack-shop 2.5).</summary>
-    private static async Task<GameServerClient> LoginAsync(ApiFactory factory, string name) => (await PlayerAsync(factory, name)).Client;
+    /// <summary>The Open packs page opening: the one call that settles the player's refunds (spec pack-shop 2.5).</summary>
+    private static Task<PackRefundsResponse> OpenPacksPageAsync(GameServerClient client) => client.RefundPacksAsync(Ct);
 
     private static Task<long> RefundRowsAsync(ApiFactory factory) =>
         CountAsync(factory, "SELECT count(*) FROM pack_ledger WHERE reason = 'refund'");
 
     [Fact]
-    public async Task RetireWithRefund_PaysEachOwnerWhatTheyPaid_AtLoginOrTheCollectionRead()
+    public async Task RetireWithRefund_PaysEachOwnerWhatTheyPaid_OnTheOpenPacksPage()
     {
         await using var factory = await FactoryAsync();
         var (admin, _) = await PlayerAsync(factory, "designer");
@@ -853,16 +853,24 @@ public class CardCollectionTests(StackFixture stack)
 
         // The refund version may break the openability rule (a set with no cards): nobody opens it.
         var retired = await admin.PutPackTypeAsync(Pack("old", 30, 5, commons, set: "no-such-set", retired: true) with { RefundUnopened = true }, Ct);
-        var pending = await RefusedAsync(() => OpenAsync(alice, "old"));   // nobody has signed in since: not paid yet, and not opened
+        var pending = await RefusedAsync(() => OpenAsync(alice, "old"));   // not paid yet, and not opened
+        await PlayerAsync(factory, Name() + "a");                          // a login pays nothing
+        var read = await bob.GetCollectionAsync(Ct);                       // nor does the collection read
         var before = await RefundRowsAsync(factory);
-        var aliceAgain = await LoginAsync(factory, Name() + "a");          // alice signs in again: paid at login
-        var afterLogin = await RefundRowsAsync(factory);
-        var bobNow = await bob.GetCollectionAsync(Ct);                     // bob's token outlived the maintenance: paid at the read
-        var aliceNow = await aliceAgain.GetCollectionAsync(Ct);
+        var aliceRefunds = await OpenPacksPageAsync(alice);                // the Open packs page pays, and says what it paid
+        var bobRefunds = await OpenPacksPageAsync(bob);
+        var aliceAgain = await OpenPacksPageAsync(alice);                  // a second visit finds nothing due
+        var bobNow = await bob.GetCollectionAsync(Ct);
+        var aliceNow = await alice.GetCollectionAsync(Ct);
 
         Assert.True(retired.RefundUnopened);
         Assert.Equal((HttpStatusCode.NotFound, ApiErrors.PackUnavailable), (pending.StatusCode, pending.ErrorCode));
-        Assert.Equal((0L, 1L), (before, afterLogin));
+        Assert.Contains("Open packs page", pending.Problem?.Detail);
+        Assert.Equal(0L, before);
+        Assert.Equal([new OwnedPackDto("old", 1)], read.OwnedPacks);
+        Assert.Equal([new PackRefundDto("old", 4, 80)], aliceRefunds.Refunded);
+        Assert.Equal([new PackRefundDto("old", 1, 30)], bobRefunds.Refunded);
+        Assert.Empty(aliceAgain.Refunded);
         Assert.Equal((190L, 100L), (aliceNow.Gems, bobNow.Gems));          // 110 + 80, 70 + 30
         Assert.Empty(aliceNow.OwnedPacks);
         Assert.Empty(bobNow.OwnedPacks);
@@ -877,7 +885,7 @@ public class CardCollectionTests(StackFixture stack)
         Assert.Equal("110", Series(metrics, "rpg_pack_refund_gems_total"));
     }
 
-    /// <summary>Postgres is a hard dependency: with it down, a login (which settles refunds) answers 503, never a token.</summary>
+    /// <summary>Postgres is a hard dependency (the user): with it down, a login answers 503, never a token.</summary>
     [Fact]
     public async Task Login_WithPostgresUnreachable_Is503()
     {
@@ -891,7 +899,7 @@ public class CardCollectionTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task Refund_TwoLoginsAtOnce_PayOnce()
+    public async Task Refund_TwoVisitsAtOnce_PayOnce()
     {
         await using var factory = await FactoryAsync();
         var (admin, _) = await PlayerAsync(factory, "designer");
@@ -902,10 +910,12 @@ public class CardCollectionTests(StackFixture stack)
         await BuyAsync(client, "old", 4);
         await admin.PutPackTypeAsync(Pack("old", 10, 5, commons, retired: true) with { RefundUnopened = true }, Ct);
 
-        // Two devices sign in at once and a third reads the collection, then once more: the account lock and the unique keys pay once.
-        await Task.WhenAll(LoginAsync(factory, Name()), LoginAsync(factory, Name()), client.GetCollectionAsync(Ct));
-        await LoginAsync(factory, Name());
+        // Two devices open the page at once, then once more: the account lock and the unique keys pay once.
+        var visits = await Task.WhenAll(OpenPacksPageAsync(client), OpenPacksPageAsync(client));
+        var again = await OpenPacksPageAsync(client);
 
+        Assert.Equal(1, visits.Sum(v => v.Refunded.Count));
+        Assert.Empty(again.Refunded);
         Assert.Equal(100, (await client.GetCollectionAsync(Ct)).Gems);
         Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'pack_refund'"));
         Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM outbox WHERE type = 'PackRefunded'"));
@@ -932,9 +942,11 @@ public class CardCollectionTests(StackFixture stack)
         await BuyAsync(other, "old", 1);
         await admin.PutPackTypeAsync(Pack("old", 10, 5, commons, retired: true) with { RefundUnopened = true }, Ct);   // version 2
 
-        await LoginAsync(factory, Name() + "m");
+        var paid = await OpenPacksPageAsync(mallory);
+        await OpenPacksPageAsync(other);
 
-        Assert.Equal(1L, await RefundRowsAsync(factory));
+        Assert.Equal([new PackRefundDto("old", 1, 10)], paid.Refunded);
+        Assert.Equal(2L, await RefundRowsAsync(factory));
         Assert.Equal((100L, 100L), ((await mallory.GetCollectionAsync(Ct)).Gems, (await other.GetCollectionAsync(Ct)).Gems));
         await AssertPackLedgerAsync(factory);
     }
@@ -942,7 +954,7 @@ public class CardCollectionTests(StackFixture stack)
     /// <summary>
     /// Spec pack-shop 2.5: packs no buy row prices (a damaged ledger) are never refunded for nothing nor taken away. What the
     /// buys prove is paid, the rest stays in the inventory held for a support check: the collection flags it, the open says so,
-    /// later logins leave it alone, and the failure metric moves.
+    /// later visits leave it alone, and the failure metric moves.
     /// </summary>
     [Fact]
     public async Task Refund_UnpricedPacks_AreHeldForASupportCheck_AndThePricedOnesPaid()
@@ -961,11 +973,13 @@ public class CardCollectionTests(StackFixture stack)
         }
 
         await admin.PutPackTypeAsync(Pack("old", 10, 5, commons, retired: true) with { RefundUnopened = true }, Ct);
-        var again = await LoginAsync(factory, Name());
-        await LoginAsync(factory, Name());   // a later login leaves the held packs alone
-        var collection = await again.GetCollectionAsync(Ct);
-        var open = await RefusedAsync(() => OpenAsync(again, "old"));
+        var first = await OpenPacksPageAsync(client);
+        var second = await OpenPacksPageAsync(client);   // a later visit leaves the held packs alone
+        var collection = await client.GetCollectionAsync(Ct);
+        var open = await RefusedAsync(() => OpenAsync(client, "old"));
 
+        Assert.Equal([new PackRefundDto("old", 1, 10)], first.Refunded);
+        Assert.Empty(second.Refunded);
         Assert.Equal(80, collection.Gems);                                         // 70 after the buy + the one priced pack
         Assert.Equal([new OwnedPackDto("old", 2, RefundHeld: true)], collection.OwnedPacks);
         Assert.Equal(ApiErrors.PackUnavailable, open.ErrorCode);
@@ -975,7 +989,7 @@ public class CardCollectionTests(StackFixture stack)
         var metrics = await factory.CreateClient().GetStringAsync("/metrics", Ct);
         Assert.Equal("1", Series(metrics, "rpg_pack_refund_failures_total", "pack=\"old\"", "reason=\"held\""));
 
-        // Review fix: operations repairs the ledger and clears the hold; the next login pays the rest, once, without paying the
+        // Review fix: operations repairs the ledger and clears the hold; the next visit pays the rest, once, without paying the
         // already refunded pack again (it gets keys of its own).
         await using (var repair = factory.Services.GetRequiredService<NpgsqlDataSource>().CreateCommand(
                          $"UPDATE pack_ledger SET delta = 3 WHERE player_id = '{player}' AND reason = 'buy';" +
@@ -984,10 +998,11 @@ public class CardCollectionTests(StackFixture stack)
             await repair.ExecuteNonQueryAsync(Ct);
         }
 
-        var settled = await LoginAsync(factory, Name());
-        await LoginAsync(factory, Name());
-        var after = await settled.GetCollectionAsync(Ct);
+        var settled = await OpenPacksPageAsync(client);
+        await OpenPacksPageAsync(client);
+        var after = await client.GetCollectionAsync(Ct);
 
+        Assert.Equal([new PackRefundDto("old", 2, 20)], settled.Refunded);
         Assert.Equal(100, after.Gems);                                             // 80 + the two packs at 10
         Assert.Empty(after.OwnedPacks);
         Assert.Equal(2L, await RefundRowsAsync(factory));
@@ -995,7 +1010,7 @@ public class CardCollectionTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task Refund_SkipsATypeUnretiredBeforeThePlayerSignsIn()
+    public async Task Refund_SkipsATypeUnretiredBeforeThePlayerVisits()
     {
         await using var factory = await FactoryAsync();
         var (admin, _) = await PlayerAsync(factory, "designer");
@@ -1007,11 +1022,13 @@ public class CardCollectionTests(StackFixture stack)
         await admin.PutPackTypeAsync(Pack("old", 10, 5, commons, retired: true) with { RefundUnopened = true }, Ct);
         await admin.PutPackTypeAsync(Pack("old", 10, 5, commons), Ct);   // changed their mind in the same maintenance window
 
-        var again = await LoginAsync(factory, Name());
-        var opened = await OpenAsync(again, "old");
+        var visit = await OpenPacksPageAsync(client);
+        var opened = await OpenAsync(client, "old");
+
+        Assert.Empty(visit.Refunded);
 
         Assert.Equal((3, 1), (opened.PackVersion, opened.PacksLeft));   // v1, the refund retirement, then v3 back on sale
-        Assert.Equal(80, (await again.GetCollectionAsync(Ct)).Gems);
+        Assert.Equal(80, (await client.GetCollectionAsync(Ct)).Gems);
         Assert.Equal(0L, await RefundRowsAsync(factory));
     }
 
@@ -1572,6 +1589,7 @@ public class CardCollectionTests(StackFixture stack)
             await RefusedAsync(() => anonymous.GetCardCatalogAsync(Ct)), await RefusedAsync(() => anonymous.GetPacksAsync(Ct)),
             await RefusedAsync(() => anonymous.GetCollectionAsync(Ct)), await RefusedAsync(() => anonymous.OpenPackAsync(StarterPack, Guid.NewGuid(), Ct)),
             await RefusedAsync(() => anonymous.BuyPackAsync(StarterPack, new PackBuyRequest(Guid.NewGuid(), 1), Ct)),
+            await RefusedAsync(() => anonymous.RefundPacksAsync(Ct)),
             await RefusedAsync(() => anonymous.DustCardAsync("item.k1", Guid.NewGuid(), Ct)),
             await RefusedAsync(() => anonymous.CraftCardAsync("item.k1", Guid.NewGuid(), Ct)),
             await RefusedAsync(() => anonymous.AbandonRunAsync(Guid.NewGuid().ToString("D"), Ct)),

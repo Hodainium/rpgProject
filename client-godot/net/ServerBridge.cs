@@ -110,6 +110,9 @@ public partial class ServerBridge : Node
     public long OpenPack(string packId, string requestJson) =>
         Start(client => client.OpenPackAsync(packId, Parse<AccountActionRequest>(requestJson).RequestKey));
 
+    /// <summary>POST /api/v1/packs/refunds, the Open packs page's call when it opens; completes with a PackRefundsResponse (spec pack-shop 2.5).</summary>
+    public long RefundPacks() => Start(client => client.RefundPacksAsync());
+
     /// <summary>POST /api/v1/packs/{packId}/buy with a PackBuyRequest; completes with a PackBuyResponse (spec pack-shop 3.1).</summary>
     public long BuyPack(string packId, string requestJson) =>
         Start(client => client.BuyPackAsync(packId, Parse<PackBuyRequest>(requestJson)));

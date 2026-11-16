@@ -61,6 +61,9 @@ class FakeBridge:
 	func BuyPack(pack_id: String, json: String) -> int:
 		return _answer("BuyPack", [pack_id, json])
 
+	func RefundPacks() -> int:
+		return _answer("RefundPacks", [])
+
 	func DustCard(card_id: String, json: String) -> int:
 		return _answer("DustCard", [card_id, json])
 

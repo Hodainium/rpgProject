@@ -267,6 +267,12 @@ func open_pack(pack_id: String, key: String) -> Dictionary:
 	return await _request("OpenPack", [pack_id, WireJson.stringify({"requestKey": key})])
 
 
+## POST /api/v1/packs/refunds (spec pack-shop 2.5): the Open packs page calls it when it opens. Pays back unopened packs of a
+## type retired with a refund; data = PackRefundsResponse {refunded: [{packId, count, gemsRefunded}]}, empty when nothing was due.
+func refund_packs() -> Dictionary:
+	return await _request("RefundPacks", [])
+
+
 ## POST /api/v1/packs/{packId}/buy (spec pack-shop 2.1): gems for `count` (1..10) unopened packs. data = PackBuyResponse
 ## {packId, packVersion, count, gemsSpent, gems, owned}. Pass the same `key` (and count) again to retry: it buys once.
 func buy_pack(pack_id: String, count: int, key: String) -> Dictionary:

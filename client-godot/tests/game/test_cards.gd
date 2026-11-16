@@ -456,7 +456,7 @@ func test_cards_local_sets_the_pool_new_local_runs_start_with() -> void:
 func test_the_server_commands_need_server_mode() -> void:
 	var session := _session()
 	var console: DevConsole = session[1]
-	for line in ["packs", "packs open demo", "packs buy demo", "dust x", "craft x", "abandon"]:
+	for line in ["packs", "packs open demo", "packs buy demo", "packs refunds", "dust x", "craft x", "abandon"]:
 		var result: Dictionary = await console.execute(line)
 		check(not result["ok"], "'%s' needs a server" % line)
 
@@ -658,6 +658,21 @@ func test_the_packs_command_buys_and_a_retry_keeps_its_key() -> void:
 	bridge.answers["BuyPack"] = [[false, {"status": 409, "errorCode": 1402, "title": "Not enough currency", "detail": ""}]]
 	var poor: Dictionary = await session[1].execute("packs buy descent-pack 10")
 	check(not poor["ok"] and poor["text"].contains("1402") and poor["text"].contains("key "), "a refusal names its code and the key: %s" % poor["text"])
+
+
+## Spec pack-shop 2.5: `packs refunds` is the Open packs page's call; it lists what was paid back, or says nothing was due.
+func test_the_packs_command_settles_refunds_like_the_open_packs_page() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers["RefundPacks"] = [[true, {"refunded": [{"packId": "old-pack", "count": 3, "gemsRefunded": 300}]}], [true, {"refunded": []}]]
+	var session := _server_session(bridge)
+	var paid: Dictionary = await session[1].execute("packs refunds")
+	check(paid["ok"] and paid["text"].contains("refunded 3 x old-pack: +300 gems"), "the refund line: %s" % paid["text"])
+	var none: Dictionary = await session[1].execute("packs refunds")
+	check(none["ok"] and none["text"] == "no refunds due", "a second visit: %s" % none["text"])
+	eq(bridge.of("RefundPacks").size(), 2, "one call per visit")
+	bridge.answers["RefundPacks"] = [[false, {"status": 503, "errorCode": null, "title": "Database unavailable", "detail": ""}]]
+	var down: Dictionary = await session[1].execute("packs refunds")
+	check(not down["ok"] and down["text"].contains("503"), "a server error is a failed command: %s" % down["text"])
 
 
 ## Spec pack-shop 6: an open with nothing owned is refused with the server's 1411 line.

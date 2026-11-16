@@ -9,12 +9,12 @@ namespace Rpg.Economy.Cards;
 /// <summary>One player's unopened packs of a type paid back (spec pack-shop 2.5).</summary>
 public sealed record PackRefund(Guid PlayerId, string PackId, int PackVersion, int Count, int Gems);
 
-/// <summary>A pack type the player could not be paid back for this time (tried again at the next login or collection read).</summary>
+/// <summary>A pack type the player could not be paid back for this time (tried again on the next Open packs visit).</summary>
 public sealed record PackRefundFailure(Guid PlayerId, string PackId, string Error);
 
 /// <summary>
 /// Packs left in the player's inventory with the refund held for a support check: no buy row prices them (a data problem), so
-/// they are neither refunded for nothing nor taken away. Logins skip a held row until operations clears the hold.
+/// they are neither refunded for nothing nor taken away. Later refund calls skip a held row until operations clears the hold.
 /// </summary>
 public sealed record PackRefundHeld(Guid PlayerId, string PackId, int Count);
 
@@ -26,8 +26,7 @@ public sealed partial class CardStore
 {
     /// <summary>
     /// Spec pack-shop 2.5: pays this player back for every unopened pack of a type whose latest version is retired with a
-    /// refund. Called at login and at the collection read, never on a timer: pack types change only during maintenance, so a
-    /// player's next login after it settles their packs. One transaction per pack type under the account lock; the unique
+    /// refund. Called when the player opens the Open packs page, never on a timer: pack types change only during maintenance. One transaction per pack type under the account lock; the unique
     /// ledger keys stop a second payment, and one pack type that fails (it rolls back alone) never stops the others.
     /// </summary>
     public async Task<PackRefundPass> RefundPlayerPacksAsync(Guid playerId, DateTimeOffset now, CancellationToken ct)
@@ -88,7 +87,7 @@ public sealed partial class CardStore
         // sure of it even if an admin saves a version while the server is up.
         await LockNamedSharedAsync(connection, transaction, $"pack_type|{packId}", ct);
 
-        // Re-read under the locks: the packs may already be paid back (a second login at the same moment).
+        // Re-read under the locks: the packs may already be paid back (a second visit of the Open packs page at the same moment).
         var pack = await LatestPackAsync(connection, transaction, packId, ct);
         var count = await LockOwnedPacksAsync(connection, transaction, playerId, packId, ct);
         if (pack is not { Refunding: true } || count <= 0 || await RefundHeldAsync(connection, transaction, playerId, packId, ct))

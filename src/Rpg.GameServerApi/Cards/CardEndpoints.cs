@@ -26,6 +26,7 @@ public static class CardEndpoints
         api.MapGet("/cards/catalog", CatalogAsync);
         api.MapGet("/packs", PacksAsync);
         api.MapGet("/cards/collection", CollectionAsync);
+        api.MapPost("/packs/refunds", RefundsAsync).RateLimited(RateLimitOptions.Actions);
         api.MapPost("/packs/{packId}/buy", BuyAsync).RateLimited(RateLimitOptions.Actions);
         api.MapPost("/packs/{packId}/open", OpenAsync).RateLimited(RateLimitOptions.Actions);
         api.MapPost("/cards/{cardId}/dust", DustAsync).RateLimited(RateLimitOptions.Actions);
@@ -73,15 +74,25 @@ public static class CardEndpoints
     }
 
     private static async Task<IResult> CollectionAsync(HttpContext context, CardStore store, MigrationRunner migrations,
-        PackRefunds refunds, CancellationToken ct)
+        CancellationToken ct)
     {
         await migrations.EnsureMigratedAsync(ct);
-        // Spec pack-shop 2.5: a token can outlive the maintenance restart, so the collection read settles refunds too.
-        await refunds.RefundAsync(context.User.Player().Id, ct);
         return Results.Ok(await store.GetCollectionAsync(context.User.Player().Id, ct));
     }
 
     // ---- account actions -------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Spec pack-shop 2.5: the Open packs page's call when it opens. Pays back the player's unopened packs of a type retired with
+    /// a refund (idempotent: a second call finds nothing due) and returns what it paid, for the page's notice.
+    /// </summary>
+    private static async Task<IResult> RefundsAsync(HttpContext context, PackRefunds refunds, RpgMetrics metrics, CancellationToken ct)
+    {
+        var watch = Stopwatch.StartNew();
+        var paid = await refunds.RefundAsync(context.User.Player().Id, ct);
+        metrics.CardActionDuration("refund_packs", watch.Elapsed);
+        return Results.Ok(new PackRefundsResponse([.. paid.Select(p => new PackRefundDto(p.PackId, p.Count, p.Gems))]));
+    }
 
     /// <summary>Spec pack-shop 2.1: gems for 1..Cards:MaxPacksPerBuy unopened packs, idempotent by the request key.</summary>
     private static async Task<IResult> BuyAsync(HttpContext context, string packId, PackBuyRequest? request, CardStore store,
