@@ -11,7 +11,7 @@ namespace Rpg.Economy.Cards;
 /// <summary>Small Npgsql helpers shared by the card store files (spec card-collection 3).</summary>
 internal static class CardSql
 {
-    public static NpgsqlCommand Cmd(NpgsqlConnection connection, NpgsqlTransaction transaction, string sql, params object?[] values)
+    public static NpgsqlCommand Cmd(NpgsqlConnection connection, NpgsqlTransaction? transaction, string sql, params object?[] values)
     {
         var command = new NpgsqlCommand(sql, connection, transaction);
         foreach (var value in values)

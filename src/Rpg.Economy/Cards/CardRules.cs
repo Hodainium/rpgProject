@@ -73,6 +73,9 @@ public static class CardRules
 
     /// <summary>Every pack holds this many cards (the user, 2026-11-15: "packs will always have 5 cards").</summary>
     public const int CardsPerPack = 5;
+
+    /// <summary>The size bound before the 5-card rule (slice 5), kept for retired versions of older pack types.</summary>
+    public const int MaxRetiredCardCount = 20;
     public const int MaxIdLength = 128;
 
     public static string? ValidateRate(CardRateRequest? request, int maxCost)
@@ -108,10 +111,13 @@ public static class CardRules
             return $"priceGems takes 1–{maxPrice}.";
         }
 
-        // A retired version never sells, so an old pack type saved with another size can still be retired (or refunded) as it is.
-        if (request.CardCount != CardsPerPack && !request.Retired)
+        // A retired version never sells, so an old pack type saved with another size can still be retired (or refunded) as it is,
+        // within the old bound (owned packs of a retired type still open with it).
+        if (request.Retired ? request.CardCount is < 1 or > MaxRetiredCardCount : request.CardCount != CardsPerPack)
         {
-            return $"cardCount must be {CardsPerPack}: every pack holds {CardsPerPack} cards.";
+            return request.Retired
+                ? $"cardCount takes 1–{MaxRetiredCardCount} on a retired version."
+                : $"cardCount must be {CardsPerPack}: every pack holds {CardsPerPack} cards.";
         }
 
         if (request.RefundUnopened == true && !request.Retired)

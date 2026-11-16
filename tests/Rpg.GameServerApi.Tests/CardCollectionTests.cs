@@ -607,6 +607,9 @@ public class CardCollectionTests(StackFixture stack)
         // The same key with another count is another request.
         var other = await RefusedAsync(() => BuyAsync(client, count: 2, key: key));
         Assert.Equal((HttpStatusCode.Conflict, ApiErrors.RequestKeyReused), (other.StatusCode, other.ErrorCode));
+        // Review fix: a retry that lost its count (it reads as 0) is a bad request, not "key reused".
+        var countless = await RefusedAsync(() => BuyAsync(client, count: 0, key: key));
+        Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardRuleInvalid), (countless.StatusCode, countless.ErrorCode));
         await AssertPackLedgerAsync(factory);
     }
 
@@ -925,7 +928,7 @@ public class CardCollectionTests(StackFixture stack)
         await GrantAsync(factory, o, gems: 100);
         var commons = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
         await AddPackAsync(factory, Pack("old", 10, 5, commons));
-        await BuyAsync(mallory, "old", 1, CardStore.RefundKey(Guid.Parse(m), "old", 2));   // the key the refund will use
+        await BuyAsync(mallory, "old", 1, CardStore.RefundKey(Guid.Parse(m), "old", 2, 0));   // the key the refund will use
         await BuyAsync(other, "old", 1);
         await admin.PutPackTypeAsync(Pack("old", 10, 5, commons, retired: true) with { RefundUnopened = true }, Ct);   // version 2
 
@@ -971,6 +974,24 @@ public class CardCollectionTests(StackFixture stack)
         Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'pack_refund' AND delta = 10"));
         var metrics = await factory.CreateClient().GetStringAsync("/metrics", Ct);
         Assert.Equal("1", Series(metrics, "rpg_pack_refund_failures_total", "pack=\"old\"", "reason=\"held\""));
+
+        // Review fix: operations repairs the ledger and clears the hold; the next login pays the rest, once, without paying the
+        // already refunded pack again (it gets keys of its own).
+        await using (var repair = factory.Services.GetRequiredService<NpgsqlDataSource>().CreateCommand(
+                         $"UPDATE pack_ledger SET delta = 3 WHERE player_id = '{player}' AND reason = 'buy';" +
+                         $"UPDATE pack_inventory SET refund_held = false WHERE player_id = '{player}'"))
+        {
+            await repair.ExecuteNonQueryAsync(Ct);
+        }
+
+        var settled = await LoginAsync(factory, Name());
+        await LoginAsync(factory, Name());
+        var after = await settled.GetCollectionAsync(Ct);
+
+        Assert.Equal(100, after.Gems);                                             // 80 + the two packs at 10
+        Assert.Empty(after.OwnedPacks);
+        Assert.Equal(2L, await RefundRowsAsync(factory));
+        await AssertPackLedgerAsync(factory);
     }
 
     [Fact]
@@ -1006,9 +1027,14 @@ public class CardCollectionTests(StackFixture stack)
 
         Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardRuleInvalid), (error.StatusCode, error.ErrorCode));
         Assert.Null(listed.RefundUnopened);   // left off the JSON unless true
-        // A pack type saved before the 5-card rule can still be retired, or refunded, at its own size.
+        // A pack type saved before the 5-card rule can still be retired, or refunded, at its own size, within the old 1-20 bound.
         var oldSize = await admin.PutPackTypeAsync(Pack("p", 10, 3, commons, retired: true) with { RefundUnopened = true }, Ct);
         Assert.Equal(3, oldSize.CardCount);
+        foreach (var size in new[] { 0, -1, 21 })
+        {
+            var bad = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("p", 10, size, commons, retired: true), Ct));
+            Assert.Equal(ApiErrors.CardRuleInvalid, bad.ErrorCode);
+        }
     }
 
     // ---- dust and the run lock ---------------------------------------------------------------------------------------

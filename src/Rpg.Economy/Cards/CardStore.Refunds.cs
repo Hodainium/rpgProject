@@ -34,7 +34,7 @@ public sealed partial class CardStore
     {
         var packs = new List<string>();
         await using (var connection = await dataSource.OpenConnectionAsync(ct))
-        await using (var select = new NpgsqlCommand(
+        await using (var select = Cmd(connection, null,
             """
             SELECT i.pack_id FROM pack_inventory i
             CROSS JOIN LATERAL (SELECT retired, refund_unopened FROM pack_types t
@@ -42,9 +42,8 @@ public sealed partial class CardStore
                                 ORDER BY t.version DESC LIMIT 1) latest
             WHERE i.player_id = $1 AND i.count > 0 AND NOT i.refund_held AND latest.retired AND latest.refund_unopened
             ORDER BY i.pack_id COLLATE "C"
-            """, connection))
+            """, playerId))
         {
-            select.Parameters.Add(new NpgsqlParameter { Value = playerId });
             await using var reader = await select.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
             {
@@ -85,9 +84,11 @@ public sealed partial class CardStore
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
         await LockAccountAsync(connection, transaction, playerId, ct);
+        // Pack types change only during maintenance; the shared lock on the type (the admin save holds it exclusively) makes
+        // sure of it even if an admin saves a version while the server is up.
+        await LockNamedSharedAsync(connection, transaction, $"pack_type|{packId}", ct);
 
-        // Re-read under the lock: the packs may already be paid back (a second login at the same moment). Pack types change
-        // only while the server is down for maintenance, so the version cannot move under this transaction.
+        // Re-read under the locks: the packs may already be paid back (a second login at the same moment).
         var pack = await LatestPackAsync(connection, transaction, packId, ct);
         var count = await LockOwnedPacksAsync(connection, transaction, playerId, packId, ct);
         if (pack is not { Refunding: true } || count <= 0 || await RefundHeldAsync(connection, transaction, playerId, packId, ct))
@@ -95,10 +96,21 @@ public sealed partial class CardStore
             return (null, 0);
         }
 
+        // Units an earlier refund of this type already paid back (a refund that held some packs, then cleared; or a type
+        // refunded, un-retired and refunded again). Refunds pay the newest buys first, so those units are skipped below.
+        int alreadyRefunded;
+        await using (var before = Cmd(connection, transaction,
+            "SELECT COALESCE(-sum(delta), 0)::int FROM pack_ledger WHERE player_id = $1 AND pack_id = $2 AND reason = 'refund'",
+            playerId, packId))
+        {
+            alreadyRefunded = (int)(await before.ExecuteScalarAsync(ct))!;
+        }
+
         // What the player paid for the packs left. Opens spend the oldest packs first, so the `count` left are the newest
-        // bought: walk the buys newest first, each unit at the price of the version it was bought at.
+        // bought: walk the buys newest first, skip what was refunded before, each unit at the price of the version it was bought at.
         long amount = 0;
         var left = count;
+        var skip = alreadyRefunded;
         await using (var buys = Cmd(connection, transaction,
             """
             SELECT l.delta, t.price_gems FROM pack_ledger l
@@ -109,7 +121,10 @@ public sealed partial class CardStore
         {
             while (left > 0 && await reader.ReadAsync(ct))
             {
-                var units = Math.Min(left, reader.GetInt32(0));
+                var row = reader.GetInt32(0);
+                var skipped = Math.Min(skip, row);
+                skip -= skipped;
+                var units = Math.Min(left, row - skipped);
                 amount += (long)units * reader.GetInt32(1);
                 left -= units;
             }
@@ -135,14 +150,14 @@ public sealed partial class CardStore
             return (null, left);
         }
 
-        var key = RefundKey(playerId, packId, pack.Version);
+        var key = RefundKey(playerId, packId, pack.Version, alreadyRefunded);
         await MovePacksAsync(connection, transaction, playerId, packId, -refunded, ct);
         await PackLedgerAsync(connection, transaction, playerId, packId, pack.Version, -refunded, "refund", key, null, ct);
         if (amount > 0)
         {
             await WalletRowAsync(connection, transaction, playerId, ct);
             await LedgerAsync(connection, transaction, playerId, "gems", (int)amount, "pack_refund",
-                $"pack_refund:{playerId:D}:{packId}:{pack.Version}", $"pack:{packId}:{pack.Version}", now, ct);
+                $"pack_refund:{playerId:D}:{packId}:{pack.Version}:{alreadyRefunded}", $"pack:{packId}:{pack.Version}", now, ct);
             await MoveWalletAsync(connection, transaction, playerId, (int)amount, 0, now, ct);
         }
 
@@ -153,23 +168,22 @@ public sealed partial class CardStore
     }
 
     /// <summary>Whether the player's packs of this type are held for a support check (spec pack-shop 2.5).</summary>
-    internal static async Task<bool> RefundHeldAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, Guid playerId,
+    internal static async Task<bool> RefundHeldAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid playerId,
         string packId, CancellationToken ct)
     {
-        await using var select = new NpgsqlCommand(
-            "SELECT refund_held FROM pack_inventory WHERE player_id = $1 AND pack_id = $2", connection, transaction);
-        select.Parameters.Add(new NpgsqlParameter { Value = playerId });
-        select.Parameters.Add(new NpgsqlParameter { Value = packId });
+        await using var select = Cmd(connection, transaction,
+            "SELECT refund_held FROM pack_inventory WHERE player_id = $1 AND pack_id = $2", playerId, packId);
         return await select.ExecuteScalarAsync(ct) is true;
     }
 
     /// <summary>
-    /// The refund's request key on <c>pack_ledger</c>: a UUID derived from (player, pack, retirement version), so the unique
-    /// (player_id, request_key) index makes a second refund of the same retirement impossible.
+    /// The refund's request key on <c>pack_ledger</c>: a UUID derived from (player, pack, retirement version, units refunded
+    /// before), so the unique (player_id, reason, request_key) index makes the same refund twice impossible, while a later one
+    /// (after a held refund is cleared) gets a key of its own.
     /// </summary>
-    public static Guid RefundKey(Guid playerId, string packId, int version)
+    public static Guid RefundKey(Guid playerId, string packId, int version, int refundedBefore)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"pack_refund:{playerId:D}:{packId}:{version}"))[..16];
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"pack_refund:{playerId:D}:{packId}:{version}:{refundedBefore}"))[..16];
         bytes[7] = (byte)((bytes[7] & 0x0F) | 0x50);   // version 5-style (name-based) in the .NET byte order
         bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);   // RFC 4122 variant
         return new Guid(bytes);
