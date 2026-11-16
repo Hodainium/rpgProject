@@ -83,7 +83,8 @@ the pack stays owned). Every pack holds 5 cards (`CardRules.CardsPerPack`; the u
 
 **Retire with a refund.** When a pack type has to go, the admin saves a retired version with `refundUnopened: true` (only valid on a
 retired version, else 400 1401). Such a version skips the set and openability rules: nobody opens it, every unopened pack is
-refunded. A retired version may also keep a pack size other than 5 (it is never sold), so an old pack type can always be retired.
+refunded. A retired version may also keep a pack size other than 5 within the old 1-20 bound (it is never sold, but owned packs
+open with it), so an old pack type can always be retired.
 
 **Pack types change only during maintenance** (the user, 2026-11-15: the server is taken down while card packs change). So there
 is no background job and no polling: a player's refunds are settled **at login** (the token issue; today `POST /auth/dev-token`)
@@ -91,15 +92,18 @@ and **at the collection read** (`GET /cards/collection`, for a client whose toke
 ```
 Login / collection read → PackRefunds.RefundAsync(player): the player's pack_inventory rows with count > 0 whose type's latest
   version is retired with refundUnopened; for each, ONE transaction:
-    1. pg_advisory_xact_lock(acct:<player>); re-read the latest version and the count (0: a second login already paid; skip)
+    1. pg_advisory_xact_lock(acct:<player>) and the shared lock on pack_type|<id> (the admin save holds it exclusively);
+       re-read the latest version and the count (0: a second login already paid; skip)
     2. amount = what the player paid for the packs left: opens spend the oldest packs first, so the n left are the newest
        n bought; walk the player's 'buy' rows newest first, each unit at its version's price_gems. Units no buy row prices
        (only a buy adds packs, so a damaged ledger) are never refunded for nothing nor taken away: the priced ones are paid,
        the rest stay in the inventory with pack_inventory.refund_held = true (a support check), logins skip a held row until
        operations clears the flag, an error log and rpg_pack_refund_failures_total{pack,reason="held"} tell them
-    3. pack_inventory count = 0; pack_ledger -n, reason 'refund', request_key = a UUID derived from (player, pack, version)
+    3. pack_inventory count -= the units paid; pack_ledger -n, reason 'refund', request_key = a UUID derived from (player,
+       pack, version, units refunded before); the price walk skips those earlier units (a held refund cleared later, or a type
+       refunded, un-retired and refunded again, pays only what is still owed)
        (unique on (player, reason, request_key): a second refund is impossible, and a player's own request keys never collide)
-    4. wallet_ledger +amount, reason 'pack_refund', key 'pack_refund:<player>:<pack>:<version>' (unique); wallet += amount
+    4. wallet_ledger +amount, reason 'pack_refund', key 'pack_refund:<player>:<pack>:<version>:<refunded before>' (unique)
     5. outbox PackRefunded (key = playerId)
   then DEL wallet:{playerId}. A pack type that fails is logged and tried again next time; it never stops the others.
 ```
