@@ -8,6 +8,13 @@ namespace Rpg.Contracts.Events;
 public sealed record PackOpenedPayload(string OpeningId, string PlayerId, string PackId, int PackVersion, int GemsSpent,
     IReadOnlyList<PackCardDto> Cards, int DustGained, int NewCards, string DrawSeed, int CatalogVersion, int PityTriggers);
 
+/// <summary>Spec pack-shop 3.1: packs bought (the gems are spent here; <see cref="PackOpenedPayload.GemsSpent"/> is 0).</summary>
+public sealed record PackPurchasedPayload(string PlayerId, string PackId, int PackVersion, int Count, int GemsSpent);
+
+/// <summary>Spec pack-shop 2.5: a player's unopened packs of a type retired with a refund, paid back in gems.</summary>
+/// <param name="PackVersion">The retirement version.</param>
+public sealed record PackRefundedPayload(string PlayerId, string PackId, int PackVersion, int Count, int GemsRefunded);
+
 public sealed record CardDustedPayload(string PlayerId, string CardId, string Rarity, int DustGained, int RateVersion);
 
 public sealed record CardCraftedPayload(string PlayerId, string CardId, string Rarity, int DustSpent, int RateVersion);

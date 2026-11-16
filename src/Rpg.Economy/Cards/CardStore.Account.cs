@@ -7,7 +7,111 @@ namespace Rpg.Economy.Cards;
 
 public sealed partial class CardStore
 {
-    // ---- open a pack (2.2) -----------------------------------------------------------------------------------------
+    // ---- buy packs (spec pack-shop 2.1) ----------------------------------------------------------------------------
+
+    /// <summary>
+    /// Spends gems for <paramref name="count"/> unopened packs of the type's latest version on sale. One transaction under the
+    /// account lock: the wallet ledger, the pack inventory and its ledger, the outbox event and the request row.
+    /// </summary>
+    public async Task<CardResult<PackBuyResponse>> BuyPacksAsync(Guid playerId, string playerName, string packId, int count,
+        int maxPerBuy, Guid key, DateTimeOffset now, CancellationToken ct)
+    {
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(ct);
+        await LockAccountAsync(connection, transaction, playerId, ct);
+        await EnsurePlayerAsync(connection, transaction, playerId, playerName, now, ct);
+
+        // The count is part of the request: the same key with another count is a different request (1407).
+        var hash = Hash("pack_buy", $"{packId}|{count}");
+        if (await ReplayAsync<PackBuyResponse>(connection, transaction, playerId, key, "pack_buy", hash, ct) is { } replay)
+        {
+            return replay;
+        }
+
+        if (count < 1 || count > maxPerBuy)
+        {
+            return CardResult<PackBuyResponse>.Fail(CardFailure.RuleInvalid, $"A buy is 1 to {maxPerBuy} packs; {count} was asked.");
+        }
+
+        // The price comes from Postgres inside the transaction, never from a cache: a stale price must not sell.
+        var pack = await LatestPackAsync(connection, transaction, packId, ct);
+        if (pack is null || pack.Retired)
+        {
+            return CardResult<PackBuyResponse>.Fail(CardFailure.PackUnavailable, $"No pack type '{packId}' is on sale.");
+        }
+
+        // Never sell a pack that cannot be opened. The save already checked it; this is the net for what changed since
+        // (a catalog update that retired the cards it draws from, a rate removed).
+        await LockNamedSharedAsync(connection, transaction, "card_catalog", ct);
+        if (CardRules.OpenProblem(pack.Odds, pack.Pity, pack.FirstGuarantees, await EligibleAsync(connection, transaction, pack.SetIds, ct),
+                await LatestRatesAsync(connection, transaction, ct)) is { } closed)
+        {
+            return CardResult<PackBuyResponse>.Fail(CardFailure.PackUnavailable, $"Pack '{packId}' cannot be sold right now: {closed}.");
+        }
+
+        var total = (long)pack.PriceGems * count;
+        if (total > int.MaxValue)
+        {
+            return CardResult<PackBuyResponse>.Fail(CardFailure.RuleInvalid, $"{count} packs at {pack.PriceGems} gems is too large a buy.");
+        }
+
+        var (gems, _) = await LockWalletAsync(connection, transaction, playerId, ct);
+        if (gems < total)
+        {
+            return CardResult<PackBuyResponse>.Fail(CardFailure.InsufficientCurrency,
+                $"{count} pack(s) cost {total} gems; the account has {gems}.");
+        }
+
+        var spent = (int)total;
+        var prefix = $"pack_buy:{playerId:D}:{key:D}";
+        await LedgerAsync(connection, transaction, playerId, "gems", -spent, "pack_buy", $"{prefix}:gems",
+            $"pack:{pack.PackId}:{pack.Version}", now, ct);
+        var (gemsAfter, _) = await MoveWalletAsync(connection, transaction, playerId, -spent, 0, now, ct);
+        var owned = await MovePacksAsync(connection, transaction, playerId, pack.PackId, count, ct);
+        await PackLedgerAsync(connection, transaction, playerId, pack.PackId, pack.Version, count, "buy", key, null, ct);
+
+        var response = new PackBuyResponse(pack.PackId, pack.Version, count, spent, gemsAfter, owned);
+        await RecordRequestAsync(connection, transaction, playerId, key, "pack_buy", hash, response, now, ct);
+        await EventAsync(connection, transaction, playerId, EventTypes.PackPurchased, now,
+            new PackPurchasedPayload(playerId.ToString("D"), pack.PackId, pack.Version, count, spent), ct);
+        await transaction.CommitAsync(ct);
+        return CardResult<PackBuyResponse>.Ok(response);
+    }
+
+    /// <summary>The player's unopened packs of one type, locked for this transaction (0 when there is no row).</summary>
+    private static async Task<int> LockOwnedPacksAsync(Npgsql.NpgsqlConnection connection, Npgsql.NpgsqlTransaction transaction,
+        Guid playerId, string packId, CancellationToken ct)
+    {
+        await using var select = Cmd(connection, transaction,
+            "SELECT count FROM pack_inventory WHERE player_id = $1 AND pack_id = $2 FOR UPDATE", playerId, packId);
+        return await select.ExecuteScalarAsync(ct) is int count ? count : 0;
+    }
+
+    /// <summary>Adds to the inventory (negative = open); the CHECK (count >= 0) is the last guard. Returns the new count.</summary>
+    private static async Task<int> MovePacksAsync(Npgsql.NpgsqlConnection connection, Npgsql.NpgsqlTransaction transaction,
+        Guid playerId, string packId, int delta, CancellationToken ct)
+    {
+        // A spend updates the row the caller locked; only a buy may create it (an INSERT of a negative count would trip the
+        // CHECK before ON CONFLICT is considered).
+        await using var command = Cmd(connection, transaction, delta < 0
+            ? "UPDATE pack_inventory SET count = count + $3, updated_at = clock_timestamp() WHERE player_id = $1 AND pack_id = $2 RETURNING count"
+            : """
+              INSERT INTO pack_inventory (player_id, pack_id, count, updated_at) VALUES ($1, $2, $3, clock_timestamp())
+              ON CONFLICT (player_id, pack_id) DO UPDATE SET count = pack_inventory.count + EXCLUDED.count, updated_at = EXCLUDED.updated_at
+              RETURNING count
+              """, playerId, packId, delta);
+        return (int)(await command.ExecuteScalarAsync(ct))!;
+    }
+
+    private static Task PackLedgerAsync(Npgsql.NpgsqlConnection connection, Npgsql.NpgsqlTransaction transaction, Guid playerId,
+        string packId, int packVersion, int delta, string reason, Guid key, Guid? openingId, CancellationToken ct) =>
+        ExecAsync(connection, transaction,
+            """
+            INSERT INTO pack_ledger (player_id, pack_id, pack_version, delta, reason, request_key, opening_id, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, clock_timestamp())
+            """, ct, playerId, packId, packVersion, delta, reason, key, openingId);
+
+    // ---- open a pack (2.2; spec pack-shop 2.2: spends an owned pack, not gems) -------------------------------------
 
     public async Task<CardResult<PackOpenResponse>> OpenPackAsync(Guid playerId, string playerName, string packId, Guid key,
         DateTimeOffset now, CancellationToken ct)
@@ -23,18 +127,29 @@ public sealed partial class CardStore
             return replay;
         }
 
-        // Rules come from Postgres inside the transaction, never from a cache: a stale price must not sell (F21).
-        var pack = await LatestPackAsync(connection, transaction, packId, ct);
-        if (pack is null || pack.Retired)
+        // Spec pack-shop 2.2: an open spends one owned pack. Nothing is written on a refusal (no draw, no pity change).
+        var ownedPacks = await LockOwnedPacksAsync(connection, transaction, playerId, packId, ct);
+        if (ownedPacks <= 0)
         {
-            return CardResult<PackOpenResponse>.Fail(CardFailure.PackUnavailable, $"No pack type '{packId}' is on sale.");
+            return CardResult<PackOpenResponse>.Fail(CardFailure.NoPackOwned, $"The account owns no unopened '{packId}' pack.");
         }
 
-        var (gems, _) = await LockWalletAsync(connection, transaction, playerId, ct);
-        if (gems < pack.PriceGems)
+        // The type's latest version, retired or not: a pack bought before a retirement still opens with its last version.
+        // Rules come from Postgres inside the transaction, never from a cache (F21).
+        var pack = await LatestPackAsync(connection, transaction, packId, ct);
+        if (pack is null)
         {
-            return CardResult<PackOpenResponse>.Fail(CardFailure.InsufficientCurrency,
-                $"The pack costs {pack.PriceGems} gems; the account has {gems}.");
+            return CardResult<PackOpenResponse>.Fail(CardFailure.PackUnavailable, $"No pack type '{packId}'.");
+        }
+
+        if (pack.Refunding)
+        {
+            // Spec pack-shop 2.5: the type was retired with a refund; the pack stays owned until the next login or collection
+            // read pays it back, or, held for a support check, until operations settles it.
+            return CardResult<PackOpenResponse>.Fail(CardFailure.PackUnavailable,
+                await RefundHeldAsync(connection, transaction, playerId, packId, ct)
+                    ? $"Pack '{packId}' was retired; refunding the packs you still hold needs a support check."
+                    : $"Pack '{packId}' was retired and is being refunded: its gems come back when you sign in or open your collection.");
         }
 
         var rates = await LatestRatesAsync(connection, transaction, ct);
@@ -42,10 +157,10 @@ public sealed partial class CardStore
         // from catalog_versions). A re-seed holds "card_catalog" exclusively while it rewrites `cards`; this waits for it.
         await LockNamedSharedAsync(connection, transaction, "card_catalog", ct);
         var eligible = await EligibleAsync(connection, transaction, pack.SetIds, ct);
-        if (!PackDrawer.CanDraw(pack.Odds, eligible))
+        if (CardRules.OpenProblem(pack.Odds, pack.Pity, pack.FirstGuarantees, eligible, rates) is { } closed)
         {
-            // A later catalog change retired everything the pack could draw: nothing is charged.
-            return CardResult<PackOpenResponse>.Fail(CardFailure.PackUnavailable, $"Pack '{packId}' has no cards to draw right now.");
+            // Something changed since the save (the catalog, the rates): nothing is spent, the pack stays owned.
+            return CardResult<PackOpenResponse>.Fail(CardFailure.PackUnavailable, $"Pack '{packId}' cannot be opened right now: {closed}.");
         }
 
         var missedBefore = await MissedAsync(connection, transaction, playerId, pack, forUpdate: true, ct);
@@ -99,9 +214,12 @@ public sealed partial class CardStore
             }
         }
 
-        await LedgerAsync(connection, transaction, playerId, "gems", -pack.PriceGems, "pack_open", $"{prefix}:gems",
-            $"pack:{pack.PackId}:{pack.Version}", now, ct);
-        var (gemsAfter, dustAfter) = await MoveWalletAsync(connection, transaction, playerId, -pack.PriceGems, dustTotal, now, ct);
+        // An open moves no gems, but it always moves the account's version: the collection's Version tells a client the
+        // cards and owned packs changed, dust or not.
+        await WalletRowAsync(connection, transaction, playerId, ct);
+        var (gemsAfter, dustAfter) = await MoveWalletAsync(connection, transaction, playerId, 0, dustTotal, now, ct);
+        var packsLeft = await MovePacksAsync(connection, transaction, playerId, pack.PackId, -1, ct);
+        await PackLedgerAsync(connection, transaction, playerId, pack.PackId, pack.Version, -1, "open", key, openingId, ct);
 
         foreach (var (rarity, missed) in draw.MissedAfter)
         {
@@ -112,8 +230,8 @@ public sealed partial class CardStore
                 """, ct, playerId, pack.PackId, rarity, missed);
         }
 
-        var response = new PackOpenResponse(openingId.ToString("D"), pack.PackId, pack.Version, pack.PriceGems, cards, gemsAfter,
-            dustAfter, drawSeed.ToString());
+        var response = new PackOpenResponse(openingId.ToString("D"), pack.PackId, pack.Version, 0, cards, gemsAfter,
+            dustAfter, drawSeed.ToString(), packsLeft);
         await ExecAsync(connection, transaction,
             """
             INSERT INTO pack_openings (opening_id, player_id, pack_id, pack_version, catalog_version, draw_seed, pity_before, result, created_at)
@@ -122,7 +240,7 @@ public sealed partial class CardStore
             Json(Serialize(response)), now.ToUniversalTime());
         await RecordRequestAsync(connection, transaction, playerId, key, "pack", hash, response, now, ct);
         await EventAsync(connection, transaction, playerId, EventTypes.PackOpened, now,
-            new PackOpenedPayload(response.OpeningId, playerId.ToString("D"), pack.PackId, pack.Version, pack.PriceGems, cards,
+            new PackOpenedPayload(response.OpeningId, playerId.ToString("D"), pack.PackId, pack.Version, 0, cards,
                 dustTotal, newCards, response.DrawSeed, catalogVersion, cards.Count(c => c.Pity)), ct);
         await transaction.CommitAsync(ct);
         return CardResult<PackOpenResponse>.Ok(response);

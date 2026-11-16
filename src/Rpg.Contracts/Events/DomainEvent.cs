@@ -33,6 +33,9 @@ public static class EventTypes
     public const string CardCrafted = "CardCrafted";
     public const string PackTypeChanged = "PackTypeChanged";
     public const string CardRatesChanged = "CardRatesChanged";
+    // Spec pack-shop 3.1.
+    public const string PackPurchased = "PackPurchased";
+    public const string PackRefunded = "PackRefunded";
     // Spec run-verify 3.1.
     public const string FloorVerified = "FloorVerified";
     public const string RunVerified = "RunVerified";

@@ -411,7 +411,7 @@ public class OutboxTests(StackFixture stack)
     public async Task CardEvents_RedpandaDown_DrainAfterRestart()
     {
         // Spec card-collection F15 and acceptance scenario 3: pack, dust and craft commit while Redpanda is down (their outbox rows
-        // are in the same transaction), and every event reaches the topic, in order, once it is back.
+        // are in the same transaction), and every event reaches the topic, in order, once it is back. Spec pack-shop: a buy too.
         await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(Paused) { ["Cards:Enabled"] = "true" });
         await CardFixtures.SeedAsync(factory);
         var client = new Rpg.Client.GameServerClient(factory.CreateClient());
@@ -421,11 +421,13 @@ public class OutboxTests(StackFixture stack)
         var options = new OutboxOptions { KafkaMessageTimeout = TimeSpan.FromSeconds(3), BackoffBase = TimeSpan.Zero };
         var relay = RealRelay(factory, options);
 
+        await client.BuyPackAsync(CardFixtures.StarterPack, new Rpg.Contracts.Cards.PackBuyRequest(Guid.NewGuid(), 1), Ct);
         await client.OpenPackAsync(CardFixtures.StarterPack, Guid.NewGuid(), Ct);
-        await relay.RunOnceAsync(Ct);  // warm: the topic exists and the first event is out
+        await relay.RunOnceAsync(Ct);  // warm: the topic exists and the first events are out
         await Docker("pause", stack.Redpanda.Id);
         try
         {
+            await client.BuyPackAsync(CardFixtures.StarterPack, new Rpg.Contracts.Cards.PackBuyRequest(Guid.NewGuid(), 1), Ct);
             await client.OpenPackAsync(CardFixtures.StarterPack, Guid.NewGuid(), Ct);  // the account actions still work
             // A card the two packs did not give (the draw is random), crafted and dusted again.
             var owned = (await client.GetCollectionAsync(Ct)).Owned.Select(o => o.CardId).ToHashSet();
@@ -434,7 +436,7 @@ public class OutboxTests(StackFixture stack)
             await client.DustCardAsync(spare, Guid.NewGuid(), Ct);
             await relay.RunOnceAsync(Ct);  // fails after the message timeout; the row backs off
             Assert.True(await ScalarAsync(factory,
-                "SELECT count(*) FROM outbox WHERE destination = 'redpanda' AND published_at IS NULL AND dead_lettered_at IS NULL") >= 3);
+                "SELECT count(*) FROM outbox WHERE destination = 'redpanda' AND published_at IS NULL AND dead_lettered_at IS NULL") >= 4);
         }
         finally
         {
@@ -461,7 +463,8 @@ public class OutboxTests(StackFixture stack)
         }
 
         var received = await ConsumeAsync(EventTopics.Economy, token.PlayerId, ids.Count);
-        Assert.Equal(4, ids.Count);  // PackOpened x2, CardCrafted, CardDusted
+        Assert.Equal(6, ids.Count);  // (PackPurchased, PackOpened) x2, CardCrafted, CardDusted
+        Assert.Equal(2L, await ScalarAsync(factory, $"SELECT count(*) FROM outbox WHERE type = 'PackPurchased' AND key = '{token.PlayerId}' AND published_at IS NOT NULL"));
         Assert.Equal(ids, received.Select(m => m.EventId));  // all of them, in order, none lost
     }
 

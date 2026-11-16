@@ -69,6 +69,27 @@ public class CardCollectionTests(StackFixture stack)
     private static Task<PackOpenResponse> OpenAsync(GameServerClient client, string pack = StarterPack, Guid? key = null) =>
         client.OpenPackAsync(pack, key ?? Guid.NewGuid(), Ct);
 
+    /// <summary>Spec pack-shop 2.1: buys unopened packs (the gems are spent here, not at the open).</summary>
+    private static Task<PackBuyResponse> BuyAsync(GameServerClient client, string pack = StarterPack, int count = 1, Guid? key = null) =>
+        client.BuyPackAsync(pack, new PackBuyRequest(key ?? Guid.NewGuid(), count), Ct);
+
+    /// <summary>Buys one pack, then opens it: what slice 5's single open did.</summary>
+    private static async Task<PackOpenResponse> BuyAndOpenAsync(GameServerClient client, string pack = StarterPack)
+    {
+        await BuyAsync(client, pack);
+        return await OpenAsync(client, pack);
+    }
+
+    /// <summary>Spec pack-shop 3.2: the inventory equals the pack ledger's sum per (player, pack), and never goes below 0.</summary>
+    private static async Task AssertPackLedgerAsync(ApiFactory factory) =>
+        Assert.Equal(0L, await CountAsync(factory,
+            """
+            SELECT count(*) FROM (
+              SELECT player_id, pack_id, sum(delta) AS owned FROM pack_ledger GROUP BY player_id, pack_id) l
+            FULL JOIN pack_inventory i USING (player_id, pack_id)
+            WHERE COALESCE(l.owned, 0) <> COALESCE(i.count, 0) OR COALESCE(i.count, 0) < 0
+            """));
+
     /// <summary>The holdings equal the card ledger's sum per card, always 0 or 1 (spec 6, ledger invariants).</summary>
     private static async Task AssertCardLedgerAsync(ApiFactory factory)
     {
@@ -181,7 +202,7 @@ public class CardCollectionTests(StackFixture stack)
         await GrantAsync(factory, player, gems: 100);
 
         var catalog = await client.GetCardCatalogAsync(Ct);
-        var opened = await OpenAsync(client);
+        var opened = await BuyAndOpenAsync(client);
 
         Assert.Equal(1, catalog.CatalogVersion);
         Assert.Equal(5, opened.Cards.Count);
@@ -206,25 +227,31 @@ public class CardCollectionTests(StackFixture stack)
     // ---- opening packs -----------------------------------------------------------------------------------------------
 
     [Fact]
-    public async Task OpenPack_SpendsGems_GrantsNewCards_AndWritesEveryLedger()
+    public async Task OpenPack_SpendsAnOwnedPack_GrantsNewCards_AndWritesEveryLedger()
     {
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 250);
 
+        var bought = await BuyAsync(client);
         var opened = await OpenAsync(client);
 
+        Assert.Equal((100, 150, 1), (bought.GemsSpent, bought.Gems, bought.Owned));
         Assert.Equal(5, opened.Cards.Count);
-        Assert.Equal((100, 150), (opened.GemsSpent, opened.Gems));
+        Assert.Equal((0, 150, 0), (opened.GemsSpent, opened.Gems, opened.PacksLeft));   // spec pack-shop 2.2: gems spent at the buy
         var collection = await client.GetCollectionAsync(Ct);
         var fresh = opened.Cards.Where(c => !c.Duplicate).Select(c => c.CardId).Distinct().Order().ToList();
         Assert.Equal(fresh, collection.Owned.Select(o => o.CardId).Order().ToList());
         Assert.Equal(opened.Cards.Sum(c => c.DustGained), collection.Dust);
         Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM pack_openings"));
         Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM outbox WHERE type = 'PackOpened'"));
-        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'pack_open' AND delta = -100"));
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'pack_buy' AND delta = -100"));
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE currency = 'gems'"));
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM pack_ledger WHERE reason = 'open' AND delta = -1 AND opening_id IS NOT NULL"));
+        Assert.Empty((await client.GetCollectionAsync(Ct)).OwnedPacks);   // a zero count is left out
         await AssertCardLedgerAsync(factory);
         await AssertDustLedgerAsync(factory);
+        await AssertPackLedgerAsync(factory);
     }
 
     [Fact]
@@ -233,6 +260,10 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 100 * 40);
+        for (var i = 0; i < 4; i++)
+        {
+            await BuyAsync(client, count: 10);
+        }
 
         var drawn = new HashSet<string>();
         for (var i = 0; i < 40; i++)
@@ -253,6 +284,7 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 250);
+        await BuyAsync(client, count: 2);
         var key = Guid.NewGuid();
 
         var first = await OpenAsync(client, key: key);
@@ -260,7 +292,10 @@ public class CardCollectionTests(StackFixture stack)
 
         Assert.Equal(first, again with { Cards = first.Cards });
         Assert.Equal(first.Cards, again.Cards);
-        Assert.Equal(150, (await client.GetCollectionAsync(Ct)).Gems);
+        Assert.Equal(1, again.PacksLeft);
+        var collection = await client.GetCollectionAsync(Ct);
+        Assert.Equal(50, collection.Gems);
+        Assert.Equal([new OwnedPackDto(StarterPack, 1)], collection.OwnedPacks);   // one pack spent, not two
         Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM pack_openings"));
         Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM outbox WHERE type = 'PackOpened'"));
     }
@@ -273,6 +308,7 @@ public class CardCollectionTests(StackFixture stack)
         await GrantAsync(factory, player, gems: 250);
         await OwnAsync(factory, player, "item.k1");
         var key = Guid.NewGuid();
+        await BuyAsync(client);
         await OpenAsync(client, key: key);
 
         var error = await RefusedAsync(() => client.DustCardAsync("item.k1", key, Ct));
@@ -292,35 +328,7 @@ public class CardCollectionTests(StackFixture stack)
     }
 
     [Fact]
-    public async Task OpenPack_WithTooFewGems_Is1402_AndNothingChanges()
-    {
-        await using var factory = await FactoryAsync();
-        var (client, player) = await PlayerAsync(factory, Name());
-        await GrantAsync(factory, player, gems: 99);
-
-        var error = await RefusedAsync(() => OpenAsync(client));
-
-        Assert.Equal((HttpStatusCode.Conflict, ApiErrors.InsufficientCurrency), (error.StatusCode, error.ErrorCode));
-        Assert.Equal(99, (await client.GetCollectionAsync(Ct)).Gems);
-        Assert.Equal(0L, await CountAsync(factory, "SELECT count(*) FROM pack_openings"));
-    }
-
-    [Fact]
-    public async Task OpenPack_UnknownOrRetired_Is404_1408()
-    {
-        await using var factory = await FactoryAsync();
-        var (client, player) = await PlayerAsync(factory, Name());
-        await GrantAsync(factory, player, gems: 500);
-        await AddPackAsync(factory, CommonsOnly("old") with { Retired = true });
-
-        var unknown = await RefusedAsync(() => OpenAsync(client, "nope"));
-        var retired = await RefusedAsync(() => OpenAsync(client, "old"));
-
-        Assert.All([unknown, retired], e => Assert.Equal((HttpStatusCode.NotFound, ApiErrors.PackUnavailable), (e.StatusCode, e.ErrorCode)));
-    }
-
-    [Fact]
-    public async Task OpenPack_Concurrent_NeverOverdraws()
+    public async Task BuyPack_Concurrent_NeverOverdraws()
     {
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
@@ -330,7 +338,7 @@ public class CardCollectionTests(StackFixture stack)
         {
             try
             {
-                await OpenAsync(client);
+                await BuyAsync(client);
                 return (Ok: true, Code: 0);
             }
             catch (GameServerApiException error)
@@ -341,8 +349,10 @@ public class CardCollectionTests(StackFixture stack)
 
         Assert.Equal(1, results.Count(r => r.Ok));
         Assert.All(results.Where(r => !r.Ok), r => Assert.Equal(ApiErrors.InsufficientCurrency, r.Code));
-        Assert.Equal(0, (await client.GetCollectionAsync(Ct)).Gems);
-        await AssertCardLedgerAsync(factory);
+        var collection = await client.GetCollectionAsync(Ct);
+        Assert.Equal(0, collection.Gems);
+        Assert.Equal([new OwnedPackDto(StarterPack, 1)], collection.OwnedPacks);
+        await AssertPackLedgerAsync(factory);
     }
 
     [Fact]
@@ -351,18 +361,20 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 100);
-        await AddPackAsync(factory, CommonsOnly("commons", price: 10, count: 20));   // three commons, twenty draws
+        await AddPackAsync(factory, CommonsOnly("commons", price: 10));   // three commons, five draws: at least two duplicates
 
-        var opened = await OpenAsync(client, "commons");
+        var opened = await BuyAndOpenAsync(client, "commons");
 
-        Assert.Equal(20, opened.Cards.Count);
-        Assert.Equal(3, opened.Cards.Count(c => !c.Duplicate));
-        Assert.Equal(17, opened.Cards.Count(c => c.Duplicate));
+        var fresh = opened.Cards.Count(c => !c.Duplicate);
+        var duplicates = opened.Cards.Count(c => c.Duplicate);
+        Assert.Equal(5, opened.Cards.Count);
+        Assert.Equal(opened.Cards.Select(c => c.CardId).Distinct().Count(), fresh);   // each card is new once, then a duplicate
+        Assert.True(duplicates >= 2, $"five draws from three cards hold at least two duplicates, got {duplicates}");
         Assert.All(opened.Cards.Where(c => c.Duplicate), c => Assert.Equal(5, c.DustGained));
         var collection = await client.GetCollectionAsync(Ct);
-        Assert.Equal(3, collection.Owned.Count);
-        Assert.Equal(17 * 5, collection.Dust);
-        Assert.Equal(17L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'duplicate'"));
+        Assert.Equal(fresh, collection.Owned.Count);
+        Assert.Equal(duplicates * 5, collection.Dust);
+        Assert.Equal((long)duplicates, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'duplicate'"));
         await AssertCardLedgerAsync(factory);
         await AssertDustLedgerAsync(factory);
     }
@@ -375,16 +387,16 @@ public class CardCollectionTests(StackFixture stack)
         await GrantAsync(factory, player, gems: 100);
         await OwnAsync(factory, player, "item.k1", DateTimeOffset.UtcNow.AddMinutes(-5));
         await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
-        await AddPackAsync(factory, CommonsOnly("commons", price: 10, count: 20));
+        await AddPackAsync(factory, CommonsOnly("commons", price: 10));
 
-        await OpenAsync(client, "commons");
+        await BuyAndOpenAsync(client, "commons");
 
         var held = (await client.GetCollectionAsync(Ct)).Owned.Single(o => o.CardId == "item.k1");
         Assert.NotNull(held.LockedByRunId);
     }
 
     [Fact]
-    public async Task OpenPack_PriceChangedAfterTheListing_ChargesTheCurrentPrice()
+    public async Task BuyPack_PriceChangedAfterTheListing_ChargesTheCurrentPrice()
     {
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
@@ -392,11 +404,13 @@ public class CardCollectionTests(StackFixture stack)
         var listed = (await client.GetPacksAsync(Ct)).Packs.Single();   // fills the pack cache at 100 gems
         await AddPackAsync(factory, FromListing(listed) with { PriceGems = 150 });
 
-        var opened = await OpenAsync(client);
+        var bought = await BuyAsync(client);
 
-        Assert.Equal(150, opened.GemsSpent);
-        Assert.Equal(2, opened.PackVersion);
-        Assert.Equal(350, opened.Gems);
+        Assert.Equal(150, bought.GemsSpent);
+        Assert.Equal(2, bought.PackVersion);
+        Assert.Equal(350, bought.Gems);
+        // Spec pack-shop 6: the buy's ledger row carries the version bought.
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM pack_ledger WHERE reason = 'buy' AND pack_version = 2 AND delta = 1"));
         Assert.Equal(150, (await (await PlayerAsync(factory, Name())).Client.GetPacksAsync(Ct)).Packs.Single().PriceGems);   // the put deleted the cache
     }
 
@@ -411,9 +425,10 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 1000);
-        await AddPackAsync(factory, Pack("pity3", 10, 2, new Dictionary<string, int> { [CardRarities.Common] = 10_000 },
+        await AddPackAsync(factory, Pack("pity3", 10, 5, new Dictionary<string, int> { [CardRarities.Common] = 10_000 },
             pity: new Dictionary<string, int> { [CardRarities.Legendary] = 3 }));
 
+        await BuyAsync(client, "pity3", 3);
         var first = await OpenAsync(client, "pity3");
         var second = await OpenAsync(client, "pity3");
         var counters = (await client.GetCollectionAsync(Ct)).Pity.Single(p => p.PackId == "pity3").MissedPacks[CardRarities.Legendary];
@@ -432,10 +447,11 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 1000);
-        await AddPackAsync(factory, Pack("first2", 10, 1, new Dictionary<string, int> { [CardRarities.Common] = 10_000 },
+        await AddPackAsync(factory, Pack("first2", 10, 5, new Dictionary<string, int> { [CardRarities.Common] = 10_000 },
             pity: new Dictionary<string, int> { [CardRarities.Mythic] = 30 }, first: new Dictionary<string, int> { [CardRarities.Mythic] = 2 }));
 
         var before = (await client.GetCollectionAsync(Ct)).Pity.SingleOrDefault(p => p.PackId == "first2");
+        await BuyAsync(client, "first2", 2);
         var one = await OpenAsync(client, "first2");
         var two = await OpenAsync(client, "first2");
 
@@ -450,9 +466,10 @@ public class CardCollectionTests(StackFixture stack)
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 1000);
         var pity = new Dictionary<string, int> { [CardRarities.Legendary] = 50 };
-        await AddPackAsync(factory, Pack("pa", 10, 1, new Dictionary<string, int> { [CardRarities.Common] = 10_000 }, pity: pity));
-        await AddPackAsync(factory, Pack("pb", 10, 1, new Dictionary<string, int> { [CardRarities.Common] = 10_000 }, pity: pity));
+        await AddPackAsync(factory, Pack("pa", 10, 5, new Dictionary<string, int> { [CardRarities.Common] = 10_000 }, pity: pity));
+        await AddPackAsync(factory, Pack("pb", 10, 5, new Dictionary<string, int> { [CardRarities.Common] = 10_000 }, pity: pity));
         var key = Guid.NewGuid();
+        await BuyAsync(client, "pa", 3);
 
         await OpenAsync(client, "pa", key);
         await OpenAsync(client, "pa", key);   // the same request again
@@ -473,10 +490,10 @@ public class CardCollectionTests(StackFixture stack)
         var (veteran, veteranId) = await PlayerAsync(factory, Name() + "v");
         var (newcomer, _) = await PlayerAsync(factory, Name() + "n");
         await GrantAsync(factory, veteranId, gems: 1000);
-        await AddPackAsync(factory, Pack("late", 10, 1, new Dictionary<string, int> { [CardRarities.Common] = 10_000 }));
-        await OpenAsync(veteran, "late");
-        await OpenAsync(veteran, "late");
-        await AddPackAsync(factory, Pack("late", 10, 1, new Dictionary<string, int> { [CardRarities.Common] = 10_000 },
+        await AddPackAsync(factory, Pack("late", 10, 5, new Dictionary<string, int> { [CardRarities.Common] = 10_000 }));
+        await BuyAndOpenAsync(veteran, "late");
+        await BuyAndOpenAsync(veteran, "late");
+        await AddPackAsync(factory, Pack("late", 10, 5, new Dictionary<string, int> { [CardRarities.Common] = 10_000 },
             pity: new Dictionary<string, int> { [CardRarities.Legendary] = 20 },
             first: new Dictionary<string, int> { [CardRarities.Legendary] = 10 }));
 
@@ -499,7 +516,8 @@ public class CardCollectionTests(StackFixture stack)
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 100, dust: 10_000);
         await OwnAsync(factory, player, "item.e1");
-        await AddPackAsync(factory, Pack("epics", 10, 1, new Dictionary<string, int> { [CardRarities.Epic] = 10_000 }));
+        await AddPackAsync(factory, Pack("epics", 10, 5, new Dictionary<string, int> { [CardRarities.Epic] = 10_000 }));
+        await BuyAsync(client, "epics");
         await using (var delete = factory.Services.GetRequiredService<NpgsqlDataSource>().CreateCommand(
                          "DELETE FROM card_rates WHERE rarity = 'epic'"))
         {
@@ -507,14 +525,18 @@ public class CardCollectionTests(StackFixture stack)
         }
 
         var open = await RefusedAsync(() => OpenAsync(client, "epics"));
+        var buy = await RefusedAsync(() => BuyAsync(client, "epics"));   // review fix: not sold while it cannot open
         var dust = await RefusedAsync(() => client.DustCardAsync("item.e1", Guid.NewGuid(), Ct));
-        var put = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("epics2", 10, 1,
+        var put = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("epics2", 10, 5,
             new Dictionary<string, int> { [CardRarities.Epic] = 10_000 }), Ct));
 
         Assert.Equal((HttpStatusCode.NotFound, ApiErrors.PackUnavailable), (open.StatusCode, open.ErrorCode));
+        Assert.Equal((HttpStatusCode.NotFound, ApiErrors.PackUnavailable), (buy.StatusCode, buy.ErrorCode));
         Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardNotCollectible), (dust.StatusCode, dust.ErrorCode));
         Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardRuleInvalid), (put.StatusCode, put.ErrorCode));
-        Assert.Equal(100, (await client.GetCollectionAsync(Ct)).Gems);   // nothing charged
+        var collection = await client.GetCollectionAsync(Ct);
+        Assert.Equal(90, collection.Gems);   // only the buy
+        Assert.Equal([new OwnedPackDto("epics", 1)], collection.OwnedPacks);   // the refused open spent nothing
     }
 
     [Fact]
@@ -523,6 +545,10 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 100 * 30);
+        for (var i = 0; i < 3; i++)
+        {
+            await BuyAsync(client, count: 10);
+        }
 
         for (var i = 0; i < 30; i++)
         {
@@ -538,7 +564,7 @@ public class CardCollectionTests(StackFixture stack)
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 100);
 
-        var opened = await OpenAsync(client);
+        var opened = await BuyAndOpenAsync(client);
 
         var data = factory.Services.GetRequiredService<NpgsqlDataSource>();
         await using var command = data.CreateCommand("SELECT draw_seed, pity_before::text, catalog_version FROM pack_openings");
@@ -555,6 +581,434 @@ public class CardCollectionTests(StackFixture stack)
 
         Assert.Equal(seed.ToString(), opened.DrawSeed);
         Assert.Equal(opened.Cards.Select(c => c.CardId), redrawn.Cards.Select(c => c.CardId));
+    }
+
+    // ---- buying and owning packs (spec pack-shop) ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task Buy_same_key_buys_once()
+    {
+        await using var factory = await FactoryAsync();
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 1000);
+        var key = Guid.NewGuid();
+
+        var first = await BuyAsync(client, count: 3, key: key);
+        var again = await BuyAsync(client, count: 3, key: key);
+
+        Assert.Equal(first, again);
+        Assert.Equal((3, 300, 700L, 3), (first.Count, first.GemsSpent, first.Gems, first.Owned));
+        var collection = await client.GetCollectionAsync(Ct);
+        Assert.Equal(700, collection.Gems);
+        Assert.Equal([new OwnedPackDto(StarterPack, 3)], collection.OwnedPacks);
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'pack_buy' AND delta = -300"));
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM pack_ledger WHERE reason = 'buy' AND delta = 3"));
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM outbox WHERE type = 'PackPurchased'"));
+        // The same key with another count is another request.
+        var other = await RefusedAsync(() => BuyAsync(client, count: 2, key: key));
+        Assert.Equal((HttpStatusCode.Conflict, ApiErrors.RequestKeyReused), (other.StatusCode, other.ErrorCode));
+        await AssertPackLedgerAsync(factory);
+    }
+
+    /// <summary>
+    /// Acceptance scenario 2: the buy committed but its response never reached the client (the API crashed, the connection
+    /// dropped). The client retries with the key it kept, on a new server instance, and gets the stored answer; gems are spent once.
+    /// </summary>
+    [Fact]
+    public async Task Buy_replayed_after_commit_spends_once()
+    {
+        await using var factory = await FactoryAsync();
+        var (_, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 250);
+        var key = Guid.NewGuid();
+        var store = factory.Services.GetRequiredService<CardStore>();
+
+        // The commit, with no HTTP response: straight through the store, as the crashed request did.
+        var committed = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 2, 10, key, DateTimeOffset.UtcNow, Ct);
+        var (retrying, _) = await PlayerAsync(factory, Name());
+        var retried = await BuyAsync(retrying, count: 2, key: key);
+
+        Assert.Equal(committed.Value, retried);
+        Assert.Equal(50, (await retrying.GetCollectionAsync(Ct)).Gems);
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'pack_buy'"));
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM outbox WHERE type = 'PackPurchased'"));
+    }
+
+    [Fact]
+    public async Task Buy_key_reused_for_open_is_refused()
+    {
+        await using var factory = await FactoryAsync();
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 250);
+        var key = Guid.NewGuid();
+        await BuyAsync(client, key: key);
+
+        var error = await RefusedAsync(() => OpenAsync(client, key: key));
+
+        Assert.Equal((HttpStatusCode.Conflict, ApiErrors.RequestKeyReused), (error.StatusCode, error.ErrorCode));
+        Assert.Equal(0L, await CountAsync(factory, "SELECT count(*) FROM pack_openings"));
+        Assert.Equal([new OwnedPackDto(StarterPack, 1)], (await client.GetCollectionAsync(Ct)).OwnedPacks);
+    }
+
+    [Fact]
+    public async Task Buy_refusals_write_nothing()
+    {
+        await using var factory = await FactoryAsync();
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 250);
+        await AddPackAsync(factory, CommonsOnly("old") with { Retired = true });
+
+        var poor = await RefusedAsync(() => BuyAsync(client, count: 3));        // 300 > 250
+        var none = await RefusedAsync(() => BuyAsync(client, count: 0));
+        var many = await RefusedAsync(() => BuyAsync(client, count: 11));       // Cards:MaxPacksPerBuy is 10
+        var unknown = await RefusedAsync(() => BuyAsync(client, "nope"));
+        var retired = await RefusedAsync(() => BuyAsync(client, "old"));
+        var keyless = await RefusedAsync(() => client.BuyPackAsync(StarterPack, new PackBuyRequest(Guid.Empty, 1), Ct));
+
+        Assert.Equal((HttpStatusCode.Conflict, ApiErrors.InsufficientCurrency), (poor.StatusCode, poor.ErrorCode));
+        Assert.All([none, many], e => Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardRuleInvalid), (e.StatusCode, e.ErrorCode)));
+        Assert.All([unknown, retired], e => Assert.Equal((HttpStatusCode.NotFound, ApiErrors.PackUnavailable), (e.StatusCode, e.ErrorCode)));
+        Assert.Equal(HttpStatusCode.BadRequest, keyless.StatusCode);
+        var collection = await client.GetCollectionAsync(Ct);
+        Assert.Equal(250, collection.Gems);
+        Assert.Empty(collection.OwnedPacks);
+        Assert.Equal(0L, await CountAsync(factory,
+            "SELECT (SELECT count(*) FROM pack_ledger) + (SELECT count(*) FROM pack_inventory) + (SELECT count(*) FROM account_requests)" +
+            " + (SELECT count(*) FROM wallet_ledger) + (SELECT count(*) FROM outbox WHERE type = 'PackPurchased')"));
+    }
+
+    [Fact]
+    public async Task Open_without_owned_pack_is_refused()
+    {
+        await using var factory = await FactoryAsync();
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 1000);   // gems alone no longer open a pack
+
+        var error = await RefusedAsync(() => OpenAsync(client));
+        var unknown = await RefusedAsync(() => OpenAsync(client, "nope"));
+
+        Assert.All([error, unknown], e => Assert.Equal((HttpStatusCode.Conflict, ApiErrors.NoPackOwned), (e.StatusCode, e.ErrorCode)));
+        Assert.Equal(1000, (await client.GetCollectionAsync(Ct)).Gems);
+        Assert.Equal(0L, await CountAsync(factory,
+            "SELECT (SELECT count(*) FROM pack_openings) + (SELECT count(*) FROM pack_pity) + (SELECT count(*) FROM account_requests)"));
+        var metrics = await factory.CreateClient().GetStringAsync("/metrics", Ct);
+        Assert.Contains(metrics.Split('\n'), line => line.StartsWith("rpg_card_actions_refused_total{") && line.Contains("reason=\"NoPackOwned\""));
+    }
+
+    [Fact]
+    public async Task Concurrent_opens_spend_one_pack_each()
+    {
+        await using var factory = await FactoryAsync();
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 200);
+        await BuyAsync(client, count: 2);
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 6).Select(async _ =>
+        {
+            try
+            {
+                await OpenAsync(client);
+                return (Ok: true, Code: 0);
+            }
+            catch (GameServerApiException error)
+            {
+                return (Ok: false, Code: error.ErrorCode ?? 0);
+            }
+        }));
+
+        Assert.Equal(2, results.Count(r => r.Ok));
+        Assert.All(results.Where(r => !r.Ok), r => Assert.Equal(ApiErrors.NoPackOwned, r.Code));
+        Assert.Empty((await client.GetCollectionAsync(Ct)).OwnedPacks);
+        Assert.Equal(2L, await CountAsync(factory, "SELECT count(*) FROM pack_openings"));
+        Assert.Equal(0L, await CountAsync(factory, "SELECT count(*) FROM pack_inventory WHERE count <> 0"));
+        await AssertPackLedgerAsync(factory);
+        await AssertCardLedgerAsync(factory);
+    }
+
+    [Fact]
+    public async Task Retired_pack_type_still_opens_owned_packs()
+    {
+        await using var factory = await FactoryAsync();
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 100);
+        var commons = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
+        var pity = new Dictionary<string, int> { [CardRarities.Legendary] = 50 };
+        await AddPackAsync(factory, Pack("old", 10, 5, commons, pity: pity));
+        await BuyAsync(client, "old", 2);
+        await AddPackAsync(factory, Pack("old", 10, 5, commons, pity: pity, retired: true));   // version 2, retired
+
+        var opened = await OpenAsync(client, "old");
+        var buy = await RefusedAsync(() => BuyAsync(client, "old"));
+
+        Assert.Equal((2, 5, 1), (opened.PackVersion, opened.Cards.Count, opened.PacksLeft));   // its last version
+        Assert.Equal(ApiErrors.PackUnavailable, buy.ErrorCode);   // but it is no longer sold
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM pack_ledger WHERE reason = 'buy' AND pack_version = 1"));
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM pack_ledger WHERE reason = 'open' AND pack_version = 2"));
+        // Its pity counters stay listed while the player still owns one (review fix).
+        Assert.Equal(1, (await client.GetCollectionAsync(Ct)).Pity.Single(p => p.PackId == "old").MissedPacks[CardRarities.Legendary]);
+    }
+
+    [Fact]
+    public async Task Undrawable_owned_pack_stays_owned()
+    {
+        await using var factory = await FactoryAsync();
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 100);
+        await AddPackAsync(factory, Pack("epics", 10, 5, new Dictionary<string, int> { [CardRarities.Epic] = 10_000 }));
+        await BuyAsync(client, "epics");
+        await SeedAsync(factory, new CardCatalogFile("fixture-3", [.. Catalog().Cards.Where(c => c.Id != "item.e1")]));   // no epic left
+
+        var error = await RefusedAsync(() => OpenAsync(client, "epics"));
+
+        Assert.Equal((HttpStatusCode.NotFound, ApiErrors.PackUnavailable), (error.StatusCode, error.ErrorCode));
+        Assert.Equal([new OwnedPackDto("epics", 1)], (await client.GetCollectionAsync(Ct)).OwnedPacks);
+        Assert.Equal(0L, await CountAsync(factory, "SELECT count(*) FROM pack_ledger WHERE reason = 'open'"));
+        // Review fix: an undrawable pack is not sold either, so nobody pays for packs that cannot open.
+        var buy = await RefusedAsync(() => BuyAsync(client, "epics"));
+        Assert.Equal((HttpStatusCode.NotFound, ApiErrors.PackUnavailable), (buy.StatusCode, buy.ErrorCode));
+        Assert.Equal(90, (await client.GetCollectionAsync(Ct)).Gems);
+    }
+
+    [Fact]
+    public async Task Inventory_equals_ledger_sum()
+    {
+        await using var factory = await FactoryAsync();
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 2000);
+        await AddPackAsync(factory, CommonsOnly("commons", price: 10));
+        await AddPackAsync(factory, CommonsOnly("alpha", price: 10));
+
+        await BuyAsync(client, count: 3);
+        await BuyAsync(client, "commons", 5);
+        await OpenAsync(client);
+        await BuyAsync(client, "alpha", 1);
+        await OpenAsync(client, "commons");
+        await OpenAsync(client, "commons");
+        await BuyAsync(client, count: 1);
+        await OpenAsync(client, "alpha");
+        await RefusedAsync(() => OpenAsync(client, "alpha"));
+
+        // Sorted by pack id, the empty "alpha" left out.
+        Assert.Equal([new OwnedPackDto("commons", 3), new OwnedPackDto(StarterPack, 3)], (await client.GetCollectionAsync(Ct)).OwnedPacks);
+        Assert.Equal(8L, await CountAsync(factory, "SELECT count(*) FROM pack_ledger"));   // 4 buys, 4 opens; the refusal wrote none
+        await AssertPackLedgerAsync(factory);
+    }
+
+    [Fact]
+    public async Task Buys_MoveTheBoughtCounter_AndTheOwnedGauge()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(Cards)
+        {
+            ["Monitors:Interval"] = "00:00:00.200",
+        });
+        await SeedAsync(factory);
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 500);
+
+        await BuyAsync(client, count: 3);
+        await BuyAsync(client, count: 1);
+        await OpenAsync(client);
+
+        var metrics = await PollMetricsAsync(factory, text => Series(text, "rpg_packs_owned") == "3");
+        Assert.Equal("3", Series(metrics, "rpg_packs_owned"));
+        Assert.Equal("4", Series(metrics, "rpg_packs_bought_total", $"pack=\"{StarterPack}\""));
+        Assert.Equal("2", Series(metrics, "rpg_account_action_duration_seconds_count", "action=\"buy_pack\""));
+    }
+
+    /// <summary>The value of the series <paramref name="name"/> carrying every one of <paramref name="labels"/>, or null.</summary>
+    private static string? Series(string metrics, string name, params string[] labels) =>
+        metrics.Split('\n')
+            .Where(line => (line.StartsWith(name + "{", StringComparison.Ordinal) || line.StartsWith(name + " ", StringComparison.Ordinal))
+                           && labels.All(line.Contains))
+            .Select(line => line[(Math.Max(line.LastIndexOf('}'), name.Length - 1) + 1)..].Trim().Split(' ')[0])
+            .FirstOrDefault();
+
+    // ---- retiring with a refund (spec pack-shop 2.5) -----------------------------------------------------------------
+
+    /// <summary>A login: the dev token issue, which settles the player's refunds (spec pack-shop 2.5).</summary>
+    private static async Task<GameServerClient> LoginAsync(ApiFactory factory, string name) => (await PlayerAsync(factory, name)).Client;
+
+    private static Task<long> RefundRowsAsync(ApiFactory factory) =>
+        CountAsync(factory, "SELECT count(*) FROM pack_ledger WHERE reason = 'refund'");
+
+    [Fact]
+    public async Task RetireWithRefund_PaysEachOwnerWhatTheyPaid_AtLoginOrTheCollectionRead()
+    {
+        await using var factory = await FactoryAsync();
+        var (admin, _) = await PlayerAsync(factory, "designer");
+        var (alice, a) = await PlayerAsync(factory, Name() + "a");
+        var (bob, b) = await PlayerAsync(factory, Name() + "b");
+        await GrantAsync(factory, a, gems: 200);
+        await GrantAsync(factory, b, gems: 100);
+        var commons = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
+        await AddPackAsync(factory, Pack("old", 10, 5, commons));
+        await BuyAsync(alice, "old", 3);                                   // 3 at 10
+        await AddPackAsync(factory, Pack("old", 30, 5, commons));          // version 2: 30 gems
+        await BuyAsync(alice, "old", 2);                                   // 2 at 30: alice paid 90, has 110 left
+        await BuyAsync(bob, "old", 1);                                     // 1 at 30: bob has 70 left
+        await OpenAsync(alice, "old");                                     // opens spend the oldest first: 4 left = 2 at 30 + 2 at 10
+
+        // The refund version may break the openability rule (a set with no cards): nobody opens it.
+        var retired = await admin.PutPackTypeAsync(Pack("old", 30, 5, commons, set: "no-such-set", retired: true) with { RefundUnopened = true }, Ct);
+        var pending = await RefusedAsync(() => OpenAsync(alice, "old"));   // nobody has signed in since: not paid yet, and not opened
+        var before = await RefundRowsAsync(factory);
+        var aliceAgain = await LoginAsync(factory, Name() + "a");          // alice signs in again: paid at login
+        var afterLogin = await RefundRowsAsync(factory);
+        var bobNow = await bob.GetCollectionAsync(Ct);                     // bob's token outlived the maintenance: paid at the read
+        var aliceNow = await aliceAgain.GetCollectionAsync(Ct);
+
+        Assert.True(retired.RefundUnopened);
+        Assert.Equal((HttpStatusCode.NotFound, ApiErrors.PackUnavailable), (pending.StatusCode, pending.ErrorCode));
+        Assert.Equal((0L, 1L), (before, afterLogin));
+        Assert.Equal((190L, 100L), (aliceNow.Gems, bobNow.Gems));          // 110 + 80, 70 + 30
+        Assert.Empty(aliceNow.OwnedPacks);
+        Assert.Empty(bobNow.OwnedPacks);
+        Assert.Equal(2L, await CountAsync(factory, "SELECT count(*) FROM pack_ledger WHERE reason = 'refund' AND pack_version = 3"));
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'pack_refund' AND delta = 80"));
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'pack_refund' AND delta = 30"));
+        Assert.Equal(2L, await CountAsync(factory,
+            "SELECT count(*) FROM outbox WHERE type = 'PackRefunded' AND (payload->'payload'->>'gemsRefunded')::int IN (80, 30)"));
+        await AssertPackLedgerAsync(factory);
+        var metrics = await factory.CreateClient().GetStringAsync("/metrics", Ct);
+        Assert.Equal("5", Series(metrics, "rpg_packs_refunded_total", "pack=\"old\""));
+        Assert.Equal("110", Series(metrics, "rpg_pack_refund_gems_total"));
+    }
+
+    /// <summary>Postgres is a hard dependency: with it down, a login (which settles refunds) answers 503, never a token.</summary>
+    [Fact]
+    public async Task Login_WithPostgresUnreachable_Is503()
+    {
+        await using var factory = new ApiFactory(StackFixture.Unreachable.Postgres, stack.RedisConnectionString, stack.RabbitMqUri,
+            "Development", Cards);
+        var client = new GameServerClient(factory.CreateClient());
+
+        var error = await RefusedAsync(() => client.GetDevTokenAsync(new DevTokenRequest(Name()), Ct));
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, error.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refund_TwoLoginsAtOnce_PayOnce()
+    {
+        await using var factory = await FactoryAsync();
+        var (admin, _) = await PlayerAsync(factory, "designer");
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 100);
+        var commons = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
+        await AddPackAsync(factory, Pack("old", 10, 5, commons));
+        await BuyAsync(client, "old", 4);
+        await admin.PutPackTypeAsync(Pack("old", 10, 5, commons, retired: true) with { RefundUnopened = true }, Ct);
+
+        // Two devices sign in at once and a third reads the collection, then once more: the account lock and the unique keys pay once.
+        await Task.WhenAll(LoginAsync(factory, Name()), LoginAsync(factory, Name()), client.GetCollectionAsync(Ct));
+        await LoginAsync(factory, Name());
+
+        Assert.Equal(100, (await client.GetCollectionAsync(Ct)).Gems);
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'pack_refund'"));
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM outbox WHERE type = 'PackRefunded'"));
+        await AssertPackLedgerAsync(factory);
+    }
+
+    /// <summary>
+    /// Security review fix: the refund's ledger key is derived from public values, so a player could buy with that very key.
+    /// Refund rows have a key space of their own (the reason is part of the unique key), and an owner that still fails never
+    /// stops the pass for everyone else.
+    /// </summary>
+    [Fact]
+    public async Task Refund_APlayersOwnKeyCannotBlockIt()
+    {
+        await using var factory = await FactoryAsync();
+        var (admin, _) = await PlayerAsync(factory, "designer");
+        var (mallory, m) = await PlayerAsync(factory, Name() + "m");
+        var (other, o) = await PlayerAsync(factory, Name() + "o");
+        await GrantAsync(factory, m, gems: 100);
+        await GrantAsync(factory, o, gems: 100);
+        var commons = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
+        await AddPackAsync(factory, Pack("old", 10, 5, commons));
+        await BuyAsync(mallory, "old", 1, CardStore.RefundKey(Guid.Parse(m), "old", 2));   // the key the refund will use
+        await BuyAsync(other, "old", 1);
+        await admin.PutPackTypeAsync(Pack("old", 10, 5, commons, retired: true) with { RefundUnopened = true }, Ct);   // version 2
+
+        await LoginAsync(factory, Name() + "m");
+
+        Assert.Equal(1L, await RefundRowsAsync(factory));
+        Assert.Equal((100L, 100L), ((await mallory.GetCollectionAsync(Ct)).Gems, (await other.GetCollectionAsync(Ct)).Gems));
+        await AssertPackLedgerAsync(factory);
+    }
+
+    /// <summary>
+    /// Spec pack-shop 2.5: packs no buy row prices (a damaged ledger) are never refunded for nothing nor taken away. What the
+    /// buys prove is paid, the rest stays in the inventory held for a support check: the collection flags it, the open says so,
+    /// later logins leave it alone, and the failure metric moves.
+    /// </summary>
+    [Fact]
+    public async Task Refund_UnpricedPacks_AreHeldForASupportCheck_AndThePricedOnesPaid()
+    {
+        await using var factory = await FactoryAsync();
+        var (admin, _) = await PlayerAsync(factory, "designer");
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 100);
+        var commons = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
+        await AddPackAsync(factory, Pack("old", 10, 5, commons));
+        await BuyAsync(client, "old", 3);
+        await using (var damage = factory.Services.GetRequiredService<NpgsqlDataSource>().CreateCommand(
+                         $"UPDATE pack_ledger SET delta = 1 WHERE player_id = '{player}' AND reason = 'buy'"))   // the ledger now prices 1 of 3
+        {
+            await damage.ExecuteNonQueryAsync(Ct);
+        }
+
+        await admin.PutPackTypeAsync(Pack("old", 10, 5, commons, retired: true) with { RefundUnopened = true }, Ct);
+        var again = await LoginAsync(factory, Name());
+        await LoginAsync(factory, Name());   // a later login leaves the held packs alone
+        var collection = await again.GetCollectionAsync(Ct);
+        var open = await RefusedAsync(() => OpenAsync(again, "old"));
+
+        Assert.Equal(80, collection.Gems);                                         // 70 after the buy + the one priced pack
+        Assert.Equal([new OwnedPackDto("old", 2, RefundHeld: true)], collection.OwnedPacks);
+        Assert.Equal(ApiErrors.PackUnavailable, open.ErrorCode);
+        Assert.Contains("support check", open.Problem?.Detail);
+        Assert.Equal(1L, await RefundRowsAsync(factory));
+        Assert.Equal(1L, await CountAsync(factory, "SELECT count(*) FROM wallet_ledger WHERE reason = 'pack_refund' AND delta = 10"));
+        var metrics = await factory.CreateClient().GetStringAsync("/metrics", Ct);
+        Assert.Equal("1", Series(metrics, "rpg_pack_refund_failures_total", "pack=\"old\"", "reason=\"held\""));
+    }
+
+    [Fact]
+    public async Task Refund_SkipsATypeUnretiredBeforeThePlayerSignsIn()
+    {
+        await using var factory = await FactoryAsync();
+        var (admin, _) = await PlayerAsync(factory, "designer");
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 100);
+        var commons = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
+        await AddPackAsync(factory, Pack("old", 10, 5, commons));
+        await BuyAsync(client, "old", 2);
+        await admin.PutPackTypeAsync(Pack("old", 10, 5, commons, retired: true) with { RefundUnopened = true }, Ct);
+        await admin.PutPackTypeAsync(Pack("old", 10, 5, commons), Ct);   // changed their mind in the same maintenance window
+
+        var again = await LoginAsync(factory, Name());
+        var opened = await OpenAsync(again, "old");
+
+        Assert.Equal((3, 1), (opened.PackVersion, opened.PacksLeft));   // v1, the refund retirement, then v3 back on sale
+        Assert.Equal(80, (await again.GetCollectionAsync(Ct)).Gems);
+        Assert.Equal(0L, await RefundRowsAsync(factory));
+    }
+
+    [Fact]
+    public async Task RetireWithRefund_ARefundNeedsARetiredVersion()
+    {
+        await using var factory = await FactoryAsync();
+        var (admin, _) = await PlayerAsync(factory, "designer");
+        var commons = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
+
+        var error = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("p", 10, 5, commons) with { RefundUnopened = true }, Ct));
+        var listed = await admin.PutPackTypeAsync(Pack("p", 10, 5, commons), Ct);
+
+        Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardRuleInvalid), (error.StatusCode, error.ErrorCode));
+        Assert.Null(listed.RefundUnopened);   // left off the JSON unless true
+        // A pack type saved before the 5-card rule can still be retired, or refunded, at its own size.
+        var oldSize = await admin.PutPackTypeAsync(Pack("p", 10, 3, commons, retired: true) with { RefundUnopened = true }, Ct);
+        Assert.Equal(3, oldSize.CardCount);
     }
 
     // ---- dust and the run lock ---------------------------------------------------------------------------------------
@@ -720,6 +1174,72 @@ public class CardCollectionTests(StackFixture stack)
         Assert.Equal(RunStatus.Abandoned, (await client.GetRunAsync(run.RunId, Ct)).Status);
     }
 
+    /// <summary>
+    /// Spec pack-shop: owned packs of a retired type open with its latest version, so a retirement is checked like any other
+    /// version: one that could not be drawn, or that can give a rarity with no card rate, is refused when it is saved, and the
+    /// packs players own keep opening with the last good version.
+    /// </summary>
+    [Fact]
+    public async Task Admin_ARetirementThatWouldTrapOwnedPacks_IsRefused()
+    {
+        await using var factory = await FactoryAsync();
+        var (admin, _) = await PlayerAsync(factory, "designer");
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 100);
+        var commons = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
+        await AddPackAsync(factory, Pack("old", 10, 5, commons));
+        await BuyAsync(client, "old", 2);
+        await using (var delete = factory.Services.GetRequiredService<NpgsqlDataSource>().CreateCommand(
+                         "DELETE FROM card_rates WHERE rarity = 'epic'"))
+        {
+            await delete.ExecuteNonQueryAsync(Ct);
+        }
+
+        var undrawable = await RefusedAsync(() => admin.PutPackTypeAsync(
+            Pack("old", 10, 5, new Dictionary<string, int> { [CardRarities.Common] = 10_000 }, set: "no-such-set", retired: true), Ct));
+        var unrated = await RefusedAsync(() => admin.PutPackTypeAsync(
+            Pack("old", 10, 5, new Dictionary<string, int> { [CardRarities.Common] = 5_000, [CardRarities.Epic] = 5_000 }, retired: true), Ct));
+        var opened = await OpenAsync(client, "old");
+
+        Assert.All([undrawable, unrated], e => Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardRuleInvalid), (e.StatusCode, e.ErrorCode)));
+        Assert.Contains("no card rate", unrated.Problem?.Detail);
+        Assert.Equal((1, 1), (opened.PackVersion, opened.PacksLeft));   // still the last good version
+        await admin.PutPackTypeAsync(Pack("old", 10, 5, commons, retired: true), Ct);   // a sound retirement is fine
+        Assert.Equal(2, (await OpenAsync(client, "old")).PackVersion);
+    }
+
+    /// <summary>
+    /// Spec pack-shop: a rarity only a pity timer (or a first-pack guarantee) can give still needs a card rate: refused at the
+    /// save, and when the rate goes away later the pack is no longer sold and an owned one is refused without being spent.
+    /// </summary>
+    [Fact]
+    public async Task APityOnlyRarity_NeedsACardRate_AtTheSaveTheBuyAndTheOpen()
+    {
+        await using var factory = await FactoryAsync();
+        var (admin, _) = await PlayerAsync(factory, "designer");
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 100);
+        var commons = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
+        await AddPackAsync(factory, Pack("pity", 10, 5, commons, pity: new Dictionary<string, int> { [CardRarities.Mythic] = 2 }));
+        await BuyAsync(client, "pity");
+        await using (var delete = factory.Services.GetRequiredService<NpgsqlDataSource>().CreateCommand(
+                         "DELETE FROM card_rates WHERE rarity = 'mythic'"))
+        {
+            await delete.ExecuteNonQueryAsync(Ct);
+        }
+
+        var save = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("pity2", 10, 5, commons,
+            first: new Dictionary<string, int> { [CardRarities.Mythic] = 1 }, pity: new Dictionary<string, int> { [CardRarities.Mythic] = 2 }), Ct));
+        var buy = await RefusedAsync(() => BuyAsync(client, "pity"));
+        var open = await RefusedAsync(() => OpenAsync(client, "pity"));
+
+        Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardRuleInvalid), (save.StatusCode, save.ErrorCode));
+        Assert.All([buy, open], e => Assert.Equal((HttpStatusCode.NotFound, ApiErrors.PackUnavailable), (e.StatusCode, e.ErrorCode)));
+        var collection = await client.GetCollectionAsync(Ct);
+        Assert.Equal(90, collection.Gems);
+        Assert.Equal([new OwnedPackDto("pity", 1)], collection.OwnedPacks);   // kept, to open once the rate is back
+    }
+
     [Fact]
     public async Task Admin_APackNobodyCanDrawFrom_IsRefused_AndOneThatBecomesUndrawableIsUnavailable()
     {
@@ -728,17 +1248,18 @@ public class CardCollectionTests(StackFixture stack)
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 100);
         // Only legendary odds, and the only legendaries are core-free items in the descent set: drawable. Epic-only is too.
-        await AddPackAsync(factory, Pack("epics", 10, 1, new Dictionary<string, int> { [CardRarities.Epic] = 10_000 }));
-        // Retire every epic: the pack is now undrawable, and the open must say so without charging.
+        await AddPackAsync(factory, Pack("epics", 10, 5, new Dictionary<string, int> { [CardRarities.Epic] = 10_000 }));
+        await BuyAsync(client, "epics");
+        // Retire every epic: the pack is now undrawable, and the open must say so without spending the pack.
         await SeedAsync(factory, new CardCatalogFile("fixture-3", [.. Catalog().Cards.Where(c => c.Id != "item.e1")]));
 
         var error = await RefusedAsync(() => OpenAsync(client, "epics"));
-        var refused = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("epics2", 10, 1,
+        var refused = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("epics2", 10, 5,
             new Dictionary<string, int> { [CardRarities.Epic] = 10_000 }), Ct));
 
         Assert.Equal((HttpStatusCode.NotFound, ApiErrors.PackUnavailable), (error.StatusCode, error.ErrorCode));
         Assert.Equal(ApiErrors.CardRuleInvalid, refused.ErrorCode);
-        Assert.Equal(100, (await client.GetCollectionAsync(Ct)).Gems);
+        Assert.Equal(90, (await client.GetCollectionAsync(Ct)).Gems);
     }
 
     [Fact]
@@ -954,16 +1475,22 @@ public class CardCollectionTests(StackFixture stack)
         var (admin, _) = await PlayerAsync(factory, "designer");
         var odds = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
 
-        var v1 = await admin.PutPackTypeAsync(Pack("p", 10, 3, odds), Ct);
-        var v2 = await admin.PutPackTypeAsync(Pack("p", 20, 3, odds), Ct);
-        var badSum = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("p", 10, 3, new Dictionary<string, int> { [CardRarities.Common] = 9_999 }), Ct));
-        var badSet = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("p", 10, 3, odds, set: "no-such-set"), Ct));
+        var v1 = await admin.PutPackTypeAsync(Pack("p", 10, 5, odds), Ct);
+        var v2 = await admin.PutPackTypeAsync(Pack("p", 20, 5, odds), Ct);
+        var badSum = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("p", 10, 5, new Dictionary<string, int> { [CardRarities.Common] = 9_999 }), Ct));
+        var badSet = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("p", 10, 5, odds, set: "no-such-set"), Ct));
         var badFirst = await RefusedAsync(() => admin.PutPackTypeAsync(
-            Pack("p", 10, 3, odds, pity: new Dictionary<string, int> { [CardRarities.Epic] = 5 }, first: new Dictionary<string, int> { [CardRarities.Epic] = 9 }), Ct));
-        var badMin = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("p", 10, 3, odds, min: CardRarities.Mythic), Ct));
+            Pack("p", 10, 5, odds, pity: new Dictionary<string, int> { [CardRarities.Epic] = 5 }, first: new Dictionary<string, int> { [CardRarities.Epic] = 9 }), Ct));
+        var badMin = await RefusedAsync(() => admin.PutPackTypeAsync(Pack("p", 10, 5, odds, min: CardRarities.Mythic), Ct));
+        // Every pack holds 5 cards (the user, 2026-11-15).
+        var badSizes = new[]
+        {
+            await RefusedAsync(() => admin.PutPackTypeAsync(Pack("p", 10, 4, odds), Ct)),
+            await RefusedAsync(() => admin.PutPackTypeAsync(Pack("p", 10, 6, odds), Ct)),
+        };   // a retired version may keep an older size (it is never sold)
 
         Assert.Equal((1, 2), (v1.Version, v2.Version));
-        Assert.All([badSum, badSet, badFirst, badMin], e => Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardRuleInvalid), (e.StatusCode, e.ErrorCode)));
+        Assert.All([badSum, badSet, badFirst, badMin, .. badSizes], e => Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardRuleInvalid), (e.StatusCode, e.ErrorCode)));
         Assert.Equal(3L, await CountAsync(factory, "SELECT count(*) FROM pack_types WHERE pack_id = 'p' OR pack_id = 'descent-pack'"));
         Assert.Equal(20, (await admin.ListPackTypesAsync(Ct)).PackTypes.Single(p => p.PackId == "p").PriceGems);
         Assert.Equal(2L, await CountAsync(factory, "SELECT count(*) FROM outbox WHERE type = 'PackTypeChanged' AND payload->'payload'->>'packId' = 'p'"));
@@ -1018,6 +1545,7 @@ public class CardCollectionTests(StackFixture stack)
         {
             await RefusedAsync(() => anonymous.GetCardCatalogAsync(Ct)), await RefusedAsync(() => anonymous.GetPacksAsync(Ct)),
             await RefusedAsync(() => anonymous.GetCollectionAsync(Ct)), await RefusedAsync(() => anonymous.OpenPackAsync(StarterPack, Guid.NewGuid(), Ct)),
+            await RefusedAsync(() => anonymous.BuyPackAsync(StarterPack, new PackBuyRequest(Guid.NewGuid(), 1), Ct)),
             await RefusedAsync(() => anonymous.DustCardAsync("item.k1", Guid.NewGuid(), Ct)),
             await RefusedAsync(() => anonymous.CraftCardAsync("item.k1", Guid.NewGuid(), Ct)),
             await RefusedAsync(() => anonymous.AbandonRunAsync(Guid.NewGuid().ToString("D"), Ct)),
@@ -1050,9 +1578,11 @@ public class CardCollectionTests(StackFixture stack)
         var client = new GameServerClient(factory.CreateClient(), Token(factory, "alice"));
 
         var open = await RefusedAsync(() => client.OpenPackAsync(StarterPack, Guid.NewGuid(), Ct));
+        var buy = await RefusedAsync(() => client.BuyPackAsync(StarterPack, new PackBuyRequest(Guid.NewGuid(), 1), Ct));
         var collection = await RefusedAsync(() => client.GetCollectionAsync(Ct));
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, open.StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, buy.StatusCode);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, collection.StatusCode);
     }
 
@@ -1064,7 +1594,7 @@ public class CardCollectionTests(StackFixture stack)
             "Development", Cards);
         var player = new GameServerClient(factory.CreateClient(), Token(factory, "alice"));
         var admin = new GameServerClient(factory.CreateClient(), Token(factory, "designer"));
-        var pack = Pack("p", 10, 3, new Dictionary<string, int> { [CardRarities.Common] = 10_000 });
+        var pack = Pack("p", 10, 5, new Dictionary<string, int> { [CardRarities.Common] = 10_000 });
 
         var failures = new[]
         {

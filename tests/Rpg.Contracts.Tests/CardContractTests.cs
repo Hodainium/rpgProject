@@ -6,7 +6,10 @@ using Rpg.Contracts.Serialization;
 
 namespace Rpg.Contracts.Tests;
 
-/// <summary>Spec card-collection 6: golden JSON for every card record and event payload, and the additive run fields.</summary>
+/// <summary>
+/// Spec card-collection 6: golden JSON for every card record and event payload, and the additive run fields; spec pack-shop 6:
+/// the buy records, the owned packs and the changed collection and open responses.
+/// </summary>
 public class CardContractTests
 {
     private const string RunId = "019a2b3c-4d5e-7f60-8a7b-8c9d0e1f2a3b";
@@ -55,9 +58,10 @@ public class CardContractTests
             "card-collection-response.json",
             new CollectionResponse([new OwnedCardDto("item.hex_charm", At, "pack", RunId), new OwnedCardDto("hero.cryomancer", At, "craft", null)],
                 120, 340, 17, RunId, "Active",
-                [new PityStateDto("descent-pack", new Dictionary<string, int> { ["epic"] = 4, ["legendary"] = 11, ["mythic"] = 2 })])
+                [new PityStateDto("descent-pack", new Dictionary<string, int> { ["epic"] = 4, ["legendary"] = 11, ["mythic"] = 2 })],
+                [new OwnedPackDto("descent-pack", 3)])
         },
-        { "card-collection-response-empty.json", new CollectionResponse([], 0, 0, 0, null, null, []) },
+        { "card-collection-response-empty.json", new CollectionResponse([], 0, 0, 0, null, null, [], []) },
         {
             "card-pack-list-response.json",
             new PackListResponse([
@@ -65,7 +69,11 @@ public class CardContractTests
             ])
         },
         { "card-action-request.json", new AccountActionRequest(Guid.Parse("c0ffee00-0000-4000-8000-000000000001")) },
-        { "card-pack-open-response.json", new PackOpenResponse("opening-1", "descent-pack", 2, 100, Drawn, 20, 20, "-1234567890123456789") },
+        { "card-pack-open-response.json", new PackOpenResponse("opening-1", "descent-pack", 2, 0, Drawn, 20, 20, "-1234567890123456789", 2) },
+        { "card-pack-buy-request.json", new PackBuyRequest(Guid.Parse("c0ffee00-0000-4000-8000-000000000002"), 3) },
+        { "card-pack-buy-response.json", new PackBuyResponse("descent-pack", 2, 3, 300, 20, 3) },
+        { "card-owned-pack.json", new OwnedPackDto("descent-pack", 3) },
+        { "card-owned-pack-held.json", new OwnedPackDto("descent-pack", 2, RefundHeld: true) },
         { "card-dust-response.json", new DustResponse("item.hex_charm", 20, 1, 340) },
         { "card-craft-response.json", new CraftResponse("hero.cryomancer", 3200, 1, 140) },
         { "card-pack-type-request.json", PackRequest() },
@@ -80,7 +88,18 @@ public class CardContractTests
         {
             "event-pack-opened.json",
             new DomainEvent<PackOpenedPayload>(EventId, EventTypes.PackOpened, 1, Player, null, At, "economy",
-                new PackOpenedPayload("opening-1", Player.ToString("D"), "descent-pack", 2, 100, Drawn, 20, 2, "-1234567890123456789", 3, 1))
+                new PackOpenedPayload("opening-1", Player.ToString("D"), "descent-pack", 2, 0, Drawn, 20, 2, "-1234567890123456789", 3, 1))
+        },
+        {
+            "event-pack-refunded.json",
+            new DomainEvent<PackRefundedPayload>(EventId, EventTypes.PackRefunded, 1, Player, null, At, "economy",
+                new PackRefundedPayload(Player.ToString("D"), "descent-pack", 3, 4, 340))
+        },
+        { "card-pack-type-request-refund.json", PackRequest(retired: true) with { RefundUnopened = true } },
+        {
+            "event-pack-purchased.json",
+            new DomainEvent<PackPurchasedPayload>(EventId, EventTypes.PackPurchased, 1, Player, null, At, "economy",
+                new PackPurchasedPayload(Player.ToString("D"), "descent-pack", 2, 3, 300))
         },
         {
             "event-card-dusted.json",

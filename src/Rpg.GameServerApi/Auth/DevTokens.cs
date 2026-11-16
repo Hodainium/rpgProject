@@ -96,8 +96,9 @@ public sealed class DevTokenIssuer(IOptions<AuthOptions> options, TimeProvider c
 public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this WebApplication app) =>
-        app.MapPost("/api/v1/auth/dev-token", (DevTokenRequest? request, DevTokenIssuer issuer,
-            IOptions<AuthOptions> options, IHostEnvironment environment, RpgMetrics metrics) =>
+        app.MapPost("/api/v1/auth/dev-token", async (DevTokenRequest? request, DevTokenIssuer issuer,
+            IOptions<AuthOptions> options, IHostEnvironment environment, RpgMetrics metrics, Cards.PackRefunds refunds,
+            CancellationToken ct) =>
         {
             // Off outside Development whatever the configuration says; 404, as if the route did not exist.
             if (!options.Value.DevTokens || !environment.IsDevelopment())
@@ -112,7 +113,11 @@ public static class AuthEndpoints
             }
 
             metrics.DevTokenIssued();
-            return Results.Ok(issuer.Issue(request!.PlayerName));
+            var token = issuer.Issue(request!.PlayerName);
+            // Spec pack-shop 2.5: login settles the player's unopened packs of a type retired with a refund. Postgres is a hard
+            // dependency of the game, so an unreachable database fails the login (503, the PostgresUnavailableHandler).
+            await refunds.RefundAsync(Guid.Parse(token.PlayerId), ct);
+            return Results.Ok(token);
         });
 
     /// <summary>The caller of an endpoint that requires authorization (so the token was validated).</summary>

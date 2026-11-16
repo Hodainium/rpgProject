@@ -21,7 +21,8 @@ public class MigrationTests(StackFixture stack)
 
         Assert.Equal(MigrationRunner.Scripts.Select(s => s.Name), await AppliedAsync(dataSource));
         Assert.Equal(["account_requests", "battle_sessions", "battle_sessions_voided", "card_holdings", "card_ledger", "card_rates",
-                "cards", "catalog_versions", "completion_marks", "outbox", "pack_openings", "pack_pity", "pack_types", "players",
+                "cards", "catalog_versions", "completion_marks", "outbox", "pack_inventory", "pack_ledger", "pack_openings", "pack_pity",
+                "pack_types", "players",
                 "reward_cycle_resets", "reward_rules", "run_actions", "run_actions_voided", "run_floors", "run_steps", "runs",
                 "schema_migrations", "wallet_ledger", "wallets"],
             await TablesAsync(dataSource));
@@ -135,6 +136,44 @@ public class MigrationTests(StackFixture stack)
                 $"VALUES ('{player}', 'gems', 1, 'x', 'k3', 'maybe')");
         });
         Assert.Equal(PostgresErrorCodes.CheckViolation, badStatus.SqlState);
+    }
+
+    /// <summary>Spec pack-shop 6: 0011 applies on top of slice 5's schema with its data, and a buy is a new request kind.</summary>
+    [Fact]
+    public async Task Migration0011_AddsThePackInventory_OnTopOfTheCardSchema_AndKeepsTheRequestLog()
+    {
+        await using var dataSource = NpgsqlDataSource.Create(await stack.NewDatabaseAsync());
+        var player = Guid.NewGuid();
+        await using (var connection = await dataSource.OpenConnectionAsync(Ct))
+        {
+            await ExecuteAsync(connection, "CREATE TABLE schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL)");
+            foreach (var (name, sql) in MigrationRunner.Scripts.Where(s => string.CompareOrdinal(s.Name, "0011") < 0))
+            {
+                await ExecuteAsync(connection, sql);
+                await ExecuteAsync(connection, $"INSERT INTO schema_migrations (name, applied_at) VALUES ('{name}', now())");
+            }
+
+            await ExecuteAsync(connection, $"INSERT INTO players (player_id, display_name, created_at) VALUES ('{player}', 'p', now())");
+            await ExecuteAsync(connection, $"INSERT INTO account_requests (player_id, request_key, kind, request_hash, response) " +
+                $"VALUES ('{player}', '{Guid.NewGuid()}', 'pack', 'h', '{{}}')");
+        }
+
+        await new MigrationRunner(dataSource, NullLogger<MigrationRunner>.Instance).EnsureMigratedAsync(Ct);
+
+        await using (var connection = await dataSource.OpenConnectionAsync(Ct))
+        {
+            await ExecuteAsync(connection, $"INSERT INTO account_requests (player_id, request_key, kind, request_hash, response) " +
+                $"VALUES ('{player}', '{Guid.NewGuid()}', 'pack_buy', 'h', '{{}}')");
+            await ExecuteAsync(connection, $"INSERT INTO pack_inventory (player_id, pack_id, count, updated_at) VALUES ('{player}', 'p', 1, now())");
+        }
+
+        Assert.Equal(["pack", "pack_buy"], await ListAsync(dataSource, "SELECT kind FROM account_requests ORDER BY kind"));
+        var negative = await Assert.ThrowsAsync<PostgresException>(async () =>
+        {
+            await using var connection = await dataSource.OpenConnectionAsync(Ct);
+            await ExecuteAsync(connection, $"UPDATE pack_inventory SET count = -1 WHERE player_id = '{player}'");
+        });
+        Assert.Equal(PostgresErrorCodes.CheckViolation, negative.SqlState);
     }
 
     private static async Task ExecuteAsync(NpgsqlConnection connection, string sql)

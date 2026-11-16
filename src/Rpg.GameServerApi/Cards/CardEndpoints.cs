@@ -26,6 +26,7 @@ public static class CardEndpoints
         api.MapGet("/cards/catalog", CatalogAsync);
         api.MapGet("/packs", PacksAsync);
         api.MapGet("/cards/collection", CollectionAsync);
+        api.MapPost("/packs/{packId}/buy", BuyAsync).RateLimited(RateLimitOptions.Actions);
         api.MapPost("/packs/{packId}/open", OpenAsync).RateLimited(RateLimitOptions.Actions);
         api.MapPost("/cards/{cardId}/dust", DustAsync).RateLimited(RateLimitOptions.Actions);
         api.MapPost("/cards/{cardId}/craft", CraftAsync).RateLimited(RateLimitOptions.Actions);
@@ -72,13 +73,53 @@ public static class CardEndpoints
     }
 
     private static async Task<IResult> CollectionAsync(HttpContext context, CardStore store, MigrationRunner migrations,
-        CancellationToken ct)
+        PackRefunds refunds, CancellationToken ct)
     {
         await migrations.EnsureMigratedAsync(ct);
+        // Spec pack-shop 2.5: a token can outlive the maintenance restart, so the collection read settles refunds too.
+        await refunds.RefundAsync(context.User.Player().Id, ct);
         return Results.Ok(await store.GetCollectionAsync(context.User.Player().Id, ct));
     }
 
     // ---- account actions -------------------------------------------------------------------------------------------
+
+    /// <summary>Spec pack-shop 2.1: gems for 1..Cards:MaxPacksPerBuy unopened packs, idempotent by the request key.</summary>
+    private static async Task<IResult> BuyAsync(HttpContext context, string packId, PackBuyRequest? request, CardStore store,
+        RunSummaryCache cache, MigrationRunner migrations, RpgMetrics metrics, IOptions<CardOptions> options, TimeProvider clock,
+        CancellationToken ct)
+    {
+        if (KeyProblem(request?.RequestKey, "A body with a requestKey (a non-empty GUID) and a count is required.") is { } bad)
+        {
+            return bad;
+        }
+
+        var player = context.User.Player();
+        Activity.Current?.SetTag("rpg.pack_id", packId);
+        var watch = Stopwatch.StartNew();
+        await migrations.EnsureMigratedAsync(ct);
+        var result = await store.BuyPacksAsync(player.Id, player.Name, packId, request!.Count, options.Value.MaxPacksPerBuy,
+            request.RequestKey, clock.GetUtcNow(), ct);
+        metrics.CardActionDuration("buy_pack", watch.Elapsed);
+        if (result.Problem is { } problem)
+        {
+            return Refused("buy_pack", problem, metrics);
+        }
+
+        var response = result.Value!;
+        if (result.Replayed)
+        {
+            metrics.AccountReplay("buy_pack");
+        }
+        else
+        {
+            metrics.PacksBought(response.PackId, response.Count, response.GemsSpent);
+        }
+
+        // On a replay too (review fix): the first request may have committed and died before it got here (acceptance 2).
+        await cache.InvalidateAsync(VerifyPolicy.WalletKey(player.Id));
+
+        return Results.Ok(response);
+    }
 
     private static async Task<IResult> OpenAsync(HttpContext context, string packId, AccountActionRequest? request, CardStore store,
         RunSummaryCache cache, MigrationRunner migrations, RpgMetrics metrics, TimeProvider clock, CancellationToken ct)
@@ -106,7 +147,7 @@ public static class CardEndpoints
         }
         else
         {
-            metrics.PackOpened(response.PackId, response.GemsSpent);
+            metrics.PackOpened(response.PackId);
             foreach (var card in response.Cards)
             {
                 metrics.PackCard(card.Rarity, card.Duplicate, card.Pity, card.DustGained);
@@ -259,9 +300,10 @@ public static class CardEndpoints
     // ---- errors ----------------------------------------------------------------------------------------------------
 
     private static IResult? KeyProblem(AccountActionRequest? request) =>
-        request is null || request.RequestKey == Guid.Empty
-            ? RunEndpoints.BadRequest("A body with a requestKey (a non-empty GUID) is required.")
-            : null;
+        KeyProblem(request?.RequestKey, "A body with a requestKey (a non-empty GUID) is required.");
+
+    private static IResult? KeyProblem(Guid? key, string detail) =>
+        key is null || key == Guid.Empty ? RunEndpoints.BadRequest(detail) : null;
 
     private static IResult Refused(string action, CardProblem problem, RpgMetrics metrics)
     {
@@ -282,6 +324,7 @@ public static class CardEndpoints
             CardFailure.RequestKeyReused => (StatusCodes.Status409Conflict, ApiErrors.RequestKeyReused, "Request key reused"),
             CardFailure.PackUnavailable => (StatusCodes.Status404NotFound, ApiErrors.PackUnavailable, "Pack unavailable"),
             CardFailure.CharacterLocked => (StatusCodes.Status400BadRequest, ApiErrors.CharacterLocked, "Character not unlocked"),
+            CardFailure.NoPackOwned => (StatusCodes.Status409Conflict, ApiErrors.NoPackOwned, "No pack owned"),
             _ => (StatusCodes.Status409Conflict, ApiErrors.RunVerifying, "A run is being verified"),
         };
         var extensions = new Dictionary<string, object?> { ["errorCode"] = code };

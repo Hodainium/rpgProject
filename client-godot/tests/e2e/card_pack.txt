@@ -1,8 +1,8 @@
 # Spec card-collection (slice 5) end to end, the happy path on the real demo content and the real stack: a card-enabled server
 # (the catalog and the Descent pack seeded from infra/economy) starts a run for two core characters and fixes the item pool on
 # the run; the game plays it with that pool, and the real worker replays every step with the SAME pool from Postgres (so a
-# card-enabled run through the real verifier, the one thing the unit tests could not show). The win pays gems, the player opens
-# a pack with them, and gems, dust, cards, ledgers and the outbox event all agree.
+# card-enabled run through the real verifier, the one thing the unit tests could not show). The win pays gems, the player buys
+# a pack with them (spec pack-shop) and opens it, and gems, dust, cards, the pack inventory, ledgers and the outbox events all agree.
 #! worker
 #! content real
 #! cards
@@ -16,6 +16,8 @@ wait ended 180
 wait verdict all 300
 wait gems 100 180
 cards
+packs
+packs buy descent-pack 1
 packs
 packs open descent-pack
 cards

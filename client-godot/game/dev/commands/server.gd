@@ -5,7 +5,7 @@ extends DevCommand
 func _init() -> void:
 	name = "server"
 	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | reward [...] | reward-reset ... | pack-type [...] | card-rate [...] | resume | forget | conflict]"
-	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. steps: the run's verification steps and their state (a Development server; spec run-verify). verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. pack-type: list the server's pack types; pack-type <id> [price=<gems>] [cards=<n>] [odds=common:7210,rare:2200,...] [sets=descent,...] [pity=epic:10,legendary:20,...] [first=epic:5,...] [min=rare|none] [retired=true|false]: a new version (fields you leave out keep the latest version's value; a new pack needs price, cards, odds and sets). card-rate: list the dust value and craft cost per rarity; card-rate <rarity> <dust value> <craft cost>: a new version (spec card-collection 2.7; both need the economy-admin role). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
+	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. steps: the run's verification steps and their state (a Development server; spec run-verify). verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. pack-type: list the server's pack types; pack-type <id> [price=<gems>] [cards=5 (every pack holds 5)] [odds=common:7210,rare:2200,...] [sets=descent,...] [pity=epic:10,legendary:20,...] [first=epic:5,...] [min=rare|none] [retired=true|false] [refund=true (with retired=true: every unopened pack is paid back in gems, and the version may break the openability rules; spec pack-shop 2.5)]: a new version (fields you leave out keep the latest version's value; a new pack needs price, cards, odds and sets). card-rate: list the dust value and craft cost per rarity; card-rate <rarity> <dust value> <craft cost>: a new version (spec card-collection 2.7; both need the economy-admin role). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
 	cheat = false
 
 
@@ -225,7 +225,7 @@ func _pack_type(ctx: DevContext, args: PackedStringArray) -> String:
 		var ids := current.keys()
 		ids.sort()
 		return "\n".join(PackedStringArray(ids.map(func(id: String) -> String: return _describe_pack(current[id]))))
-	var usage := "usage: server pack-type <id> [price=<gems>] [cards=<n>] [odds=common:7210,...] [sets=a,b] [pity=epic:10,...] [first=epic:5,...] [min=rare|none] [retired=true|false]"
+	var usage := "usage: server pack-type <id> [price=<gems>] [cards=5] [odds=common:7210,...] [sets=a,b] [pity=epic:10,...] [first=epic:5,...] [min=rare|none] [retired=true|false] [refund=true|false]"
 	var id := args[1]
 	var body: Dictionary = {}
 	if current.has(id):
@@ -260,6 +260,11 @@ func _pack_type(ctx: DevContext, args: PackedStringArray) -> String:
 					body["minRarityPerPack"] = value
 			"retired":
 				body["retired"] = value == "true"
+			"refund":   # spec pack-shop 2.5: with retired=true, every unopened pack is paid back in gems
+				if value == "true":
+					body["refundUnopened"] = true
+				else:
+					body.erase("refundUnopened")
 			_:
 				return ctx.fail(usage + " (unknown option %s)" % option)
 	for needed in ["priceGems", "cardCount", "oddsPer10000", "setIds"]:
@@ -294,7 +299,8 @@ static func _describe_pack(pack: Dictionary) -> String:
 		first_parts.append("%s %d" % [rarity, int(first[rarity])])
 	return "%s v%d: %d gems, %d cards, odds/10000 [%s], sets %s, pity [%s], first [%s], min %s%s" % [pack["packId"],
 		int(pack["version"]), int(pack["priceGems"]), int(pack["cardCount"]), ", ".join(parts), ",".join(PackedStringArray(pack["setIds"])),
-		", ".join(pity_parts), ", ".join(first_parts), pack.get("minRarityPerPack", "none"), " [retired]" if pack.get("retired", false) else ""]
+		", ".join(pity_parts), ", ".join(first_parts), pack.get("minRarityPerPack", "none"), (" [retired, refunding unopened packs]" if pack.get("refundUnopened", false)
+			else " [retired]") if pack.get("retired", false) else ""]
 
 
 ## Spec card-collection 2.7: lists the dust value and craft cost per rarity, or writes a new version of one rarity.

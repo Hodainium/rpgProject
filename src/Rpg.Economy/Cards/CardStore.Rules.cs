@@ -60,28 +60,27 @@ public sealed partial class CardStore
         await LockNamedAsync(connection, transaction, $"pack_type|{request.PackId}", ct);
 
         var distinctSets = request.SetIds.Distinct().ToArray();
-        await using (var sets = Cmd(connection, transaction, "SELECT count(DISTINCT set_id) FROM cards WHERE set_id = ANY($1)", new NpgsqlParameter { Value = distinctSets }))
+        // Spec pack-shop 2.5: a retire-with-refund version is never opened (every unopened pack is paid back), so it may break
+        // the set and openability rules: that is usually why the type has to go.
+        var refunding = PackType.IsRefunding(request.Retired, request.RefundUnopened);
+        if (!refunding)
         {
-            if ((long)(await sets.ExecuteScalarAsync(ct))! != distinctSets.Length)
+            await using (var sets = Cmd(connection, transaction, "SELECT count(DISTINCT set_id) FROM cards WHERE set_id = ANY($1)", new NpgsqlParameter { Value = distinctSets }))
             {
-                return CardResult<PackType>.Fail(CardFailure.RuleInvalid, "setIds names a set that has no cards in the catalog.");
+                if ((long)(await sets.ExecuteScalarAsync(ct))! != distinctSets.Length)
+                {
+                    return CardResult<PackType>.Fail(CardFailure.RuleInvalid, "setIds names a set that has no cards in the catalog.");
+                }
             }
-        }
 
-        // A pack nobody can draw from (every rarity with odds has no eligible card) would fail every open: refuse it here.
-        if (!request.Retired && !PackDrawer.CanDraw(request.OddsPer10000, await EligibleAsync(connection, transaction, distinctSets, ct)))
-        {
-            return CardResult<PackType>.Fail(CardFailure.RuleInvalid,
-                "No rarity with odds above 0 has an eligible card (non-core, not retired) in the pack's sets.");
-        }
-
-        // Review fix: every rarity the pack can draw needs a card rate (a duplicate is dusted at it), or every open would fail.
-        var rates = await LatestRatesAsync(connection, transaction, ct);
-        if (!request.Retired && request.OddsPer10000.Where(o => o.Value > 0).Select(o => o.Key).FirstOrDefault(r => !rates.ContainsKey(r))
-                is { } unrated)
-        {
-            return CardResult<PackType>.Fail(CardFailure.RuleInvalid,
-                $"Rarity '{unrated}' has odds in this pack but no card rate: put its rate first.");
+            // A version packs could not be opened with is refused, retired or not: owned packs of a retired type still open with
+            // its latest version (spec pack-shop), so a broken retirement would leave them stuck.
+            if (CardRules.OpenProblem(request.OddsPer10000, request.PityPacks, request.FirstGuarantees,
+                    await EligibleAsync(connection, transaction, distinctSets, ct), await LatestRatesAsync(connection, transaction, ct)) is { } closed)
+            {
+                return CardResult<PackType>.Fail(CardFailure.RuleInvalid,
+                    $"Packs could not be opened with this version: {closed}. Retire it with refundUnopened to pay the unopened packs back.");
+            }
         }
 
         int version;
@@ -101,11 +100,12 @@ public sealed partial class CardStore
         await using (var insert = Cmd(connection, transaction,
                          """
                          INSERT INTO pack_types (pack_id, version, name, price_gems, card_count, odds, set_ids, retired, pity, first_guarantees,
-                                                 min_rarity, created_by)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING effective_from
+                                                 min_rarity, created_by, refund_unopened)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING effective_from
                          """,
                          request.PackId, version, request.Name, request.PriceGems, request.CardCount, Json(Serialize(request.OddsPer10000)),
-                         distinctSets, request.Retired, Json(Serialize(pity)), Json(Serialize(first)), Text(request.MinRarityPerPack), adminName))
+                         distinctSets, request.Retired, Json(Serialize(pity)), Json(Serialize(first)), Text(request.MinRarityPerPack), adminName,
+                         refunding))
         {
             effectiveFrom = new DateTimeOffset(DateTime.SpecifyKind((DateTime)(await insert.ExecuteScalarAsync(ct))!, DateTimeKind.Utc));
         }
@@ -115,7 +115,7 @@ public sealed partial class CardStore
             new PackTypeChangedPayload(request.PackId, version, request.PriceGems, request.Retired, adminName), ct);
         await transaction.CommitAsync(ct);
         return CardResult<PackType>.Ok(new PackType(request.PackId, request.Name, version, request.PriceGems, request.CardCount,
-            request.OddsPer10000, distinctSets, request.Retired, pity, first, request.MinRarityPerPack, effectiveFrom, adminName));
+            request.OddsPer10000, distinctSets, request.Retired, pity, first, request.MinRarityPerPack, effectiveFrom, adminName, refunding));
     }
 
     public async Task<IReadOnlyList<CardRate>> ListRatesAsync(CancellationToken ct)

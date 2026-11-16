@@ -211,12 +211,14 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
     public async Task<CollectionResponse> GetCollectionAsync(Guid playerId, CancellationToken ct)
     {
         await using var connection = await dataSource.OpenConnectionAsync(ct);
-        var active = await ActiveRunAsync(connection, null, playerId, ct);
+        // Review fix (spec pack-shop 2.3): one snapshot for the whole read, so a buy that commits mid-read can never show its
+        // packs beside the gems it spent (or an open's cards beside the pack it used).
+        await using var transaction = await connection.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, ct);
+        var active = await ActiveRunAsync(connection, transaction, playerId, ct);
         var owned = new List<OwnedCardDto>();
-        await using (var select = new NpgsqlCommand(
-            "SELECT card_id, acquired_at, source FROM card_holdings WHERE player_id = $1 ORDER BY card_id COLLATE \"C\"", connection))
+        await using (var select = Cmd(connection, transaction,
+            "SELECT card_id, acquired_at, source FROM card_holdings WHERE player_id = $1 ORDER BY card_id COLLATE \"C\"", playerId))
         {
-            select.Parameters.Add(new NpgsqlParameter { Value = playerId });
             await using var reader = await select.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
             {
@@ -228,9 +230,8 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
 
         long gems = 0, dust = 0;
         long version = 0;
-        await using (var wallet = new NpgsqlCommand("SELECT gems, dust, version FROM wallets WHERE player_id = $1", connection))
+        await using (var wallet = Cmd(connection, transaction, "SELECT gems, dust, version FROM wallets WHERE player_id = $1", playerId))
         {
-            wallet.Parameters.Add(new NpgsqlParameter { Value = playerId });
             await using var reader = await wallet.ExecuteReaderAsync(ct);
             if (await reader.ReadAsync(ct))
             {
@@ -238,14 +239,31 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
             }
         }
 
-        var pity = new List<PityStateDto>();
-        foreach (var pack in (await CardSql.LatestPacksAsync(connection, null, ct)).Where(p => !p.Retired && p.Pity.Any(x => x.Value > 0))
-                     .OrderBy(p => p.PackId, StringComparer.Ordinal))
+        // Spec pack-shop 2.3: the unopened packs, from Postgres like ownership (never cached), sorted by id, zero counts left out.
+        var packsOwned = new List<OwnedPackDto>();
+        await using (var select = Cmd(connection, transaction,
+            "SELECT pack_id, count, refund_held FROM pack_inventory WHERE player_id = $1 AND count > 0 ORDER BY pack_id COLLATE \"C\"", playerId))
         {
-            pity.Add(new PityStateDto(pack.PackId, await MissedAsync(connection, null, playerId, pack, forUpdate: false, ct)));
+            await using var reader = await select.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                packsOwned.Add(new OwnedPackDto(reader.GetString(0), reader.GetInt32(1), reader.GetBoolean(2) ? true : null));
+            }
         }
 
-        return new CollectionResponse(owned, gems, dust, version, active?.RunId.ToString("D"), active?.Status, pity);
+        // Review fix: a retired type the player still owns packs of still opens and moves pity (spec pack-shop 2.2), so its
+        // counters stay listed.
+        var ownedIds = packsOwned.Select(p => p.PackId).ToHashSet(StringComparer.Ordinal);
+        var pity = new List<PityStateDto>();
+        foreach (var pack in (await CardSql.LatestPacksAsync(connection, transaction, ct))
+                     .Where(p => (!p.Retired || ownedIds.Contains(p.PackId)) && !p.Refunding && p.Pity.Any(x => x.Value > 0))
+                     .OrderBy(p => p.PackId, StringComparer.Ordinal))
+        {
+            pity.Add(new PityStateDto(pack.PackId, await MissedAsync(connection, transaction, playerId, pack, forUpdate: false, ct)));
+        }
+
+        await transaction.CommitAsync(ct);
+        return new CollectionResponse(owned, gems, dust, version, active?.RunId.ToString("D"), active?.Status, pity, packsOwned);
     }
 
     /// <summary>

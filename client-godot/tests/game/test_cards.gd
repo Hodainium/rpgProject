@@ -456,7 +456,7 @@ func test_cards_local_sets_the_pool_new_local_runs_start_with() -> void:
 func test_the_server_commands_need_server_mode() -> void:
 	var session := _session()
 	var console: DevConsole = session[1]
-	for line in ["packs", "packs open demo", "dust x", "craft x", "abandon"]:
+	for line in ["packs", "packs open demo", "packs buy demo", "dust x", "craft x", "abandon"]:
 		var result: Dictionary = await console.execute(line)
 		check(not result["ok"], "'%s' needs a server" % line)
 
@@ -494,6 +494,13 @@ func test_the_link_sends_the_account_calls_with_their_keys() -> void:
 	check(opened["ok"], "the open is answered")
 	eq(JSON.parse_string(bridge.of("OpenPack")[0][2]), {"requestKey": key}, "the body is the request key")
 	eq(bridge.of("OpenPack")[0][1], "p", "for that pack")
+	bridge.answers["BuyPack"] = [[true, {"packId": "p", "packVersion": 2, "count": 3, "gemsSpent": 300, "gems": 50, "owned": 3}]]
+	var bought: Dictionary = await link.buy_pack("p", 3, key)
+	check(bought["ok"] and int(bought["data"]["owned"]) == 3, "the buy is answered with the response: %s" % bought)
+	var buy_body: Dictionary = JSON.parse_string(bridge.of("BuyPack")[0][2])
+	eq([buy_body.keys().size(), buy_body["requestKey"], int(buy_body["count"])], [2, key, 3], "the body is the key and the count")
+	eq(bridge.of("BuyPack")[0][1], "p", "for that pack")
+	check(not bridge.of("BuyPack")[0][2].contains("3.0"), "the count goes as a whole number")
 	var dusted: Dictionary = await link.dust_card("item.a", key)
 	check(not dusted["ok"], "the dust is refused")
 	eq(dusted["error"]["errorCode"], 1403, "with the run lock's code")
@@ -568,7 +575,8 @@ func _server_session(bridge: FakeBridge) -> Array:
 
 const COLLECTION := {"owned": [{"cardId": "item.a", "acquiredAt": "t", "source": "pack", "lockedByRunId": "r1"},
 	{"cardId": "item.b", "acquiredAt": "t", "source": "craft", "lockedByRunId": null}], "gems": 5, "dust": 40, "version": 2,
-	"activeRunId": "r1", "activeRunStatus": "Active", "pity": [{"packId": "p", "missedPacks": {"legendary": 7, "mythic": 3}}]}
+	"activeRunId": "r1", "activeRunStatus": "Active", "pity": [{"packId": "p", "missedPacks": {"legendary": 7, "mythic": 3}}],
+	"ownedPacks": [{"packId": "descent-pack", "count": 2}, {"packId": "old-pack", "count": 1, "refundHeld": true}]}
 
 
 func test_the_cards_command_shows_the_account() -> void:
@@ -577,7 +585,8 @@ func test_the_cards_command_shows_the_account() -> void:
 	var session := _server_session(bridge)
 	var result: Dictionary = await session[1].execute("cards")
 	check(result["ok"], "cards works: %s" % result["text"])
-	for part in ["gems 5, dust 40", "2 collected", "item.a", "locked by the run", "item.b", "pity p", "legendary 7"]:
+	for part in ["gems 5, dust 40", "2 collected", "item.a", "locked by the run", "item.b", "pity p", "legendary 7",
+			"unopened descent-pack: 2", "unopened old-pack: 1  [refund held: needs a support check]"]:
 		check(result["text"].contains(part), "the account line has '%s': %s" % [part, result["text"]])
 	bridge.answers["GetCollection"] = [[false, {"status": 503, "errorCode": null, "title": "down", "detail": ""}]]
 	var down: Dictionary = await session[1].execute("cards")
@@ -589,8 +598,8 @@ func test_the_packs_command_lists_opens_and_shows_pity() -> void:
 	bridge.answers["GetPacks"] = [[true, {"packs": [{"packId": "descent-pack", "name": "Descent", "version": 1, "priceGems": 100, "cardCount": 5,
 		"oddsPer10000": {"common": 7210, "rare": 2200, "epic": 450, "legendary": 100, "mythic": 40}, "setIds": ["descent"], "cardIds": [],
 		"pityPacks": {"epic": 10, "legendary": 20, "mythic": 30}, "firstGuarantees": {}, "minRarityPerPack": "rare"}]}]]
-	bridge.answers["OpenPack"] = [[true, {"openingId": "o", "packId": "descent-pack", "packVersion": 1, "gemsSpent": 100, "gems": 400, "dust": 25,
-		"drawSeed": "9", "cards": [{"cardId": "item.a", "rarity": "common", "duplicate": false, "dustGained": 0, "pity": false},
+	bridge.answers["OpenPack"] = [[true, {"openingId": "o", "packId": "descent-pack", "packVersion": 1, "gemsSpent": 0, "gems": 400, "dust": 25,
+		"drawSeed": "9", "packsLeft": 1, "cards": [{"cardId": "item.a", "rarity": "common", "duplicate": false, "dustGained": 0, "pity": false},
 			{"cardId": "item.b", "rarity": "rare", "duplicate": true, "dustGained": 20, "pity": false},
 			{"cardId": "hero.m", "rarity": "mythic", "duplicate": false, "dustGained": 0, "pity": true}]}]]
 	bridge.answers["GetCollection"] = [[true, COLLECTION]]
@@ -598,9 +607,15 @@ func test_the_packs_command_lists_opens_and_shows_pity() -> void:
 	var listed: Dictionary = await session[1].execute("packs")
 	check(listed["ok"] and listed["text"].contains("descent-pack: 100 gems, 5 cards") and listed["text"].contains("common 72.10%")
 		and listed["text"].contains("pity epic 10") and listed["text"].contains("at least a rare"), "the pack line: %s" % listed["text"])
+	check(listed["text"].contains("at least a rare; owned 2"), "the pack line counts the owned packs: %s" % listed["text"])
+	check(listed["text"].contains("old-pack: no longer sold; owned 1"), "an owned pack no longer sold is still listed: %s" % listed["text"])
+	bridge.answers["GetCollection"] = [[false, {"status": 503, "errorCode": null, "title": "down", "detail": ""}], [true, COLLECTION]]
+	var partial: Dictionary = await session[1].execute("packs")
+	check(partial["ok"] and partial["text"].contains("descent-pack: 100 gems") and not partial["text"].contains("owned 2")
+		and partial["text"].contains("owned packs unknown"), "without the collection the packs on sale are still listed: %s" % partial["text"])
 	var opened: Dictionary = await session[1].execute("packs open descent-pack")
 	check(opened["ok"], "open works: %s" % opened["text"])
-	for part in ["opened descent-pack", "for 100 gems", "gems 400, dust 25", "common item.a  NEW", "(duplicate: +20 dust)", "[pity]"]:
+	for part in ["opened descent-pack", "unopened left 1", "gems 400, dust 25", "common item.a  NEW", "(duplicate: +20 dust)", "[pity]"]:
 		check(opened["text"].contains(part), "the opening has '%s': %s" % [part, opened["text"]])
 	var sent: Dictionary = JSON.parse_string(bridge.of("OpenPack")[0][2])
 	check(opened["text"].contains(str(sent["requestKey"])), "the reply prints the request key the call used")
@@ -612,6 +627,47 @@ func test_the_packs_command_lists_opens_and_shows_pity() -> void:
 	check(pity["ok"] and pity["text"].contains("p: packs since") and pity["text"].contains("mythic 3"), "the pity counters: %s" % pity["text"])
 	var bad: Dictionary = await session[1].execute("packs open")
 	check(not bad["ok"], "open needs a pack id")
+
+
+## Spec pack-shop 6: `packs buy` prints the key and the new count, and a retry with the same key sends the same request.
+func test_the_packs_command_buys_and_a_retry_keeps_its_key() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers["BuyPack"] = [[true, {"packId": "descent-pack", "packVersion": 1, "count": 3, "gemsSpent": 300, "gems": 200, "owned": 3}]]
+	var session := _server_session(bridge)
+	var bought: Dictionary = await session[1].execute("packs buy descent-pack 3")
+	check(bought["ok"], "buy works: %s" % bought["text"])
+	for part in ["bought 3 x descent-pack", "for 300 gems", "gems 200", "unopened descent-pack 3"]:
+		check(bought["text"].contains(part), "the buy has '%s': %s" % [part, bought["text"]])
+	var sent: Dictionary = JSON.parse_string(bridge.of("BuyPack")[0][2])
+	eq(int(sent["count"]), 3, "the count is sent")
+	check(bought["text"].contains("[key %s]" % sent["requestKey"]), "the reply prints the key the call used")
+	var retried: Dictionary = await session[1].execute("packs buy descent-pack 3 %s" % sent["requestKey"])
+	check(retried["ok"], "a retry with the key")
+	eq(JSON.parse_string(bridge.of("BuyPack")[1][2]), sent, "the retry sends the very same request (the server answers it once)")
+	var one: Dictionary = await session[1].execute("packs buy descent-pack")
+	check(one["ok"], "the count defaults to one")
+	eq(int(JSON.parse_string(bridge.of("BuyPack")[2][2])["count"]), 1, "one pack")
+	for line in ["packs buy", "packs buy descent-pack two"]:
+		var bad: Dictionary = await session[1].execute(line)
+		check(not bad["ok"], "'%s' is refused before any call" % line)
+	eq(bridge.of("BuyPack").size(), 3, "no call for the refused lines")
+	bridge.answers["BuyPack"] = [[false, {"status": 400, "errorCode": 1401, "title": "Invalid card rule", "detail": ""}]]
+	var many: Dictionary = await session[1].execute("packs buy descent-pack 11")
+	check(not many["ok"] and many["text"].contains("1401"), "the range is the server's: %s" % many["text"])
+	eq(int(JSON.parse_string(bridge.of("BuyPack")[3][2])["count"]), 11, "the count went to the server")
+	bridge.answers["BuyPack"] = [[false, {"status": 409, "errorCode": 1402, "title": "Not enough currency", "detail": ""}]]
+	var poor: Dictionary = await session[1].execute("packs buy descent-pack 10")
+	check(not poor["ok"] and poor["text"].contains("1402") and poor["text"].contains("key "), "a refusal names its code and the key: %s" % poor["text"])
+
+
+## Spec pack-shop 6: an open with nothing owned is refused with the server's 1411 line.
+func test_the_packs_command_refuses_an_open_with_no_owned_pack() -> void:
+	var bridge := FakeBridge.new()
+	bridge.answers["OpenPack"] = [[false, {"status": 409, "errorCode": 1411, "title": "No pack owned", "detail": ""}]]
+	var session := _server_session(bridge)
+	var refused: Dictionary = await session[1].execute("packs open descent-pack")
+	check(not refused["ok"] and refused["text"].contains("409 No pack owned (1411)") and refused["text"].contains("key "),
+		"the 1411 line: %s" % refused["text"])
 
 
 func test_the_dust_command_resolves_first_and_names_the_locking_run() -> void:
@@ -676,6 +732,13 @@ func test_the_server_pack_type_command_merges_into_the_latest_version() -> void:
 	check(not incomplete["ok"] and incomplete["text"].contains("needs price, cards, odds and sets"), "a new pack needs its basics: %s" % incomplete["text"])
 	var unknown: Dictionary = await session[1].execute("server pack-type descent-pack colour=red")
 	check(not unknown["ok"] and unknown["text"].contains("unknown option"), "an unknown option is refused")
+	check(not body.has("refundUnopened"), "no refund unless asked")
+	# Spec pack-shop 2.5: retire with a refund.
+	bridge.answers["PutPackType"] = [[true, latest.merged({"version": 4, "retired": true, "refundUnopened": true}, true)]]
+	var refunding: Dictionary = await session[1].execute("server pack-type descent-pack retired=true refund=true")
+	check(refunding["ok"] and refunding["text"].contains("[retired, refunding unopened packs]"), "a refund retirement: %s" % refunding["text"])
+	var sent: Dictionary = JSON.parse_string(bridge.of("PutPackType")[1][1])
+	check(sent["retired"] == true and sent["refundUnopened"] == true, "it sends retired and refundUnopened: %s" % sent)
 
 
 func test_the_server_card_rate_command_lists_and_writes() -> void:

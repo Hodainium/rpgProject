@@ -103,9 +103,16 @@ public partial class ServerBridge : Node
     /// <summary>GET /api/v1/cards/collection; completes with a CollectionResponse.</summary>
     public long GetCollection() => Start(client => client.GetCollectionAsync());
 
-    /// <summary>POST /api/v1/packs/{packId}/open with an AccountActionRequest; completes with a PackOpenResponse.</summary>
+    /// <summary>
+    /// POST /api/v1/packs/{packId}/open with an AccountActionRequest; completes with a PackOpenResponse. Spends one owned pack
+    /// (spec pack-shop; 409 1411 when none is owned).
+    /// </summary>
     public long OpenPack(string packId, string requestJson) =>
         Start(client => client.OpenPackAsync(packId, Parse<AccountActionRequest>(requestJson).RequestKey));
+
+    /// <summary>POST /api/v1/packs/{packId}/buy with a PackBuyRequest; completes with a PackBuyResponse (spec pack-shop 3.1).</summary>
+    public long BuyPack(string packId, string requestJson) =>
+        Start(client => client.BuyPackAsync(packId, Parse<PackBuyRequest>(requestJson)));
 
     /// <summary>POST /api/v1/cards/{cardId}/dust with an AccountActionRequest; completes with a DustResponse.</summary>
     public long DustCard(string cardId, string requestJson) =>

@@ -255,14 +255,22 @@ func get_packs() -> Dictionary:
 	return await _request("GetPacks", [])
 
 
-## GET /api/v1/cards/collection: data = CollectionResponse {owned, gems, dust, version, activeRunId, activeRunStatus, pity}.
+## GET /api/v1/cards/collection: data = CollectionResponse {owned, gems, dust, version, activeRunId, activeRunStatus, pity,
+## ownedPacks} (ownedPacks: the unopened packs per type, spec pack-shop 2.3).
 func get_collection() -> Dictionary:
 	return await _request("GetCollection", [])
 
 
-## POST /api/v1/packs/{packId}/open: data = PackOpenResponse. Pass the same `key` again to retry.
+## POST /api/v1/packs/{packId}/open: spends one owned pack (409 1411 when none; spec pack-shop 2.2). data = PackOpenResponse
+## (gemsSpent 0, packsLeft). Pass the same `key` again to retry.
 func open_pack(pack_id: String, key: String) -> Dictionary:
 	return await _request("OpenPack", [pack_id, WireJson.stringify({"requestKey": key})])
+
+
+## POST /api/v1/packs/{packId}/buy (spec pack-shop 2.1): gems for `count` (1..10) unopened packs. data = PackBuyResponse
+## {packId, packVersion, count, gemsSpent, gems, owned}. Pass the same `key` (and count) again to retry: it buys once.
+func buy_pack(pack_id: String, count: int, key: String) -> Dictionary:
+	return await _request("BuyPack", [pack_id, WireJson.stringify({"requestKey": key, "count": count})])
 
 
 ## POST /api/v1/cards/{cardId}/dust: data = DustResponse; a 409 1403 names the run that holds the card (error.runId, error.runStatus).
@@ -292,6 +300,9 @@ static func describe_collection(collection: Dictionary) -> String:
 		for rarity in missed:
 			parts.append("%s %d" % [rarity, int(missed[rarity])])
 		lines.append("  pity %s: packs since %s" % [state["packId"], ", ".join(parts)])
+	for entry in collection.get("ownedPacks", []):
+		lines.append("  unopened %s: %d%s" % [entry["packId"], int(entry["count"]),
+			"  [refund held: needs a support check]" if entry.get("refundHeld", false) else ""])
 	return "\n".join(lines)
 
 

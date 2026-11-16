@@ -6,6 +6,7 @@ public enum CardFailure
 {
     RuleInvalid, InsufficientCurrency, CardLockedByRun, CardNotCollectible, CardAlreadyOwned, CardNotOwned, RequestKeyReused,
     PackUnavailable, CharacterLocked, RunVerifying,
+    NoPackOwned,   // spec pack-shop 2.2
 }
 
 /// <summary>Why an account action or a rule write is refused; the API maps <see cref="Failure"/> to a code and a status.</summary>
@@ -29,18 +30,49 @@ public sealed record CardRate(string Rarity, int DustValue, int CraftCost, int V
 /// <summary>One version of a pack type.</summary>
 public sealed record PackType(string PackId, string Name, int Version, int PriceGems, int CardCount,
     IReadOnlyDictionary<string, int> Odds, IReadOnlyList<string> SetIds, bool Retired, IReadOnlyDictionary<string, int> Pity,
-    IReadOnlyDictionary<string, int> FirstGuarantees, string? MinRarity, DateTimeOffset EffectiveFrom, string CreatedBy)
+    IReadOnlyDictionary<string, int> FirstGuarantees, string? MinRarity, DateTimeOffset EffectiveFrom, string CreatedBy,
+    bool RefundUnopened = false)
 {
     public PackConfig Config => new(CardCount, Odds, MinRarity, Pity);
 
+    /// <summary>Spec pack-shop 2.5: retired with a refund, so its unopened packs are paid back and none of them opens.</summary>
+    public bool Refunding => IsRefunding(Retired, RefundUnopened);
+
+    /// <summary>The one definition of "this version refunds" (the save and the store both use it).</summary>
+    public static bool IsRefunding(bool retired, bool? refundUnopened) => retired && refundUnopened == true;
+
     public PackTypeResponse ToResponse() => new(PackId, Name, Version, PriceGems, CardCount, Odds, SetIds, Retired, Pity,
-        FirstGuarantees, MinRarity, EffectiveFrom, CreatedBy);
+        FirstGuarantees, MinRarity, EffectiveFrom, CreatedBy, RefundUnopened ? true : null);
 }
 
 /// <summary>Request validation for the admin writes (spec card-collection 2.7). Null = fine.</summary>
 public static class CardRules
 {
-    public const int MaxCardCount = 20;
+    /// <summary>
+    /// The one rule for "can a pack with these settings be opened right now" (spec pack-shop), used when a pack-type version
+    /// is saved (retired ones too: owned packs open with the latest version), when a pack is bought and when one is opened.
+    /// Two things: some rarity with odds above 0 still has an eligible card (the draw spreads the odds over the rarities that
+    /// have cards), and every rarity the pack can give (by its odds, a pity timer or a first-pack guarantee) has a card rate,
+    /// the dust a duplicate of it is worth. Null = it can be opened; otherwise why not.
+    /// </summary>
+    public static string? OpenProblem(IReadOnlyDictionary<string, int> odds, IReadOnlyDictionary<string, int>? pity,
+        IReadOnlyDictionary<string, int>? firstGuarantees, IReadOnlyDictionary<string, IReadOnlyList<string>> eligible,
+        IReadOnlyDictionary<string, CardRate> rates)
+    {
+        if (!PackDrawer.CanDraw(odds, eligible))
+        {
+            return "no rarity with odds above 0 has an eligible card (non-core, not retired) in the pack's sets";
+        }
+
+        var reachable = odds.Concat(pity ?? new Dictionary<string, int>()).Concat(firstGuarantees ?? new Dictionary<string, int>())
+            .Where(entry => entry.Value > 0).Select(entry => entry.Key);
+        return reachable.Order(StringComparer.Ordinal).FirstOrDefault(rarity => !rates.ContainsKey(rarity)) is { } unrated
+            ? $"rarity '{unrated}' can come out of the pack but has no card rate (the dust a duplicate is worth): put its rate first"
+            : null;
+    }
+
+    /// <summary>Every pack holds this many cards (the user, 2026-11-15: "packs will always have 5 cards").</summary>
+    public const int CardsPerPack = 5;
     public const int MaxIdLength = 128;
 
     public static string? ValidateRate(CardRateRequest? request, int maxCost)
@@ -76,9 +108,15 @@ public static class CardRules
             return $"priceGems takes 1–{maxPrice}.";
         }
 
-        if (request.CardCount is < 1 or > MaxCardCount)
+        // A retired version never sells, so an old pack type saved with another size can still be retired (or refunded) as it is.
+        if (request.CardCount != CardsPerPack && !request.Retired)
         {
-            return $"cardCount takes 1–{MaxCardCount}.";
+            return $"cardCount must be {CardsPerPack}: every pack holds {CardsPerPack} cards.";
+        }
+
+        if (request.RefundUnopened == true && !request.Retired)
+        {
+            return "refundUnopened needs retired: a refund is how a pack type is retired when its packs cannot be kept.";
         }
 
         if (request.OddsPer10000 is null || request.OddsPer10000.Keys.Any(k => !CardRarities.Order.Contains(k))
