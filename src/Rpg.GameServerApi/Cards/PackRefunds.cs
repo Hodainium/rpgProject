@@ -31,7 +31,7 @@ public sealed class PackRefunds(CardStore store, MigrationRunner migrations, Run
         {
             metrics.PackRefundFailed(held.PackId, "held");
             logger.LogError("Refund of {Count} '{Pack}' pack(s) to {Player} held for a support check: no buy row prices them " +
-                "(look at pack_ledger; clear pack_inventory.refund_held once settled)", held.Count, held.PackId, held.PlayerId);
+                "(look at pack_ledger; set pack_inventory.refund_held_version back to NULL once settled)", held.Count, held.PackId, held.PlayerId);
         }
 
         foreach (var refund in pass.Paid)

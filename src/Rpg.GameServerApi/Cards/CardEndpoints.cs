@@ -163,10 +163,10 @@ public static class CardEndpoints
             {
                 metrics.PackCard(card.Rarity, card.Duplicate, card.Pity, card.DustGained);
             }
-
-            await cache.InvalidateAsync(VerifyPolicy.WalletKey(player.Id));
         }
 
+        // On a replay too (review fix): the first request may have committed and died before it got here (acceptance 2).
+        await cache.InvalidateAsync(VerifyPolicy.WalletKey(player.Id));
         return Results.Ok(response);
     }
 

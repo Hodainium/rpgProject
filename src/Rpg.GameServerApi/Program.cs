@@ -110,7 +110,7 @@ builder.Services.AddSingleton<CatalogCache>();
 builder.Services.AddSingleton<CardSeedState>();
 builder.Services.AddHostedService<CardSeeder>();
 builder.Services.AddHostedService<CardsOwnedMonitor>();
-builder.Services.AddSingleton<PackRefunds>();   // spec pack-shop 2.5: at login and at the collection read, no timer
+builder.Services.AddSingleton<PackRefunds>();   // spec pack-shop 2.5: POST /packs/refunds (the Open packs page), no timer
 builder.Services.AddSingleton<WalletCache>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddHostedService<PresenceMonitor>();

@@ -36,10 +36,11 @@ public sealed partial class CardStore
         await using (var select = Cmd(connection, null,
             """
             SELECT i.pack_id FROM pack_inventory i
-            CROSS JOIN LATERAL (SELECT retired, refund_unopened FROM pack_types t
+            CROSS JOIN LATERAL (SELECT version, retired, refund_unopened FROM pack_types t
                                 WHERE t.pack_id = i.pack_id AND t.effective_from <= clock_timestamp()
                                 ORDER BY t.version DESC LIMIT 1) latest
-            WHERE i.player_id = $1 AND i.count > 0 AND NOT i.refund_held AND latest.retired AND latest.refund_unopened
+            WHERE i.player_id = $1 AND i.count > 0 AND i.refund_held_version IS DISTINCT FROM latest.version
+              AND latest.retired AND latest.refund_unopened
             ORDER BY i.pack_id COLLATE "C"
             """, playerId))
         {
@@ -68,7 +69,7 @@ public sealed partial class CardStore
                     held.Add(new PackRefundHeld(playerId, pack, unpriced));
                 }
             }
-            catch (Exception ex) when (ex is PostgresException or InvalidOperationException)
+            catch (Exception ex) when (ex is NpgsqlException or InvalidOperationException)
             {
                 failed.Add(new PackRefundFailure(playerId, pack, ex.Message));
             }
@@ -90,89 +91,124 @@ public sealed partial class CardStore
         // Re-read under the locks: the packs may already be paid back (a second visit of the Open packs page at the same moment).
         var pack = await LatestPackAsync(connection, transaction, packId, ct);
         var count = await LockOwnedPacksAsync(connection, transaction, playerId, packId, ct);
-        if (pack is not { Refunding: true } || count <= 0 || await RefundHeldAsync(connection, transaction, playerId, packId, ct))
+        if (pack is not { Refunding: true } || count <= 0 || await RefundHeldAsync(connection, transaction, playerId, packId, pack.Version, ct))
         {
             return (null, 0);
         }
 
-        // Units an earlier refund of this type already paid back (a refund that held some packs, then cleared; or a type
-        // refunded, un-retired and refunded again). Refunds pay the newest buys first, so those units are skipped below.
-        int alreadyRefunded;
-        await using (var before = Cmd(connection, transaction,
-            "SELECT COALESCE(-sum(delta), 0)::int FROM pack_ledger WHERE player_id = $1 AND pack_id = $2 AND reason = 'refund'",
-            playerId, packId))
-        {
-            alreadyRefunded = (int)(await before.ExecuteScalarAsync(ct))!;
-        }
-
-        // What the player paid for the packs left. Opens spend the oldest packs first, so the `count` left are the newest
-        // bought: walk the buys newest first, skip what was refunded before, each unit at the price of the version it was bought at.
-        long amount = 0;
-        var left = count;
-        var skip = alreadyRefunded;
-        await using (var buys = Cmd(connection, transaction,
+        // What the player paid for the packs left, by replaying the pack ledger in order (review fix: a type refunded,
+        // un-retired, bought again and refunded again must price the packs bought after the first refund). Buys join the back
+        // of a queue at the price of the version bought, an open takes the oldest pack, a refund takes the packs it paid for
+        // (the newest); what is left is what the player owns, each with its price.
+        var queue = new LinkedList<(int Price, int Units)>();   // front = oldest; Price -1 = no pack type row prices it
+        var refundedBefore = 0;
+        await using (var rows = Cmd(connection, transaction,
             """
-            SELECT l.delta, t.price_gems FROM pack_ledger l
-            JOIN pack_types t ON t.pack_id = l.pack_id AND t.version = l.pack_version
-            WHERE l.player_id = $1 AND l.pack_id = $2 AND l.reason = 'buy' ORDER BY l.id DESC
+            SELECT l.reason, l.delta, t.price_gems FROM pack_ledger l
+            LEFT JOIN pack_types t ON t.pack_id = l.pack_id AND t.version = l.pack_version
+            WHERE l.player_id = $1 AND l.pack_id = $2 ORDER BY l.id
             """, playerId, packId))
-        await using (var reader = await buys.ExecuteReaderAsync(ct))
+        await using (var reader = await rows.ExecuteReaderAsync(ct))
         {
-            while (left > 0 && await reader.ReadAsync(ct))
+            while (await reader.ReadAsync(ct))
             {
-                var row = reader.GetInt32(0);
-                var skipped = Math.Min(skip, row);
-                skip -= skipped;
-                var units = Math.Min(left, row - skipped);
-                amount += (long)units * reader.GetInt32(1);
-                left -= units;
+                var delta = reader.GetInt32(1);
+                switch (reader.GetString(0))
+                {
+                    case "buy":
+                        queue.AddLast((reader.IsDBNull(2) ? -1 : reader.GetInt32(2), delta));
+                        break;
+                    case "open":
+                        Take(queue, -delta, fromFront: true);
+                        break;
+                    case "refund":
+                        refundedBefore -= delta;
+                        Take(queue, -delta, fromFront: false);
+                        break;
+                }
             }
         }
 
+        // The `count` owned are the newest in the queue. Units with no price (more packs owned than the buys prove, or a buy of
+        // a version with no row) are a data problem: they are held, never refunded for nothing, never taken away.
+        long amount = 0;
+        var refunded = 0;
+        var left = count;
+        for (var node = queue.Last; node is not null && left > 0; node = node.Previous)
+        {
+            var units = Math.Min(left, node.Value.Units);
+            left -= units;
+            if (node.Value.Price >= 0)
+            {
+                amount += (long)units * node.Value.Price;
+                refunded += units;
+            }
+        }
+
+        var held = count - refunded;
         if (amount > int.MaxValue)
         {
             throw new InvalidOperationException($"The refund of {count} '{packId}' packs for {playerId:D} is {amount} gems: too large for one ledger row.");
         }
 
-        // Only a buy adds packs, so units no buy row prices are a data problem. Pay what is provable and hold the rest in the
-        // inventory for a support check: never refund them for nothing, never take them away.
-        var refunded = count - left;
-        if (left > 0)
+        // Pay what is provable and hold the rest for a support check of this retirement (a later retirement checks again).
+        if (held > 0)
         {
             await ExecAsync(connection, transaction,
-                "UPDATE pack_inventory SET refund_held = true WHERE player_id = $1 AND pack_id = $2", ct, playerId, packId);
+                "UPDATE pack_inventory SET refund_held_version = $3 WHERE player_id = $1 AND pack_id = $2", ct, playerId, packId, pack.Version);
         }
 
         if (refunded == 0)
         {
             await transaction.CommitAsync(ct);
-            return (null, left);
+            return (null, held);
         }
 
-        var key = RefundKey(playerId, packId, pack.Version, alreadyRefunded);
+        var key = RefundKey(playerId, packId, pack.Version, refundedBefore);
         await MovePacksAsync(connection, transaction, playerId, packId, -refunded, ct);
         await PackLedgerAsync(connection, transaction, playerId, packId, pack.Version, -refunded, "refund", key, null, ct);
         if (amount > 0)
         {
             await WalletRowAsync(connection, transaction, playerId, ct);
             await LedgerAsync(connection, transaction, playerId, "gems", (int)amount, "pack_refund",
-                $"pack_refund:{playerId:D}:{packId}:{pack.Version}:{alreadyRefunded}", $"pack:{packId}:{pack.Version}", now, ct);
+                $"pack_refund:{playerId:D}:{packId}:{pack.Version}:{refundedBefore}", $"pack:{packId}:{pack.Version}", now, ct);
             await MoveWalletAsync(connection, transaction, playerId, (int)amount, 0, now, ct);
         }
 
         await EventAsync(connection, transaction, playerId, EventTypes.PackRefunded, now,
             new PackRefundedPayload(playerId.ToString("D"), packId, pack.Version, refunded, (int)amount), ct);
         await transaction.CommitAsync(ct);
-        return (new PackRefund(playerId, packId, pack.Version, refunded, (int)amount), left);
+        return (new PackRefund(playerId, packId, pack.Version, refunded, (int)amount), held);
     }
 
-    /// <summary>Whether the player's packs of this type are held for a support check (spec pack-shop 2.5).</summary>
+    /// <summary>Takes `units` from the queue's front (an open) or back (a refund); a damaged ledger may ask for more than is there.</summary>
+    private static void Take(LinkedList<(int Price, int Units)> queue, int units, bool fromFront)
+    {
+        while (units > 0 && (fromFront ? queue.First : queue.Last) is { } node)
+        {
+            var taken = Math.Min(units, node.Value.Units);
+            units -= taken;
+            if (taken == node.Value.Units)
+            {
+                queue.Remove(node);
+            }
+            else
+            {
+                node.Value = (node.Value.Price, node.Value.Units - taken);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether the player's packs of this type are held for a support check of this retirement version (spec pack-shop 2.5).
+    /// The hold belongs to one retirement: an un-retired type, or a later retirement, is not held.
+    /// </summary>
     internal static async Task<bool> RefundHeldAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid playerId,
-        string packId, CancellationToken ct)
+        string packId, int version, CancellationToken ct)
     {
         await using var select = Cmd(connection, transaction,
-            "SELECT refund_held FROM pack_inventory WHERE player_id = $1 AND pack_id = $2", playerId, packId);
-        return await select.ExecuteScalarAsync(ct) is true;
+            "SELECT refund_held_version FROM pack_inventory WHERE player_id = $1 AND pack_id = $2", playerId, packId);
+        return await select.ExecuteScalarAsync(ct) is int held && held == version;
     }
 
     /// <summary>

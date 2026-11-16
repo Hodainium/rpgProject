@@ -240,14 +240,19 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
         }
 
         // Spec pack-shop 2.3: the unopened packs, from Postgres like ownership (never cached), sorted by id, zero counts left out.
+        // RefundHeld only while the type's latest version is the retirement whose refund is held (spec pack-shop 2.5).
+        var latestPacks = (await CardSql.LatestPacksAsync(connection, transaction, ct)).ToDictionary(p => p.PackId, StringComparer.Ordinal);
         var packsOwned = new List<OwnedPackDto>();
         await using (var select = Cmd(connection, transaction,
-            "SELECT pack_id, count, refund_held FROM pack_inventory WHERE player_id = $1 AND count > 0 ORDER BY pack_id COLLATE \"C\"", playerId))
+            "SELECT pack_id, count, refund_held_version FROM pack_inventory WHERE player_id = $1 AND count > 0 ORDER BY pack_id COLLATE \"C\"", playerId))
         {
             await using var reader = await select.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
             {
-                packsOwned.Add(new OwnedPackDto(reader.GetString(0), reader.GetInt32(1), reader.GetBoolean(2) ? true : null));
+                var packId = reader.GetString(0);
+                var held = !reader.IsDBNull(2) && latestPacks.TryGetValue(packId, out var latest) && latest.Refunding
+                    && latest.Version == reader.GetInt32(2);
+                packsOwned.Add(new OwnedPackDto(packId, reader.GetInt32(1), held ? true : null));
             }
         }
 
@@ -255,7 +260,7 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
         // counters stay listed.
         var ownedIds = packsOwned.Select(p => p.PackId).ToHashSet(StringComparer.Ordinal);
         var pity = new List<PityStateDto>();
-        foreach (var pack in (await CardSql.LatestPacksAsync(connection, transaction, ct))
+        foreach (var pack in latestPacks.Values
                      .Where(p => (!p.Retired || ownedIds.Contains(p.PackId)) && !p.Refunding && p.Pity.Any(x => x.Value > 0))
                      .OrderBy(p => p.PackId, StringComparer.Ordinal))
         {

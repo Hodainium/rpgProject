@@ -21,17 +21,23 @@ public sealed partial class CardStore
         await LockAccountAsync(connection, transaction, playerId, ct);
         await EnsurePlayerAsync(connection, transaction, playerId, playerName, now, ct);
 
-        // A count out of range (or missing, which reads as 0) is a bad request before anything else: no stored answer can match it.
-        if (count < 1 || count > maxPerBuy)
+        // A count below 1 (or missing, which reads as 0) is malformed before anything else: no stored answer can match it.
+        if (count < 1)
         {
             return CardResult<PackBuyResponse>.Fail(CardFailure.RuleInvalid, $"A buy is 1 to {maxPerBuy} packs; {count} was asked.");
         }
 
-        // The count is part of the request: the same key with another count is a different request (1407).
+        // The count is part of the request: the same key with another count is a different request (1407). The replay comes
+        // before the upper bound, so a committed buy is still answered after Cards:MaxPacksPerBuy is lowered.
         var hash = Hash("pack_buy", $"{packId}|{count}");
         if (await ReplayAsync<PackBuyResponse>(connection, transaction, playerId, key, "pack_buy", hash, ct) is { } replay)
         {
             return replay;
+        }
+
+        if (count > maxPerBuy)
+        {
+            return CardResult<PackBuyResponse>.Fail(CardFailure.RuleInvalid, $"A buy is 1 to {maxPerBuy} packs; {count} was asked.");
         }
 
         // The price comes from Postgres inside the transaction, never from a cache: a stale price must not sell.
@@ -148,7 +154,7 @@ public sealed partial class CardStore
             // Spec pack-shop 2.5: the type was retired with a refund; the pack stays owned until the Open packs page pays it back,
             // or, held for a support check, until operations settles it.
             return CardResult<PackOpenResponse>.Fail(CardFailure.PackUnavailable,
-                await RefundHeldAsync(connection, transaction, playerId, packId, ct)
+                await RefundHeldAsync(connection, transaction, playerId, packId, pack.Version, ct)
                     ? $"Pack '{packId}' was retired; refunding the packs you still hold needs a support check."
                     : $"Pack '{packId}' was retired and is being refunded: its gems come back on the Open packs page.");
         }

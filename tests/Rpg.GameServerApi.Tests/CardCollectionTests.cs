@@ -993,7 +993,7 @@ public class CardCollectionTests(StackFixture stack)
         // already refunded pack again (it gets keys of its own).
         await using (var repair = factory.Services.GetRequiredService<NpgsqlDataSource>().CreateCommand(
                          $"UPDATE pack_ledger SET delta = 3 WHERE player_id = '{player}' AND reason = 'buy';" +
-                         $"UPDATE pack_inventory SET refund_held = false WHERE player_id = '{player}'"))
+                         $"UPDATE pack_inventory SET refund_held_version = NULL WHERE player_id = '{player}'"))
         {
             await repair.ExecuteNonQueryAsync(Ct);
         }
@@ -1007,6 +1007,62 @@ public class CardCollectionTests(StackFixture stack)
         Assert.Empty(after.OwnedPacks);
         Assert.Equal(2L, await RefundRowsAsync(factory));
         await AssertPackLedgerAsync(factory);
+    }
+
+    /// <summary>
+    /// Review fix: the ledger is replayed in order (buys join a queue, opens take the oldest, refunds take what they paid), so a
+    /// type refunded, put back on sale at another price, bought again and refunded again pays what the new packs cost; and a
+    /// hold from the first retirement does not follow the packs into the next one.
+    /// </summary>
+    [Fact]
+    public async Task Refund_AfterAnUnretireAndANewBuy_PaysTheNewPrice_AndAnOldHoldDoesNotStick()
+    {
+        await using var factory = await FactoryAsync();
+        var (admin, _) = await PlayerAsync(factory, "designer");
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 1000);
+        var commons = new Dictionary<string, int> { [CardRarities.Common] = 10_000 };
+        await AddPackAsync(factory, Pack("old", 100, 5, commons));
+        await BuyAsync(client, "old", 3);                                                                  // 3 at 100: 700 left
+        await admin.PutPackTypeAsync(Pack("old", 100, 5, commons, retired: true) with { RefundUnopened = true }, Ct);   // v2
+        var first = await OpenPacksPageAsync(client);                                                      // +300: 1000
+        await admin.PutPackTypeAsync(Pack("old", 200, 5, commons), Ct);                                   // v3: back on sale at 200
+        await BuyAsync(client, "old", 2);                                                                  // 2 at 200: 600 left
+        await OpenAsync(client, "old");                                                                    // 1 left, at 200
+        await using (var hold = factory.Services.GetRequiredService<NpgsqlDataSource>().CreateCommand(
+                         $"UPDATE pack_inventory SET refund_held_version = 2 WHERE player_id = '{player}'"))   // an old hold, for v2
+        {
+            await hold.ExecuteNonQueryAsync(Ct);
+        }
+
+        var onSale = await client.GetCollectionAsync(Ct);
+        await admin.PutPackTypeAsync(Pack("old", 200, 5, commons, retired: true) with { RefundUnopened = true }, Ct);   // v4
+        var second = await OpenPacksPageAsync(client);
+
+        Assert.Equal([new PackRefundDto("old", 3, 300)], first.Refunded);
+        Assert.Equal([new OwnedPackDto("old", 1)], onSale.OwnedPacks);                                     // not shown as held
+        Assert.Equal([new PackRefundDto("old", 1, 200)], second.Refunded);                                 // the 200 it cost
+        Assert.Equal(800, (await client.GetCollectionAsync(Ct)).Gems);
+        await AssertPackLedgerAsync(factory);
+    }
+
+    /// <summary>Review fix: a committed buy is still answered by its key after Cards:MaxPacksPerBuy is lowered (acceptance 2).</summary>
+    [Fact]
+    public async Task Buy_Replayed_AfterTheLimitIsLowered_ReturnsTheStoredResponse()
+    {
+        await using var factory = await FactoryAsync();
+        var (_, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 2000);
+        var store = factory.Services.GetRequiredService<CardStore>();
+        var key = Guid.NewGuid();
+
+        var committed = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 10, 10, key, DateTimeOffset.UtcNow, Ct);
+        var replayed = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 10, 5, key, DateTimeOffset.UtcNow, Ct);
+        var fresh = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 10, 5, Guid.NewGuid(), DateTimeOffset.UtcNow, Ct);
+
+        Assert.True(replayed.Replayed);
+        Assert.Equal(committed.Value, replayed.Value);
+        Assert.Equal(CardFailure.RuleInvalid, fresh.Problem?.Failure);   // a new buy of 10 is over the lowered limit
     }
 
     [Fact]

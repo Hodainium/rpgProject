@@ -6,8 +6,9 @@ CREATE TABLE pack_inventory (
   pack_id text NOT NULL,
   count int NOT NULL CHECK (count >= 0),
   updated_at timestamptz NOT NULL,
-  -- Spec pack-shop 2.5: a refund held for a support check (packs no buy row prices); logins skip it until operations clears it.
-  refund_held boolean NOT NULL DEFAULT false,
+  -- Spec pack-shop 2.5: the retirement version whose refund is held for a support check (packs no buy row prices); refund
+  -- calls skip the row for that version until operations sets it back to NULL. A later retirement checks again.
+  refund_held_version int NULL,
   PRIMARY KEY (player_id, pack_id));
 
 CREATE TABLE pack_ledger (                      -- append-only: +n per buy, -1 per open, -n per refund

@@ -112,7 +112,6 @@ public static class AuthEndpoints
                     detail: $"playerName takes 1–{DevTokenIssuer.MaxNameLength} letters, digits, '-', '_' or '.'.");
             }
 
-            metrics.DevTokenIssued();
             // Postgres is a hard dependency of the game (the user, 2026-11-15): with it unreachable, no token (503, the
             // PostgresUnavailableHandler), since nothing the player could do next would work.
             await using (var ping = dataSource.CreateCommand("SELECT 1"))
@@ -120,6 +119,7 @@ public static class AuthEndpoints
                 await ping.ExecuteScalarAsync(ct);
             }
 
+            metrics.DevTokenIssued();
             return Results.Ok(issuer.Issue(request!.PlayerName));
         });
 
