@@ -96,14 +96,16 @@ Open packs page opens → POST /api/v1/packs/refunds (rate limited as `actions`;
   version is retired with refundUnopened; for each, ONE transaction:
     1. pg_advisory_xact_lock(acct:<player>) and the shared lock on pack_type|<id> (the admin save holds it exclusively);
        re-read the latest version and the count (0: a second visit already paid; skip)
-    2. amount = what the player paid for the packs left: opens spend the oldest packs first, so the n left are the newest
-       n bought; walk the player's 'buy' rows newest first, each unit at its version's price_gems. Units no buy row prices
-       (only a buy adds packs, so a damaged ledger) are never refunded for nothing nor taken away: the priced ones are paid,
-       the rest stay in the inventory with pack_inventory.refund_held = true (a support check), visits skip a held row until
-       operations clears the flag, an error log and rpg_pack_refund_failures_total{pack,reason="held"} tell them
+    2. amount = what the player paid for the packs left, by replaying the player's pack_ledger for the type in order: a buy
+       joins the back of a queue at its version's price_gems, an open takes the oldest pack (first in, first out), a refund
+       takes the packs it paid for (the newest); the n owned are the newest left in the queue. So a held refund cleared later,
+       or a type refunded, un-retired, bought again and refunded again, pays only what is still owed, at what it cost.
+       Units nothing prices (only a buy adds packs, so a damaged ledger) are never refunded for nothing nor taken away: the
+       priced ones are paid, the rest stay in the inventory with pack_inventory.refund_held_version = this retirement's version
+       (a support check); visits skip the row for that version until operations sets it back to NULL (a later retirement
+       checks again); an error log and rpg_pack_refund_failures_total{pack,reason="held"} tell them
     3. pack_inventory count -= the units paid; pack_ledger -n, reason 'refund', request_key = a UUID derived from (player,
-       pack, version, units refunded before); the price walk skips those earlier units (a held refund cleared later, or a type
-       refunded, un-retired and refunded again, pays only what is still owed)
+       pack, version, units refunded before)
        (unique on (player, reason, request_key): a second refund is impossible, and a player's own request keys never collide)
     4. wallet_ledger +amount, reason 'pack_refund', key 'pack_refund:<player>:<pack>:<version>:<refunded before>' (unique)
     5. outbox PackRefunded (key = playerId)
