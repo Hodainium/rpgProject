@@ -418,14 +418,18 @@ func test_smooth_lathe_shades_a_dome_round() -> void:
 	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
 	var worst := 1.0
 	var base_down := true
+	var apex_up := 1.0
 	for v in vertices.size():
 		var p := vertices[v]
 		var n := normals[v]
+		if p.y > 0.001 and Vector2(p.x, p.z).length() < 0.0001:  # the apex, on the axis: straight up (no star at the tip)
+			apex_up = minf(apex_up, n.dot(Vector3.UP))
 		if p.y > 0.001:  # on the dome: the normal is the sphere's
 			worst = minf(worst, n.dot(p.normalized()))
 		elif p.length() < 0.299:  # inside the base disc: straight down
 			base_down = base_down and n.dot(Vector3.DOWN) > 0.999
 	check(worst > 0.98, "every dome vertex faces away from the centre (worst dot %.3f)" % worst)
+	check(apex_up > 0.99999, "the apex vertices all point straight up (worst dot %.5f)" % apex_up)
 	check(base_down, "the flat base stays flat: the 90 degree rim is not smoothed")
 	var flat := AttachmentMesh.lathe(dome, 32)
 	var flat_normals: PackedVector3Array = flat.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
