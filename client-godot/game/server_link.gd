@@ -78,6 +78,7 @@ var _waits: Dictionary = {}
 ## Whether the last request got an answer (any HTTP status); null before the first one.
 var _answered: Variant = null
 var _signing_in: bool = false
+var _card_account: CardAccount
 var _sign_in_error: Dictionary = {}
 
 # The linked run (Part B).
@@ -292,6 +293,31 @@ func craft_card(card_id: String, key: String) -> Dictionary:
 ## POST /api/v1/runs/{runId}/abandon: cancels the Active run (the dust pop-up's path); data null.
 func abandon_run(run_id: String) -> Dictionary:
 	return await _request("AbandonRun", [run_id])
+
+
+## Spec card-ui 2.5: the player's one account action in flight (buy, open, dust, craft), made on first use for this link.
+func card_account() -> CardAccount:
+	if _card_account == null:
+		_card_account = CardAccount.new(self)
+	return _card_account
+
+
+## The link's retry wait for a caller with its own retry loop (CardAccount): `delay` ±25% jitter, or the server's Retry-After,
+## never longer than `cap` seconds.
+func retry_wait(error: Dictionary, delay: float, cap: float = INF) -> void:
+	var after: Variant = error.get("retryAfterSeconds")
+	var wait: float = float(after) if after != null else delay * randf_range(0.75, 1.25)
+	await get_tree().create_timer(minf(wait, cap)).timeout
+
+
+## How long the player's account action has been reconnecting, or -1 (the connecting pop-up; makes no account).
+func account_reconnecting_seconds() -> float:
+	return _card_account.reconnecting_seconds() if _card_account != null else -1.0
+
+
+## The key of the wait the pop-up shows now (the newest), or &"".
+func newest_wait_key() -> StringName:
+	return &"" if _waits.is_empty() else _waits.keys()[-1]
 
 
 static func describe_collection(collection: Dictionary) -> String:
@@ -833,6 +859,8 @@ static func retryable(error: Dictionary) -> bool:
 
 ## One line for the player: "409 Floor not reachable (1105)".
 static func describe(error: Dictionary) -> String:
+	if error.get("local", false):
+		return str(error.get("title", ""))  # refused here, before any call (CardAccount)
 	var code: Variant = error.get("errorCode")
 	var status := int(error.get("status", 0))
 	return "%s%s%s" % ["%d " % status if status > 0 else "no connection: ", str(error.get("title", "")),

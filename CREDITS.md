@@ -80,3 +80,14 @@ The game's sounds come from these packs. Every file was trimmed, converted to mo
 - Files used: Select_Advance - Softer.wav, Select_AreYouSure - Softer.wav, Select_Confirm - Softer.wav, Select_ConfirmBIG - Softer.wav, Select_Decline - Softer.wav, Select_GoBack - Softer.wav, Select_Pause - Softer.wav, Select_Unable - Softer.wav, Select_Unpause - Softer.wav, Select_Up - Softer.wav
 
 <!-- /audio -->
+
+## Fonts
+
+- Chakra Petch, by The Chakra Petch Project Authors (https://github.com/m4rc1e/Chakra-Petch). SIL Open Font License 1.1 (`client-godot/presentation/demo/ui/fonts/OFL.txt`).
+- Cinzel, by The Cinzel Project Authors (https://github.com/NDISCOVER/Cinzel), used for card and pack names. SIL Open Font License 1.1 (`client-godot/presentation/demo/ui/fonts/Cinzel-OFL.txt`).
+
+## Icons
+
+Card and pack glyphs from game-icons.net (https://game-icons.net), CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/), recoloured in the game. Copies of the icons used live in `client-godot/presentation/demo/cards/icons/<author>/`.
+
+- Delapouite (https://delapouite.com): stairs.

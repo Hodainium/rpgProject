@@ -21,10 +21,14 @@ extends UIScreen
 @export var local_tag_color: Color = Color(0.85, 0.7, 0.3)
 @export var synced_tag_color: Color = Color(0.25, 1.0, 0.35)
 @export var offline_color: Color = Color(1.0, 0.8, 0.25)
+## Spec card-ui 1.7: the Open packs button, with the unopened count when the account has some.
+@export var open_packs_text: String = "Open packs"
+@export var open_packs_count_text: String = "Open packs (%d)"
 
 var _server: ServerLink
 var _info: Dictionary = {}
 var _generation: int = 0
+var _unopened_generation: int = 0
 
 
 func bind(context: UIContext) -> void:
@@ -46,6 +50,7 @@ func _watch(link: ServerLink) -> void:
 		_server.connection_changed.connect(_connection_changed)
 	if active:
 		refresh()
+		_show_unopened()
 
 
 func _mode_changed(_mode: String) -> void:
@@ -61,6 +66,7 @@ func _connection_changed() -> void:
 func on_activated() -> void:
 	%Error.text = ""
 	refresh()
+	_show_unopened()
 
 
 func refresh() -> void:
@@ -82,6 +88,22 @@ func refresh() -> void:
 	_show(info)
 	if info["reason"] == "unreadable":
 		%Error.text = reason_texts["unreadable"]
+
+
+## Spec card-ui 1.7: the Open packs button carries the account's unopened count (server mode only). Asked once per activation,
+## never from a connection change: a failed fetch changes the connection, which would ask again, forever.
+func _show_unopened() -> void:
+	_unopened_generation += 1
+	var generation := _unopened_generation
+	%OpenPacks.text = open_packs_text
+	if _server == null or not is_instance_valid(_server):
+		return
+	var collection: Dictionary = await _server.get_collection()
+	if generation != _unopened_generation or not is_instance_valid(self) or not is_inside_tree() or not collection["ok"]:
+		return
+	var unopened := ShopModel.unopened(collection["data"])
+	if unopened > 0:
+		%OpenPacks.text = open_packs_count_text % unopened
 
 
 func _show(info: Dictionary) -> void:
