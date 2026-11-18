@@ -1,6 +1,7 @@
 ## Spec card-ui 6: checks the card style against the content (validate_content.tscn and the tests). Errors: a rarity the catalog uses
 ## with no look (card_style_rarity_missing), no face scene for the active look (card_style_face_missing). Warnings: an item or armor
-## card with no glyph (card_icon_missing: it shows the default), a character with no portrait (card_portrait_missing), a portrait
+## card with no glyph (card_icon_missing: it shows the default), and as an error two cards sharing a glyph (card_icon_shared; only a
+## Void card may share the glyph of the item it corrupts, user 2026-11-18), a character with no portrait (card_portrait_missing), a portrait
 ## older than its character's look file (card_portrait_stale: re-run game/tools/build_card_portraits.tscn -- --force --only <id>).
 class_name CardStyleValidator
 extends RefCounted
@@ -15,6 +16,19 @@ static func validate(style: CardStyle, content: ContentIndex, registry: StyleReg
 		issues.append(ValidationIssue.new(ValidationIssue.ERROR, "card_style_face_missing", where + ".face_scenes",
 			"no face scene for the active look '%s'" % style.face))
 	var rarities := {}
+	var holders := {}  # glyph path → item and armor card ids drawn with it (Void twins left out)
+	for card in CardCatalog.cards(content):
+		if card["kind"] != CardCatalog.KIND_CHARACTER and CardIconPass.twin_of(content, card["id"]) == "":
+			var glyph := style.art_for(StringName(card["id"]))
+			if glyph != null and glyph.resource_path != "":
+				holders[glyph.resource_path] = holders.get(glyph.resource_path, []) + [card["id"]]
+	var paths: Array[String] = []
+	paths.assign(holders.keys())
+	paths.sort()
+	for path in paths:
+		if holders[path].size() > 1:
+			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "card_icon_shared", ", ".join(holders[path]),
+				"these cards share the glyph %s; every card has its own (only a Void card may share its item's): give each a NAME_ICONS entry in game/cards/card_icon_pass.gd and re-run build_card_icon_pass.tscn -- --apply --force" % path.get_file()))
 	for card in CardCatalog.cards(content):
 		rarities[card["rarity"]] = true
 		var id := StringName(card["id"])

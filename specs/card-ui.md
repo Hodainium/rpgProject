@@ -25,7 +25,8 @@ through console commands. This slice makes it a player feature, in Hearthstone's
    `H:\assets\game-icons` tinted by element; a character's art is a **prerendered portrait**: a still of the character's real
    in-game cube look, shot in a portrait studio scene (3.5). Zero art time per new card: a new item gets a face from its tags and
    one icon pick, a new character one portrait run.
-2. **Collection** (Hearthstone's collection viewer): an 8-card page (4 x 2) on a 3D stage, page turning, filters (set, kind, rarity,
+2. **Collection** (Hearthstone's collection viewer): a 10-card page (5 x 2 with wide gaps, so a hovered card at the edge still has room; it was 4 x 2
+   with a side window until the playtest of 2026-11-18 removed the side window: the owned count sits beside the card count) on a 3D stage, page turning, filters (set, kind, rarity,
    room pool, owned / missing, search), owned / missing / locked / NEW states, the dust and gem totals.
 3. **Card detail with craft and dust** (Hearthstone's crafting view): the card large, its facts, Dust (+value) and Create (-cost),
    and the run-lock pop-up that offers to cancel the active run (409 1403) or says to wait for the verdict (Verifying).
@@ -76,6 +77,9 @@ Main menu ── Collection button (UIPushButton, same_layer) ──▶ UIManage
                                                       after 0.3 s as for every server wait)
   build the CollectionModel (pure: catalog x content x collection x seen set) → filter, sort, page → 8 CardViews on the stage
 ```
+Playtest (user, 2026-11-18): the Collection opens on the **owned** cards only (Owned on, Missing off; `missing_at_first`). It has
+no side window and no description window: one book window fills the screen, with Back, the title, the set and kind tabs and the
+dust and gems in its top row (the menu frame's own Back and description window are hidden), so the page never moves.
 Catalog drift: a server card id with no local definition shows an "Unknown card" face (name = id) and logs one warning; a local card
 the server does not list is not shown in server mode. The NEW set (`cards_seen.json`, 3.4) is client-local and per player.
 
@@ -287,8 +291,9 @@ corrupted outline `#e040fb` (the magenta of 5b2). Slice 5b2 reads `CardStyle.rar
 | `PackReveal` (pure) | from a `PackOpenResponse`: five slots with rarity, tier, duplicate, dust, pity, new; flip order, `reveal(i)`, `reveal_all()`, `done`; the labels' text |
 | `CardAccount` | the single account action in flight (2.5) over `ServerLink`, its in-memory key, `run(kind, target)`, the retry until answered with `reconnecting` / `reconnected`, `give_up()`, the 1403 cancel path |
 | `CardSeen` | the per-player NEW set, `user://saves/<player>/cards_seen.json` (ids seen in the collection); a card is NEW until shown in the detail or hovered for 0.5 s |
-| `CardFaceCache` | renders a face scene once per (card, state, style version) into an `ImageTexture` (one shared `SubViewport`, `UPDATE_ONCE`), LRU of 64; a page never keeps 8 live viewports |
-| `CardView3D` (Node3D) | a thin rounded card mesh: face texture on the front, back texture on the back, a material that takes the foil / glow shader (`foil_shimmer`, `glow_aura`), hover tilt toward the cursor with a moving glare, lift, flip; built on `FxStage.world_root` |
+| ~~`CardFaceCache`~~ | **dropped (user, 2026-11-18):** no cache. Card faces render **on demand, live**: each visible `CardView3D` renders its face scene into its **own `SubViewport`** (a still face, Common / Rare / Epic: `UPDATE_ONCE`; a face with looping layers, Legendary / Mythic / corrupted: `UPDATE_ALWAYS`), freed with the view when the page changes. The viewport is sized to the card's size on screen (`render_scale`, capped) with a margin for the corrupted glow. Measured on a full page of 8 Mythics (`cardui bench`, section 6); a cache of still faces comes back only if those numbers say so |
+| `CardView3D` (Node3D) | a thin card quad: the live face texture on the front (unshaded, so the face's colours stay as approved), a plain back (the card back texture arrives with the pack opening), hover tilt toward the cursor with a moving glare, lift, a missing card ghosted (grey and blue, `card_view.gdshader`), a rarity flash after a craft; built on `FxStage.world_root`; flip arrives with the pack opening |
+| `CardPage` (Control) | the page (`columns` x `rows`, the Collection's 5 x 2; each card's input Control is exactly the card, so a click between cards opens nothing): a `FxStage` (reaching `stage_bleed` past the page, so a hovered card is never cut off) under a grid of focusable 2D slots (input, focus, the "In your run" chip and the NEW badge; the "Craft · cost" chip is off since the playtest of 2026-11-18, `show_craft_chip`); each slot's `CardView3D` follows it through `Camera3D.project_position` and is kept while its card stays on the page; `set_paused` while the detail covers it; `card_pressed`, `card_hovered`. The detail uses a 1 x 1 page with `selectable` off (it only tilts; the focus stays on its buttons) |
 | `CardIconPass` | the icon proposal (3.5) |
 
 Screens (`presentation/demo/ui/cards/`, each a `UIScreen` on the theme; Back top left; hover previews, click selects):
@@ -315,6 +320,14 @@ gamepad work); each `CardView3D` follows its slot through the stage camera (`Cam
   shared shader); **Mythic** twinkling rainbow glitter (`game/cards/shaders/card_mythic.gdshader`) over the opal frame; a **corrupted**
   card a steady magenta glow and a magenta frame outline. Each card starts its loops at its own point (`CardFaceView.phase_spread`,
   6 s, from a hash of the card and its view: no RNG), so a pack's cards never sweep in step.
+- **Void cards (user, 2026-11-18, superseding the corrupted look above):** an `Item.Corrupted` card wears the Legendary look
+  (`CardStyle.corrupted_as`: frame, backdrop, gold sheen); no magenta glow or outline; the set symbol keeps the card's real
+  rarity colour (11 of the 16 Void cards are Epic). What sets it apart is its glyph: option C of six shown live, a near-black
+  "void" glyph in a magenta glow (`corrupted_glyph`, `corrupted_glyph_halo`, `corrupted_glyph_halo_radius`). Setting
+  `corrupted_as` to empty brings the old corrupted look back.
+- **Set symbol colour (user, 2026-11-18):** the rarity's colour, except where `CardStyle.set_symbol_colors` overrides it: Common's
+  is `#7f8694` (its silver a few steps darker; the pale `#cfd3dc` vanished on the parchment name bar). The rarity colour itself is
+  unchanged everywhere else.
 - Tried and dropped in the engine: Look A; element colours; rounded bars; dark or tinted bars; a stone frame; a crown crest; a rarity
   outline on the art; white, element-coloured or rarity-coloured glyphs; the Epic glow; Mythic holo, rim chase, aurora and rays;
   rose prism, spectrum, holo-stripe, nebula and still-metal Mythic frames.
@@ -362,7 +375,7 @@ lights and effects are presentation data the user can tune.
 | 4 | Dust refused by the run lock, Active | The pop-up; Cancel run → abandon → `release_cancelled` → the same key re-sent → dusted | `test_card_ui::test_dust_cancel_run_path`; e2e `card_ui_run_lock` |
 | 5 | Dust refused, run Verifying | The wait message; nothing else | `test_card_ui::test_dust_verifying_message` |
 | 6 | Abandon refused (1410, the run turned Verifying meanwhile) | The wait message; the dust is not retried | same test, second case |
-| 7 | Stale collection (1402, 1404, 1405, 1406) | The server's line in the message bar, the refused sound, the collection refetched | Shop (built): `test_card_ui::test_shop_refusals_show_the_line_and_refetch`; Collection and detail: `test_card_ui::test_stale_refusals_refetch` (not built yet) |
+| 7 | Stale collection (1402, 1404, 1405, 1406) | The server's line in the message bar, the refused sound, the collection refetched | Shop (built): `test_card_ui::test_shop_refusals_show_the_line_and_refetch`; Collection and detail (built 2026-11-18): `test_card_ui::test_stale_refusals_refetch` (1413 and 1402) |
 | 8 | Pack retired (1408) | Message, pack list refetched | `test_card_ui::test_pack_unavailable` |
 | 9 | Key reused (1407; a bug) | Treated as a refusal: the key is forgotten, an error is logged with `push_error` (deliberate logging, which never fails a test: only a 1407 the test caused itself; user 2026-11-18) | `test_card_ui::test_key_reused_is_an_error` |
 | 10 | Catalog drift (server card unknown locally) | "Unknown card" face, one warning | `test_card_ui::test_unknown_card_face` |
@@ -400,7 +413,12 @@ content):
 - Isolation: no file under `presentation/demo/cards/` is reachable from `combat/`, `game/verify/` or the ruleset version's inputs.
 - Validator: `card_icon_missing` (warning), `card_style_rarity_missing` (error: a catalog rarity with no look),
   `card_style_element_unknown` (error), `card_icon_pass_stale` (warning: an icon file not in the registry or the reverse).
-- Console (dev-tools parity, memory "Dev tools Claude parity"): `cardui open collection|packs|detail <id>`, `cardui page <n>`,
+- Benchmark (gate 2, user 2026-11-18): `cardui bench [rarity] [seconds]` shows a full page of 8 cards of one rarity (repeated
+  when the content has fewer) and reports the frame time against an empty page, vsync off. First run (2026-11-18, the user's 4K
+  screen fullscreen, RTX 5080, faces rendered at 546 x 727 px): empty 0.58 ms average (p95 0.84), 8 live Mythics 0.86 ms (p95
+  1.15), 8 live Legendaries 0.77 ms, 8 still Commons 0.56 ms. A live page costs about 0.3 ms a frame: no face cache.
+- Console (dev-tools parity, memory "Dev tools Claude parity"): `cardui open collection|packs|detail <id>`, `cardui collection`,
+  `cardui detail [dust|create]`, `cardui page <n>`,
   `cardui filter <field> <value>`, `cardui pack <pack id>` (a real open) and `cardui pack demo [rarity ...]` (a made-up response,
   presentation only, local mode allowed: plays the choreography without touching an account), `cardui reveal <i>|all`,
   `cardui log on|off`; each refused where it makes no sense and tested.

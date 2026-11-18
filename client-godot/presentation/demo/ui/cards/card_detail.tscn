@@ -1,0 +1,189 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/cards/card_detail.gd" id="1_detail"]
+[ext_resource type="Script" path="res://game/cards/card_page.gd" id="2_page"]
+[ext_resource type="Script" path="res://game/ui/ui_back_button.gd" id="3_back"]
+
+[node name="CardDetail" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_detail")
+focus_on_activate = NodePath("Center/Row/Info/Margin/Stack/Back")
+
+[node name="Dim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.08, 0.72)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Row" type="HBoxContainer" parent="Center"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 36
+
+[node name="CardArea" type="Control" parent="Center/Row"]
+custom_minimum_size = Vector2(440, 616)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Card" type="Control" parent="Center/Row/CardArea"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_page")
+columns = 1
+rows = 1
+chip_room = 0.0
+show_badges = false
+selectable = false
+
+[node name="Info" type="PanelContainer" parent="Center/Row"]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Margin" type="MarginContainer" parent="Center/Row/Info"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="Stack" type="VBoxContainer" parent="Center/Row/Info/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Name" type="Label" parent="Center/Row/Info/Margin/Stack"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Title"
+text = "Card"
+autowrap_mode = 3
+
+[node name="TypeLine" type="Label" parent="Center/Row/Info/Margin/Stack"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Item"
+
+[node name="Facts" type="GridContainer" parent="Center/Row/Info/Margin/Stack"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 4
+columns = 2
+
+[node name="RarityLabel" type="Label" parent="Center/Row/Info/Margin/Stack/Facts"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Rarity"
+
+[node name="Rarity" type="Label" parent="Center/Row/Info/Margin/Stack/Facts"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Common"
+
+[node name="SetLabel" type="Label" parent="Center/Row/Info/Margin/Stack/Facts"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Set"
+
+[node name="Set" type="Label" parent="Center/Row/Info/Margin/Stack/Facts"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Core"
+
+[node name="PoolsLabel" type="Label" parent="Center/Row/Info/Margin/Stack/Facts"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Found in"
+
+[node name="Pools" type="Label" parent="Center/Row/Info/Margin/Stack/Facts"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="StatusLabel" type="Label" parent="Center/Row/Info/Margin/Stack/Facts"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Status"
+
+[node name="Status" type="Label" parent="Center/Row/Info/Margin/Stack/Facts"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="Text" type="Label" parent="Center/Row/Info/Margin/Stack"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="CraftBar" type="HBoxContainer" parent="Center/Row/Info/Margin/Stack"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="DustButton" type="Button" parent="Center/Row/Info/Margin/Stack/CraftBar"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Dust  +0"
+
+[node name="DustTotal" type="Label" parent="Center/Row/Info/Margin/Stack/CraftBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gold"
+text = "0 dust"
+horizontal_alignment = 1
+
+[node name="CreateButton" type="Button" parent="Center/Row/Info/Margin/Stack/CraftBar"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Create  -0"
+
+[node name="Note" type="Label" parent="Center/Row/Info/Margin/Stack"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 3
+
+[node name="Message" type="Label" parent="Center/Row/Info/Margin/Stack"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="Back" type="Button" parent="Center/Row/Info/Margin/Stack"]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_type_variation = &"Toggle"
+text = "BACK"
+script = ExtResource("3_back")

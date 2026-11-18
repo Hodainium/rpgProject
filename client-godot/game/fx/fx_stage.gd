@@ -73,5 +73,65 @@ func project(world_position: Vector3) -> Vector2:
 	return point
 
 
+## Spec card-ui 3.3: render the 3D picture at the window's real pixels. The project stretches its canvas (`canvas_items`, 1920 x
+## 1080), so on a 4K screen a stretched stage would render at half the resolution and be scaled up (blurry cards). On: the
+## container stops stretching, the viewport takes the stage's size times the screen's scale, and the container is drawn scaled
+## down by the same factor, one viewport pixel per screen pixel. Off (the default): the container stretches, as before.
+func match_screen_pixels(on: bool = true) -> void:
+	_screen_pixels = on
+	container.stretch = not on
+	if on:
+		if not resized.is_connected(_fit_screen_pixels):
+			resized.connect(_fit_screen_pixels)
+		if is_inside_tree():
+			_notification(NOTIFICATION_ENTER_TREE)
+		_fit_screen_pixels()
+	else:
+		container.scale = Vector2.ONE
+		container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+
+## Screen pixels per stage unit (1 unless match_screen_pixels is on).
+func pixel_ratio() -> float:
+	if not _screen_pixels or not is_inside_tree():
+		return 1.0
+	return maxf(get_viewport().get_screen_transform().get_scale().x * get_global_transform().get_scale().x, 0.25)
+
+
+## A point in the stage's own coordinates as a point in the viewport (what Camera3D.project_position takes).
+func to_viewport(point: Vector2) -> Vector2:
+	var viewport_size := Vector2(viewport.size)
+	if size.x <= 0.0 or size.y <= 0.0:
+		return point
+	return point * viewport_size / size
+
+
+var _screen_pixels: bool = false
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_ENTER_TREE and _screen_pixels:
+		var window := get_tree().root
+		if not window.size_changed.is_connected(_fit_screen_pixels):
+			window.size_changed.connect(_fit_screen_pixels)   # a fullscreen switch keeps the canvas size, not the pixels
+		_fit_screen_pixels.call_deferred()
+	elif what == NOTIFICATION_EXIT_TREE and is_inside_tree():
+		var window := get_tree().root
+		if window.size_changed.is_connected(_fit_screen_pixels):
+			window.size_changed.disconnect(_fit_screen_pixels)
+
+
+func _fit_screen_pixels() -> void:
+	if not _screen_pixels or size.x <= 0.0 or size.y <= 0.0:
+		return
+	var ratio := pixel_ratio()
+	var pixels := Vector2i(maxi(1, roundi(size.x * ratio)), maxi(1, roundi(size.y * ratio)))
+	container.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	container.position = Vector2.ZERO
+	container.scale = Vector2.ONE / ratio
+	container.size = Vector2(pixels)
+	viewport.size = pixels
+
+
 func is_behind_camera(world_position: Vector3) -> bool:
 	return camera != null and camera.is_inside_tree() and camera.is_position_behind(world_position)

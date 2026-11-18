@@ -27,6 +27,11 @@ func _ready() -> void:
 			return
 		file.store_string(WireJson.stringify({"cards": rows}))
 		file.close()
+	var clashes := CardIconPass.clashes(rows, content)
+	if args.has("--apply") and not clashes.is_empty():
+		printerr("build_card_icon_pass: not applied, cards share a glyph (only a Void card and its item may):\n  " + "\n  ".join(clashes))
+		get_tree().quit(2)
+		return
 	if args.has("--apply"):
 		var result := CardIconPass.apply(rows, source, CardIconPass.DEST_DIR, CardArtSet.ICONS_PATH, args.has("--force"))
 		print("copied %d, kept %d, wrote %s" % [result["copied"].size(), result["skipped"].size(), result["wrote"] if result["wrote"] != "" else "nothing"])

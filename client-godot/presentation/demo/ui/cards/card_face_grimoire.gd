@@ -18,13 +18,15 @@ extends CardFaceView
 @export var corrupted_glow: Color = Color(0.878, 0.251, 0.984)
 
 var _frame_base: UIWindowStyle
+var _glow_base: Array = []   # the scene's own glyph halo (colour, radius), kept before a Void card changes it
 
 
 func _fill() -> void:
 	var look := frame_look()  # the rarity's (or the corrupted look's) two metals
 	var light := look.frame_light
 	var dark := look.frame_dark
-	var mythic := face.rarity == "mythic" and not face.corrupted
+	var shown := shown_rarity()   # a Void card wears CardStyle.corrupted_as (Legendary)
+	var mythic := shown == "mythic" and not corrupted_glow_look()
 	if _frame_base == null:
 		_frame_base = %Frame.get_theme_stylebox(&"panel") as UIWindowStyle  # the scene's own frame, kept before any card changes it
 	var frame := _frame_base.duplicate() as UIWindowStyle  # never the last card's (a reused view)
@@ -36,7 +38,7 @@ func _fill() -> void:
 		frame.top = light
 		frame.middle = light.lerp(dark, 0.5)
 		frame.bottom = dark
-	if face.corrupted:
+	if corrupted_glow_look():
 		frame.border_color = corrupted_glow
 		frame.border_width = 2
 	%Frame.add_theme_stylebox_override(&"panel", frame)
@@ -48,7 +50,7 @@ func _fill() -> void:
 		bold.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): 700}
 		%Name.add_theme_font_override(&"font", bold)
 	%SetSymbol.texture = style.set_marks.get(StringName(face.set_id))
-	%SetSymbol.modulate = style.rarity(face.rarity).color
+	%SetSymbol.modulate = style.set_symbol_color(face.rarity)
 	%Art.texture = art()
 	var material := (%Art.material as ShaderMaterial)
 	var portrait := face.kind == CardFace.KIND_CHARACTER and face.portrait != null
@@ -56,18 +58,22 @@ func _fill() -> void:
 	material.set_shader_parameter(&"bg_center", light.lerp(Color.WHITE, 0.3))
 	material.set_shader_parameter(&"bg_mid", dark)
 	material.set_shader_parameter(&"bg_edge", Color("0c0c12"))
-	material.set_shader_parameter(&"glyph_tint", glyph_color)
+	material.set_shader_parameter(&"glyph_tint", style.corrupted_glyph if face.corrupted else glyph_color)
+	if _glow_base.is_empty():
+		_glow_base = [material.get_shader_parameter(&"glow_color"), material.get_shader_parameter(&"glow_radius")]
+	material.set_shader_parameter(&"glow_color", style.corrupted_glyph_halo if face.corrupted else _glow_base[0])
+	material.set_shader_parameter(&"glow_radius", style.corrupted_glyph_halo_radius if face.corrupted else _glow_base[1])
 	material.set_shader_parameter(&"glyph_scale", glyph_size)
 	%Type.text = face.type_line
 	%Text.text = face.text
-	%Mythic.visible = face.rarity == "mythic"
-	%Foil.visible = face.rarity == "legendary"
+	%Mythic.visible = shown == "mythic"
+	%Foil.visible = shown == "legendary"
 	var foil := (%Foil.material as ShaderMaterial)
 	foil.set_shader_parameter(&"rainbow", 0.0)
 	foil.set_shader_parameter(&"tint", legendary_sheen)
 	foil.set_shader_parameter(&"strength", 0.5)
 	_sweep(foil, 0.14, legendary_sheen_speed)
-	%Glow.visible = face.corrupted
+	%Glow.visible = corrupted_glow_look()
 	(%Glow.material as ShaderMaterial).set_shader_parameter(&"color", corrupted_glow)
 	if not %Art.resized.is_connected(_size_art):
 		%Art.resized.connect(_size_art)

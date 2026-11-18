@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://presentation/demo/ui/main_menu.gd" id="1_menu"]
 [ext_resource type="Script" path="res://game/ui/ui_push_button.gd" id="2_push"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/settings.tscn" id="4_settings"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/credits.tscn" id="5_credits"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/cards/shop.tscn" id="6_shop"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/cards/collection.tscn" id="7_collection"]
 
 [node name="MainMenu" type="CenterContainer"]
 anchors_preset = 15
@@ -77,9 +78,9 @@ offline_text = "You must be online to start a run."
 [node name="Collection" type="Button" parent="Panel/Margin/Box"]
 unique_name_in_owner = true
 layout_mode = 2
-disabled = true
 text = "Collection"
 script = ExtResource("2_push")
+screen = ExtResource("7_collection")
 
 [node name="Shop" type="Button" parent="Panel/Margin/Box"]
 unique_name_in_owner = true

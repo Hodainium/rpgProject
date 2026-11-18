@@ -23,8 +23,17 @@ const RARITY_ORDER: Array[String] = ["common", "rare", "epic", "legendary", "myt
 @export var face_scenes: Dictionary[StringName, PackedScene] = {}
 ## The look in use (console `cardui look [name]`).
 @export var face: StringName = &"grimoire"
-## Overrides frame and outline for Item.Corrupted cards (the rarity gem stays).
+## Overrides frame and outline for Item.Corrupted cards (the rarity gem stays). Used only when `corrupted_as` is empty.
 @export var corrupted: CardRarityLook
+## Void (Item.Corrupted) cards are drawn with this rarity's look: its frame, backdrop and effects (user, 2026-11-18: "Void cards
+## show as legendaries"); the set symbol keeps the card's real rarity colour. Empty: the `corrupted` look (the magenta glow).
+@export var corrupted_as: StringName = &"legendary"
+## A Void card's glyph colour (the one thing that sets it apart; other glyphs are the face's ivory).
+## The user's pick of 2026-11-18 (option C of six): a near-black "void" glyph in a magenta glow.
+@export var corrupted_glyph: Color = Color(0.07, 0.0, 0.10)
+## The halo round a Void card's glyph and its reach in pixels (other glyphs: the face's dark halo).
+@export var corrupted_glyph_halo: Color = Color(0.878, 0.251, 0.984, 0.95)
+@export var corrupted_glyph_halo_radius: float = 12.0
 ## physical, fire, ice, void, food, neutral.
 @export var elements: Dictionary[StringName, CardElement] = {}
 ## First match wins, after `element_overrides`.
@@ -40,6 +49,9 @@ const RARITY_ORDER: Array[String] = ["common", "rare", "epic", "legendary", "myt
 @export_file("*.tres") var art_set_paths: Array[String] = []
 ## The loaded sets (from art_set_paths on first use; tests set them directly).
 var art_sets: Array[CardArtSet] = []
+## The set symbol's colour by rarity when it is not the rarity's own colour (user, 2026-11-18: the pale Common silver vanished on
+## the parchment name bar; the pick, "E3", is the same silver a few steps darker).
+@export var set_symbol_colors: Dictionary[StringName, Color] = {&"common": Color("7f8694")}
 ## The set marks on a card: set id (core, descent) → glyph.
 @export var set_marks: Dictionary[StringName, Texture2D] = {}
 
@@ -65,6 +77,11 @@ static func use(style: CardStyle) -> void:
 func rarity(name: String) -> CardRarityLook:
 	var look: CardRarityLook = rarities.get(StringName(name))
 	return look if look != null else CardRarityLook.new()
+
+
+## The set symbol's colour for `rarity_name`: an override, else the rarity's colour.
+func set_symbol_color(rarity_name: String) -> Color:
+	return set_symbol_colors.get(StringName(rarity_name), rarity(rarity_name).color)
 
 
 func element(name: StringName) -> CardElement:

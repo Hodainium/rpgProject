@@ -50,11 +50,22 @@ func _tick(_seconds: float) -> void:
 	pass
 
 
-## The rarity's look, or the corrupted look for a corrupted card when the style has one.
+## The rarity's look, or for a corrupted (Void) card the look of `CardStyle.corrupted_as` (or the corrupted look when that is empty).
 func frame_look() -> CardRarityLook:
-	if face.corrupted and style.corrupted != null:
-		return style.corrupted
-	return style.rarity(face.rarity)
+	return style.rarity(shown_rarity()) if not (face.corrupted and style.corrupted_as == &"" and style.corrupted != null) \
+		else style.corrupted
+
+
+## The rarity whose look the face wears: its own, or `CardStyle.corrupted_as` for a Void card.
+func shown_rarity() -> String:
+	if face.corrupted and style.corrupted_as != &"":
+		return String(style.corrupted_as)
+	return face.rarity
+
+
+## True when a Void card wears the old corrupted look (magenta glow and outline).
+func corrupted_glow_look() -> bool:
+	return face.corrupted and style.corrupted_as == &""
 
 
 ## The card's art: a portrait, its icon, or the style's default glyph.

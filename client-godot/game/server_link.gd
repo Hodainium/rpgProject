@@ -267,6 +267,10 @@ static func new_request_key() -> String:
 	return "%s-%s-%s-%s-%s" % [hex.substr(0, 8), hex.substr(8, 4), hex.substr(12, 4), hex.substr(16, 4), hex.substr(20, 12)]
 
 
+## Spec card-ui 2.1: the card catalog the Collection read last (CatalogResponse), kept for this link's session; {} = not read yet.
+var card_catalog: Dictionary = {}
+
+
 ## GET /api/v1/cards/catalog: data = CatalogResponse {catalogVersion, catalogHash, cards}.
 func get_card_catalog() -> Dictionary:
 	return await _request("GetCardCatalog", [])
