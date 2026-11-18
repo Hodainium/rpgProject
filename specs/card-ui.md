@@ -57,8 +57,9 @@ no server change (the server half of the Shop is 5b0 `pack-shop`).
 **Not used here:** RabbitMQ, Redpanda, the verifier, new endpoints, contracts, tables or metrics (all in 5b0 or slice 5).
 
 **Acceptance scenarios covered (client half):** 1 (the client keeps one key per action until it gets an answer, so a double click
-or a retry is one purchase) and 2 (the pending action is stored on disk and re-sent with the same key on the next visit, so a crash
-or a dropped connection buys once and shows the same five cards once). The server's half of 1, 2 and 3 is slice 5's and 5b0's.
+or a retry is one purchase) and 2 (a dropped connection blocks the game behind the "Reconnecting…" pop-up while it re-sends the action with
+the same key until the server answers, so it buys once and shows the same five cards once; after a crash nothing is re-sent and the
+screens show the server's state, 2.5). The server's half of 1, 2 and 3 is slice 5's and 5b0's.
 
 ## 2. Sequence flow
 
@@ -72,7 +73,6 @@ Main menu ── Collection button (UIPushButton, same_layer) ──▶ UIManage
                                                       response names a card the cached catalog lacks)
                   ServerLink.get_collection()        (every activation and after every action; the connecting pop-up shows
                                                       after 0.3 s as for every server wait)
-                  CardAccount.resume_pending()       (2.5: a stored, unanswered action is re-sent first)
   build the CollectionModel (pure: catalog x content x collection x seen set) → filter, sort, page → 8 CardViews on the stage
 ```
 Catalog drift: a server card id with no local definition shows an "Unknown card" face (name = id) and logs one warning; a local card
@@ -111,6 +111,7 @@ Main menu ── Shop ──▶ ShopScreen: ServerLink.get_packs() + get_collect
                             button shows the count
       409 1402 → refused sound, "Not enough gems (need 500, have 340)" (the Buy buttons were already disabled when the collection said so)
       404 1408 / 400 1401 → the server's line; packs refetched
+      no answer / 5xx / 429 → "Reconnecting…" in the connecting pop-up (2.5); the Shop shows the answer once it lands
 ```
 
 ### 2.3 Pack opening
@@ -130,8 +131,8 @@ Main menu ── Open packs ──▶ PackScreen
       409 1411  → stale count: "You have no pack of this kind left"; collection refetched
       404 1408  → only when the pack has nothing left to draw (a catalog change retired every card it could give; an owned pack
                   of a retired pack type still opens): "This pack cannot be opened right now"; the pack stays owned
-      no answer / 5xx / 429 → ServerLink's backoff, then the pending action stays on disk (2.5) and the screen says
-                              "The server did not answer. Your pack is safe: it opens when you come back."
+      no answer / 5xx / 429 → "Reconnecting…" in the connecting pop-up (2.5) until the server answers with the same key; the reveal then
+                              plays as usual
 ```
 
 ### 2.4 The pack choreography (Hearthstone's beats, our effects)
@@ -155,19 +156,34 @@ without effects; the labels always show. Sounds come from the existing bank (sec
 
 ### 2.5 Pending account actions (client half of acceptance scenarios 1 and 2)
 
+**Hearthstone's model (user, 2026-11-16): reconnect, never resume.** An unanswered account action blocks the game until the
+server answers; nothing is written to disk.
+
 ```
 CardAccount.run(kind, target):
-  1. if a pending action exists → refuse a new one (buttons are disabled while one is pending)
-  2. key = ServerLink.new_request_key(); write user://saves/<player>/account.json {kind, target, key, startedAt}
-  3. send; on a retryable failure (no answer, 5xx, 429) retry with backoff (the ServerLink policy) with the SAME key
-  4. on any answer (success or a 4xx refusal) delete account.json and return the answer
-CardAccount.resume_pending() (collection and pack screens, on activation):
-  account.json present → re-send it with its key: a commit whose answer was lost comes back as the stored response
-  (`replayed`), so a pack shows its five cards (the reveal starts over), a dust or craft shows its result once.
+  1. if an action is in flight → refuse a new one (buttons are disabled while one is in flight)
+  2. key = ServerLink.new_request_key(), kept in memory only
+  3. send; on a retryable failure (no answer, 5xx, 429): emit reconnecting → the screen's wait text turns "Reconnecting…" in
+     the connecting pop-up (it dims and blocks clicks; the screen swallows Back) and the action is re-sent with the SAME key,
+     ServerLink's backoff capped at `reconnect_max_delay` (default 10 s), until the server answers; a commit whose answer was lost comes back as the stored response (`replayed`), so a pack shows its five
+     cards once, a dust or craft its result once
+  4. on any answer (success or a 4xx refusal) emit reconnected, forget the key and return the answer
+CardAccount.give_up() (the pop-up's "Stop waiting", shown after `give_up_after`, default 60 s; console `cardui giveup`):
+  stop retrying, forget the key, the caller gets {given_up: true} at once; the screen refetches and says
+  "We couldn't confirm your purchase. Your gems and packs show what the server has." The account stays busy (no new action)
+  until the try already out comes back, whatever it says; then `busy_changed` fires and the screen refetches again, since
+  that try may have landed. The button shows only while the account's own wait is the pop-up's, and takes focus.
+  Retry-After waits are capped at `reconnect_max_delay` too.
 ```
-A 1403 refusal keeps the key in memory (not on disk) for the retry after the cancel, since the server stored nothing under it. One
-action at a time per player is the server's rule too (the account advisory lock), so a single pending slot is enough. The file is
-per player id (`ServerLink.player_id`), so another player on the same machine never replays it.
+After a crash, a quit or giving up, nothing is re-sent: every card screen fetches the collection on activation, so the player sees
+whether the buy, dust or craft happened, and a new press is a new action the player chose with the fresh totals. A pack opened
+that way is already in the collection without its reveal (Hearthstone's behaviour; a "last opening" read of `pack_openings` is
+out of this slice). The rare case it leaves open: a request the server receives only after the crash and a second buy pressed
+after the restart are two purchases, each of them paid and shown.
+
+A 1403 refusal keeps the key for the retry after the cancel, since the server stored nothing under it. One action at a time per
+player is the server's rule too (the account advisory lock), so a single slot is enough. The account and its key belong to one
+`ServerLink`: connecting to another server or player makes a new one.
 
 ### 2.6 Class pick (server mode)
 
@@ -245,7 +261,7 @@ corrupted outline `#e040fb` (the magenta of 5b2). Slice 5b2 reads `CardStyle.rar
 | `CardFace` (RefCounted, pure data) | id, kind (character, item, equipment), name, text, type line (`<Kind> — <subtype>`: a character's `role`; an item's Passive / Usable / Food and its room pools; armor's slot), rarity, set id, core, pools, element (tints the art window and the glyph; never shown as a badge), art (icon or portrait), corrupted, slot. `CardFaces.build(content, catalog_rows)` makes them; no Node, testable headless |
 | `CollectionModel` (pure) | catalog x faces x `CollectionResponse` x seen set → entries with state (owned, missing, core, locked by run, new), filters (set, kind, rarity, pool, owned / missing, text), sort (kind, rarity, name; Hearthstone's order: characters first), pages of 8 |
 | `PackReveal` (pure) | from a `PackOpenResponse`: five slots with rarity, tier, duplicate, dust, pity, new; flip order, `reveal(i)`, `reveal_all()`, `done`; the labels' text |
-| `CardAccount` | the single pending account action (2.5) over `ServerLink`, its file, `run(kind, target)`, `resume_pending()`, the 1403 cancel path |
+| `CardAccount` | the single account action in flight (2.5) over `ServerLink`, its in-memory key, `run(kind, target)`, the retry until answered with `reconnecting` / `reconnected`, `give_up()`, the 1403 cancel path |
 | `CardSeen` | the per-player NEW set, `user://saves/<player>/cards_seen.json` (ids seen in the collection); a card is NEW until shown in the detail or hovered for 0.5 s |
 | `CardFaceCache` | renders a face scene once per (card, state, style version) into an `ImageTexture` (one shared `SubViewport`, `UPDATE_ONCE`), LRU of 64; a page never keeps 8 live viewports |
 | `CardView3D` (Node3D) | a thin rounded card mesh: face texture on the front, back texture on the back, a material that takes the foil / glow shader (`foil_shimmer`, `glow_aura`), hover tilt toward the cursor with a moving glare, lift, flip; built on `FxStage.world_root` |
@@ -253,6 +269,9 @@ corrupted outline `#e040fb` (the magenta of 5b2). Slice 5b2 reads `CardStyle.rar
 
 Screens (`presentation/demo/ui/cards/`, each a `UIScreen` on the theme; Back top left; hover previews, click selects):
 `collection.tscn` (Menu layer), `card_detail.tscn` (Modal layer), `shop.tscn` (Menu layer), `packs.tscn` (Menu layer),
+no Reconnecting screen of its own: the existing connecting pop-up (`connecting_popup.tscn`, `UI.Slot.Overlay`, which dims and
+blocks clicks) shows the screen's "Reconnecting…" wait text and gains the "Stop waiting" button after `give_up_after` (2.5); an
+account screen swallows Back (`handles_back`) while its action is on its way,
 `card_face.tscn` (the 2D face,
 Look A: art window shaped by kind, oval for characters, arch for items, round for equipment; name on a curved ribbon with shrink to
 fit; gem; plaque; type line; the core tab), and the main menu's two `UIPushButton`s. The 2D slot grid owns input and focus (keyboard and
@@ -262,7 +281,6 @@ gamepad work); each `CardView3D` follows its slot through the stage camera (`Cam
 
 | File | Content | Lifetime |
 |---|---|---|
-| `user://saves/<player>/account.json` | `{kind: buy|open|dust|craft, target, count (buy), key, startedAt}` | until the action gets an answer |
 | `user://saves/<player>/cards_seen.json` | the seen card ids | kept; a missing or broken file means "nothing seen" (every owned non-core card shows NEW once) |
 
 ### 3.5 Icons
@@ -289,15 +307,16 @@ lights and effects are presentation data the user can tune.
 
 | # | Failure | Behaviour | Test |
 |---|---|---|---|
-| 1 | Double click on Open, Dust or Create | One pending action; the buttons disable while it is pending; the second click is ignored | `test_card_ui::test_one_pending_action` |
-| 2 | The response is lost after the server committed (crash, drop) | `account.json` holds the key; the next visit re-sends it and gets the stored response: the same five cards, revealed again, no second charge (acceptance 2) | `test_card_ui::test_lost_open_replays_same_cards` (fake bridge: commit, drop, restart, replay); e2e `card_ui_replay` |
-| 3 | No answer, 5xx, 429 | ServerLink's backoff with the same key; after the retries, the action stays pending and the screen says so | `test_card_ui::test_retry_keeps_key` |
+| 1 | Double click on Buy, Open, Dust or Create | One action in flight; the buttons disable while it is; the second click is ignored | `test_card_ui::test_one_action_in_flight` |
+| 2 | The response is lost after the server committed (a drop) | The reconnect re-sends the same key and gets the stored response: the same five cards, revealed once, no second charge (acceptance 2) | `test_card_ui::test_lost_open_replays_same_cards` (fake bridge: commit, drop, replay); e2e `card_ui_replay` |
+| 3 | No answer, 5xx, 429 | The connecting pop-up ("Reconnecting…") blocks the game and the action is retried with the same key until the server answers; after `give_up_after` it offers "Stop waiting" | `test_card_ui::test_retry_keeps_key`, `test_card_ui::test_give_up` |
+| 3b | The app crashes or quits mid-action | Nothing is stored and nothing re-sent; the screens show the server's state on the next start | `test_card_ui::test_no_resume_after_restart` |
 | 4 | Dust refused by the run lock, Active | The pop-up; Cancel run → abandon → `release_cancelled` → the same key re-sent → dusted | `test_card_ui::test_dust_cancel_run_path`; e2e `card_ui_run_lock` |
 | 5 | Dust refused, run Verifying | The wait message; nothing else | `test_card_ui::test_dust_verifying_message` |
 | 6 | Abandon refused (1410, the run turned Verifying meanwhile) | The wait message; the dust is not retried | same test, second case |
 | 7 | Stale collection (1402, 1404, 1405, 1406) | The server's line in the message bar, the refused sound, the collection refetched | `test_card_ui::test_stale_refusals_refetch` |
 | 8 | Pack retired (1408) | Message, pack list refetched | `test_card_ui::test_pack_unavailable` |
-| 9 | Key reused (1407; a bug) | Treated as a refusal: the pending file is dropped, an error is logged (fails tests through `ScriptErrorLog`) | `test_card_ui::test_key_reused_is_an_error` |
+| 9 | Key reused (1407; a bug) | Treated as a refusal: the key is forgotten, an error is logged (fails tests through `ScriptErrorLog`) | `test_card_ui::test_key_reused_is_an_error` |
 | 10 | Catalog drift (server card unknown locally) | "Unknown card" face, one warning | `test_card_ui::test_unknown_card_face` |
 | 11 | Server unreachable on the menu | Collection opens in its offline form (core + local pool, read-only, "Offline"); Open packs shows "Needs a server connection" | `test_card_ui::test_offline_collection` |
 | 12 | Back during the reveal | Reveal all, then leave; the cards are owned whatever the screen did | `test_card_ui::test_back_reveals_all` |
@@ -350,9 +369,9 @@ content):
 - `card_ui_run_lock`: start a run, `cardui open detail <owned card>`, dust → the pop-up answered "Cancel run" by script (`ui press`),
   the run Abandoned, the card dusted, one `card_ledger` row (`.sql` check).
 - `card_ui_replay`: the control folder's `server-stop` right after the open's commit is not timeable, so the scenario stops the
-  server before the open, lets the open fail, restarts the server, and re-enters the screen: the pending action goes through once
-  (`account_requests` has one row, `rpg_account_request_replays_total` unchanged); the lost-response half is covered by the fake
-  bridge test above.
+  server before the open, waits until the account reconnects, restarts the server: the open goes through
+  once, with the key it started with (`account_requests` has one row, `rpg_account_request_replays_total` unchanged); the
+  lost-response half is covered by the fake bridge test above.
 
 - `card_ui_open` buys first: `cardui shop buy descent 2`, `expect` gems down by twice the price and two owned packs, then opens one
   (`expect` one pack left, gems unchanged by the open).

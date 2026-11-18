@@ -1,0 +1,88 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/cards/shop_offer.gd" id="1_offer"]
+[ext_resource type="Script" path="res://game/cards/card_pack_view.gd" id="2_pack"]
+
+[node name="ShopOffer" type="PanelContainer"]
+size_flags_horizontal = 3
+script = ExtResource("1_offer")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 22
+
+[node name="Row" type="HBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="Pack" type="Control" parent="Margin/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 228)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("2_pack")
+
+[node name="Info" type="VBoxContainer" parent="Margin/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 6
+
+[node name="Name" type="Label" parent="Margin/Row/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gold"
+text = "The Descent"
+
+[node name="Holds" type="Label" parent="Margin/Row/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 3
+
+[node name="Guarantee" type="Label" parent="Margin/Row/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 3
+
+[node name="Owned" type="Label" parent="Margin/Row/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BuyRow" type="HBoxContainer" parent="Margin/Row/Info"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Buy1" type="Button" parent="Margin/Row/Info/BuyRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(190, 0)
+layout_mode = 2
+text = "Buy 1"
+
+[node name="Buy5" type="Button" parent="Margin/Row/Info/BuyRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(190, 0)
+layout_mode = 2
+text = "Buy 5"
+
+[node name="OddsWindow" type="VBoxContainer" parent="Margin/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 4
+
+[node name="OddsTitle" type="Label" parent="Margin/Row/OddsWindow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Caption"
+
+[node name="Odds" type="GridContainer" parent="Margin/Row/OddsWindow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 22
+theme_override_constants/v_separation = 2
+columns = 2

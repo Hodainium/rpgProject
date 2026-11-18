@@ -7,8 +7,12 @@ extends UIScreen
 @export_multiline var changes_note: String = "Trimmed, converted to mono 16-bit WAV and loudness-matched for this game."
 
 
+## Spec card-ui 3.5: the fonts and the game-icons glyphs (CC BY 3.0) the cards and packs use, after the sounds.
+@export_multiline var art_credits: String = "[b]Fonts[/b]\nChakra Petch, by The Chakra Petch Project Authors · SIL Open Font License 1.1\nCinzel, by The Cinzel Project Authors · SIL Open Font License 1.1\n\n[b]Icons[/b]\ngame-icons.net · CC BY 3.0 · recoloured\nDelapouite: stairs"
+
+
 func bind(_context: UIContext) -> void:
-	%Text.text = text_of(SfxBank.load_manifest(), header, changes_note)
+	%Text.text = text_of(SfxBank.load_manifest(), header, changes_note) + ("\n" + art_credits if art_credits != "" else "")
 
 
 ## The credits text for a bank (static so the tests read the same text the screen shows).
