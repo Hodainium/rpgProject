@@ -466,7 +466,9 @@ legendary mythic`), on the 4K screen per memory "Godot window monitor".
 4. ~~Opening costs gems~~ **decided:** packs are bought in a separate Shop and opened from the account's unopened packs, whose
    count shows on the Open packs screen, as in Hearthstone (user, 2026-11-15). A buy has no extra pop-up (the button names the
    price); an open needs none (already paid).
-5. **The class pick locks unowned characters** (2.6) in this slice. It is a flow fix the UI needs; it could move to 5c.
+5. ~~The class pick locks unowned characters (2.6) in this slice~~ **decided 2026-11-18 (user): moves to the character slice**
+   that follows 5b (character look touch-up + the character selection screen's UI overhaul), where the new class-pick screen is
+   built; 2.6 stays the behaviour it must have.
 
 **Decided in review (user, 2026-11-15):** no ATK / HP corners and no top-left badge; a Magic-style type line names the card's kind;
 item art is the game-icons SVGs; character art is prerendered portraits of the in-game cubes, never generated art; portraits face
