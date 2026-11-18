@@ -39,6 +39,10 @@ func _ready() -> void:
 	# Spec audio-pass 4: the sound bank (presentation, like the effects registry).
 	if root == "res://content/":
 		issues.append_array(AudioValidator.validate())
+	# Spec card-ui 6: the card style (faces, rarity looks, every card's art).
+	if root == "res://content/" and ResourceLoader.exists(CardStyle.DEFAULT_PATH):
+		var registry: StyleRegistry = load(UnitStyle.DEFAULT_REGISTRY) if ResourceLoader.exists(UnitStyle.DEFAULT_REGISTRY) else null
+		issues.append_array(CardStyleValidator.validate(load(CardStyle.DEFAULT_PATH) as CardStyle, content, registry))
 	print("validate_content: ", root)
 	print(ContentValidator.report(issues))
 	get_tree().quit(3 if ContentValidator.error_count(issues) > 0 else 0)

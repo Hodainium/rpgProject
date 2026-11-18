@@ -10,8 +10,9 @@ Card look proposals (HTML mock-up on real demo cards): https://claude.ai/artifac
 **Approved screen prototype** (user, 2026-11-15: "I really like the UI you provided, let's go with it"): the clickable Collection,
 card detail, Shop and Open packs at https://claude.ai/artifact/8puWhAr32ANzuqYSBgWfDZ; the Godot screens follow its layout and
 flow. Its files, data builder and the portrait command are kept in `specs/design/card-ui-prototype/` (README there).
-The engine builds **both Look A, "Tavern"** (Hearthstone-leaning, the user's favourite so far) **and Look B, "Grimoire"**
-(Magic-leaning) as switchable face scenes, so the user picks in the engine (section 7, question 1). Look C is dropped.
+The engine built **both Look A, "Tavern"** (Hearthstone-leaning) **and Look B, "Grimoire"** (Magic-leaning) as face scenes, and
+the user picked **Look B** in the engine on 2026-11-18 (first gate, section 7 question 1; Look A was then deleted). The approved
+face is described in 3.3 "The card face (gate 1)".
 
 ## 1. Purpose & enterprise mapping
 
@@ -296,10 +297,33 @@ no Reconnecting screen of its own: the existing connecting pop-up (`connecting_p
 blocks clicks) shows the screen's "Reconnecting…" wait text with the **Go offline** button beneath its window (2.5) and the 1412
 "opened somewhere else" dialog; an
 account screen swallows Back (`handles_back`) while its action is on its way,
-`card_face.tscn` (the 2D face,
-Look A: art window shaped by kind, oval for characters, arch for items, round for equipment; name on a curved ribbon with shrink to
-fit; gem; plaque; type line; the core tab), and the main menu's three `UIPushButton`s (Collection, Shop, Open packs; user 2026-11-15). The 2D slot grid owns input and focus (keyboard and
+`card_face_grimoire.tscn` (the 2D face, below), and the main menu's three `UIPushButton`s (Collection, Shop, Open packs; user 2026-11-15). The 2D slot grid owns input and focus (keyboard and
 gamepad work); each `CardView3D` follows its slot through the stage camera (`Camera3D.project_position`).
+
+### 3.3b The card face (gate 1, approved by the user 2026-11-18)
+
+`presentation/demo/ui/cards/card_face_grimoire.tscn` (root `CardFaceView`, `game/cards/card_face_view.gd`; design size 300 × 420):
+- **Layout (Magic):** a black border; a frame; the **name bar** on top (Cinzel) with the **set symbol** in the rarity's colour; the
+  full-width **art**; the **type bar**; the **rules box** (parchment). Bars are **rectangular** parchment.
+- **Colours by rarity**, not element: the frame and the art backdrop take the rarity's two metals (`CardRarityLook.frame_light` /
+  `frame_dark`; a corrupted card the `CardStyle.corrupted` look). **Mythic**'s frame is **opal** (`game/cards/shaders/card_frame.gdshader`:
+  a milky pastel iridescence drifting slowly).
+- **Art:** a character's prerendered portrait fills the window; an item's game-icons glyph is **ivory** (`glyph_color`), at 60% of the
+  window (`glyph_size`), with a dark halo (`game/cards/shaders/card_art.gdshader`).
+- **Effects:** Common, Rare and Epic none; **Legendary** a warm gold sheen (`foil_shimmer`) sweeping top left to bottom right, starting
+  and ending fully off the card, 0.35 card lengths a second, 1.5 s apart (`sweep_from` / `sweep_to` / `rest`, new and defaulted on the
+  shared shader); **Mythic** twinkling rainbow glitter (`game/cards/shaders/card_mythic.gdshader`) over the opal frame; a **corrupted**
+  card a steady magenta glow and a magenta frame outline. Each card starts its loops at its own point (`CardFaceView.phase_spread`,
+  6 s, from a hash of the card and its view: no RNG), so a pack's cards never sweep in step.
+- Tried and dropped in the engine: Look A; element colours; rounded bars; dark or tinted bars; a stone frame; a crown crest; a rarity
+  outline on the art; white, element-coloured or rarity-coloured glyphs; the Epic glow; Mythic holo, rim chase, aurora and rays;
+  rose prism, spectrum, holo-stripe, nebula and still-metal Mythic frames.
+
+**Art files (a deviation from 3.2, agreed at the gate):** `CardStyle.icons` / `portraits` became two `CardArtSet` files the builders
+create and the style lists in `art_sets`: `presentation/demo/cards/card_icons.tres` (the icon pass: 85 glyphs under
+`presentation/demo/cards/icons/<author>/`, credited in `CREDITS.md`) and `card_portraits.tres` (the portrait tool). That way both
+builders only ever create new files. Element resolution (3.2) is kept in the face data (`CardFace.element`) though the approved face
+no longer shows it.
 
 ### 3.4 Files on the player's machine (client only, never uploaded)
 
@@ -410,8 +434,8 @@ legendary mythic`), on the 4K screen per memory "Godot window monitor".
 ## 7. Decisions to confirm, and what stays out
 
 **Questions for the review:**
-1. **The look: A and B both built, chosen in the engine** (user, 2026-11-15: "in engine I would like to see both A and B";
-   A is the favourite so far; C is dropped). Two face scenes, `card_face_tavern.tscn` (A) and `card_face_grimoire.tscn` (B),
+1. ~~The look~~ **decided 2026-11-18: Look B "Grimoire"**, as described in 3.3b; Look A deleted. Before the pick: **A and B both
+   built, chosen in the engine** (user, 2026-11-15: "in engine I would like to see both A and B"; C is dropped). Two face scenes, `card_face_tavern.tscn` (A) and `card_face_grimoire.tscn` (B),
    share every field of `CardFace` and the same art; `CardStyle.face_scenes` holds both and `CardStyle.face` names the active one.
    The look is switched live with the console's `cardui look tavern|grimoire` and a dev-build row in the Graphics screen, and the
    card gallery shows both side by side. Once the user picks, the other scene is deleted (with the user's OK) and `face_scenes`

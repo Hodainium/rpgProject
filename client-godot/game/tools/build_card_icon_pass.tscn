@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/tools/build_card_icon_pass.gd" id="1"]
+
+[node name="BuildCardIconPass" type="Node"]
+script = ExtResource("1")

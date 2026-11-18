@@ -90,4 +90,8 @@ The game's sounds come from these packs. Every file was trimmed, converted to mo
 
 Card and pack glyphs from game-icons.net (https://game-icons.net), CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/), recoloured in the game. Copies of the icons used live in `client-godot/presentation/demo/cards/icons/<author>/`.
 
-- Delapouite (https://delapouite.com): stairs.
+- Delapouite (https://delapouite.com): animal-hide, bellows, bracer, chest-armor, coins, cube, drum, electrical-resistance, flag-objective, gloves, hammer-break, harp, holy-water, hot-meal, leg-armor, magic-potion, medicines, metronome, present, ring, sheep, stairs, two-coins, wanted-reward, warhammer.
+- Lorc (https://lorcblog.blogspot.com): angel-wings, book-cover, boots, broadsword, cake-slice, crown, crowned-heart, crystal-growth, crystal-shine, eyeball, feather, fire-ring, flaming-claw, gem-pendant, heart-organ, hourglass, hunting-horn, key, knapsack, lantern-flame, leather-vest, lightning-helix, magnifying-glass, meat, medal, mirror-mirror, ouroboros, padlock, plain-dagger, pointy-hat, poison-bottle, potion-ball, powder, ribbon, ringing-bell, robe, round-bottom-flask, scroll-unfurled, shatter, smoking-orb, snowflake-1, stone-block, stone-sphere, swap-bag, sword-wound, target-arrows, thorny-vine, tombstone, tooth, totem-head, unlit-bomb, visored-helm, wax-seal, wizard-staff.
+- Lucas: cloak.
+- Skoll: blood, fangs, pentacle, pocket-watch, rank-3.
+- Willdabeast (http://wjbstories.blogspot.com): chain-mail.

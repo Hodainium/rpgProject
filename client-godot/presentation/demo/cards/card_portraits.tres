@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CardArtSet" load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://game/cards/card_art_set.gd" id="1_set"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/portraits/demo.character.arcanist.png" id="2_portrait"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/portraits/demo.character.bard.png" id="3_portrait"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/portraits/demo.character.bulwark.png" id="4_portrait"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/portraits/demo.character.cleric.png" id="5_portrait"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/portraits/demo.character.cryomancer.png" id="6_portrait"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/portraits/demo.character.ember_knight.png" id="7_portrait"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/portraits/demo.character.plaguewright.png" id="8_portrait"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/portraits/demo.character.pyromancer.png" id="9_portrait"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/portraits/demo.character.ranger.png" id="10_portrait"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/portraits/demo.character.shatterweaver.png" id="11_portrait"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/portraits/demo.character.warrior.png" id="12_portrait"]
+
+[resource]
+script = ExtResource("1_set")
+textures = Dictionary[StringName, Texture2D]({
+&"demo.character.arcanist": ExtResource("2_portrait"),
+&"demo.character.bard": ExtResource("3_portrait"),
+&"demo.character.bulwark": ExtResource("4_portrait"),
+&"demo.character.cleric": ExtResource("5_portrait"),
+&"demo.character.cryomancer": ExtResource("6_portrait"),
+&"demo.character.ember_knight": ExtResource("7_portrait"),
+&"demo.character.plaguewright": ExtResource("8_portrait"),
+&"demo.character.pyromancer": ExtResource("9_portrait"),
+&"demo.character.ranger": ExtResource("10_portrait"),
+&"demo.character.shatterweaver": ExtResource("11_portrait"),
+&"demo.character.warrior": ExtResource("12_portrait")
+})

@@ -15,6 +15,9 @@ render_mode blend_add;
 // @uniform angle      direction of the sweep, radians
 // @uniform rainbow    0 = a plain tinted band, 1 = a full rainbow
 // @uniform corner     corner rounding of the card, in pixels
+// @uniform sweep_from where the band starts each pass (0 = the card's near edge along the sweep, 1 = its far edge)
+// @uniform sweep_to   where the band ends each pass; set both far enough out that the band's soft edge leaves the card
+// @uniform rest       fraction of each pass the band waits off the card (at sweep_to) before it sweeps again
 uniform float progress = 0.0;
 uniform float time = 0.0;
 uniform float fade = 1.0;
@@ -27,6 +30,9 @@ uniform float band_width = 0.16;
 uniform float angle = 0.6;
 uniform float rainbow = 1.0;
 uniform float corner = 14.0;
+uniform float sweep_from = -0.3;
+uniform float sweep_to = 1.3;
+uniform float rest = 0.0;
 
 float rounded_box(vec2 p, vec2 half_size, float r) {
 	vec2 q = abs(p) - half_size + vec2(r);
@@ -45,7 +51,9 @@ void fragment() {
 	float mask = 1.0 - smoothstep(-1.0, 1.0, d);
 	vec2 dir = vec2(cos(angle), sin(angle));
 	float across = dot(UV - vec2(0.5), dir) + 0.5;
-	float sweep = fract(time * speed) * 1.6 - 0.3;
+	// Each pass: the band travels sweep_from → sweep_to, then rests there (off the card) for `rest` of the pass.
+	float moving = clamp(fract(time * speed) / max(1.0 - rest, 0.0001), 0.0, 1.0);
+	float sweep = mix(sweep_from, sweep_to, moving);
 	float x = across - sweep;
 	float band = exp(-(x * x) / (band_width * band_width));
 	vec3 base = mix(vec3(1.0), hue(across * 1.5 + time * 0.2), rainbow);
