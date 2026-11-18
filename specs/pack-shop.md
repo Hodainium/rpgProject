@@ -38,7 +38,9 @@ buying → `PackPurchased` drains from the outbox after it is back). 4 (no Redis
 ### 2.1 Buy
 
 ```
-Godot client ── POST /api/v1/packs/{packId}/buy  { requestKey, count }        (rate-limited as `actions`)
+Godot client ── POST /api/v1/packs/{packId}/buy  { requestKey, count, session, expectedAccountVersion }   (rate-limited as `actions`;
+                                          since spec account-session: after step 2 and the count check, an older session → 409 1412,
+                                          a moved account version → 409 1413, nothing written)
   API, ONE transaction (the slice 5 account shape):
     1. pg_advisory_xact_lock(acct:<player>)
     2. account_requests (player, requestKey): same kind and hash → return the stored response (200); different → 409 1407
@@ -47,7 +49,7 @@ Godot client ── POST /api/v1/packs/{packId}/buy  { requestKey, count }      
     5. wallet gems >= price x count, else 409 1402; wallet_ledger -price x count, reason 'pack_buy'
     6. pack_inventory (player, pack) += count (upsert); pack_ledger +count, reason 'buy', pack_version, request_key
     7. outbox PackPurchased (key = playerId); account_requests row (the response)
-  ◀── 200 PackBuyResponse { packId, packVersion, count, gemsSpent, gems, owned }     DEL wallet:{playerId}
+  ◀── 200 PackBuyResponse { packId, packVersion, count, gemsSpent, gems, owned, accountVersion }     DEL wallet:v2:{playerId}
 ```
 The price is fixed at the buy (the version bought is on the ledger row). A pack bought before a retirement still opens (2.2).
 
@@ -90,8 +92,10 @@ open with it), so an old pack type can always be retired.
 is no background job and no polling: a player's refunds are settled **when they open the Open packs page** (the user: the one
 place they look for their packs), for that player only, through its own call, so the page can say where the packs went:
 ```
-Open packs page opens → POST /api/v1/packs/refunds (rate limited as `actions`; 200 PackRefundsResponse {refunded: [{packId, count,
-  gemsRefunded}]}, empty when nothing was due; the page shows "Your 3 Descent Packs were retired: +300 gems")
+Open packs page opens → POST /api/v1/packs/refunds { session } (rate limited as `actions`; 200 PackRefundsResponse {refunded: [{packId,
+  count, gemsRefunded}]}, empty when nothing was due; the page shows "Your 3 Descent Packs were retired: +300 gems"). Since spec
+  account-session: an older session → 409 1412 (checked up front and again in each pack type's transaction; refunds already paid are
+  still reported); the answer carries no account version, so the page reads the collection after it; a hold raises the account version
   → PackRefunds.RefundAsync(player): the player's pack_inventory rows with count > 0, not held, whose type's latest
   version is retired with refundUnopened; for each, ONE transaction:
     1. pg_advisory_xact_lock(acct:<player>) and the shared lock on pack_type|<id> (the admin save holds it exclusively);
@@ -109,7 +113,7 @@ Open packs page opens → POST /api/v1/packs/refunds (rate limited as `actions`;
        (unique on (player, reason, request_key): a second refund is impossible, and a player's own request keys never collide)
     4. wallet_ledger +amount, reason 'pack_refund', key 'pack_refund:<player>:<pack>:<version>:<refunded before>' (unique)
     5. outbox PackRefunded (key = playerId)
-  then DEL wallet:{playerId}. A pack type that fails is logged and tried again next time; it never stops the others.
+  then DEL wallet:v2:{playerId} (also after a hold). A pack type that fails is logged and tried again next time; it never stops the others.
 ```
 Login and the collection read do not refund. Postgres is a hard dependency of the game (the user): with it down the login answers
 503 (it checks the database) like every other endpoint. A refund that fails for one pack type (a data problem) is logged and tried
@@ -126,8 +130,9 @@ A type un-retired in the same maintenance window, before the player signs in, is
 
 ```csharp
 /// <summary>Body of POST /packs/{packId}/buy. Count 1..10 (Cards:MaxPacksPerBuy).</summary>
-public sealed record PackBuyRequest(Guid RequestKey, int Count);
-public sealed record PackBuyResponse(string PackId, int PackVersion, int Count, int GemsSpent, long Gems, int Owned);   // Gems: wallets are 64-bit (0010)
+public sealed record PackBuyRequest(Guid RequestKey, int Count, long? Session, long? ExpectedAccountVersion);   // the last two: spec account-session 3.1
+public sealed record PackBuyResponse(string PackId, int PackVersion, int Count, int GemsSpent, long Gems, int Owned, long AccountVersion);
+    // Gems: wallets are 64-bit (0010); AccountVersion: spec account-session 3.1
 
 /// <summary>Unopened packs the player owns, per pack type (0 counts are left out).</summary>
 public sealed record OwnedPackDto(string PackId, int Count);
@@ -140,8 +145,9 @@ public sealed record PackPurchasedPayload(string PlayerId, string PackId, int Pa
 ```
 `PackOpenedPayload.GemsSpent` is 0 from now on (the gems are on `PackPurchased`).
 
-Refunds (2.5): `PackRefundsResponse(IReadOnlyList<PackRefundDto> Refunded)` and `PackRefundDto(string PackId, int Count,
-int GemsRefunded)` for `POST /packs/refunds` (`Rpg.Client.RefundPacksAsync`, `ServerBridge.RefundPacks`, `ServerLink.refund_packs`,
+Refunds (2.5): `PackRefundsRequest(long? Session)` (spec account-session), `PackRefundsResponse(IReadOnlyList<PackRefundDto> Refunded)`
+(no account version, spec account-session 2.3) and `PackRefundDto(string PackId, int Count,
+int GemsRefunded)` for `POST /packs/refunds` (`Rpg.Client.RefundPacksAsync(PackRefundsRequest)`, `ServerBridge.RefundPacks(json)`, `ServerLink.refund_packs`,
 console `packs refunds`); `PackTypeRequest` and `PackTypeResponse` gain `bool? RefundUnopened = null` (left off the JSON unless true, so the
 existing goldens and seed files are unchanged), and the event
 ```csharp

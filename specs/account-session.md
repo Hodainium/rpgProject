@@ -1,6 +1,6 @@
 # Spec: account-session (slice 5b1)
 
-Status: **spec written and reviewed 2026-11-16 (decisions in section 7).** Builds on `specs/card-collection.md` (slice 5: the account, its advisory lock
+Status: **built and merged 2026-11-18 (#62); synced with the implementation 2026-11-18. Decisions in section 7.** Builds on `specs/card-collection.md` (slice 5: the account, its advisory lock
 `acct:<player>`, request keys in `account_requests`, open / dust / craft), `specs/pack-shop.md` (5b0: buy, owned packs, refunds) and
 `specs/card-ui.md` 2.5 (the client's one action in flight, reconnect instead of resume). Decided with the user on 2026-11-16 after the
 Shop sub-step of 5b: "It is unacceptable to me to show the client stale item ownership. We definitely need to gate it in some way,
@@ -189,32 +189,34 @@ entries cached under the old `version` shape are never read, and the old `wallet
 
 | Piece | Change |
 |---|---|
-| `net/ServerBridge.cs` | `StartAccountSession()`; `RefundPacks(json)` now takes a body |
-| `ServerLink` | `start_account_session() -> {ok, data, error}` (keeps `account_session`, hands the version to `CardAccount`), `session_replaced` (bool, set by a 1412), the card calls and the run start send `session`, decisions `expectedAccountVersion` |
+| `net/ServerBridge.cs` | `StartAccountSession()`; `RefundPacks(json)` and `AbandonRun(runId, json)` now take a body; errors carry `currentSession` / `currentAccountVersion` |
+| `ServerLink` | `start_account_session() -> {ok, data, error}` (keeps `account_session`, hands the version to `CardAccount`; callers waiting on a start in flight get its result), started in the background right after the first sign-in (a token refreshed after a 401 keeps it), `session_replaced` (bool, set by a 1412) and `session_changed`, `take_account()` ("Use it here"), `go_online()` (a fresh sign-in and session), `renew_session()` (after a give-up; forgets the session when it cannot start one), `answered(error)` (the server answered at all); the card calls and the run start send `session`, decisions `expectedAccountVersion`; a decision's result carries the `fence` it sent, which a retry passes back (review fix: every try of one action sends the same key, session and version); a successful refund leaves the version unknown (the next decision reads the account first) |
 | `CardAccount` | `account_version` (last known account version), sent with each decision and taken from an answer by the +1 rule (2.3), never from refunds; on 1413 `account_version = currentAccountVersion`; on 1412 `session_replaced` and every later `run` refused locally until a new session; after `give_up()` the account is free only once a new session has been started |
-| console | `server session` (start one, print it), `server session steal` (start one without telling the link: another device, for tests), `packs` commands send the numbers |
+| console | `server session` (start one, print it), `server session steal` (start one without telling the link: another device, for tests); `packs buy` / `open`, `dust` and `craft` read the account first, as a screen does (a reward that moved the version since the login would otherwise make the console's decision a 1413) |
 
 ## 4. Failure modes
 
 | # | Failure | Behaviour | Test |
 |---|---|---|---|
 | 1 | The same key twice in one session (acceptance 1) | Replay of the stored response; one effect | existing `Buy_same_key_buys_once`, `Open_same_key_once`; new `Replay_answers_after_the_version_moved` |
-| 2 | A crash with a buy in flight, then a new login, and the old buy commits first (acceptance 2) | The session call waits on the lock; its snapshot shows the purchase | `AccountSessionTests.Session_waits_for_an_action_mid_commit` (the test holds `acct:<player>` in its own transaction, changes the wallet, starts the session call, commits; the snapshot has the change) |
-| 3 | The old buy arrives after the new login | 409 1412; no ledger row, wallet and inventory unchanged | `AccountSessionTests.Old_session_is_refused_and_writes_nothing` (each of the five actions) |
+| 2 | A crash with a buy in flight, then a new login, and the old buy commits first (acceptance 2) | The session call waits on the lock; its snapshot shows the purchase | `AccountSessionTests.Session_WaitsForAnActionMidCommit_AndItsSnapshotShowsIt` (the test holds `acct:<player>` in its own transaction, changes the wallet, starts the session call, commits; the snapshot has the change) |
+| 3 | The old buy arrives after the new login | 409 1412; no ledger row, wallet and inventory unchanged | `AccountSessionTests.OldSession_IsRefusedByEveryFencedCall_AndWritesNothing_TheNewestLoginWins` (each of the seven fenced calls) |
 | 4 | Two devices | The newest login wins; the other's next action is 1412 | same test, two sessions in turn |
-| 5 | A reward or refund lands between the fetch and the press | 409 1413 with `currentAccountVersion`; nothing written; the same key works after the refetch | `AccountSessionTests.Stale_version_is_refused_and_writes_nothing` (buy, open, dust, craft), `Same_key_after_a_stale_refusal` |
-| 6 | A committed request retried after a newer session | Its stored response (replay before the checks) | `AccountSessionTests.Replay_before_the_session_check` |
-| 7 | Missing session or expected version | 400, nothing written | `AccountSessionTests.Missing_numbers_are_malformed` |
-| 8 | A writer forgets to raise the version | Caught by a test per writer, incl. the refund hold | `AccountSessionTests.Every_account_writer_raises_the_version` (buy, open, dust, craft, refund, refund hold, granted reward, released pending reward) |
-| 9 | Postgres down at the session call | 503 as every endpoint; the client stays on its gate ("Connecting…") | existing 503 tests extended with the session endpoint |
-| 10 | Client: a 1413 | Version updated, refusal returned, no retry | Godot `test_account_session::test_stale_version_refetches` |
-| 11 | Client: a 1412 | Every later action refused locally until `start_account_session` | `test_account_session::test_replaced_session_blocks_until_a_new_one` |
-| 12 | Client: give up | The account is free only after a new session; the request given up is fenced | `test_account_session::test_give_up_starts_a_new_session` |
+| 5 | A reward or refund lands between the fetch and the press | 409 1413 with `currentAccountVersion`; nothing written; the same key works after the refetch | `AccountSessionTests.StaleVersion_IsRefusedByEveryDecision_AndWritesNothing` (buy, open, dust, craft), `SameKey_AfterAStaleRefusal_GoesThroughOnce` |
+| 6 | A committed request retried after a newer session | Its stored response (replay before the checks) | `AccountSessionTests.Replay_ComesBeforeTheSessionAndVersionChecks` |
+| 7 | Missing session or expected version | 400, nothing written | `AccountSessionTests.MissingNumbers_AreMalformed` |
+| 8 | A writer forgets to raise the version | Caught by a test per writer, incl. the refund hold | `AccountSessionTests.EveryAccountWriter_RaisesTheVersion` (buy, open, dust, craft, refund, refund hold); the granted and released rewards: the worker's `SettlementTests.ABossVictory_GrantsOneMarkPerCharacter_AndWritesTheLedgerWalletAndEventsTogether` (version 2 after two) |
+| 9 | Postgres down at the session call | 503 as every endpoint; the client stays on its gate ("Connecting…") | `CardCollectionTests.AccountActions_WithPostgresUnreachable_Answer503` (the session call added) |
+| 10 | Client: a 1413 | Version updated, refusal returned, no retry | Godot `test_account_session::test_a_stale_version_takes_the_current_one_and_is_not_retried`, `test_the_shop_says_a_stale_view_was_read_again` |
+| 11 | Client: a 1412 | Every later action refused locally until `start_account_session` | `test_account_session::test_a_replaced_session_blocks_account_calls_until_the_account_is_taken_back`, `test_the_shop_after_a_replaced_session_offers_use_it_here` |
+| 12 | Client: give up | The account is free only after a new session; the request given up is fenced | `test_account_session::test_giving_up_starts_a_new_session_before_the_account_is_free` |
+| 12f | A retry after another call moved the session or the version | Every try of one action sends the first try's session and version | `test_account_session::test_every_retry_of_one_action_sends_the_first_try_s_session_and_version` |
+| 12g | The +1 rule and refunds | An answer that is not the one sent + 1, or a refund, makes the next decision read the account first | `test_account_session::test_an_answer_that_is_not_the_one_sent_plus_one_is_read_again_before_the_next_decision`, `test_a_refund_is_followed_by_a_read_never_by_its_own_version` |
 | 12b | Abandon or run start from an old session | 409 1412; the run stays Active, no run is started, nothing written | `AccountSessionTests.OldSession_IsRefusedByEveryFencedCall_AndWritesNothing_TheNewestLoginWins` |
 | 12e | A retried abandon (its 204 was lost) after a newer login | 204: it changes nothing | `AccountSessionTests.RetriedAbandon_AfterANewerLogin_IsStillASuccess` |
-| 12c | A server run finished offline, then the game goes online (a new session meanwhile) | The queue uploads, the run is verified and its reward settles; the session plays no part | `test_account_session::test_offline_run_survives_a_new_session` (fake bridge); e2e `offline_stairs` passes with a session started on reconnect |
-| 12d | No server at start | Offline mode: the card screens offer Go online; runs play; Go online signs in and starts a session | `test_account_session::test_go_online_starts_a_session` |
-| 13 | End to end: a second "device" | `server session steal`, then `packs buy` → refused 1412, wallet unchanged (`.sql`), then `server session` and the buy goes through | e2e `account_session_fence` (`#! cards`) |
+| 12c | A server run finished offline, then the game goes online (a new session meanwhile) | The queue uploads, the run is verified and its reward settles; the session plays no part | `test_account_session::test_a_run_played_offline_still_syncs_after_a_new_session` (fake bridge); e2e `offline_stairs` passes with a session started on reconnect |
+| 12d | No server at start | Offline mode: the card screens offer Go online; runs play; Go online signs in and starts a session | `test_account_session::test_go_online_from_offline_mode_signs_in_and_starts_a_session`, `test_the_shop_with_no_session_offers_go_online` |
+| 13 | End to end: a second "device" | `server session steal`, then `packs buy` → refused 1412 and `packs open` refused by the game itself, nothing written (`.sql`), then `server session` and the buy reaches the account (refused 1402 for want of gems: the fence was all that stopped it) | e2e `account_session_fence` (`#! cards`) |
 
 Replay mismatches and 2002 do not arise: nothing here is verified. No queue, so no dead letters.
 
@@ -267,3 +269,6 @@ Decided with the user on 2026-11-16:
    open connection and expiring sessions whose socket is gone becomes the standard choice.
 6. **One name for the account version** (2026-11-17): `account_version` everywhere (section 1).
 7. **Refunds carry no account version** (2026-11-17): the page reloads the collection after them (2.3).
+
+**Open (2026-11-18):** after a 1412 only the Shop offers **Use it here**; the main menu's New run is refused with "Your account was
+opened somewhere else." and no way back yet. It comes with the main menu and class-pick screens of spec `card-ui`.

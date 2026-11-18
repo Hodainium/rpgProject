@@ -197,7 +197,9 @@ rebuilds the state by replaying it. In 2b the checkpoint is the latest *claimed*
 namespace Rpg.Contracts.Runs;
 
 // Part A
-public sealed record RunStartRequest(string RulesetVersion, string RunStructureId, IReadOnlyList<string> CharacterIds);
+public sealed record RunStartRequest(string RulesetVersion, string RunStructureId, IReadOnlyList<string> CharacterIds, long? Session);
+// Session (spec account-session 2.2, required): the player's account session. A run start abandons the active run, so an older
+// session is refused with 409 1412 (`currentSession`) before anything changes.
 /// 201. Floor is 0; FloorSeed is a decimal string (int64 isn't safe as a JSON number in browsers).
 public sealed record RunStartResponse(string RunId, int Floor, string FloorSeed, DateTimeOffset StartedAt);
 

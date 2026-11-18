@@ -81,7 +81,7 @@ ignored by Godot (it filters by what exists).
 ### 2.2 Open a pack
 
 ```
-Godot client ── POST /api/v1/packs/{packId}/open  { requestKey }
+Godot client ── POST /api/v1/packs/{packId}/open  { requestKey, session, expectedAccountVersion }   (spec account-session 2.2)
   API, ONE transaction:
     1. pg_advisory_xact_lock(player)                      (serialises every account action and the run start)
     2. account_requests (player, requestKey): found → same kind and hash → return the stored response (200); different → 409 1407
@@ -102,14 +102,17 @@ Godot client ── POST /api/v1/packs/{packId}/open  { requestKey }
     8. outbox: PackOpened (key = playerId)
   ◀── 200 PackOpenResponse                     DEL nothing in Redis (ownership and wallet are not cached; wallet:{id} is deleted)
 ```
-`wallet:{playerId}` (slice 4's read cache) is deleted on every wallet change. Open, dust and craft use the `actions` rate-limit bucket.
+`wallet:v2:{playerId}` (slice 4's read cache; versioned by spec account-session) is deleted on every wallet change, on a replay too.
+Open, dust and craft use the `actions` rate-limit bucket. Since spec account-session (slice 5b1) every one of them carries the
+player's account session and the account version the screen showed, checked under the lock after the replay: 409 1412 / 1413,
+nothing written (`specs/account-session.md` 2.2).
 A pack none of whose odds-bearing rarities has an eligible card (a later catalog change retired them all) is `404 1408 PackUnavailable`
 and charges nothing; the admin put refuses to create such a pack (400 1401).
 
 ### 2.3 Dust a card
 
 ```
-Godot client ── POST /api/v1/cards/{cardId}/dust  { requestKey }
+Godot client ── POST /api/v1/cards/{cardId}/dust  { requestKey, session, expectedAccountVersion }
   API, ONE transaction: advisory lock → account_requests check →
     card must be held (409 1406), not core (400 1404), and not locked by the run (below, 409 1403 with runId) →
     DELETE holding; card_ledger -1; wallet dust += dust_value(rarity, latest rate version); wallet_ledger row (rate version recorded);
@@ -124,7 +127,9 @@ A card acquired after the start (a pack or a craft during the run) is not locked
 cancels the run or starts another.
 
 ```
-Godot client ── POST /api/v1/runs/{id}/abandon                    (new: the cancel path the 409 pop-up uses)
+Godot client ── POST /api/v1/runs/{id}/abandon  { session }        (new: the cancel path the 409 pop-up uses; the body since spec
+                                                                    account-session: an older session gets 409 1412 and the run
+                                                                    stays Active; an abandon already done answers 204 first)
   API, ONE transaction under the account lock: Active → Abandoned (caches deleted, `rpg_run_ends_total{status=Abandoned}`); the same
        status as "start a new run" gives the previous one, and like it nothing is voided. Verifying → 409 1410 RunVerifying; another
        player's or unknown run → 404; Lost / Won / Rejected → 409 1101. A repeated cancel of an already Abandoned run is a plain 204
@@ -134,7 +139,7 @@ Godot client ── POST /api/v1/runs/{id}/abandon                    (new: the 
 ### 2.4 Craft a card
 
 ```
-Godot client ── POST /api/v1/cards/{cardId}/craft  { requestKey }
+Godot client ── POST /api/v1/cards/{cardId}/craft  { requestKey, session, expectedAccountVersion }
   API, ONE transaction: advisory lock → request check →
     card known, not core, not retired (400 1404 / 404); not already owned (409 1405); dust >= craft_cost (409 1402);
     wallet dust -= cost (ledger row with rate version); holding insert (source 'craft'); card_ledger +1; outbox CardCrafted.
@@ -145,7 +150,8 @@ reachable without luck.
 ### 2.5 Run start with the account
 
 ```
-Godot client ── POST /api/v1/runs  { rulesetVersion, runStructureId, characterIds }          (request unchanged)
+Godot client ── POST /api/v1/runs  { rulesetVersion, runStructureId, characterIds, session }   (+ session since spec account-session:
+                                                                    a start abandons the active run, so an older session gets 409 1412)
   API, in the existing run-start transaction (the player's advisory lock is taken first):
     - Cards:Enabled false, or no catalog seeded yet (the `cards` table is empty) → exactly today's behaviour, no pool, no character
       check (CardPool absent): a server with nothing to enforce must not refuse every run
@@ -213,8 +219,10 @@ public sealed record CatalogResponse(int CatalogVersion, string CatalogHash, IRe
 
 public sealed record OwnedCardDto(string CardId, DateTimeOffset AcquiredAt, string Source, string? LockedByRunId);   // Source: pack | craft
 /// <summary>Core cards are implied (everyone owns them) and not listed in Owned.</summary>
-public sealed record CollectionResponse(IReadOnlyList<OwnedCardDto> Owned, int Gems, int Dust, long Version, string? ActiveRunId,
-    string? ActiveRunStatus, IReadOnlyList<PityStateDto> Pity);   // ActiveRunStatus: Active | Verifying
+public sealed record CollectionResponse(IReadOnlyList<OwnedCardDto> Owned, long Gems, long Dust, long AccountVersion, string? ActiveRunId,
+    string? ActiveRunStatus, IReadOnlyList<PityStateDto> Pity, IReadOnlyList<OwnedPackDto> OwnedPacks);
+    // ActiveRunStatus: Active | Verifying. Gems and Dust are 64-bit (migration 0010); OwnedPacks: spec pack-shop 2.3;
+    // AccountVersion (renamed from Version, spec account-session 2.4): raised by every change to what this response shows
 
 public sealed record PackTypeDto(string PackId, string Name, int Version, int PriceGems, int CardCount,
     IReadOnlyDictionary<string, int> OddsPer10000, IReadOnlyList<string> SetIds, IReadOnlyList<string> CardIds,
@@ -226,13 +234,14 @@ public sealed record PityStateDto(string PackId, IReadOnlyDictionary<string, int
 public sealed record PackListResponse(IReadOnlyList<PackTypeDto> Packs);
 
 /// <summary>Body of open, dust and craft. The key is generated by the client per action and kept until it gets a response.</summary>
-public sealed record AccountActionRequest(Guid RequestKey);
+public sealed record AccountActionRequest(Guid RequestKey, long? Session, long? ExpectedAccountVersion);   // both required (spec account-session 3.1)
 
 public sealed record PackCardDto(string CardId, string Rarity, bool Duplicate, int DustGained, bool Pity);   // Pity: this card was forced by a pity timer
 public sealed record PackOpenResponse(string OpeningId, string PackId, int PackVersion, int GemsSpent,
-    IReadOnlyList<PackCardDto> Cards, int Gems, int Dust, string DrawSeed);          // DrawSeed: decimal string (int64)
-public sealed record DustResponse(string CardId, int DustGained, int RateVersion, int Dust);
-public sealed record CraftResponse(string CardId, int DustSpent, int RateVersion, int Dust);
+    IReadOnlyList<PackCardDto> Cards, long Gems, long Dust, string DrawSeed, int PacksLeft, long AccountVersion);
+    // DrawSeed: decimal string (int64); PacksLeft: spec pack-shop 2.2; AccountVersion: spec account-session 3.1
+public sealed record DustResponse(string CardId, int DustGained, int RateVersion, long Dust, long AccountVersion);
+public sealed record CraftResponse(string CardId, int DustSpent, int RateVersion, long Dust, long AccountVersion);
 
 // The two files the server seeds from (Cards:CatalogFile, Cards:SeedFile)
 public sealed record CardCatalogFile(string CatalogHash, IReadOnlyList<CatalogFileCard> Cards);       // written by build_card_catalog.tscn
@@ -336,7 +345,7 @@ Card ids are content ids; retention for `pack_openings` and `account_requests` j
 |---|---|---|---|
 | `catalog:cards` | `CatalogResponse` JSON | 1 h | Deleted by the seeder and by a card-rate put. Miss or any Redis error → Postgres |
 | `catalog:packs` | `PackListResponse` JSON | 1 h | Deleted by a pack-type put and by the seeder. Same fallback |
-| `wallet:{playerId}` | existing slice 4 key | existing | Now also deleted on every pack, dust and craft |
+| `wallet:v2:{playerId}` | existing slice 4 key (versioned by spec account-session) | existing | Now also deleted on every pack, dust and craft, on a replay too |
 
 No locks: serialisation is the Postgres advisory lock `pg_advisory_xact_lock(hashtextextended('acct:'||player, 0))`,
 taken by the three actions and by the run start, in that order of acquisition only (it is the sole lock, no deadlock).
