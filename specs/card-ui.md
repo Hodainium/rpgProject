@@ -320,6 +320,11 @@ gamepad work); each `CardView3D` follows its slot through the stage camera (`Cam
   shared shader); **Mythic** twinkling rainbow glitter (`game/cards/shaders/card_mythic.gdshader`) over the opal frame; a **corrupted**
   card a steady magenta glow and a magenta frame outline. Each card starts its loops at its own point (`CardFaceView.phase_spread`,
   6 s, from a hash of the card and its view: no RNG), so a pack's cards never sweep in step.
+- **Void cards (user, 2026-11-18, superseding the corrupted look above):** an `Item.Corrupted` card wears the Legendary look
+  (`CardStyle.corrupted_as`: frame, backdrop, gold sheen); no magenta glow or outline; the set symbol keeps the card's real
+  rarity colour (11 of the 16 Void cards are Epic). What sets it apart is its glyph: option C of six shown live, a near-black
+  "void" glyph in a magenta glow (`corrupted_glyph`, `corrupted_glyph_halo`, `corrupted_glyph_halo_radius`). Setting
+  `corrupted_as` to empty brings the old corrupted look back.
 - Tried and dropped in the engine: Look A; element colours; rounded bars; dark or tinted bars; a stone frame; a crown crest; a rarity
   outline on the art; white, element-coloured or rarity-coloured glyphs; the Epic glow; Mythic holo, rim chase, aurora and rays;
   rose prism, spectrum, holo-stripe, nebula and still-metal Mythic frames.

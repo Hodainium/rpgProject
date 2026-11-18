@@ -23,8 +23,17 @@ const RARITY_ORDER: Array[String] = ["common", "rare", "epic", "legendary", "myt
 @export var face_scenes: Dictionary[StringName, PackedScene] = {}
 ## The look in use (console `cardui look [name]`).
 @export var face: StringName = &"grimoire"
-## Overrides frame and outline for Item.Corrupted cards (the rarity gem stays).
+## Overrides frame and outline for Item.Corrupted cards (the rarity gem stays). Used only when `corrupted_as` is empty.
 @export var corrupted: CardRarityLook
+## Void (Item.Corrupted) cards are drawn with this rarity's look: its frame, backdrop and effects (user, 2026-11-18: "Void cards
+## show as legendaries"); the set symbol keeps the card's real rarity colour. Empty: the `corrupted` look (the magenta glow).
+@export var corrupted_as: StringName = &"legendary"
+## A Void card's glyph colour (the one thing that sets it apart; other glyphs are the face's ivory).
+## The user's pick of 2026-11-18 (option C of six): a near-black "void" glyph in a magenta glow.
+@export var corrupted_glyph: Color = Color(0.07, 0.0, 0.10)
+## The halo round a Void card's glyph and its reach in pixels (other glyphs: the face's dark halo).
+@export var corrupted_glyph_halo: Color = Color(0.878, 0.251, 0.984, 0.95)
+@export var corrupted_glyph_halo_radius: float = 12.0
 ## physical, fire, ice, void, food, neutral.
 @export var elements: Dictionary[StringName, CardElement] = {}
 ## First match wins, after `element_overrides`.
