@@ -91,7 +91,7 @@ func test_main_menu_in_local_mode() -> void:
 	for node in ["Continue", "NewRun", "Quit"]:
 		check(menu.get_node("%" + node) != null, node + " exists")
 	check(menu.get_node("%Continue").disabled, "no save: Continue is greyed")
-	eq(menu.get_node("%ContinueInfo").text, "No run to continue", "and says why")
+	eq([menu.get_node("%ContinueInfo").text, menu.get_node("%ContinueInfo").visible], ["", false], "and no line under it (the greyed button says enough)")
 	eq(menu.get_node("%ModeLine").text, "Local mode (offline)", "the mode line")
 
 
@@ -294,7 +294,7 @@ func test_server_no_run_and_verifying() -> void:
 	bridge.answers = {"GetCurrentRun": [[true, null]]}
 	game.use_server(_link(bridge))
 	await _frames(15)
-	eq(_menu(game).get_node("%ContinueInfo").text, "No run to continue", "204: no run")
+	eq([_menu(game).get_node("%ContinueInfo").text, _menu(game).get_node("%ContinueInfo").visible], ["", false], "204: no run, no line")
 	bridge.answers = {"GetCurrentRun": [_current_run("Verifying")]}
 	var info: Dictionary = await game.can_continue()
 	eq(info["reason"], "verifying", "a run being verified")

@@ -4,8 +4,9 @@
 extends UIScreen
 
 @export var checking_text: String = "Checking the server…"
+## Why Continue is greyed; "" shows nothing (no run: the greyed Continue says enough, user 2026-11-18).
 @export var reason_texts: Dictionary = {
-	"none": "No run to continue",
+	"none": "",
 	"unreachable": "Can't reach the server",
 	"verifying": "The run is being verified",
 	"unreadable": "The saved run couldn't be read",
@@ -117,6 +118,7 @@ func _show(info: Dictionary) -> void:
 		%ContinueInfo.text = info["subtitle"] + (older_suffix if info["older"] else "")
 	else:
 		%ContinueInfo.text = info["subtitle"] if info["subtitle"] != "" else str(reason_texts.get(info["reason"], ""))
+	%ContinueInfo.visible = %ContinueInfo.text != ""  # no empty gap under Continue
 
 
 func _continue() -> void:
