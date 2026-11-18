@@ -20,7 +20,7 @@ public sealed class WalletStore(NpgsqlDataSource dataSource, MigrationRunner mig
         await migrations.EnsureMigratedAsync(ct);
         long gems = 0;
         long version = 0;
-        await using (var wallet = dataSource.CreateCommand("SELECT gems, version FROM wallets WHERE player_id = $1"))
+        await using (var wallet = dataSource.CreateCommand("SELECT gems, account_version FROM wallets WHERE player_id = $1"))
         {
             wallet.Parameters.Add(new NpgsqlParameter { Value = playerId });
             await using var reader = await wallet.ExecuteReaderAsync(ct);

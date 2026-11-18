@@ -21,6 +21,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		if not collection["ok"] or collection["data"]["owned"].is_empty():
 			return ctx.fail("no collected card to dust")
 		card_id = str(collection["data"]["owned"][0]["cardId"])
+	if args[0] != "first":
+		await ctx.game.server.get_collection()   # spec account-session 2.3: read the account first, as the card detail does
 	var answer: Dictionary = await ctx.game.server.dust_card(card_id, key)
 	if not answer["ok"]:
 		var error: Dictionary = answer["error"]

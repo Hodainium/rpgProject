@@ -111,19 +111,27 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
         RequiredAsync<CollectionResponse>(HttpMethod.Get, "api/v1/cards/collection", null, ct);
 
     /// <summary>
-    /// POST /api/v1/packs/{packId}/open: spends one owned pack (409 1411 when there is none). Retrying with the same key returns
-    /// the same cards.
+    /// POST /api/v1/account/session (spec account-session 2.1): the account login. Returns the player's new session number,
+    /// which every account action carries, and the collection read as the session started.
     /// </summary>
-    public Task<PackOpenResponse> OpenPackAsync(string packId, Guid requestKey, CancellationToken ct = default) =>
+    public Task<AccountSessionResponse> StartAccountSessionAsync(CancellationToken ct = default) =>
+        RequiredAsync<AccountSessionResponse>(HttpMethod.Post, "api/v1/account/session", null, ct);
+
+    /// <summary>
+    /// POST /api/v1/packs/{packId}/open: spends one owned pack (409 1411 when there is none). Retrying with the same key returns
+    /// the same cards. The request carries the account session and version (409 1412 / 1413, spec account-session).
+    /// </summary>
+    public Task<PackOpenResponse> OpenPackAsync(string packId, AccountActionRequest request, CancellationToken ct = default) =>
         RequiredAsync<PackOpenResponse>(HttpMethod.Post, $"api/v1/packs/{Uri.EscapeDataString(packId)}/open",
-            JsonContent.Create(new AccountActionRequest(requestKey), options: RpgJson.Options), ct);
+            JsonContent.Create(request, options: RpgJson.Options), ct);
 
     /// <summary>
     /// POST /api/v1/packs/refunds (spec pack-shop 2.5): the Open packs page's call when it opens. Pays back unopened packs of a
     /// type retired with a refund and returns what it paid.
     /// </summary>
-    public Task<PackRefundsResponse> RefundPacksAsync(CancellationToken ct = default) =>
-        RequiredAsync<PackRefundsResponse>(HttpMethod.Post, "api/v1/packs/refunds", null, ct);
+    public Task<PackRefundsResponse> RefundPacksAsync(PackRefundsRequest request, CancellationToken ct = default) =>
+        RequiredAsync<PackRefundsResponse>(HttpMethod.Post, "api/v1/packs/refunds",
+            JsonContent.Create(request, options: RpgJson.Options), ct);
 
     /// <summary>
     /// POST /api/v1/packs/{packId}/buy (spec pack-shop 2.1): spends gems for 1..10 unopened packs. Retrying with the same key
@@ -134,18 +142,22 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
             JsonContent.Create(request, options: RpgJson.Options), ct);
 
     /// <summary>POST /api/v1/cards/{cardId}/dust: removes the card for dust (409 1403 while the active run holds it).</summary>
-    public Task<DustResponse> DustCardAsync(string cardId, Guid requestKey, CancellationToken ct = default) =>
+    public Task<DustResponse> DustCardAsync(string cardId, AccountActionRequest request, CancellationToken ct = default) =>
         RequiredAsync<DustResponse>(HttpMethod.Post, $"api/v1/cards/{Uri.EscapeDataString(cardId)}/dust",
-            JsonContent.Create(new AccountActionRequest(requestKey), options: RpgJson.Options), ct);
+            JsonContent.Create(request, options: RpgJson.Options), ct);
 
     /// <summary>POST /api/v1/cards/{cardId}/craft: spends dust on a card the account does not own.</summary>
-    public Task<CraftResponse> CraftCardAsync(string cardId, Guid requestKey, CancellationToken ct = default) =>
+    public Task<CraftResponse> CraftCardAsync(string cardId, AccountActionRequest request, CancellationToken ct = default) =>
         RequiredAsync<CraftResponse>(HttpMethod.Post, $"api/v1/cards/{Uri.EscapeDataString(cardId)}/craft",
-            JsonContent.Create(new AccountActionRequest(requestKey), options: RpgJson.Options), ct);
+            JsonContent.Create(request, options: RpgJson.Options), ct);
 
-    /// <summary>POST /api/v1/runs/{runId}/abandon: cancels the Active run (204); 409 1410 while it is being verified.</summary>
-    public Task AbandonRunAsync(string runId, CancellationToken ct = default) =>
-        SendAsync<object>(HttpMethod.Post, $"api/v1/runs/{Uri.EscapeDataString(runId)}/abandon", null, ct, allowNoContent: true);
+    /// <summary>
+    /// POST /api/v1/runs/{runId}/abandon: cancels the Active run (204); 409 1410 while it is being verified; 409 1412 from an older
+    /// account session (spec account-session).
+    /// </summary>
+    public Task AbandonRunAsync(string runId, RunAbandonRequest request, CancellationToken ct = default) =>
+        SendAsync<object>(HttpMethod.Post, $"api/v1/runs/{Uri.EscapeDataString(runId)}/abandon",
+            JsonContent.Create(request, options: RpgJson.Options), ct, allowNoContent: true);
 
     /// <summary>PUT /api/v1/admin/pack-types (economy-admin): a new version of one pack type.</summary>
     public Task<PackTypeResponse> PutPackTypeAsync(PackTypeRequest request, CancellationToken ct = default) =>

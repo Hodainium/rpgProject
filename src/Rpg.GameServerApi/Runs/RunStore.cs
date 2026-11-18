@@ -16,12 +16,16 @@ namespace Rpg.GameServerApi.Runs;
 /// <summary>A run as stored, with its owner (the summary DTO has no owner, so ownership checks need this).</summary>
 public sealed record StoredRun(Guid PlayerId, RunSummaryResponse Summary);
 
-public enum StartOutcome { Created, AbandonedPrevious, PreviousVerifying, CharacterLocked }
+public enum StartOutcome { Created, AbandonedPrevious, PreviousVerifying, CharacterLocked, SessionReplaced }
 
+/// <param name="CurrentSession">On <see cref="StartOutcome.SessionReplaced"/>: the player's current account session.</param>
 public sealed record StartResult(StartOutcome Outcome, Guid RunId, long FloorSeed, DateTimeOffset StartedAt,
-    Guid? AbandonedRunId, RunPool? Pool = null, string? Detail = null);
+    Guid? AbandonedRunId, RunPool? Pool = null, string? Detail = null, long? CurrentSession = null);
 
-public enum AbandonOutcome { Abandoned, AlreadyAbandoned, NotFound, NotActive, Verifying }
+public enum AbandonOutcome { Abandoned, AlreadyAbandoned, NotFound, NotActive, Verifying, SessionReplaced }
+
+/// <summary>An abandon's outcome; CurrentSession is the player's current account session on <see cref="AbandonOutcome.SessionReplaced"/>.</summary>
+public sealed record AbandonResult(AbandonOutcome Outcome, long? CurrentSession = null, string? Detail = null);
 
 public enum FloorOutcome { Issued, Repeated, NotFound, NotActive, NotReachable, UploadIncomplete, Unverified, RolledBack }
 
@@ -60,6 +64,14 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
             ct, player.Id, player.Name, now);
         // Serializes concurrent starts of one player, so the one_active_run index is never what decides.
         await Execute(connection, transaction, "SELECT 1 FROM players WHERE player_id = $1 FOR UPDATE", ct, player.Id);
+
+        // Spec account-session 2.2: a run start abandons the active run, so it is fenced like the abandon (session only), under
+        // the account lock and before anything changes.
+        if (await CardStore.CheckFenceAsync(connection, transaction, player.Id, new AccountFence(request.Session!.Value, null), ct)
+            is { } fenced)
+        {
+            return new StartResult(StartOutcome.SessionReplaced, Guid.Empty, 0, now, null, null, fenced.Detail, fenced.Current);
+        }
 
         Guid? abandoned = null;
         await using (var active = Command(connection, transaction,
@@ -130,7 +142,7 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
     /// Cancels the player's Active run (spec card-collection 2.3): the path the dust pop-up offers. The same Abandoned status
     /// that "start a new run" gives the previous one. A run waiting for its verdict can't be cancelled.
     /// </summary>
-    public async Task<AbandonOutcome> AbandonAsync(Guid playerId, Guid runId, DateTimeOffset now, CancellationToken ct)
+    public async Task<AbandonResult> AbandonAsync(Guid playerId, Guid runId, long session, DateTimeOffset now, CancellationToken ct)
     {
         await migrations.EnsureMigratedAsync(ct);
         await using var connection = await dataSource.OpenConnectionAsync(ct);
@@ -144,31 +156,40 @@ public sealed partial class RunStore(NpgsqlDataSource dataSource, MigrationRunne
         {
             if (await select.ExecuteScalarAsync(ct) is not string found)
             {
-                return AbandonOutcome.NotFound;
+                return new AbandonResult(AbandonOutcome.NotFound);
             }
 
             status = found;
         }
 
-        if (status == nameof(RunStatus.Verifying))
-        {
-            return AbandonOutcome.Verifying;
-        }
-
         if (status == nameof(RunStatus.Abandoned))
         {
-            return AbandonOutcome.AlreadyAbandoned;   // a retried cancel (the first 204 was lost) is a success, not a second run end
+            // A retried cancel (the first 204 was lost) is a success, not a second run end, whatever the session now: it changes
+            // nothing, like the replay of a committed account action (spec account-session 2.2, step 2).
+            return new AbandonResult(AbandonOutcome.AlreadyAbandoned);
+        }
+
+        // Spec account-session 2.2: fenced by the account session (no version: a cancel is not a decision on the account's
+        // contents), under the lock and before anything changes, so a stale device never cancels a run.
+        if (await CardStore.CheckFenceAsync(connection, transaction, playerId, new AccountFence(session, null), ct) is { } fenced)
+        {
+            return new AbandonResult(AbandonOutcome.SessionReplaced, fenced.Current, fenced.Detail);
+        }
+
+        if (status == nameof(RunStatus.Verifying))
+        {
+            return new AbandonResult(AbandonOutcome.Verifying);
         }
 
         if (status != nameof(RunStatus.Active))
         {
-            return AbandonOutcome.NotActive;
+            return new AbandonResult(AbandonOutcome.NotActive);
         }
 
         await Execute(connection, transaction, "UPDATE runs SET status = $2, ended_at = $3 WHERE run_id = $1", ct,
             runId, nameof(RunStatus.Abandoned), now);
         await transaction.CommitAsync(ct);
-        return AbandonOutcome.Abandoned;
+        return new AbandonResult(AbandonOutcome.Abandoned);
     }
 
     /// <summary>

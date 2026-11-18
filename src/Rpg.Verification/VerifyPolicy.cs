@@ -23,6 +23,10 @@ public static class VerifyPolicy
     /// <summary>How long a tombstone lasts: far longer than one API read of a battle takes.</summary>
     public static readonly TimeSpan VoidedTtl = TimeSpan.FromMinutes(2);
 
-    /// <summary>Spec settlement-outbox 3.5: the cached wallet; the worker deletes it after a settlement commits.</summary>
-    public static string WalletKey(Guid playerId) => $"wallet:{playerId:D}";
+    /// <summary>
+    /// Spec settlement-outbox 3.5: the cached wallet; the worker deletes it after a settlement commits. Versioned since spec
+    /// account-session renamed the wallet's Version to AccountVersion: an entry cached under the old shape is never read (it
+    /// would read as account version 0); the old `wallet:{id}` entries simply expire (60 s).
+    /// </summary>
+    public static string WalletKey(Guid playerId) => $"wallet:v2:{playerId:D}";
 }

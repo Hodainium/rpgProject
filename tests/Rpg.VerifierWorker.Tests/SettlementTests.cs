@@ -30,7 +30,7 @@ public class SettlementTests(Stack stack)
         await using var worker = await CreateAsync(stack);
         WinsAgainstABoss(worker, "warrior", "cleric");
         var battle = await worker.SeedAsync();
-        await worker.ExecuteAsync("INSERT INTO wallets (player_id, gems, version, updated_at) VALUES ($1, 2147483640, 1, now())", battle.PlayerId);
+        await worker.ExecuteAsync("INSERT INTO wallets (player_id, gems, account_version, updated_at) VALUES ($1, 2147483640, 1, now())", battle.PlayerId);
 
         var decision = await worker.Processor.ProcessAsync(JobOf(battle), Ct);
 
@@ -51,7 +51,7 @@ public class SettlementTests(Stack stack)
         Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM completion_marks WHERE player_id = $1", battle.PlayerId));
         Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT count(*) FROM wallet_ledger WHERE player_id = $1", battle.PlayerId));
         Assert.Equal(20, await worker.ScalarAsync<int>("SELECT gems::int FROM wallets WHERE player_id = $1", battle.PlayerId));
-        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT version FROM wallets WHERE player_id = $1", battle.PlayerId));
+        Assert.Equal(2L, await worker.ScalarAsync<long>("SELECT account_version FROM wallets WHERE player_id = $1", battle.PlayerId));
         Assert.Equal(20, await worker.ScalarAsync<int>("SELECT sum(delta)::int FROM wallet_ledger WHERE player_id = $1", battle.PlayerId));
         Assert.Equal(["BattleVerified", "RewardPending", "RewardPending", "RewardGranted", "RewardGranted"],
             await worker.OutboxTypesAsync("redpanda"));
@@ -160,7 +160,7 @@ public class SettlementTests(Stack stack)
         var battle = await worker.SeedAsync();
         // As if the status guard had been bypassed: a ledger row for warrior's grant exists already (no mark), and cleric
         // already holds this mark from an earlier battle.
-        await worker.ExecuteAsync("INSERT INTO wallets (player_id, gems, version) VALUES ($1, 10, 1)", battle.PlayerId);
+        await worker.ExecuteAsync("INSERT INTO wallets (player_id, gems, account_version) VALUES ($1, 10, 1)", battle.PlayerId);
         await worker.ExecuteAsync(
             "INSERT INTO wallet_ledger (player_id, currency, delta, reason, ref_battle_id, idempotency_key) VALUES ($1, 'gems', 10, 'completion_mark', 'x', $2)",
             battle.PlayerId, $"mark:{battle.BattleId}:warrior:boss/boss.lich");

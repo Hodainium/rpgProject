@@ -88,7 +88,7 @@ public class ChallengeSettlementTests(Stack stack)
         Completes(worker, ["warrior"], Win, Fast);
         var battle = await worker.SeedAsync(submittedAt: Wednesday);
         // The fast star of this very battle is in the ledger already (and the wallet holds it), but no mark exists.
-        await worker.ExecuteAsync("INSERT INTO wallets (player_id, gems, version) VALUES ($1, 5, 1)", battle.PlayerId);
+        await worker.ExecuteAsync("INSERT INTO wallets (player_id, gems, account_version) VALUES ($1, 5, 1)", battle.PlayerId);
         await worker.ExecuteAsync(
             "INSERT INTO wallet_ledger (player_id, currency, delta, reason, ref_battle_id, idempotency_key) VALUES ($1, 'gems', 5, 'completion_mark', 'x', $2)",
             battle.PlayerId, $"mark:{battle.BattleId}:warrior:{Fast}");

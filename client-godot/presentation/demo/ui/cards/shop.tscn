@@ -44,3 +44,10 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 2
 autowrap_mode = 3
+
+[node name="Online" type="Button" parent="Content/Stack"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Go online"

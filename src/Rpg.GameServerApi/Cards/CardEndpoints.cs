@@ -26,6 +26,7 @@ public static class CardEndpoints
         api.MapGet("/cards/catalog", CatalogAsync);
         api.MapGet("/packs", PacksAsync);
         api.MapGet("/cards/collection", CollectionAsync);
+        api.MapPost("/account/session", SessionAsync).RateLimited(RateLimitOptions.Actions);
         api.MapPost("/packs/refunds", RefundsAsync).RateLimited(RateLimitOptions.Actions);
         api.MapPost("/packs/{packId}/buy", BuyAsync).RateLimited(RateLimitOptions.Actions);
         api.MapPost("/packs/{packId}/open", OpenAsync).RateLimited(RateLimitOptions.Actions);
@@ -83,15 +84,44 @@ public static class CardEndpoints
     // ---- account actions -------------------------------------------------------------------------------------------
 
     /// <summary>
+    /// Spec account-session 2.1: the account login. Raises the player's session under the account lock and returns it with the
+    /// collection read inside that lock (final: no older request can commit after it).
+    /// </summary>
+    private static async Task<IResult> SessionAsync(HttpContext context, CardStore store, MigrationRunner migrations,
+        RpgMetrics metrics, TimeProvider clock, CancellationToken ct)
+    {
+        var player = context.User.Player();
+        var watch = Stopwatch.StartNew();
+        await migrations.EnsureMigratedAsync(ct);
+        var response = await store.StartSessionAsync(player.Id, player.Name, clock.GetUtcNow(), ct);
+        metrics.CardActionDuration("account_session", watch.Elapsed);
+        metrics.AccountSessionStarted();
+        Activity.Current?.SetTag("rpg.account_session", response.Session);
+        return Results.Ok(response);
+    }
+
+    /// <summary>
     /// Spec pack-shop 2.5: the Open packs page's call when it opens. Pays back the player's unopened packs of a type retired with
     /// a refund (idempotent: a second call finds nothing due) and returns what it paid, for the page's notice.
     /// </summary>
-    private static async Task<IResult> RefundsAsync(HttpContext context, PackRefunds refunds, RpgMetrics metrics, CancellationToken ct)
+    private static async Task<IResult> RefundsAsync(HttpContext context, PackRefundsRequest? request, PackRefunds refunds,
+        RpgMetrics metrics, CancellationToken ct)
     {
+        if (request?.Session is not { } session || session < 1)
+        {
+            return RunEndpoints.BadRequest("A body with the account session (session, 1 or more) is required.");
+        }
+
+        Activity.Current?.SetTag("rpg.account_session", session);
         var watch = Stopwatch.StartNew();
-        var paid = await refunds.RefundAsync(context.User.Player().Id, ct);
+        var pass = await refunds.RefundAsync(context.User.Player().Id, session, ct);
         metrics.CardActionDuration("refund_packs", watch.Elapsed);
-        return Results.Ok(new PackRefundsResponse([.. paid.Select(p => new PackRefundDto(p.PackId, p.Count, p.Gems))]));
+        if (pass.Problem is { } problem)
+        {
+            return Refused("refund_packs", problem, metrics);
+        }
+
+        return Results.Ok(new PackRefundsResponse([.. pass.Paid.Select(p => new PackRefundDto(p.PackId, p.Count, p.Gems))]));
     }
 
     /// <summary>Spec pack-shop 2.1: gems for 1..Cards:MaxPacksPerBuy unopened packs, idempotent by the request key.</summary>
@@ -99,17 +129,24 @@ public static class CardEndpoints
         RunSummaryCache cache, MigrationRunner migrations, RpgMetrics metrics, IOptions<CardOptions> options, TimeProvider clock,
         CancellationToken ct)
     {
-        if (KeyProblem(request?.RequestKey, "A body with a requestKey (a non-empty GUID) and a count is required.") is { } bad)
+        const string NeedsBody = "A body with a requestKey (a non-empty GUID) and a count is required.";
+        if (request is null)
+        {
+            return RunEndpoints.BadRequest(NeedsBody);
+        }
+
+        if ((KeyProblem(request.RequestKey, NeedsBody) ?? FenceProblem(request.Session, request.ExpectedAccountVersion)) is { } bad)
         {
             return bad;
         }
 
         var player = context.User.Player();
         Activity.Current?.SetTag("rpg.pack_id", packId);
+        Activity.Current?.SetTag("rpg.account_session", request.Session);
         var watch = Stopwatch.StartNew();
         await migrations.EnsureMigratedAsync(ct);
-        var result = await store.BuyPacksAsync(player.Id, player.Name, packId, request!.Count, options.Value.MaxPacksPerBuy,
-            request.RequestKey, clock.GetUtcNow(), ct);
+        var result = await store.BuyPacksAsync(player.Id, player.Name, packId, request.Count, options.Value.MaxPacksPerBuy,
+            request.RequestKey, Fence(request.Session, request.ExpectedAccountVersion), clock.GetUtcNow(), ct);
         metrics.CardActionDuration("buy_pack", watch.Elapsed);
         if (result.Problem is { } problem)
         {
@@ -141,10 +178,11 @@ public static class CardEndpoints
         }
 
         var player = context.User.Player();
+        Activity.Current?.SetTag("rpg.account_session", request!.Session);
         Activity.Current?.SetTag("rpg.pack_id", packId);
         var watch = Stopwatch.StartNew();
         await migrations.EnsureMigratedAsync(ct);
-        var result = await store.OpenPackAsync(player.Id, player.Name, packId, request!.RequestKey, clock.GetUtcNow(), ct);
+        var result = await store.OpenPackAsync(player.Id, player.Name, packId, request!.RequestKey, Fence(request), clock.GetUtcNow(), ct);
         metrics.CardActionDuration("open_pack", watch.Elapsed);
         if (result.Problem is { } problem)
         {
@@ -179,9 +217,10 @@ public static class CardEndpoints
         }
 
         var player = context.User.Player();
+        Activity.Current?.SetTag("rpg.account_session", request!.Session);
         var watch = Stopwatch.StartNew();
         await migrations.EnsureMigratedAsync(ct);
-        var result = await store.DustAsync(player.Id, player.Name, cardId, request!.RequestKey, clock.GetUtcNow(), ct);
+        var result = await store.DustAsync(player.Id, player.Name, cardId, request!.RequestKey, Fence(request), clock.GetUtcNow(), ct);
         metrics.CardActionDuration("dust", watch.Elapsed);
         if (result.Problem is { } problem)
         {
@@ -195,9 +234,10 @@ public static class CardEndpoints
         else
         {
             metrics.CardDusted(result.Value!.DustGained);
-            await cache.InvalidateAsync(VerifyPolicy.WalletKey(player.Id));
         }
 
+        // On a replay too, as buy and open do: the first request may have committed and died before it got here (acceptance 2).
+        await cache.InvalidateAsync(VerifyPolicy.WalletKey(player.Id));
         return Results.Ok(result.Value);
     }
 
@@ -210,9 +250,10 @@ public static class CardEndpoints
         }
 
         var player = context.User.Player();
+        Activity.Current?.SetTag("rpg.account_session", request!.Session);
         var watch = Stopwatch.StartNew();
         await migrations.EnsureMigratedAsync(ct);
-        var result = await store.CraftAsync(player.Id, player.Name, cardId, request!.RequestKey, clock.GetUtcNow(), ct);
+        var result = await store.CraftAsync(player.Id, player.Name, cardId, request!.RequestKey, Fence(request), clock.GetUtcNow(), ct);
         metrics.CardActionDuration("craft", watch.Elapsed);
         if (result.Problem is { } problem)
         {
@@ -226,9 +267,10 @@ public static class CardEndpoints
         else
         {
             metrics.CardCrafted(result.Value!.DustSpent);
-            await cache.InvalidateAsync(VerifyPolicy.WalletKey(player.Id));
         }
 
+        // On a replay too, as buy and open do: the first request may have committed and died before it got here (acceptance 2).
+        await cache.InvalidateAsync(VerifyPolicy.WalletKey(player.Id));
         return Results.Ok(result.Value);
     }
 
@@ -311,7 +353,18 @@ public static class CardEndpoints
     // ---- errors ----------------------------------------------------------------------------------------------------
 
     private static IResult? KeyProblem(AccountActionRequest? request) =>
-        KeyProblem(request?.RequestKey, "A body with a requestKey (a non-empty GUID) is required.");
+        KeyProblem(request?.RequestKey, "A body with a requestKey (a non-empty GUID) is required.")
+        ?? FenceProblem(request!.Session, request.ExpectedAccountVersion);
+
+    /// <summary>Spec account-session 3.1: a decision carries the session (1 or more) and the expected account version (0 or more).</summary>
+    private static IResult? FenceProblem(long? session, long? expectedAccountVersion) =>
+        session is null or < 1 || expectedAccountVersion is null or < 0
+            ? RunEndpoints.BadRequest("The account session (session, 1 or more) and the account version the screen showed (expectedAccountVersion) are required.")
+            : null;
+
+    private static AccountFence Fence(long? session, long? expectedAccountVersion) => new(session!.Value, expectedAccountVersion!.Value);
+
+    private static AccountFence Fence(AccountActionRequest request) => Fence(request.Session, request.ExpectedAccountVersion);
 
     private static IResult? KeyProblem(Guid? key, string detail) =>
         key is null || key == Guid.Empty ? RunEndpoints.BadRequest(detail) : null;
@@ -336,6 +389,8 @@ public static class CardEndpoints
             CardFailure.PackUnavailable => (StatusCodes.Status404NotFound, ApiErrors.PackUnavailable, "Pack unavailable"),
             CardFailure.CharacterLocked => (StatusCodes.Status400BadRequest, ApiErrors.CharacterLocked, "Character not unlocked"),
             CardFailure.NoPackOwned => (StatusCodes.Status409Conflict, ApiErrors.NoPackOwned, "No pack owned"),
+            CardFailure.SessionReplaced => (StatusCodes.Status409Conflict, ApiErrors.AccountSessionReplaced, "Account session replaced"),
+            CardFailure.AccountVersionStale => (StatusCodes.Status409Conflict, ApiErrors.AccountVersionStale, "Account changed"),
             _ => (StatusCodes.Status409Conflict, ApiErrors.RunVerifying, "A run is being verified"),
         };
         var extensions = new Dictionary<string, object?> { ["errorCode"] = code };
@@ -343,6 +398,15 @@ public static class CardEndpoints
         {
             extensions["runId"] = problem.RunId;
             extensions["runStatus"] = problem.RunStatus;
+        }
+
+        if (problem.Failure == CardFailure.SessionReplaced)
+        {
+            extensions["currentSession"] = problem.Current;
+        }
+        else if (problem.Failure == CardFailure.AccountVersionStale)
+        {
+            extensions["currentAccountVersion"] = problem.Current;
         }
 
         return Results.Problem(statusCode: status, title: title, detail: problem.Detail, extensions: extensions);

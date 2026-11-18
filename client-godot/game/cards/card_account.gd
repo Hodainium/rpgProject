@@ -33,6 +33,10 @@ const RUN_VERIFYING: int = 1410
 ## The longest wait between two re-sends while reconnecting (ServerLink's backoff, capped here).
 var reconnect_max_delay: float = 10.0
 
+## Spec account-session 2.3: the account version the screens show (from a collection read or the session's snapshot, or a
+## decision's answer that is exactly the one sent + 1); -1 = not known, so ServerLink reads the collection before the next decision.
+var account_version: int = -1
+
 var link: ServerLink
 var _running: bool = false
 var _action: Dictionary = {}
@@ -151,7 +155,11 @@ func _send(action: Dictionary, generation: int) -> void:
 			break
 		result = await _call(action)
 	if generation != _generation:
-		_free()  # given up: the last try is back, whatever it says (the screens refetch the server's state)
+		# Given up: the last try is back, whatever it says. Spec account-session 2.3: a new session fences anything of the given-up
+		# request still on its way (the session call waits for a commit in progress), so the screens' refetch after this is final.
+		account_version = -1
+		await link.renew_session()
+		_free()
 		return
 	if code_of(result) == KEY_REUSED:
 		push_error("CardAccount: the server says key %s was used for another request (%s %s)" % [action["key"], action["kind"], action["target"]])
@@ -174,18 +182,24 @@ func _free(emit: bool = true) -> void:
 		busy_changed.emit()
 
 
+## One try. The first try's session and account version (`fence`) go with every retry (spec account-session 2.3).
 func _call(action: Dictionary) -> Dictionary:
 	var target := str(action["target"])
 	var key := str(action["key"])
+	var fence: Dictionary = action.get("fence", {})
+	var result: Dictionary
 	match str(action["kind"]):
 		BUY:
-			return await link.buy_pack(target, int(action.get("count", 1)), key)
+			result = await link.buy_pack(target, int(action.get("count", 1)), key, fence)
 		OPEN:
-			return await link.open_pack(target, key)
+			result = await link.open_pack(target, key, fence)
 		DUST:
-			return await link.dust_card(target, key)
+			result = await link.dust_card(target, key, fence)
 		_:
-			return await link.craft_card(target, key)
+			result = await link.craft_card(target, key, fence)
+	if fence.is_empty() and result.get("fence") is Dictionary:
+		action["fence"] = result["fence"]
+	return result
 
 
 static func _answer(result: Dictionary, kind: String, target: String, count: int, key: String, given_up: bool) -> Dictionary:

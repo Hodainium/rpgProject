@@ -24,7 +24,7 @@ namespace Rpg.GameServerApi.Tests;
 public class BattleVerifyTests(StackFixture stack)
 {
     private static readonly RunStartRequest Start =
-        new(ApiFactory.TestRuleset, "descent", ["warrior", "cleric", "ranger"]);
+        new(ApiFactory.TestRuleset, "descent", ["warrior", "cleric", "ranger"], Session: null);   // the session is added per call (AccountTestExtensions.StartFencedRunAsync)
 
     private static readonly Dictionary<string, string?> QuietBackground = new()
     {
@@ -244,7 +244,7 @@ public class BattleVerifyTests(StackFixture stack)
     private static async Task<(GameServerClient Client, RunStartResponse Run)> StartedAsync(ApiFactory factory)
     {
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
         return (client, run);
     }
 

@@ -108,10 +108,13 @@ public partial class ServerBridge : Node
     /// (spec pack-shop; 409 1411 when none is owned).
     /// </summary>
     public long OpenPack(string packId, string requestJson) =>
-        Start(client => client.OpenPackAsync(packId, Parse<AccountActionRequest>(requestJson).RequestKey));
+        Start(client => client.OpenPackAsync(packId, Parse<AccountActionRequest>(requestJson)));
+
+    /// <summary>POST /api/v1/account/session (spec account-session 2.1); completes with an AccountSessionResponse.</summary>
+    public long StartAccountSession() => Start(client => client.StartAccountSessionAsync());
 
     /// <summary>POST /api/v1/packs/refunds, the Open packs page's call when it opens; completes with a PackRefundsResponse (spec pack-shop 2.5).</summary>
-    public long RefundPacks() => Start(client => client.RefundPacksAsync());
+    public long RefundPacks(string requestJson) => Start(client => client.RefundPacksAsync(Parse<PackRefundsRequest>(requestJson)));
 
     /// <summary>POST /api/v1/packs/{packId}/buy with a PackBuyRequest; completes with a PackBuyResponse (spec pack-shop 3.1).</summary>
     public long BuyPack(string packId, string requestJson) =>
@@ -119,17 +122,17 @@ public partial class ServerBridge : Node
 
     /// <summary>POST /api/v1/cards/{cardId}/dust with an AccountActionRequest; completes with a DustResponse.</summary>
     public long DustCard(string cardId, string requestJson) =>
-        Start(client => client.DustCardAsync(cardId, Parse<AccountActionRequest>(requestJson).RequestKey));
+        Start(client => client.DustCardAsync(cardId, Parse<AccountActionRequest>(requestJson)));
 
     /// <summary>POST /api/v1/cards/{cardId}/craft with an AccountActionRequest; completes with a CraftResponse.</summary>
     public long CraftCard(string cardId, string requestJson) =>
-        Start(client => client.CraftCardAsync(cardId, Parse<AccountActionRequest>(requestJson).RequestKey));
+        Start(client => client.CraftCardAsync(cardId, Parse<AccountActionRequest>(requestJson)));
 
-    /// <summary>POST /api/v1/runs/{runId}/abandon; completes with "null" (204).</summary>
-    public long AbandonRun(string runId) =>
+    /// <summary>POST /api/v1/runs/{runId}/abandon with a RunAbandonRequest (spec account-session); completes with "null" (204).</summary>
+    public long AbandonRun(string runId, string requestJson) =>
         Start<object?>(async client =>
         {
-            await client.AbandonRunAsync(runId);
+            await client.AbandonRunAsync(runId, Parse<RunAbandonRequest>(requestJson));
             return null;
         });
 
@@ -190,13 +193,14 @@ public partial class ServerBridge : Node
             ok = false;
             json = Error((int)ex.StatusCode, ex.ErrorCode, ex.Problem?.Title ?? ex.Message, ex.Problem?.Detail ?? "",
                 ex.RetryAfter?.TotalSeconds, ex.Problem?.ExpectedSeq, ex.Problem?.LastSeq, ex.Problem?.Epoch,
-                ex.Problem?.RollbackSeq, ex.Problem?.Reason, ex.Problem?.RunId, ex.Problem?.RunStatus);
+                ex.Problem?.RollbackSeq, ex.Problem?.Reason, ex.Problem?.RunId, ex.Problem?.RunStatus, ex.Problem?.CurrentSession,
+                ex.Problem?.CurrentAccountVersion);
         }
         catch (Exception ex)
         {
             // No response at all: network down, timeout, refused connection, unreadable body.
             ok = false;
-            json = Error(0, null, ex.GetType().Name, ex.Message, null, null, null, null, null, null, null, null);
+            json = Error(0, null, ex.GetType().Name, ex.Message, null, null, null, null, null, null, null, null, null, null);
         }
 
         // The game may be quitting (a heartbeat still in flight): a disposed bridge has no one to tell.
@@ -214,10 +218,12 @@ public partial class ServerBridge : Node
         ?? throw new ArgumentException($"Expected a {typeof(T).Name} JSON object.");
 
     private static string Error(int status, int? errorCode, string title, string detail, double? retryAfterSeconds,
-        int? expectedSeq, int? lastSeq, int? epoch, int? rollbackSeq, string? reason, string? runId, string? runStatus) =>
+        int? expectedSeq, int? lastSeq, int? epoch, int? rollbackSeq, string? reason, string? runId, string? runStatus,
+        long? currentSession, long? currentAccountVersion) =>
         JsonSerializer.Serialize(new
         {
             status, errorCode, title, detail, retryAfterSeconds, expectedSeq, lastSeq, epoch, rollbackSeq, reason,
             runId, runStatus,   // a 1403 CardLockedByRun names the run that holds the card (spec card-collection 2.3)
+            currentSession, currentAccountVersion,   // a 1412 / 1413 (spec account-session 2.3)
         }, RpgJson.Options);
 }

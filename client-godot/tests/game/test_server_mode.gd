@@ -61,8 +61,11 @@ class FakeBridge:
 	func BuyPack(pack_id: String, json: String) -> int:
 		return _answer("BuyPack", [pack_id, json])
 
-	func RefundPacks() -> int:
-		return _answer("RefundPacks", [])
+	func RefundPacks(json: String) -> int:
+		return _answer("RefundPacks", [json])
+
+	func StartAccountSession() -> int:
+		return _answer("StartAccountSession", [])
 
 	func DustCard(card_id: String, json: String) -> int:
 		return _answer("DustCard", [card_id, json])
@@ -70,8 +73,8 @@ class FakeBridge:
 	func CraftCard(card_id: String, json: String) -> int:
 		return _answer("CraftCard", [card_id, json])
 
-	func AbandonRun(run_id: String) -> int:
-		return _answer("AbandonRun", [run_id])
+	func AbandonRun(run_id: String, json: String) -> int:
+		return _answer("AbandonRun", [run_id, json])
 
 	func PutPackType(json: String) -> int:
 		return _answer("PutPackType", [json])
@@ -137,6 +140,10 @@ class FakeBridge:
 				return [true, null]
 			"EndRun":
 				return [true, {"runId": args[0], "status": "Won"}]
+			"StartAccountSession":
+				# Spec account-session: a login. The collection is the empty account at version 0.
+				return [true, {"session": 1, "collection": {"owned": [], "gems": 0, "dust": 0, "accountVersion": 0, "activeRunId": null,
+					"activeRunStatus": null, "pity": [], "ownedPacks": []}}]
 		return [false, {"status": 0, "errorCode": null, "title": "no answer for %s" % method, "detail": ""}]
 
 	## The calls to `method`, in order.
@@ -311,7 +318,8 @@ func test_server_link_starts_and_retries_the_stairs() -> void:
 	var started: Dictionary = await link.start_run("4.7.2.stable.mono+0123456789abcdef", "fixture.run.two_floors", PARTY)
 	check(started["ok"], "the run starts on the server")
 	var sent: Dictionary = JSON.parse_string(bridge.of("StartRun")[0][1])
-	eq(sent.keys(), ["rulesetVersion", "runStructureId", "characterIds"], "RunStartRequest in the record's field order")
+	eq(sent.keys(), ["rulesetVersion", "runStructureId", "characterIds", "session"], "RunStartRequest in the record's field order")
+	eq(int(sent["session"]), 1, "with the account session (spec account-session: a run start is fenced)")
 	eq(sent["characterIds"], PARTY, "with the party")
 	var run := _server_run(str(started["data"]["floorSeed"]).to_int(), str(started["data"]["runId"]))
 	link.link(run, RUN_ID)

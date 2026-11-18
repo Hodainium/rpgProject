@@ -16,6 +16,13 @@ extends DemoMenuFrame
 @export var wait_text: String = "Talking to the Shop…"
 @export var reconnecting_text: String = "Reconnecting to the server…"
 @export var gave_up_text: String = "We couldn't confirm your purchase. Your gems and packs show what the server has."
+## Spec account-session 2.3: a newer login holds the account (1412); the button takes it back here.
+@export var replaced_text: String = "Your account was opened somewhere else."
+@export var use_here_text: String = "Use it here"
+## The account changed since the Shop read it (1413): it read it again.
+@export var stale_text: String = "Your account changed. Here is what you have now."
+## No session could start (the server is unreachable): offline mode, with a button to sign in again.
+@export var go_online_text: String = "Go online"
 @export var gems_tween_seconds: float = 0.6
 ## The hover preview in the description window.
 @export var preview_kind_text: String = "%d cards · %d gems"
@@ -43,6 +50,28 @@ var _refresh_when_free: bool = false  # given up: refetch once the last try is b
 func bind(_context: UIContext) -> void:
 	%Offers.entry_filled.connect(_wire_offer)
 	%Title.text = title_text
+	%Online.pressed.connect(_go_online)
+
+
+## Spec account-session 2.3 and 2.1: "Use it here" takes the account back from another login; "Go online" signs in again. Then
+## the Shop reads the account from the new session's start.
+func _go_online() -> void:
+	var link: ServerLink = ctx.main.server if ctx != null else null
+	if link == null or loading or _buying or link.card_account().busy():
+		return
+	_show_online("")
+	if link.session_replaced:
+		await link.take_account()
+	else:
+		await link.go_online()
+	if is_instance_valid(self) and active:
+		refresh()
+
+
+## The Go online / Use it here button (`text` "" hides it).
+func _show_online(text: String) -> void:
+	%Online.text = text
+	%Online.visible = text != ""
 
 
 func on_activated() -> void:
@@ -50,7 +79,15 @@ func on_activated() -> void:
 		var account := ctx.main.server.card_account()
 		if not account.busy_changed.is_connected(_on_busy_changed):
 			account.busy_changed.connect(_on_busy_changed)
+		if not ctx.main.server.session_changed.is_connected(_on_session_changed):
+			ctx.main.server.session_changed.connect(_on_session_changed)
 	refresh()
+
+
+## Spec account-session 2.3 (review fix): a 1412 from any call (a run start, the console) shows the gate at once.
+func _on_session_changed() -> void:
+	if active and not loading and not _buying:
+		refresh()
 
 
 func on_deactivated() -> void:
@@ -90,10 +127,31 @@ func refresh() -> void:
 		describe({"name": title_text, "text": offline_text})
 		_finish_loading()
 		return
+	_show_online("")
+	if link.session_replaced:
+		# Spec account-session 2.3: another login holds the account. Nothing of it is shown until the player takes it back.
+		_show_offers([], -1)
+		_say(replaced_text)
+		_show_online(use_here_text)
+		_finish_loading()
+		return
 	loading = true
 	_say(loading_text)
 	_begin_wait(link)
 	var line := ""
+	if link.account_session == 0:
+		# The gate (spec account-session 2.1): ownership shows only from a session; none could start at sign-in, so try now.
+		var started: Dictionary = await link.start_account_session()
+		if not _current(generation):
+			return
+		if not started["ok"]:
+			_end_wait()
+			_show_offers([], -1)
+			_say(unreachable_text % ServerLink.describe(started["error"]))
+			if not ServerLink.answered(started["error"]):
+				_show_online(go_online_text)   # a server-side refusal is not cured by signing in again
+			_finish_loading()
+			return
 	var packs: Dictionary = await link.get_packs()
 	if not _current(generation):
 		return
@@ -101,6 +159,8 @@ func refresh() -> void:
 		_end_wait()
 		_show_offers([], -1)
 		_say(unreachable_text % ServerLink.describe(packs["error"]))
+		if not ServerLink.answered(packs["error"]):
+			_show_online(go_online_text)
 		_finish_loading()
 		return
 	var collection: Dictionary = await link.get_collection()
@@ -222,6 +282,11 @@ func _bought_line(answer: Dictionary, template: String) -> String:
 
 func _refusal_line(answer: Dictionary) -> String:
 	var error: Dictionary = answer.get("error", {})
+	match CardAccount.code_of(answer):
+		ServerLink.ACCOUNT_SESSION_REPLACED:
+			return replaced_text
+		ServerLink.ACCOUNT_VERSION_STALE:
+			return stale_text
 	var detail := str(error.get("detail", ""))
 	return detail if detail != "" else ServerLink.describe(error)
 

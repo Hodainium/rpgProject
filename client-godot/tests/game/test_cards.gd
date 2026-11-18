@@ -487,18 +487,21 @@ func test_the_link_sends_the_account_calls_with_their_keys() -> void:
 	bridge.answers["OpenPack"] = [[true, {"openingId": "o", "packId": "p", "packVersion": 1, "gemsSpent": 100, "cards": [], "gems": 0, "dust": 0, "drawSeed": "1"}]]
 	bridge.answers["DustCard"] = [[false, {"status": 409, "errorCode": 1403, "title": "Card locked by the run", "detail": "", "runId": "r1", "runStatus": "Active"}]]
 	bridge.answers["GetCollection"] = [[true, {"owned": [{"cardId": "item.a", "acquiredAt": "t", "source": "pack", "lockedByRunId": "r1"}], "gems": 5, "dust": 40,
-		"version": 2, "activeRunId": "r1", "activeRunStatus": "Active", "pity": [{"packId": "p", "missedPacks": {"legendary": 7}}]}]]
+		"accountVersion": 2, "activeRunId": "r1", "activeRunStatus": "Active", "pity": [{"packId": "p", "missedPacks": {"legendary": 7}}]}]]
 	var link := _link(bridge)
 	var key := ServerLink.new_request_key()
 	var opened: Dictionary = await link.open_pack("p", key)
 	check(opened["ok"], "the open is answered")
-	eq(JSON.parse_string(bridge.of("OpenPack")[0][2]), {"requestKey": key}, "the body is the request key")
+	# Spec account-session: the session (the fake login's 1) and the account version the screen showed (the login's 0) go with it.
+	eq(JSON.parse_string(bridge.of("OpenPack")[0][2]), {"requestKey": key, "session": 1.0, "expectedAccountVersion": 0.0},
+		"the body is the request key, the session and the account version")
 	eq(bridge.of("OpenPack")[0][1], "p", "for that pack")
 	bridge.answers["BuyPack"] = [[true, {"packId": "p", "packVersion": 2, "count": 3, "gemsSpent": 300, "gems": 50, "owned": 3}]]
 	var bought: Dictionary = await link.buy_pack("p", 3, key)
 	check(bought["ok"] and int(bought["data"]["owned"]) == 3, "the buy is answered with the response: %s" % bought)
 	var buy_body: Dictionary = JSON.parse_string(bridge.of("BuyPack")[0][2])
-	eq([buy_body.keys().size(), buy_body["requestKey"], int(buy_body["count"])], [2, key, 3], "the body is the key and the count")
+	eq([buy_body.keys().size(), buy_body["requestKey"], int(buy_body["count"]), int(buy_body["session"])], [4, key, 3, 1],
+		"the body is the key, the count, the session and the account version")
 	eq(bridge.of("BuyPack")[0][1], "p", "for that pack")
 	check(not bridge.of("BuyPack")[0][2].contains("3.0"), "the count goes as a whole number")
 	var dusted: Dictionary = await link.dust_card("item.a", key)
@@ -574,7 +577,7 @@ func _server_session(bridge: FakeBridge) -> Array:
 
 
 const COLLECTION := {"owned": [{"cardId": "item.a", "acquiredAt": "t", "source": "pack", "lockedByRunId": "r1"},
-	{"cardId": "item.b", "acquiredAt": "t", "source": "craft", "lockedByRunId": null}], "gems": 5, "dust": 40, "version": 2,
+	{"cardId": "item.b", "acquiredAt": "t", "source": "craft", "lockedByRunId": null}], "gems": 5, "dust": 40, "accountVersion": 2,
 	"activeRunId": "r1", "activeRunStatus": "Active", "pity": [{"packId": "p", "missedPacks": {"legendary": 7, "mythic": 3}}],
 	"ownedPacks": [{"packId": "descent-pack", "count": 2}, {"packId": "old-pack", "count": 1, "refundHeld": true}]}
 
@@ -632,7 +635,11 @@ func test_the_packs_command_lists_opens_and_shows_pity() -> void:
 ## Spec pack-shop 6: `packs buy` prints the key and the new count, and a retry with the same key sends the same request.
 func test_the_packs_command_buys_and_a_retry_keeps_its_key() -> void:
 	var bridge := FakeBridge.new()
-	bridge.answers["BuyPack"] = [[true, {"packId": "descent-pack", "packVersion": 1, "count": 3, "gemsSpent": 300, "gems": 200, "owned": 3}]]
+	bridge.answers["BuyPack"] = [[true, {"packId": "descent-pack", "packVersion": 1, "count": 3, "gemsSpent": 300, "gems": 200, "owned": 3,
+		"accountVersion": 1}]]
+	# A replayed answer carries the version of its time, so the client reads the account again before its next decision.
+	bridge.answers["GetCollection"] = [[true, {"owned": [], "gems": 200, "dust": 0, "accountVersion": 1, "activeRunId": null,
+		"activeRunStatus": null, "pity": [], "ownedPacks": [{"packId": "descent-pack", "count": 3}]}]]
 	var session := _server_session(bridge)
 	var bought: Dictionary = await session[1].execute("packs buy descent-pack 3")
 	check(bought["ok"], "buy works: %s" % bought["text"])
@@ -643,7 +650,8 @@ func test_the_packs_command_buys_and_a_retry_keeps_its_key() -> void:
 	check(bought["text"].contains("[key %s]" % sent["requestKey"]), "the reply prints the key the call used")
 	var retried: Dictionary = await session[1].execute("packs buy descent-pack 3 %s" % sent["requestKey"])
 	check(retried["ok"], "a retry with the key")
-	eq(JSON.parse_string(bridge.of("BuyPack")[1][2]), sent, "the retry sends the very same request (the server answers it once)")
+	var again: Dictionary = JSON.parse_string(bridge.of("BuyPack")[1][2])
+	eq([again["requestKey"], int(again["count"])], [sent["requestKey"], 3], "the retry sends the same key and count (the server answers it once)")
 	var one: Dictionary = await session[1].execute("packs buy descent-pack")
 	check(one["ok"], "the count defaults to one")
 	eq(int(JSON.parse_string(bridge.of("BuyPack")[2][2])["count"]), 1, "one pack")

@@ -176,6 +176,33 @@ public class MigrationTests(StackFixture stack)
         Assert.Equal(PostgresErrorCodes.CheckViolation, negative.SqlState);
     }
 
+    /// <summary>Spec account-session 3.1: 0012 applies on a database at 0011 with players in it; each starts with no session (0).</summary>
+    [Fact]
+    public async Task Migration0012_AddsTheAccountSession_StartingAtZero_ForExistingPlayers()
+    {
+        await using var dataSource = NpgsqlDataSource.Create(await stack.NewDatabaseAsync());
+        var player = Guid.NewGuid();
+        await using (var connection = await dataSource.OpenConnectionAsync(Ct))
+        {
+            await ExecuteAsync(connection, "CREATE TABLE schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL)");
+            foreach (var (name, sql) in MigrationRunner.Scripts.Where(s => string.CompareOrdinal(s.Name, "0012") < 0))
+            {
+                await ExecuteAsync(connection, sql);
+                await ExecuteAsync(connection, $"INSERT INTO schema_migrations (name, applied_at) VALUES ('{name}', now())");
+            }
+
+            await ExecuteAsync(connection, $"INSERT INTO players (player_id, display_name, created_at) VALUES ('{player}', 'p', now())");
+            await ExecuteAsync(connection, $"INSERT INTO wallets (player_id, gems, dust, version) VALUES ('{player}', 70, 5, 9)");
+        }
+
+        await new MigrationRunner(dataSource, NullLogger<MigrationRunner>.Instance).EnsureMigratedAsync(Ct);
+
+        Assert.Equal(["0"], await ListAsync(dataSource, $"SELECT account_session::text FROM players WHERE player_id = '{player}'"));
+        // The column is renamed, not replaced: the balance and the account version survive.
+        Assert.Equal(["70|5|9"], await ListAsync(dataSource,
+            $"SELECT gems || '|' || dust || '|' || account_version FROM wallets WHERE player_id = '{player}'"));
+    }
+
     private static async Task ExecuteAsync(NpgsqlConnection connection, string sql)
     {
         await using var command = new NpgsqlCommand(sql, connection);

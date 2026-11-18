@@ -81,6 +81,23 @@ var _signing_in: bool = false
 var _card_account: CardAccount
 var _sign_in_error: Dictionary = {}
 
+## Spec account-session 2.1: the player's account session (0 = none yet), started right after the first sign-in (a token
+## refreshed after a 401 keeps it: that is the same login). Every account-changing call carries it.
+var account_session: int = 0
+## Spec account-session 2.3: a call came back 1412 (a newer login, another device). Account calls are refused here until
+## take_account() or go_online() starts a new session.
+var session_replaced: bool = false
+## The session started, was replaced or was taken back (the card screens redraw their gate).
+signal session_changed
+var _starting_session: bool = false
+var _session_result: Dictionary = {}
+signal _session_started
+
+const ACCOUNT_SESSION_REPLACED: int = 1412
+const ACCOUNT_VERSION_STALE: int = 1413
+## Spec card-ui / account-session 2.3: the line for a call refused because another login holds the account.
+var replaced_text: String = "Your account was opened somewhere else."
+
 # The linked run (Part B).
 var _run: RunController
 var _run_id: String = ""
@@ -163,11 +180,15 @@ static func bridge_available() -> bool:
 ## for a few seconds after startup, until its card catalog is loaded) is asked again after its Retry-After; nothing was started by
 ## it. Any other failure returns at once: a start is not idempotent, so one with no answer is not repeated blindly.
 func start_run(ruleset_version: String, run_structure_id: String, character_ids: Array) -> Dictionary:
+	# Spec account-session 2.2: a run start abandons the active run, so it carries the account session.
+	var fenced := await _fenced()
+	if not fenced.is_empty():
+		return fenced
 	var request := {"rulesetVersion": ruleset_version, "runStructureId": run_structure_id,
-		"characterIds": character_ids.map(func(id) -> String: return str(id))}
+		"characterIds": character_ids.map(func(id) -> String: return str(id)), "session": account_session}
 	var result := {}
 	for attempt in maxi(start_unavailable_attempts, 1):
-		result = await _request("StartRun", [WireJson.stringify(request)])
+		result = _watch_fence(await _request("StartRun", [WireJson.stringify(request)]))
 		if result["ok"] or int(result["error"].get("status", 0)) != 503 or attempt == start_unavailable_attempts - 1:
 			return result
 		await _backoff(result["error"], retry_base_seconds)
@@ -229,7 +250,7 @@ func get_steps(run_id: String) -> Dictionary:
 	return await _request("GetSteps", [run_id])
 
 
-## GET /api/v1/wallet (spec settlement-outbox): data = WalletResponse {gems, version, recent}.
+## GET /api/v1/wallet (spec settlement-outbox): data = WalletResponse {gems, accountVersion, recent}.
 func get_wallet() -> Dictionary:
 	return await _request("GetWallet", [])
 
@@ -256,43 +277,163 @@ func get_packs() -> Dictionary:
 	return await _request("GetPacks", [])
 
 
-## GET /api/v1/cards/collection: data = CollectionResponse {owned, gems, dust, version, activeRunId, activeRunStatus, pity,
-## ownedPacks} (ownedPacks: the unopened packs per type, spec pack-shop 2.3).
+## GET /api/v1/cards/collection: data = CollectionResponse {owned, gems, dust, accountVersion, activeRunId, activeRunStatus,
+## pity, ownedPacks} (ownedPacks: the unopened packs per type, spec pack-shop 2.3). A full read: the account version it carries
+## is the one the screen now shows (spec account-session 2.3).
 func get_collection() -> Dictionary:
-	return await _request("GetCollection", [])
+	var result := await _request("GetCollection", [])
+	if result["ok"] and result["data"] is Dictionary:
+		card_account().account_version = int(result["data"].get("accountVersion", -1))
+	return result
 
 
 ## POST /api/v1/packs/{packId}/open: spends one owned pack (409 1411 when none; spec pack-shop 2.2). data = PackOpenResponse
-## (gemsSpent 0, packsLeft). Pass the same `key` again to retry.
-func open_pack(pack_id: String, key: String) -> Dictionary:
-	return await _request("OpenPack", [pack_id, WireJson.stringify({"requestKey": key})])
+## (gemsSpent 0, packsLeft, accountVersion). Pass the same `key` again to retry.
+func open_pack(pack_id: String, key: String, fence: Dictionary = {}) -> Dictionary:
+	return await _decision("OpenPack", pack_id, {"requestKey": key}, fence)
 
 
 ## POST /api/v1/packs/refunds (spec pack-shop 2.5): the Open packs page calls it when it opens. Pays back unopened packs of a
 ## type retired with a refund; data = PackRefundsResponse {refunded: [{packId, count, gemsRefunded}]}, empty when nothing was due.
+## Fenced by the session; it carries no account version (spec account-session 2.3), so the page reads the collection after it.
 func refund_packs() -> Dictionary:
-	return await _request("RefundPacks", [])
+	var fenced := await _fenced()
+	if not fenced.is_empty():
+		return fenced
+	var result := _watch_fence(await _request("RefundPacks", [WireJson.stringify({"session": account_session})]))
+	if result["ok"]:
+		card_account().account_version = -1   # a payout moved it; the next decision reads the account first (review fix)
+	return result
 
 
 ## POST /api/v1/packs/{packId}/buy (spec pack-shop 2.1): gems for `count` (1..10) unopened packs. data = PackBuyResponse
-## {packId, packVersion, count, gemsSpent, gems, owned}. Pass the same `key` (and count) again to retry: it buys once.
-func buy_pack(pack_id: String, count: int, key: String) -> Dictionary:
-	return await _request("BuyPack", [pack_id, WireJson.stringify({"requestKey": key, "count": count})])
+## {packId, packVersion, count, gemsSpent, gems, owned, accountVersion}. Pass the same `key` (and count) again to retry: it
+## buys once.
+func buy_pack(pack_id: String, count: int, key: String, fence: Dictionary = {}) -> Dictionary:
+	return await _decision("BuyPack", pack_id, {"requestKey": key, "count": count}, fence)
 
 
 ## POST /api/v1/cards/{cardId}/dust: data = DustResponse; a 409 1403 names the run that holds the card (error.runId, error.runStatus).
-func dust_card(card_id: String, key: String) -> Dictionary:
-	return await _request("DustCard", [card_id, WireJson.stringify({"requestKey": key})])
+func dust_card(card_id: String, key: String, fence: Dictionary = {}) -> Dictionary:
+	return await _decision("DustCard", card_id, {"requestKey": key}, fence)
 
 
 ## POST /api/v1/cards/{cardId}/craft: data = CraftResponse.
-func craft_card(card_id: String, key: String) -> Dictionary:
-	return await _request("CraftCard", [card_id, WireJson.stringify({"requestKey": key})])
+func craft_card(card_id: String, key: String, fence: Dictionary = {}) -> Dictionary:
+	return await _decision("CraftCard", card_id, {"requestKey": key}, fence)
 
 
-## POST /api/v1/runs/{runId}/abandon: cancels the Active run (the dust pop-up's path); data null.
+## POST /api/v1/runs/{runId}/abandon: cancels the Active run (the dust pop-up's path); data null. Fenced by the session.
 func abandon_run(run_id: String) -> Dictionary:
-	return await _request("AbandonRun", [run_id])
+	var fenced := await _fenced()
+	if not fenced.is_empty():
+		return fenced
+	return _watch_fence(await _request("AbandonRun", [run_id, WireJson.stringify({"session": account_session})]))
+
+
+# --- The account session (spec account-session) ----------------------------------------------------------------------
+
+## POST /api/v1/account/session: the account login. data = AccountSessionResponse {session, collection}. Keeps the session, takes
+## the collection's account version, and clears a replaced session.
+func start_account_session() -> Dictionary:
+	if _starting_session:
+		await _session_started
+		return _session_result   # review fix: the start this caller waited for, not a guess from the state
+	_starting_session = true
+	var result := await _request("StartAccountSession", [])
+	_starting_session = false
+	_session_result = result
+	if result["ok"] and result["data"] is Dictionary:
+		account_session = int(result["data"].get("session", 0))
+		session_replaced = false
+		var collection: Variant = result["data"].get("collection")
+		card_account().account_version = int(collection.get("accountVersion", -1)) if collection is Dictionary else -1
+		session_changed.emit()
+	_session_started.emit()
+	return result
+
+
+## Spec account-session 2.3: after a give-up, a new session fences anything of the given-up request still on its way. When it
+## cannot start (still offline), the link forgets its session, so the next fenced call starts one before it goes out.
+func renew_session() -> void:
+	var started := await start_account_session()
+	if not started["ok"]:
+		account_session = 0
+
+
+## Spec account-session 2.3: "Use it here" after a 1412: this client takes the account back (a new session; other devices are
+## fenced from now on).
+func take_account() -> Dictionary:
+	return await start_account_session()
+
+
+## Spec account-session 2.1: Go online from offline mode: sign in again (a fresh token) and start a session.
+func go_online() -> Dictionary:
+	_token = ""
+	account_session = 0
+	var signed := await _sign_in()
+	if not signed["ok"]:
+		return signed
+	if account_session == 0:
+		return await start_account_session()
+	return {"ok": true, "data": null, "error": {}}
+
+
+## A fenced call may go out: {} when the link holds a current session (starting one first when it has none), else the refusal
+## to return instead (a replaced session, or the session call's failure).
+func _fenced() -> Dictionary:
+	if session_replaced:
+		return {"ok": false, "data": null, "error": {"status": -1, "local": true, "busy": false, "title": replaced_text,
+			"errorCode": ACCOUNT_SESSION_REPLACED}}
+	if account_session == 0:
+		var started := await start_account_session()
+		if not started["ok"]:
+			return started
+	return {}
+
+
+## An account decision (buy, open, dust, craft): the session and the account version the screen showed go with it (a version
+## the client no longer trusts is read first); a success keeps the answer's version only when it is the one sent + 1. The result
+## carries `fence` {session, accountVersion}: what it sent. A retry passes it back (review fix: the same key, session and version
+## on every try of one action, whatever another call changed meanwhile).
+func _decision(method: String, target: String, body: Dictionary, fence: Dictionary = {}) -> Dictionary:
+	var account := card_account()
+	var session := int(fence.get("session", 0))
+	var sent := int(fence.get("accountVersion", -1))
+	if fence.is_empty():
+		var fenced := await _fenced()
+		if not fenced.is_empty():
+			return fenced
+		if account.account_version < 0:
+			var read := await get_collection()
+			if not read["ok"]:
+				return read
+		session = account_session
+		sent = account.account_version
+	var request := body.duplicate()
+	request["session"] = session
+	request["expectedAccountVersion"] = sent
+	var result := _watch_fence(await _request(method, [target, WireJson.stringify(request)]))
+	result["fence"] = {"session": session, "accountVersion": sent}
+	if result["ok"] and result["data"] is Dictionary:
+		var now := int(result["data"].get("accountVersion", -1))
+		account.account_version = now if now == sent + 1 else -1   # else: read again before the next decision
+	return result
+
+
+## Notes what a fenced call's refusal says: 1412 marks the session replaced, 1413 takes the current account version.
+func _watch_fence(result: Dictionary) -> Dictionary:
+	if result["ok"]:
+		return result
+	match int(_code(result["error"])):
+		ACCOUNT_SESSION_REPLACED:
+			if not session_replaced:
+				session_replaced = true
+				session_changed.emit()
+		ACCOUNT_VERSION_STALE:
+			var current: Variant = result["error"].get("currentAccountVersion")
+			card_account().account_version = int(current) if current != null else -1
+	return result
 
 
 ## Spec card-ui 2.5: the player's one account action in flight (buy, open, dust, craft), made on first use for this link.
@@ -366,7 +507,7 @@ func battle_verdicts(run: RunController, only_seq: int = -1) -> Array[Dictionary
 
 
 static func describe_wallet(wallet: Dictionary) -> String:
-	var lines := PackedStringArray(["gems %d (version %d)" % [int(wallet.get("gems", 0)), int(wallet.get("version", 0))]])
+	var lines := PackedStringArray(["gems %d (account version %d)" % [int(wallet.get("gems", 0)), int(wallet.get("accountVersion", 0))]])
 	for entry in wallet.get("recent", []):
 		lines.append("  %+d %s %s%s" % [int(entry.get("delta", 0)), entry.get("currency", "?"), entry.get("reason", "?"),
 			" (battle %s)" % entry["refBattleId"] if entry.get("refBattleId") != null else ""])
@@ -851,6 +992,11 @@ func _linked() -> bool:
 	return _run != null and is_instance_valid(_run) and _run.state != null and _run.state.run_id == _run_id
 
 
+## The server answered (any HTTP status), as opposed to no answer at all or a refusal made here before any call.
+static func answered(error: Dictionary) -> bool:
+	return int(error.get("status", 0)) > 0
+
+
 ## No answer, a server error or rate limiting: worth retrying. A 4xx refusal is not.
 static func retryable(error: Dictionary) -> bool:
 	var status := int(error.get("status", 0))
@@ -951,6 +1097,10 @@ func _sign_in() -> Dictionary:
 	else:
 		_sign_in_error = result["error"]
 	_signed_in.emit()
+	# Spec account-session 2.1: the session is the login, started right after the first sign-in (best effort: a fenced call
+	# starts it again if this fails). A token refreshed after a 401 keeps the session: it is the same login.
+	if result["ok"] and account_session == 0 and not session_replaced and not _starting_session:
+		start_account_session()   # in the background (review fix): a fenced call waits for it, other calls do not
 	return result if not result["ok"] else {"ok": true, "data": null, "error": {}}
 
 

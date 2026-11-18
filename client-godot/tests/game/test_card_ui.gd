@@ -14,7 +14,7 @@ const PACKS := {"packs": [{"packId": "descent-pack", "name": "Descent Pack", "ve
 	"cardIds": [], "pityPacks": {"legendary": 20, "epic": 10, "mythic": 30}, "firstGuarantees": {}, "minRarityPerPack": "rare"},
 	{"packId": "mini-pack", "name": "Mini", "version": 1, "priceGems": 40, "cardCount": 5, "oddsPer10000": {"common": 10000},
 	"setIds": ["descent"], "cardIds": [], "pityPacks": {}, "firstGuarantees": {}, "minRarityPerPack": null}]}
-const COLLECTION := {"owned": [], "gems": 340, "dust": 0, "version": 3, "activeRunId": null, "activeRunStatus": null, "pity": [],
+const COLLECTION := {"owned": [], "gems": 340, "dust": 0, "accountVersion": 3, "activeRunId": null, "activeRunStatus": null, "pity": [],
 	"ownedPacks": [{"packId": "descent-pack", "count": 2}, {"packId": "old-pack", "count": 4, "refundHeld": true}]}
 
 var _games: Array[GameMain] = []
@@ -173,7 +173,8 @@ func test_lost_buy_is_resent_with_its_key_until_the_server_answers() -> void:
 	var keys := _buy_bodies(bridge).map(func(body: Dictionary) -> String: return body["requestKey"])
 	check(keys.all(func(key: String) -> bool: return key == answer["key"]), "every try carried the same key")
 	var last: Dictionary = _buy_bodies(bridge)[-1]
-	eq([int(last["count"]), last.size()], [5, 2], "the very same request (the server answers a known key once)")
+	eq([int(last["count"]), last.size(), int(last["session"]), int(last["expectedAccountVersion"])], [5, 4, 1, 3],
+		"the very same request, with the session and the account version read before (the server answers a known key once)")
 	check(not DirAccess.dir_exists_absolute(link.saves_dir), "nothing was written to disk")
 
 

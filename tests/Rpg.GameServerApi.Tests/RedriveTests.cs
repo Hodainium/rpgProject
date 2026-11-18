@@ -23,7 +23,7 @@ public class RedriveTests(StackFixture stack)
     };
 
     private static readonly Rpg.Contracts.Runs.RunStartRequest Start =
-        new(ApiFactory.TestRuleset, "descent", ["warrior", "cleric", "ranger"]);
+        new(ApiFactory.TestRuleset, "descent", ["warrior", "cleric", "ranger"], Session: null);   // the session is added per call (AccountTestExtensions.StartFencedRunAsync)
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -51,7 +51,7 @@ public class RedriveTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Ops);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);   // writes the genesis job (rabbit) to the outbox
+        var run = await client.StartFencedRunAsync(Start, Ct);   // writes the genesis job (rabbit) to the outbox
         await ExecuteAsync(factory,
             "UPDATE outbox SET dead_lettered_at = now(), dead_letter_reason = 'attempts', attempts = 20 WHERE published_at IS NULL");
 
@@ -75,8 +75,8 @@ public class RedriveTests(StackFixture stack)
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Ops);
         var alice = await ClientAsync(factory, "alice");
         var bob = await ClientAsync(factory, "bob");
-        var live = await alice.StartRunAsync(Start, Ct);
-        var ended = await bob.StartRunAsync(Start, Ct);
+        var live = await alice.StartFencedRunAsync(Start, Ct);
+        var ended = await bob.StartFencedRunAsync(Start, Ct);
         await ExecuteAsync(factory,
             "UPDATE run_steps SET dead_lettered_at = now(), dead_letter_reason = 'attempts', attempts = 5");
         await ExecuteAsync(factory, $"UPDATE runs SET status = 'Lost' WHERE run_id = '{ended.RunId}'");

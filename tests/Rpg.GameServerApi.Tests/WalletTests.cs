@@ -84,7 +84,7 @@ public class WalletTests(StackFixture stack)
 
         var redis = await ConnectionMultiplexer.ConnectAsync(stack.RedisConnectionString);
         await redis.GetDatabase().KeyDeleteAsync(VerifyPolicy.WalletKey(player));  // scenario 4
-        await ExecuteAsync(factory, $"UPDATE wallets SET gems = 15, version = version + 1 WHERE player_id = '{player}'");
+        await ExecuteAsync(factory, $"UPDATE wallets SET gems = 15, account_version = account_version + 1 WHERE player_id = '{player}'");
         var second = await client.GetWalletAsync(Ct);
 
         Assert.Equal(10, first.Gems);
@@ -107,7 +107,7 @@ public class WalletTests(StackFixture stack)
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Quiet);
         var client = await ClientAsync(factory, Alice());
         var player = await PlayerIdAsync(factory, Alice());
-        var run = await client.StartRunAsync(new Rpg.Contracts.Runs.RunStartRequest(ApiFactory.TestRuleset, "descent", ["warrior"]), Ct);
+        var run = await client.StartFencedRunAsync(new Rpg.Contracts.Runs.RunStartRequest(ApiFactory.TestRuleset, "descent", ["warrior"], Session: null), Ct);
         await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Battle(run.RunId, 2)), Ct);
         var battle = $"{run.RunId}/f0/c5";
         await GrantAsync(factory, player, battle, "warrior", 10);
@@ -195,8 +195,8 @@ public class WalletTests(StackFixture stack)
     {
         await ExecuteAsync(factory, $"INSERT INTO players VALUES ('{player}', 'p', now()) ON CONFLICT DO NOTHING");
         await ExecuteAsync(factory,
-            $"INSERT INTO wallets (player_id, gems, version) VALUES ('{player}', {gems}, 1) " +
-            $"ON CONFLICT (player_id) DO UPDATE SET gems = wallets.gems + {gems}, version = wallets.version + 1");
+            $"INSERT INTO wallets (player_id, gems, account_version) VALUES ('{player}', {gems}, 1) " +
+            $"ON CONFLICT (player_id) DO UPDATE SET gems = wallets.gems + {gems}, account_version = wallets.account_version + 1");
         await ExecuteAsync(factory,
             "INSERT INTO wallet_ledger (player_id, currency, delta, reason, ref_battle_id, idempotency_key) " +
             $"VALUES ('{player}', 'gems', {gems}, 'completion_mark', '{battle}', 'mark:{battle}:{character}:boss')");

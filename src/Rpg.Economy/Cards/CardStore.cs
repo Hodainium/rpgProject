@@ -214,6 +214,48 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
         // Review fix (spec pack-shop 2.3): one snapshot for the whole read, so a buy that commits mid-read can never show its
         // packs beside the gems it spent (or an open's cards beside the pack it used).
         await using var transaction = await connection.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, ct);
+        var collection = await ReadCollectionAsync(connection, transaction, playerId, ct);
+        await transaction.CommitAsync(ct);
+        return collection;
+    }
+
+    /// <summary>
+    /// Spec account-session 2.1: the account login. Under the account lock, raises the player's session number and reads the
+    /// collection in the same transaction, so the snapshot is final: no account action can be between its lock and its commit
+    /// while this holds the lock, and every later call from an older session is refused. READ COMMITTED on purpose: each read
+    /// takes its snapshot after the lock is held (a repeatable-read snapshot would be taken by the lock statement itself, before
+    /// the wait, and miss an action that committed during it). Cards, packs and pity change only under this lock; the wallet row
+    /// (gems, dust, version) is read in one statement.
+    /// </summary>
+    public async Task<AccountSessionResponse> StartSessionAsync(Guid playerId, string playerName, DateTimeOffset now, CancellationToken ct)
+    {
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
+        await using var transaction = await connection.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        await LockAccountAsync(connection, transaction, playerId, ct);
+        await EnsurePlayerAsync(connection, transaction, playerId, playerName, now, ct);
+        long session;
+        await using (var update = Cmd(connection, transaction,
+            "UPDATE players SET account_session = account_session + 1 WHERE player_id = $1 RETURNING account_session", playerId))
+        {
+            session = (long)(await update.ExecuteScalarAsync(ct))!;
+        }
+
+        var collection = await ReadCollectionAsync(connection, transaction, playerId, ct);
+        await transaction.CommitAsync(ct);
+        return new AccountSessionResponse(session, collection);
+    }
+
+    /// <summary>
+    /// Spec account-session 2.2: the session and version check for a caller outside the card store that takes the account lock
+    /// itself (the run abandon). Call it after the lock; null when the call may go on.
+    /// </summary>
+    public static Task<CardProblem?> CheckFenceAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid playerId,
+        AccountFence fence, CancellationToken ct) =>
+        FenceAsync(connection, transaction, playerId, fence, ct);
+
+    private static async Task<CollectionResponse> ReadCollectionAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
+        Guid playerId, CancellationToken ct)
+    {
         var active = await ActiveRunAsync(connection, transaction, playerId, ct);
         var owned = new List<OwnedCardDto>();
         await using (var select = Cmd(connection, transaction,
@@ -230,7 +272,7 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
 
         long gems = 0, dust = 0;
         long version = 0;
-        await using (var wallet = Cmd(connection, transaction, "SELECT gems, dust, version FROM wallets WHERE player_id = $1", playerId))
+        await using (var wallet = Cmd(connection, transaction, "SELECT gems, dust, account_version FROM wallets WHERE player_id = $1", playerId))
         {
             await using var reader = await wallet.ExecuteReaderAsync(ct);
             if (await reader.ReadAsync(ct))
@@ -267,7 +309,6 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
             pity.Add(new PityStateDto(pack.PackId, await MissedAsync(connection, transaction, playerId, pack, forUpdate: false, ct)));
         }
 
-        await transaction.CommitAsync(ct);
         return new CollectionResponse(owned, gems, dust, version, active?.RunId.ToString("D"), active?.Status, pity, packsOwned);
     }
 
@@ -350,16 +391,33 @@ public sealed partial class CardStore(NpgsqlDataSource dataSource)
         return (reader.GetInt64(0), reader.GetInt64(1));
     }
 
-    /// <summary>Adds to the wallet (negative = spend); the CHECK constraints are the last guard. Returns the new balances.</summary>
-    private static async Task<(long Gems, long Dust)> MoveWalletAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
-        Guid playerId, int gems, int dust, DateTimeOffset now, CancellationToken ct)
+    /// <summary>
+    /// Adds to the wallet (negative = spend) and raises the account version (spec account-session 2.4); the CHECK constraints are
+    /// the last guard. Returns the new balances and version.
+    /// </summary>
+    private static async Task<(long Gems, long Dust, long Version)> MoveWalletAsync(NpgsqlConnection connection,
+        NpgsqlTransaction transaction, Guid playerId, int gems, int dust, DateTimeOffset now, CancellationToken ct)
     {
         await using var update = Cmd(connection, transaction,
-            "UPDATE wallets SET gems = gems + $2, dust = dust + $3, version = version + 1, updated_at = $4 WHERE player_id = $1 RETURNING gems, dust",
+            "UPDATE wallets SET gems = gems + $2, dust = dust + $3, account_version = account_version + 1, updated_at = $4 WHERE player_id = $1 RETURNING gems, dust, account_version",
             playerId, gems, dust, now.ToUniversalTime());
         await using var reader = await update.ExecuteReaderAsync(ct);
         await reader.ReadAsync(ct);
-        return (reader.GetInt64(0), reader.GetInt64(1));
+        return (reader.GetInt64(0), reader.GetInt64(1), reader.GetInt64(2));
+    }
+
+    /// <summary>
+    /// Spec account-session 2.4: raises the account version for a change that moves no currency (a hold, a free refund); returns
+    /// the new version.
+    /// </summary>
+    private static async Task<long> RaiseVersionAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid playerId,
+        DateTimeOffset now, CancellationToken ct)
+    {
+        await WalletRowAsync(connection, transaction, playerId, ct);
+        await using var update = Cmd(connection, transaction,
+            "UPDATE wallets SET account_version = account_version + 1, updated_at = $2 WHERE player_id = $1 RETURNING account_version", playerId,
+            now.ToUniversalTime());
+        return (long)(await update.ExecuteScalarAsync(ct))!;
     }
 
     private static Task LedgerAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid playerId, string currency,
