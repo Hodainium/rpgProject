@@ -1160,6 +1160,14 @@ func test_card_page_renders_faces_live_and_frees_them() -> void:
 	var page: CardPage = screen.get_node("%Page")
 	screen.set_filter("missing", true)
 	eq(page.views.size(), screen.per_page(), "one view per card on a full page")
+	await _frames(2)
+	var full_size: Vector2 = page.slots.values()[0].size
+	screen.set_filter("text", "card.item.c2")
+	await _frames(2)
+	eq([page.slots.size(), page.slots.values()[0].size], [1, full_size],
+		"one search match keeps the grid: the card keeps the size it has on a full page (playtest 2026-11-18)")
+	screen.set_filter("text", "")
+	await _frames(2)
 	var first: CardView3D = page.views.values()[0]
 	var viewport := first.viewport
 	check(first.face_view != null and first.face_view.get_parent() == viewport, "each card renders its face in its own SubViewport")

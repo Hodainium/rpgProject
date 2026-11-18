@@ -118,6 +118,16 @@ func show_entries(entries: Array[Dictionary], style: CardStyle, scene: PackedSce
 		view.set_ghost(entry["state"] == CollectionModel.STATE_MISSING)
 		if id == focused:
 			slot.grab_focus.call_deferred()
+	# Playtest 2026-11-18: a short page (a search with one match) keeps the full grid: empty cells hold the other places, so the
+	# cards stay the size and place they have on a full page.
+	for index in range(wanted.size(), columns * rows):
+		var filler := Control.new()
+		filler.name = "Empty%d" % index
+		filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		filler.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		filler.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_grid.add_child(filler)
+		_cells[&"_empty_%d" % index] = filler
 	set_paused(_paused)
 	_queue_place()
 
