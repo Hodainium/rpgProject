@@ -56,6 +56,51 @@ internal static class CardSql
             "INSERT INTO players (player_id, display_name, created_at) VALUES ($1, $2, $3) ON CONFLICT (player_id) DO NOTHING",
             ct, playerId, name, now.ToUniversalTime());
 
+    /// <summary>
+    /// Spec account-session 2.2 steps 3 and 4, inside the account transaction after the lock, the player row and the replay: the
+    /// call's session must be the player's current one, and (for a decision) the account must still be the version the screen
+    /// showed. Null when both hold; nothing is written either way.
+    /// </summary>
+    public static async Task<CardProblem?> FenceAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, Guid playerId,
+        AccountFence fence, CancellationToken ct)
+    {
+        long current;
+        await using (var select = Cmd(connection, transaction, "SELECT account_session FROM players WHERE player_id = $1", playerId))
+        {
+            current = await select.ExecuteScalarAsync(ct) is long session ? session : 0;
+        }
+
+        if (current != fence.Session)
+        {
+            return new CardProblem(CardFailure.SessionReplaced, current == 0
+                    ? "No account session is open for this account: start one (POST /api/v1/account/session) first."
+                    : $"Session {fence.Session} is not the account's current session ({current}): the account was opened somewhere else.",
+                Current: current);
+        }
+
+        if (fence.ExpectedAccountVersion is not { } expected)
+        {
+            return null;
+        }
+
+        // Review fix: the wallet row is locked with the read. Reward settlement writes it without the account lock, so an
+        // unlocked read could pass a version that a reward then moves before this decision commits; locked, the reward waits for
+        // this transaction and moves the version after it. The row is made only now, for the current session's own decision
+        // (an empty row is no account change: every decision makes one anyway).
+        await ExecAsync(connection, transaction, "INSERT INTO wallets (player_id) VALUES ($1) ON CONFLICT DO NOTHING", ct, playerId);
+        long version;
+        await using (var locked = Cmd(connection, transaction, "SELECT account_version FROM wallets WHERE player_id = $1 FOR UPDATE", playerId))
+        {
+            version = (long)(await locked.ExecuteScalarAsync(ct))!;
+        }
+
+        return version == expected
+            ? null
+            : new CardProblem(CardFailure.AccountVersionStale,
+                $"The account changed since it was read (account version {expected}, now {version}): read it again before deciding.",
+                Current: version);
+    }
+
     public static string Hash(string kind, string target) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(kind + "|" + target)));
 

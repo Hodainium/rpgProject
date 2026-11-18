@@ -82,9 +82,9 @@ public static class PendingGems
             long balance;
             await using (var wallet = new NpgsqlCommand(
                 """
-                INSERT INTO wallets (player_id, gems, version, updated_at) VALUES ($1, $2, 1, $3)
+                INSERT INTO wallets (player_id, gems, account_version, updated_at) VALUES ($1, $2, 1, $3)
                 ON CONFLICT (player_id) DO UPDATE
-                  SET gems = wallets.gems + EXCLUDED.gems, version = wallets.version + 1, updated_at = EXCLUDED.updated_at
+                  SET gems = wallets.gems + EXCLUDED.gems, account_version = wallets.account_version + 1, updated_at = EXCLUDED.updated_at
                 RETURNING gems
                 """, connection, transaction))
             {

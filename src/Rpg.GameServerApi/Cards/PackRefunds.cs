@@ -15,11 +15,14 @@ namespace Rpg.GameServerApi.Cards;
 public sealed class PackRefunds(CardStore store, MigrationRunner migrations, RunSummaryCache cache, RpgMetrics metrics,
     TimeProvider clock, ILogger<PackRefunds> logger)
 {
-    /// <summary>Refunds what is due and returns what was paid back.</summary>
-    public async Task<IReadOnlyList<PackRefund>> RefundAsync(Guid playerId, CancellationToken ct)
+    /// <summary>
+    /// Refunds what is due and returns the pass: what was paid back (no account version: spec account-session 2.3), or the
+    /// refusal when <paramref name="session"/> is not the player's current account session.
+    /// </summary>
+    public async Task<PackRefundPass> RefundAsync(Guid playerId, long session, CancellationToken ct)
     {
         await migrations.EnsureMigratedAsync(ct);
-        var pass = await store.RefundPlayerPacksAsync(playerId, clock.GetUtcNow(), ct);
+        var pass = await store.RefundPlayerPacksAsync(playerId, session, clock.GetUtcNow(), ct);
         foreach (var failure in pass.Failed)
         {
             metrics.PackRefundFailed(failure.PackId, "error");
@@ -41,11 +44,11 @@ public sealed class PackRefunds(CardStore store, MigrationRunner migrations, Run
                 refund.PlayerId, refund.Gems);
         }
 
-        if (pass.Paid.Count > 0)
+        if (pass.Paid.Count > 0 || pass.Held.Count > 0)   // a hold raises the account version too (spec account-session 2.4)
         {
             await cache.InvalidateAsync(VerifyPolicy.WalletKey(playerId));
         }
 
-        return pass.Paid;
+        return pass;
     }
 }

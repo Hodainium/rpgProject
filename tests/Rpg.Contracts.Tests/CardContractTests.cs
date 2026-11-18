@@ -68,15 +68,21 @@ public class CardContractTests
                 new PackTypeDto("descent-pack", "Descent Pack", 2, 100, 5, Odds, ["descent"], ["hero.cryomancer", "item.hex_charm"], Pity, First, "rare"),
             ])
         },
-        { "card-action-request.json", new AccountActionRequest(Guid.Parse("c0ffee00-0000-4000-8000-000000000001")) },
-        { "card-pack-open-response.json", new PackOpenResponse("opening-1", "descent-pack", 2, 0, Drawn, 20, 20, "-1234567890123456789", 2) },
-        { "card-pack-buy-request.json", new PackBuyRequest(Guid.Parse("c0ffee00-0000-4000-8000-000000000002"), 3) },
-        { "card-pack-buy-response.json", new PackBuyResponse("descent-pack", 2, 3, 300, 20, 3) },
+        { "card-action-request.json", new AccountActionRequest(Guid.Parse("c0ffee00-0000-4000-8000-000000000001"), 4, 17) },
+        { "card-pack-open-response.json", new PackOpenResponse("opening-1", "descent-pack", 2, 0, Drawn, 20, 20, "-1234567890123456789", 2, 18) },
+        { "card-pack-buy-request.json", new PackBuyRequest(Guid.Parse("c0ffee00-0000-4000-8000-000000000002"), 3, 4, 17) },
+        { "card-pack-buy-response.json", new PackBuyResponse("descent-pack", 2, 3, 300, 20, 3, 18) },
         { "card-owned-pack.json", new OwnedPackDto("descent-pack", 3) },
         { "card-owned-pack-held.json", new OwnedPackDto("descent-pack", 2, RefundHeld: true) },
         { "card-pack-refunds-response.json", new PackRefundsResponse([new PackRefundDto("descent-pack", 3, 300)]) },
-        { "card-dust-response.json", new DustResponse("item.hex_charm", 20, 1, 340) },
-        { "card-craft-response.json", new CraftResponse("hero.cryomancer", 3200, 1, 140) },
+        { "card-pack-refunds-request.json", new PackRefundsRequest(4) },
+        { "run-abandon-request.json", new RunAbandonRequest(4) },
+        {
+            "account-session-response.json",
+            new AccountSessionResponse(4, new CollectionResponse([], 120, 340, 17, null, null, [], [new OwnedPackDto("descent-pack", 3)]))
+        },
+        { "card-dust-response.json", new DustResponse("item.hex_charm", 20, 1, 340, 18) },
+        { "card-craft-response.json", new CraftResponse("hero.cryomancer", 3200, 1, 140, 18) },
         { "card-pack-type-request.json", PackRequest() },
         {
             "card-pack-type-response.json",

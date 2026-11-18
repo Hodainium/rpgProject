@@ -29,5 +29,8 @@ public static class ApiErrors
     public const int CharacterLocked = 1409;          // 400: run start with a character the account does not own
     public const int RunVerifying = 1410;             // 409: abandon refused, a won run is waiting for its verdict
     public const int NoPackOwned = 1411;              // 409: an open with no unopened pack of that type (spec pack-shop 3.1)
+    // Spec account-session 3.1: the fence on every account-changing call.
+    public const int AccountSessionReplaced = 1412;   // 409, extension `currentSession`: the request's session is not the player's current one
+    public const int AccountVersionStale = 1413;      // 409, extension `currentAccountVersion`: the account changed since the screen read it
     public const int RateLimited = 1201;              // 429 + Retry-After
 }

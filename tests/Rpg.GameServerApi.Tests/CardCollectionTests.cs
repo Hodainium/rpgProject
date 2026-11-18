@@ -60,6 +60,10 @@ public class CardCollectionTests(StackFixture stack)
     private static async Task<GameServerApiException> RefusedAsync(Func<Task> call) =>
         await Assert.ThrowsAsync<GameServerApiException>(call);
 
+    /// <summary>Spec account-session: the client's session and the account's current version, for a call straight to the store.</summary>
+    private static async Task<AccountFence> FenceOfAsync(GameServerClient client) =>
+        new(await client.SessionAsync(Ct), (await client.GetCollectionAsync(Ct)).AccountVersion);
+
     private static async Task AddPackAsync(ApiFactory factory, PackTypeRequest pack)
     {
         var (admin, _) = await PlayerAsync(factory, "designer");
@@ -71,7 +75,7 @@ public class CardCollectionTests(StackFixture stack)
 
     /// <summary>Spec pack-shop 2.1: buys unopened packs (the gems are spent here, not at the open).</summary>
     private static Task<PackBuyResponse> BuyAsync(GameServerClient client, string pack = StarterPack, int count = 1, Guid? key = null) =>
-        client.BuyPackAsync(pack, new PackBuyRequest(key ?? Guid.NewGuid(), count), Ct);
+        client.BuyPackAsync(pack, key ?? Guid.NewGuid(), count, Ct);
 
     /// <summary>Buys one pack, then opens it: what slice 5's single open did.</summary>
     private static async Task<PackOpenResponse> BuyAndOpenAsync(GameServerClient client, string pack = StarterPack)
@@ -386,7 +390,7 @@ public class CardCollectionTests(StackFixture stack)
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 100);
         await OwnAsync(factory, player, "item.k1", DateTimeOffset.UtcNow.AddMinutes(-5));
-        await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
+        await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct);
         await AddPackAsync(factory, CommonsOnly("commons", price: 10));
 
         await BuyAndOpenAsync(client, "commons");
@@ -621,13 +625,14 @@ public class CardCollectionTests(StackFixture stack)
     public async Task Buy_replayed_after_commit_spends_once()
     {
         await using var factory = await FactoryAsync();
-        var (_, player) = await PlayerAsync(factory, Name());
+        var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 250);
         var key = Guid.NewGuid();
         var store = factory.Services.GetRequiredService<CardStore>();
 
         // The commit, with no HTTP response: straight through the store, as the crashed request did.
-        var committed = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 2, 10, key, DateTimeOffset.UtcNow, Ct);
+        var committed = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 2, 10, key, await FenceOfAsync(client),
+            DateTimeOffset.UtcNow, Ct);
         var (retrying, _) = await PlayerAsync(factory, Name());
         var retried = await BuyAsync(retrying, count: 2, key: key);
 
@@ -666,7 +671,7 @@ public class CardCollectionTests(StackFixture stack)
         var many = await RefusedAsync(() => BuyAsync(client, count: 11));       // Cards:MaxPacksPerBuy is 10
         var unknown = await RefusedAsync(() => BuyAsync(client, "nope"));
         var retired = await RefusedAsync(() => BuyAsync(client, "old"));
-        var keyless = await RefusedAsync(() => client.BuyPackAsync(StarterPack, new PackBuyRequest(Guid.Empty, 1), Ct));
+        var keyless = await RefusedAsync(() => client.BuyPackAsync(StarterPack, Guid.Empty, 1, Ct));
 
         Assert.Equal((HttpStatusCode.Conflict, ApiErrors.InsufficientCurrency), (poor.StatusCode, poor.ErrorCode));
         Assert.All([none, many], e => Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CardRuleInvalid), (e.StatusCode, e.ErrorCode)));
@@ -1051,14 +1056,17 @@ public class CardCollectionTests(StackFixture stack)
     public async Task Buy_Replayed_AfterTheLimitIsLowered_ReturnsTheStoredResponse()
     {
         await using var factory = await FactoryAsync();
-        var (_, player) = await PlayerAsync(factory, Name());
+        var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, gems: 2000);
         var store = factory.Services.GetRequiredService<CardStore>();
         var key = Guid.NewGuid();
 
-        var committed = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 10, 10, key, DateTimeOffset.UtcNow, Ct);
-        var replayed = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 10, 5, key, DateTimeOffset.UtcNow, Ct);
-        var fresh = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 10, 5, Guid.NewGuid(), DateTimeOffset.UtcNow, Ct);
+        var committed = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 10, 10, key, await FenceOfAsync(client),
+            DateTimeOffset.UtcNow, Ct);
+        var replayed = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 10, 5, key, await FenceOfAsync(client),
+            DateTimeOffset.UtcNow, Ct);
+        var fresh = await store.BuyPacksAsync(Guid.Parse(player), Name(), StarterPack, 10, 5, Guid.NewGuid(), await FenceOfAsync(client),
+            DateTimeOffset.UtcNow, Ct);
 
         Assert.True(replayed.Replayed);
         Assert.Equal(committed.Value, replayed.Value);
@@ -1154,7 +1162,7 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
         await OwnAsync(factory, player, "item.k1", DateTimeOffset.UtcNow.AddMinutes(-5));
-        var run = await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
+        var run = await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct);
 
         var locked = await RefusedAsync(() => client.DustCardAsync("item.k1", Guid.NewGuid(), Ct));
         var collection = await client.GetCollectionAsync(Ct);
@@ -1171,7 +1179,7 @@ public class CardCollectionTests(StackFixture stack)
     {
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
-        await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
+        await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct);
         await OwnAsync(factory, player, "item.k1", DateTimeOffset.UtcNow.AddMinutes(1));
 
         var dusted = await client.DustCardAsync("item.k1", Guid.NewGuid(), Ct);
@@ -1185,7 +1193,7 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
         await OwnAsync(factory, player, "item.k1", DateTimeOffset.UtcNow.AddMinutes(-5));
-        var run = await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
+        var run = await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct);
         await RefusedAsync(() => client.DustCardAsync("item.k1", Guid.NewGuid(), Ct));
 
         await client.AbandonRunAsync(run.RunId, Ct);
@@ -1202,7 +1210,7 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
         await OwnAsync(factory, player, "item.k1", DateTimeOffset.UtcNow.AddMinutes(-5));
-        var run = await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
+        var run = await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct);
         await ExecuteAsync(factory, $"UPDATE runs SET status = 'Verifying' WHERE run_id = '{run.RunId}'");
 
         var locked = await RefusedAsync(() => client.DustCardAsync("item.k1", Guid.NewGuid(), Ct));
@@ -1221,7 +1229,7 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await FactoryAsync();
         var (client, _) = await PlayerAsync(factory, Name() + "a");
         var (other, _) = await PlayerAsync(factory, Name() + "b");
-        var run = await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
+        var run = await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct);
 
         var stranger = await RefusedAsync(() => other.AbandonRunAsync(run.RunId, Ct));
         await ExecuteAsync(factory, $"UPDATE runs SET status = 'Lost', ended_at = now() WHERE run_id = '{run.RunId}'");
@@ -1238,7 +1246,7 @@ public class CardCollectionTests(StackFixture stack)
         var (client, player) = await PlayerAsync(factory, Name());
         await OwnAsync(factory, player, "item.k1", DateTimeOffset.UtcNow.AddMinutes(-5));
 
-        var start = client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
+        var start = client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct);
         var dust = Task.Run(async () =>
         {
             try
@@ -1265,7 +1273,7 @@ public class CardCollectionTests(StackFixture stack)
     {
         await using var factory = await FactoryAsync();
         var (client, _) = await PlayerAsync(factory, Name());
-        var run = await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
+        var run = await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct);
 
         await client.AbandonRunAsync(run.RunId, Ct);
         await client.AbandonRunAsync(run.RunId, Ct);   // the first 204 was lost
@@ -1459,7 +1467,7 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await FactoryAsync();
         var (client, player) = await PlayerAsync(factory, Name());
         await GrantAsync(factory, player, dust: 100);
-        var run = await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
+        var run = await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct);
 
         await client.CraftCardAsync("item.r1", Guid.NewGuid(), Ct);
 
@@ -1477,7 +1485,7 @@ public class CardCollectionTests(StackFixture stack)
         await OwnAsync(factory, player, "item.e1");
         await OwnAsync(factory, player, "hero.m1");
 
-        var run = await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a", "hero.m1"]), Ct);
+        var run = await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a", "hero.m1"], Session: null), Ct);
         var resumed = await client.ResumeAsync(run.RunId, Ct);
 
         Assert.Equal(CoreItems.Append("item.e1").Order(StringComparer.Ordinal), run.CardPool!);
@@ -1493,10 +1501,10 @@ public class CardCollectionTests(StackFixture stack)
     {
         await using var factory = await FactoryAsync();
         var (client, _) = await PlayerAsync(factory, Name());
-        var earlier = await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
+        var earlier = await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct);
 
-        var locked = await RefusedAsync(() => client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a", "hero.m2"]), Ct));
-        var unknown = await RefusedAsync(() => client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["nobody"]), Ct));
+        var locked = await RefusedAsync(() => client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a", "hero.m2"], Session: null), Ct));
+        var unknown = await RefusedAsync(() => client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["nobody"], Session: null), Ct));
 
         Assert.Equal((HttpStatusCode.BadRequest, ApiErrors.CharacterLocked), (locked.StatusCode, locked.ErrorCode));
         Assert.Equal(ApiErrors.CharacterLocked, unknown.ErrorCode);
@@ -1512,7 +1520,7 @@ public class CardCollectionTests(StackFixture stack)
         await OwnAsync(factory, player, "item.k1");
         await SeedAsync(factory, new CardCatalogFile("fixture-2", [.. Catalog().Cards.Where(c => c.Id != "item.k1")]));
 
-        var run = await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct);
+        var run = await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct);
 
         Assert.Contains("item.k1", run.CardPool!);
     }
@@ -1524,7 +1532,7 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Cards);
         var (client, _) = await PlayerAsync(factory, Name());
 
-        var run = await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["anybody"]), Ct);
+        var run = await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["anybody"], Session: null), Ct);
 
         Assert.Null(run.CardPool);
         Assert.Null(run.UnlockedCharacterIds);
@@ -1543,7 +1551,7 @@ public class CardCollectionTests(StackFixture stack)
         });
         var (client, _) = await PlayerAsync(factory, Name());
 
-        var error = await RefusedAsync(() => client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"]), Ct));
+        var error = await RefusedAsync(() => client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["hero.a"], Session: null), Ct));
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, error.StatusCode);
         Assert.NotNull(error.RetryAfter);
@@ -1556,7 +1564,7 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await ApiFactory.RunsAsync(stack, settings: new Dictionary<string, string?>(Cards) { ["Cards:Enabled"] = "false" });
         var (client, _) = await PlayerAsync(factory, Name());
 
-        var run = await client.StartRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["anybody"]), Ct);
+        var run = await client.StartFencedRunAsync(new RunStartRequest(ApiFactory.TestRuleset, "run.test", ["anybody"], Session: null), Ct);
         var resumed = await client.ResumeAsync(run.RunId, Ct);
 
         Assert.Null(run.CardPool);
@@ -1639,16 +1647,20 @@ public class CardCollectionTests(StackFixture stack)
     {
         await using var factory = await FactoryAsync();
         var anonymous = new GameServerClient(factory.CreateClient());
+        // Explicit bodies (review fix): the session-starting test helpers would be refused at /account/session first, and the
+        // endpoints themselves would go unchecked.
+        var action = new AccountActionRequest(Guid.NewGuid(), 1, 0);
 
         var errors = new[]
         {
             await RefusedAsync(() => anonymous.GetCardCatalogAsync(Ct)), await RefusedAsync(() => anonymous.GetPacksAsync(Ct)),
-            await RefusedAsync(() => anonymous.GetCollectionAsync(Ct)), await RefusedAsync(() => anonymous.OpenPackAsync(StarterPack, Guid.NewGuid(), Ct)),
-            await RefusedAsync(() => anonymous.BuyPackAsync(StarterPack, new PackBuyRequest(Guid.NewGuid(), 1), Ct)),
-            await RefusedAsync(() => anonymous.RefundPacksAsync(Ct)),
-            await RefusedAsync(() => anonymous.DustCardAsync("item.k1", Guid.NewGuid(), Ct)),
-            await RefusedAsync(() => anonymous.CraftCardAsync("item.k1", Guid.NewGuid(), Ct)),
-            await RefusedAsync(() => anonymous.AbandonRunAsync(Guid.NewGuid().ToString("D"), Ct)),
+            await RefusedAsync(() => anonymous.GetCollectionAsync(Ct)), await RefusedAsync(() => anonymous.OpenPackAsync(StarterPack, action, Ct)),
+            await RefusedAsync(() => anonymous.BuyPackAsync(StarterPack, new PackBuyRequest(Guid.NewGuid(), 1, 1, 0), Ct)),
+            await RefusedAsync(() => anonymous.RefundPacksAsync(new PackRefundsRequest(1), Ct)),
+            await RefusedAsync(() => anonymous.DustCardAsync("item.k1", action, Ct)),
+            await RefusedAsync(() => anonymous.CraftCardAsync("item.k1", action, Ct)),
+            await RefusedAsync(() => anonymous.AbandonRunAsync(Guid.NewGuid().ToString("D"), new RunAbandonRequest(1), Ct)),
+            await RefusedAsync(() => anonymous.StartAccountSessionAsync(Ct)),
         };
 
         Assert.All(errors, e => Assert.Equal(HttpStatusCode.Unauthorized, e.StatusCode));
@@ -1677,13 +1689,16 @@ public class CardCollectionTests(StackFixture stack)
             "Development", Cards);
         var client = new GameServerClient(factory.CreateClient(), Token(factory, "alice"));
 
-        var open = await RefusedAsync(() => client.OpenPackAsync(StarterPack, Guid.NewGuid(), Ct));
-        var buy = await RefusedAsync(() => client.BuyPackAsync(StarterPack, new PackBuyRequest(Guid.NewGuid(), 1), Ct));
+        // Explicit bodies (review fix): through the test helpers the 503 would come from /account/session, not these endpoints.
+        var open = await RefusedAsync(() => client.OpenPackAsync(StarterPack, new AccountActionRequest(Guid.NewGuid(), 1, 0), Ct));
+        var buy = await RefusedAsync(() => client.BuyPackAsync(StarterPack, new PackBuyRequest(Guid.NewGuid(), 1, 1, 0), Ct));
         var collection = await RefusedAsync(() => client.GetCollectionAsync(Ct));
+        var session = await RefusedAsync(() => client.StartAccountSessionAsync(Ct));   // spec account-session 4, row 9
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, open.StatusCode);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, buy.StatusCode);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, collection.StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, session.StatusCode);
     }
 
     [Fact]

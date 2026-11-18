@@ -22,7 +22,7 @@ namespace Rpg.GameServerApi.Tests;
 public class RunAuthorityTests(StackFixture stack)
 {
     private static readonly RunStartRequest Start =
-        new(ApiFactory.TestRuleset, "descent", ["warrior", "cleric", "ranger"]);
+        new(ApiFactory.TestRuleset, "descent", ["warrior", "cleric", "ranger"], Session: null);   // the session is added per call (AccountTestExtensions.StartFencedRunAsync)
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -31,7 +31,7 @@ public class RunAuthorityTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
 
         var first = await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2), RunLog.Room(3)), Ct);
         var second = await client.SendActionsAsync(run.RunId,
@@ -56,7 +56,7 @@ public class RunAuthorityTests(StackFixture stack)
         // Spec floor-chests 3.1: open_chest names its room and reports what the chest put out (OfferSource.Chest).
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
         var open = new RunActionRequest(3, new RunAction("open_chest", 0, Cell: 1, ChestId: "fixture.chest.crate", Serial: 0,
             CoinsAfter: 3, Offers: [new ItemOffer(2000, "fixture.item.tonic", 0, OfferSource.Chest),
                 new ItemOffer(2001, "fixture.equipment.crate_helm", 0, OfferSource.Chest, ItemKind.Equipment)]),
@@ -75,7 +75,7 @@ public class RunAuthorityTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
         var batch = RunLog.Batch(RunLog.Start(), RunLog.Room(2), RunLog.Battle(run.RunId, 3));
 
         var once = await client.SendActionsAsync(run.RunId, batch, Ct);
@@ -95,7 +95,7 @@ public class RunAuthorityTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
         await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2)), Ct);
 
         var ex = await Assert.ThrowsAsync<GameServerApiException>(() => client.SendActionsAsync(run.RunId,
@@ -115,7 +115,7 @@ public class RunAuthorityTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
         await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start()), Ct);
 
         var ex = await Assert.ThrowsAsync<GameServerApiException>(() =>
@@ -133,7 +133,7 @@ public class RunAuthorityTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
         var notAnObject = JsonDocument.Parse("[1]").RootElement.Clone();
         var wrongVersion = JsonDocument.Parse("""{"schemaVersion":2}""").RootElement.Clone();
 
@@ -169,7 +169,7 @@ public class RunAuthorityTests(StackFixture stack)
         await using var factory = await ApiFactory.RunsAsync(stack);
         var deviceA = await ClientAsync(factory, "alice");
         var deviceB = await ClientAsync(factory, "alice");
-        var run = await deviceA.StartRunAsync(Start, Ct);
+        var run = await deviceA.StartFencedRunAsync(Start, Ct);
         await deviceA.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start()), Ct);
 
         var results = await Task.WhenAll(
@@ -188,7 +188,7 @@ public class RunAuthorityTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
         await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2), RunLog.Room(3)), Ct);
 
         var ahead = await Assert.ThrowsAsync<GameServerApiException>(() =>
@@ -213,7 +213,7 @@ public class RunAuthorityTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
         await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2)), Ct);
 
         var ex = await Assert.ThrowsAsync<GameServerApiException>(() =>
@@ -231,7 +231,7 @@ public class RunAuthorityTests(StackFixture stack)
                          settings: new Dictionary<string, string?> { ["Run:AutoApproveWins"] = "true" }))   // the setting is gone
         {
             var client = await ClientAsync(factory, "alice");
-            var run = await client.StartRunAsync(Start, Ct);
+            var run = await client.StartFencedRunAsync(Start, Ct);
             await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2)), Ct);
 
             var end = await client.EndRunAsync(run.RunId, RunLog.End(3, RunEndStatus.Won), Ct);
@@ -258,11 +258,11 @@ public class RunAuthorityTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var byEndpoint = await client.StartRunAsync(Start, Ct);
+        var byEndpoint = await client.StartFencedRunAsync(Start, Ct);
         await client.SendActionsAsync(byEndpoint.RunId, RunLog.Batch(RunLog.Start()), Ct);
         var lost = await client.EndRunAsync(byEndpoint.RunId, RunLog.End(2, RunEndStatus.Lost), Ct);
 
-        var queued = await client.StartRunAsync(Start, Ct);
+        var queued = await client.StartFencedRunAsync(Start, Ct);
         var death = RunLog.Batch(RunLog.Start(), RunLog.Room(2),
             new RunActionRequest(3, new RunAction(RunActionTypes.End, 0), "h3", RunLog.PlayedAt, RunLog.Snapshot(3)));
         var ack = await client.SendActionsAsync(queued.RunId, death, Ct);
@@ -286,11 +286,11 @@ public class RunAuthorityTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
         await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start()), Ct);
         await client.EndRunAsync(run.RunId, RunLog.End(2, RunEndStatus.Won), Ct);
 
-        var ex = await Assert.ThrowsAsync<GameServerApiException>(() => client.StartRunAsync(Start, Ct));
+        var ex = await Assert.ThrowsAsync<GameServerApiException>(() => client.StartFencedRunAsync(Start, Ct));
 
         Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);
         Assert.Equal(ApiErrors.RunNotActive, ex.ErrorCode);
@@ -305,7 +305,7 @@ public class RunAuthorityTests(StackFixture stack)
         await ReadyProbe.WaitUntilAsync(factory.CreateClient(), r => r.StatusOf("redis") == "Healthy");
         var alice = await ClientAsync(factory, "alice");
         var bob = await ClientAsync(factory, "bob");
-        var run = await alice.StartRunAsync(Start, Ct);
+        var run = await alice.StartFencedRunAsync(Start, Ct);
         var battle = RunLog.Battle(run.RunId, 2, cell: 5);
         await alice.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), battle), Ct);
         await alice.SendActionsAsync(run.RunId, RunLog.Batch(battle), Ct);  // re-upload maps to the same row
@@ -342,7 +342,7 @@ public class RunAuthorityTests(StackFixture stack)
         await using var factory = await ApiFactory.RunsAsync(stack);
         var alice = await ClientAsync(factory, "alice");
         var bob = await ClientAsync(factory, "bob");
-        var run = await alice.StartRunAsync(Start, Ct);
+        var run = await alice.StartFencedRunAsync(Start, Ct);
         var empty = await alice.ResumeAsync(run.RunId, Ct);
         RunActionRequest[] tail =
         [
@@ -395,7 +395,7 @@ public class RunAuthorityTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
         // Every uploaded battle is a checkpoint, so a battle only lands in a tail when its snapshot is gone; clear it
         // in the database to check the tail rebuilds the battle from battle_sessions.
         var battle = RunLog.Battle(run.RunId, 2);
@@ -417,10 +417,10 @@ public class RunAuthorityTests(StackFixture stack)
             ["RateLimit:Buckets:runs:RefillPerSecond"] = "0.05",
         });
         var client = await ClientAsync(factory, "limited-" + Guid.NewGuid().ToString("N")[..8]);
-        await client.StartRunAsync(Start, Ct);
-        var run = await client.StartRunAsync(Start, Ct);
+        await client.StartFencedRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
 
-        var ex = await Assert.ThrowsAsync<GameServerApiException>(() => client.StartRunAsync(Start, Ct));
+        var ex = await Assert.ThrowsAsync<GameServerApiException>(() => client.StartFencedRunAsync(Start, Ct));
         await GateOpenAsync(factory, run.RunId);
         var stairs = await client.GetFloorSeedAsync(run.RunId, 1, new FloorSeedRequest(0), Ct);  // another bucket
 
@@ -447,7 +447,7 @@ public class RunAuthorityTests(StackFixture stack)
 
         for (var i = 0; i < 3; i++)
         {
-            await client.StartRunAsync(Start, Ct);
+            await client.StartFencedRunAsync(Start, Ct);
         }
 
         var metrics = await factory.CreateClient().GetStringAsync("/metrics", Ct);
@@ -466,9 +466,9 @@ public class RunAuthorityTests(StackFixture stack)
             settings: new Dictionary<string, string?> { ["Monitors:Interval"] = "00:00:01" });
         var alice = await ClientAsync(factory, "alice");
         var bob = await ClientAsync(factory, "bob");
-        await alice.StartRunAsync(Start, Ct);
-        await alice.StartRunAsync(Start, Ct);  // abandons the first
-        await bob.StartRunAsync(Start, Ct);
+        await alice.StartFencedRunAsync(Start, Ct);
+        await alice.StartFencedRunAsync(Start, Ct);  // abandons the first
+        await bob.StartFencedRunAsync(Start, Ct);
         await alice.HeartbeatAsync(new PresenceRequest(PresenceActivity.Map), Ct);
         await bob.HeartbeatAsync(new PresenceRequest(PresenceActivity.Battle), Ct);
         // carol was last seen 6 minutes ago, dave left a battle 3 minutes ago.
@@ -496,7 +496,7 @@ public class RunAuthorityTests(StackFixture stack)
     {
         await using var factory = await ApiFactory.RunsAsync(stack);
         var client = await ClientAsync(factory, "alice");
-        var run = await client.StartRunAsync(Start, Ct);
+        var run = await client.StartFencedRunAsync(Start, Ct);
         var lateStart = RunLog.Start() with { PlayedAt = DateTimeOffset.UtcNow.AddSeconds(-90) };
         await client.SendActionsAsync(run.RunId, RunLog.Batch(lateStart, RunLog.Battle(run.RunId, 2)), Ct);
         await client.SendActionsAsync(run.RunId, RunLog.Batch(lateStart), Ct);

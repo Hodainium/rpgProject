@@ -18,9 +18,13 @@ public sealed record PackRefundFailure(Guid PlayerId, string PackId, string Erro
 /// </summary>
 public sealed record PackRefundHeld(Guid PlayerId, string PackId, int Count);
 
-/// <summary>One player's refund check: what was paid, what was held for a support check, and what failed.</summary>
+/// <summary>
+/// One player's refund check: what was paid, what was held for a support check, and what failed. Spec account-session: Problem is
+/// set when the call's session is not the current one and nothing was paid yet (once a refund has committed, a newer login only
+/// stops the rest: the pass says what was paid).
+/// </summary>
 public sealed record PackRefundPass(IReadOnlyList<PackRefund> Paid, IReadOnlyList<PackRefundHeld> Held,
-    IReadOnlyList<PackRefundFailure> Failed);
+    IReadOnlyList<PackRefundFailure> Failed, CardProblem? Problem = null);
 
 public sealed partial class CardStore
 {
@@ -29,26 +33,40 @@ public sealed partial class CardStore
     /// refund. Called when the player opens the Open packs page, never on a timer: pack types change only during maintenance. One transaction per pack type under the account lock; the unique
     /// ledger keys stop a second payment, and one pack type that fails (it rolls back alone) never stops the others.
     /// </summary>
-    public async Task<PackRefundPass> RefundPlayerPacksAsync(Guid playerId, DateTimeOffset now, CancellationToken ct)
+    public async Task<PackRefundPass> RefundPlayerPacksAsync(Guid playerId, long session, DateTimeOffset now, CancellationToken ct)
     {
+        // Spec account-session 2.2: fenced (session only, a refund is not the player's decision). A plain read up front refuses
+        // an old session with nothing due too, without queueing on the account lock; each pack type's own transaction fences
+        // again under the lock, so a newer login between them stops the rest.
+        var fence = new AccountFence(session, null);
         var packs = new List<string>();
         await using (var connection = await dataSource.OpenConnectionAsync(ct))
-        await using (var select = Cmd(connection, null,
-            """
-            SELECT i.pack_id FROM pack_inventory i
-            CROSS JOIN LATERAL (SELECT version, retired, refund_unopened FROM pack_types t
-                                WHERE t.pack_id = i.pack_id AND t.effective_from <= clock_timestamp()
-                                ORDER BY t.version DESC LIMIT 1) latest
-            WHERE i.player_id = $1 AND i.count > 0 AND i.refund_held_version IS DISTINCT FROM latest.version
-              AND latest.retired AND latest.refund_unopened
-            ORDER BY i.pack_id COLLATE "C"
-            """, playerId))
+        await using (var transaction = await connection.BeginTransactionAsync(ct))
         {
-            await using var reader = await select.ExecuteReaderAsync(ct);
-            while (await reader.ReadAsync(ct))
+            if (await FenceAsync(connection, transaction, playerId, fence, ct) is { } fenced)
             {
-                packs.Add(reader.GetString(0));
+                return new PackRefundPass([], [], [], fenced);
             }
+
+            await using (var select = Cmd(connection, transaction,
+                """
+                SELECT i.pack_id FROM pack_inventory i
+                CROSS JOIN LATERAL (SELECT version, retired, refund_unopened FROM pack_types t
+                                    WHERE t.pack_id = i.pack_id AND t.effective_from <= clock_timestamp()
+                                    ORDER BY t.version DESC LIMIT 1) latest
+                WHERE i.player_id = $1 AND i.count > 0 AND i.refund_held_version IS DISTINCT FROM latest.version
+                  AND latest.retired AND latest.refund_unopened
+                ORDER BY i.pack_id COLLATE "C"
+                """, playerId))
+            {
+                await using var reader = await select.ExecuteReaderAsync(ct);
+                while (await reader.ReadAsync(ct))
+                {
+                    packs.Add(reader.GetString(0));
+                }
+            }
+
+            await transaction.CommitAsync(ct);
         }
 
         var paid = new List<PackRefund>();
@@ -58,7 +76,14 @@ public sealed partial class CardStore
         {
             try
             {
-                var (refund, unpriced) = await RefundOneAsync(playerId, pack, now, ct);
+                var (refund, unpriced, problem) = await RefundOneAsync(playerId, pack, fence, now, ct);
+                if (problem is not null)
+                {
+                    // A newer login stops the rest. What already committed is still told (review fix): refunds are idempotent,
+                    // so a later call would find nothing due and the player would never hear where those packs went.
+                    return paid.Count > 0 ? new PackRefundPass(paid, held, failed) : new PackRefundPass(paid, held, failed, problem);
+                }
+
                 if (refund is not null)
                 {
                     paid.Add(refund);
@@ -78,12 +103,21 @@ public sealed partial class CardStore
         return new PackRefundPass(paid, held, failed);
     }
 
-    /// <summary>Pays back the packs a buy row prices; returns that payment (null when none) and the packs held for a support check.</summary>
-    private async Task<(PackRefund? Paid, int Held)> RefundOneAsync(Guid playerId, string packId, DateTimeOffset now, CancellationToken ct)
+    /// <summary>
+    /// Pays back the packs a buy row prices; returns that payment (null when none), the packs held for a support check, and the
+    /// fence's refusal.
+    /// </summary>
+    private async Task<(PackRefund? Paid, int Held, CardProblem? Problem)> RefundOneAsync(Guid playerId, string packId,
+        AccountFence fence, DateTimeOffset now, CancellationToken ct)
     {
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
         await LockAccountAsync(connection, transaction, playerId, ct);
+        if (await FenceAsync(connection, transaction, playerId, fence, ct) is { } fenced)
+        {
+            return (null, 0, fenced);
+        }
+
         // Pack types change only during maintenance; the shared lock on the type (the admin save holds it exclusively) makes
         // sure of it even if an admin saves a version while the server is up.
         await LockNamedSharedAsync(connection, transaction, $"pack_type|{packId}", ct);
@@ -93,7 +127,7 @@ public sealed partial class CardStore
         var count = await LockOwnedPacksAsync(connection, transaction, playerId, packId, ct);
         if (pack is not { Refunding: true } || count <= 0 || await RefundHeldAsync(connection, transaction, playerId, packId, pack.Version, ct))
         {
-            return (null, 0);
+            return (null, 0, null);
         }
 
         // What the player paid for the packs left, by replaying the pack ledger in order (review fix: a type refunded,
@@ -160,8 +194,11 @@ public sealed partial class CardStore
 
         if (refunded == 0)
         {
+            // Spec account-session 2.4: a hold changes the owned packs the collection shows, so it raises the account version
+            // (once per transaction: a payout below raises it for both).
+            await RaiseVersionAsync(connection, transaction, playerId, now, ct);
             await transaction.CommitAsync(ct);
-            return (null, held);
+            return (null, held, null);
         }
 
         var key = RefundKey(playerId, packId, pack.Version, refundedBefore);
@@ -174,11 +211,15 @@ public sealed partial class CardStore
                 $"pack_refund:{playerId:D}:{packId}:{pack.Version}:{refundedBefore}", $"pack:{packId}:{pack.Version}", now, ct);
             await MoveWalletAsync(connection, transaction, playerId, (int)amount, 0, now, ct);
         }
+        else
+        {
+            await RaiseVersionAsync(connection, transaction, playerId, now, ct);   // free packs taken back still change the account
+        }
 
         await EventAsync(connection, transaction, playerId, EventTypes.PackRefunded, now,
             new PackRefundedPayload(playerId.ToString("D"), packId, pack.Version, refunded, (int)amount), ct);
         await transaction.CommitAsync(ct);
-        return (new PackRefund(playerId, packId, pack.Version, refunded, (int)amount), held);
+        return (new PackRefund(playerId, packId, pack.Version, refunded, (int)amount), held, null);
     }
 
     /// <summary>Takes `units` from the queue's front (an open) or back (a refund); a damaged ledger may ask for more than is there.</summary>

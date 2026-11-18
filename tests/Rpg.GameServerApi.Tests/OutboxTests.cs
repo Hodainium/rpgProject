@@ -421,13 +421,13 @@ public class OutboxTests(StackFixture stack)
         var options = new OutboxOptions { KafkaMessageTimeout = TimeSpan.FromSeconds(3), BackoffBase = TimeSpan.Zero };
         var relay = RealRelay(factory, options);
 
-        await client.BuyPackAsync(CardFixtures.StarterPack, new Rpg.Contracts.Cards.PackBuyRequest(Guid.NewGuid(), 1), Ct);
+        await client.BuyPackAsync(CardFixtures.StarterPack, Guid.NewGuid(), 1, Ct);
         await client.OpenPackAsync(CardFixtures.StarterPack, Guid.NewGuid(), Ct);
         await relay.RunOnceAsync(Ct);  // warm: the topic exists and the first events are out
         await Docker("pause", stack.Redpanda.Id);
         try
         {
-            await client.BuyPackAsync(CardFixtures.StarterPack, new Rpg.Contracts.Cards.PackBuyRequest(Guid.NewGuid(), 1), Ct);
+            await client.BuyPackAsync(CardFixtures.StarterPack, Guid.NewGuid(), 1, Ct);
             await client.OpenPackAsync(CardFixtures.StarterPack, Guid.NewGuid(), Ct);  // the account actions still work
             // A card the two packs did not give (the draw is random), crafted and dusted again.
             var owned = (await client.GetCollectionAsync(Ct)).Owned.Select(o => o.CardId).ToHashSet();

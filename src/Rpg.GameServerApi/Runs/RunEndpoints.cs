@@ -58,7 +58,16 @@ public static class RunEndpoints
                 detail: "The server is still loading the card catalog; try again in a few seconds.");
         }
 
+        Activity.Current?.SetTag("rpg.account_session", request.Session);
         var result = await store.StartAsync(player, request, clock.GetUtcNow(), ct);
+        if (result.Outcome == StartOutcome.SessionReplaced)
+        {
+            metrics.RunStart("session_replaced");
+            metrics.CardActionRefused("start_run", nameof(StartOutcome.SessionReplaced));
+            return Conflict(ApiErrors.AccountSessionReplaced, "Account session replaced", result.Detail ?? "",
+                new Dictionary<string, object?> { ["currentSession"] = result.CurrentSession });
+        }
+
         if (result.Outcome == StartOutcome.PreviousVerifying)
         {
             metrics.RunStart("rejected");
@@ -89,13 +98,27 @@ public static class RunEndpoints
         return Results.Created($"/api/v1/runs/{response.RunId}", response);
     }
 
-    /// <summary>Spec card-collection 2.3: cancels the Active run (abandoned, not a death). A Verifying run answers 409 1410.</summary>
-    private static async Task<IResult> AbandonAsync(HttpContext context, Guid runId, RunStore store, RunSummaryCache cache,
-        RpgMetrics metrics, TimeProvider clock, CancellationToken ct)
+    /// <summary>
+    /// Spec card-collection 2.3: cancels the Active run (abandoned, not a death). A Verifying run answers 409 1410. Spec
+    /// account-session 2.2: the body carries the player's account session; an older one answers 409 1412 and nothing changes.
+    /// </summary>
+    private static async Task<IResult> AbandonAsync(HttpContext context, Guid runId, RunAbandonRequest? request, RunStore store,
+        RunSummaryCache cache, RpgMetrics metrics, TimeProvider clock, CancellationToken ct)
     {
-        var player = context.User.Player();
-        switch (await store.AbandonAsync(player.Id, runId, clock.GetUtcNow(), ct))
+        if (request?.Session is not { } session || session < 1)
         {
+            return BadRequest("A body with the account session (session, 1 or more) is required.");
+        }
+
+        var player = context.User.Player();
+        Activity.Current?.SetTag("rpg.account_session", session);
+        var result = await store.AbandonAsync(player.Id, runId, session, clock.GetUtcNow(), ct);
+        switch (result.Outcome)
+        {
+            case AbandonOutcome.SessionReplaced:
+                metrics.CardActionRefused("abandon_run", nameof(AbandonOutcome.SessionReplaced));
+                return Conflict(ApiErrors.AccountSessionReplaced, "Account session replaced", result.Detail ?? "",
+                    new Dictionary<string, object?> { ["currentSession"] = result.CurrentSession });
             case AbandonOutcome.NotFound:
                 return NotFound(runId);
             case AbandonOutcome.Verifying:
@@ -214,6 +237,11 @@ public static class RunEndpoints
         if (request is null)
         {
             return "A body is required.";
+        }
+
+        if (request.Session is null or < 1)
+        {
+            return "The account session (session, 1 or more) is required: start one with POST /api/v1/account/session.";
         }
 
         if (string.IsNullOrWhiteSpace(request.RulesetVersion) || request.RulesetVersion.Length > MaxIdLength)

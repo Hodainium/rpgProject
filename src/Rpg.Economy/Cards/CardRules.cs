@@ -7,10 +7,19 @@ public enum CardFailure
     RuleInvalid, InsufficientCurrency, CardLockedByRun, CardNotCollectible, CardAlreadyOwned, CardNotOwned, RequestKeyReused,
     PackUnavailable, CharacterLocked, RunVerifying,
     NoPackOwned,   // spec pack-shop 2.2
+    SessionReplaced, AccountVersionStale,   // spec account-session 2.2
 }
 
+/// <summary>
+/// Spec account-session 2.2: what an account-changing call carries. Session: the player's account session the client holds;
+/// ExpectedAccountVersion: the account version the screen showed, for a player decision (buy, open, dust, craft), null for a
+/// call that is fenced but not versioned (refunds, the run start and abandon).
+/// </summary>
+public sealed record AccountFence(long Session, long? ExpectedAccountVersion);
+
 /// <summary>Why an account action or a rule write is refused; the API maps <see cref="Failure"/> to a code and a status.</summary>
-public sealed record CardProblem(CardFailure Failure, string Detail, string? RunId = null, string? RunStatus = null);
+/// <param name="Current">Spec account-session: the player's current session (SessionReplaced) or account version (AccountVersionStale).</param>
+public sealed record CardProblem(CardFailure Failure, string Detail, string? RunId = null, string? RunStatus = null, long? Current = null);
 
 /// <summary>An account action's outcome: a value, or a problem. <see cref="Replayed"/>: the stored answer of an earlier identical request.</summary>
 public sealed record CardResult<T>(T? Value, CardProblem? Problem, bool Replayed = false) where T : class
@@ -19,6 +28,8 @@ public sealed record CardResult<T>(T? Value, CardProblem? Problem, bool Replayed
 
     public static CardResult<T> Fail(CardFailure failure, string detail, string? runId = null, string? runStatus = null) =>
         new(null, new CardProblem(failure, detail, runId, runStatus));
+
+    public static CardResult<T> Fail(CardProblem problem) => new(null, problem);
 }
 
 /// <summary>One version of a rarity's rates (spec card-collection 3.2).</summary>

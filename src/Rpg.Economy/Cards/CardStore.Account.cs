@@ -14,7 +14,7 @@ public sealed partial class CardStore
     /// account lock: the wallet ledger, the pack inventory and its ledger, the outbox event and the request row.
     /// </summary>
     public async Task<CardResult<PackBuyResponse>> BuyPacksAsync(Guid playerId, string playerName, string packId, int count,
-        int maxPerBuy, Guid key, DateTimeOffset now, CancellationToken ct)
+        int maxPerBuy, Guid key, AccountFence fence, DateTimeOffset now, CancellationToken ct)
     {
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
@@ -38,6 +38,13 @@ public sealed partial class CardStore
         if (count > maxPerBuy)
         {
             return CardResult<PackBuyResponse>.Fail(CardFailure.RuleInvalid, $"A buy is 1 to {maxPerBuy} packs; {count} was asked.");
+        }
+
+        // Spec account-session 2.2: after the replay (a committed buy is answered whatever the session or version now) and the
+        // malformed count (a 400 never turns into a refetch).
+        if (await FenceAsync(connection, transaction, playerId, fence, ct) is { } fenced)
+        {
+            return CardResult<PackBuyResponse>.Fail(fenced);
         }
 
         // The price comes from Postgres inside the transaction, never from a cache: a stale price must not sell.
@@ -73,11 +80,11 @@ public sealed partial class CardStore
         var prefix = $"pack_buy:{playerId:D}:{key:D}";
         await LedgerAsync(connection, transaction, playerId, "gems", -spent, "pack_buy", $"{prefix}:gems",
             $"pack:{pack.PackId}:{pack.Version}", now, ct);
-        var (gemsAfter, _) = await MoveWalletAsync(connection, transaction, playerId, -spent, 0, now, ct);
+        var (gemsAfter, _, version) = await MoveWalletAsync(connection, transaction, playerId, -spent, 0, now, ct);
         var owned = await MovePacksAsync(connection, transaction, playerId, pack.PackId, count, ct);
         await PackLedgerAsync(connection, transaction, playerId, pack.PackId, pack.Version, count, "buy", key, null, ct);
 
-        var response = new PackBuyResponse(pack.PackId, pack.Version, count, spent, gemsAfter, owned);
+        var response = new PackBuyResponse(pack.PackId, pack.Version, count, spent, gemsAfter, owned, version);
         await RecordRequestAsync(connection, transaction, playerId, key, "pack_buy", hash, response, now, ct);
         await EventAsync(connection, transaction, playerId, EventTypes.PackPurchased, now,
             new PackPurchasedPayload(playerId.ToString("D"), pack.PackId, pack.Version, count, spent), ct);
@@ -121,7 +128,7 @@ public sealed partial class CardStore
     // ---- open a pack (2.2; spec pack-shop 2.2: spends an owned pack, not gems) -------------------------------------
 
     public async Task<CardResult<PackOpenResponse>> OpenPackAsync(Guid playerId, string playerName, string packId, Guid key,
-        DateTimeOffset now, CancellationToken ct)
+        AccountFence fence, DateTimeOffset now, CancellationToken ct)
     {
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
@@ -132,6 +139,11 @@ public sealed partial class CardStore
         if (await ReplayAsync<PackOpenResponse>(connection, transaction, playerId, key, "pack", hash, ct) is { } replay)
         {
             return replay;
+        }
+
+        if (await FenceAsync(connection, transaction, playerId, fence, ct) is { } fenced)
+        {
+            return CardResult<PackOpenResponse>.Fail(fenced);
         }
 
         // Spec pack-shop 2.2: an open spends one owned pack. Nothing is written on a refusal (no draw, no pity change).
@@ -221,10 +233,10 @@ public sealed partial class CardStore
             }
         }
 
-        // An open moves no gems, but it always moves the account's version: the collection's Version tells a client the
+        // An open moves no gems, but it always moves the account's version: the collection's AccountVersion tells a client the
         // cards and owned packs changed, dust or not.
         await WalletRowAsync(connection, transaction, playerId, ct);
-        var (gemsAfter, dustAfter) = await MoveWalletAsync(connection, transaction, playerId, 0, dustTotal, now, ct);
+        var (gemsAfter, dustAfter, version) = await MoveWalletAsync(connection, transaction, playerId, 0, dustTotal, now, ct);
         var packsLeft = await MovePacksAsync(connection, transaction, playerId, pack.PackId, -1, ct);
         await PackLedgerAsync(connection, transaction, playerId, pack.PackId, pack.Version, -1, "open", key, openingId, ct);
 
@@ -238,7 +250,7 @@ public sealed partial class CardStore
         }
 
         var response = new PackOpenResponse(openingId.ToString("D"), pack.PackId, pack.Version, 0, cards, gemsAfter,
-            dustAfter, drawSeed.ToString(), packsLeft);
+            dustAfter, drawSeed.ToString(), packsLeft, version);
         await ExecAsync(connection, transaction,
             """
             INSERT INTO pack_openings (opening_id, player_id, pack_id, pack_version, catalog_version, draw_seed, pity_before, result, created_at)
@@ -263,7 +275,7 @@ public sealed partial class CardStore
     // ---- dust (2.3) ------------------------------------------------------------------------------------------------
 
     public async Task<CardResult<DustResponse>> DustAsync(Guid playerId, string playerName, string cardId, Guid key,
-        DateTimeOffset now, CancellationToken ct)
+        AccountFence fence, DateTimeOffset now, CancellationToken ct)
     {
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
@@ -274,6 +286,11 @@ public sealed partial class CardStore
         if (await ReplayAsync<DustResponse>(connection, transaction, playerId, key, "dust", hash, ct) is { } replay)
         {
             return replay;
+        }
+
+        if (await FenceAsync(connection, transaction, playerId, fence, ct) is { } fenced)
+        {
+            return CardResult<DustResponse>.Fail(fenced);
         }
 
         var card = await FindCardAsync(connection, transaction, cardId, ct);
@@ -316,9 +333,9 @@ public sealed partial class CardStore
         await CardLedgerAsync(connection, transaction, playerId, cardId, -1, "dust", key.ToString("D"), prefix, now, ct);
         await WalletRowAsync(connection, transaction, playerId, ct);
         await LedgerAsync(connection, transaction, playerId, "dust", rate.DustValue, "dust", prefix, $"rate:{rate.Rarity}:{rate.Version}", now, ct);
-        var (_, dust) = await MoveWalletAsync(connection, transaction, playerId, 0, rate.DustValue, now, ct);
+        var (_, dust, version) = await MoveWalletAsync(connection, transaction, playerId, 0, rate.DustValue, now, ct);
 
-        var response = new DustResponse(cardId, rate.DustValue, rate.Version, dust);
+        var response = new DustResponse(cardId, rate.DustValue, rate.Version, dust, version);
         await RecordRequestAsync(connection, transaction, playerId, key, "dust", hash, response, now, ct);
         await EventAsync(connection, transaction, playerId, EventTypes.CardDusted, now,
             new CardDustedPayload(playerId.ToString("D"), cardId, card.Rarity, rate.DustValue, rate.Version), ct);
@@ -329,7 +346,7 @@ public sealed partial class CardStore
     // ---- craft (2.4) -----------------------------------------------------------------------------------------------
 
     public async Task<CardResult<CraftResponse>> CraftAsync(Guid playerId, string playerName, string cardId, Guid key,
-        DateTimeOffset now, CancellationToken ct)
+        AccountFence fence, DateTimeOffset now, CancellationToken ct)
     {
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(ct);
@@ -340,6 +357,11 @@ public sealed partial class CardStore
         if (await ReplayAsync<CraftResponse>(connection, transaction, playerId, key, "craft", hash, ct) is { } replay)
         {
             return replay;
+        }
+
+        if (await FenceAsync(connection, transaction, playerId, fence, ct) is { } fenced)
+        {
+            return CardResult<CraftResponse>.Fail(fenced);
         }
 
         var card = await FindCardAsync(connection, transaction, cardId, ct);
@@ -378,9 +400,9 @@ public sealed partial class CardStore
             playerId, cardId);
         await CardLedgerAsync(connection, transaction, playerId, cardId, 1, "craft", key.ToString("D"), prefix, now, ct);
         await LedgerAsync(connection, transaction, playerId, "dust", -rate.CraftCost, "craft", prefix, $"rate:{rate.Rarity}:{rate.Version}", now, ct);
-        var (_, dustAfter) = await MoveWalletAsync(connection, transaction, playerId, 0, -rate.CraftCost, now, ct);
+        var (_, dustAfter, version) = await MoveWalletAsync(connection, transaction, playerId, 0, -rate.CraftCost, now, ct);
 
-        var response = new CraftResponse(cardId, rate.CraftCost, rate.Version, dustAfter);
+        var response = new CraftResponse(cardId, rate.CraftCost, rate.Version, dustAfter, version);
         await RecordRequestAsync(connection, transaction, playerId, key, "craft", hash, response, now, ct);
         await EventAsync(connection, transaction, playerId, EventTypes.CardCrafted, now,
             new CardCraftedPayload(playerId.ToString("D"), cardId, card.Rarity, rate.CraftCost, rate.Version), ct);

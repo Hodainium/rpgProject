@@ -61,6 +61,7 @@ public sealed class RpgMetrics
     private readonly Counter<long> _dustMoved;
     private readonly Counter<long> _cardRefusals;
     private readonly Counter<long> _accountReplays;
+    private readonly Counter<long> _accountSessions;
     private readonly Histogram<double> _cardActionDuration;
     private readonly Counter<long> _cardCatalogReads;
     private readonly Counter<long> _cardRuleChanges;
@@ -157,6 +158,8 @@ public sealed class RpgMetrics
         _dustMoved = meter.CreateCounter<long>("rpg.dust", description: "Dust moved: direction in (faucet) or out (sink), by reason.");
         _cardRefusals = meter.CreateCounter<long>("rpg.card_actions_refused", description: "Account actions refused, by action and reason.");
         _accountReplays = meter.CreateCounter<long>("rpg.account_request_replays", description: "Account requests answered from the request log, by action.");
+        _accountSessions = meter.CreateCounter<long>("rpg.account_sessions_started",
+            description: "Account sessions started (spec account-session: each login fences the older ones).");
         _cardActionDuration = meter.CreateHistogram<double>("rpg.account_action_duration", unit: "s",
             description: "The whole transaction of one account action.");
         _cardCatalogReads = meter.CreateCounter<long>("rpg.card_catalog_reads", description: "Catalog reads by where the answer came from.");
@@ -353,6 +356,8 @@ public sealed class RpgMetrics
         new KeyValuePair<string, object?>("action", action), new KeyValuePair<string, object?>("reason", reason));
 
     public void AccountReplay(string action) => _accountReplays.Add(1, new KeyValuePair<string, object?>("action", action));
+
+    public void AccountSessionStarted() => _accountSessions.Add(1);
 
     public void CardActionDuration(string action, TimeSpan duration) => _cardActionDuration.Record(duration.TotalSeconds,
         new KeyValuePair<string, object?>("action", action));

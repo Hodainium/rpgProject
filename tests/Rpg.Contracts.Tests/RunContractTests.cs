@@ -19,7 +19,7 @@ public class RunContractTests
 
     public static TheoryData<string, object> Goldens() => new()
     {
-        { "run-start-request.json", new RunStartRequest(Ruleset, "descent", ["warrior", "cleric", "ranger"]) },
+        { "run-start-request.json", new RunStartRequest(Ruleset, "descent", ["warrior", "cleric", "ranger"], 4) },
         { "run-start-response.json", new RunStartResponse(RunId, 0, "8070450532247928832", Started) },
         { "floor-seed-request.json", new FloorSeedRequest() },
         { "floor-seed-response.json", new FloorSeedResponse(RunId, 3, "1234567890123456789") },
@@ -64,7 +64,7 @@ public class RunContractTests
             .Select(field => (int)field.GetRawConstantValue()!)
             .ToList();
 
-        Assert.Equal(23, codes.Count);   // spec card-collection 3.1 adds 1401–1410, spec pack-shop 3.1 adds 1411
+        Assert.Equal(25, codes.Count);   // spec card-collection 3.1 adds 1401–1410, spec pack-shop 3.1 adds 1411, spec account-session 1412–1413
         Assert.Equal(codes.Count, codes.Distinct().Count());
         Assert.DoesNotContain(ReplayErrors.ReplayMismatchCode, codes);
     }
