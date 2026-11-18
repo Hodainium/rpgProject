@@ -185,6 +185,13 @@ A 1403 refusal keeps the key for the retry after the cancel, since the server st
 player is the server's rule too (the account advisory lock), so a single slot is enough. The account and its key belong to one
 `ServerLink`: connecting to another server or player makes a new one.
 
+**The account session (spec `account-session`, slice 5b1, built 2026-11-18).** Every account action also carries the player's
+account session and, for a decision, the account version the screen showed; the server refuses an older session (409 1412) or a moved
+version (409 1413) and writes nothing. On the screens: no ownership shows without a session; after a 1412 "Your account was opened
+somewhere else." with **Use it here** (a new session); **Go online** when no session could start for lack of an answer; after a 1413
+"Your account changed. Here is what you have now." and a refetch; giving up a reconnect starts a new session. The Shop does all of
+this today; Collection, card detail, Open packs and the main menu's New run (no Use it here yet) follow it as they are built.
+
 ### 2.6 Class pick (server mode)
 
 ```
@@ -274,7 +281,7 @@ blocks clicks) shows the screen's "Reconnecting…" wait text and gains the "Sto
 account screen swallows Back (`handles_back`) while its action is on its way,
 `card_face.tscn` (the 2D face,
 Look A: art window shaped by kind, oval for characters, arch for items, round for equipment; name on a curved ribbon with shrink to
-fit; gem; plaque; type line; the core tab), and the main menu's two `UIPushButton`s. The 2D slot grid owns input and focus (keyboard and
+fit; gem; plaque; type line; the core tab), and the main menu's three `UIPushButton`s (Collection, Shop, Open packs; user 2026-11-15). The 2D slot grid owns input and focus (keyboard and
 gamepad work); each `CardView3D` follows its slot through the stage camera (`Camera3D.project_position`).
 
 ### 3.4 Files on the player's machine (client only, never uploaded)
@@ -309,14 +316,14 @@ lights and effects are presentation data the user can tune.
 |---|---|---|---|
 | 1 | Double click on Buy, Open, Dust or Create | One action in flight; the buttons disable while it is; the second click is ignored | `test_card_ui::test_one_action_in_flight` |
 | 2 | The response is lost after the server committed (a drop) | The reconnect re-sends the same key and gets the stored response: the same five cards, revealed once, no second charge (acceptance 2) | `test_card_ui::test_lost_open_replays_same_cards` (fake bridge: commit, drop, replay); e2e `card_ui_replay` |
-| 3 | No answer, 5xx, 429 | The connecting pop-up ("Reconnecting…") blocks the game and the action is retried with the same key until the server answers; after `give_up_after` it offers "Stop waiting" | `test_card_ui::test_retry_keeps_key`, `test_card_ui::test_give_up` |
+| 3 | No answer, 5xx, 429 | The connecting pop-up ("Reconnecting…") blocks the game and the action is retried with the same key until the server answers; after `give_up_after` it offers "Stop waiting" | `test_card_ui::test_retry_keeps_key_through_server_errors`, `test_card_ui::test_give_up_settles_at_once_and_ignores_a_late_answer`, `test_card_ui::test_reconnect_caps_a_long_retry_after`, `test_card_ui::test_shop_reconnects_until_the_buy_is_answered`, `test_card_ui::test_shop_stop_waiting_shows_the_server_state` |
 | 3b | The app crashes or quits mid-action | Nothing is stored and nothing re-sent; the screens show the server's state on the next start | `test_card_ui::test_no_resume_after_restart` |
 | 4 | Dust refused by the run lock, Active | The pop-up; Cancel run → abandon → `release_cancelled` → the same key re-sent → dusted | `test_card_ui::test_dust_cancel_run_path`; e2e `card_ui_run_lock` |
 | 5 | Dust refused, run Verifying | The wait message; nothing else | `test_card_ui::test_dust_verifying_message` |
 | 6 | Abandon refused (1410, the run turned Verifying meanwhile) | The wait message; the dust is not retried | same test, second case |
-| 7 | Stale collection (1402, 1404, 1405, 1406) | The server's line in the message bar, the refused sound, the collection refetched | `test_card_ui::test_stale_refusals_refetch` |
+| 7 | Stale collection (1402, 1404, 1405, 1406) | The server's line in the message bar, the refused sound, the collection refetched | Shop (built): `test_card_ui::test_shop_refusals_show_the_line_and_refetch`; Collection and detail: `test_card_ui::test_stale_refusals_refetch` (not built yet) |
 | 8 | Pack retired (1408) | Message, pack list refetched | `test_card_ui::test_pack_unavailable` |
-| 9 | Key reused (1407; a bug) | Treated as a refusal: the key is forgotten, an error is logged (fails tests through `ScriptErrorLog`) | `test_card_ui::test_key_reused_is_an_error` |
+| 9 | Key reused (1407; a bug) | Treated as a refusal: the key is forgotten, an error is logged with `push_error` (deliberate logging, which never fails a test: only a 1407 the test caused itself; user 2026-11-18) | `test_card_ui::test_key_reused_is_an_error` |
 | 10 | Catalog drift (server card unknown locally) | "Unknown card" face, one warning | `test_card_ui::test_unknown_card_face` |
 | 11 | Server unreachable on the menu | Collection opens in its offline form (core + local pool, read-only, "Offline"); Open packs shows "Needs a server connection" | `test_card_ui::test_offline_collection` |
 | 12 | Back during the reveal | Reveal all, then leave; the cards are owned whatever the screen did | `test_card_ui::test_back_reveals_all` |

@@ -32,7 +32,7 @@ never depended on it; a killed worker's lock only delayed its job by up to ~2 mi
 | Verifier worker | Writes verdict + settlement + outbox rows in one transaction, then acks | Versioned calculation worker, idempotent consumer |
 | Outbox relay (new, in `Rpg.GameServerApi` as a `BackgroundService`) | Drains `outbox` to RabbitMQ or Redpanda, marks rows published | Outbox relay / CDC publisher |
 | Redpanda | Append-only event log (`rpg.battle.events`, `rpg.economy.events`) | BMS Kafka |
-| Redis | Wallet read cache only (`wallet:{playerId}`); not used for any correctness | Cache-aside, never the source of truth |
+| Redis | Wallet read cache only (`wallet:v2:{playerId}`); not used for any correctness | Cache-aside, never the source of truth |
 | Prometheus / OpenTelemetry | Outbox lag, relay results, settlement counters, trace continued from the job through the event | GUTS metrics, tracing |
 
 **Not used here:** the run-level consequences of a rejection, `FloorVerified`, the run-end verdict and win-based
@@ -110,10 +110,10 @@ Verifier worker, a replay finished with exit 0 (Verified) or 2 (Rejected):
                                       idempotency_key = 'mark:{battleId}:{characterId}:{bossId}')   UNIQUE ← the second gate
                 (the boss id is in the key because a battle can hold more than one boss: without it the second boss's
                  ledger row of the same character would collide and be skipped silently)
-                UPDATE wallets SET gems = gems + @delta, version = version + 1 WHERE player_id = @p
+                UPDATE wallets SET gems = gems + @delta, account_version = account_version + 1 WHERE player_id = @p   (column renamed by 0012)
                 INSERT outbox  RewardGranted  (destination 'redpanda', key = playerId)
   COMMIT
-  then, best effort (a failure is logged and counted, never changes the decision): verdict cache writes, DEL wallet:{playerId}
+  then, best effort (a failure is logged and counted, never changes the decision): verdict cache writes, DEL wallet:v2:{playerId}
   ack
 ```
 
@@ -138,7 +138,7 @@ and step 3).
 
 ```
 Godot client / dashboard ── GET /api/v1/wallet   (Bearer)
-  Redis GET wallet:{playerId} → hit → 200
+  Redis GET wallet:v2:{playerId} → hit → 200
   miss / Redis error → Postgres wallets (+ last 20 ledger rows) → 200, fill the cache (60 s)
 ```
 
@@ -189,7 +189,9 @@ public sealed record RewardGrantedPayload(string Source /*"completion_mark"*/, s
 
 namespace Rpg.Contracts.Economy;
 
-public sealed record WalletResponse(int Gems, long Version, IReadOnlyList<LedgerEntryDto> Recent);
+public sealed record WalletResponse(long Gems, long AccountVersion, IReadOnlyList<LedgerEntryDto> Recent);
+// Gems: 64-bit since migration 0010; AccountVersion (renamed from Version, column wallets.account_version since migration 0012,
+// spec account-session 2.4): raised by every change to the account
 public sealed record LedgerEntryDto(string Currency, int Delta, string Reason, string? RefBattleId, DateTimeOffset At);
 ```
 
@@ -224,7 +226,7 @@ CREATE INDEX outbox_key ON outbox (destination, key, seq) WHERE published_at IS 
 CREATE TABLE wallets (
   player_id uuid PRIMARY KEY REFERENCES players,
   gems int NOT NULL DEFAULT 0 CHECK (gems >= 0),
-  version bigint NOT NULL DEFAULT 0,
+  version bigint NOT NULL DEFAULT 0,          -- renamed account_version by 0012 (spec account-session); gems bigint since 0010
   updated_at timestamptz NOT NULL DEFAULT now());
 
 CREATE TABLE wallet_ledger (
@@ -296,7 +298,7 @@ a successful publish is only logged (never counted as a failed publish: the row 
 
 | Key | Value | TTL | Semantics |
 |---|---|---|---|
-| `wallet:{playerId}` | `WalletResponse` JSON | 60 s | Cache-aside for `GET /wallet`; `DEL` after a settlement commit; a miss or error → Postgres (scenario 4) |
+| `wallet:v2:{playerId}` | `WalletResponse` JSON | 60 s | Cache-aside for `GET /wallet`; `DEL` after a settlement commit; a miss or error → Postgres (scenario 4) |
 | `lock:battle:{id}` | | | **Removed.** The worker no longer takes it; `Verifier:UseLock`, `LockTtl` and `rpg_verify_lock_total` go with it |
 
 ### 3.6 HTTP
