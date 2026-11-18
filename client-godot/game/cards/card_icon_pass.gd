@@ -37,6 +37,27 @@ const KEYWORDS: Dictionary = {
 	"wing": "angel-wings", "badge": "rank-3", "stew": "hot-meal", "heartstring": "harp", "rites": "tombstone",
 	"shatterpoint": "shatter", "toxic": "poison-bottle", "box": "present",
 }
+## A card's whole name (lower case) → its glyph, checked before the words (user, 2026-11-18: every card its own glyph; the
+## keyword table gave one glyph to whole families, ten rings, eleven charms). Only a Void card may share, with the item it corrupts.
+const NAME_ICONS: Dictionary = {
+	"slag plate": "breastplate", "vestment": "robe", "dynamo coil": "tesla-coil", "cinder glove": "fire-punch",
+	"hearty stew": "bubbling-bowl", "duelist's band": "diamond-ring", "mana locket": "double-necklace",
+	"quickstep anklet": "running-shoe", "tactician's ring": "big-diamond-ring", "tuning fork": "musical-notes",
+	"warding talisman": "ankh", "scar ring": "double-ringed-orb", "skeleton ring": "skeleton-key", "ledger": "notebook",
+	"headsman's blade": "battle-axe", "war axe": "war-axe", "hunting knife": "bowie-knife", "keen rapier": "piercing-sword",
+	"witch's eye": "evil-eyes", "sunforged brand": "sun", "ember pendant": "fire-gem", "iron charm": "charm",
+	"cadence charm": "music-spell", "frost ember charm": "frozen-orb", "frostfire charm": "frostfire",
+	"frostguard charm": "snowflake-2", "hexbreaker charm": "magic-shield", "lucid charm": "crystal-eye",
+	"momentum charm": "whirlwind", "swift charm": "wingfoot", "heart locket": "heart-necklace", "ember heart": "burning-passion",
+	"glass heart": "glass-heart", "second heart": "heart-plus", "rally horn": "mighty-horn", "appraiser's loupe": "spectacle-lenses",
+	"glass lens": "microscope-lens", "rations": "bread-slice", "gilded idol": "trophy", "clarion bell": "windchimes",
+	"purifying bell": "bell-shield", "plague flask": "bubbling-flask", "oath stone": "rune-stone", "shatter hammer": "thor-hammer",
+	"kindled edge": "burning-embers", "serrated edge": "serrated-slash", "tempered edge": "anvil-impact", "bounty mark": "wanted-reward",
+	"fire bomb": "fire-bomb", "frost bomb": "ice-bomb", "seer's circlet": "jewel-crown", "predator's fang": "saber-tooth",
+	"siphon sigil": "heart-drop", "thrift sigil": "piggy-bank", "corrupted sigil": "cursed-star", "thornbark mail": "scale-mail",
+}
+## The id segment a Void card adds to the id of the item it corrupts (demo.item.corrupted_frost_lantern → demo.item.frost_lantern).
+const CORRUPTED_PREFIX: String = "corrupted_"
 ## An armor slot's glyph when no word of the name matched.
 const SLOT_ICONS: Dictionary = {"Weapon": "broadsword", "Body": "chest-armor", "Head": "visored-helm", "Arms": "gauntlet",
 	"Legs": "leg-armor", "Accessory": "ring"}
@@ -65,25 +86,101 @@ static func index(source: String) -> Dictionary:
 	return stems
 
 
-## One row per item and armor card, by id: {id, name, stem, author, source, by}. `by`: keyword, word, slot or fallback. A stem
-## the folder lacks is reported with an empty source.
+## One row per item and armor card, by id: {id, name, stem, author, source, by}. `by`: name, keyword, word, slot, fallback or
+## twin (a Void card takes the glyph of the item it corrupts). Every other card gets a glyph no other card has: a pick already
+## taken falls to the card's next candidate, and one with none left is `by` "shared" (see clashes()). Cards are picked in catalog
+## order, Void cards after the rest. A stem the folder lacks is reported with an empty source.
 static func propose(content: ContentIndex, source: String = DEFAULT_SOURCE) -> Array[Dictionary]:
 	var stems := index(source)
-	var rows: Array[Dictionary] = []
+	var cards: Array[Dictionary] = []
 	for card in CardCatalog.cards(content):
-		if card["kind"] == CardCatalog.KIND_CHARACTER:
-			continue
-		var id := StringName(card["id"])
-		var entry: Resource = content.items.get(id)
-		if entry == null:
-			entry = content.equipment.get(id)
-		var name: String = entry.display_name if entry.display_name != "" else String(id)
-		var slot := CardFaces.slot_name(entry.slot) if entry is EquipmentDefinition else ""
-		var pick := pick_icon(name, slot, stems)
-		var found: Dictionary = stems.get(pick["stem"], {})
-		rows.append({"id": String(id), "name": name, "stem": pick["stem"], "by": pick["by"],
-			"author": str(found.get("author", "")), "source": str(found.get("path", ""))})
+		if card["kind"] != CardCatalog.KIND_CHARACTER:
+			cards.append(card)
+	var picked := {}  # id → row
+	var used := {}  # stem → the id that holds it
+	for void_pass in [false, true]:
+		for card in cards:
+			var id := String(card["id"])
+			var base := twin_of(content, id)
+			if (base != "") != void_pass:
+				continue
+			var entry: Resource = content.items.get(StringName(id))
+			if entry == null:
+				entry = content.equipment.get(StringName(id))
+			var name: String = entry.display_name if entry.display_name != "" else id
+			var slot := CardFaces.slot_name(entry.slot) if entry is EquipmentDefinition else ""
+			var pick := {}
+			if base != "" and picked.has(base):
+				pick = {"stem": picked[base]["stem"], "by": "twin"}
+			else:
+				pick = _unique_pick(name, slot, stems, used)
+				used[pick["stem"]] = id
+			var found: Dictionary = stems.get(pick["stem"], {})
+			picked[id] = {"id": id, "name": name, "stem": pick["stem"], "by": pick["by"],
+				"author": str(found.get("author", "")), "source": str(found.get("path", ""))}
+	var rows: Array[Dictionary] = []
+	for card in cards:
+		rows.append(picked[String(card["id"])])
 	return rows
+
+
+## The id of the item a Void card corrupts (`demo.item.corrupted_x` → `demo.item.x`), when it is a corrupted card and that item is
+## a card too; else "". Only such a pair may share a glyph.
+static func twin_of(content: ContentIndex, id: String) -> String:
+	var entry: Resource = content.items.get(StringName(id))
+	if entry == null:
+		entry = content.equipment.get(StringName(id))
+	if entry == null or not TagMatch.has(entry.tags, CardFaces.CORRUPTED_TAG):
+		return ""
+	var dot := id.rfind(".")
+	var last := id.substr(dot + 1)
+	if not last.begins_with(CORRUPTED_PREFIX):
+		return ""
+	var base := id.substr(0, dot + 1) + last.trim_prefix(CORRUPTED_PREFIX)
+	return base if content.items.has(StringName(base)) or content.equipment.has(StringName(base)) else ""
+
+
+## Rows whose glyph another card holds too, other than a Void card and its item: "<id> shares <stem> with <ids>" lines.
+static func clashes(rows: Array[Dictionary], content: ContentIndex) -> Array[String]:
+	var holders := {}
+	for row in rows:
+		if row["by"] != "twin":
+			holders[row["stem"]] = holders.get(row["stem"], []) + [row["id"]]
+	var lines: Array[String] = []
+	var stems: Array[String] = []
+	stems.assign(holders.keys())
+	stems.sort()
+	for stem in stems:
+		if holders[stem].size() > 1:
+			lines.append("%s is shared by %s" % [stem, ", ".join(holders[stem])])
+	return lines
+
+
+## The card's candidates in order (its name, then pick_icon's chain word by word, then its slot, then the fallback); the first no
+## other card holds wins, else the first with `by` "shared".
+static func _unique_pick(name: String, slot: String, stems: Dictionary, used: Dictionary) -> Dictionary:
+	var candidates: Array[Dictionary] = []
+	var whole: String = NAME_ICONS.get(name.to_lower(), "")
+	if whole != "" and stems.has(whole):
+		candidates.append({"stem": whole, "by": "name"})
+	var words: Array[String] = []
+	for found in RegEx.create_from_string("[A-Za-z]+").search_all(name):
+		words.append(found.get_string().to_lower())
+	words.reverse()
+	for word in words:
+		var stem: String = KEYWORDS.get(word, "")
+		if stem != "" and stems.has(stem):
+			candidates.append({"stem": stem, "by": "keyword"})
+	for word in words:
+		if stems.has(word):
+			candidates.append({"stem": word, "by": "word"})
+	if slot != "" and SLOT_ICONS.has(slot):
+		candidates.append({"stem": SLOT_ICONS[slot], "by": "slot"})
+	candidates.append({"stem": FALLBACK, "by": "fallback"})
+	for candidate in candidates:
+		if not used.has(candidate["stem"]):
+			return candidate
+	return {"stem": candidates[0]["stem"], "by": "shared"}
 
 
 ## The glyph for a card name (and armor slot): {stem, by}.
@@ -117,6 +214,10 @@ static func report(rows: Array[Dictionary]) -> String:
 			lines.append(line)
 	lines.append("unmatched (the fallback glyph): %d" % fallback.size())
 	lines.append_array(fallback)
+	var shared := rows.filter(func(row: Dictionary) -> bool: return row["by"] == "shared")
+	lines.append("shared with another card (add a NAME_ICONS entry): %d" % shared.size())
+	for row in shared:
+		lines.append("  %s %s (%s)" % [row["id"], row["name"], row["stem"]])
 	return "\n".join(lines)
 
 

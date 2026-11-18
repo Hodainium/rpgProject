@@ -1232,6 +1232,36 @@ func test_cardui_collection_commands() -> void:
 	check(dusted["ok"] and dusted["text"].contains("Dusted: +20 dust."), "dusted: %s" % dusted["text"])
 
 
+## User, 2026-11-18: every card its own glyph; only a Void card may share the glyph of the item it corrupts.
+func test_cards_never_share_a_glyph_except_void_twins() -> void:
+	var base := CardWorld.item("card.item.lantern", "Rare", CardWorld.DESCENT, ["Treasure"])
+	var twin := CardWorld.item("card.item.corrupted_lantern", "Epic", CardWorld.DESCENT, ["Void"])
+	twin.tags.append(&"Item.Corrupted")
+	var other := CardWorld.item("card.item.other_lantern", "Rare", CardWorld.DESCENT, ["Treasure"])
+	var list := CardWorld.resources()
+	list.append_array([base, twin, other])
+	var content := CardWorld.content(list)
+	eq([CardIconPass.twin_of(content, "card.item.corrupted_lantern"), CardIconPass.twin_of(content, "card.item.lantern")],
+		["card.item.lantern", ""], "a Void card's twin is the item it corrupts")
+	var glyph := PlaceholderTexture2D.new()
+	glyph.resource_path = "res://test/lantern.svg"
+	var set := CardArtSet.new()
+	set.textures = {&"card.item.lantern": glyph, &"card.item.corrupted_lantern": glyph}
+	var style := CardStyle.new()
+	style.art_sets = [set]
+	var shared := CardStyleValidator.validate(style, content).filter(func(issue: ValidationIssue) -> bool:
+		return issue.code == "card_icon_shared")
+	eq(shared.size(), 0, "a Void card may share its item's glyph")
+	set.textures[&"card.item.other_lantern"] = glyph
+	shared = CardStyleValidator.validate(style, content).filter(func(issue: ValidationIssue) -> bool:
+		return issue.code == "card_icon_shared")
+	eq(shared.size(), 1, "two different cards may not")
+	check(shared[0].path.contains("card.item.other_lantern") and shared[0].severity == ValidationIssue.ERROR, "an error naming both")
+	var rows: Array[Dictionary] = [{"id": "a", "stem": "ring", "by": "keyword"}, {"id": "b", "stem": "ring", "by": "shared"},
+		{"id": "c", "stem": "ring", "by": "twin"}]
+	eq(CardIconPass.clashes(rows, content), ["ring is shared by a, b"], "the pass reports clashes, not twins")
+
+
 # --- Isolation (spec 3.2) --------------------------------------------------------------------------------------------------
 
 func test_the_card_presentation_stays_out_of_combat_the_verifier_and_the_ruleset() -> void:
