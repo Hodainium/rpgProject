@@ -29,7 +29,7 @@ it:
 │  rpgDemo                             │
 │                                      │
 │  [ Continue ]  LOCAL                 │   or SYNCED (server mode)
-│    The Descent · floor 3 · Warrior,  │   greyed: "No run to continue",
+│    The Descent · floor 3 · Warrior,  │   greyed (no run: no line),
 │    Cleric, Arcanist · 12 min ago     │   "Checking the server…", "Can't reach the server"
 │  [ New run ]                         │   → the class-pick screen (today's title menu), Back returns
 │  [ Settings ]                        │   → settings, now with a Server section
@@ -71,7 +71,7 @@ is a client file, like Part B's server-mode save (`user://saves/<player>/run.jso
    Godot (ServerLink) ──GET /api/v1/runs/current──▶ GameServerApi ──▶ Redis run:current:{player} ──miss──▶ Postgres runs
                       ◀── 200 RunSummaryResponse (Active) │ 204 (none) │ no answer / 5xx
    ```
-   200 Active → Continue enabled; 204 or another status → "No run to continue"; no answer → the offline Continue
+   200 Active → Continue enabled; 204 or another status → Continue greyed with no line under it (user 2026-11-18: the greyed button says enough); no answer → the offline Continue
    (M12) when a save exists, else "Can't reach the server" (greyed). When the link answers again (`connection_changed`), or the mode changes, the menu asks again.
 
 **Continue** (after the M11 pop-up's Yes)
@@ -114,7 +114,7 @@ save (`ServerLink.load_save()`) is for the same `runId`, its snapshot adds the r
 |---|---|---|
 | Server mode, server off at app start | The mode line is yellow. With no server save, Continue is greyed "Can't reach the server"; with one, it is the offline Continue (M12, tag "Not synced", confirm first). The heartbeat (quicker while offline, B12; `test_server_ui::test_heartbeat_quicker_while_offline`) notices the server's return, `connection_changed` re-asks, Continue becomes "Synced". Nothing resumes on its own (D1). | `test_main_menu::test_server_continue_follows_connection`, `test_server_offline_continue_from_the_save` |
 | Server mode, offline Continue, the server holds a newer copy | The queued actions meet a 1103 and the run rebuilds from the server's log or stops, as Part B. | **Not tested end to end yet** (no e2e scenario) |
-| Server mode, no active run (204) | Continue greyed "No run to continue". | same file, `test_server_no_run_and_verifying` |
+| Server mode, no active run (204) | Continue greyed, no line under it (user 2026-11-18). | same file, `test_server_no_run_and_verifying` |
 | Server run is Verifying | Continue greyed "The run is being verified" (resume needs an Active run; Part B 2.3 keeps polling in the run that sent it). | same test |
 | Local save unreadable or wrong schema | Treated as no save; the file is kept (renamed `run.json.bad`) so nothing is lost silently, and the menu says "The saved run couldn't be read". | `test_local_save_unreadable` |
 | Local save won't load (content changed) | Continue shows the error and a "Delete save" button; nothing else changes. | `test_local_save_wont_load` |
