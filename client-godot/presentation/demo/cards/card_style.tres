@@ -5,6 +5,12 @@
 [ext_resource type="Script" path="res://game/cards/card_pack_look.gd" id="3_pack"]
 [ext_resource type="FontFile" path="res://presentation/demo/ui/fonts/Cinzel.ttf" id="4_cinzel"]
 [ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/stairs.svg" id="5_stairs"]
+[ext_resource type="Script" path="res://game/cards/card_element.gd" id="6_element"]
+[ext_resource type="Script" path="res://game/cards/card_element_rule.gd" id="7_rule"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="8_query"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/cards/card_face_grimoire.tscn" id="10_grimoire"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/cube.svg" id="13_cube"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/swap-bag.svg" id="15_bag"]
 
 [sub_resource type="Resource" id="common"]
 script = ExtResource("2_rarity")
@@ -52,6 +58,91 @@ glyph = ExtResource("5_stairs")
 label = "The Descent"
 burst_color = Color(1, 0.886, 0.541, 1)
 
+[sub_resource type="Resource" id="corrupted"]
+script = ExtResource("2_rarity")
+color = Color(0.878, 0.251, 0.984, 1)
+frame_light = Color(0.612, 0.435, 0.69, 1)
+frame_dark = Color(0.165, 0.071, 0.212, 1)
+tier = 2
+
+[sub_resource type="Resource" id="el_physical"]
+script = ExtResource("6_element")
+color = Color(0.902, 0.827, 0.651, 1)
+frame_light = Color(0.851, 0.78, 0.612, 1)
+frame_dark = Color(0.541, 0.455, 0.282, 1)
+
+[sub_resource type="Resource" id="el_fire"]
+script = ExtResource("6_element")
+color = Color(1, 0.416, 0.169, 1)
+frame_light = Color(0.949, 0.627, 0.482, 1)
+frame_dark = Color(0.604, 0.184, 0.078, 1)
+
+[sub_resource type="Resource" id="el_ice"]
+script = ExtResource("6_element")
+color = Color(0.435, 0.847, 1, 1)
+frame_light = Color(0.663, 0.863, 0.949, 1)
+frame_dark = Color(0.165, 0.424, 0.58, 1)
+
+[sub_resource type="Resource" id="el_void"]
+script = ExtResource("6_element")
+color = Color(0.878, 0.251, 0.984, 1)
+frame_light = Color(0.612, 0.435, 0.69, 1)
+frame_dark = Color(0.165, 0.071, 0.212, 1)
+
+[sub_resource type="Resource" id="el_food"]
+script = ExtResource("6_element")
+color = Color(0.561, 0.82, 0.416, 1)
+frame_light = Color(0.78, 0.878, 0.627, 1)
+frame_dark = Color(0.31, 0.478, 0.173, 1)
+
+[sub_resource type="Resource" id="q_corrupted"]
+script = ExtResource("8_query")
+require_any_tags = Array[StringName]([&"Item.Corrupted"])
+
+[sub_resource type="Resource" id="q_food"]
+script = ExtResource("8_query")
+require_any_tags = Array[StringName]([&"Item.Food", &"Pool.Food"])
+
+[sub_resource type="Resource" id="q_fire"]
+script = ExtResource("8_query")
+require_any_tags = Array[StringName]([&"Damage.Type.Fire", &"Event.Damage.Dealt.Fire", &"Status.Debuff.Burn"])
+
+[sub_resource type="Resource" id="q_ice"]
+script = ExtResource("8_query")
+require_any_tags = Array[StringName]([&"Damage.Type.Ice", &"Event.Damage.Dealt.Ice", &"Status.Debuff.Freeze"])
+
+[sub_resource type="Resource" id="q_physical"]
+script = ExtResource("8_query")
+require_any_tags = Array[StringName]([&"Damage.Type.Physical"])
+
+[sub_resource type="Resource" id="rule_corrupted"]
+script = ExtResource("7_rule")
+query = SubResource("q_corrupted")
+element = &"void"
+
+[sub_resource type="Resource" id="rule_food"]
+script = ExtResource("7_rule")
+query = SubResource("q_food")
+element = &"food"
+
+[sub_resource type="Resource" id="rule_fire"]
+script = ExtResource("7_rule")
+query = SubResource("q_fire")
+look_in_abilities = true
+element = &"fire"
+
+[sub_resource type="Resource" id="rule_ice"]
+script = ExtResource("7_rule")
+query = SubResource("q_ice")
+look_in_abilities = true
+element = &"ice"
+
+[sub_resource type="Resource" id="rule_physical"]
+script = ExtResource("7_rule")
+query = SubResource("q_physical")
+look_in_abilities = true
+element = &"physical"
+
 [resource]
 script = ExtResource("1_style")
 rarities = Dictionary[StringName, ExtResource("2_rarity")]({
@@ -66,3 +157,24 @@ pack_looks = Dictionary[StringName, ExtResource("3_pack")]({
 })
 default_pack = SubResource("descent_pack")
 name_font = ExtResource("4_cinzel")
+face_scenes = Dictionary[StringName, PackedScene]({
+&"grimoire": ExtResource("10_grimoire")
+})
+face = &"grimoire"
+corrupted = SubResource("corrupted")
+elements = Dictionary[StringName, ExtResource("6_element")]({
+&"fire": SubResource("el_fire"),
+&"food": SubResource("el_food"),
+&"ice": SubResource("el_ice"),
+&"neutral": SubResource("el_physical"),
+&"physical": SubResource("el_physical"),
+&"void": SubResource("el_void")
+})
+element_rules = Array[ExtResource("7_rule")]([SubResource("rule_corrupted"), SubResource("rule_food"), SubResource("rule_fire"), SubResource("rule_ice"), SubResource("rule_physical")])
+default_element = &"neutral"
+default_icon = ExtResource("15_bag")
+art_set_paths = Array[String](["res://presentation/demo/cards/card_icons.tres", "res://presentation/demo/cards/card_portraits.tres"])
+set_marks = Dictionary[StringName, Texture2D]({
+&"core": ExtResource("13_cube"),
+&"descent": ExtResource("5_stairs")
+})

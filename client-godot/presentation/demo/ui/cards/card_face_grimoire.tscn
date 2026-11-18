@@ -1,0 +1,274 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/cards/card_face_grimoire.gd" id="1_face"]
+[ext_resource type="Shader" path="res://game/cards/shaders/card_art.gdshader" id="2_art"]
+[ext_resource type="Script" path="res://game/ui/ui_window_style.gd" id="3_window"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_aura.gdshader" id="4_glow"]
+[ext_resource type="FontFile" path="res://presentation/demo/ui/fonts/ChakraPetch-SemiBold.ttf" id="5_semibold"]
+[ext_resource type="FontFile" path="res://presentation/demo/ui/fonts/ChakraPetch-Bold.ttf" id="6_bold"]
+[ext_resource type="Shader" path="res://game/cards/shaders/card_frame.gdshader" id="7_frame"]
+[ext_resource type="Shader" path="res://game/fx/shaders/foil_shimmer.gdshader" id="8_foil"]
+[ext_resource type="Shader" path="res://game/cards/shaders/card_mythic.gdshader" id="9_mythic"]
+
+[sub_resource type="ShaderMaterial" id="mythic_mat"]
+resource_local_to_scene = true
+shader = ExtResource("9_mythic")
+shader_parameter/rect_size = Vector2(300, 420)
+shader_parameter/corner = 16.0
+
+[sub_resource type="ShaderMaterial" id="glow_mat"]
+resource_local_to_scene = true
+shader = ExtResource("4_glow")
+shader_parameter/rect_size = Vector2(360, 480)
+shader_parameter/margin = 30.0
+shader_parameter/color = Color(0.878, 0.251, 0.984, 1)
+shader_parameter/intensity = 0.8
+shader_parameter/corner = 16.0
+shader_parameter/falloff = 0.17
+shader_parameter/inner_glow = 0.0
+shader_parameter/pulse_amount = 0.0
+
+[sub_resource type="ShaderMaterial" id="prism_mat"]
+resource_local_to_scene = true
+shader = ExtResource("7_frame")
+shader_parameter/rect_size = Vector2(276, 396)
+shader_parameter/corner = 8.0
+
+[sub_resource type="ShaderMaterial" id="foil_mat"]
+resource_local_to_scene = true
+shader = ExtResource("8_foil")
+shader_parameter/rect_size = Vector2(300, 420)
+shader_parameter/margin = 0.0
+shader_parameter/tint = Color(1, 0.94, 0.8, 1)
+shader_parameter/strength = 0.45
+shader_parameter/speed = 0.22
+shader_parameter/band_width = 0.16
+shader_parameter/corner = 16.0
+
+[sub_resource type="ShaderMaterial" id="shadow_mat"]
+shader = ExtResource("4_glow")
+shader_parameter/rect_size = Vector2(360, 480)
+shader_parameter/margin = 30.0
+shader_parameter/color = Color(0, 0, 0, 0.55)
+shader_parameter/intensity = 0.9
+shader_parameter/corner = 16.0
+shader_parameter/falloff = 0.09
+shader_parameter/inner_glow = 0.0
+shader_parameter/pulse_amount = 0.0
+
+[sub_resource type="ShaderMaterial" id="art_mat"]
+resource_local_to_scene = true
+shader = ExtResource("2_art")
+shader_parameter/outline_width = 2.7
+shader_parameter/outline_color = Color(0, 0, 0, 0.6)
+shader_parameter/glyph_scale = 0.6
+shader_parameter/glyph_tint = Color(0.953, 0.918, 0.831, 1)
+shader_parameter/glow_color = Color(0, 0, 0, 0.55)
+shader_parameter/glow_radius = 6.0
+shader_parameter/inner_shadow = 0.3
+
+[sub_resource type="StyleBox" id="face_style"]
+script = ExtResource("3_window")
+top = Color(0.051, 0.051, 0.063, 1)
+middle = Color(0.051, 0.051, 0.063, 1)
+bottom = Color(0.051, 0.051, 0.063, 1)
+border_color = Color(0.051, 0.051, 0.063, 1)
+border_width = 0
+ring_width = 0
+corner_radius = 16
+shadow_color = Color(0, 0, 0, 0)
+padding = 0
+
+[sub_resource type="StyleBox" id="frame_style"]
+resource_local_to_scene = true
+script = ExtResource("3_window")
+top = Color(0.851, 0.78, 0.612, 1)
+middle = Color(0.7, 0.62, 0.45, 1)
+bottom = Color(0.541, 0.455, 0.282, 1)
+middle_at = 0.5
+border_color = Color(0, 0, 0, 0.5)
+border_width = 1
+ring_width = 0
+corner_radius = 8
+shadow_color = Color(0, 0, 0, 0)
+padding = 8
+
+[sub_resource type="StyleBox" id="bar_style"]
+script = ExtResource("3_window")
+top = Color(0.953, 0.918, 0.831, 1)
+middle = Color(0.88, 0.84, 0.73, 1)
+bottom = Color(0.804, 0.749, 0.612, 1)
+middle_at = 0.5
+border_color = Color(0, 0, 0, 0.55)
+border_width = 1
+ring_width = 0
+corner_radius = 0
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_offset = Vector2(0, 1)
+padding = 3
+
+[sub_resource type="StyleBox" id="text_style"]
+script = ExtResource("3_window")
+top = Color(0.957, 0.933, 0.867, 1)
+middle = Color(0.92, 0.89, 0.8, 1)
+bottom = Color(0.867, 0.82, 0.702, 1)
+middle_at = 0.5
+border_color = Color(0, 0, 0, 0.5)
+border_width = 1
+ring_width = 0
+corner_radius = 3
+shadow_color = Color(0, 0, 0, 0)
+padding = 8
+
+[node name="CardFaceGrimoire" type="Control"]
+custom_minimum_size = Vector2(300, 420)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 300.0
+offset_bottom = 420.0
+mouse_filter = 2
+script = ExtResource("1_face")
+
+[node name="Shadow" type="ColorRect" parent="."]
+material = SubResource("shadow_mat")
+layout_mode = 0
+offset_left = -30.0
+offset_top = -16.0
+offset_right = 330.0
+offset_bottom = 464.0
+mouse_filter = 2
+
+[node name="Glow" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+material = SubResource("glow_mat")
+layout_mode = 0
+offset_left = -30.0
+offset_top = -30.0
+offset_right = 330.0
+offset_bottom = 450.0
+mouse_filter = 2
+
+[node name="Face" type="Panel" parent="."]
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 420.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("face_style")
+
+[node name="Prism" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+material = SubResource("prism_mat")
+layout_mode = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 288.0
+offset_bottom = 408.0
+mouse_filter = 2
+
+[node name="Frame" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 288.0
+offset_bottom = 408.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("frame_style")
+
+[node name="Rows" type="VBoxContainer" parent="Frame"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 7
+
+[node name="NameBar" type="PanelContainer" parent="Frame/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("bar_style")
+
+[node name="Row" type="HBoxContainer" parent="Frame/Rows/NameBar"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Name" type="Label" parent="Frame/Rows/NameBar/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.106, 0.086, 0.051, 1)
+theme_override_font_sizes/font_size = 17
+text = "Card Name"
+vertical_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="SetSymbol" type="TextureRect" parent="Frame/Rows/NameBar/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Art" type="TextureRect" parent="Frame/Rows"]
+unique_name_in_owner = true
+material = SubResource("art_mat")
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 0
+
+[node name="TypeBar" type="PanelContainer" parent="Frame/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("bar_style")
+
+[node name="Type" type="Label" parent="Frame/Rows/TypeBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.106, 0.086, 0.051, 1)
+theme_override_fonts/font = ExtResource("6_bold")
+theme_override_font_sizes/font_size = 14
+text = "Item — Passive"
+vertical_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="TextBox" type="PanelContainer" parent="Frame/Rows"]
+custom_minimum_size = Vector2(0, 112)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("text_style")
+
+[node name="Text" type="Label" parent="Frame/Rows/TextBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.106, 0.086, 0.051, 1)
+theme_override_constants/line_spacing = -2
+theme_override_fonts/font = ExtResource("5_semibold")
+theme_override_font_sizes/font_size = 15
+text = "Card text"
+autowrap_mode = 3
+text_overrun_behavior = 3
+
+[node name="Mythic" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+material = SubResource("mythic_mat")
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 420.0
+mouse_filter = 2
+
+[node name="Foil" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+material = SubResource("foil_mat")
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 420.0
+mouse_filter = 2

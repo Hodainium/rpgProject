@@ -4,8 +4,8 @@ extends DevCommand
 
 func _init() -> void:
 	name = "server"
-	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | session [steal] | reward [...] | reward-reset ... | pack-type [...] | card-rate [...] | resume | forget | conflict]"
-	help = "No argument: the mode, server, floor seeds and upload queue. session: start a new account session (a login; spec account-session) and print it; session steal: start one as another device would, without telling this game, so its next account call is refused with 1412. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. steps: the run's verification steps and their state (a Development server; spec run-verify). verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. pack-type: list the server's pack types; pack-type <id> [price=<gems>] [cards=5 (every pack holds 5)] [odds=common:7210,rare:2200,...] [sets=descent,...] [pity=epic:10,legendary:20,...] [first=epic:5,...] [min=rare|none] [retired=true|false] [refund=true (with retired=true: every unopened pack is paid back in gems, and the version may break the openability rules; spec pack-shop 2.5)]: a new version (fields you leave out keep the latest version's value; a new pack needs price, cards, odds and sets). card-rate: list the dust value and craft cost per rarity; card-rate <rarity> <dust value> <craft cost>: a new version (spec card-collection 2.7; both need the economy-admin role). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
+	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | session [steal] | go-offline | go-online | reward [...] | reward-reset ... | pack-type [...] | card-rate [...] | resume | forget | conflict]"
+	help = "No argument: the mode, server, floor seeds and upload queue. session: start a new account session (a login; spec account-session) and print it; session steal: start one as another device would, without telling this game, so its next account call is refused with 1412. go-offline: the connecting pop-up's Go offline (local mode for this session, the Settings keep the url, back to the main menu). go-online: the main menu's Go online (links the Settings' server again, retrying until it answers). <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. steps: the run's verification steps and their state (a Development server; spec run-verify). verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. pack-type: list the server's pack types; pack-type <id> [price=<gems>] [cards=5 (every pack holds 5)] [odds=common:7210,rare:2200,...] [sets=descent,...] [pity=epic:10,legendary:20,...] [first=epic:5,...] [min=rare|none] [retired=true|false] [refund=true (with retired=true: every unopened pack is paid back in gems, and the version may break the openability rules; spec pack-shop 2.5)]: a new version (fields you leave out keep the latest version's value; a new pack needs price, cards, odds and sets). card-rate: list the dust value and craft cost per rarity; card-rate <rarity> <dust value> <craft cost>: a new version (spec card-collection 2.7; both need the economy-admin role). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
 	cheat = false
 
 
@@ -32,6 +32,21 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		return await _card_rate(ctx, args)
 	if args.size() > 0 and args[0] in ["resume", "forget", "conflict"]:
 		return await _part_b(ctx, args[0])
+	if args.size() > 0 and args[0] == "go-offline":
+		# The connecting pop-up's Go offline (card-ui playtest 2026-11-18): local mode for this session, the url kept.
+		if ctx.game == null or ctx.game.server == null:
+			return ctx.fail("already in local mode")
+		if not ctx.game.go_offline():
+			return ctx.fail("Go offline works from the main menu (mode is %s)" % ctx.game.mode)
+		return "local mode (the Settings keep the url: server go-online)"
+	if args.size() > 0 and args[0] == "go-online":
+		# The main menu's Go online: links the Settings' server again, retrying until it answers (server go-offline stops it).
+		if ctx.game == null or ctx.game.is_online():
+			return ctx.fail("already online")
+		if ctx.game.server == null and not ctx.game.can_go_online():
+			return ctx.fail("Go online needs a server url in the Settings")
+		var error: String = await ctx.game.go_online()
+		return ctx.fail(error) if error != "" else "online: %s as %s" % [ctx.game.server.url, ctx.game.server.player]
 	if ctx.game == null:
 		return ctx.fail("no game")
 	if args.is_empty():

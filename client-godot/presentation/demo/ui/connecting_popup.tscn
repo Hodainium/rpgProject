@@ -54,12 +54,17 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 16
 
-[node name="Row" type="HBoxContainer" parent="Popup/Center/Window/Margin"]
+[node name="Box" type="VBoxContainer" parent="Popup/Center/Window/Margin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 14
+
+[node name="Row" type="HBoxContainer" parent="Popup/Center/Window/Margin/Box"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 16
 
-[node name="Spinner" type="Control" parent="Popup/Center/Window/Margin/Row"]
+[node name="Spinner" type="Control" parent="Popup/Center/Window/Margin/Box/Row"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
@@ -67,16 +72,83 @@ size_flags_vertical = 4
 mouse_filter = 2
 script = ExtResource("2_spinner")
 
-[node name="Text" type="Label" parent="Popup/Center/Window/Margin/Row"]
+[node name="Text" type="Label" parent="Popup/Center/Window/Margin/Box/Row"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Connecting to the server…"
 vertical_alignment = 1
 
-[node name="GiveUp" type="Button" parent="Popup/Center/Window/Margin/Row"]
+[node name="GoOffline" type="Button" parent="Popup/Center/Window/Margin/Box"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-size_flags_vertical = 4
-text = "Stop waiting"
+text = "Go offline"
+
+[node name="Replaced" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="Replaced"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.5)
+
+[node name="Center" type="CenterContainer" parent="Replaced"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Window" type="PanelContainer" parent="Replaced/Center"]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Replaced/Center/Window"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="Box" type="VBoxContainer" parent="Replaced/Center/Window/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="ReplacedText" type="Label" parent="Replaced/Center/Window/Margin/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(392, 0)
+layout_mode = 2
+text = "Your account was opened somewhere else."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Replaced/Center/Window/Margin/Box"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="UseHere" type="Button" parent="Replaced/Center/Window/Margin/Box/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Use it here"
+
+[node name="ReplacedOffline" type="Button" parent="Replaced/Center/Window/Margin/Box/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Go offline"

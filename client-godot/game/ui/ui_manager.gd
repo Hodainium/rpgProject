@@ -161,6 +161,28 @@ func clear(layer: StringName) -> void:
 	remove(screens[0])
 
 
+## Removes every screen a player opened on `layer`; screens the policy's rules own (the main menu) stay, wherever they sit on
+## the stack (review fix). Card-ui playtest 2026-11-18: Go offline returns to the main menu.
+func close_opened(layer: StringName) -> void:
+	var stack: UILayerStack = _stacks.get(layer)
+	if stack == null:
+		return
+	# Review fix: a yes/no dialog answers No first, so whoever awaits confirm() goes on (confirm() then removes it).
+	for screen in stack.screens():
+		if screen is UIConfirm and is_instance_valid(screen) and not screen.owned_by_rule:
+			screen.decided.emit(false)
+	var opened := stack.screens().filter(func(screen: UIScreen) -> bool: return not screen.owned_by_rule)
+	if opened.is_empty():
+		return
+	for index in range(opened.size() - 1, -1, -1):
+		if is_instance_valid(opened[index]) and opened[index].get_parent() == stack:
+			_free_screen(opened[index])
+	var top := stack.top()
+	if top != null:
+		top._ui_activate()
+	stack_changed.emit(stack.layer)
+
+
 ## The top screen of a layer, or null.
 func top(layer: StringName) -> UIScreen:
 	var stack: UILayerStack = _stacks.get(layer)
@@ -191,6 +213,21 @@ func confirm(text: String, yes_label: String = "Yes", no_label: String = "No") -
 	var answer: bool = await dialog.decided
 	remove(dialog)
 	return answer
+
+
+## A notice with one button on the Modal layer (the confirm dialog with its No hidden; card-ui playtest 2026-11-18: "Purchased 1
+## pack!"). Await it to know when the player closed it (the button or Back).
+## A newer notice closes an older one still open (review fix: notices never pile up behind each other).
+func notify(text: String, ok_label: String = "OK") -> void:
+	var stack: UILayerStack = _stacks.get(&"UI.Layer.Modal")
+	if stack != null:
+		var screens := stack.screens()
+		for index in range(screens.size() - 1, -1, -1):  # only the notices on top: never free a dialog someone awaits
+			var screen := screens[index]
+			if not (screen is UIConfirm and screen.is_notice()):
+				break
+			screen.decided.emit(true)
+	await confirm(text, ok_label, "")
 
 
 ## The extension point registered for `slot` (the first one), or null. Lets a panel make room for another (spec

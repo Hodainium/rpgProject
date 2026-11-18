@@ -113,9 +113,9 @@ func test_go_online_from_offline_mode_signs_in_and_starts_a_session() -> void:
 	var down: Dictionary = await link.get_packs()
 	check(not down["ok"] and link.account_session == 0, "offline: no session")
 	bridge.offline = false
-	var online: Dictionary = await link.go_online()
+	var online: Dictionary = await link.reconnect()  # GameMain.go_online's call (ServerLink.go_online was removed 2026-11-18)
 	check(online["ok"], "Go online works once the server answers")
-	eq(link.account_session, 1, "signed in and logged in")
+	check(await _until(func() -> bool: return link.account_session == 1), "signed in and logged in")
 
 
 # --- the fence on every account-changing call (2.2) -------------------------------------------------------------------------
@@ -293,24 +293,61 @@ func _open_shop(game: GameMain) -> UIScreen:
 	return shop
 
 
+## Card-ui playtest (user, 2026-11-18): the 1412 is a pop-up in a blue window ("opened somewhere else", Use it here, Go offline)
+## over whatever screen is up, never a line in the message bar.
 func test_the_shop_after_a_replaced_session_offers_use_it_here() -> void:
 	var bridge := _bridge()
 	bridge.answers["BuyPack"] = [_refused(1412, {"currentSession": 2})]
 	bridge.answers["StartAccountSession"] = [_session(1), _session(3)]
 	var game := _game(bridge)
 	var shop := await _open_shop(game)
+	var popup := _popup(game)
 	eq(shop.shown()["offers"].size(), 1, "the offers show")
+	check(not popup.shows_replaced(), "no pop-up yet")
+	var lines: Array[String] = []
+	GameplayMessages.listen(GameplayMessageRouter.NOTIFICATION,
+		func(_channel: StringName, message: Variant) -> void: lines.append(str(message.text)), GameplayMessageRouter.Match.EXACT,
+		null, shop)
 	await shop.buy("descent-pack", 1)
 	if shop.loading:
 		await shop.loaded
-	eq([shop.shown()["message"], shop.shown()["offers"].size()], ["Your account was opened somewhere else.", 0],
+	eq([shop.shown()["message"], shop.shown()["offers"].size()], ["", 0],
 		"the account is not shown while another login holds it")
-	var button: Button = shop.get_node("%Online")
-	eq([button.visible, button.text], [true, "Use it here"], "the way back")
-	button.pressed.emit()
+	check(popup.shows_replaced(), "the pop-up says so")
+	eq(popup.get_node("%ReplacedText").text, "Your account was opened somewhere else.", "its text")
+	check(not lines.has("Your account was opened somewhere else."), "not on the message line")
+	check(not shop.get_node("%Online").visible, "the Shop has no button of its own for it")
+	popup.get_node("%UseHere").pressed.emit()
 	check(await _until(func() -> bool: return shop.shown()["offers"].size() == 1 and not shop.loading), "taken back: the Shop reads it again")
 	eq(game.server.account_session, 3, "from the new session")
-	check(not button.visible, "the button goes")
+	check(not popup.shows_replaced(), "the pop-up goes")
+
+
+func test_a_replaced_session_can_go_offline() -> void:
+	var bridge := _bridge()
+	bridge.answers["BuyPack"] = [_refused(1412, {"currentSession": 2})]
+	var game := _game(bridge)
+	var shop := await _open_shop(game)
+	var popup := _popup(game)
+	await shop.buy("descent-pack", 1)
+	check(await _until(func() -> bool: return popup.shows_replaced()), "the pop-up")
+	popup.get_node("%ReplacedOffline").pressed.emit()
+	eq(game.server, null, "local mode")
+	await _frames(3)
+	check(game.ui.top(MENU) != shop and game.ui.top(MENU).owned_by_rule, "back on the main menu")
+	check(not popup.shows_replaced(), "the pop-up goes")
+
+
+func _frames(count: int) -> void:
+	for i in count:
+		await host.get_tree().process_frame
+
+
+func _popup(game: GameMain) -> Node:
+	for node in game.find_children("*", "", true, false):
+		if node.scene_file_path == "res://presentation/demo/ui/connecting_popup.tscn":
+			return node
+	return null
 
 
 func test_the_shop_with_no_session_offers_go_online() -> void:
