@@ -168,13 +168,28 @@ CardAccount.run(kind, target):
      ServerLink's backoff capped at `reconnect_max_delay` (default 10 s), until the server answers; a commit whose answer was lost comes back as the stored response (`replayed`), so a pack shows its five
      cards once, a dust or craft its result once
   4. on any answer (success or a 4xx refusal) emit reconnected, forget the key and return the answer
-CardAccount.give_up() (the pop-up's "Stop waiting", shown after `give_up_after`, default 60 s; console `cardui giveup`):
+CardAccount.give_up() (console `cardui giveup`; the pop-up's **Go offline** gives up too, see below):
   stop retrying, forget the key, the caller gets {given_up: true} at once; the screen refetches and says
   "We couldn't confirm your purchase. Your gems and packs show what the server has." The account stays busy (no new action)
   until the try already out comes back, whatever it says; then `busy_changed` fires and the screen refetches again, since
-  that try may have landed. The button shows only while the account's own wait is the pop-up's, and takes focus.
+  that try may have landed. The button shows only while the account's own wait is the pop-up's; it takes the focus, as do Use it here and a notice's OK
+(the theme's focus is a white outline since 2026-11-18, the user's pick; it was yellow).
   Retry-After waits are capped at `reconnect_max_delay` too.
 ```
+**Go offline (user, 2026-11-18 Shop playtest; replaces "Stop waiting"):** a button **beneath** the pop-up's blue window, shown as
+soon as the account reconnects (`give_up_after`, now 0 s), and while the main menu's Go online signs in. It gives the action up
+(`CardAccount.give_up()`), plays in local mode for this session (`GameMain.go_offline()`: the Settings keep the url) and returns to
+the main menu (`UIManager.close_opened` on the Menu and Modal layers). The main menu then shows **Go online** (only in local mode
+with a url in the Settings): `GameMain.go_online()` links the Settings' server and signs in again (a fresh token and session) behind
+the same pop-up ("Connecting to the server…" with Go offline under it), retrying with backoff (`go_online_retry_seconds`, 1 s doubling
+to 10 s) until it answers; a sign-in the server itself refuses goes back to local mode with its line. Console `server go-offline`,
+`server go-online`.
+
+**Online only (user, 2026-11-18):** the main menu's Shop and Open packs need the server. Pressed while not online (local mode, or
+linked but never signed in), the theme's dialog says "You must be online to access the Shop." / "You must be online to open packs."
+with **Go online** (the same `GameMain.go_online()`; the screen opens once online) and **Back** (`UIPushButton.needs_online` /
+`offline_text`). A buy that goes through also says so in a dialog with one OK button, "Purchased 1 pack!" (`UIManager.notify`).
+
 After a crash, a quit or giving up, nothing is re-sent: every card screen fetches the collection on activation, so the player sees
 whether the buy, dust or craft happened, and a new press is a new action the player chose with the fresh totals. A pack opened
 that way is already in the collection without its reveal (Hearthstone's behaviour; a "last opening" read of `pack_openings` is
@@ -188,9 +203,10 @@ player is the server's rule too (the account advisory lock), so a single slot is
 **The account session (spec `account-session`, slice 5b1, built 2026-11-18).** Every account action also carries the player's
 account session and, for a decision, the account version the screen showed; the server refuses an older session (409 1412) or a moved
 version (409 1413) and writes nothing. On the screens: no ownership shows without a session; after a 1412 "Your account was opened
-somewhere else." with **Use it here** (a new session); **Go online** when no session could start for lack of an answer; after a 1413
+somewhere else." with **Use it here** (a new session) and **Go offline**, a centred pop-up in a blue window over whatever screen is up
+(the connecting pop-up's second dialog, user 2026-11-18: the message line bottom left is only for status, never for this); **Go online** when no session could start for lack of an answer; after a 1413
 "Your account changed. Here is what you have now." and a refetch; giving up a reconnect starts a new session. The Shop does all of
-this today; Collection, card detail, Open packs and the main menu's New run (no Use it here yet) follow it as they are built.
+this today; Collection, card detail, Open packs follow it as they are built (the 1412 pop-up already covers the main menu's New run).
 
 ### 2.6 Class pick (server mode)
 
@@ -277,7 +293,8 @@ corrupted outline `#e040fb` (the magenta of 5b2). Slice 5b2 reads `CardStyle.rar
 Screens (`presentation/demo/ui/cards/`, each a `UIScreen` on the theme; Back top left; hover previews, click selects):
 `collection.tscn` (Menu layer), `card_detail.tscn` (Modal layer), `shop.tscn` (Menu layer), `packs.tscn` (Menu layer),
 no Reconnecting screen of its own: the existing connecting pop-up (`connecting_popup.tscn`, `UI.Slot.Overlay`, which dims and
-blocks clicks) shows the screen's "Reconnecting…" wait text and gains the "Stop waiting" button after `give_up_after` (2.5); an
+blocks clicks) shows the screen's "Reconnecting…" wait text with the **Go offline** button beneath its window (2.5) and the 1412
+"opened somewhere else" dialog; an
 account screen swallows Back (`handles_back`) while its action is on its way,
 `card_face.tscn` (the 2D face,
 Look A: art window shaped by kind, oval for characters, arch for items, round for equipment; name on a curved ribbon with shrink to
@@ -316,7 +333,7 @@ lights and effects are presentation data the user can tune.
 |---|---|---|---|
 | 1 | Double click on Buy, Open, Dust or Create | One action in flight; the buttons disable while it is; the second click is ignored | `test_card_ui::test_one_action_in_flight` |
 | 2 | The response is lost after the server committed (a drop) | The reconnect re-sends the same key and gets the stored response: the same five cards, revealed once, no second charge (acceptance 2) | `test_card_ui::test_lost_open_replays_same_cards` (fake bridge: commit, drop, replay); e2e `card_ui_replay` |
-| 3 | No answer, 5xx, 429 | The connecting pop-up ("Reconnecting…") blocks the game and the action is retried with the same key until the server answers; after `give_up_after` it offers "Stop waiting" | `test_card_ui::test_retry_keeps_key_through_server_errors`, `test_card_ui::test_give_up_settles_at_once_and_ignores_a_late_answer`, `test_card_ui::test_reconnect_caps_a_long_retry_after`, `test_card_ui::test_shop_reconnects_until_the_buy_is_answered`, `test_card_ui::test_shop_stop_waiting_shows_the_server_state` |
+| 3 | No answer, 5xx, 429 | The connecting pop-up ("Reconnecting…") blocks the game and the action is retried with the same key until the server answers; it offers **Go offline** beneath its window (local mode, back to the main menu) | `test_card_ui::test_retry_keeps_key_through_server_errors`, `test_card_ui::test_give_up_settles_at_once_and_ignores_a_late_answer`, `test_card_ui::test_reconnect_caps_a_long_retry_after`, `test_card_ui::test_shop_reconnects_until_the_buy_is_answered`, `test_card_ui::test_shop_stop_waiting_shows_the_server_state`, `test_card_ui::test_go_offline_returns_to_the_main_menu_in_local_mode`, `test_card_ui::test_go_online_retries_behind_the_pop_up_until_it_answers`, `test_card_ui::test_go_offline_while_going_online_stays_local` |
 | 3b | The app crashes or quits mid-action | Nothing is stored and nothing re-sent; the screens show the server's state on the next start | `test_card_ui::test_no_resume_after_restart` |
 | 4 | Dust refused by the run lock, Active | The pop-up; Cancel run → abandon → `release_cancelled` → the same key re-sent → dusted | `test_card_ui::test_dust_cancel_run_path`; e2e `card_ui_run_lock` |
 | 5 | Dust refused, run Verifying | The wait message; nothing else | `test_card_ui::test_dust_verifying_message` |

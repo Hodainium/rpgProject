@@ -1,7 +1,7 @@
 ## Spec card-ui 6 (dev-tools parity): drives the card screens headless. `cardui open shop` opens the Shop over the main menu;
 ## `cardui shop` prints what it shows; `cardui shop buy <pack id> [count]` presses its Buy (through the player's CardAccount,
-## one key until answered); `cardui account` shows the account action on its way, `cardui giveup` is the pop-up's give-up
-## button. The Collection, card detail and Open packs arrive with their screens.
+## one key until answered); `cardui account` shows the account action on its way, `cardui giveup` stops waiting for it and stays
+## online (the pop-up's Go offline gives it up and plays offline). The Collection, card detail and Open packs arrive with their screens.
 extends DevCommand
 
 const SCREENS: Dictionary = {"shop": "res://presentation/demo/ui/cards/shop.tscn"}
@@ -10,7 +10,7 @@ const SCREENS: Dictionary = {"shop": "res://presentation/demo/ui/cards/shop.tscn
 func _init() -> void:
 	name = "cardui"
 	usage = "cardui [open shop | shop [buy <pack id> [count]] | account | giveup]"
-	help = "The card screens. open shop: opens the Shop (Menu layer; local mode shows that it needs a server). shop: the offers on screen (pack, price, owned), the gems and the message line. shop buy <pack id> [count]: presses Buy on the Shop (opened first if needed) and waits for the server's answer, reconnecting as long as it takes; count 1 or 5 like the buttons, any whole number for a test. account: the account action on its way and how long it has been reconnecting (server mode). giveup: stop waiting for it (the connecting pop-up's button)."
+	help = "The card screens. open shop: opens the Shop (Menu layer; local mode shows that it needs a server). shop: the offers on screen (pack, price, owned), the gems and the message line. shop buy <pack id> [count]: presses Buy on the Shop (opened first if needed) and waits for the server's answer, reconnecting as long as it takes; count 1 or 5 like the buttons, any whole number for a test. account: the account action on its way and how long it has been reconnecting (server mode). giveup: stop waiting for it but stay online (the connecting pop-up's Go offline also gives it up, then plays offline: server go-offline)."
 	cheat = false
 
 

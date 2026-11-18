@@ -414,13 +414,13 @@ func test_shop_stop_waiting_shows_the_server_state() -> void:
 	var shop := await _open_shop(game)
 	var popup := _popup(game)
 	check(popup != null, "the connecting pop-up is in the layout")
-	popup.give_up_after = 0.0
 	var answer := {}
 	var press := func() -> void: answer.merge(await shop.buy("descent-pack", 1))
 	press.call()
-	check(await _until(func() -> bool: return popup.offers_give_up(), 600), "the pop-up offers to stop waiting")
+	check(await _until(func() -> bool: return popup.offers_go_offline(), 600),
+		"the pop-up offers Go offline as soon as the account reconnects")
 	var fetched := bridge.count("GetCollection")
-	popup.get_node("%GiveUp").pressed.emit()
+	game.server.card_account().give_up()  # `cardui giveup`: stop waiting but stay online
 	check(await _until(func() -> bool: return not answer.is_empty() and not shop.loading), "the buy settles")
 	check(answer["given_up"], "given up")
 	eq(shop.shown()["message"], "We couldn't confirm your purchase. Your gems and packs show what the server has.", "the line")
@@ -429,6 +429,215 @@ func test_shop_stop_waiting_shows_the_server_state() -> void:
 	check(await _until(func() -> bool: return not game.server.card_account().busy() and not shop.loading and not buy1.disabled),
 		"once the last try is back, the Shop refetches and can buy again")
 	eq(shop.shown()["message"], "We couldn't confirm your purchase. Your gems and packs show what the server has.", "the line stays")
+
+
+## Card-ui playtest (user, 2026-11-18): a buy that went through says so in a blue window with one OK button.
+func test_a_purchase_shows_a_notice() -> void:
+	var bridge := _bridge()
+	bridge.answers["BuyPack"] = [[true, {"packId": "descent-pack", "packVersion": 1, "count": 5, "gemsSpent": 500, "gems": 40,
+		"owned": 7}]]
+	var game := _game(bridge)
+	var shop := await _open_shop(game)
+	await shop.buy("descent-pack", 5)
+	await _frames(2)
+	var notice := game.ui.top(&"UI.Layer.Modal")
+	check(notice is UIConfirm, "a notice on the Modal layer")
+	eq(notice.get_node("%Text").text, "Purchased 5 packs!", "its text")
+	eq([notice.get_node("%Yes").visible, notice.get_node("%Yes").text, notice.get_node("%No").visible], [true, "OK", false], "one OK button")
+	notice.get_node("%Yes").pressed.emit()
+	await _frames(2)
+	eq(game.ui.top(&"UI.Layer.Modal"), null, "OK closes it")
+	eq(game.ui.top(MENU), shop, "back on the Shop")
+
+
+## Card-ui playtest (user, 2026-11-18): Go offline under the Reconnecting pop-up stops waiting, plays in local mode (the Settings
+## keep their url) and returns to the main menu.
+func test_go_offline_returns_to_the_main_menu_in_local_mode() -> void:
+	var url_before: Variant = GameMain.load_setting(ServerLink.SETTINGS_SECTION, "url", "")
+	var bridge := _bridge()
+	bridge.answers["BuyPack"] = DOWN
+	var game := _game(bridge)
+	await _frames(2)
+	var menu := game.ui.top(MENU)  # the main menu, under the Shop
+	check(menu != null and menu.owned_by_rule, "the main menu is up")
+	var shop := await _open_shop(game)
+	var popup := _popup(game)
+	popup.show_after_seconds = 0.0
+	var answer := {}
+	var press := func() -> void: answer.merge(await shop.buy("descent-pack", 1))
+	press.call()
+	check(await _until(func() -> bool: return popup.offers_go_offline(), 600), "Go offline shows under the pop-up")
+	var button: Button = popup.get_node("%GoOffline")
+	eq(button.text, "Go offline", "named so")
+	check(button.get_parent() == popup.get_node("%Text").get_parent().get_parent(), "inside the window, under the text's row")
+	check(button.theme_type_variation == &"" and not button.has_theme_stylebox_override(&"normal"), "a plain theme button")
+	button.pressed.emit()
+	check(await _until(func() -> bool: return not answer.is_empty()), "the buy settles")
+	check(answer.get("given_up", false), "given up: nothing is re-sent")
+	eq(game.server, null, "local mode")
+	await _frames(3)
+	eq(game.ui.top(MENU), menu, "back on the main menu")
+	check(not popup.showing(), "the pop-up is gone")
+	eq(GameMain.load_setting(ServerLink.SETTINGS_SECTION, "url", ""), url_before, "the Settings keep their server")
+
+
+## The main menu's Go online: the same pop-up while it signs in again, retried until the server answers.
+func test_go_online_retries_behind_the_pop_up_until_it_answers() -> void:
+	var game := _game()
+	game.go_online_retry_seconds = Vector2(0.02, 0.05)
+	await _frames(2)
+	var popup := _popup(game)
+	popup.show_after_seconds = 0.0
+	var bridge := _bridge()
+	bridge.offline = true
+	var result := {}
+	var press := func() -> void: result["error"] = await game.go_online(_link(bridge))
+	press.call()
+	check(await _until(func() -> bool: return bridge.count("GetDevToken") >= 3, 3000), "it keeps trying")
+	await _frames(2)
+	check(popup.showing() and popup.offers_go_offline(), "behind the pop-up, with Go offline")
+	eq(game.server.waiting_text(), "Connecting to the server…", "its text")
+	bridge.offline = false
+	check(await _until(func() -> bool: return result.has("error"), 3000), "the server answers")
+	eq(result["error"], "", "online")
+	check(game.server != null and game.server.connected(), "in server mode, signed in")
+	await _frames(2)
+	check(not popup.showing(), "the pop-up is gone")
+
+
+func test_go_offline_while_going_online_stays_local() -> void:
+	var game := _game()
+	game.go_online_retry_seconds = Vector2(0.02, 0.05)
+	await _frames(2)
+	var popup := _popup(game)
+	popup.show_after_seconds = 0.0
+	var bridge := _bridge()
+	bridge.offline = true
+	var press := func() -> void: await game.go_online(_link(bridge))
+	press.call()
+	check(await _until(func() -> bool: return popup.offers_go_offline(), 600), "Go offline is offered")
+	popup.get_node("%GoOffline").pressed.emit()
+	eq(game.server, null, "local mode at once")
+	var tries := bridge.count("GetDevToken")
+	await _frames(10)
+	check(bridge.count("GetDevToken") <= tries + 1, "and no more sign-in tries")
+	check(not popup.showing(), "the pop-up is gone")
+	# Review fix (round 3): the first Go online ended, so a second one works (it used to stay "stopped" for good).
+	await _frames(10)
+	eq(await game.go_online(_link(_bridge())), "", "Go online again: online")
+	check(game.is_online(), "online")
+
+
+## Review fixes (2026-11-18): a 503 or 429 is retried like no answer; a link that holds a session keeps it when it comes back.
+func test_go_online_retries_server_errors_and_keeps_the_session() -> void:
+	var game := _game()
+	game.go_online_retry_seconds = Vector2(0.02, 0.05)
+	await _frames(2)
+	var bridge := _bridge()
+	bridge.answers["GetDevToken"] = [[false, {"status": 503, "errorCode": null, "title": "Database unavailable", "detail": ""}],
+		"default"]
+	var result := {}
+	var press := func() -> void: result["error"] = await game.go_online(_link(bridge))
+	press.call()
+	check(await _until(func() -> bool: return result.has("error"), 3000), "it answers in the end")
+	eq(result["error"], "", "a 503 was retried, not taken as a refusal")
+	check(bridge.count("GetDevToken") >= 2, "signed in again after the 503")
+	check(await _until(func() -> bool: return game.server.account_session == 1), "a session")
+	var sessions := bridge.count("StartAccountSession")
+	bridge.offline = true
+	await game.server.get_collection()  # a call goes unanswered: not online any more
+	check(not game.is_online(), "not online")
+	bridge.offline = false
+	eq(await game.go_online(), "", "back online with the same link")
+	eq([game.server.account_session, bridge.count("StartAccountSession")], [1, sessions], "no new session (it would fence its own calls)")
+
+
+func test_go_online_once_at_a_time() -> void:
+	var game := _game()
+	game.go_online_retry_seconds = Vector2(0.02, 0.05)
+	await _frames(2)
+	var bridge := _bridge()
+	bridge.offline = true
+	var first := func() -> void: await game.go_online(_link(bridge))
+	first.call()
+	eq(await game.go_online(), GameMain.GO_ONLINE_STOPPED, "a second press while the first tries")
+	game.go_offline()
+
+
+func test_go_offline_answers_an_open_dialog_and_keeps_the_old_link_idle() -> void:
+	var game := _game(_bridge())
+	await _frames(3)
+	var link := game.server
+	var answer := {}
+	var ask := func() -> void: answer["yes"] = await game.ui.confirm("Continue?")
+	ask.call()
+	await _frames(1)
+	check(game.go_offline(), "Go offline on the main menu")
+	eq(answer, {"yes": false}, "the dialog answered No, its caller went on")
+	eq(game.ui.top(&"UI.Layer.Modal"), null, "and it is gone")
+	check(is_instance_valid(link) and link.retired, "the old link stays (idle) so nothing resumes on a freed object")
+	var retried: Dictionary = await link.start_account_session()
+	check(not retried["ok"], "a retired link starts no session")
+
+
+func test_go_offline_is_refused_during_a_run() -> void:
+	var game := _game(_bridge())
+	await _frames(2)
+	game.set_mode("run")
+	check(not game.go_offline(), "refused")
+	check(game.server != null, "the run keeps its link")
+	game.set_mode("menu")
+
+
+func test_enter_closes_a_notice() -> void:
+	var game := _game()
+	await _frames(2)
+	var closed := {}
+	var show := func() -> void:
+		await game.ui.notify("Purchased 1 pack!")
+		closed["done"] = true
+	show.call()
+	await _frames(2)
+	var press := InputEventAction.new()
+	press.action = &"ui_accept"
+	press.pressed = true
+	Input.parse_input_event(press)
+	check(await _until(func() -> bool: return closed.has("done")), "Enter closed it")
+
+
+## Review fix: Enter on the purchase notice closes it and never presses the focused Buy again; notices never pile up.
+func test_enter_on_the_purchase_notice_buys_nothing_more() -> void:
+	var bridge := _bridge()
+	bridge.answers["BuyPack"] = [[true, {"packId": "descent-pack", "packVersion": 1, "count": 1, "gemsSpent": 100, "gems": 240,
+		"owned": 3}]]
+	var game := _game(bridge)
+	var shop := await _open_shop(game)
+	var buy1: Button = shop.get_node("%Offers").get_child(0).get_node("%Buy1")
+	buy1.grab_focus()
+	await shop.buy("descent-pack", 1)
+	await _frames(3)
+	var owner := buy1.get_viewport().gui_get_focus_owner()
+	check(owner != buy1 and owner != null and owner.name == "Yes", "the notice's OK took the focus from Buy")
+	var press := InputEventAction.new()
+	press.action = &"ui_accept"
+	press.pressed = true
+	Input.parse_input_event(press)
+	await _frames(3)
+	eq([bridge.count("BuyPack"), game.ui.top(&"UI.Layer.Modal")], [1, null], "Enter closed the notice, no second buy")
+	game.ui.notify("one")
+	game.ui.notify("two")
+	await _frames(2)
+	var modal: Array = game.ui.layout.stacks().filter(func(stack: UILayerStack) -> bool: return stack.layer == &"UI.Layer.Modal")
+	eq(modal[0].screens().size(), 1, "a newer notice replaces the older one")
+
+
+func test_go_online_only_from_the_main_menu() -> void:
+	var game := _game()
+	await _frames(2)
+	game.set_mode("run")
+	eq(await game.go_online(_link(_bridge())), "Go online from the main menu.", "refused during a run")
+	eq(game.server, null, "nothing linked")
+	game.set_mode("menu")
 
 
 func test_back_while_the_shop_waits_for_the_server() -> void:
@@ -447,6 +656,10 @@ func test_back_while_the_shop_waits_for_the_server() -> void:
 	await _frames(8)
 	eq(bridge.count("BuyPack"), 1, "the buy went out once")
 	check(not game.server.card_account().busy(), "and got its answer")
+	check(game.ui.top(&"UI.Layer.Modal") is UIConfirm, "the purchase notice is up")
+	game.ui.back()  # closes the notice first
+	await _frames(2)
+	eq([game.ui.top(&"UI.Layer.Modal"), game.ui.top(MENU)], [null, shop], "Back closes the notice")
 	game.ui.back()
 	await _frames(2)
 	eq(String(game.ui.top(MENU).name), "MainMenu", "then Back returns to the main menu")
@@ -480,6 +693,43 @@ func test_main_menu_has_the_three_card_buttons_and_the_unopened_count() -> void:
 	menu.get_node("%Shop").pressed.emit()
 	await _frames(2)
 	eq(String(game.ui.top(MENU).name), "Shop", "Shop opens the Shop")
+
+
+## Card-ui playtest (user, 2026-11-18): the Shop and Open packs need the server; offline, a dialog says so and offers Go online.
+func test_shop_offline_asks_to_go_online() -> void:
+	var game := _game()
+	await _frames(3)
+	var menu := game.ui.top(MENU)
+	eq([menu.get_node("%Shop").needs_online, menu.get_node("%OpenPacks").needs_online], [true, true], "both need the server")
+	eq(menu.get_node("%OpenPacks").offline_text, "You must be online to open packs.", "Open packs' line")
+	menu.get_node("%Shop").pressed.emit()
+	await _frames(2)
+	var dialog := game.ui.top(&"UI.Layer.Modal")
+	check(dialog is UIConfirm, "a dialog instead of the Shop")
+	eq([dialog.get_node("%Text").text, dialog.get_node("%Yes").text, dialog.get_node("%No").text],
+		["You must be online to access the Shop.", "Go online", "Back"], "its text and buttons")
+	dialog.get_node("%No").pressed.emit()
+	await _frames(2)
+	eq([game.ui.top(&"UI.Layer.Modal"), game.ui.top(MENU)], [null, menu], "Back: still on the main menu, no Shop")
+
+
+func test_shop_offline_go_online_then_opens_the_shop() -> void:
+	var bridge := _bridge()
+	bridge.offline = true
+	var game := _game(bridge)  # linked, but the server does not answer: not online
+	game.go_online_retry_seconds = Vector2(0.02, 0.05)
+	await _frames(3)
+	check(not game.is_online(), "not online")
+	var menu := game.ui.top(MENU)
+	menu.get_node("%Shop").pressed.emit()
+	await _frames(2)
+	var dialog := game.ui.top(&"UI.Layer.Modal")
+	dialog.get_node("%Yes").pressed.emit()
+	check(await _until(func() -> bool: return bridge.count("GetDevToken") >= 2, 3000), "Go online signs in, retrying")
+	bridge.offline = false
+	check(await _until(func() -> bool: return game.ui.top(MENU) != menu, 3000), "once online, the Shop opens")
+	eq(String(game.ui.top(MENU).name), "Shop", "the Shop")
+	check(game.is_online(), "online")
 
 
 func _console(game: GameMain) -> DevConsole:

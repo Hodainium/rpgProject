@@ -377,6 +377,90 @@ func test_run_menu_save_and_quit_and_abandon() -> void:
 	check(not run_menu.get_node("%Abandon").visible, "server mode has no Abandon run")
 
 
+## Card-ui playtest (user, 2026-11-18): in local mode (after Go offline) Continue still offers the player's server-mode save,
+## not synced, with a warning that the server drops it if its copy is newer; continuing links the server again.
+func test_local_mode_offers_the_server_save_unsynced() -> void:
+	var game := _game()
+	game.start_run(PARTY, "7", RUN)
+	_enter_a_room(game.run)
+	var hash := game.run.state.run_hash()
+	var snapshot := game.run.snapshot()
+	game.back_to_menu()
+	game.delete_local_save()
+	var bridge := FakeBridge.new()
+	bridge.offline = true
+	var link := _link(bridge)
+	DirAccess.make_dir_recursive_absolute(link.save_path().get_base_dir())
+	var file := FileAccess.open(link.save_path(), FileAccess.WRITE)
+	file.store_string(WireJson.stringify({"schemaVersion": 1, "runId": RUN_ID, "player": "tester", "floorSeeds": {},
+		"snapshot": snapshot, "queue": [], "lastAckedSeq": 0, "end": {}}))
+	file.close()
+	game.server_save_path = link.save_path()
+	eq(game.server, null, "local mode")
+	var menu := _menu(game)
+	menu.refresh()
+	await _frames(5)
+	check(not menu.get_node("%Continue").disabled, "Continue is enabled")
+	eq(menu.get_node("%Tag").text, "NOT SYNCED", "tagged as not synced")
+	menu.get_node("%Continue").pressed.emit()
+	for i in 30:
+		if game.ui.top(MODAL) is UIConfirm:
+			break
+		await host.get_tree().process_frame
+	var dialog := game.ui.top(MODAL)
+	check(dialog is UIConfirm and dialog.get_node("%Text").text.contains("this save will be discarded"), "the warning")
+	if dialog is UIConfirm:
+		dialog.decided.emit(false)
+	await _frames(3)
+	eq(game.continue_server_offline(link), "", "continued")
+	eq([game.mode, game.server], ["run", link], "playing, linked again (it syncs once the server answers)")
+	eq(game.run.state.run_hash(), hash, "from the saved state")
+
+
+## User, 2026-11-18: local-mode saves are a debug feature. The player build never writes one and never offers one; offline,
+## Continue offers only the online run's copy on this computer.
+func test_the_player_build_has_no_local_mode_saves() -> void:
+	var game := _game()
+	game.start_run(PARTY, "7", RUN)
+	_enter_a_room(game.run)
+	game.save_local_run()
+	check(FileAccess.file_exists(game.local_save_path), "a debug build saves a local-mode run")
+	var debug_info: Dictionary = await game.can_continue()
+	eq(debug_info["tag"], "Local", "and offers it")
+	game.back_to_menu()
+	game.debug_local_mode = false
+	eq((await game.can_continue())["enabled"], false, "the player build does not offer it")
+	eq(game.continue_local_run(), "No saved run", "nor continues it")
+	game.delete_local_save()
+	game.start_run(PARTY, "7", RUN)
+	_enter_a_room(game.run)
+	game.save_local_run()
+	check(not FileAccess.file_exists(game.local_save_path), "nor writes one")
+	game.back_to_menu()
+
+
+## User, 2026-11-18: a player starts no run offline. The player build's New run asks to go online; a debug build still opens
+## the class pick for a local run.
+func test_new_run_needs_the_server_in_the_player_build() -> void:
+	var game := _game()
+	await _frames(3)
+	var menu := _menu(game)
+	game.debug_local_mode = false
+	menu.get_node("%NewRun").pressed.emit()
+	await _frames(2)
+	var dialog := game.ui.top(MODAL)
+	check(dialog is UIConfirm, "the player build asks to go online")
+	if dialog is UIConfirm:
+		eq([dialog.get_node("%Text").text, dialog.get_node("%Yes").text], ["You must be online to start a run.", "Go online"], "the line")
+		dialog.get_node("%No").pressed.emit()
+	await _frames(2)
+	eq(game.ui.top(MENU), menu, "Back: no class pick")
+	game.debug_local_mode = true
+	menu.get_node("%NewRun").pressed.emit()
+	await _frames(2)
+	check(game.ui.top(MODAL) == null and game.ui.top(MENU) != menu, "a debug build opens the class pick offline")
+
+
 ## Offline Continue: the server can't be reached but the player's server-mode save is playable; the pop-up says it isn't
 ## synced, and Continue loads the save without asking the server.
 func test_server_offline_continue_from_the_save() -> void:

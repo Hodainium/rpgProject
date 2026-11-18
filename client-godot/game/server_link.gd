@@ -85,7 +85,7 @@ var _sign_in_error: Dictionary = {}
 ## refreshed after a 401 keeps it: that is the same login). Every account-changing call carries it.
 var account_session: int = 0
 ## Spec account-session 2.3: a call came back 1412 (a newer login, another device). Account calls are refused here until
-## take_account() or go_online() starts a new session.
+## take_account() starts a new session ("Use it here").
 var session_replaced: bool = false
 ## The session started, was replaced or was taken back (the card screens redraw their gate).
 signal session_changed
@@ -336,6 +336,8 @@ func abandon_run(run_id: String) -> Dictionary:
 ## POST /api/v1/account/session: the account login. data = AccountSessionResponse {session, collection}. Keeps the session, takes
 ## the collection's account version, and clears a replaced session.
 func start_account_session() -> Dictionary:
+	if retired:   # review fix: a dropped link never raises the session over the one the game uses now
+		return {"ok": false, "data": null, "error": {"status": -1, "local": true, "busy": false, "title": "offline"}}
 	if _starting_session:
 		await _session_started
 		return _session_result   # review fix: the start this caller waited for, not a guess from the state
@@ -367,16 +369,38 @@ func take_account() -> Dictionary:
 	return await start_account_session()
 
 
-## Spec account-session 2.1: Go online from offline mode: sign in again (a fresh token) and start a session.
-func go_online() -> Dictionary:
-	_token = ""
-	account_session = 0
-	var signed := await _sign_in()
-	if not signed["ok"]:
-		return signed
-	if account_session == 0:
-		return await start_account_session()
-	return {"ok": true, "data": null, "error": {}}
+## Card-ui playtest review fix (2026-11-18): back online with this link. Signs in when it has no token (that also starts the
+## account session), else asks the server something cheap; never wipes a session it holds (a fresh one would fence this
+## client's own given-up request with a 1412). ok once the server answered.
+func reconnect() -> Dictionary:
+	if _token == "":
+		return await _sign_in()
+	return await get_collection()
+
+
+## True once the game dropped this link (Go offline, another server): it starts no session and is freed once its last
+## try can have come back.
+var retired: bool = false
+
+
+## Never emitted: a retired link's retry loops park on it for good (review fix, 2026-11-18).
+signal _never
+
+## Review fix: the game drops this link (Go offline, another server). It is not freed: coroutines parked in its retry timers
+## or bridge calls would resume on a freed object, or hang a caller, at no fixed time. It gives its account action up, stops its
+## heartbeat, lets go of its run (no upload, seed or end loop goes on) and every request or retry wait parks for good, so it
+## sends nothing new; its last bridge calls end with the bridge timeout. One idle node per drop, freed with the game.
+func retire() -> void:
+	if retired:
+		return
+	retired = true
+	_run = null
+	_run_id = ""
+	if _card_account != null:
+		_card_account.give_up()
+	if _heartbeat != null:
+		_heartbeat.stop()
+	_waits.clear()
 
 
 ## A fenced call may go out: {} when the link holds a current session (starting one first when it has none), else the refusal
@@ -449,6 +473,8 @@ func retry_wait(error: Dictionary, delay: float, cap: float = INF) -> void:
 	var after: Variant = error.get("retryAfterSeconds")
 	var wait: float = float(after) if after != null else delay * randf_range(0.75, 1.25)
 	await get_tree().create_timer(minf(wait, cap)).timeout
+	if retired:
+		await _never  # the game dropped this link: its loop ends here
 
 
 ## How long the player's account action has been reconnecting, or -1 (the connecting pop-up; makes no account).
@@ -724,9 +750,15 @@ func save() -> void:
 
 ## The local save, or {} when there is none (or it can't be read).
 func load_save() -> Dictionary:
-	if not FileAccess.file_exists(save_path()):
+	return read_save(save_path())
+
+
+## A server-mode save at `path` (schema 1), or {} (none, unreadable, another schema). Also read with no link: local mode's
+## Continue offers the Settings player's save (card-ui playtest, user 2026-11-18).
+static func read_save(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
 		return {}
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(save_path()))
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	return parsed if parsed is Dictionary and int(parsed.get("schemaVersion", 0)) == 1 else {}
 
 
@@ -1035,6 +1067,8 @@ func _backoff(error: Dictionary, delay: float) -> void:
 	var after: Variant = error.get("retryAfterSeconds")
 	var wait: float = float(after) if after != null else delay * randf_range(0.75, 1.25)
 	await get_tree().create_timer(wait).timeout
+	if retired:
+		await _never  # the game dropped this link: its loop ends here
 
 
 func _fetch_floor(run: RunController, run_id: String, floor_index: int) -> void:
@@ -1065,6 +1099,8 @@ func _fetch_floor(run: RunController, run_id: String, floor_index: int) -> void:
 
 ## One call through the bridge with the player's token (fetched first; once more after a 401).
 func _request(method: String, args: Array) -> Dictionary:
+	if retired:
+		await _never  # review fix: a dropped link sends nothing (its run's lambdas may still call in)
 	var signed := await _sign_in()
 	if not signed["ok"]:
 		return signed
@@ -1099,7 +1135,7 @@ func _sign_in() -> Dictionary:
 	_signed_in.emit()
 	# Spec account-session 2.1: the session is the login, started right after the first sign-in (best effort: a fenced call
 	# starts it again if this fails). A token refreshed after a 401 keeps the session: it is the same login.
-	if result["ok"] and account_session == 0 and not session_replaced and not _starting_session:
+	if result["ok"] and account_session == 0 and not session_replaced and not _starting_session and not retired:
 		start_account_session()   # in the background (review fix): a fenced call waits for it, other calls do not
 	return result if not result["ok"] else {"ok": true, "data": null, "error": {}}
 

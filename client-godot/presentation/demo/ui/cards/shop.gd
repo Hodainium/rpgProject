@@ -12,13 +12,13 @@ extends DemoMenuFrame
 @export var unreachable_text: String = "Can't reach the server: %s"
 @export var empty_text: String = "No packs are on sale right now."
 @export var bought_text: String = "Bought %d pack%s. You have %d waiting in Open packs."
+## The pop-up after a buy went through (card-ui playtest, user 2026-11-18): the count and "s" for more than one.
+@export var purchased_text: String = "Purchased %d pack%s!"
+@export var purchased_ok_text: String = "OK"
 @export var not_enough_text: String = "Not enough gems (need %d, have %d)."
 @export var wait_text: String = "Talking to the Shop…"
 @export var reconnecting_text: String = "Reconnecting to the server…"
 @export var gave_up_text: String = "We couldn't confirm your purchase. Your gems and packs show what the server has."
-## Spec account-session 2.3: a newer login holds the account (1412); the button takes it back here.
-@export var replaced_text: String = "Your account was opened somewhere else."
-@export var use_here_text: String = "Use it here"
 ## The account changed since the Shop read it (1413): it read it again.
 @export var stale_text: String = "Your account changed. Here is what you have now."
 ## No session could start (the server is unreachable): offline mode, with a button to sign in again.
@@ -53,22 +53,19 @@ func bind(_context: UIContext) -> void:
 	%Online.pressed.connect(_go_online)
 
 
-## Spec account-session 2.3 and 2.1: "Use it here" takes the account back from another login; "Go online" signs in again. Then
-## the Shop reads the account from the new session's start.
+## Spec account-session 2.1: "Go online" signs in again, then the Shop reads the account from the new session's start. (A 1412's
+## "Use it here" is the connecting pop-up's, card-ui playtest 2026-11-18.)
 func _go_online() -> void:
 	var link: ServerLink = ctx.main.server if ctx != null else null
-	if link == null or loading or _buying or link.card_account().busy():
+	if link == null or loading or _buying or link.card_account().busy() or link.session_replaced:
 		return
 	_show_online("")
-	if link.session_replaced:
-		await link.take_account()
-	else:
-		await link.go_online()
+	await ctx.main.go_online()   # review fix: the one Go online (the pop-up with Go offline, one at a time, the session kept)
 	if is_instance_valid(self) and active:
 		refresh()
 
 
-## The Go online / Use it here button (`text` "" hides it).
+## The Go online button (`text` "" hides it).
 func _show_online(text: String) -> void:
 	%Online.text = text
 	%Online.visible = text != ""
@@ -129,10 +126,10 @@ func refresh() -> void:
 		return
 	_show_online("")
 	if link.session_replaced:
-		# Spec account-session 2.3: another login holds the account. Nothing of it is shown until the player takes it back.
+		# Spec account-session 2.3: another login holds the account. Nothing of it is shown until the player takes it back
+		# (the connecting pop-up's "opened somewhere else" dialog; session_changed refreshes the Shop).
 		_show_offers([], -1)
-		_say(replaced_text)
-		_show_online(use_here_text)
+		_say("")
 		_finish_loading()
 		return
 	loading = true
@@ -235,6 +232,8 @@ func buy(pack_id: String, count: int) -> Dictionary:
 				_offers[index]["owned"] = int(data["owned"])
 		%Offers.set_items(_offers)
 		_say(_bought_line(answer, bought_text))
+		var bought := int(data.get("count", count))
+		ctx.ui.notify(purchased_text % [bought, "" if bought == 1 else "s"], purchased_ok_text)  # not awaited: the buy is done
 	elif answer.get("given_up", false):
 		# The server may or may not have done it: show what it has now, and again once the last try is back.
 		_note = gave_up_text
@@ -247,8 +246,9 @@ func buy(pack_id: String, count: int) -> Dictionary:
 		await refresh()
 		if not is_instance_valid(self):
 			return answer
-		_refuse(not_enough_text % [int(offer.get("price", 0)) * count, maxi(_gems, 0)]
-			if CardAccount.code_of(answer) == CardAccount.NOT_ENOUGH_CURRENCY else _refusal_line(answer))
+		if CardAccount.code_of(answer) != ServerLink.ACCOUNT_SESSION_REPLACED:   # that one is the pop-up's
+			_refuse(not_enough_text % [int(offer.get("price", 0)) * count, maxi(_gems, 0)]
+				if CardAccount.code_of(answer) == CardAccount.NOT_ENOUGH_CURRENCY else _refusal_line(answer))
 	_update_offers()
 	return answer
 
@@ -283,8 +283,6 @@ func _bought_line(answer: Dictionary, template: String) -> String:
 func _refusal_line(answer: Dictionary) -> String:
 	var error: Dictionary = answer.get("error", {})
 	match CardAccount.code_of(answer):
-		ServerLink.ACCOUNT_SESSION_REPLACED:
-			return replaced_text
 		ServerLink.ACCOUNT_VERSION_STALE:
 			return stale_text
 	var detail := str(error.get("detail", ""))

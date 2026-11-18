@@ -17,13 +17,16 @@ extends UIScreen
 @export var synced_confirm: String = "This run is synced with the server as %s. Continue it?"
 ## The server can't be reached but the server-mode save can be played (like Steam Cloud offline).
 @export var offline_tag: String = "Not synced"
-@export var offline_confirm: String = "This save hasn't been synced with the server. You can play it offline, but the server will deny it if its copy of the run is newer. Continue it?"
+@export var offline_confirm: String = "This run hasn't been synced with the server. You can play it offline, but if the server has a newer copy of it, this save will be discarded once you're back online. Continue it?"
 @export var local_tag_color: Color = Color(0.85, 0.7, 0.3)
 @export var synced_tag_color: Color = Color(0.25, 1.0, 0.35)
 @export var offline_color: Color = Color(1.0, 0.8, 0.25)
 ## Spec card-ui 1.7: the Open packs button, with the unopened count when the account has some.
 @export var open_packs_text: String = "Open packs"
 @export var open_packs_count_text: String = "Open packs (%d)"
+## Card-ui playtest (2026-11-18): only in local mode with a server in the Settings; links it again behind the connecting
+## pop-up (whose Go offline returns here).
+@export var go_online_text: String = "Go online"
 
 var _server: ServerLink
 var _info: Dictionary = {}
@@ -37,6 +40,8 @@ func bind(context: UIContext) -> void:
 	%DeleteSave.pressed.connect(func():
 		context.main.delete_local_save()
 		refresh())
+	%GoOnline.text = go_online_text
+	%GoOnline.pressed.connect(_go_online)
 	context.main.server_changed.connect(_watch)
 	context.main.mode_changed.connect(_mode_changed)
 	_watch(context.main.server)
@@ -75,6 +80,7 @@ func refresh() -> void:
 	_generation += 1
 	var generation := _generation
 	%ModeLine.text = ctx.main.mode_line()
+	%GoOnline.visible = ctx.main.can_go_online()
 	if _server != null and is_instance_valid(_server):
 		%ModeLine.add_theme_color_override(&"font_color", synced_tag_color if _server.connected() else offline_color)
 	else:
@@ -104,6 +110,15 @@ func _show_unopened() -> void:
 	var unopened := ShopModel.unopened(collection["data"])
 	if unopened > 0:
 		%OpenPacks.text = open_packs_count_text % unopened
+
+
+func _go_online() -> void:
+	%Error.text = ""
+	var error: String = await ctx.main.go_online()
+	if not is_instance_valid(self) or error == GameMain.GO_ONLINE_STOPPED:
+		return
+	%Error.text = error
+	refresh()
 
 
 func _show(info: Dictionary) -> void:

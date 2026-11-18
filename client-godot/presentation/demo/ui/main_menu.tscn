@@ -70,6 +70,9 @@ layout_mode = 2
 text = "New run"
 script = ExtResource("2_push")
 screen = ExtResource("3_title")
+needs_online = true
+debug_skips_online = true
+offline_text = "You must be online to start a run."
 
 [node name="Collection" type="Button" parent="Panel/Margin/Box"]
 unique_name_in_owner = true
@@ -84,6 +87,8 @@ layout_mode = 2
 text = "Shop"
 script = ExtResource("2_push")
 screen = ExtResource("6_shop")
+needs_online = true
+offline_text = "You must be online to access the Shop."
 
 [node name="OpenPacks" type="Button" parent="Panel/Margin/Box"]
 unique_name_in_owner = true
@@ -91,6 +96,8 @@ layout_mode = 2
 disabled = true
 text = "Open packs"
 script = ExtResource("2_push")
+needs_online = true
+offline_text = "You must be online to open packs."
 
 [node name="Settings" type="Button" parent="Panel/Margin/Box"]
 layout_mode = 2
@@ -115,6 +122,12 @@ custom_minimum_size = Vector2(412, 0)
 layout_mode = 2
 theme_type_variation = &"Warning"
 autowrap_mode = 3
+
+[node name="GoOnline" type="Button" parent="Panel/Margin/Box"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Go online"
 
 [node name="ModeLine" type="Label" parent="Panel/Margin/Box"]
 unique_name_in_owner = true

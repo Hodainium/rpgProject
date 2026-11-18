@@ -44,6 +44,10 @@ const CONTENT_ROOTS: Array[String] = ["res://content/", "res://tests/fixtures/"]
 ## Spec main-menu M4: the mode line of the main menu and Settings.
 @export var local_mode_text: String = "Local mode (offline)"
 @export var server_mode_format: String = "Server mode: %s as %s"
+## Card-ui playtest (2026-11-18): the connecting pop-up's text while Go online signs in again.
+@export var going_online_text: String = "Connecting to the server…"
+## Seconds between Go online's sign-in tries (doubled after each, up to the second number).
+@export var go_online_retry_seconds: Vector2 = Vector2(1.0, 10.0)
 ## The 3D room (a Node3D with setup(main)); not UI.
 @export var room_view: PackedScene
 @export var unit_view: PackedScene
@@ -86,12 +90,19 @@ var _error_label: Label
 ## Spec playtest-fixes B11: a server problem stays on the message line until something replaces it; once the link
 ## answers again (the same link, or a new one from the console's `server <url>`), the line says so.
 var _server_problem_shown: bool = false
+## Local mode is a debug feature (user, 2026-11-18): a player never has a local-only save and starts no run offline (New run
+## needs the server, UIPushButton.debug_skips_online). True in the editor and the dev and full builds (debug), false in the
+## player build; tests set it.
+var debug_local_mode: bool = OS.is_debug_build()
 ## Spec main-menu M5 (D2): local-mode runs are saved after every action. Off headless (tests turn it on with their own
-## `local_save_path`).
-var local_saves: bool = DisplayServer.get_name() != "headless"
+## `local_save_path`) and in the player build (debug_local_mode).
+var local_saves: bool = DisplayServer.get_name() != "headless" and OS.is_debug_build()
 ## Set before the scene enters the tree: play locally even in a window, ignoring the Settings' server url (dev_run --local).
 var force_local: bool = false
 var local_save_path: String = LocalSave.DEFAULT_PATH
+## Card-ui playtest (user, 2026-11-18): where local mode looks for the Settings player's server-mode save; "" = the default
+## user://saves/<player>/run.json (tests set their own).
+var server_save_path: String = ""
 ## While a save loads: a run that stops then keeps its file (the menu offers "Delete save").
 var _loading_save: bool = false
 
@@ -141,10 +152,11 @@ func _ready() -> void:
 
 ## Spec server-authority: plays in server mode through `link`, or in local mode when null.
 func use_server(link: ServerLink) -> void:
-	if server != null and server != link:
-		server.queue_free()
+	var old := server
 	var changed := server != link
 	server = link
+	if old != null and old != link:
+		old.retire()  # review fix: after the switch, so whatever its give-up wakes sees the new link; kept, never freed early
 	if server != null and server.get_parent() == null:
 		add_child(server)
 	if changed and server != null:
@@ -175,6 +187,91 @@ func connect_server(url: String, player_name: String = "dev") -> String:
 func disconnect_server() -> void:
 	save_setting(ServerLink.SETTINGS_SECTION, "url", "")
 	use_server(null)
+
+
+## The connecting pop-up's wait while Go online signs in (it offers Go offline under it).
+const GO_ONLINE_WAIT: StringName = &"server.go_online"
+
+
+## Card-ui playtest (user, 2026-11-18): the connecting pop-up's Go offline. Stops waiting for an account action (the link's
+## retire(): nothing is re-sent; the next login shows what the server has), plays in local mode for this session (the Settings
+## keep the url: the main menu's Go online or the next start links again) and returns to the main menu. Only on the main menu
+## (review fix): a run in progress keeps its link. False when refused.
+func go_offline() -> bool:
+	if mode != "menu":
+		return false
+	use_server(null)
+	if ui != null:
+		ui.close_opened(&"UI.Layer.Modal")
+		ui.close_opened(&"UI.Layer.Menu")
+	return true
+
+
+## Signed in to a server that answers (the Shop and Open packs need it; card-ui playtest 2026-11-18).
+func is_online() -> bool:
+	return server != null and server.connected()
+
+
+## The main menu offers Go online: local mode now, with a server url in the Settings (after Go offline, or an unbuilt link).
+func can_go_online() -> bool:
+	return server == null and str(load_setting(ServerLink.SETTINGS_SECTION, "url", "")) != ""
+
+
+## Go online could not build a link.
+@export var no_server_text: String = "No server is set in the Settings."
+## Go online works from the main menu only (a run keeps its link).
+@export var go_online_menu_text: String = "Go online from the main menu."
+
+## go_online()'s result when the player went offline meanwhile, or another Go online is already on its way (nothing to show).
+const GO_ONLINE_STOPPED: String = "stopped"
+var _going_online: bool = false
+
+
+## Card-ui playtest (2026-11-18): the main menu's Go online. Links the Settings' server (or signs the current link in again) and
+## waits behind the connecting pop-up, retrying with the link's backoff (jitter, Retry-After) while the server gives no answer,
+## a 5xx or a 429, until it answers or the player presses Go offline. "" once online, GO_ONLINE_STOPPED, or why not (a refusal
+## the server means: back to local mode). `link`: tests pass a link over a fake bridge.
+func go_online(link: ServerLink = null) -> String:
+	if is_online():
+		return ""
+	if mode != "menu":
+		return go_online_menu_text   # review fix: a refused sign-in must never drop a run's link
+	if _going_online:
+		return GO_ONLINE_STOPPED   # review fix: one Go online at a time (a double click, a key press under the pop-up)
+	if server != null:
+		link = server  # linked, not answering (down at start, or a call went unanswered): bring this link back
+	elif link == null:
+		link = ServerLink.from_settings()
+		if link == null:
+			return no_server_text
+	if server != link:
+		use_server(link)
+	_going_online = true
+	link.begin_wait(GO_ONLINE_WAIT, going_online_text)
+	var delay := go_online_retry_seconds.x
+	var result := GO_ONLINE_STOPPED
+	while true:
+		if server != link or link.retired:
+			break  # Go offline (review fix: checked before every try, so this loop always ends)
+		var signed: Dictionary = await link.reconnect()
+		if server != link or link.retired:
+			break
+		if signed["ok"] or (ServerLink.answered(signed["error"]) and link.connected()):
+			link.end_wait(GO_ONLINE_WAIT)
+			result = ""
+			break
+		if not ServerLink.retryable(signed["error"]):
+			# The server refused the sign-in itself: trying again won't help. Back to local mode, the button stays.
+			use_server(null)
+			result = ServerLink.describe(signed["error"])
+			break
+		# Its own timer, not the link's (a dropped link parks its waits for good): Retry-After or the delay ±25%, capped.
+		var after: Variant = signed["error"].get("retryAfterSeconds")
+		var wait: float = float(after) if after != null else delay * randf_range(0.75, 1.25)
+		await get_tree().create_timer(minf(wait, go_online_retry_seconds.y), true, false, true).timeout
+		delay = minf(delay * 2.0, go_online_retry_seconds.y)
+	_going_online = false
+	return result
 
 
 func _on_server_connection(link: ServerLink) -> void:
@@ -415,7 +512,7 @@ static func save_setting(section: String, key: String, value: Variant) -> void:
 
 ## Whether the run in memory is a local-mode run that gets a save (not a sandbox, not a server run, not ended).
 func _saves_this_run() -> bool:
-	return local_saves and run != null and run.state != null and not run.journal and not run.state.sandbox \
+	return local_saves and debug_local_mode and run != null and run.state != null and not run.journal and not run.state.sandbox \
 		and not run.state.seeds().server_mode() and run.state.status == RunState.ACTIVE and run.runner_error == ""
 
 
@@ -444,7 +541,15 @@ static func _no_continue(reason: String) -> Dictionary:
 ## GET /runs/current (so this awaits); local mode reads the save file.
 func can_continue() -> Dictionary:
 	if server == null:
-		var read := LocalSave.read(local_save_path)
+		# A local-mode save only in a debug build; the player build offers only the online run's copy on this computer.
+		var read := LocalSave.read(local_save_path) if debug_local_mode else {"state": "none"}
+		if read["state"] == "none":
+			# Card-ui playtest (user, 2026-11-18): offline (after Go offline) the server-mode save can be played unsynced, as when
+			# the server can't be reached at start; it syncs once the server answers, which drops it if its copy is newer.
+			var unsynced := _offline_server_save()
+			if not unsynced.is_empty():
+				return {"enabled": true, "reason": "", "tag": "Offline", "older": false,
+					"subtitle": "%s · not synced" % _server_save_text(unsynced)}
 		if read["state"] != "ok":
 			return _no_continue("none" if read["state"] == "none" else "unreadable")
 		var saved: Dictionary = read["data"]
@@ -478,6 +583,21 @@ func can_continue() -> Dictionary:
 	if not local.is_empty() and str(local.get("runId", "")) == str(data.get("runId", "")):
 		text = _server_save_text(local) + " · started " + ago(str(data.get("startedAt", "")))
 	return {"enabled": true, "reason": "", "tag": "Synced", "subtitle": text, "older": false}
+
+
+## The Settings player's server-mode save while in local mode, when its run is still active, or {}.
+func _offline_server_save() -> Dictionary:
+	var path := server_save_path
+	if path == "":
+		var url := str(load_setting(ServerLink.SETTINGS_SECTION, "url", ""))
+		var player := str(load_setting(ServerLink.SETTINGS_SECTION, "player", ""))
+		if url == "":
+			return {}
+		path = "user://saves".path_join(player if player != "" else "dev").path_join("run.json")
+	var saved := ServerLink.read_save(path)
+	if saved.is_empty() or str(saved.get("snapshot", {}).get("run", {}).get("status", "")) != RunState.ACTIVE:
+		return {}
+	return saved
 
 
 ## The Continue info for the player's server-mode save when the server can't be reached, or {} when there is no
@@ -519,9 +639,17 @@ static func ago(iso: String) -> String:
 
 ## Spec main-menu (offline Continue): plays the server-mode save without asking the server. Its actions upload when the
 ## server answers; a save the server has moved past is refused then (rebuilt from the server, or the run stops).
-func continue_server_offline() -> String:
+func continue_server_offline(link: ServerLink = null) -> String:
 	if server == null:
-		return "not in server mode"
+		# Local mode with the Settings player's server-mode save: link the Settings' server again (it syncs once it answers;
+		# `link`: tests pass one over a fake bridge).
+		if _offline_server_save().is_empty():
+			return "not in server mode"
+		if link == null:
+			link = ServerLink.from_settings()
+		if link == null:
+			return no_server_text
+		use_server(link)
 	_new_run()
 	var error := server.resume_offline(run, content)
 	if error != "":
@@ -533,6 +661,8 @@ func continue_server_offline() -> String:
 ## Continues the local save in a new RunController (like a resume from a server save). "" or the error; on an error
 ## the save stays and the mode goes back to "menu".
 func continue_local_run() -> String:
+	if not debug_local_mode:
+		return "No saved run"  # local-mode saves are a debug feature
 	var read := LocalSave.read(local_save_path)
 	if read["state"] != "ok":
 		return "The saved run couldn't be read" if read["state"] == "bad" else "No saved run"
