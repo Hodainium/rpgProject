@@ -325,6 +325,9 @@ gamepad work); each `CardView3D` follows its slot through the stage camera (`Cam
   rarity colour (11 of the 16 Void cards are Epic). What sets it apart is its glyph: option C of six shown live, a near-black
   "void" glyph in a magenta glow (`corrupted_glyph`, `corrupted_glyph_halo`, `corrupted_glyph_halo_radius`). Setting
   `corrupted_as` to empty brings the old corrupted look back.
+- **Set symbol colour (user, 2026-11-18):** the rarity's colour, except where `CardStyle.set_symbol_colors` overrides it: Common's
+  is `#7f8694` (its silver a few steps darker; the pale `#cfd3dc` vanished on the parchment name bar). The rarity colour itself is
+  unchanged everywhere else.
 - Tried and dropped in the engine: Look A; element colours; rounded bars; dark or tinted bars; a stone frame; a crown crest; a rarity
   outline on the art; white, element-coloured or rarity-coloured glyphs; the Epic glow; Mythic holo, rim chase, aurora and rays;
   rose prism, spectrum, holo-stripe, nebula and still-metal Mythic frames.

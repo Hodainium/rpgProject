@@ -49,6 +49,9 @@ const RARITY_ORDER: Array[String] = ["common", "rare", "epic", "legendary", "myt
 @export_file("*.tres") var art_set_paths: Array[String] = []
 ## The loaded sets (from art_set_paths on first use; tests set them directly).
 var art_sets: Array[CardArtSet] = []
+## The set symbol's colour by rarity when it is not the rarity's own colour (user, 2026-11-18: the pale Common silver vanished on
+## the parchment name bar; the pick, "E3", is the same silver a few steps darker).
+@export var set_symbol_colors: Dictionary[StringName, Color] = {&"common": Color("7f8694")}
 ## The set marks on a card: set id (core, descent) → glyph.
 @export var set_marks: Dictionary[StringName, Texture2D] = {}
 
@@ -74,6 +77,11 @@ static func use(style: CardStyle) -> void:
 func rarity(name: String) -> CardRarityLook:
 	var look: CardRarityLook = rarities.get(StringName(name))
 	return look if look != null else CardRarityLook.new()
+
+
+## The set symbol's colour for `rarity_name`: an override, else the rarity's colour.
+func set_symbol_color(rarity_name: String) -> Color:
+	return set_symbol_colors.get(StringName(rarity_name), rarity(rarity_name).color)
 
 
 func element(name: StringName) -> CardElement:

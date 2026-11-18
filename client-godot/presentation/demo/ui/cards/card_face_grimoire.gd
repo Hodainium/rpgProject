@@ -50,7 +50,7 @@ func _fill() -> void:
 		bold.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): 700}
 		%Name.add_theme_font_override(&"font", bold)
 	%SetSymbol.texture = style.set_marks.get(StringName(face.set_id))
-	%SetSymbol.modulate = style.rarity(face.rarity).color
+	%SetSymbol.modulate = style.set_symbol_color(face.rarity)
 	%Art.texture = art()
 	var material := (%Art.material as ShaderMaterial)
 	var portrait := face.kind == CardFace.KIND_CHARACTER and face.portrait != null
