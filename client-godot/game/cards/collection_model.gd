@@ -1,6 +1,6 @@
 ## Spec card-ui 3.3: what the Collection shows (pure, testable headless): the card faces × the server's CollectionResponse (or the
 ## local test pool) × the catalog's rates × the NEW set → one entry per card with its state, then filters, Hearthstone's sort
-## (characters first, then rarity, then name) and pages (12 on the Collection: 6 x 2 since the playtest of 2026-11-18). The screen
+## (characters first, then rarity, then name) and pages (10 on the Collection: 5 x 2 since the playtest of 2026-11-18). The screen
 ## draws the entries; it never decides ownership itself.
 ##
 ## Ownership has three sources (spec card-ui 2.1 and account-session 2.3):

@@ -919,7 +919,7 @@ func test_offline_collection() -> void:
 	eq([states["card.item.c1"], states["card.item.c2"], states["card.item.c3"]], ["core", "owned", "missing"], "core + the local pool")
 	eq(shown["cards"].size(), 9, "only the owned at first: the 8 core cards and the pool's one")
 	screen.set_filter("missing", true)
-	eq(screen.shown()["cards"].size(), 12, "a full page of 12 (6 x 2)")
+	eq(screen.shown()["cards"].size(), screen.per_page(), "a full page (the grid's columns x rows)")
 	var detail: UIScreen = screen.open_detail("card.item.c3")
 	await _frames(2)
 	check(detail != null and detail.shown()["core_note"] and not detail.shown()["create_enabled"], "local mode: no Create")
@@ -1159,7 +1159,7 @@ func test_card_page_renders_faces_live_and_frees_them() -> void:
 	var screen := await _open_collection(game)
 	var page: CardPage = screen.get_node("%Page")
 	screen.set_filter("missing", true)
-	eq(page.views.size(), 12, "twelve views on a full page")
+	eq(page.views.size(), screen.per_page(), "one view per card on a full page")
 	var first: CardView3D = page.views.values()[0]
 	var viewport := first.viewport
 	check(first.face_view != null and first.face_view.get_parent() == viewport, "each card renders its face in its own SubViewport")

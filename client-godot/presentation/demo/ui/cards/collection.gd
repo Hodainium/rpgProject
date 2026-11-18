@@ -1,6 +1,6 @@
 ## Spec card-ui 2.1 (Hearthstone's collection viewer, the approved prototype's layout as changed in the playtest of 2026-11-18): one
-## book window over the whole screen with Back, the title, set and kind tabs and the dust and gems in its top row, 12 cards a page
-## (6 x 2) on a 3D stage, the rarity gems, the pool, Owned / Missing (owned only at first) and search filters, paging, and the
+## book window over the whole screen with Back, the title, set and kind tabs and the dust and gems in its top row, 10 cards a page
+## (5 x 2) on a 3D stage, the rarity gems, the pool, Owned / Missing (owned only at first) and search filters, paging, and the
 ## owned count beside the card count. Clicking a card opens the card detail (Dust / Create). Built on the menu frame with its
 ## description window and Back hidden.
 ## Server mode reads the catalog (once per session) and the collection (every activation and after every action); ownership
@@ -276,7 +276,7 @@ func _keep_content_below() -> void:
 	pass
 
 
-## Cards a page: the page's grid (6 x 2 since the playtest of 2026-11-18).
+## Cards a page: the page's grid (5 x 2 since the playtest of 2026-11-18).
 func per_page() -> int:
 	return maxi(1, %Page.columns * %Page.rows)
 
