@@ -1,0 +1,13 @@
+# Spec account-session (slice 5b1) end to end: the login session fences every account change, on the real server and the real
+# game headless. The game signs in and starts its session; another "device" (the same player through the same bridge, not
+# telling the game) starts a newer one; the game's next buy is refused with 1412 before anything is checked or written, and so
+# is the open (refused by the game itself now: it knows its session was replaced). The game takes the account back ("Use it here"): the same buy now
+# reaches the account and is refused for the real reason (no gems, 1402), so the fence was the only thing stopping it.
+#! cards
+cards
+server session steal
+refused 1412 packs buy descent-pack 1
+refused somewhere packs open descent-pack
+server session
+refused 1402 packs buy descent-pack 1
+cards

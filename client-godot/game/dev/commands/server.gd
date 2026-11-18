@@ -4,8 +4,8 @@ extends DevCommand
 
 func _init() -> void:
 	name = "server"
-	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | reward [...] | reward-reset ... | pack-type [...] | card-rate [...] | resume | forget | conflict]"
-	help = "No argument: the mode, server, floor seeds and upload queue. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. steps: the run's verification steps and their state (a Development server; spec run-verify). verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. pack-type: list the server's pack types; pack-type <id> [price=<gems>] [cards=5 (every pack holds 5)] [odds=common:7210,rare:2200,...] [sets=descent,...] [pity=epic:10,legendary:20,...] [first=epic:5,...] [min=rare|none] [retired=true|false] [refund=true (with retired=true: every unopened pack is paid back in gems, and the version may break the openability rules; spec pack-shop 2.5)]: a new version (fields you leave out keep the latest version's value; a new pack needs price, cards, odds and sets). card-rate: list the dust value and craft cost per rarity; card-rate <rarity> <dust value> <craft cost>: a new version (spec card-collection 2.7; both need the economy-admin role). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
+	usage = "server [<url> [player] | off | ruleset | check | verdict [seq] | wallet | session [steal] | reward [...] | reward-reset ... | pack-type [...] | card-rate [...] | resume | forget | conflict]"
+	help = "No argument: the mode, server, floor seeds and upload queue. session: start a new account session (a login; spec account-session) and print it; session steal: start one as another device would, without telling this game, so its next account call is refused with 1412. <url> [player]: server mode. off: local mode. ruleset: the version. check: the server agrees with the run. steps: the run's verification steps and their state (a Development server; spec run-verify). verdict [seq]: the verifier's verdict on the run's battles (spec battle-verify). wallet: the player's gems and last ledger rows (spec settlement-outbox). reward: list the server's reward ladders; reward <challenge id> <amount> [cycle=once|weekly] [ends=<UTC ISO>]: set a challenge's reward (a new version; 0 retires it); reward boss <boss id> <amount>: the same for the challenge boss/<boss id> (needs the economy-admin role, which only a Development server gives, spec economy-challenges). reward-reset [boss] <id> [player=me|<player id>] [reason]: the next clear pays the ladder again, for everyone or one player. pack-type: list the server's pack types; pack-type <id> [price=<gems>] [cards=5 (every pack holds 5)] [odds=common:7210,rare:2200,...] [sets=descent,...] [pity=epic:10,legendary:20,...] [first=epic:5,...] [min=rare|none] [retired=true|false] [refund=true (with retired=true: every unopened pack is paid back in gems, and the version may break the openability rules; spec pack-shop 2.5)]: a new version (fields you leave out keep the latest version's value; a new pack needs price, cards, odds and sets). card-rate: list the dust value and craft cost per rarity; card-rate <rarity> <dust value> <craft cost>: a new version (spec card-collection 2.7; both need the economy-admin role). resume: continue the server's current run (local save or the server's log), checking the state hash. forget: delete the local save. conflict: resend an acknowledged action with another hash (a 1103)."
 	cheat = false
 
 
@@ -20,6 +20,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		return await _verdict(ctx, args)
 	if args.size() > 0 and args[0] == "wallet":
 		return await _wallet(ctx)
+	if args.size() > 0 and args[0] == "session":
+		return await _session(ctx, args)
 	if args.size() > 0 and args[0] == "reward":
 		return await _reward(ctx, args)
 	if args.size() > 0 and args[0] == "reward-reset":
@@ -166,6 +168,25 @@ func _wallet(ctx: DevContext) -> String:
 	if not answer["ok"]:
 		return ctx.fail("GET wallet: " + ServerLink.describe(answer["error"]))
 	return ServerLink.describe_wallet(answer["data"])
+
+
+## Spec account-session: `server session` starts a new account session (a login) for this game; `server session steal` starts one
+## through the same bridge without the link noticing, as a second device would, so this game's next account call gets 1412.
+func _session(ctx: DevContext, args: PackedStringArray) -> String:
+	if ctx.game == null or ctx.game.server == null:
+		return ctx.fail("not in server mode")
+	var link: ServerLink = ctx.game.server
+	if args.size() == 1:
+		var started: Dictionary = await link.take_account()
+		if not started["ok"]:
+			return ctx.fail("POST account/session: " + ServerLink.describe(started["error"]))
+		return "session %d (account version %d)" % [link.account_session, link.card_account().account_version]
+	if args.size() == 2 and args[1] == "steal":
+		var stolen: Dictionary = await link.request("StartAccountSession", [])
+		if not stolen["ok"]:
+			return ctx.fail("POST account/session: " + ServerLink.describe(stolen["error"]))
+		return "another device holds session %d; this game still holds %d" % [int(stolen["data"]["session"]), link.account_session]
+	return ctx.fail("usage: server session [steal]")
 
 
 ## Spec economy-challenges: lists the reward ladders, or sets one. The amounts live on the server; this only drives its admin path.

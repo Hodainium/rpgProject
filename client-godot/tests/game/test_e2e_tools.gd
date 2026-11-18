@@ -270,10 +270,10 @@ func test_server_verdict_command() -> void:
 func test_server_wallet_and_wait_gems() -> void:
 	var bridge := _bridge()
 	var session := _session(bridge)
-	bridge.answers["GetWallet"] = [[true, {"gems": 20, "version": 2, "recent": [
+	bridge.answers["GetWallet"] = [[true, {"gems": 20, "accountVersion": 2, "recent": [
 		{"currency": "gems", "delta": 10, "reason": "boss_mark", "refBattleId": "b1", "at": "2026-11-02T10:00:00+00:00"}]}]]
 	var shown := await _run(session, "server wallet")
-	check(shown["ok"] and shown["text"].contains("gems 20 (version 2)") and shown["text"].contains("+10 gems boss_mark (battle b1)"),
+	check(shown["ok"] and shown["text"].contains("gems 20 (account version 2)") and shown["text"].contains("+10 gems boss_mark (battle b1)"),
 		"the wallet is shown: " + shown["text"])
 	var paid := await _run(session, "wait gems 20 2")
 	check(paid["ok"], "enough gems: " + paid["text"])

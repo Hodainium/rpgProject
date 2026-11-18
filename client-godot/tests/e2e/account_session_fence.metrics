@@ -1,0 +1,3 @@
+rpg_account_sessions_started_total\{[^}]*\} 3
+rpg_card_actions_refused_total\{[^}]*reason="SessionReplaced"[^}]*\} 1
+rpg_card_actions_refused_total\{[^}]*reason="InsufficientCurrency"[^}]*\} 1

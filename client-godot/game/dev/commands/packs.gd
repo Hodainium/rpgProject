@@ -24,6 +24,9 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 				return ctx.fail("count must be a whole number, not '%s'" % args[2])
 			count = int(args[2])
 		var buy_key := args[3] if args.size() > 3 else ServerLink.new_request_key()
+		# Spec account-session 2.3: a screen shows the account before the player decides; so does the console (its version is then
+		# the one sent, not one from before a reward or another device's change).
+		await link.get_collection()
 		var bought: Dictionary = await link.buy_pack(args[1], count, buy_key)
 		if not bought["ok"]:
 			return ctx.fail("POST packs/%s/buy: %s (key %s)" % [args[1], ServerLink.describe(bought["error"]), buy_key])
@@ -34,6 +37,7 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 		if args.size() < 2:
 			return ctx.fail("usage: " + usage)
 		var key := args[2] if args.size() > 2 else ServerLink.new_request_key()
+		await link.get_collection()   # spec account-session 2.3: read the account first, as the Open packs screen does
 		var answer: Dictionary = await link.open_pack(args[1], key)
 		if not answer["ok"]:
 			return ctx.fail("POST packs/%s/open: %s (key %s)" % [args[1], ServerLink.describe(answer["error"]), key])

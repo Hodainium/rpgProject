@@ -15,6 +15,7 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 	if args.is_empty():
 		return ctx.fail("usage: " + usage)
 	var key := args[1] if args.size() > 1 else ServerLink.new_request_key()
+	await ctx.game.server.get_collection()   # spec account-session 2.3: read the account first, as the card detail does
 	var answer: Dictionary = await ctx.game.server.craft_card(args[0], key)
 	if not answer["ok"]:
 		return ctx.fail("POST cards/%s/craft: %s (key %s)" % [args[0], ServerLink.describe(answer["error"]), key])
