@@ -768,6 +768,462 @@ func test_cardui_command() -> void:
 	check(not (await console.execute("cardui giveup"))["ok"], "nothing to give up")
 
 
+# --- The Collection and card detail (spec 2.1, 2.2; gate 2) -----------------------------------------------------------------
+
+const COLLECTION_SCENE: String = "res://presentation/demo/ui/cards/collection.tscn"
+const DETAIL_SCENE: String = "res://presentation/demo/ui/cards/card_detail.tscn"
+const MODAL: StringName = &"UI.Layer.Modal"
+const RATES := {"common": [5, 40], "rare": [20, 100], "epic": [100, 400], "legendary": [400, 1600], "mythic": [1000, 3200]}
+
+
+## The server's catalog of the card fixtures (CardWorld), with rates by rarity.
+static func _catalog() -> Dictionary:
+	var cards: Array = []
+	for row in CardCatalog.cards(CardWorld.content()):
+		var card: Dictionary = row.duplicate()
+		var rate: Array = RATES[row["rarity"]]
+		card["retired"] = false
+		card["dustValue"] = rate[0]
+		card["craftCost"] = rate[1]
+		cards.append(card)
+	return {"catalogVersion": 1, "catalogHash": "fixture", "cards": cards}
+
+
+static func _owned_collection(dust: int = 120, run_status: Variant = null) -> Dictionary:
+	var collection: Dictionary = COLLECTION.duplicate(true)
+	collection["dust"] = dust
+	collection["owned"] = [{"cardId": "card.item.r1", "acquiredAt": "2026-11-01T10:00:00+00:00", "source": "pack", "lockedByRunId": null},
+		{"cardId": "card.item.e1", "acquiredAt": "2026-11-01T10:00:00+00:00", "source": "pack",
+			"lockedByRunId": "run-1" if run_status != null else null}]
+	collection["activeRunId"] = "run-1" if run_status != null else null
+	collection["activeRunStatus"] = run_status
+	return collection
+
+
+func _card_bridge(collection: Dictionary = _owned_collection()) -> FakeBridge:
+	var bridge := _bridge()
+	bridge.answers["GetCardCatalog"] = [[true, _catalog()]]
+	bridge.answers["GetCollection"] = [[true, collection]]
+	return bridge
+
+
+func _card_game(bridge: FakeBridge = null) -> GameMain:
+	var game := _game(bridge)
+	game.content = CardWorld.content()
+	return game
+
+
+func _open_collection(game: GameMain) -> UIScreen:
+	await _frames(2)
+	var screen := game.ui.push(MENU, load(COLLECTION_SCENE))
+	if screen != null and screen.loading:
+		await screen.loaded
+	return screen
+
+
+## Answers the confirm dialog that comes up on the Modal layer.
+func _answer(game: GameMain, yes: bool) -> bool:
+	for i in 60:
+		var dialog := game.ui.top(MODAL)
+		if dialog is UIConfirm:
+			dialog.decided.emit(yes)
+			return true
+		await host.get_tree().process_frame
+	return false
+
+
+func _card_ids(shown: Dictionary) -> Array:
+	return shown["cards"].map(func(card: Dictionary) -> String: return card["id"])
+
+
+func test_collection_model_states_filters_sort_and_pages() -> void:
+	var faces := CardFaces.build(CardWorld.content(), CardStyle.current())
+	var all := CollectionModel.entries(faces, _owned_collection(120, "Active"), {"card.item.r1": true},
+		CollectionModel.rates_of(_catalog()))
+	var by_id := {}
+	for entry in all:
+		by_id[entry["id"]] = entry
+	eq([by_id["card.item.c1"]["state"], by_id["card.item.r1"]["state"], by_id["card.item.c2"]["state"]],
+		["core", "owned", "missing"], "core, owned, missing")
+	eq([by_id["card.item.e1"]["locked"], by_id["card.item.e1"]["new"], by_id["card.item.r1"]["new"], by_id["card.item.c1"]["new"]],
+		[true, true, false, false], "the run lock; NEW only for an owned non-core card not seen")
+	eq([by_id["card.item.l1"]["dust"], by_id["card.item.l1"]["craft"]], [400, 1600], "the catalog's rates")
+	var sorted := CollectionModel.filtered(all, CollectionModel.default_filters())
+	eq(sorted[0]["face"].kind, CardFace.KIND_CHARACTER, "characters first")
+	var items := sorted.filter(func(entry: Dictionary) -> bool: return entry["face"].kind == CardFace.KIND_ITEM)
+	var ranks := items.map(func(entry: Dictionary) -> int: return CardStyle.RARITY_ORDER.find(entry["face"].rarity))
+	var ordered := ranks.duplicate()
+	ordered.sort()
+	eq(ranks, ordered, "items by rarity, lowest first")
+	eq(sorted.back()["face"].kind, CardFace.KIND_EQUIPMENT, "armor last")
+	eq(CollectionModel.page_count(sorted, 8), ceili(sorted.size() / 8.0), "pages of the size asked")
+	eq(CollectionModel.page(sorted, 99, 8).size(), sorted.size() - (CollectionModel.page_count(sorted, 8) - 1) * 8, "the last page, short")
+	var filters := CollectionModel.default_filters()
+	filters["set"] = "descent"
+	filters["kind"] = "item"
+	filters["missing"] = false
+	eq(CollectionModel.filtered(all, filters).map(func(entry: Dictionary) -> String: return entry["id"]), ["card.item.r1", "card.item.e1"],
+		"set, kind and owned only, combined")
+	filters = CollectionModel.default_filters()
+	filters["rarities"] = ["legendary"]
+	filters["pool"] = "Boss"
+	eq(CollectionModel.filtered(all, filters).map(func(entry: Dictionary) -> String: return entry["id"]), ["card.item.boss2"], "rarity and pool")
+	filters = CollectionModel.default_filters()
+	filters["text"] = "  CARD.GEAR "
+	eq(CollectionModel.filtered(all, filters).size(), 1, "search: trimmed, any case (the fixtures' names are their ids)")
+	var local := CollectionModel.entries(faces, null, {}, {}, ["card.item.c2"])
+	eq(local.filter(func(entry: Dictionary) -> bool: return CollectionModel.is_owned(entry)).size(),
+		local.filter(func(entry: Dictionary) -> bool: return entry["face"].core).size() + 1, "local: core + the test pool")
+	var unknown := CollectionModel.entries(faces, null, {}, {})
+	check(unknown.all(func(entry: Dictionary) -> bool: return entry["state"] in ["core", "unknown"] and not entry["new"]),
+		"no collection and no pool: no ownership shows")
+	filters = CollectionModel.default_filters()
+	filters["owned"] = false
+	filters["missing"] = false
+	eq(CollectionModel.filtered(unknown, filters).size(), unknown.filter(func(e: Dictionary) -> bool: return e["state"] == "unknown").size(),
+		"unknown cards ignore the owned / missing filter")
+	var retired := CollectionModel.rates_of(_catalog())
+	retired["card.item.c2"]["retired"] = true
+	retired["card.item.r1"]["retired"] = true
+	var with_retired := CollectionModel.entries(faces, _owned_collection(), {}, retired)
+	var ids := with_retired.map(func(entry: Dictionary) -> String: return entry["id"])
+	check(not ids.has("card.item.c2") and ids.has("card.item.r1"), "a retired card shows only while owned")
+
+
+func test_card_seen_keeps_the_new_set_per_player() -> void:
+	var dir := "user://test_card_ui/seen_%d_%d" % [OS.get_process_id(), Time.get_ticks_usec()]
+	var seen := CardSeen.open(dir, "ann")
+	check(seen.ids.is_empty(), "a missing file: nothing seen")
+	check(seen.mark("card.item.r1") and not seen.mark("card.item.r1"), "marked once")
+	check(CardSeen.open(dir, "ann").has("card.item.r1"), "kept on disk")
+	check(not CardSeen.open(dir, "bob").has("card.item.r1"), "per player")
+	var file := FileAccess.open(dir.path_join("ann").path_join(CardSeen.FILE_NAME), FileAccess.WRITE)
+	file.store_string("{broken")
+	file.close()
+	check(CardSeen.open(dir, "ann").ids.is_empty(), "a broken file: nothing seen")
+	var memory := CardSeen.open("", "ann")
+	memory.mark("x")
+	eq(memory.path, "", "no folder: in memory only")
+
+
+func test_offline_collection() -> void:
+	var game := _card_game()
+	game.local_card_pool = [&"card.item.c2"]
+	var screen := await _open_collection(game)
+	check(screen != null and screen.name == "Collection", "the Collection opens in local mode")
+	var shown: Dictionary = screen.shown()
+	check(not shown["actions"] and shown["message"].contains("Local mode"), "read-only, with the line: %s" % shown["message"])
+	var states := {}
+	for entry in screen.all_entries:
+		states[entry["id"]] = entry["state"]
+	eq([states["card.item.c1"], states["card.item.c2"], states["card.item.c3"]], ["core", "owned", "missing"], "core + the local pool")
+	eq(shown["cards"].size(), 9, "only the owned at first: the 8 core cards and the pool's one")
+	screen.set_filter("missing", true)
+	eq(screen.shown()["cards"].size(), 12, "a full page of 12 (6 x 2)")
+	var detail: UIScreen = screen.open_detail("card.item.c3")
+	await _frames(2)
+	check(detail != null and detail.shown()["core_note"] and not detail.shown()["create_enabled"], "local mode: no Create")
+	game.ui.back()
+	await _frames(2)
+	eq(game.ui.top(MODAL), null, "Back closes the detail")
+	game.ui.back()
+	await _frames(2)
+	eq(String(game.ui.top(MENU).name), "MainMenu", "Back returns to the main menu")
+
+
+func test_collection_shows_the_account_in_server_mode() -> void:
+	var bridge := _card_bridge(_owned_collection(120, "Active"))
+	var game := _card_game(bridge)
+	var screen := await _open_collection(game)
+	var shown: Dictionary = screen.shown()
+	var owned: int = screen.all_entries.filter(func(entry: Dictionary) -> bool: return CollectionModel.is_owned(entry)).size()
+	eq([shown["dust"], shown["gems"], shown["actions"], shown["count"]], [120, 340, true, owned],
+		"dust, gems, actions on; only the owned cards at first (playtest 2026-11-18)")
+	check(not screen.get_node("%Missing").button_pressed and screen.get_node("%Owned").button_pressed, "Owned on, Missing off")
+	screen.set_filter("missing", true)
+	eq(screen.shown()["count"], _catalog()["cards"].size(), "Missing adds the rest")
+	eq(screen.get_node("%Dust").text, "120 dust", "the dust total")
+	check(screen.get_node("%RunLine").visible, "the run line says cards are locked")
+	screen.set_filter("kind", "item")
+	screen.set_filter("missing", false)
+	var cards := {}
+	for card in screen.shown()["cards"]:
+		cards[card["id"]] = card
+	check(cards.has("card.item.e1") and cards["card.item.e1"]["locked"] and cards["card.item.e1"]["new"], "locked and NEW")
+	var slot: Control = screen.get_node("%Page").slots["card.item.e1"]
+	eq([slot.get_node("Chip").text, slot.get_node("New").visible], ["In your run", true], "the chip and the badge")
+	screen.set_filter("missing", true)
+	screen.set_filter("owned", false)
+	var missing_slot: Control = screen.get_node("%Page").slots.values()[0]
+	check(not missing_slot.has_node("Chip"), "no craft-cost chip under a missing card (playtest 2026-11-18: the detail shows it)")
+	var views_before: Dictionary = screen.get_node("%Page").views.duplicate()
+	screen.set_filter("text", "card")
+	var kept: bool = views_before.keys().all(func(id: String) -> bool:
+		return screen.get_node("%Page").views.get(id) == views_before[id])
+	check(kept, "a filter that keeps the same cards keeps their views (no face rendered again)")
+	eq(bridge.count("GetCardCatalog"), 1, "the catalog read once")
+	var reads := bridge.count("GetCollection")
+	await screen.refresh()
+	eq(bridge.count("GetCardCatalog"), 1, "and kept for the session")
+	eq(bridge.count("GetCollection"), reads + 1, "the collection read on every refresh")
+
+
+func test_collection_reads_the_catalog_again_when_a_card_is_unknown() -> void:
+	var collection := _owned_collection()
+	collection["owned"].append({"cardId": "card.item.brand_new", "acquiredAt": "2026-11-01T10:00:00+00:00", "source": "pack",
+		"lockedByRunId": null})
+	var game := _card_game(_card_bridge(collection))
+	var screen := await _open_collection(game)
+	eq(game.server.card_catalog.is_empty(), false, "the catalog is kept")
+	eq((game.server.bridge as FakeBridge).count("GetCardCatalog"), 2, "a card the cached catalog lacks: read again (once)")
+	check(screen != null, "the screen still shows")
+
+
+func test_collection_shows_no_ownership_without_a_session() -> void:
+	var bridge := _card_bridge()
+	var game := _card_game(bridge)
+	await _frames(3)
+	game.server.session_replaced = true
+	var reads := bridge.count("GetCollection")
+	var screen := await _open_collection(game)
+	check(screen.all_entries.all(func(entry: Dictionary) -> bool: return entry["state"] in ["core", "unknown"]),
+		"another login holds the account: nothing shows as owned or missing")
+	check(not screen.shown()["actions"], "no actions")
+	eq(bridge.count("GetCollection"), reads, "the account is not read")
+	game.server.session_replaced = false
+	game.server.session_changed.emit()
+	await screen.loaded
+	check(screen.shown()["actions"], "Use it here (a new session): the account shows again")
+
+
+func test_collection_unreachable_offers_go_online() -> void:
+	var bridge := _card_bridge()
+	bridge.answers["StartAccountSession"] = [[false, {"status": 0, "errorCode": null, "title": "HttpRequestException", "detail": "offline"}]]
+	var game := _card_game(bridge)
+	game.server.account_session = 0
+	var screen := await _open_collection(game)
+	check(screen.get_node("%Online").visible, "Go online")
+	check(screen.shown()["message"].begins_with("Can't reach the server"), "the line: %s" % screen.shown()["message"])
+	check(screen.all_entries.all(func(entry: Dictionary) -> bool: return entry["state"] in ["core", "unknown"]), "no ownership")
+
+
+func _open_detail(game: GameMain, id: String) -> UIScreen:
+	var screen := await _open_collection(game)
+	var detail: UIScreen = screen.open_detail(id)
+	await _frames(2)
+	return detail
+
+
+func test_detail_dust_and_create() -> void:
+	var bridge := _card_bridge(_owned_collection(400))
+	bridge.answers["DustCard"] = [[true, {"cardId": "card.item.r1", "dustGained": 20, "rateVersion": 1, "dust": 420, "accountVersion": 4}]]
+	var game := _card_game(bridge)
+	var detail := await _open_detail(game, "card.item.r1")
+	var before: Dictionary = detail.shown()
+	eq([before["dust_enabled"], before["create_enabled"]], [true, false], "an owned card: Dust, no Create")
+	var big: Control = detail.get_node("%Card").slots.values()[0]
+	eq([big.focus_mode, big.has_node("Chip"), big.has_node("New")], [Control.FOCUS_NONE, false, false],
+		"the big card takes no focus and shows no chip or badge (playtest 2026-11-18)")
+	var page: CardPage = game.ui.top(MENU).get_node("%Page")
+	eq(page.stage.viewport.render_target_update_mode, SubViewport.UPDATE_DISABLED, "the page under the detail stops rendering")
+	eq(detail.get_node("%DustButton").text, "Dust  +20", "the dust value")
+	var after_dust := _owned_collection(420)
+	after_dust["owned"] = after_dust["owned"].slice(1)
+	after_dust["accountVersion"] = 4
+	bridge.answers["GetCollection"] = [[true, after_dust]]
+	var dusting: Array = [null]
+	var run := func() -> void: dusting[0] = await detail.dust()
+	run.call()
+	check(await _answer(game, true), "the dust asks first")
+	await _until(func() -> bool: return dusting[0] != null)
+	check(dusting[0]["ok"], "dusted")
+	var shown: Dictionary = detail.shown()
+	eq([shown["state"], shown["message"], shown["dust_enabled"]], ["missing", "Dusted: +20 dust.", false], "the card is missing now")
+	eq(detail.get_node("%DustTotal").text, "420 dust", "the new total")
+	check(shown["create_enabled"], "a Rare costs 100: 420 dust can create it again")
+	eq(bridge.count("DustCard"), 1, "one dust")
+
+
+func test_detail_create_asks_only_for_the_expensive_rarities() -> void:
+	var bridge := _card_bridge(_owned_collection(2000))
+	bridge.answers["CraftCard"] = [[true, {"cardId": "card.item.c2", "dustSpent": 40, "rateVersion": 1, "dust": 1960, "accountVersion": 4}]]
+	var game := _card_game(bridge)
+	var detail := await _open_detail(game, "card.item.c2")
+	check(detail.shown()["create_enabled"], "a missing Common, enough dust")
+	var answer: Dictionary = await detail.create()
+	check(answer["ok"], "created without a pop-up")
+	game.ui.back()
+	await _frames(2)
+	var screen: UIScreen = game.ui.top(MENU)
+	var legendary: UIScreen = screen.open_detail("card.item.l1")
+	await _frames(2)
+	var made: Array = [null]
+	var run := func() -> void: made[0] = await legendary.create()
+	run.call()
+	check(await _answer(game, false), "a Legendary asks first")
+	await _until(func() -> bool: return made[0] != null)
+	eq([made[0], bridge.count("CraftCard")], [{}, 1], "Cancel sends nothing")
+
+
+func test_dust_cancel_run_from_the_detail() -> void:
+	var bridge := _card_bridge(_owned_collection(120, "Active"))
+	bridge.answers["DustCard"] = [[false, {"status": 409, "errorCode": 1403, "title": "Card locked by the run", "detail": "",
+		"runId": "run-1", "runStatus": "Active"}], [true, {"cardId": "card.item.e1", "dustGained": 100, "rateVersion": 1, "dust": 220}]]
+	bridge.answers["AbandonRun"] = [[true, null]]
+	var game := _card_game(bridge)
+	var detail := await _open_detail(game, "card.item.e1")
+	check(detail.shown()["locked"] and detail.shown()["dust_enabled"], "a locked card can still be dusted (the pop-up is the way out)")
+	var dusting: Array = [null]
+	var run := func() -> void: dusting[0] = await detail.dust()
+	run.call()
+	check(await _answer(game, true), "the run-lock pop-up: Cancel run")
+	await _until(func() -> bool: return dusting[0] != null)
+	check(dusting[0]["ok"], "dusted after the cancel")
+	eq(bridge.count("AbandonRun"), 1, "the run was cancelled")
+	var keys := bridge.calls.filter(func(call: Array) -> bool: return call[0] == "DustCard").map(
+		func(call: Array) -> String: return JSON.parse_string(call[2])["requestKey"])
+	eq([keys.size(), keys[0] == keys[1]], [2, true], "the same key re-sent")
+
+
+func test_dust_keep_run_sends_nothing() -> void:
+	var bridge := _card_bridge(_owned_collection(120, "Active"))
+	var game := _card_game(bridge)
+	var detail := await _open_detail(game, "card.item.e1")
+	var dusting: Array = [null]
+	var run := func() -> void: dusting[0] = await detail.dust()
+	run.call()
+	check(await _answer(game, false), "Keep run")
+	await _until(func() -> bool: return dusting[0] != null)
+	eq([dusting[0], bridge.count("DustCard")], [{}, 0], "nothing sent")
+
+
+func test_dust_verifying_message() -> void:
+	var bridge := _card_bridge(_owned_collection(120, "Verifying"))
+	var game := _card_game(bridge)
+	var detail := await _open_detail(game, "card.item.e1")
+	var answer: Dictionary = await detail.dust()
+	eq([answer, bridge.count("DustCard")], [{}, 0], "nothing sent while the run is verified")
+	check(detail.shown()["message"].contains("being verified"), "the wait message: %s" % detail.shown()["message"])
+	# Second case: the server says Verifying (the collection was stale) on a card the screen thought free.
+	var stale := _card_bridge(_owned_collection(120))
+	stale.answers["DustCard"] = [[false, {"status": 409, "errorCode": 1403, "title": "Card locked by the run", "detail": "",
+		"runId": "run-1", "runStatus": "Verifying"}]]
+	var game2 := _card_game(stale)
+	var detail2 := await _open_detail(game2, "card.item.r1")
+	var dusting: Array = [null]
+	var run := func() -> void: dusting[0] = await detail2.dust()
+	run.call()
+	check(await _answer(game2, true), "the dust confirm")
+	await _until(func() -> bool: return dusting[0] != null)
+	eq([stale.count("DustCard"), stale.count("AbandonRun")], [1, 0], "no cancel, no retry")
+	check(detail2.shown()["message"].contains("being verified"), "the wait message")
+
+
+func test_stale_refusals_refetch() -> void:
+	var bridge := _card_bridge(_owned_collection(2000))
+	bridge.answers["CraftCard"] = [[false, {"status": 409, "errorCode": 1413, "title": "Account version stale", "detail": "",
+		"currentAccountVersion": 9}], [false, {"status": 409, "errorCode": 1402, "title": "Not enough dust", "detail": ""}]]
+	var game := _card_game(bridge)
+	var detail := await _open_detail(game, "card.item.c2")
+	var reads := bridge.count("GetCollection")
+	var answer: Dictionary = await detail.create()
+	eq(CardAccount.code_of(answer), 1413, "a moved account")
+	check(bridge.count("GetCollection") > reads, "the collection was read again")
+	eq(detail.shown()["message"], "Your account changed. Here is what you have now.", "the line")
+	var screen: UIScreen = game.ui.top(MENU)
+	eq(screen.shown()["message"], "Your account changed. Here is what you have now.", "the Collection says so too")
+	answer = await detail.create()
+	eq(CardAccount.code_of(answer), 1402, "not enough dust")
+	check(detail.shown()["message"].begins_with("Not enough dust"), "the line: %s" % detail.shown()["message"])
+
+
+func test_detail_after_a_session_replaced_waits_for_use_it_here() -> void:
+	var bridge := _card_bridge(_owned_collection(400))
+	bridge.answers["DustCard"] = [[false, {"status": 409, "errorCode": 1412, "title": "Account session replaced", "detail": "",
+		"currentSession": 7}]]
+	var game := _card_game(bridge)
+	var detail := await _open_detail(game, "card.item.r1")
+	var dusting: Array = [null]
+	var run := func() -> void: dusting[0] = await detail.dust()
+	run.call()
+	check(await _answer(game, true), "the dust confirm")
+	await _until(func() -> bool: return dusting[0] != null)
+	check(game.server.session_replaced, "the session is marked replaced")
+	eq(detail.shown()["message"], "", "the detail says nothing: the pop-up's Use it here does")
+	var screen: UIScreen = game.ui.top(MENU)
+	check(not screen.shown()["actions"], "the Collection shows no ownership until Use it here")
+
+
+func test_card_page_renders_faces_live_and_frees_them() -> void:
+	var game := _card_game()
+	var screen := await _open_collection(game)
+	var page: CardPage = screen.get_node("%Page")
+	screen.set_filter("missing", true)
+	eq(page.views.size(), 12, "twelve views on a full page")
+	var first: CardView3D = page.views.values()[0]
+	var viewport := first.viewport
+	check(first.face_view != null and first.face_view.get_parent() == viewport, "each card renders its face in its own SubViewport")
+	screen.turn(1)
+	await _frames(2)
+	check(not is_instance_valid(viewport), "a page change frees the old viewports")
+	var style := CardStyle.current()
+	var faces := CardFaces.build(CardWorld.content(), style)
+	var still := CardView3D.new()
+	var shiny := CardView3D.new()
+	host.add_child(still)
+	host.add_child(shiny)
+	_nodes.append(still)
+	_nodes.append(shiny)
+	var common: CardFace = faces.filter(func(face: CardFace) -> bool: return face.rarity == "common")[0]
+	var legendary: CardFace = faces.filter(func(face: CardFace) -> bool: return face.rarity == "legendary")[0]
+	still.show_face(common, style, style.face_scene(), 1.0, 1.0)
+	shiny.show_face(legendary, style, style.face_scene(), 1.0, 1.0)
+	eq([still.live(), shiny.live()], [false, true], "a Common is still, a Legendary loops")
+	eq(shiny.viewport.render_target_update_mode, SubViewport.UPDATE_ALWAYS, "a looping face redraws every frame")
+	check(still.viewport.render_target_update_mode in [SubViewport.UPDATE_ONCE, SubViewport.UPDATE_DISABLED],
+		"a still face draws once")
+	still.set_render_scale(2.0)
+	eq(still.viewport.size, Vector2i(ceili((300 + 60) * 2.0), ceili((420 + 60) * 2.0)), "sized to the card on screen, with the glow margin")
+
+
+func test_main_menu_collection_opens_the_collection() -> void:
+	var game := _card_game()
+	await _frames(3)
+	var menu := game.ui.top(MENU)
+	check(not menu.get_node("%Collection").disabled, "Collection is enabled")
+	menu.get_node("%Collection").pressed.emit()
+	await _frames(3)
+	eq(String(game.ui.top(MENU).name), "Collection", "Collection opens the Collection (local mode too)")
+
+
+func test_cardui_collection_commands() -> void:
+	var bridge := _card_bridge(_owned_collection(400))
+	bridge.answers["DustCard"] = [[true, {"cardId": "card.item.r1", "dustGained": 20, "rateVersion": 1, "dust": 420, "accountVersion": 4}]]
+	var game := _card_game(bridge)
+	await _frames(2)
+	var console := _console(game)
+	for line in ["cardui collection", "cardui page 2", "cardui filter kind item", "cardui detail", "cardui open detail"]:
+		check(not (await console.execute(line))["ok"], "'%s' is refused before the Collection opens" % line)
+	var opened: Dictionary = await console.execute("cardui open collection")
+	check(opened["ok"] and opened["text"].contains("page 1 /") and opened["text"].contains("dust 400"), "opened: %s" % opened["text"])
+	check((await console.execute("cardui filter missing on"))["ok"], "Missing on: two pages")
+	var paged: Dictionary = await console.execute("cardui page 2")
+	check(paged["ok"] and paged["text"].begins_with("page 2 /"), "page 2: %s" % paged["text"])
+	var filtered: Dictionary = await console.execute("cardui filter rarity epic")
+	check(filtered["ok"] and filtered["text"].contains("card.item.e1") and not filtered["text"].contains("(common)"),
+		"rarity filter: %s" % filtered["text"])
+	for line in ["cardui filter rarity shiny", "cardui filter owned maybe", "cardui filter kind spell", "cardui filter colour red",
+			"cardui page x", "cardui open detail card.nope"]:
+		check(not (await console.execute(line))["ok"], "'%s' is refused" % line)
+	var detail: Dictionary = await console.execute("cardui open detail card.item.r1")
+	check(detail["ok"] and detail["text"].contains("\"dust_enabled\":true"), "the detail: %s" % detail["text"])
+	check(not (await console.execute("cardui detail create"))["ok"], "Create refused on an owned card")
+	var answering := func() -> void: await _answer(game, true)
+	answering.call()
+	var dusted: Dictionary = await console.execute("cardui detail dust")
+	check(dusted["ok"] and dusted["text"].contains("Dusted: +20 dust."), "dusted: %s" % dusted["text"])
+
+
 # --- Isolation (spec 3.2) --------------------------------------------------------------------------------------------------
 
 func test_the_card_presentation_stays_out_of_combat_the_verifier_and_the_ruleset() -> void:
@@ -776,7 +1232,7 @@ func test_the_card_presentation_stays_out_of_combat_the_verifier_and_the_ruleset
 	check(not RulesetVersion.ROOTS.any(func(root: String) -> bool: return CardStyle.DEFAULT_PATH.begins_with(root)),
 		"the card style is outside the ruleset roots")
 	var names := ["CardStyle", "CardPackLook", "CardRarityLook", "CardPackView", "CardAccount", "ShopModel", "presentation/demo/cards",
-		"presentation/demo/ui/cards"]
+		"presentation/demo/ui/cards", "CollectionModel", "CardSeen", "CardView3D", "CardPage"]
 	for root in ["res://combat/", "res://game/verify/"]:
 		for path in _scripts(root):
 			var text := FileAccess.get_file_as_string(path)

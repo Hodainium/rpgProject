@@ -1,0 +1,238 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/menu_frame.tscn" id="1_frame"]
+[ext_resource type="Script" path="res://presentation/demo/ui/cards/collection.gd" id="2_collection"]
+[ext_resource type="Script" path="res://game/cards/card_page.gd" id="3_page"]
+[ext_resource type="Script" path="res://game/ui/ui_spinner.gd" id="4_spinner"]
+[ext_resource type="Script" path="res://game/ui/ui_back_button.gd" id="5_back"]
+
+[node name="Collection" instance=ExtResource("1_frame")]
+script = ExtResource("2_collection")
+focus_on_activate = NodePath("Content/Stack/Body/Book/Margin/Stack/Tabs/Back")
+
+[node name="Back" parent="."]
+visible = false
+
+[node name="Top" parent="."]
+visible = false
+
+[node name="Content" parent="."]
+offset_top = 16.0
+
+[node name="Body" type="HBoxContainer" parent="Content/Stack"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+
+[node name="Book" type="PanelContainer" parent="Content/Stack/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Margin" type="MarginContainer" parent="Content/Stack/Body/Book"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="Stack" type="VBoxContainer" parent="Content/Stack/Body/Book/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Tabs" type="HBoxContainer" parent="Content/Stack/Body/Book/Margin/Stack"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="Back" type="Button" parent="Content/Stack/Body/Book/Margin/Stack/Tabs"]
+layout_mode = 2
+theme_type_variation = &"Toggle"
+text = "BACK"
+script = ExtResource("5_back")
+
+[node name="Title" type="Label" parent="Content/Stack/Body/Book/Margin/Stack/Tabs"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Title"
+text = "Collection"
+
+[node name="SetTabs" type="HBoxContainer" parent="Content/Stack/Body/Book/Margin/Stack/Tabs"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="KindTabs" type="HBoxContainer" parent="Content/Stack/Body/Book/Margin/Stack/Tabs"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Spacer" type="Control" parent="Content/Stack/Body/Book/Margin/Stack/Tabs"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Dust" type="Label" parent="Content/Stack/Body/Book/Margin/Stack/Tabs"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"Gold"
+text = "0 dust"
+
+[node name="Gems" type="Label" parent="Content/Stack/Body/Book/Margin/Stack/Tabs"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"Gold"
+text = "0 gems"
+
+[node name="PageHead" type="HBoxContainer" parent="Content/Stack/Body/Book/Margin/Stack"]
+layout_mode = 2
+
+[node name="PageTitle" type="Label" parent="Content/Stack/Body/Book/Margin/Stack/PageHead"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HeaderLarge"
+text = "All cards"
+
+[node name="Count" type="Label" parent="Content/Stack/Body/Book/Margin/Stack/PageHead"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "0 cards"
+
+[node name="PageArea" type="Control" parent="Content/Stack/Body/Book/Margin/Stack"]
+custom_minimum_size = Vector2(0, 420)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Page" type="Control" parent="Content/Stack/Body/Book/Margin/Stack/PageArea"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_page")
+columns = 6
+gap = Vector2(28, 26)
+
+[node name="Empty" type="Label" parent="Content/Stack/Body/Book/Margin/Stack/PageArea"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Muted"
+text = "No card matches these filters."
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Spinner" type="Control" parent="Content/Stack/Body/Book/Margin/Stack/PageArea"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -28.0
+offset_top = -28.0
+offset_right = 28.0
+offset_bottom = 28.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_spinner")
+thickness = 5.0
+
+[node name="Bar" type="HBoxContainer" parent="Content/Stack/Body/Book/Margin/Stack"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="RarityLabel" type="Label" parent="Content/Stack/Body/Book/Margin/Stack/Bar"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Rarity"
+
+[node name="Rarities" type="HBoxContainer" parent="Content/Stack/Body/Book/Margin/Stack/Bar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Pool" type="OptionButton" parent="Content/Stack/Body/Book/Margin/Stack/Bar"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Room pool"
+
+[node name="Owned" type="Button" parent="Content/Stack/Body/Book/Margin/Stack/Bar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Toggle"
+toggle_mode = true
+button_pressed = true
+text = "Owned"
+
+[node name="Missing" type="Button" parent="Content/Stack/Body/Book/Margin/Stack/Bar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Toggle"
+toggle_mode = true
+text = "Missing"
+
+[node name="Search" type="LineEdit" parent="Content/Stack/Body/Book/Margin/Stack/Bar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Search cards"
+clear_button_enabled = true
+
+[node name="Prev" type="Button" parent="Content/Stack/Body/Book/Margin/Stack/Bar"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Previous page (Page Up)"
+text = " < "
+
+[node name="PageNo" type="Label" parent="Content/Stack/Body/Book/Margin/Stack/Bar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "1 / 1"
+
+[node name="Next" type="Button" parent="Content/Stack/Body/Book/Margin/Stack/Bar"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Next page (Page Down)"
+text = " > "
+
+[node name="Lines" type="HBoxContainer" parent="Content/Stack"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="RunLine" type="Label" parent="Content/Stack/Lines"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="Message" type="Label" parent="Content/Stack/Lines"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="Online" type="Button" parent="Content/Stack/Lines"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Go online"
