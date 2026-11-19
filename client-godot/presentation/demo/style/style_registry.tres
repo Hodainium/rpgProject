@@ -859,7 +859,6 @@ effect = ExtResource("29_holy")
 [sub_resource type="Resource" id="Resource_i6477"]
 script = ExtResource("2_b37kx")
 shape = ExtResource("6_6yhn0")
-rotation_degrees = Vector3(0, 0, 0)
 
 [sub_resource type="Resource" id="Resource_wasn7"]
 script = ExtResource("1_avbba")

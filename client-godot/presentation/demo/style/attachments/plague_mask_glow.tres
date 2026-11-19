@@ -71,5 +71,5 @@ tintable = false
 
 [resource]
 script = ExtResource("2_shape")
-display_name = "Glowing lenses: Beak mask"
+display_name = "Beak mask, glowing lenses"
 parts = Array[ExtResource("1_part")]([SubResource("Resource_beak"), SubResource("Resource_lens_l"), SubResource("Resource_lens_r"), SubResource("Resource_rims"), SubResource("Resource_rims_r")])
