@@ -1,0 +1,86 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3 uid="uid://dg8ou0nmj6m1w"]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_5qued"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_gn0hf"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_eedry"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_aura.gdshader" id="4_e7dq8"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_umlwi"]
+[ext_resource type="Shader" path="res://game/fx/shaders/foil_shimmer.gdshader" id="6_00u2h"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="7_yh31q"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="8_dj212"]
+
+[sub_resource type="Resource" id="Resource_bxeox"]
+script = ExtResource("2_gn0hf")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_ioyvk"]
+script = ExtResource("2_gn0hf")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_2rmik"]
+script = ExtResource("3_eedry")
+shader = ExtResource("4_e7dq8")
+shader_params = {
+"corner": 18.0,
+"fade_in": 0.1,
+"fade_out": 0.5,
+"falloff": 0.1,
+"pulse_amount": 0.0
+}
+grow = 34.0
+id = &"glow"
+duration = 1.25
+bindings = Array[ExtResource("2_gn0hf")]([SubResource("Resource_bxeox"), SubResource("Resource_ioyvk")])
+
+[sub_resource type="Resource" id="Resource_6ohw6"]
+script = ExtResource("2_gn0hf")
+property = "material:shader_parameter/tint"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_hniyv"]
+script = ExtResource("2_gn0hf")
+property = "material:shader_parameter/strength"
+param = &"intensity"
+scale = 1.4
+
+[sub_resource type="Resource" id="Resource_y8hpe"]
+script = ExtResource("3_eedry")
+shader = ExtResource("6_00u2h")
+shader_params = {
+"angle": 0.7,
+"band_width": 0.3,
+"corner": 18.0,
+"rainbow": 1.0,
+"speed": 1.6,
+"sweep_from": -0.4,
+"sweep_to": 1.4
+}
+id = &"foil"
+duration = 1.25
+bindings = Array[ExtResource("2_gn0hf")]([SubResource("Resource_6ohw6"), SubResource("Resource_hniyv")])
+
+[sub_resource type="Resource" id="Resource_ycx3p"]
+script = ExtResource("7_yh31q")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.7, 0.2, 1)
+description = "Tint of the foil and glow (the card's rarity)."
+
+[sub_resource type="Resource" id="Resource_npk27"]
+script = ExtResource("7_yh31q")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("8_dj212")
+id = &"fx.reveal_foil"
+display_name = "Reveal foil sweep"
+params = Array[ExtResource("7_yh31q")]([SubResource("Resource_ycx3p"), SubResource("Resource_npk27")])
+layers = Array[ExtResource("1_5qued")]([SubResource("Resource_2rmik"), SubResource("Resource_y8hpe")])
+space = 1
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "A big card reveal: a rainbow foil band sweeps across the card twice over a soft glow. Anchor it on the card's control."

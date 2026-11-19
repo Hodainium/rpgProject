@@ -1,0 +1,30 @@
+# Spec card-ui 2.2 (the run-lock pop-up) end to end through the screens: a won run pays gems, a pack is bought and opened, a
+# second run starts (its pool holds the new cards) and is left with Save and quit; the card detail's Dust asks first, the script
+# answers "Cancel run", the run is abandoned on the server and the same dust (same key) goes through.
+#! worker
+#! content real
+#! cards
+#! env Monitors__Interval=00:00:01
+server reward boss demo.enemy.rat_king 300
+server reward boss demo.enemy.golem 300
+new demo.character.warrior,demo.character.cleric run=demo.run.one_floor
+wait run
+autorun policy=smart
+wait ended 180
+wait verdict all 300
+wait gems 100 180
+ui press Menu
+cardui shop buy descent-pack 1
+ui back
+cardui pack descent-pack
+cardui reveal all
+cardui done
+ui back
+new demo.character.warrior,demo.character.cleric run=demo.run.one_floor
+wait run
+ui push res://presentation/demo/ui/run_menu.tscn UI.Layer.GameMenu
+ui press SaveQuit
+cardui open detail first
+cardui detail dust nowait
+ui press "Cancel run"
+cardui wait acted 60

@@ -42,6 +42,8 @@ var id: String = ""
 var entry: Dictionary = {}
 var collection: Node
 var busy: bool = false
+## The last action's answer ({} before any): the console's `cardui wait acted`.
+var last_answer: Dictionary = {}
 var _style: CardStyle
 
 
@@ -230,6 +232,7 @@ func _act(kind: String, cancel_run: bool) -> Dictionary:
 			view.flash(_style.rarity(face.rarity).color if kind == CardAccount.CRAFT else dust_flash_color)
 	elif not line.is_empty() and CardAccount.code_of(answer) != ServerLink.ACCOUNT_SESSION_REPLACED:
 		ctx.main.refuse(line)
+	last_answer = answer
 	acted.emit(answer)
 	return answer
 

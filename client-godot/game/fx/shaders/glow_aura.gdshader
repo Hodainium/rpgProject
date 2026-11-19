@@ -41,6 +41,8 @@ void fragment() {
 	vec2 p = (UV - vec2(0.5)) * rect_size;
 	float d = rounded_box(p, rect_size * 0.5 - vec2(margin), corner);
 	float outside = d >= 0.0 ? exp(-d * falloff) : 0.0;
+	// The glow always reaches zero at the quad's edge (d = margin), so a slow falloff never shows the quad as a box.
+	outside *= 1.0 - smoothstep(margin * 0.45, margin, d);
 	float inside = d < 0.0 ? inner_glow * smoothstep(-margin * 0.7, 0.0, d) : 0.0;
 	float pulse = 1.0 + pulse_amount * sin(time * pulse_speed * 6.28318);
 	float a = (outside + inside) * intensity * pulse;

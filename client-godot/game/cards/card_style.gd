@@ -55,6 +55,24 @@ var art_sets: Array[CardArtSet] = []
 ## The set marks on a card: set id (core, descent) → glyph.
 @export var set_marks: Dictionary[StringName, Texture2D] = {}
 
+@export_group("Pack opening")
+## Spec card-ui 3.2: the card back (face-down cards in a pack). None = the back drawn in code (CardBackView: navy and gold, the
+## cube emblem).
+@export var back_texture: Texture2D
+## Spec card-ui 2.4: the choreography's numbers, effects and sounds. None = PackChoreography's defaults.
+@export var choreography: PackChoreography
+
+var _default_choreography: PackChoreography
+
+
+## The choreography in use (`choreography`, else the defaults).
+func pack_choreography() -> PackChoreography:
+	if choreography != null:
+		return choreography
+	if _default_choreography == null:
+		_default_choreography = PackChoreography.new()
+	return _default_choreography
+
 static var _loaded: CardStyle
 
 

@@ -1,0 +1,103 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3 uid="uid://1ai07teikbwd"]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_8q5t6"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_aff0b"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_74akt"]
+[ext_resource type="Shader" path="res://game/fx/shaders/radial_burst.gdshader" id="4_acg5f"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_72k21"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_2d_layer.gd" id="6_jn7gw"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="7_3q6bv"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="8_32im1"]
+
+[sub_resource type="Resource" id="Resource_0wcpd"]
+script = ExtResource("2_aff0b")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_ox1gd"]
+script = ExtResource("2_aff0b")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+
+[sub_resource type="Resource" id="Resource_aytw8"]
+script = ExtResource("3_74akt")
+shader = ExtResource("4_acg5f")
+shader_params = {
+"flash": 1.4,
+"ring_width": 0.08
+}
+size = Vector2(1300, 1300)
+id = &"ring"
+duration = 0.75
+bindings = Array[ExtResource("2_aff0b")]([SubResource("Resource_0wcpd"), SubResource("Resource_ox1gd")])
+
+[sub_resource type="Resource" id="Resource_s83aw"]
+script = ExtResource("2_aff0b")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_ugh8a"]
+script = ExtResource("2_aff0b")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 0.8
+
+[sub_resource type="Resource" id="Resource_ck3sj"]
+script = ExtResource("3_74akt")
+shader = ExtResource("4_acg5f")
+shader_params = {
+"flash": 0.0,
+"ring_width": 0.05
+}
+size = Vector2(900, 900)
+id = &"echo"
+start_delay = 0.16
+duration = 0.6
+bindings = Array[ExtResource("2_aff0b")]([SubResource("Resource_s83aw"), SubResource("Resource_ugh8a")])
+
+[sub_resource type="Resource" id="Resource_jgelf"]
+script = ExtResource("2_aff0b")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_xvec5"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_nq6cx"]
+script = ExtResource("6_jn7gw")
+size_min = 0.1
+size_max = 0.32
+speed_min = 380.0
+speed_max = 720.0
+gravity = Vector3(0, 0, 0)
+damping = 400.0
+amount = 60
+lifetime = 0.9
+color_ramp = SubResource("Gradient_xvec5")
+id = &"motes"
+min_quality = 2
+bindings = Array[ExtResource("2_aff0b")]([SubResource("Resource_jgelf")])
+
+[sub_resource type="Resource" id="Resource_af0qe"]
+script = ExtResource("7_3q6bv")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.7, 0.2, 1)
+description = "Colour of the rings and motes (the card's rarity)."
+
+[sub_resource type="Resource" id="Resource_tdb87"]
+script = ExtResource("7_3q6bv")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("8_32im1")
+id = &"fx.reveal_starburst"
+display_name = "Reveal starburst"
+params = Array[ExtResource("7_3q6bv")]([SubResource("Resource_af0qe"), SubResource("Resource_tdb87")])
+layers = Array[ExtResource("1_8q5t6")]([SubResource("Resource_aytw8"), SubResource("Resource_ck3sj"), SubResource("Resource_nq6cx")])
+space = 3
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "A big card reveal: two shockwave rings and motes thrown outward."

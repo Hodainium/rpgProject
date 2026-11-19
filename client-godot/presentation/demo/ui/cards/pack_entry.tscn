@@ -1,0 +1,50 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/cards/pack_entry.gd" id="1_entry"]
+[ext_resource type="Script" path="res://game/cards/card_pack_view.gd" id="2_pack"]
+
+[node name="PackEntry" type="VBoxContainer"]
+theme_override_constants/separation = 6
+alignment = 1
+script = ExtResource("1_entry")
+
+[node name="PackButton" type="Button" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 228)
+layout_mode = 2
+size_flags_horizontal = 4
+flat = true
+mouse_default_cursor_shape = 2
+
+[node name="Pack" type="Control" parent="PackButton"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_pack")
+
+[node name="Name" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gold"
+text = "The Descent"
+horizontal_alignment = 1
+
+[node name="Pity" type="Label" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+theme_type_variation = &"Muted"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Odds" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"Toggle"
+text = "Odds"
