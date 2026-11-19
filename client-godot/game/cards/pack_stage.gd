@@ -69,6 +69,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	stage.match_screen_pixels()
+	(style if style != null else CardStyle.current()).warm_art()   # the faces' art loads off the main thread now
 	resized.connect(_on_resized)
 	if style == null:
 		style = CardStyle.current()

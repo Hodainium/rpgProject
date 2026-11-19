@@ -24,6 +24,8 @@ const COLUMNS := 40
 const ROWS := 72
 ## Ridges across each seal (the crimp).
 const RIDGES := 44
+## Built meshes by their shape (every pack of one size shares them; building one takes a few ms).
+static var _meshes: Dictionary = {}
 
 var viewport: SubViewport
 var back_viewport: SubViewport
@@ -102,6 +104,15 @@ func apply_foil() -> void:
 ## sides, and exactly flat (z = 0, where the front and the back meet) over the `seal` share at each end, so the crimped teeth
 ## lie pressed together. `flip` makes the back (facing -z, its picture mirrored so it reads from behind).
 static func pouch(width: float, tall: float, bulge: float, seal_share: float, flip: bool) -> ArrayMesh:
+	var key := "%s|%s|%s|%s|%s" % [width, tall, bulge, seal_share, flip]
+	if _meshes.has(key):
+		return _meshes[key]
+	var mesh := _build_pouch(width, tall, bulge, seal_share, flip)
+	_meshes[key] = mesh
+	return mesh
+
+
+static func _build_pouch(width: float, tall: float, bulge: float, seal_share: float, flip: bool) -> ArrayMesh:
 	var tool := SurfaceTool.new()
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var sign := -1.0 if flip else 1.0

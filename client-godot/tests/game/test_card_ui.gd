@@ -351,10 +351,38 @@ func test_shop_double_press_buys_once() -> void:
 	var shop := await _open_shop(game)
 	var entry: Node = shop.get_node("%Offers").get_child(0)
 	entry.get_node("%Buy1").pressed.emit()
-	check(entry.get_node("%Buy1").disabled, "the buttons disable while the buy is on its way")
+	check(entry.get_node("%Buy1").disabled, "the buttons disable while the confirm is up")
+	entry.get_node("%Buy1").pressed.emit()
+	check(await _answer(game, true), "Buy asks first")
+	check(entry.get_node("%Buy1").disabled, "and stay disabled while the buy is on its way")
 	entry.get_node("%Buy1").pressed.emit()
 	await _frames(4)
 	eq(bridge.count("BuyPack"), 1, "one purchase")
+
+
+func test_shop_buy_asks_to_confirm_and_cancel_buys_nothing() -> void:
+	var bridge := _bridge()
+	bridge.answers["BuyPack"] = [[true, {"packId": "descent-pack", "packVersion": 1, "count": 5, "gemsSpent": 500, "gems": 40,
+		"owned": 7}]]
+	var game := _game(bridge)
+	var shop := await _open_shop(game)
+	var entry: Node = shop.get_node("%Offers").get_child(0)
+	entry.get_node("%Buy5").pressed.emit()
+	await _frames(2)
+	var dialog: UIScreen = game.ui.top(MODAL)
+	check(dialog is UIConfirm, "a confirm pop-up comes up")
+	var texts := dialog.find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
+	check(texts.any(func(text: String) -> bool: return text.begins_with("Buy 5 packs of ") and text.ends_with(" gems?")),
+		"it names the count, the pack and the price: %s" % [texts])
+	check(await _answer(game, false), "Cancel")
+	await _frames(3)
+	eq(bridge.count("BuyPack"), 0, "Cancel buys nothing")
+	check(not entry.get_node("%Buy1").disabled, "and the buttons work again (Buy 1: five cost more than the account has)")
+	entry.get_node("%Buy5").pressed.emit()
+	check(await _answer(game, true), "Buy")
+	await _frames(6)
+	eq(bridge.count("BuyPack"), 1, "Buy buys")
+	check(entry.get_node("%Pack").solid, "the Shop's pack is the 3D foil pack")
 
 
 func test_shop_refusals_show_the_line_and_refetch() -> void:

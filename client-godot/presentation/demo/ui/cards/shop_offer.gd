@@ -35,6 +35,7 @@ func set_item(item: Variant, _context: UIContext) -> void:
 	%Pack.look = look
 	%Pack.name_font = style.name_font
 	%Pack.label = look.label if look.label != "" else str(offer["name"])
+	%Pack.solid = style.pack_choreography().pack_3d   # the 3D foil pack, as on Open packs (user, 2026-11-18)
 	%Name.text = str(offer["name"])
 	if style.name_font != null:
 		%Name.add_theme_font_override(&"font", style.name_font)

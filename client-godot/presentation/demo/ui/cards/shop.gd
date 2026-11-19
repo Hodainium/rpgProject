@@ -15,6 +15,10 @@ extends DemoMenuFrame
 ## The pop-up after a buy went through (card-ui playtest, user 2026-11-18): the count and "s" for more than one.
 @export var purchased_text: String = "Purchased %d pack%s!"
 @export var purchased_ok_text: String = "OK"
+## The question before a buy (user, 2026-11-18): count, "s" for several, the pack's name, the gems it costs.
+@export var confirm_buy_text: String = "Buy %d pack%s of %s for %d gems?"
+@export var confirm_buy_yes_text: String = "Buy"
+@export var confirm_buy_no_text: String = "Cancel"
 @export var not_enough_text: String = "Not enough gems (need %d, have %d)."
 @export var wait_text: String = "Talking to the Shop…"
 @export var reconnecting_text: String = "Reconnecting to the server…"
@@ -42,6 +46,8 @@ var _offers: Array[Dictionary] = []
 var _gems: int = -1
 var _shown_gems: float = -1.0
 var _buying: bool = false
+## A Buy press is waiting on its confirm pop-up (the buttons lock meanwhile).
+var _asking: bool = false
 var _gems_tween: Tween
 var _note: String = ""  # a line the next refreshes keep (after giving up), cleared by the next buy
 var _refresh_when_free: bool = false  # given up: refetch once the last try is back
@@ -203,7 +209,8 @@ func _preview(offer: Dictionary) -> void:
 		"text": " · ".join(odds), "extra": preview_pity_text % ", ".join(pity) if not pity.is_empty() else ""})
 
 
-## Spec card-ui 2.3a: one buy through the account (one key until it is answered; no confirm pop-up, the button names the
+## Spec card-ui 2.3a: one buy through the account (one key until it is answered; the Buy buttons ask first, in _buy, user
+## 2026-11-18; this is the buy itself, which the console also calls; the button names the
 ## price). The connecting pop-up covers the wait after 0.3 s and says "Reconnecting…" while the account re-sends it.
 func buy(pack_id: String, count: int) -> Dictionary:
 	var link: ServerLink = ctx.main.server if ctx != null else null
@@ -253,12 +260,26 @@ func buy(pack_id: String, count: int) -> Dictionary:
 	return answer
 
 
+## A Buy button: asks "Buy N packs of X for G gems?" (Buy / Cancel) and buys only on Buy (user, 2026-11-18).
 func _buy(pack_id: String, count: int) -> void:
-	await buy(pack_id, count)
+	var offer := offer_for(pack_id)
+	if _asking or _buying or loading or offer.is_empty() or ctx == null:
+		return
+	_asking = true
+	_update_offers()
+	var price := int(offer.get("price", 0)) * count
+	var yes: bool = await ctx.ui.confirm(confirm_buy_text % [count, "" if count == 1 else "s", str(offer["name"]), price],
+		confirm_buy_yes_text, confirm_buy_no_text)
+	if not is_instance_valid(self):
+		return
+	_asking = false
+	_update_offers()
+	if yes:
+		await buy(pack_id, count)
 
 
 func _update_offers() -> void:
-	var locked := _buying or loading  # a buy never overlaps a refresh (its totals would land over the buy's)
+	var locked := _buying or loading or _asking  # a buy never overlaps a refresh (its totals would land over the buy's)
 	if ctx != null and ctx.main.server != null:
 		locked = locked or ctx.main.server.card_account().busy()
 	for entry in %Offers.get_children():

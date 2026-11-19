@@ -109,11 +109,26 @@ func element(name: StringName) -> CardElement:
 	return look if look != null else CardElement.new()
 
 
+## Starts loading the art sets on a background thread (the first card face otherwise loads every icon and portrait at once:
+## ~190 ms, measured 2026-11-18, which stalled the first pack's flight). A screen that will show cards calls it as it opens;
+## art_for then takes the finished loads (or finishes them).
+func warm_art() -> void:
+	if not art_sets.is_empty():
+		return
+	for path in art_set_paths:
+		if ResourceLoader.exists(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			ResourceLoader.load_threaded_request(path)
+
+
 ## A card's art (glyph or portrait) from the art sets, or null.
 func art_for(id: StringName) -> Texture2D:
 	if art_sets.is_empty() and not art_set_paths.is_empty():
 		for path in art_set_paths:
-			var loaded := load(path) as CardArtSet if ResourceLoader.exists(path) else null
+			var loaded: CardArtSet = null
+			if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+				loaded = ResourceLoader.load_threaded_get(path) as CardArtSet   # warm_art() began it (waits if not done)
+			elif ResourceLoader.exists(path):
+				loaded = load(path) as CardArtSet
 			if loaded != null:
 				art_sets.append(loaded)
 	for art_set in art_sets:
