@@ -1,0 +1,361 @@
+<title>Class Pick Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Cinzel:wght@600;700&display=swap">
+<style>
+/* Layout: a 16:9 game screen. Left: the turntable stage and the class card under it. Right: party slots, then recommended parties, then Start. */
+:root{
+  --bg:#070a16; --ink:#eef1ff; --dim:#9aa3c7; --mute:#5d6588;
+  --win-top:#2b3f93; --win-bot:#0c1547; --edge:#c9d2f2; --edge-dark:#56619a;
+  --gold:#e8c66a; --lock:#7d7f8c; --ok:#7fd99a; --warn:#f0b35a;
+  --f-ui:"Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --f-name:"Cinzel", Georgia, serif;
+  color-scheme:dark;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;max-width:1280px;margin:0 auto 12px;font-size:13px;color:var(--dim)}
+.bar b{color:var(--ink);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:12px}
+.seg{display:inline-flex;border:1px solid var(--edge-dark);border-radius:6px;overflow:hidden}
+.seg button{background:transparent;border:0;padding:5px 10px;color:var(--dim)}
+.seg button[aria-pressed=true]{background:var(--win-top);color:var(--ink)}
+
+.screen{max-width:1280px;margin:0 auto;aspect-ratio:16/9;position:relative;border-radius:10px;overflow:hidden;
+  background:radial-gradient(120% 90% at 30% 25%,#1a2252 0%,#0b1030 55%,#05070f 100%);
+  display:grid;grid-template-columns:1.25fr 1fr;gap:18px;padding:18px}
+.win{background:linear-gradient(180deg,var(--win-top),var(--win-bot));border:2px solid var(--edge);border-radius:7px;
+  box-shadow:inset 0 0 0 1px var(--edge-dark),0 6px 18px #0008}
+.head{font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:13px;color:var(--dim);margin:0 0 8px}
+
+/* left column */
+.left{display:grid;grid-template-rows:auto 1fr;gap:10px;min-width:0;min-height:0}
+.title{display:flex;align-items:center;gap:14px}
+.back{background:none;border:1px solid var(--edge-dark);border-radius:6px;padding:4px 10px;color:var(--dim)}
+.title h1{margin:0;font-family:var(--f-name);font-size:26px;letter-spacing:.04em}
+.stagewrap{position:relative;min-height:0;display:grid;grid-template-rows:1fr auto}
+.stage{position:relative;perspective:900px;overflow:hidden;min-height:0}
+.floor{position:absolute;left:8%;right:8%;bottom:6%;height:26%;border-radius:50%;
+  background:radial-gradient(closest-side,#8fa6ff33,#8fa6ff10 60%,transparent)}
+.frame{position:absolute;left:50%;top:50%;width:var(--fs);height:var(--fs);transform:translate(-50%,-56%);
+  border:2px solid var(--gold);border-radius:12px;box-shadow:0 0 0 4px #0006,0 0 30px #e8c66a33;pointer-events:none;z-index:50}
+.frame::before,.frame::after{content:"";position:absolute;width:18px;height:18px;border:3px solid var(--gold)}
+.frame::before{left:-7px;top:-7px;border-right:0;border-bottom:0}
+.frame::after{right:-7px;bottom:-7px;border-left:0;border-top:0}
+.unit{position:absolute;left:50%;top:50%;width:var(--fs);height:var(--fs);margin:calc(var(--fs)/-2) 0 0 calc(var(--fs)/-2);
+  border-radius:12px;overflow:hidden;transform-style:preserve-3d;will-change:transform;border:0;padding:0;background:#000}
+.unit img{width:100%;height:100%;display:block;object-fit:cover}
+.unit.locked img{filter:grayscale(1) brightness(.55)}
+.unit .pad{position:absolute;right:8px;top:8px;width:26px;height:26px;display:none}
+.unit.locked .pad{display:block}
+.arrow{position:absolute;top:44%;z-index:60;width:54px;height:54px;border-radius:50%;border:2px solid var(--edge);
+  background:linear-gradient(180deg,var(--win-top),var(--win-bot));display:grid;place-items:center;font-size:24px}
+.arrow.l{left:10px}.arrow.r{right:10px}
+.dots{display:flex;justify-content:center;gap:6px;padding:6px 0 0}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--mute)}
+.dots i.on{background:var(--gold)}
+.dots i.lk{outline:1px solid var(--mute);background:transparent}
+
+.card{padding:12px 14px;display:grid;grid-template-columns:1fr 168px;gap:6px 16px;min-height:0}
+.card .nm{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;grid-column:1/-1}
+.card .nm h2{margin:0;font-family:var(--f-name);font-size:24px}
+.role{color:var(--dim);font-size:13px}
+.chip{font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:4px;border:1px solid var(--edge-dark);color:var(--dim)}
+.chip.lock{color:#d8d8e0;border-color:var(--lock);background:#ffffff10}
+.chip.in{color:var(--ok);border-color:#3f7d55}
+.desc{margin:0;font-size:14px;line-height:1.4;color:#d9ddf3;max-width:62ch}
+.moves{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.mv{font-size:12.5px;padding:3px 8px;border-radius:4px;background:#ffffff12;border:1px solid #ffffff22}
+.mv small{color:var(--dim);margin-right:5px;text-transform:uppercase;font-size:10px;letter-spacing:.05em}
+.mv.Ultimate{border-color:#e8c66a88}.mv.Ultimate small{color:var(--gold)}
+.learn{font-size:12px;color:var(--dim);margin-top:4px}
+.stats{display:grid;grid-template-columns:auto 1fr auto;gap:3px 8px;align-items:center;font-size:12.5px;align-self:start}
+.stats span{color:var(--dim)}.stats em{font-style:normal;font-variant-numeric:tabular-nums;text-align:right}
+.stats .b{height:6px;border-radius:3px;background:#ffffff14;overflow:hidden}
+.stats .b i{display:block;height:100%;background:var(--c,#8fa6ff)}
+.act{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap}
+.btn{border:2px solid var(--edge);border-radius:6px;padding:6px 16px;background:linear-gradient(180deg,#3a52b0,#16226a);font-weight:600}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;border-color:var(--edge-dark);color:var(--dim)}
+.hint{font-size:13px;color:var(--warn)}
+
+/* right column */
+.right{display:grid;grid-template-rows:auto 1fr auto;gap:12px;min-width:0;min-height:0}
+.party{padding:12px}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.slot{aspect-ratio:1;border-radius:8px;border:2px solid var(--edge-dark);background:#0007;position:relative;overflow:hidden;padding:0}
+.slot img{width:100%;height:100%;object-fit:cover;display:block}
+.slot .x{position:absolute;inset:auto 0 0 0;font-size:11px;padding:2px 4px;background:#000a;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot:hover:not(.empty) .x{background:#8a1e2ccc}
+.slot:hover:not(.empty) .x::after{content:" · remove"}
+.slot.empty{border-style:dashed;display:grid;place-items:center;color:var(--mute);font-size:12px;text-align:center;cursor:default}
+.slot.missing{border-color:var(--warn);border-style:dashed}
+.slot.missing img{filter:grayscale(1) brightness(.35)}
+.slot.missing .x{color:var(--warn)}
+.slot.target{box-shadow:0 0 0 2px var(--gold)}
+.rows{display:grid;gap:6px}
+.row{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:4px 8px 4px 4px;border-radius:6px;
+  border:1px solid #ffffff22;background:#0004;text-align:left;width:100%}
+.row img{width:40px;height:40px;border-radius:5px;object-fit:cover}
+.row .n{font-weight:600}.row .r{font-size:12px;color:var(--dim)}
+.row .rm{font-size:12px;color:var(--dim)}
+.row:hover:not(.empty) .rm{color:#ff8b98}
+.row.empty{border-style:dashed;color:var(--mute);cursor:default;grid-template-columns:40px 1fr}
+.row.empty .ph{width:40px;height:40px;border-radius:5px;border:1px dashed var(--mute)}
+.row.missing{border-color:var(--warn);border-style:dashed}
+.row.missing img{filter:grayscale(1) brightness(.4)}
+.row.missing .rm{color:var(--warn)}
+.row.target{box-shadow:0 0 0 2px var(--gold)}
+.pcount{float:right;color:var(--ink);font-weight:600}
+
+.rec{padding:12px;min-height:0;display:grid;grid-template-rows:auto auto 1fr;gap:8px}
+.tabs{display:flex;gap:4px}
+.tabs button{background:transparent;border:1px solid var(--edge-dark);border-radius:5px;padding:3px 9px;font-size:12px;color:var(--dim)}
+.tabs button[aria-pressed=true]{color:var(--ink);border-color:var(--edge);background:#ffffff12}
+.reclist{display:grid;gap:6px;overflow:auto;min-height:0;align-content:start}
+.team{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:7px 9px;border:1px solid #ffffff22;border-radius:6px;background:#0004;text-align:left;width:100%}
+.team:hover{border-color:var(--edge)}
+.team .tn{font-weight:600}.team .stat{font-size:12px;color:var(--dim);text-align:right;font-variant-numeric:tabular-nums}
+.team .stat b{color:var(--ok);font-weight:600}
+.faces{display:flex;gap:4px;grid-column:1/-1}
+.faces img{width:30px;height:30px;border-radius:4px;object-fit:cover}
+.faces img.lk{filter:grayscale(1) brightness(.45);outline:1px dashed var(--warn);outline-offset:-1px}
+.team .why{grid-column:1/-1;font-size:12px;color:var(--dim)}
+.sample{font-size:11px;color:var(--mute)}
+.go{display:flex;gap:10px;align-items:center;justify-content:flex-end}
+.go .btn{font-family:var(--f-name);font-size:20px;padding:8px 26px;letter-spacing:.06em}
+.go .why2{font-size:12.5px;color:var(--dim);margin-right:auto}
+
+.toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:#000c;border:1px solid var(--edge-dark);
+  padding:6px 14px;border-radius:6px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99}
+.toast.on{opacity:1}
+.notes{max-width:1280px;margin:14px auto 0;font-size:13.5px;line-height:1.5;color:var(--dim)}
+.notes h3{color:var(--ink);font-size:14px;margin:0 0 4px}
+.notes ul{margin:0;padding-left:18px}
+
+@media (max-width:900px){
+  .screen{aspect-ratio:auto;grid-template-columns:1fr}
+  .stage{height:300px}
+  .card{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+
+<div class="bar" role="toolbar" aria-label="Prototype switches">
+  <span><b>Carousel</b></span>
+  <span class="seg" id="sw-carousel"><button data-v="turntable" aria-pressed="true">A · Turntable</button><button data-v="frame">B · Frame and neighbours</button></span>
+  <span><b>Party</b></span>
+  <span class="seg" id="sw-party"><button data-v="slots" aria-pressed="true">Portrait slots</button><button data-v="rows">Rows</button></span>
+  <span><b>Account</b></span>
+  <span class="seg" id="sw-own"><button data-v="core" aria-pressed="true">Server: core six owned</button><button data-v="some">Server: + Pyromancer</button><button data-v="local">Local mode (all)</button></span>
+</div>
+
+<div class="screen" id="screen">
+  <section class="left">
+    <div class="title"><button class="back" id="back">‹ Back</button><h1>Choose your party</h1></div>
+    <div class="stagewrap win" style="padding:0">
+      <div class="stage" id="stage" tabindex="0" aria-label="Class carousel, use the arrow keys">
+        <div class="floor"></div>
+        <div class="frame" id="frame"></div>
+        <button class="arrow l" id="prev" aria-label="Previous class">‹</button>
+        <button class="arrow r" id="next" aria-label="Next class">›</button>
+      </div>
+      <div class="dots" id="dots" style="padding-bottom:8px"></div>
+    </div>
+  </section>
+  <section class="right">
+    <div class="party win"><p class="head">Party <span class="pcount" id="pcount"></span></p><div id="party"></div></div>
+    <div class="rec win">
+      <p class="head" style="margin:0">Recommended parties</p>
+      <div class="tabs" id="tabs"><button data-t="dev" aria-pressed="true">Developer picks</button><button data-t="win">Top win rate</button><button data-t="played">Most played</button></div>
+      <div class="reclist" id="reclist"></div>
+    </div>
+    <div class="go"><span class="why2" id="gowhy"></span><button class="btn" id="start">Lock in</button></div>
+  </section>
+  <div class="toast" id="toast"></div>
+</div>
+<div class="card win" id="card" style="max-width:1280px;margin:12px auto 0"></div>
+
+<div class="notes">
+  <h3>What to try</h3>
+  <ul>
+    <li>Turn the carousel with the arrows, the keyboard's left and right keys, the mouse wheel, or by clicking a cube beside the frame.</li>
+    <li>Click a member in the party panel to take it out. Click a recommended party to load it; a class you do not own leaves its slot empty and marked, and the next class you add fills it.</li>
+    <li>Win rate and play rate tabs show sample numbers; the real ones come from the analytics backend later.</li>
+  </ul>
+</div>
+
+<script>
+const CLASSES = /*DATA*/;
+const MAXP = 4;
+const PAD = `<svg class="pad" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="12" rx="2" fill="#2a2c36" stroke="#cfd2dc" stroke-width="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="#cfd2dc" stroke-width="2"/></svg>`;
+const byId = Object.fromEntries(CLASSES.map(c=>[c.id,c]));
+const TEAMS = [
+  {n:"Classic Four", m:["warrior","cleric","arcanist","bard"], why:"Front line, healer, area damage, buffs. A safe first run.", win:41, play:22},
+  {n:"Iron Wall", m:["bulwark","cleric","ranger","bard"], why:"Bulwark takes the hits; Ranger follow-ups do the work.", win:44, play:14},
+  {n:"Break Squad", m:["ember_knight","shatterweaver","ranger","cleric"], why:"Brand, mark and fracture: everything breaks fast.", win:47, play:9},
+  {n:"Firestorm", m:["pyromancer","arcanist","bard","cleric"], why:"Stack Burn on every enemy; Finale doubles the turn.", win:38, play:12},
+  {n:"Deep Freeze", m:["cryomancer","warrior","bard","cleric"], why:"Freeze locks the boss while Warrior executes.", win:36, play:7},
+  {n:"Plague House", m:["plaguewright","bulwark","bard","cleric"], why:"Long debuffs and a tank that waits them out.", win:33, play:6},
+];
+let state = {carousel:"turntable", partyView:"slots", own:"core", tab:"dev",
+  pos:0, target:0, party:["warrior","cleric",null,null], missing:{}};
+
+function owned(id){ if(state.own==="local") return true; const c=byId[id]; return c.core || (state.own==="some" && id==="pyromancer"); }
+const N = CLASSES.length;
+const idx = ()=> ((Math.round(state.target)%N)+N)%N;
+const cur = ()=> CLASSES[idx()];
+
+// ---- stage
+const stage = document.getElementById("stage");
+const units = CLASSES.map((c,i)=>{
+  const b=document.createElement("button"); b.className="unit"; b.innerHTML=`<img alt="${c.name}" src="${c.img}">${PAD}`;
+  b.addEventListener("click",()=>{ const off=wrapOff(i-state.target); if(Math.abs(off)>0.1) turn(Math.round(off)); });
+  stage.appendChild(b); return b;
+});
+function wrapOff(o){ o=((o%N)+N)%N; return o>N/2? o-N : o; }
+function frameSize(){ const h=stage.clientHeight, w=stage.clientWidth; return Math.min(h*0.62, w*0.36); }
+function layout(){
+  const fs=frameSize(); stage.style.setProperty("--fs",fs+"px"); document.getElementById("frame").style.setProperty("--fs",fs+"px");
+  const W=stage.clientWidth;
+  units.forEach((u,i)=>{
+    const o = wrapOff(i-state.pos); let t, z, op, vis=true;
+    if(state.carousel==="turntable"){
+      const a = o*(2*Math.PI/N);
+      const x = Math.sin(a)*W*0.40, depth = Math.cos(a);           // depth 1 = front
+      const s = 0.45+0.55*((depth+1)/2)**1.6;
+      const spin = -o*(360/N)*1.6;                                 // each cube turns as it travels
+      t = `translate3d(${x}px,${-fs*0.06 - (1-depth)*fs*0.18}px,0) scale(${s}) rotateY(${spin}deg)`;
+      z = Math.round(depth*40)+40; op = 0.25+0.75*((depth+1)/2)**2;
+    } else {
+      const ao=Math.abs(o);
+      const x = Math.sign(o)*Math.min(ao,1.6)*W*0.33 + (ao>1? Math.sign(o)*(ao-1)*W*0.25:0);
+      const s = ao<1? 1-0.42*ao : 0.58-(ao-1)*0.2;
+      const spin = o*-360*0.5*Math.min(ao,1);                      // spins half a turn on its way in or out
+      t = `translate3d(${x}px,${-fs*0.06 + Math.min(ao,1)*fs*0.12}px,0) scale(${Math.max(s,0.1)}) rotateY(${spin}deg)`;
+      z = 100-Math.round(ao*10); op = ao<1? 1-0.45*ao : Math.max(0,0.55-(ao-1)*0.9); vis = ao<2.2;
+    }
+    u.style.transform=t; u.style.zIndex=z; u.style.opacity=vis?op:0; u.style.pointerEvents=vis?"auto":"none";
+    u.classList.toggle("locked",!owned(CLASSES[i].id));
+    u.tabIndex=-1;
+  });
+}
+let raf=null;
+function animate(){
+  const d=state.target-state.pos;
+  if(Math.abs(d)<0.002){ state.pos=state.target; layout(); raf=null; return; }
+  state.pos += d*0.14; layout(); raf=requestAnimationFrame(animate);
+}
+function turn(step){
+  state.target+=step; renderCard(); renderDots();
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){ state.pos=state.target; layout(); return; }
+  if(!raf) raf=requestAnimationFrame(animate);
+}
+document.getElementById("prev").onclick=()=>turn(-1);
+document.getElementById("next").onclick=()=>turn(1);
+stage.addEventListener("keydown",e=>{ if(e.key==="ArrowLeft"){turn(-1);e.preventDefault()} if(e.key==="ArrowRight"){turn(1);e.preventDefault()} if(e.key==="Enter"){toggleCurrent()} });
+let wheelLock=0; stage.addEventListener("wheel",e=>{ e.preventDefault(); const now=Date.now(); if(now-wheelLock<180) return; wheelLock=now; turn(e.deltaY>0||e.deltaX>0?1:-1); },{passive:false});
+new ResizeObserver(layout).observe(stage);
+
+function renderDots(){
+  document.getElementById("dots").innerHTML = CLASSES.map((c,i)=>`<i class="${i===idx()?"on":""} ${owned(c.id)?"":"lk"}" title="${c.name}"></i>`).join("");
+}
+
+// ---- class card
+const MAXS = {max_hp:1400, atk:560, def:420, spd:130, max_mp:140};
+const SL = [["max_hp","HP"],["atk","ATK"],["def","DEF"],["spd","SPD"],["max_mp","SP"]];
+const TL = {Basic:"Basic",Skill:"Skill",Ultimate:"Ult",FollowUp:"Follow-up"};
+function renderCard(){
+  const c=cur(), own=owned(c.id), inP=state.party.includes(c.id), full=state.party.every(Boolean);
+  const order={Basic:0,Skill:1,FollowUp:2,Ultimate:3};
+  const mv=[...c.abilities].sort((a,b)=>order[a.t]-order[b.t]).map(a=>`<span class="mv ${a.t}"><small>${TL[a.t]}</small>${a.n}</span>`).join("");
+  let btn, hint="";
+  if(!own){ btn=`<button class="btn" disabled>Add to party</button>`; hint=`Find ${c.name} in a pack or craft it.`; }
+  else if(inP){ btn=`<button class="btn ghost" id="addbtn">Remove from party</button>`; }
+  else { btn=`<button class="btn" id="addbtn" ${full?"disabled":""}>Add to party</button>`; if(full) hint="The party is full. Click a member on the right to take it out."; }
+  document.getElementById("card").innerHTML = `
+    <div class="nm"><h2 style="color:${c.color}">${c.name}</h2><span class="role">${c.role}</span>
+      ${own?"":`<span class="chip lock">Locked</span>`}${inP?`<span class="chip in">In party</span>`:""}</div>
+    <div style="min-width:0">
+      <p class="desc">${c.desc}</p>
+      <div class="moves">${mv}</div>
+      <div class="learn">Learns: ${c.levels.map(l=>`Lv ${l[0]} ${l[1]}`).join(" · ")}</div>
+    </div>
+    <div class="stats" style="--c:${c.color}">${SL.map(([k,l])=>`<span>${l}</span><div class="b"><i style="width:${Math.min(100,c.stats[k]/MAXS[k]*100)}%"></i></div><em>${c.stats[k]}</em>`).join("")}</div>
+    <div class="act">${btn}${hint?`<span class="hint">${hint}</span>`:""}</div>`;
+  const ab=document.getElementById("addbtn"); if(ab) ab.onclick=toggleCurrent;
+}
+function toggleCurrent(){
+  const c=cur(); if(!owned(c.id)) return;
+  const i=state.party.indexOf(c.id);
+  if(i>=0){ state.party[i]=null; delete state.missing[i]; }
+  else{
+    let slot=Object.keys(state.missing).map(Number).sort()[0];      // a missing member's slot first
+    if(slot===undefined) slot=state.party.indexOf(null);
+    if(slot<0) return toast("The party is full.");
+    state.party[slot]=c.id; if(state.missing[slot]){ toast(`${c.name} fills in for ${byId[state.missing[slot]].name}.`); delete state.missing[slot]; }
+  }
+  renderAll();
+}
+
+// ---- party
+function renderParty(){
+  const p=state.party, n=p.filter(Boolean).length;
+  document.getElementById("pcount").textContent=`${n} / ${MAXP}`;
+  const firstFill = Object.keys(state.missing).map(Number).sort()[0];
+  const html = p.map((id,i)=>{
+    const miss=state.missing[i], tgt = i===firstFill;
+    if(state.partyView==="slots"){
+      if(id){ const c=byId[id]; return `<button class="slot" data-i="${i}" title="Remove ${c.name}"><img src="${c.img}" alt=""><span class="x">${c.name}</span></button>`; }
+      if(miss){ const c=byId[miss]; return `<div class="slot missing ${tgt?"target":""}" title="${c.name} is not owned: add any class to fill in"><img src="${c.img}" alt=""><span class="x">Fill in · ${c.name}</span></div>`; }
+      return `<div class="slot empty">Empty</div>`;
+    }
+    if(id){ const c=byId[id]; return `<button class="row" data-i="${i}"><img src="${c.img}" alt=""><span><span class="n" style="color:${c.color}">${c.name}</span><br><span class="r">${c.role}</span></span><span class="rm">Remove ×</span></button>`; }
+    if(miss){ const c=byId[miss]; return `<div class="row missing ${tgt?"target":""}"><img src="${c.img}" alt=""><span><span class="n">${c.name}</span><br><span class="r">Not owned. Add any class to fill in.</span></span><span class="rm">Fill in</span></div>`; }
+    return `<div class="row empty"><span class="ph"></span><span>Empty slot</span></div>`;
+  }).join("");
+  const box=document.getElementById("party");
+  box.innerHTML = `<div class="${state.partyView==="slots"?"slots":"rows"}">${html}</div>`;
+  box.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.i; const id=state.party[i]; state.party[i]=null; toast(`${byId[id].name} left the party.`); renderAll(); });
+  const go=document.getElementById("start"), why=document.getElementById("gowhy");
+  const miss=Object.keys(state.missing).length;
+  go.disabled = n===0; why.textContent = n===0? "Pick at least one class." : miss? `${miss} slot${miss>1?"s":""} not filled: you can start short-handed.` : n<MAXP? `${MAXP-n} empty slot${MAXP-n>1?"s":""}.` : "";
+}
+
+// ---- recommended
+function renderRec(){
+  const t=state.tab, list=[...TEAMS];
+  if(t==="win") list.sort((a,b)=>b.win-a.win); if(t==="played") list.sort((a,b)=>b.play-a.play);
+  document.getElementById("reclist").innerHTML = (t!=="dev"?`<div class="sample">Sample numbers. Real rates come from verified runs once the analytics backend exists.</div>`:"") +
+   list.map((p,k)=>{
+    const lk=p.m.filter(id=>!owned(id)).length;
+    const stat = t==="dev"? (lk?`<span style="color:var(--warn)">${lk} not owned</span>`:`All owned`) : t==="win"? `<b>${p.win}%</b> wins` : `<b>${p.play}%</b> of runs`;
+    return `<button class="team" data-k="${TEAMS.indexOf(p)}"><span class="tn">${p.n}</span><span class="stat">${stat}</span>
+      <span class="faces">${p.m.map(id=>`<img class="${owned(id)?"":"lk"}" src="${byId[id].img}" alt="${byId[id].name}" title="${byId[id].name}${owned(id)?"":" (not owned)"}">`).join("")}</span>
+      <span class="why">${p.why}</span></button>`;
+  }).join("");
+  document.querySelectorAll(".team").forEach(b=>b.onclick=()=>{
+    const p=TEAMS[+b.dataset.k]; state.missing={};
+    state.party=p.m.map((id,i)=>{ if(owned(id)) return id; state.missing[i]=id; return null; });
+    const m=Object.keys(state.missing).length;
+    toast(m? `${p.n} loaded. ${m} class${m>1?"es":""} not owned: fill in from the carousel.` : `${p.n} loaded.`);
+    renderAll();
+  });
+}
+document.getElementById("tabs").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; state.tab=b.dataset.t; setPressed("tabs","t",state.tab); renderRec(); };
+
+// ---- switches
+function setPressed(box,attr,v){ document.querySelectorAll(`#${box} button`).forEach(b=>b.setAttribute("aria-pressed",b.dataset[attr]===v)); }
+function sw(box,key){ document.getElementById(box).onclick=e=>{ const b=e.target.closest("button"); if(!b) return; state[key]=b.dataset.v; setPressed(box,"v",state[key]);
+  if(key==="own"){ state.party=state.party.map(id=>id&&owned(id)?id:null); }
+  renderAll(); }; }
+sw("sw-carousel","carousel"); sw("sw-party","partyView"); sw("sw-own","own");
+document.getElementById("start").onclick=()=>toast("Run starts with "+state.party.filter(Boolean).map(id=>byId[id].name).join(", ")+".");
+document.getElementById("back").onclick=()=>toast("Back to the main menu.");
+let tt; function toast(s){ const t=document.getElementById("toast"); t.textContent=s; t.classList.add("on"); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("on"),2200); }
+
+function renderAll(){ layout(); renderCard(); renderParty(); renderRec(); renderDots(); }
+renderAll();
+</script>
