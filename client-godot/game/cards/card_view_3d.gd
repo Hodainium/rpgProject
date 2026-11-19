@@ -54,7 +54,9 @@ func _init() -> void:
 	viewport.disable_3d = true
 	viewport.gui_disable_input = true
 	viewport.handle_input_locally = false
-	viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR
+	# Mipmapped filtering: the portraits are imported at 1024 with mipmaps and drawn smaller on most cards (a texture
+	# without mipmaps falls back to its full-size level, so icons are unchanged).
+	viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(viewport)
 	material = ShaderMaterial.new()
