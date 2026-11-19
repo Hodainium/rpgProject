@@ -61,8 +61,7 @@ var _faces_key: String = ""
 var _rates: Dictionary = {}
 var _note: String = ""
 var _refresh_when_free: bool = false
-var _dust_tween: Tween
-var _shown_dust: float = -1.0
+var _dust_counter: UICountUp
 
 
 func bind(_context: UIContext) -> void:
@@ -248,7 +247,7 @@ func _show(entries: Array[Dictionary], line: String) -> void:
 	var dust := int(collection.get("dust", 0)) if collection is Dictionary else -1
 	%Gems.visible = gems >= 0
 	%Gems.text = gems_text % maxi(gems, 0)
-	_set_dust(dust, _shown_dust >= 0.0 and dust >= 0)
+	_set_dust(dust, dust >= 0)   # counts only from a total already shown
 
 
 ## Applies the filters and shows the current page.
@@ -480,22 +479,9 @@ func _sync_filter_controls() -> void:
 
 ## The dust total; `animate` counts it to the new value (after a dust or craft).
 func _set_dust(dust: int, animate: bool) -> void:
-	%Dust.visible = dust >= 0
-	if _dust_tween != null:
-		_dust_tween.kill()
-	if dust < 0:
-		_shown_dust = -1.0
-		return
-	if not animate or not is_inside_tree():
-		_show_dust(float(dust))
-		return
-	_dust_tween = create_tween()
-	_dust_tween.tween_method(_show_dust, _shown_dust, float(dust), 0.6)
-
-
-func _show_dust(value: float) -> void:
-	_shown_dust = value
-	%Dust.text = dust_text % roundi(value)
+	if _dust_counter == null:
+		_dust_counter = UICountUp.new(%Dust, dust_text)
+	_dust_counter.set_value(dust, animate)
 
 
 func _say(text: String) -> void:

@@ -1,0 +1,24 @@
+# Spec card-ui (gate 3) end to end, the card screens on the real stack: a won run pays gems; the Shop screen buys two Descent
+# packs (one key, one purchase); Open packs opens one through the player's CardAccount, the five cards fan out face down and are
+# all flipped, Done reads the account again; the Collection then shows the new cards. Gems, packs, cards and dust agree in Postgres.
+#! worker
+#! content real
+#! cards
+#! env Monitors__Interval=00:00:01
+server reward boss demo.enemy.rat_king 300
+server reward boss demo.enemy.golem 300
+new demo.character.warrior,demo.character.cleric run=demo.run.one_floor
+wait run
+autorun policy=smart
+wait ended 180
+wait verdict all 300
+wait gems 200 180
+ui press Menu
+cardui shop buy descent-pack 2
+ui back
+cardui open packs
+cardui pack descent-pack
+cardui reveal all
+cardui done
+ui back
+cardui open collection

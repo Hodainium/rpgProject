@@ -12,7 +12,8 @@
   "impact": -17,
   "status": -23,
   "moment": -19,
-  "signature": -15
+  "signature": -15,
+  "pack": -18
  },
  "max_ms": {
   "ui": 350,
@@ -21,7 +22,8 @@
   "impact": 600,
   "status": 700,
   "moment": 1200,
-  "signature": 3000
+  "signature": 3000,
+  "pack": 3000
  },
  "tolerance_db": 1.5,
  "peak_ceiling_db": -1.0,
@@ -162,6 +164,10 @@
     "Holy5.wav": {
      "author": "null-painter-error [cc0]",
      "url": "https://null-painter-error.itch.io/"
+    },
+    "Holy6.wav": {
+     "author": "nightskypatr0l [CC0]",
+     "url": "https://stanleycommz.carrd.co/"
     },
     "Ice1.wav": {
      "author": "nightskypatr0l [CC0]",
@@ -1888,6 +1894,86 @@
      "loudness": -15.0,
      "peak_db": -4.2,
      "ms": 3000
+    }
+   ]
+  },
+  {
+   "id": "pack.flip.common",
+   "pack": "pixel",
+   "takes": [
+    "WHSH_MOVEMENT-Simple Whoosh_HY_PC-001.wav"
+   ],
+   "category": "pack",
+   "fade_ms": 600,
+   "measured": [
+    {
+     "loudness": -18.0,
+     "peak_db": -1.8,
+     "ms": 216
+    }
+   ]
+  },
+  {
+   "id": "pack.flip.rare",
+   "pack": "pixel",
+   "takes": [
+    "MAGAngl_BUFF-Simple Heal_HY_PC-001.wav"
+   ],
+   "category": "pack",
+   "fade_ms": 600,
+   "measured": [
+    {
+     "loudness": -18.0,
+     "peak_db": -6.7,
+     "ms": 1638
+    }
+   ]
+  },
+  {
+   "id": "pack.flip.epic",
+   "pack": "pixel",
+   "takes": [
+    "DSGNTonl_SKILL IMPACT-Glistening Shimmers_HY_PC-001.wav"
+   ],
+   "category": "pack",
+   "fade_ms": 600,
+   "measured": [
+    {
+     "loudness": -18.0,
+     "peak_db": -4.5,
+     "ms": 1136
+    }
+   ]
+  },
+  {
+   "id": "pack.flip.legendary",
+   "pack": "pixel",
+   "takes": [
+    "MAGAngl_BUFF-Healing Gusts_HY_PC-001.wav"
+   ],
+   "category": "pack",
+   "fade_ms": 600,
+   "measured": [
+    {
+     "loudness": -18.0,
+     "peak_db": -2.5,
+     "ms": 2584
+    }
+   ]
+  },
+  {
+   "id": "pack.flip.mythic",
+   "pack": "easyrpg",
+   "takes": [
+    "Holy6.wav"
+   ],
+   "category": "pack",
+   "fade_ms": 600,
+   "measured": [
+    {
+     "loudness": -18.0,
+     "peak_db": -5.2,
+     "ms": 1995
     }
    ]
   }

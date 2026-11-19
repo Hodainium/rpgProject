@@ -351,10 +351,38 @@ func test_shop_double_press_buys_once() -> void:
 	var shop := await _open_shop(game)
 	var entry: Node = shop.get_node("%Offers").get_child(0)
 	entry.get_node("%Buy1").pressed.emit()
-	check(entry.get_node("%Buy1").disabled, "the buttons disable while the buy is on its way")
+	check(entry.get_node("%Buy1").disabled, "the buttons disable while the confirm is up")
+	entry.get_node("%Buy1").pressed.emit()
+	check(await _answer(game, true), "Buy asks first")
+	check(entry.get_node("%Buy1").disabled, "and stay disabled while the buy is on its way")
 	entry.get_node("%Buy1").pressed.emit()
 	await _frames(4)
 	eq(bridge.count("BuyPack"), 1, "one purchase")
+
+
+func test_shop_buy_asks_to_confirm_and_cancel_buys_nothing() -> void:
+	var bridge := _bridge()
+	bridge.answers["BuyPack"] = [[true, {"packId": "descent-pack", "packVersion": 1, "count": 5, "gemsSpent": 500, "gems": 40,
+		"owned": 7}]]
+	var game := _game(bridge)
+	var shop := await _open_shop(game)
+	var entry: Node = shop.get_node("%Offers").get_child(0)
+	entry.get_node("%Buy5").pressed.emit()
+	await _frames(2)
+	var dialog: UIScreen = game.ui.top(MODAL)
+	check(dialog is UIConfirm, "a confirm pop-up comes up")
+	var texts := dialog.find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
+	check(texts.any(func(text: String) -> bool: return text.begins_with("Buy 5 packs of ") and text.ends_with(" gems?")),
+		"it names the count, the pack and the price: %s" % [texts])
+	check(await _answer(game, false), "Cancel")
+	await _frames(3)
+	eq(bridge.count("BuyPack"), 0, "Cancel buys nothing")
+	check(not entry.get_node("%Buy1").disabled, "and the buttons work again (Buy 1: five cost more than the account has)")
+	entry.get_node("%Buy5").pressed.emit()
+	check(await _answer(game, true), "Buy")
+	await _frames(6)
+	eq(bridge.count("BuyPack"), 1, "Buy buys")
+	check(entry.get_node("%Pack").solid, "the Shop's pack is the 3D foil pack")
 
 
 func test_shop_refusals_show_the_line_and_refetch() -> void:
@@ -1270,7 +1298,8 @@ func test_the_card_presentation_stays_out_of_combat_the_verifier_and_the_ruleset
 	check(not RulesetVersion.ROOTS.any(func(root: String) -> bool: return CardStyle.DEFAULT_PATH.begins_with(root)),
 		"the card style is outside the ruleset roots")
 	var names := ["CardStyle", "CardPackLook", "CardRarityLook", "CardPackView", "CardAccount", "ShopModel", "presentation/demo/cards",
-		"presentation/demo/ui/cards", "CollectionModel", "CardSeen", "CardView3D", "CardPage"]
+		"presentation/demo/ui/cards", "CollectionModel", "CardSeen", "CardView3D", "CardPage", "PackReveal", "PackStage",
+		"PackChoreography", "OpenPacksModel", "CardBackView"]
 	for root in ["res://combat/", "res://game/verify/"]:
 		for path in _scripts(root):
 			var text := FileAccess.get_file_as_string(path)
@@ -1289,3 +1318,553 @@ static func _scripts(root: String) -> Array[String]:
 	for sub in dir.get_directories():
 		found.append_array(_scripts(root.path_join(sub)))
 	return found
+
+
+# --- Gate 3: Open packs and the pack reveal (spec card-ui 2.3, 2.4) ------------------------------------------------------------
+
+const PACKS_SCENE: String = "res://presentation/demo/ui/cards/packs.tscn"
+
+
+## A PackOpenResponse of the card fixtures: a duplicate Rare, an Epic, a pity Legendary.
+static func _open_response(packs_left: int = 1) -> Dictionary:
+	return {"openingId": "op-1", "packId": "descent-pack", "packVersion": 1, "gemsSpent": 0, "cards": [
+		{"cardId": "card.item.c1", "rarity": "common", "duplicate": false, "dustGained": 0, "pity": false},
+		{"cardId": "card.item.r1", "rarity": "rare", "duplicate": true, "dustGained": 20, "pity": false},
+		{"cardId": "card.item.c2", "rarity": "common", "duplicate": false, "dustGained": 0, "pity": false},
+		{"cardId": "card.item.e1", "rarity": "epic", "duplicate": false, "dustGained": 0, "pity": false},
+		{"cardId": "card.item.l1", "rarity": "legendary", "duplicate": false, "dustGained": 0, "pity": true}],
+		"gems": 340, "dust": 140, "drawSeed": "42", "packsLeft": packs_left, "accountVersion": 4}
+
+
+func _pack_bridge() -> FakeBridge:
+	var bridge := _card_bridge()
+	bridge.answers["RefundPacks"] = [[true, {"refunded": []}]]
+	return bridge
+
+
+func _open_packs(game: GameMain) -> UIScreen:
+	await _frames(2)
+	var screen := game.ui.push(MENU, load(PACKS_SCENE))
+	if screen != null and screen.loading:
+		await screen.loaded
+	return screen
+
+
+func _open_bodies(bridge: FakeBridge) -> Array:
+	return bridge.of("OpenPack").map(func(call: Array) -> Dictionary: return JSON.parse_string(call[2]))
+
+
+func test_pack_reveal_slots_tiers_labels_and_order() -> void:
+	var reveal := PackReveal.from_response(_open_response())
+	eq(reveal.size(), 5, "five cards")
+	eq(reveal.slots.map(func(slot: Dictionary) -> int: return slot["tier"]), [0, 1, 0, 2, 3], "tiers by rarity")
+	eq([reveal.slots[1]["new"], reveal.slots[1]["dust"], reveal.slots[0]["new"]], [false, 20, true],
+		"a duplicate gives dust; NEW only for a card not owned before the open")
+	eq(reveal.dust_gained(), 20, "the dust of the duplicates")
+	eq([reveal.packs_left, reveal.gems, reveal.dust], [1, 340, 140], "the totals after the open")
+	eq(reveal.hidden(), [0, 1, 2, 3, 4], "all face down")
+	check(reveal.reveal(3) and not reveal.reveal(3), "a card flips once")
+	eq(reveal.next_hidden(), 0, "Space flips the first still face down")
+	eq(reveal.rarity_line(3), "Epic", "the rarity word")
+	eq([reveal.rarity_line(4), reveal.detail_line(4)], ["Legendary!", "NEW · Guaranteed"], "a big rarity and a pity card")
+	eq(reveal.detail_line(1), "+20 dust", "a duplicate's dust")
+	eq(reveal.reveal_all(), [0, 1, 2, 4], "Reveal all flips the rest in order")
+	check(reveal.done(), "done")
+	var demo := PackReveal.from_response(PackReveal.demo(CardCatalog.cards(CardWorld.content()), ["epic", "legendary"]))
+	eq(demo.slots.map(func(slot: Dictionary) -> String: return slot["rarity"]), ["common", "common", "common", "epic", "legendary"],
+		"a demo pads with common")
+	check(demo.slots[1]["duplicate"] and demo.slots[4]["pity"], "the demo shows a duplicate and a pity card")
+
+
+func test_open_packs_model_counts_pity_and_held_packs() -> void:
+	var collection: Dictionary = COLLECTION.duplicate(true)
+	collection["pity"] = [{"packId": "descent-pack", "missedPacks": {"epic": 7, "legendary": 8, "mythic": 12}}]
+	collection["ownedPacks"].append({"packId": "retired-pack", "count": 1})
+	var entries := OpenPacksModel.entries(PACKS, collection)
+	eq(entries.map(func(entry: Dictionary) -> String: return entry["packId"]), ["descent-pack", "retired-pack"],
+		"the list's order, then a retired type still owned; a held refund is left out")
+	eq(entries[0]["count"], 2, "the count")
+	eq(OpenPacksModel.pity_line(entries[0]), "Epic in 3 · Legendary in 12 · Mythic in 18 packs", "PityPacks - missed")
+	eq(entries[1]["name"], "Retired Pack", "a type the list no longer carries (retired) is named from its id")
+	eq(OpenPacksModel.odds_lines(entries[0])[0], "Common 72.10%", "odds in rarity order")
+	eq(OpenPacksModel.entries(PACKS, null), [], "no collection, no packs")
+
+
+func test_card_view_shows_a_back_and_flips() -> void:
+	var stage := FxStage.new()
+	host.add_child(stage)
+	_nodes.append(stage)
+	var view := CardView3D.new()
+	stage.world_root.add_child(view)
+	var face := CardFaces.build(CardWorld.content(), CardStyle.current())[0]
+	view.show_face(face, CardStyle.current(), CardStyle.current().face_scene(), 1.0, 1.0)
+	view.show_back(CardStyle.current(), true)
+	check(view.face_down and view.back_mesh != null, "face down with a back")
+	check(is_equal_approx(view.flipper.rotation.y, PI), "the back faces the camera")
+	var tween := view.flip(0.05)
+	check(tween != null and not view.face_down, "the flip starts")
+	await tween.finished
+	check(is_equal_approx(view.flipper.rotation.y, 0.0), "face up")
+	check(view.flip(0.05) == null, "a face-up card does not flip again")
+
+
+func test_open_packs_shows_the_owned_packs_and_pays_refunds() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["RefundPacks"] = [[true, {"refunded": [{"packId": "descent-pack", "count": 3, "gemsRefunded": 300}]}]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	var shown: Dictionary = screen.shown()
+	eq(shown["packs"].map(func(pack: Dictionary) -> String: return "%s x%d" % [pack["packId"], pack["count"]]), ["descent-pack x2"],
+		"the owned packs (a held refund is not openable)")
+	eq([shown["gems"], shown["dust"]], [340, 120], "the totals")
+	eq(shown["message"], "Your 3 Descent Packs were retired: +300 gems.", "the refund notice")
+	eq(bridge.count("RefundPacks"), 1, "refunds are paid once, when the screen opens")
+	var entry: Node = screen.get_node("%PackList").get_child(0)
+	eq(entry.get_node("%Pack").count, 2, "the count badge")
+
+
+func test_open_a_pack_plays_the_reveal() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[true, _open_response()]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	var after: Dictionary = _owned_collection()
+	after["ownedPacks"] = [{"packId": "descent-pack", "count": 1}, {"packId": "old-pack", "count": 4, "refundHeld": true}]
+	after["pity"] = [{"packId": "descent-pack", "missedPacks": {"epic": 4, "legendary": 4, "mythic": 4}}]
+	var before_pity: String = screen.shown()["packs"][0]["pity"]
+	bridge.answers["GetCollection"] = [[true, after]]   # the server's state once the pack is opened
+	var answer: Dictionary = await screen.open_pack("descent-pack")
+	check(answer["ok"], "opened")
+	var shown: Dictionary = screen.shown()
+	eq(shown["cards"].size(), 5, "five cards on the stage")
+	check(shown["cards"].all(func(card: Dictionary) -> bool: return not card["revealed"] and card["labels"].is_empty()),
+		"face down, no labels yet")
+	eq(shown["packs"][0]["count"], 1, "the badge drops by one (PacksLeft)")
+	check(shown["packs"][0]["pity"] != before_pity and shown["packs"][0]["pity"].contains("Epic in 6"),
+		"the pity countdown changed with every card still face down (%s → %s)" % [before_pity, shown["packs"][0]["pity"]])
+	check(screen.get_node("%RevealAll").visible and not screen.get_node("%Done").visible, "Reveal all, no Done yet")
+	var stage: PackStage = screen.get_node("%Stage")
+	check(stage.views.all(func(view: CardView3D) -> bool: return view.face_down), "every view shows its back")
+	check(await screen.flip(4), "a click flips card 5")
+	eq(Array(stage.labels_of(4)), ["Legendary!", "NEW · Guaranteed"], "its labels (the labels show with effects off too)")
+	check(not await screen.flip(4), "once")
+	await screen.reveal_all()
+	eq(screen.shown()["cards"][1]["labels"], ["Rare", "+20 dust"], "a duplicate's dust")
+	check(screen.shown()["done"] and screen.get_node("%Done").visible, "Done after the fifth")
+	eq(screen.shown()["dust"], 140, "the dust total takes the duplicates")
+	eq(bridge.count("OpenPack"), 1, "one open")
+	await screen.done()
+	eq(screen.shown()["cards"], [], "Done clears the stage")
+	check(bridge.count("GetCollection") >= 2, "and reads the account again")
+
+
+func test_lost_open_replays_same_cards() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = DOWN
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	var answer := {}
+	var press := func() -> void: answer.merge(await screen.open_pack("descent-pack"))
+	press.call()
+	var account := game.server.card_account()
+	check(await _until(func() -> bool: return account.reconnecting_seconds() >= 0.0), "reconnecting")
+	eq(game.server.waiting_text(), "Reconnecting to the server…", "the connecting pop-up says so")
+	check(screen.get_node("%Stage").pack != null, "the pack waits in the socket")
+	game.ui.back()
+	eq(game.ui.top(MENU), screen, "Back waits for the open")
+	# The commit landed but its answer was lost: the server answers the same key with the stored response.
+	bridge.answers["OpenPack"] = [[true, _open_response()]]
+	check(await _until(func() -> bool: return not answer.is_empty()), "the server answers")
+	check(answer["ok"], "the stored response")
+	eq(screen.shown()["cards"].map(func(card: Dictionary) -> String: return card["id"]),
+		["card.item.c1", "card.item.r1", "card.item.c2", "card.item.e1", "card.item.l1"], "the same five cards, revealed once")
+	var keys := _open_bodies(bridge).map(func(body: Dictionary) -> String: return body["requestKey"])
+	check(keys.size() >= 2 and keys.all(func(key: String) -> bool: return key == answer["key"]), "one key for every try")
+
+
+func test_stale_pack_count() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[false, {"status": 409, "errorCode": 1411, "title": "NoPackOwned", "detail": ""}]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	var reads := bridge.count("GetCollection")
+	var after := _owned_collection()
+	after["ownedPacks"] = []
+	bridge.answers["GetCollection"] = [[true, after]]
+	var answer: Dictionary = await screen.open_pack("descent-pack")
+	check(not answer["ok"], "refused")
+	var shown: Dictionary = screen.shown()
+	eq(shown["message"], "You have no pack of this kind left.", "the line")
+	eq(shown["packs"], [], "the count corrected from the server")
+	check(bridge.count("GetCollection") > reads, "the collection read again")
+	eq(shown["cards"], [], "no reveal")
+	check(screen.get_node("%Empty").visible, "the Shop line")
+
+
+func test_pack_unavailable() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[false, {"status": 404, "errorCode": 1408, "title": "PackUnavailable", "detail": ""}]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	var packs_reads := bridge.count("GetPacks")
+	await screen.open_pack("descent-pack")
+	eq(screen.shown()["message"], "This pack cannot be opened right now.", "the line")
+	check(bridge.count("GetPacks") > packs_reads, "the pack list read again")
+	eq(screen.shown()["packs"][0]["count"], 2, "the pack stays owned")
+
+
+func test_back_reveals_all() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[true, _open_response()]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	await screen.open_pack("descent-pack")
+	var stage: PackStage = screen.get_node("%Stage")
+	check(game.ui.back(), "Back is taken")
+	eq(game.ui.top(MENU), screen, "the screen stays while the cards flip")
+	var flipped := []
+	stage.card_flipped.connect(func(index: int) -> void: flipped.append(index))
+	var id := screen.get_instance_id()
+	check(await _until(func() -> bool: return game.ui.top(MENU) == null or game.ui.top(MENU).get_instance_id() != id), "then it leaves")
+	eq(flipped.size(), 5, "every card was flipped first")
+
+
+func test_reveal_without_fx() -> void:
+	check(not FxManager.enabled, "effects are inert headless")
+	var game := _card_game()
+	var screen := await _open_packs(game)
+	eq(screen.shown()["message"], "Opening packs needs a server connection. Packs, gems and cards live on the server.", "local mode")
+	var demo: PackReveal = await screen.play_demo(["epic", "legendary", "mythic"])
+	check(demo != null and demo.size() == 5, "the demo plays offline")
+	await screen.reveal_all()
+	var cards: Array = screen.shown()["cards"]
+	check(cards.all(func(card: Dictionary) -> bool: return card["labels"].size() == 2), "every label shows without effects")
+	eq(cards[4]["labels"][0], "Mythic!", "the last card")
+
+
+func test_cardui_pack_commands() -> void:
+	var game := _card_game()
+	await _frames(3)
+	var console := _console(game)
+	var refused: Dictionary = await console.execute("cardui pack descent-pack")
+	check(not refused["ok"] and refused["text"].contains("not in server mode"), "a real open needs the server: " + refused["text"])
+	var demo: Dictionary = await console.execute("cardui pack demo rare epic")
+	check(demo["ok"] and demo["text"].contains("demo pack on the stage") and demo["text"].contains("face down"), demo["text"])
+	var bad: Dictionary = await console.execute("cardui reveal 9")
+	check(not bad["ok"] and bad["text"].contains("usage"), bad["text"])
+	var one: Dictionary = await console.execute("cardui reveal 5")
+	check(one["ok"] and one["text"].contains("card 5") and one["text"].contains("Epic / NEW"), one["text"])
+	var all: Dictionary = await console.execute("cardui reveal all")
+	check(all["ok"] and all["text"].contains("all revealed"), all["text"])
+	var done: Dictionary = await console.execute("cardui done")
+	check(done["ok"] and not done["text"].contains("card 1"), done["text"])
+	var wrong: Dictionary = await console.execute("cardui pack demo shiny")
+	check(not wrong["ok"] and wrong["text"].contains("no rarity"), wrong["text"])
+	var logged: Dictionary = await console.execute("cardui log on")
+	eq(logged["text"], "account log on", "the account log")
+	CardAccount.log_actions = false
+
+
+func test_cardui_pack_opens_through_the_account() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[true, _open_response()]]
+	var game := _card_game(bridge)
+	await _frames(3)
+	var console := _console(game)
+	var opened: Dictionary = await console.execute("cardui pack descent-pack")
+	check(opened["ok"] and opened["text"].contains("opened [key") and opened["text"].contains("card 5: card.item.l1"), opened["text"])
+	var waited: Dictionary = await console.execute("cardui wait opened 1")
+	check(waited["ok"] and waited["text"].contains("card 1"), waited["text"])
+	var all: Dictionary = await console.execute("cardui reveal all")
+	check(all["ok"] and all["text"].contains("all revealed"), all["text"])
+	eq(bridge.count("OpenPack"), 1, "one open")
+
+
+func test_main_menu_open_packs_opens_the_pack_screen() -> void:
+	var game := _card_game(_pack_bridge())
+	await _frames(6)
+	var menu := game.ui.top(MENU)
+	check(not menu.get_node("%OpenPacks").disabled, "Open packs is enabled")
+	menu.get_node("%OpenPacks").pressed.emit()
+	await _frames(3)
+	eq(String(game.ui.top(MENU).name), "Packs", "Open packs opens the pack screen")
+
+
+## Review fix: a first open's countdown starts at the first guarantee (the server's PackDrawer.InitialMissed), not at the pity.
+func test_open_packs_first_open_counts_from_the_first_guarantee() -> void:
+	var packs: Dictionary = PACKS.duplicate(true)
+	packs["packs"][0]["firstGuarantees"] = {"epic": 5, "legendary": 10, "mythic": 15}
+	var entries := OpenPacksModel.entries(packs, COLLECTION)
+	eq(OpenPacksModel.pity_line(entries[0]), "Epic in 5 · Legendary in 10 · Mythic in 15 packs", "no counters yet: the first guarantee")
+	var opened: Dictionary = COLLECTION.duplicate(true)
+	opened["pity"] = [{"packId": "descent-pack", "missedPacks": {"epic": 1}}]
+	eq(OpenPacksModel.pity_line(OpenPacksModel.entries(packs, opened)[0]), "Epic in 9 · Legendary in 20 · Mythic in 30 packs",
+		"after the first open the server's counters count")
+
+
+## Review fixes: Reveal all announces the end once, after the last card has turned; Enter on a face-up card flips the next one.
+func test_reveal_all_announces_once_and_enter_flips_the_next() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[true, _open_response()]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	await screen.open_pack("descent-pack")
+	var stage: PackStage = screen.get_node("%Stage")
+	await screen.flip(0)
+	var enter := InputEventAction.new()
+	enter.action = &"ui_accept"
+	enter.pressed = true
+	stage._on_slot_input(enter, 0)
+	check(screen.reveal.slots[1]["revealed"], "Enter on the face-up first card flipped the second")
+	check(stage.slots[1].has_focus(), "which took the focus")
+	var announced := [0]
+	screen.revealed.connect(func() -> void: announced[0] += 1)
+	var turning := [true]
+	stage.all_revealed.connect(func() -> void: turning[0] = stage.views.any(func(view: CardView3D) -> bool:
+		return not is_equal_approx(view.flipper.rotation.y, 0.0)))
+	await screen.reveal_all()
+	await _frames(30)
+	eq(announced[0], 1, "revealed once")
+	check(not turning[0], "after every card has turned")
+
+
+func test_cards_fan_from_the_socket_and_show_no_focus_ring() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[true, _open_response()]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	var stage: PackStage = screen.get_node("%Stage")
+	var socket := stage._pack_rect().get_center()
+	var first_seen: Array = []
+	stage.child_entered_tree.connect(func(node: Node) -> void:
+		if node.name.begins_with("Slot") and first_seen.is_empty():
+			first_seen.append((node as Control).position + (node as Control).size * 0.5))
+	await screen.open_pack("descent-pack")
+	eq(first_seen.size(), 1, "a card slot was built")
+	var place: Vector2 = stage._places()[0].get_center()
+	check(first_seen[0].distance_to(socket) < 40.0 and first_seen[0].distance_to(place) > 100.0,
+		"the cards start in the socket (%s, socket %s), never at their places (%s)" % [first_seen[0], socket, place])
+	check(stage.slots[0].has_focus(), "the first card holds the focus")
+	check(not FileAccess.get_file_as_string("res://game/cards/pack_stage.gd").contains("&\"focus\""), "and no card draws a focus ring")
+
+
+func test_card_flip_takes_its_seconds() -> void:
+	var stage := FxStage.new()
+	host.add_child(stage)
+	_nodes.append(stage)
+	var view := CardView3D.new()
+	stage.world_root.add_child(view)
+	view.show_back(CardStyle.current(), true)
+	var start := Time.get_ticks_msec()
+	await view.flip(0.2).finished
+	var took := (Time.get_ticks_msec() - start) / 1000.0
+	check(took < 0.28, "the settle runs beside the turn: %.2f s for a 0.2 s flip" % took)
+	check(is_equal_approx(view.flipper.position.z, 0.0), "settled")
+
+
+func test_pack_sounds_ring_out_and_fade_when_the_stage_leaves() -> void:
+	var plan := PackChoreography.new()
+	for tier in 5:
+		var id := plan.flip_sound(tier)
+		check(ResourceLoader.exists(SfxBank.bank_path(id)), "the %d flip sound %s is in the bank" % [tier, id])
+	var bank := SfxBank.load_manifest()
+	for row in bank.entries():
+		if str(row["id"]).begins_with("pack.flip."):
+			check(int(row["measured"][0]["ms"]) > 200, "%s keeps its tail (%d ms)" % [row["id"], row["measured"][0]["ms"]])
+	var stage := PackStage.new()
+	host.add_child(stage)
+	for index in 6:
+		stage._play_sound("pack.flip.legendary")
+	var voices: Array = stage._voices.duplicate()
+	eq(voices.size(), 6, "overlapping sounds each get their own voice, none is cut by the next")
+	check(voices.all(func(v): return v.get_parent().name == PackStage.VOICE_HOST), "the voices live outside the stage")
+	stage.queue_free()
+	await host.get_tree().process_frame
+	await host.get_tree().process_frame
+	var ringing: AudioStreamPlayer = voices[0]
+	check(is_instance_valid(ringing) and ringing.playing, "the screen closed: the sound still rings")
+	check(ringing.volume_db < 0.0, "and is fading out (%.1f dB)" % ringing.volume_db)
+	await host.get_tree().create_timer(plan.sound_fade_seconds + 0.2).timeout
+	check(voices.all(func(v): return not is_instance_valid(v)), "after the fade every voice is gone")
+
+
+func test_big_reveal_effects_by_rarity_and_the_alternatives_exist() -> void:
+	var plan := PackChoreography.new()
+	eq([plan.big_reveal_fx(2), plan.big_reveal_fx(3), plan.big_reveal_fx(4)], [&"", &"fx.reveal_halo", &"fx.reveal_rays"],
+		"nothing below Legendary; the halo on a Legendary, the short rays on a Mythic (the user's picks)")
+	plan.mythic_fx = &""
+	eq(plan.big_reveal_fx(4), &"fx.reveal_halo", "a Mythic with no pick of its own takes the Legendary's")
+	plan.mythic_fx = &"fx.legendary_rays"
+	eq(plan.big_reveal_fx(4), &"fx.legendary_rays", "a Mythic's own pick")
+	plan.mythic_fx = &"none"
+	eq(plan.big_reveal_fx(4), &"", "none is none")
+	var registry := load("res://presentation/demo/fx/fx_registry.tres") as FxRegistry
+	var ids := registry.all()
+	for id in [&"fx.reveal_rays", &"fx.reveal_halo"]:
+		check(ids.has(id), "%s is registered" % id)
+	check(ids[&"fx.reveal_rays"].layers[0].duration < ids[&"fx.legendary_rays"].layers[0].duration, "the short rays are shorter")
+	for id in [&"fx.reveal_rays", &"fx.reveal_halo"]:
+		eq(ids[id].space, FxDefinition.Space.UI, "%s plays over the screen, not clipped by the stage's viewport" % id)
+	var halo: FxShaderQuadLayer = ids[&"fx.reveal_halo"].layers[0]
+	check(exp(-float(halo.shader_params["falloff"]) * halo.grow) < 0.002, "the halo has faded out before its quad's edge (no box)")
+
+
+func test_face_down_cards_glow_only_when_selected_and_walk_in_one_order() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[true, _open_response()]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	await screen.open_pack("descent-pack")
+	var stage: PackStage = screen.get_node("%Stage")
+	eq(stage._tells.size(), 0, "no card glows its rarity until it is hovered or selected")
+	stage.slots[3].grab_focus()
+	await _frames(1)
+	eq(stage._tells.keys(), [3], "the card the keyboard selects glows")
+	stage.slots[4].grab_focus()
+	await _frames(1)
+	eq(stage._tells.keys(), [4], "and stops when the selection moves on")
+	for index in 5:
+		var slot: Control = stage.slots[index]
+		eq(slot.get_node(slot.focus_neighbor_right), stage.slots[(index + 1) % 5], "right from card %d goes to the next" % index)
+		eq(slot.get_node(slot.focus_neighbor_bottom), stage.slots[(index + 1) % 5], "down too")
+		eq(slot.get_node(slot.focus_neighbor_left), stage.slots[(index + 4) % 5], "left from card %d goes back" % index)
+	await screen.flip(4)
+	eq(stage._tells.size(), 0, "a card face up glows no more")
+
+
+func test_the_pack_reveal_demo_opens_made_up_packs_and_swaps_effects() -> void:
+	var demo: Control = load("res://game/dev/pack_reveal_demo.tscn").instantiate()
+	host.add_child(demo)
+	_nodes.append(demo)
+	var deadline := Time.get_ticks_msec() + 20000
+	while (demo.stage == null or demo.stage.reveal == null or demo.stage.busy) and Time.get_ticks_msec() < deadline:
+		await _frames(1)
+	eq(demo.stage.slots.size(), 5, "a made-up pack on the stage")
+	eq(demo.stage.reveal.opening_id, "demo", "a demo opening, nothing from the server")
+	demo._mythic.select(2)
+	demo._mythic.item_selected.emit(2)
+	eq(demo.stage.choreography().big_reveal_fx(4), demo._picked(demo._mythic), "the picker sets the stage's Mythic reveal")
+	check(demo.stage.choreography() != CardStyle.current().pack_choreography(), "on a copy: the style is not changed")
+	await demo.stage.flip_all()
+	check(demo.stage.reveal.done(), "every card revealed")
+
+
+func test_space_or_enter_opens_the_next_pack_and_after_a_reveal_the_one_after() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[true, _open_response()], [true, _open_response()]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	var accept := InputEventAction.new()
+	accept.action = &"ui_accept"
+	accept.pressed = true
+	screen._unhandled_input(accept)
+	var deadline := Time.get_ticks_msec() + 10000
+	while (screen.reveal == null or screen.opening) and Time.get_ticks_msec() < deadline:
+		await _frames(1)
+	eq(bridge.count("OpenPack"), 1, "Space / Enter with an empty stage opens a pack")
+	screen._unhandled_input(accept)
+	await _frames(5)
+	check(screen.reveal.slots[0]["revealed"] and bridge.count("OpenPack") == 1, "with cards face down it flips the next instead")
+	await screen.reveal_all()
+	await _frames(30)
+	var first: PackReveal = screen.reveal
+	screen._unhandled_input(accept)
+	deadline = Time.get_ticks_msec() + 10000
+	while (screen.reveal == null or screen.reveal == first or screen.opening) and Time.get_ticks_msec() < deadline:
+		await _frames(1)
+	eq(bridge.count("OpenPack"), 2, "with every card face up it clears the stage and opens the next pack")
+
+
+func test_the_3d_pack_bulges_toward_the_camera_and_the_foil_demo_builds() -> void:
+	var middle := (CardPack3D.ROWS / 2) * (CardPack3D.COLUMNS + 1) + CardPack3D.COLUMNS / 2
+	var seal_row := 2 * (CardPack3D.COLUMNS + 1) + CardPack3D.COLUMNS / 2   # inside the top seal
+	for flip in [false, true]:
+		var arrays := CardPack3D.pouch(1.0, 1.52, 0.05, 0.085, flip).surface_get_arrays(0)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var side := -1.0 if flip else 1.0
+		check(is_equal_approx(vertices[middle].z * side, 0.05), "%s: the body stands off the seal plane" % ["front", "back"][int(flip)])
+		check(is_zero_approx(vertices[seal_row].z), "the seal lies flat, pressed against the other face")
+		check(normals[middle].z * side > 0.9, "its normals face outward (the back is a real back, seen from behind)")
+	var quarter := (CardPack3D.ROWS / 2) * (CardPack3D.COLUMNS + 1) + CardPack3D.COLUMNS / 4
+	var front := CardPack3D.pouch(1.0, 1.52, 0.05, 0.085, false).surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array
+	check(front[quarter].z > 0.048, "flat across most of the face, not a balloon (%.3f at a quarter)" % front[quarter].z)
+	var demo: Control = load("res://game/dev/pack_foil_demo.tscn").instantiate()
+	host.add_child(demo)
+	_nodes.append(demo)
+	await _frames(3)
+	eq(demo._solid.size(), 2, "the metallic and the holographic 3D pack")
+
+
+func test_a_cancelled_pack_never_takes_the_next_ones_3d_model() -> void:
+	var stage := PackStage.new()
+	stage.size = Vector2(1200, 800)
+	host.add_child(stage)
+	_nodes.append(stage)
+	var look := CardStyle.current().pack("descent-pack")
+	stage.socket_pack(look, "A")
+	await _frames(2)
+	var first := stage.pack_3d
+	stage.cancel_pack()
+	stage.socket_pack(look, "B")
+	var second := stage.pack_3d
+	await host.get_tree().create_timer(0.4).timeout
+	check(not is_instance_valid(first), "the cancelled pack's 3D model is gone")
+	check(is_instance_valid(second) and stage.pack_3d == second, "the new pack's 3D model is still there after the fade")
+
+
+func test_enter_under_a_dialog_opens_nothing_and_done_leaves_the_focus_on_the_column() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[true, _open_response()]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	game.ui.notify("a notice")
+	await _frames(2)
+	var accept := InputEventAction.new()
+	accept.action = &"ui_accept"
+	accept.pressed = true
+	screen._unhandled_input(accept)
+	await _frames(3)
+	eq(bridge.count("OpenPack"), 0, "Enter with a dialog up opens no pack behind it")
+	check(await _answer(game, true), "the notice closes")
+	await screen.open_pack("descent-pack")
+	await screen.reveal_all()
+	await _frames(20)
+	await screen.done()
+	await _frames(2)
+	var owner := screen.get_viewport().gui_get_focus_owner()
+	check(owner != null and screen.is_ancestor_of(owner), "after Done the focus is on the screen (%s), not lost" % owner)
+
+
+func test_a_refresh_behind_the_buy_confirm_does_not_drop_the_buy() -> void:
+	var bridge := _bridge()
+	bridge.answers["BuyPack"] = [[true, {"packId": "descent-pack", "packVersion": 1, "count": 1, "gemsSpent": 100, "gems": 240,
+		"owned": 3}]]
+	var game := _game(bridge)
+	var shop := await _open_shop(game)
+	shop.get_node("%Offers").get_child(0).get_node("%Buy1").pressed.emit()
+	await _frames(2)
+	shop._on_session_changed()   # a session change while the pop-up is up
+	check(not shop.loading, "no refresh starts behind the confirm")
+	shop.refresh()   # one started anyway (the screen's own)
+	check(await _answer(game, true), "Buy")
+	var deadline := Time.get_ticks_msec() + 5000
+	while bridge.count("BuyPack") == 0 and Time.get_ticks_msec() < deadline:
+		await _frames(1)
+	eq(bridge.count("BuyPack"), 1, "the confirmed buy goes through once the refresh is done")
+
+
+func test_a_session_change_behind_the_buy_confirm_refreshes_once_it_is_answered() -> void:
+	var game := _game(_bridge())
+	var shop := await _open_shop(game)
+	var reads := [0]
+	shop.loaded.connect(func() -> void: reads[0] += 1)
+	shop.get_node("%Offers").get_child(0).get_node("%Buy1").pressed.emit()
+	await _frames(2)
+	shop._on_session_changed()
+	check(not shop.loading, "nothing refreshes behind the pop-up")
+	check(await _answer(game, false), "Cancel")
+	var deadline := Time.get_ticks_msec() + 5000
+	while reads[0] == 0 and Time.get_ticks_msec() < deadline:
+		await _frames(1)
+	eq(reads[0], 1, "the skipped refresh runs once the pop-up is answered")

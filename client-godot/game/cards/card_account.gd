@@ -33,6 +33,9 @@ const RUN_VERIFYING: int = 1410
 ## The longest wait between two re-sends while reconnecting (ServerLink's backoff, capped here).
 var reconnect_max_delay: float = 10.0
 
+## Spec card-ui 5: console `cardui log on`: a line per account action sent and per answer (dev only, never in a hash).
+static var log_actions: bool = false
+
 ## Spec account-session 2.3: the account version the screens show (from a collection read or the session's snapshot, or a
 ## decision's answer that is exactly the one sent + 1); -1 = not known, so ServerLink reads the collection before the next decision.
 var account_version: int = -1
@@ -87,6 +90,8 @@ func run(kind: String, target: String, count: int = 1, key: String = "") -> Dict
 	_action = action
 	_result = {}
 	busy_changed.emit()
+	if log_actions:
+		print("cardui: %s %s x%d [key %s]" % [kind, target, int(action["count"]), action["key"]])
 	_send(action, _generation)  # in the background: give_up() settles the caller without waiting for it
 	if not _result.is_empty():
 		return _result
@@ -164,6 +169,9 @@ func _send(action: Dictionary, generation: int) -> void:
 	if code_of(result) == KEY_REUSED:
 		push_error("CardAccount: the server says key %s was used for another request (%s %s)" % [action["key"], action["kind"], action["target"]])
 	var answer := _answer(result, str(action["kind"]), str(action["target"]), int(action.get("count", 1)), str(action["key"]), false)
+	if log_actions:
+		print("cardui: %s %s answered %s%s" % [action["kind"], action["target"], "ok" if result["ok"] else "refused %d" % code_of(result),
+			" (after reconnecting)" if _reconnecting_since >= 0 else ""])
 	var was_reconnecting := _reconnecting_since >= 0
 	_reconnecting_since = -1
 	_result = answer

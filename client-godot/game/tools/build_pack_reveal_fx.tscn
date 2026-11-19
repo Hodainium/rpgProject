@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/tools/build_pack_reveal_fx.gd" id="1"]
+
+[node name="BuildPackRevealFx" type="Node"]
+script = ExtResource("1")

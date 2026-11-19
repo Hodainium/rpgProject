@@ -1,0 +1,27 @@
+# Spec card-ui 2.5 (acceptance 2, the client half) end to end: the server goes away before an open, so the open gets no answer;
+# the connecting pop-up says "Reconnecting…" while the player's CardAccount re-sends it with the SAME key; the server comes back
+# and the open goes through once: one account request, one opening, one pack spent, the five cards revealed once.
+# (A response lost after the commit is covered by test_card_ui::test_lost_open_replays_same_cards: it cannot be timed here.)
+#! worker
+#! content real
+#! cards
+#! env Monitors__Interval=00:00:01
+server reward boss demo.enemy.rat_king 300
+server reward boss demo.enemy.golem 300
+new demo.character.warrior,demo.character.cleric run=demo.run.one_floor
+wait run
+autorun policy=smart
+wait ended 180
+wait verdict all 300
+wait gems 100 180
+ui press Menu
+cardui shop buy descent-pack 1
+ui back
+cardui open packs
+e2e server-stop
+cardui pack descent-pack nowait
+cardui wait reconnecting 60
+e2e server-start
+cardui wait opened 120
+cardui reveal all
+cardui done

@@ -55,6 +55,24 @@ var art_sets: Array[CardArtSet] = []
 ## The set marks on a card: set id (core, descent) → glyph.
 @export var set_marks: Dictionary[StringName, Texture2D] = {}
 
+@export_group("Pack opening")
+## Spec card-ui 3.2: the card back (face-down cards in a pack). None = the back drawn in code (CardBackView: navy and gold, the
+## cube emblem).
+@export var back_texture: Texture2D
+## Spec card-ui 2.4: the choreography's numbers, effects and sounds. None = PackChoreography's defaults.
+@export var choreography: PackChoreography
+
+var _default_choreography: PackChoreography
+
+
+## The choreography in use (`choreography`, else the defaults).
+func pack_choreography() -> PackChoreography:
+	if choreography != null:
+		return choreography
+	if _default_choreography == null:
+		_default_choreography = PackChoreography.new()
+	return _default_choreography
+
 static var _loaded: CardStyle
 
 
@@ -91,11 +109,26 @@ func element(name: StringName) -> CardElement:
 	return look if look != null else CardElement.new()
 
 
+## Starts loading the art sets on a background thread (the first card face otherwise loads every icon and portrait at once:
+## ~190 ms, measured 2026-11-18, which stalled the first pack's flight). A screen that will show cards calls it as it opens;
+## art_for then takes the finished loads (or finishes them).
+func warm_art() -> void:
+	if not art_sets.is_empty():
+		return
+	for path in art_set_paths:
+		if ResourceLoader.exists(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			ResourceLoader.load_threaded_request(path)
+
+
 ## A card's art (glyph or portrait) from the art sets, or null.
 func art_for(id: StringName) -> Texture2D:
 	if art_sets.is_empty() and not art_set_paths.is_empty():
 		for path in art_set_paths:
-			var loaded := load(path) as CardArtSet if ResourceLoader.exists(path) else null
+			var loaded: CardArtSet = null
+			if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+				loaded = ResourceLoader.load_threaded_get(path) as CardArtSet   # warm_art() began it (waits if not done)
+			elif ResourceLoader.exists(path):
+				loaded = load(path) as CardArtSet
 			if loaded != null:
 				art_sets.append(loaded)
 	for art_set in art_sets:

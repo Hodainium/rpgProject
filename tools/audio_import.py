@@ -100,8 +100,9 @@ def measure(path):
     return round(loud, 2), round(tp, 2), round(seconds, 3)
 
 
-def convert(src, dst, max_ms, target, ceiling, sample_rate):
-    """Trim, cut, fade, gain to the target and limit; writes dst. Two passes: measure, then apply the gain."""
+def convert(src, dst, max_ms, target, ceiling, sample_rate, fade_ms=None):
+    """Trim, cut, fade, gain to the target and limit; writes dst. Two passes: measure, then apply the gain. A row's `fade_ms`
+    sets the fade-out at the cut (default: 120 ms at most), so a long ringing tail dies away instead of stopping."""
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     trim = ("silenceremove=start_periods=1:start_threshold=-60dB:start_silence=0.002,"
             "areverse,silenceremove=start_periods=1:start_threshold=-60dB:start_silence=0.01,areverse")
@@ -110,7 +111,10 @@ def convert(src, dst, max_ms, target, ceiling, sample_rate):
         ffmpeg(["-y", "-i", src, "-ac", "1", "-ar", str(sample_rate), "-af", trim, "-c:a", "pcm_f32le", base])
         _, _, length = measure(base)
         cut = min(length, max_ms / 1000.0)
-        fade = min(0.12, cut * 0.4) if length > cut else min(0.008, cut * 0.2)
+        if fade_ms is not None:
+            fade = min(fade_ms / 1000.0, cut * 0.5) if length > cut else min(0.008, cut * 0.2)
+        else:
+            fade = min(0.12, cut * 0.4) if length > cut else min(0.008, cut * 0.2)
         shaped = os.path.join(tmp, "shaped.wav")
         ffmpeg(["-y", "-i", base, "-af", "atrim=0:%.4f,afade=t=out:st=%.4f:d=%.4f,afade=t=in:d=0.002" % (cut, cut - fade, fade),
                 "-c:a", "pcm_f32le", shaped])
@@ -243,7 +247,8 @@ def main():
         measured = []
         for src, dst in zip(sources, targets):
             loud, peak, seconds = convert(src, dst, row.get("max_ms", manifest["max_ms"][row["category"]]),
-                                          manifest["targets"][row["category"]], manifest["peak_ceiling_db"], fmt["sample_rate"])
+                                          manifest["targets"][row["category"]], manifest["peak_ceiling_db"], fmt["sample_rate"],
+                                          row.get("fade_ms"))
             measured.append({"loudness": loud, "peak_db": peak, "ms": int(round(seconds * 1000))})
             done += 1
         row["measured"] = measured

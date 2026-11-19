@@ -5,15 +5,15 @@
 extends DevCommand
 
 const SCREENS: Dictionary = {"shop": "res://presentation/demo/ui/cards/shop.tscn",
-	"collection": "res://presentation/demo/ui/cards/collection.tscn"}
+	"collection": "res://presentation/demo/ui/cards/collection.tscn", "packs": "res://presentation/demo/ui/cards/packs.tscn"}
 const DETAIL: String = "res://presentation/demo/ui/cards/card_detail.tscn"
 const FILTERS: Array[String] = ["set", "kind", "rarity", "pool", "owned", "missing", "text"]
 
 
 func _init() -> void:
 	name = "cardui"
-	usage = "cardui [open shop|collection|detail <card id> | shop [buy <pack id> [count]] | collection | page <n> | filter <field> <value> | detail [dust|create] | bench [rarity] [seconds] | account | giveup | look [name]]"
-	help = "The card screens. open shop: opens the Shop (Menu layer; local mode shows that it needs a server). shop: the offers on screen (pack, price, owned), the gems and the message line. shop buy <pack id> [count]: presses Buy on the Shop (opened first if needed) and waits for the server's answer, reconnecting as long as it takes; count 1 or 5 like the buttons, any whole number for a test. account: the account action on its way and how long it has been reconnecting (server mode). giveup: stop waiting for it but stay online (the connecting pop-up's Go offline also gives it up, then plays offline: server go-offline). open collection: the Collection (local mode: the core set and the local test pool, read-only). open detail <card id>: the card's detail over the Collection. collection: what the Collection shows (page, cards and their states, dust, gems, message). page <n>: turn to page n. filter <field> <value>: set, kind (all, character, item, equipment), rarity (all, or a list like epic,legendary), pool (any or a pool), owned / missing (on, off), text (a search; - clears). detail: what the open detail shows; detail dust / detail create press its button (the confirm and run-lock pop-ups are answered with ui press). bench [rarity] [seconds]: a full page of cards (12) of that rarity (default mythic, repeated when the content has fewer) and the frame time over that many seconds (default 5) with vsync off, against an empty page (spec 3.3: faces render live, no cache). look [name]: the card face in use (CardStyle.face_scenes; the demo has one, grimoire, the user's pick), switched in memory; the card gallery shows every card in it (res://game/dev/card_gallery.tscn)."
+	usage = "cardui [open shop|collection|packs|detail <card id> | shop [buy <pack id> [count]] | collection | page <n> | filter <field> <value> | detail [dust|create] | packs | pack <pack id> [nowait] | pack demo [rarity ...] | reveal <i>|all | done | wait reconnecting|opened|revealed|acted [seconds] | bench [rarity] [seconds] | account | giveup | log on|off | look [name]]"
+	help = "The card screens. open shop: opens the Shop (Menu layer; local mode shows that it needs a server). shop: the offers on screen (pack, price, owned), the gems and the message line. shop buy <pack id> [count]: buys on the Shop (opened first if needed; skips the player's confirm pop-up) and waits for the server's answer, reconnecting as long as it takes; count 1 or 5 like the buttons, any whole number for a test. account: the account action on its way and how long it has been reconnecting (server mode). giveup: stop waiting for it but stay online (the connecting pop-up's Go offline also gives it up, then plays offline: server go-offline). open collection: the Collection (local mode: the core set and the local test pool, read-only). open detail <card id>: the card's detail over the Collection. collection: what the Collection shows (page, cards and their states, dust, gems, message). page <n>: turn to page n. filter <field> <value>: set, kind (all, character, item, equipment), rarity (all, or a list like epic,legendary), pool (any or a pool), owned / missing (on, off), text (a search; - clears). detail: what the open detail shows; detail dust / detail create press its button (the confirm and run-lock pop-ups are answered with ui press). bench [rarity] [seconds]: a full page of cards (12) of that rarity (default mythic, repeated when the content has fewer) and the frame time over that many seconds (default 5) with vsync off, against an empty page (spec 3.3: faces render live, no cache). open packs: the Open packs screen (refunds of retired packs are paid as it opens). packs: what it shows (the packs held with their counts and pity, gems, dust, the cards on the stage with their labels). pack <pack id> [nowait]: opens one owned pack through the player's CardAccount (Open packs opened first if needed) and waits until its cards are on the stage, face down (nowait: returns at once, for a script that stops the server; then cardui wait reconnecting / opened). pack demo [rarity ...]: the choreography on made-up cards of the local content (the rarities of the five slots, padded with common; no account is touched; local mode allowed). reveal <i>|all: flips card i (1-5) or the rest. done: Done (the cards leave, the packs are read again). wait reconnecting|opened|revealed|acted [seconds]: until the account reconnects, a pack's cards are on the stage, all are face up, or the open card detail has its answer (after detail dust|create nowait; default 60 s). open detail first: the first owned card that is not core. detail dust|create nowait: presses the button and returns at once (a script answers the pop-up with ui press). log on|off: a line per account action and answer. look [name]: the card face in use (CardStyle.face_scenes; the demo has one, grimoire, the user's pick), switched in memory; the card gallery shows every card in it (res://game/dev/card_gallery.tscn)."
 	cheat = false
 
 
@@ -25,7 +25,7 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 	match args[0]:
 		"open":
 			if args.size() < 2 or not (SCREENS.has(args[1]) or args[1] == "detail"):
-				return ctx.fail("usage: cardui open shop|collection|detail <card id>")
+				return ctx.fail("usage: cardui open shop|collection|packs|detail <card id>")
 			if ctx.game.mode != "menu":
 				return ctx.fail("the card screens open from the main menu (mode is %s)" % ctx.game.mode)
 			if args[1] == "detail":
@@ -34,6 +34,14 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 				var holder := await _open(ctx, "collection")
 				if holder == null:
 					return ctx.fail("could not open the Collection")
+				if args[2] == "first":
+					# The first owned card that is not core (a script's card from a random pack).
+					for entry in holder.all_entries:
+						if entry["state"] == CollectionModel.STATE_OWNED:
+							args[2] = str(entry["id"])
+							break
+					if args[2] == "first":
+						return ctx.fail("no owned card that is not core")
 				if holder.entry_for(args[2]).is_empty():
 					return ctx.fail("no card '%s' in the Collection" % args[2])
 				var detail: UIScreen = holder.open_detail(args[2])
@@ -45,6 +53,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 				return ctx.fail("could not open %s: %s" % [args[1], "; ".join(ctx.game.ui.problems)])
 			if args[1] == "collection":
 				return "opened collection\n%s" % _describe_collection(screen.shown())
+			if args[1] == "packs":
+				return "opened packs\n%s" % _describe_packs(screen.shown())
 			return "opened %s\n%s" % [args[1], _describe(screen.shown())]
 		"collection":
 			var shown_collection := _top(ctx, "collection")
@@ -78,12 +88,26 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 			if args.size() == 1:
 				return JSON.stringify(open_detail.shown())
 			if not args[1] in ["dust", "create"]:
-				return ctx.fail("usage: cardui detail [dust|create]")
+				return ctx.fail("usage: cardui detail [dust|create] [nowait]")
 			if ctx.game.server == null:
 				return ctx.fail("not in server mode: dust and cards live on the server")
 			var before: Dictionary = open_detail.shown()
 			if not before["dust_enabled" if args[1] == "dust" else "create_enabled"]:
 				return ctx.fail("%s is not possible on this card now: %s" % [args[1], JSON.stringify(before)])
+			if args.size() > 2 and args[2] == "nowait":
+				# A script answers the pop-up next (ui press), then waits with cardui wait acted.
+				open_detail.last_answer = {}
+				var kind := args[1]
+				var press := func() -> void:
+					var sent: Dictionary
+					if kind == "dust":
+						sent = await open_detail.dust()
+					else:
+						sent = await open_detail.create()
+					if sent.is_empty() and is_instance_valid(open_detail):
+						open_detail.last_answer = {"kind": kind, "ok": false, "sent": false}   # No, Keep run, a Verifying run
+				press.call()
+				return "%s pressed (cardui wait acted)" % args[1]
 			var answer: Dictionary
 			if args[1] == "dust":
 				answer = await open_detail.dust()
@@ -138,6 +162,44 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 				return ctx.fail("the Shop is busy with a buy of its own")
 			var line := "%s [key %s]\n%s" % [shop.shown()["message"], answer["key"], _describe(shop.shown())]
 			return line if answer.get("ok", false) else ctx.fail(line)
+		"packs":
+			var packs_screen := _top(ctx, "packs")
+			if packs_screen == null:
+				return ctx.fail("Open packs is not open (cardui open packs)")
+			if packs_screen.loading:
+				await packs_screen.loaded
+			return _describe_packs(packs_screen.shown())
+		"pack":
+			return await _pack(ctx, args)
+		"reveal":
+			var revealing := _top(ctx, "packs")
+			if revealing == null or revealing.reveal == null:
+				return ctx.fail("no pack is on the stage (cardui pack <pack id>)")
+			if args.size() < 2:
+				return ctx.fail("usage: cardui reveal <1-5>|all")
+			if args[1] == "all":
+				await revealing.reveal_all()
+			elif args[1].is_valid_int() and int(args[1]) >= 1 and int(args[1]) <= revealing.reveal.size():
+				if not await revealing.flip(int(args[1]) - 1):
+					return ctx.fail("card %s is face up already" % args[1])
+			else:
+				return ctx.fail("usage: cardui reveal <1-%d>|all" % revealing.reveal.size())
+			return _describe_packs(revealing.shown())
+		"done":
+			var finishing := _top(ctx, "packs")
+			if finishing == null or finishing.reveal == null or not finishing.reveal.done():
+				return ctx.fail("no fully revealed pack on the stage (cardui reveal all)")
+			await finishing.done()
+			if finishing.loading:
+				await finishing.loaded
+			return _describe_packs(finishing.shown())
+		"wait":
+			return await _wait(ctx, args)
+		"log":
+			if args.size() < 2 or not args[1] in ["on", "off"]:
+				return ctx.fail("usage: cardui log on|off")
+			CardAccount.log_actions = args[1] == "on"
+			return "account log %s" % args[1]
 		"account":
 			if ctx.game.server == null:
 				return ctx.fail("not in server mode")
@@ -172,20 +234,123 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 
 
 ## Pushes the screen (or finds it on top) and waits until it has loaded.
+## The UI applies a state change at the end of the frame (UIManager.refresh_state), and removing a rule screen drops every screen
+## above it: a screen pushed in the frame a script went back to the menu (the run-end screen's Menu) would vanish. So a frame
+## passes before the push, and the screen is polled (a dropped screen never emits `loaded`).
 static func _open(ctx: DevContext, which: String) -> UIScreen:
 	var screen := _top(ctx, which)
 	if screen == null:
-		screen = ctx.game.ui.push(&"UI.Layer.Menu", load(SCREENS[which]))
+		await ctx.console.tree.process_frame
+		screen = _top(ctx, which)
+		if screen == null:
+			screen = ctx.game.ui.push(&"UI.Layer.Menu", load(SCREENS[which]))
 	if screen == null:
 		return null
-	if screen.loading:
-		await screen.loaded
+	var deadline := Time.get_ticks_msec() + 60000
+	while is_instance_valid(screen) and screen.loading and Time.get_ticks_msec() < deadline:
+		Watchdog.beat("cardui open " + which)
+		await ctx.console.tree.process_frame
+	if not is_instance_valid(screen) or not screen.is_inside_tree() or screen.loading:
+		return null
 	return screen
 
 
 static func _top(ctx: DevContext, which: String) -> UIScreen:
 	var screen: UIScreen = ctx.game.ui.top(&"UI.Layer.Menu")
 	return screen if screen != null and screen.scene_file_path == SCREENS[which] else null
+
+
+## `cardui pack <pack id> [nowait]` and `cardui pack demo [rarity ...]`.
+static func _pack(ctx: DevContext, args: PackedStringArray) -> String:
+	if args.size() < 2:
+		return ctx.fail("usage: cardui pack <pack id> [nowait] | pack demo [rarity ...]")
+	var screen := _top(ctx, "packs")
+	if screen == null:
+		if ctx.game.mode != "menu":
+			return ctx.fail("Open packs opens from the main menu (mode is %s)" % ctx.game.mode)
+		screen = await _open(ctx, "packs")
+		if screen == null:
+			return ctx.fail("could not open Open packs")
+	if screen.loading:
+		await screen.loaded
+	if screen.reveal != null or screen.opening:
+		return ctx.fail("a pack is on the stage already (cardui reveal all, then cardui done)")
+	if args[1] == "demo":
+		var rarities: Array = []
+		for rarity in args.slice(2):
+			if not CardStyle.RARITY_ORDER.has(rarity):
+				return ctx.fail("no rarity '%s' (%s)" % [rarity, ", ".join(CardStyle.RARITY_ORDER)])
+			rarities.append(rarity)
+		var demo: PackReveal = await screen.play_demo(rarities)
+		if demo == null:
+			return ctx.fail("the stage is busy")
+		return "demo pack on the stage\n" + _describe_packs(screen.shown())
+	if ctx.game.server == null:
+		return ctx.fail("not in server mode: packs live on the server (cardui pack demo plays the choreography offline)")
+	var pack_id := args[1]
+	if screen.entry_for(pack_id).is_empty():
+		return ctx.fail("no unopened '%s' pack (%s)" % [pack_id, JSON.stringify(screen.shown()["packs"])])
+	if ctx.game.server.card_account().busy():
+		return ctx.fail("another account action is on its way (cardui account)")
+	if args.size() > 2 and args[2] == "nowait":
+		screen.open_pack(pack_id)
+		return "opening %s (cardui wait reconnecting|opened)" % pack_id
+	var answer: Dictionary = await screen.open_pack(pack_id)
+	if answer.is_empty():
+		return ctx.fail("the screen did not send the open")
+	var line := "%s [key %s]\n%s" % ["opened" if answer.get("ok", false) else "refused", answer.get("key", ""),
+		_describe_packs(screen.shown())]
+	return line if answer.get("ok", false) else ctx.fail(line)
+
+
+## `cardui wait reconnecting|opened|revealed [seconds]`.
+static func _wait(ctx: DevContext, args: PackedStringArray) -> String:
+	if args.size() < 2 or not args[1] in ["reconnecting", "opened", "revealed", "acted"]:
+		return ctx.fail("usage: cardui wait reconnecting|opened|revealed|acted [seconds]")
+	var seconds := float(args[2]) if args.size() > 2 and args[2].is_valid_float() else 60.0
+	var deadline := Time.get_ticks_msec() + int(seconds * 1000.0)
+	while Time.get_ticks_msec() < deadline:
+		var screen := _top(ctx, "packs")
+		match args[1]:
+			"reconnecting":
+				if ctx.game.server != null and ctx.game.server.card_account().reconnecting_seconds() >= 0.0:
+					return "reconnecting (%s)" % JSON.stringify(ctx.game.server.card_account().in_flight())
+			"opened":
+				if screen != null and screen.reveal != null and not screen.opening:
+					return _describe_packs(screen.shown())
+			"revealed":
+				if screen != null and screen.reveal != null and screen.reveal.done():
+					return _describe_packs(screen.shown())
+			"acted":
+				var detail: UIScreen = ctx.game.ui.top(&"UI.Layer.Modal")
+				if detail != null and detail.scene_file_path == DETAIL and not detail.last_answer.is_empty():
+					var acted: Dictionary = detail.last_answer
+					if not acted.get("sent", true):
+						return ctx.fail("%s sent nothing (answered No or Keep run, or the run is being verified): %s" % [
+							acted["kind"], JSON.stringify(detail.shown())])
+					var text := "%s: %s" % [acted.get("kind", ""), JSON.stringify(detail.shown())]
+					return text if acted.get("ok", false) else ctx.fail(text)
+				if detail == null or (detail.scene_file_path != DETAIL and not detail is UIConfirm):
+					return ctx.fail("the card detail closed before it acted")
+		Watchdog.beat("cardui wait " + args[1])
+		await ctx.console.tree.create_timer(0.1).timeout
+	return ctx.fail("not %s within %s s" % [args[1], seconds])
+
+
+static func _describe_packs(shown: Dictionary) -> String:
+	var lines := PackedStringArray(["gems %s, dust %s" % [str(shown["gems"]) if int(shown["gems"]) >= 0 else "unknown",
+		str(shown["dust"]) if int(shown["dust"]) >= 0 else "unknown"]])
+	for pack in shown["packs"]:
+		lines.append("  %s x%d%s" % [pack["packId"], int(pack["count"]), " (%s)" % pack["pity"] if str(pack["pity"]) != "" else ""])
+	for card in shown["cards"]:
+		var state: String = ": " + " / ".join(card["labels"]) if card["revealed"] else ", face down"
+		lines.append("  card %d: %s (%s)%s%s%s" % [int(card["index"]) + 1, card["id"], card["rarity"],
+			", duplicate +%d dust" % int(card["dust"]) if card["duplicate"] else ", new", ", pity" if card["pity"] else "", state])
+	if shown["done"]:
+		lines.append("  all revealed (cardui done)")
+	if str(shown["message"]) != "":
+		lines.append("  message: %s" % shown["message"])
+	return "\n".join(lines)
 
 
 static func _describe_collection(shown: Dictionary) -> String:

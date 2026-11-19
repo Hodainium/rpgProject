@@ -1,6 +1,7 @@
 # Spec: card-ui (slice 5b)
 
-Status: **spec written 2026-11-15, awaiting review.** Builds on `specs/card-collection.md` (slice 5: the account, the endpoints,
+Status: **built; all three user gates passed and the card UI accepted by the user on 2026-11-18** (spec written 2026-11-15; synced
+to the build 2026-11-18). Builds on `specs/card-collection.md` (slice 5: the account, the endpoints,
 `ServerLink`'s card calls, `CardCatalog`), `specs/ui-framework.md` (screens, layers, `UIList`, Back), `specs/ff7-ui.md` (the window
 theme), `specs/vfx-framework.md` (`FxStage`, `FxDefinition`, the shader library), `specs/cube-style.md` (the unit looks a character
 card shows) and the roadmap entry "5b. `card-ui`" (its look-and-feel list is the requirement). References: `H:\assets\references\hearthstone\`
@@ -111,13 +112,16 @@ still works (the pop-up is the way out, as slice 5 decided).
 ```
 Main menu ── Shop ──▶ ShopScreen: ServerLink.get_packs() + get_collection() → one offer per pack type (art, name, card count,
                       the Rare guarantee line, Buy 1 · price, Buy 5 · 5 x price, an Odds window); the owned count beside it
-  Buy n:  CardAccount.run(BUY, {pack, count: n}) ─▶ ServerLink.buy_pack(pack, n, key) ─▶ POST /api/v1/packs/{packId}/buy (5b0 2.1)
+  Buy n:  UIManager.confirm("Buy 5 packs of The Descent for 500 gems?", "Buy", "Cancel")   (user, 2026-11-18; Cancel sends nothing;
+          the Buy buttons lock while it is up; the console's `cardui shop buy` skips it)
+          → CardAccount.run(BUY, {pack, count: n}) ─▶ ServerLink.buy_pack(pack, n, key) ─▶ POST /api/v1/packs/{packId}/buy (5b0 2.1)
       200 PackBuyResponse → gems total animates down; "Bought 5 packs. You have 7 waiting in Open packs."; the menu's Open packs
                             button shows the count
       409 1402 → refused sound, "Not enough gems (need 500, have 340)" (the Buy buttons were already disabled when the collection said so)
       404 1408 / 400 1401 → the server's line; packs refetched
       no answer / 5xx / 429 → "Reconnecting…" in the connecting pop-up (2.5); the Shop shows the answer once it lands
 ```
+Each offer shows the 3D foil pack (as on Open packs, 2.4 beat 1).
 
 ### 2.3 Pack opening
 
@@ -128,7 +132,7 @@ Main menu ── Open packs ──▶ PackScreen
   ServerLink.get_packs() + get_collection()  → left column: each pack type the player owns, with its count badge ("x 7");
                                                pity line per type ("Epic in 3 · Legendary in 12 · Mythic in 18 packs": PityPacks - missed),
                                                an Odds button (OddsPer10000 as percentages; slice 5 3.4b); no packs → "Buy packs in the Shop"
-  click a pack / drag it to the socket / press Enter on it:
+  click a pack / press Enter on it / Space, Enter or the pad's A anywhere on the screen (the first pack in the column that has one):
     CardAccount.run(OPEN, pack) ─▶ POST /packs/{id}/open {requestKey}   (no pop-up: the pack is already paid for)
   (the server spends one owned pack: 5b0 2.2)
       waiting:  the pack sits in the socket and pulses (the connecting pop-up still covers waits over 0.3 s)
@@ -139,25 +143,34 @@ Main menu ── Open packs ──▶ PackScreen
       no answer / 5xx / 429 → "Reconnecting…" in the connecting pop-up (2.5) until the server answers with the same key; the reveal then
                               plays as usual
 ```
+Playtest (user, 2026-11-18): the column's packs are the 3D foil pack (2.4 beat 1; `CardPackView.solid`), swaying, tilting toward the
+pointer, the count badge inside the pack's top-right corner. The pity countdowns update as soon as the open is answered (the
+collection is read again in the background while the cards are still face down). Space, Enter or the pad's A flips the next card
+while some are face down, and once all are face up clears the stage and opens the next pack. Dragging a pack to the socket was
+dropped (user, 2026-11-18).
 
 ### 2.4 The pack choreography (Hearthstone's beats, our effects)
 
-All timings are `PackChoreography` resource values (3.2), shown here at their defaults; every beat is an `FxDefinition` with a
-`color` and a `tier` parameter (tier 0 Common .. 4 Mythic), never one effect per rarity.
+All timings are `PackChoreography` resource values (3.2), shown here at their defaults. The beats reuse the shared effect library
+with the rarity's colour and a strength per tier (0 Common .. 4 Mythic, `PackChoreography`'s arrays), never one effect per rarity
+(as built and approved, 2026-11-18: no new `card.*` definitions with a `tier` parameter).
 
 | Beat | What the player sees | Effect data |
 |---|---|---|
-| 1. Socket (0.35 s) | The pack flies from the column into the centre socket and settles with a shake | `card.pack_settle` (`FxTweenLayer` + `FxShakeLayer`) |
-| 2. Burst (0.6 s) | The pack shakes harder, splits, a radial burst and particles; the burst's colour is the pack's own (not a rarity tell) | `card.pack_burst` (`radial_burst`, particles, light) |
-| 3. Fan (0.5 s) | Five cards fly out face down to Hearthstone's five positions (three above, two below), staggered 0.06 s | tweens on `CardView3D` |
-| 4. Tell (idle) | Each face-down card glows its rarity: none for Common, blue Rare, purple Epic, orange Legendary with a low hum, rose Mythic with slow rays; a pity card adds a gold rim | `card.rarity_tell` (`glow_aura`, `rays` from tier 3) |
-| 5. Flip (0.45 s each) | Click a card (or Space for the next, or Reveal all): it lifts, flips, and flashes its rarity colour; Epic adds sparks, Legendary rays and a short shake, Mythic a screen flash, rays and a camera push | `card.flip_flash` (`vignette_flash`, `rays`, `FxShakeLayer` by tier) |
-| 6. Labels | Under the flipped card: its rarity word in its colour ("Legendary!"), NEW if not owned before, "+100 dust" with the dust vial for a duplicate, "Guaranteed" ribbon on a `Pity` card | 2D overlay on the stage (`FxStage.overlay`) |
-| 7. Done | After the fifth flip a Done button appears in the centre; Done (or Back) returns the cards to the stage edge and refreshes the collection and totals | |
+| 1. Socket (0.35 s) | The pack, the **3D metallic foil pouch** (`CardPack3D`: a mostly flat body, pressed crimped seals at both ends, a printed back with its seam; user, 2026-11-18), flies from the column into the centre socket, settles with a shake, then pulses and sways while the server answers so the foil catches the light | code tweens on a flat stand-in the 3D pack follows; the stage's world has a sky to reflect and a light at the socket |
+| 2. Burst (0.6 s) | The pack shakes harder and bursts; the burst's colour is the pack's own (not a rarity tell) | `fx.pack_burst` |
+| 3. Fan (0.5 s) | Five cards fly out face down from the socket to Hearthstone's five positions (three above, two below), staggered 0.06 s | tweens on `CardView3D` |
+| 4. Tell | A face-down card glows its rarity **only while hovered or selected with the keyboard or controller** (none for Common); no rim and no focus ring on a card (user, 2026-11-18) | `fx.card_glow` (`tell_intensity` / `tell_pulse` by tier) |
+| 5. Flip (0.45 s each) | Click a card (or Space / Enter for the next, or Reveal all): it lifts, flips and flashes its rarity colour (stronger by tier); Legendary and Mythic add a big reveal and a short shake, Mythic a screen flash | `fx.card_flip_flash` (`flash_intensity` by tier); big reveal `fx.reveal_halo` on a Legendary, `fx.reveal_rays` (short rays, no flash of their own) on a Mythic (the user's picks, `rays_fx` / `mythic_fx`); `fx.screen_shake` from tier 3; `fx.screen_flash` at tier 4 |
+| 6. Labels | Under the flipped card: its rarity word in its colour ("Legendary!"), NEW if not owned before, "+100 dust" for a duplicate, "Guaranteed" on a `Pity` card | 2D labels on the card's slot |
+| 7. Done | After the fifth flip Done appears at the bottom right (in the centre it covered a card's label); Done (or Back) returns the cards to the stage edge and refreshes the collection and totals; the focus stays put, so Space opens the next pack | |
 
 Skipping: Reveal all flips the remaining cards 0.12 s apart with their flashes at half length; Back during the reveal also reveals
 all first (the cards are already the player's: leaving never loses them). Visual-effects quality `off` (Settings) plays the flips
-without effects; the labels always show. Sounds come from the existing bank (section 7 question 3).
+without effects; the labels always show. Sounds (section 7 question 3, decided): socket `ui.confirm`, burst `break`, flips
+`pack.flip.common` .. `pack.flip.mythic` (the user's picks, imported whole into the bank's `pack` category); each sound takes a free
+voice, and one still ringing when the screen closes fades out (`sound_fade_seconds`). The first open stays smooth: the card art
+loads on a background thread as the screen opens (`CardStyle.warm_art`; the first faces used to load it on the main thread, ~186 ms).
 
 ### 2.5 Pending account actions (client half of acceptance scenarios 1 and 2)
 
@@ -240,8 +253,8 @@ All card presentation lives under `presentation/demo/cards/` and is loaded throu
 ## presentation/demo/cards/card_style.tres: how every card looks. One per content set; the demo has one.
 class_name CardStyle extends Resource
 @export var face_scenes: Dictionary[StringName, PackedScene] = {}  # tavern (Look A), grimoire (Look B): the 2D faces rendered to textures
-@export var face: StringName = &"tavern"       # the active look until the user picks one (section 7, question 1)
-@export var back_texture: Texture2D            # the card back (navy and gold, the cube emblem)
+@export var face: StringName = &"grimoire"     # the user's pick (section 7, question 1)
+@export var back_texture: Texture2D            # optional: the card back is drawn in code (CardBackView: navy and gold, the cube emblem)
 @export var rarities: Dictionary[StringName, CardRarityLook] = {}   # common, rare, epic, legendary, mythic (catalog names)
 @export var corrupted: CardRarityLook          # overrides frame and outline for Item.Corrupted, keeps the rarity gem
 @export var elements: Dictionary[StringName, CardElement] = {}     # physical, fire, ice, void, food, neutral
@@ -272,7 +285,8 @@ class_name CardElementRule extends Resource    # "a card whose tags (or its abil
 @export var look_in_abilities: bool = false    # also match the tags of the abilities it grants or uses (Damage.Type.*)
 @export var element: StringName
 
-class_name PackChoreography extends Resource   # every number of 2.4 (seconds, positions, stagger) and the five FxDefinitions
+class_name PackChoreography extends Resource   # every number of 2.4 (seconds, places, stagger), the effect ids with their strengths by
+                                               # tier (rays_fx, mythic_fx, ...), the sounds, pack_3d and pack_sway; none = the defaults
 ```
 
 The **rarity colours** (mock-up legend): Common `#cfd3dc`, Rare `#3e8cff`, Epic `#b05cff`, Legendary `#ff9d24`, Mythic `#ff4f86`,
@@ -287,12 +301,16 @@ corrupted outline `#e040fb` (the magenta of 5b2). Slice 5b2 reads `CardStyle.rar
 | Piece | What it is |
 |---|---|
 | `CardFace` (RefCounted, pure data) | id, kind (character, item, equipment), name, text, type line (`<Kind> — <subtype>`: a character's `role`; an item's Passive / Usable / Food and its room pools; armor's slot), rarity, set id, core, pools, element (tints the art window and the glyph; never shown as a badge), art (icon or portrait), corrupted, slot. `CardFaces.build(content, catalog_rows)` makes them; no Node, testable headless |
-| `CollectionModel` (pure) | catalog x faces x `CollectionResponse` x seen set → entries with state (owned, missing, core, locked by run, new), filters (set, kind, rarity, pool, owned / missing, text), sort (kind, rarity, name; Hearthstone's order: characters first), pages of 8 |
-| `PackReveal` (pure) | from a `PackOpenResponse`: five slots with rarity, tier, duplicate, dust, pity, new; flip order, `reveal(i)`, `reveal_all()`, `done`; the labels' text |
+| `CollectionModel` (pure) | catalog x faces x `CollectionResponse` x seen set → entries with state (owned, missing, core, locked by run, new), filters (set, kind, rarity, pool, owned / missing, text), sort (kind, rarity, name; Hearthstone's order: characters first), pages the size of the page's grid (5 x 2) |
+| `PackReveal` (pure) | from a `PackOpenResponse`: five slots with rarity, tier, duplicate, dust, pity, new; flip order, `reveal(i)`, `reveal_all()`, `done`; the labels' text; `demo()` makes up a response for `cardui pack demo` |
+| `OpenPacksModel` (pure) | the owned packs per type in the server's order, counts, pity countdowns (a first open counts from the first guarantees), odds; refund-held packs left out |
+| `PackStage` (Control) | the reveal stage (2.4): socket, wait, burst, fan, tells on hover, flips, labels, Done; focusable 2D slots own input and focus (one fixed order for arrows and the d-pad); its voices outlive it and fade |
+| `CardBackView`, `CardPack3D` | the card back drawn in code; the 3D foil pack (also inside `CardPackView` when `solid`) |
+| `UICountUp` (`game/ui/`) | a total that counts to its new value (gems, dust), shared by the Shop, the Collection and Open packs |
 | `CardAccount` | the single account action in flight (2.5) over `ServerLink`, its in-memory key, `run(kind, target)`, the retry until answered with `reconnecting` / `reconnected`, `give_up()`, the 1403 cancel path |
 | `CardSeen` | the per-player NEW set, `user://saves/<player>/cards_seen.json` (ids seen in the collection); a card is NEW until shown in the detail or hovered for 0.5 s |
 | ~~`CardFaceCache`~~ | **dropped (user, 2026-11-18):** no cache. Card faces render **on demand, live**: each visible `CardView3D` renders its face scene into its **own `SubViewport`** (a still face, Common / Rare / Epic: `UPDATE_ONCE`; a face with looping layers, Legendary / Mythic / corrupted: `UPDATE_ALWAYS`), freed with the view when the page changes. The viewport is sized to the card's size on screen (`render_scale`, capped) with a margin for the corrupted glow. Measured on a full page of 8 Mythics (`cardui bench`, section 6); a cache of still faces comes back only if those numbers say so |
-| `CardView3D` (Node3D) | a thin card quad: the live face texture on the front (unshaded, so the face's colours stay as approved), a plain back (the card back texture arrives with the pack opening), hover tilt toward the cursor with a moving glare, lift, a missing card ghosted (grey and blue, `card_view.gdshader`), a rarity flash after a craft; built on `FxStage.world_root`; flip arrives with the pack opening |
+| `CardView3D` (Node3D) | a thin card quad: the live face texture on the front (unshaded, so the face's colours stay as approved), the card back (`show_back`, `CardBackView`), hover tilt toward the cursor with a moving glare, lift, a missing card ghosted (grey and blue, `card_view.gdshader`), a rarity flash after a craft, `flip(seconds, lift)`; built on `FxStage.world_root` |
 | `CardPage` (Control) | the page (`columns` x `rows`, the Collection's 5 x 2; each card's input Control is exactly the card, so a click between cards opens nothing): a `FxStage` (reaching `stage_bleed` past the page, so a hovered card is never cut off) under a grid of focusable 2D slots (input, focus, the "In your run" chip and the NEW badge; the "Craft · cost" chip is off since the playtest of 2026-11-18, `show_craft_chip`); each slot's `CardView3D` follows it through `Camera3D.project_position` and is kept while its card stays on the page; `set_paused` while the detail covers it; `card_pressed`, `card_hovered`. The detail uses a 1 x 1 page with `selectable` off (it only tilts; the focus stays on its buttons) |
 | `CardIconPass` | the icon proposal (3.5) |
 
@@ -424,10 +442,14 @@ content):
   `cardui log on|off`; each refused where it makes no sense and tested.
 
 **Headless and window tools:**
-- `game/dev/card_gallery.tscn`: every card of the content at every state (owned, missing, locked, NEW) and the five rarity tells;
+- `game/dev/card_gallery.tscn`: every card of the content at every state (owned, missing, locked, NEW) (the five rarity tells were
+  dropped: the user likes the gallery as it is, 2026-11-18);
   `-- --shots <dir>` saves contact sheets (as `fx_gallery` does), used for the user's look gate and smoke-tested headless in the suite
   (no errors, one sheet per page).
 - The icon pass: deterministic proposal on the fixtures (golden), `--apply` writes only a new file.
+- `game/dev/pack_reveal_demo.tscn` (window): made-up packs on the real `PackStage` to compare the big reveal effects, the screen
+  flash and the shake; no server, no account (`-- --shot <prefix> --at <s,...>` saves timed pictures).
+- `game/dev/pack_foil_demo.tscn` (window): the 3D pack, metallic and holographic, turning; drag to spin (`-- --shot`, `--spin`).
 
 **End to end** (`tools/e2e.sh`, `#! cards`, the real demo catalog, real Godot headless through `dev_run --server`):
 - `card_ui_open`: `cardui open packs`, `cardui pack descent`, `cardui reveal all`, `expect` gems down by the price, five cards,
@@ -439,8 +461,11 @@ content):
   once, with the key it started with (`account_requests` has one row, `rpg_account_request_replays_total` unchanged); the
   lost-response half is covered by the fake bridge test above.
 
-- `card_ui_open` buys first: `cardui shop buy descent 2`, `expect` gems down by twice the price and two owned packs, then opens one
-  (`expect` one pack left, gems unchanged by the open).
+- `card_ui_open` buys first: `cardui shop buy descent-pack 2`, then opens one.
+
+As built, the e2e checks are the scenarios' `.sql` files (server state: gems, owned packs, opened cards, ledger rows, one
+`account_requests` row per key) and `.metrics` files; `expect` cannot read what a screen shows, so what the screens show after an
+open (the new cards in the Collection, the totals) is covered by the Godot screen tests above, not by e2e.
 
 Both suites must pass (`tools/godot_tests.sh`, `tools/dotnet_test.sh`; the .NET suite is unchanged by this slice).
 
@@ -460,13 +485,16 @@ legendary mythic`), on the 4K screen per memory "Godot window monitor".
    goes back to one entry. The mock-up is a reference; the cards are adjusted in the engine.
 2. ~~The card name font~~ **decided:** Cinzel (user, 2026-11-15), a new OFL font in `presentation/demo/ui/fonts/`, credited like
    Chakra Petch; card names only, the chrome stays Chakra Petch.
-3. **Sounds.** The pack burst, the flips and the rarity stings: pick from the existing bank (my proposal: `ui.confirm` for the
-   socket, the break sound for the burst, the cue sounds of heal / revive / phase change for Epic / Legendary / Mythic), or import a
-   few new takes through `tools/audio_import.py` with the user's picks. Retro Anime stays reserved for the two ults.
+3. ~~Sounds~~ **decided 2026-11-18 (user, from a page of the bank's sounds and alternatives):** socket `ui.confirm`, burst
+   `break`, flips Common Simple Whoosh, Rare Simple Heal, Epic Glistening Shimmers, Legendary Healing Gusts, Mythic Holy6, imported
+   through `tools/audio_import.py` as `pack.flip.*` (category `pack`: up to 3 s, so the tails ring out; a row's `fade_ms`). Retro
+   Anime stays reserved for the two ults.
 4. ~~Opening costs gems~~ **decided:** packs are bought in a separate Shop and opened from the account's unopened packs, whose
-   count shows on the Open packs screen, as in Hearthstone (user, 2026-11-15). A buy has no extra pop-up (the button names the
-   price); an open needs none (already paid).
-5. **The class pick locks unowned characters** (2.6) in this slice. It is a flow fix the UI needs; it could move to 5c.
+   count shows on the Open packs screen, as in Hearthstone (user, 2026-11-15). An open needs no pop-up (already paid). ~~A buy has
+   no extra pop-up~~: **a buy asks first** (user, 2026-11-18): "Buy N packs of X for G gems?" with Buy / Cancel (2.3a).
+5. ~~The class pick locks unowned characters (2.6) in this slice~~ **decided 2026-11-18 (user): moves to the character slice**
+   that follows 5b (character look touch-up + the character selection screen's UI overhaul), where the new class-pick screen is
+   built; 2.6 stays the behaviour it must have.
 
 **Decided in review (user, 2026-11-15):** no ATK / HP corners and no top-left badge; a Magic-style type line names the card's kind;
 item art is the game-icons SVGs; character art is prerendered portraits of the in-game cubes, never generated art; portraits face
@@ -477,6 +505,8 @@ reach the screens; the main menu is not redesigned; the FF7 theme for chrome, bu
 every effect as `FxDefinition` data; the UI framework. **Decided earlier (memory "card art direction"):** frames per rarity, one
 game-icons glyph per card tinted by element, `foil_shimmer` / `glow_aura` / `rays`, no
 illustrations. (The live spinning cube on character cards is replaced by prerendered portraits, user 2026-11-15.)
+
+**Dropped (user, 2026-11-18):** dragging a pack to the socket; the card gallery's five rarity tells.
 
 **Stays out:** golden cards, card backs as collectibles, a shop for gems or bundles (5c prices packs), the collection's deck view
 (there are no decks), animated card art, the floor item cards (5b2), the balance numbers (5c), trading.

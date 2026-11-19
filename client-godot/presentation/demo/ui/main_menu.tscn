@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/credits.tscn" id="5_credits"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/cards/shop.tscn" id="6_shop"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/cards/collection.tscn" id="7_collection"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/cards/packs.tscn" id="8_packs"]
 
 [node name="MainMenu" type="CenterContainer"]
 anchors_preset = 15
@@ -94,9 +95,9 @@ offline_text = "You must be online to access the Shop."
 [node name="OpenPacks" type="Button" parent="Panel/Margin/Box"]
 unique_name_in_owner = true
 layout_mode = 2
-disabled = true
 text = "Open packs"
 script = ExtResource("2_push")
+screen = ExtResource("8_packs")
 needs_online = true
 offline_text = "You must be online to open packs."
 

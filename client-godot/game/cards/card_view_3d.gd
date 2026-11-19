@@ -23,6 +23,15 @@ var face_view: CardFaceView
 var viewport: SubViewport
 var mesh: MeshInstance3D
 var material: ShaderMaterial
+## Spec card-ui 2.4: the card back (a pack's face-down cards), built by show_back(); null until then.
+var back_mesh: MeshInstance3D
+var back_viewport: SubViewport
+## The hover tilt, lift and scale turn this node; the flip turns `flipper` under it (front and back quads).
+var pivot: Node3D
+var flipper: Node3D
+## True while the back faces the camera.
+var face_down: bool = false
+var _flip_tween: Tween
 ## Pixels per design pixel of the face texture (the card's height on screen / 420).
 var render_scale: float = 1.0
 ## The card's height in world units (the face, without PAD).
@@ -52,11 +61,17 @@ func _init() -> void:
 	material.shader = SHADER
 	material.set_shader_parameter(&"texture_size", CardFaceView.SIZE + Vector2(PAD, PAD) * 2.0)
 	material.set_shader_parameter(&"card_box", Vector4(PAD, PAD, CardFaceView.SIZE.x, CardFaceView.SIZE.y))
+	pivot = Node3D.new()
+	pivot.name = "Pivot"
+	add_child(pivot)
+	flipper = Node3D.new()
+	flipper.name = "Flip"
+	pivot.add_child(flipper)
 	mesh = MeshInstance3D.new()
 	mesh.name = "Card"
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mesh.material_override = material
-	add_child(mesh)
+	flipper.add_child(mesh)
 	set_process(false)
 
 
@@ -94,6 +109,7 @@ func set_render_scale(pixels_per_design_pixel: float) -> void:
 	face_view.scale = Vector2(render_scale, render_scale)
 	face_view.position = Vector2(PAD, PAD) * render_scale
 	redraw()
+	_render_back()
 
 
 ## The render scales a face texture takes (a huge card on a big screen stops at 3 pixels per design pixel).
@@ -101,12 +117,14 @@ static func clamp_scale(pixels_per_design_pixel: float) -> float:
 	return clampf(pixels_per_design_pixel, 0.5, 3.0)
 
 
-## Draws the face again: every frame for a live face, once for a still one.
+## Draws the face again: every frame for a live face, once for a still one (or one lying face down: nothing of it shows).
 func redraw() -> void:
-	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if live() else SubViewport.UPDATE_ONCE
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if live() and not face_down else SubViewport.UPDATE_ONCE
 
 
 func set_height(height: float) -> void:
+	if is_equal_approx(height, card_height) and mesh.mesh != null:
+		return   # review fix: the pack stage places its cards every frame; an unchanged size makes no new mesh
 	card_height = height
 	_size_mesh()
 
@@ -116,6 +134,83 @@ func _size_mesh() -> void:
 	var quad := QuadMesh.new()
 	quad.size = (CardFaceView.SIZE + Vector2(PAD, PAD) * 2.0) * unit
 	mesh.mesh = quad
+	if back_mesh != null:
+		back_mesh.mesh = quad
+
+
+## Spec card-ui 2.4: gives the card a back (the style's `back_texture`, else CardBackView) on the other side of the quad,
+## rendered once. `down` turns the back to the camera.
+func show_back(style: CardStyle, down: bool = true) -> void:
+	if back_mesh == null:
+		back_viewport = SubViewport.new()
+		back_viewport.name = "Back"
+		back_viewport.transparent_bg = true
+		back_viewport.disable_3d = true
+		back_viewport.gui_disable_input = true
+		back_viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR
+		add_child(back_viewport)
+		var back := CardBackView.new()
+		back.name = "BackView"
+		back.texture = style.back_texture if style != null else null
+		back_viewport.add_child(back)
+		var back_material := ShaderMaterial.new()
+		back_material.shader = SHADER
+		back_material.set_shader_parameter(&"texture_size", CardFaceView.SIZE + Vector2(PAD, PAD) * 2.0)
+		back_material.set_shader_parameter(&"card_box", Vector4(PAD, PAD, CardFaceView.SIZE.x, CardFaceView.SIZE.y))
+		back_material.set_shader_parameter(&"face_tex", back_viewport.get_texture())
+		back_mesh = MeshInstance3D.new()
+		back_mesh.name = "CardBack"
+		back_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		back_mesh.material_override = back_material
+		back_mesh.rotation = Vector3(0, PI, 0)
+		flipper.add_child(back_mesh)
+	_render_back()
+	_size_mesh()
+	set_face_down(down)
+
+
+## The back's texture at the current render scale, drawn once.
+func _render_back() -> void:
+	if back_viewport == null:
+		return
+	var back_scale := maxf(render_scale, 0.5)
+	var design := CardFaceView.SIZE + Vector2(PAD, PAD) * 2.0
+	back_viewport.size = Vector2i(ceili(design.x * back_scale), ceili(design.y * back_scale))
+	var view: Control = back_viewport.get_node("BackView")
+	view.scale = Vector2(back_scale, back_scale)
+	view.position = Vector2(PAD, PAD) * back_scale
+	back_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
+## Turns the card at once (no animation): the back to the camera when `down`.
+func set_face_down(down: bool) -> void:
+	if _flip_tween != null:
+		_flip_tween.kill()
+	face_down = down
+	flipper.rotation = Vector3(0, PI if down else 0.0, 0)
+	flipper.position = Vector3.ZERO
+	redraw()
+
+
+## Spec card-ui 2.4 beat 5: the card lifts `lift` (world units at a card height of 1), turns face up over `seconds` and settles.
+## Returns the tween (await its `finished`), or null when it was already face up.
+func flip(seconds: float, lift: float = 0.35) -> Tween:
+	if not face_down:
+		return null
+	face_down = false
+	redraw()   # a live face goes live as it turns
+	if _flip_tween != null:
+		_flip_tween.kill()
+	if seconds <= 0.0 or not is_inside_tree():
+		set_face_down(false)
+		return null
+	var height := lift * card_height
+	_flip_tween = create_tween()
+	_flip_tween.set_parallel(true)
+	_flip_tween.tween_property(flipper, "rotation:y", 0.0, seconds).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_flip_tween.tween_property(flipper, "position:z", height, seconds * 0.4).set_ease(Tween.EASE_OUT)
+	_flip_tween.tween_property(flipper, "position:z", 0.0, seconds * 0.6).set_ease(Tween.EASE_IN_OUT).set_delay(seconds * 0.4)
+	return _flip_tween
 
 
 ## A missing card: greyed and tinted.
@@ -155,9 +250,9 @@ func _process(delta: float) -> void:
 	var target_lift := 1.0 if (_hovering or _raised) else 0.0
 	_tilt = _tilt.lerp(target_tilt, weight)
 	_lift = lerpf(_lift, target_lift, weight)
-	mesh.rotation = Vector3(deg_to_rad(_tilt.y * tilt_degrees), deg_to_rad(_tilt.x * tilt_degrees), 0.0)
-	mesh.position = Vector3(0, 0, _lift * hover_lift)
-	mesh.scale = Vector3.ONE * lerpf(1.0, hover_scale, _lift)
+	pivot.rotation = Vector3(deg_to_rad(_tilt.y * tilt_degrees), deg_to_rad(_tilt.x * tilt_degrees), 0.0)
+	pivot.position = Vector3(0, 0, _lift * hover_lift)
+	pivot.scale = Vector3.ONE * lerpf(1.0, hover_scale, _lift)
 	var glare_uv := Vector2(0.5, 0.5) + _tilt * 0.45
 	material.set_shader_parameter(&"glare_pos", glare_uv)
 	material.set_shader_parameter(&"glare_strength", clampf(_lift, 0.0, 1.0) if _hovering else 0.0)

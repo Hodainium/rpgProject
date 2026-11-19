@@ -1,0 +1,88 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3 uid="uid://dumlq647xjx14"]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_0mgqk"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_msf8w"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_l0fcw"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_aura.gdshader" id="4_6dqjy"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_lxx4v"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_2d_layer.gd" id="6_e270a"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="7_l5ryb"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="8_5hc5b"]
+
+[sub_resource type="Resource" id="Resource_8fa8i"]
+script = ExtResource("2_msf8w")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_bahoc"]
+script = ExtResource("2_msf8w")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.8
+
+[sub_resource type="Resource" id="Resource_42ljt"]
+script = ExtResource("3_l0fcw")
+shader = ExtResource("4_6dqjy")
+shader_params = {
+"corner": 18.0,
+"fade_in": 0.12,
+"fade_out": 0.5,
+"falloff": 0.04,
+"inner_glow": 0.35,
+"pulse_amount": 0.25,
+"pulse_speed": 2.5
+}
+grow = 200.0
+id = &"glow"
+duration = 1.4
+bindings = Array[ExtResource("2_msf8w")]([SubResource("Resource_8fa8i"), SubResource("Resource_bahoc")])
+
+[sub_resource type="Resource" id="Resource_guaxx"]
+script = ExtResource("2_msf8w")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_t061x"]
+offsets = PackedFloat32Array(0, 0.25, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_80smn"]
+script = ExtResource("6_e270a")
+size_min = 0.12
+size_max = 0.32
+spread = 30.0
+speed_min = 60.0
+speed_max = 170.0
+gravity = Vector3(0, -40, 0)
+fit_to_anchor = true
+amount = 42
+lifetime = 1.3
+explosiveness = 0.5
+color_ramp = SubResource("Gradient_t061x")
+id = &"sparkles"
+min_quality = 2
+bindings = Array[ExtResource("2_msf8w")]([SubResource("Resource_guaxx")])
+
+[sub_resource type="Resource" id="Resource_2bfc8"]
+script = ExtResource("7_l5ryb")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.7, 0.2, 1)
+description = "Colour of the halo (the card's rarity)."
+
+[sub_resource type="Resource" id="Resource_h4mck"]
+script = ExtResource("7_l5ryb")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("8_5hc5b")
+id = &"fx.reveal_halo"
+display_name = "Reveal halo"
+params = Array[ExtResource("7_l5ryb")]([SubResource("Resource_2bfc8"), SubResource("Resource_h4mck")])
+layers = Array[ExtResource("1_0mgqk")]([SubResource("Resource_42ljt"), SubResource("Resource_80smn")])
+space = 1
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "A big card reveal: a halo swells around the card and sparkles rise from it. Anchor it on the card's control."
