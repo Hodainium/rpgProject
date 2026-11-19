@@ -20,6 +20,11 @@ extends Resource
 ## How far a flipping card lifts toward the camera (world units at a card height of 1).
 @export var flip_lift: float = 0.35
 
+## The pack on the stage is the 3D metallic foil pouch (CardPack3D; the user's pick, 2026-11-18); off = the flat pack.
+@export var pack_3d: bool = true
+## How much the 3D pack sways while it waits in the socket (radians), so its foil catches the light.
+@export var pack_sway: float = 0.22
+
 @export_group("Layout")
 ## Hearthstone's five places (three above, two below), as fractions of the stage (x, y of the card's centre).
 ## Room is left under each card for its two label lines (the bottom row's labels stay on the stage).

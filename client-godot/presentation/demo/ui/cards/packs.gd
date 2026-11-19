@@ -134,12 +134,34 @@ func _reveal_then_leave() -> void:
 		ctx.ui.back()
 
 
+## Space / Enter / the pad's A (ui_accept): flips the next card while some are face down; otherwise opens the next pack (Done
+## first when a revealed pack is still on the stage). Playtest fix 2026-11-18.
 func _unhandled_input(event: InputEvent) -> void:
-	if not active or reveal == null or reveal.done():
+	if not active or event.is_echo() or not event.is_action_pressed(&"ui_accept"):
 		return
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
-		get_viewport().set_input_as_handled()
+	get_viewport().set_input_as_handled()
+	if reveal != null and not reveal.done():
 		flip_next()
+	else:
+		open_next()
+
+
+## Opens one pack of the first type in the column that has one (after Done when the last pack's cards are still out). Returns
+## the account's answer ({} when nothing was sent).
+func open_next() -> Dictionary:
+	if opening or loading or %Stage.busy:
+		return {}
+	if reveal != null:
+		if not reveal.done():
+			return {}
+		await done()
+		if not is_instance_valid(self) or reveal != null:
+			return {}
+	for index in entries.size():
+		if int(entries[index]["count"]) > 0:
+			var view: Node = %PackList.get_child(index) if index < %PackList.get_child_count() else null
+			return await open_pack(str(entries[index]["packId"]), view.pack_view() if view != null and view.has_method("pack_view") else null)
+	return {}
 
 
 ## Reads the packs and the collection again (`with_refunds`: pays the refunds of retired packs first, spec pack-shop 2.5).
@@ -417,7 +439,7 @@ func _on_all_revealed() -> void:
 	_show_buttons()
 	if not reveal.done():
 		return
-	%Done.grab_focus.call_deferred()
+	# Playtest fix: the focus stays where it is, so Space / Enter reach the screen and open the next pack (Done is still a click).
 	revealed.emit()
 
 

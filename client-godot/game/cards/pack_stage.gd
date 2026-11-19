@@ -28,8 +28,11 @@ var reveal: PackReveal
 ## index → CardView3D / slot Control.
 var views: Array[CardView3D] = []
 var slots: Array[Control] = []
-## The pack in the socket (null when none).
+## The pack in the socket (null when none). With the 3D pack it is the invisible stand-in the beats animate, and `pack_3d`
+## follows it (as the card views follow their slots).
 var pack: CardPackView
+var pack_3d: CardPack3D
+var _sway_time: float = 0.0
 ## True while a beat animates (Done and Reveal all wait for it).
 var busy: bool = false
 ## The choreography to play instead of the style's (the reveal demo tries effects with it).
@@ -61,6 +64,7 @@ func _init() -> void:
 	_anchor = Node3D.new()
 	_anchor.name = "Socket"
 	stage.world_root.add_child(_anchor)
+	_give_the_foil_a_sky()
 
 
 func _ready() -> void:
@@ -69,6 +73,27 @@ func _ready() -> void:
 	if style == null:
 		style = CardStyle.current()
 	set_process(false)
+
+
+## The 3D pack's metal reflects a sky (the stage shows its clear colour behind; the cards are unshaded, so only the pack sees it)
+## and a light in front of the socket.
+func _give_the_foil_a_sky() -> void:
+	var env := stage.environment.environment
+	var sky := Sky.new()
+	var sky_material := ProceduralSkyMaterial.new()
+	sky_material.sky_top_color = Color(0.35, 0.4, 0.6)
+	sky_material.sky_horizon_color = Color(0.9, 0.85, 0.8)
+	sky_material.ground_bottom_color = Color(0.08, 0.06, 0.12)
+	sky_material.ground_horizon_color = Color(0.5, 0.45, 0.5)
+	sky.sky_material = sky_material
+	env.sky = sky
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	var light := OmniLight3D.new()
+	light.name = "PackLight"
+	light.position = Vector3(0.8, 0.9, 3.0)
+	light.omni_range = 9.0
+	light.light_energy = 2.5
+	stage.world_root.add_child(light)
 
 
 func choreography() -> PackChoreography:
@@ -94,6 +119,14 @@ func socket_pack(look: CardPackLook, label: String, from_rect: Rect2 = Rect2()) 
 		pack.name_font = style.name_font
 	pack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(pack)
+	if plan.pack_3d:
+		pack.self_modulate = Color(1, 1, 1, 0)   # the stand-in: the 3D pack is what shows
+		pack_3d = CardPack3D.new()
+		pack_3d.name = "Pack3D"
+		stage.world_root.add_child(pack_3d)
+		pack_3d.show_pack(look, label, style.name_font if style != null else null)
+		_sway_time = 0.0
+		set_process(true)
 	var target := _pack_rect()
 	pack.size = target.size
 	pack.pivot_offset = Vector2.ZERO   # the flight scales from the top left, so the start lines up with the column's pack
@@ -140,6 +173,7 @@ func cancel_pack() -> void:
 			var tween := create_tween()
 			tween.tween_property(leaving, "modulate:a", 0.0, 0.25)
 			tween.tween_callback(leaving.queue_free)
+			tween.tween_callback(_free_pack_3d)
 		else:
 			leaving.queue_free()
 
@@ -172,6 +206,7 @@ func burst(open: PackReveal, faces: Array, look: CardPackLook) -> void:
 	if pack != null and is_instance_valid(pack):
 		pack.queue_free()
 		pack = null
+	_free_pack_3d()
 	if plan.burst_seconds > 0.0 and is_inside_tree():
 		await get_tree().create_timer(plan.burst_seconds * 0.4).timeout
 	var fanning := plan.fan_seconds > 0.0 and is_inside_tree()
@@ -434,6 +469,7 @@ func clear() -> void:
 	if pack != null and is_instance_valid(pack):
 		pack.queue_free()
 	pack = null
+	_free_pack_3d()
 	busy = false
 	set_process(false)
 
@@ -458,8 +494,41 @@ func _pack_rect() -> Rect2:
 	return Rect2(size * 0.5 - pack_size * 0.5, pack_size)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	_place_views()
+	_place_pack_3d(delta)
+
+
+## The 3D pack where its stand-in is (centre, size, turn, fade), swaying a little so the foil catches the light.
+func _place_pack_3d(delta: float) -> void:
+	if pack_3d == null or not is_instance_valid(pack_3d):
+		return
+	if pack == null or not is_instance_valid(pack) or stage.camera == null or not stage.camera.is_inside_tree():
+		pack_3d.visible = false
+		return
+	var viewport_height := float(stage.viewport.size.y)
+	if viewport_height <= 0.0 or absf(viewport_height - stage.size.y * stage.pixel_ratio()) > 2.0:
+		pack_3d.visible = false   # the stage's viewport has not taken its size yet (the first frames): placing now would be wrong
+		return
+	_sway_time += delta
+	var depth := stage.camera.position.z
+	var world_per_pixel := 2.0 * depth * tan(deg_to_rad(stage.camera.fov) * 0.5) / viewport_height
+	var center := pack.position + pack.pivot_offset + (pack.size * 0.5 - pack.pivot_offset).rotated(pack.rotation) * pack.scale
+	pack_3d.position = stage.camera.project_position(stage.to_viewport(center), depth)
+	var pixels_tall := pack.size.y * pack.scale.y * viewport_height / maxf(stage.size.y, 1.0)
+	var fade := pack.modulate.a
+	pack_3d.scale = Vector3.ONE * maxf(pixels_tall * world_per_pixel / pack_3d.height * fade, 0.001)
+	pack_3d.visible = fade > 0.02
+	var sway := choreography().pack_sway
+	pack_3d.rotation = Vector3(sway * 0.35 * sin(_sway_time * 0.9), sway * sin(_sway_time * 1.3), -pack.rotation)
+
+
+func _free_pack_3d() -> void:
+	if pack_3d != null and is_instance_valid(pack_3d):
+		pack_3d.queue_free()
+	pack_3d = null
+	if slots.is_empty() and is_inside_tree():
+		set_process(false)
 
 
 ## The stage changed size: the pack in the socket and the cards move to their places at the new size (the labels with them), and
@@ -536,11 +605,11 @@ func _on_slot_input(event: InputEvent, index: int) -> void:
 	elif event.is_action_pressed(&"ui_accept"):
 		# Enter or Space (both ui_accept) on a face-down card flips it; on a face-up one, the next face-down card (spec 2.4:
 		# Space flips the next), which then takes the focus.
-		slots[index].accept_event()
 		var target := index
 		if reveal != null and index < reveal.size() and reveal.slots[index]["revealed"]:
 			target = reveal.next_hidden()
 		if target >= 0:
+			slots[index].accept_event()   # with every card face up the key goes on to the screen (it opens the next pack)
 			if target != index:
 				slots[target].grab_focus()
 			card_pressed.emit(target)

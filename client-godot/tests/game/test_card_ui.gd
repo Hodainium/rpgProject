@@ -1719,3 +1719,51 @@ func test_the_pack_reveal_demo_opens_made_up_packs_and_swaps_effects() -> void:
 	check(demo.stage.choreography() != CardStyle.current().pack_choreography(), "on a copy: the style is not changed")
 	await demo.stage.flip_all()
 	check(demo.stage.reveal.done(), "every card revealed")
+
+
+func test_space_or_enter_opens_the_next_pack_and_after_a_reveal_the_one_after() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[true, _open_response()], [true, _open_response()]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	var accept := InputEventAction.new()
+	accept.action = &"ui_accept"
+	accept.pressed = true
+	screen._unhandled_input(accept)
+	var deadline := Time.get_ticks_msec() + 10000
+	while (screen.reveal == null or screen.opening) and Time.get_ticks_msec() < deadline:
+		await _frames(1)
+	eq(bridge.count("OpenPack"), 1, "Space / Enter with an empty stage opens a pack")
+	screen._unhandled_input(accept)
+	await _frames(5)
+	check(screen.reveal.slots[0]["revealed"] and bridge.count("OpenPack") == 1, "with cards face down it flips the next instead")
+	await screen.reveal_all()
+	await _frames(30)
+	var first: PackReveal = screen.reveal
+	screen._unhandled_input(accept)
+	deadline = Time.get_ticks_msec() + 10000
+	while (screen.reveal == null or screen.reveal == first or screen.opening) and Time.get_ticks_msec() < deadline:
+		await _frames(1)
+	eq(bridge.count("OpenPack"), 2, "with every card face up it clears the stage and opens the next pack")
+
+
+func test_the_3d_pack_bulges_toward_the_camera_and_the_foil_demo_builds() -> void:
+	var middle := (CardPack3D.ROWS / 2) * (CardPack3D.COLUMNS + 1) + CardPack3D.COLUMNS / 2
+	var seal_row := 2 * (CardPack3D.COLUMNS + 1) + CardPack3D.COLUMNS / 2   # inside the top seal
+	for flip in [false, true]:
+		var arrays := CardPack3D.pouch(1.0, 1.52, 0.05, 0.085, flip).surface_get_arrays(0)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var side := -1.0 if flip else 1.0
+		check(is_equal_approx(vertices[middle].z * side, 0.05), "%s: the body stands off the seal plane" % ["front", "back"][int(flip)])
+		check(is_zero_approx(vertices[seal_row].z), "the seal lies flat, pressed against the other face")
+		check(normals[middle].z * side > 0.9, "its normals face outward (the back is a real back, seen from behind)")
+	var quarter := (CardPack3D.ROWS / 2) * (CardPack3D.COLUMNS + 1) + CardPack3D.COLUMNS / 4
+	var front := CardPack3D.pouch(1.0, 1.52, 0.05, 0.085, false).surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array
+	check(front[quarter].z > 0.048, "flat across most of the face, not a balloon (%.3f at a quarter)" % front[quarter].z)
+	var demo: Control = load("res://game/dev/pack_foil_demo.tscn").instantiate()
+	host.add_child(demo)
+	_nodes.append(demo)
+	await _frames(3)
+	eq([demo._flat.size(), demo._solid.size()], [5, 2], "five flat looks and two 3D packs")
+	check(demo._flat[1].foil != null and demo._flat[0].foil == null, "the foils are on all but today's pack")

@@ -62,7 +62,29 @@ func _ready() -> void:
 	stage.card_pressed.connect(func(index: int) -> void: stage.flip(index))
 	stage.all_revealed.connect(func() -> void: _say("All revealed. Open another pack, or press R for the same one."))
 	_apply()
-	open_pack.call_deferred(_rarities)
+	_shots_if_asked()
+	await get_tree().process_frame   # the layout first: the socket is measured on the stage's real size
+	await get_tree().process_frame
+	open_pack(_rarities)
+
+
+## `-- --shot <prefix> --at <s,s,...>`: saves a picture at each of those seconds after start, then quits (to check the beats
+## without a person at the window).
+func _shots_if_asked() -> void:
+	var args := OS.get_cmdline_user_args()
+	var at := args.find("--shot")
+	if at < 0 or at + 1 >= args.size():
+		return
+	var times := PackedStringArray(["0.5"])
+	var when := args.find("--at")
+	if when >= 0 and when + 1 < args.size():
+		times = args[when + 1].split(",")
+	var waited := 0.0
+	for time in times:
+		await get_tree().create_timer(float(time) - waited).timeout
+		waited = float(time)
+		get_viewport().get_texture().get_image().save_png("%s_%s.png" % [args[at + 1], time])
+	get_tree().quit()
 
 
 func _build_panel() -> Control:
