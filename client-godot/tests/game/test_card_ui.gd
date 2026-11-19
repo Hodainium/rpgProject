@@ -1694,13 +1694,13 @@ func test_big_reveal_effects_by_rarity_and_the_alternatives_exist() -> void:
 		"nothing below Legendary; the halo on a Legendary, the short rays on a Mythic (the user's picks)")
 	plan.mythic_fx = &""
 	eq(plan.big_reveal_fx(4), &"fx.reveal_halo", "a Mythic with no pick of its own takes the Legendary's")
-	plan.mythic_fx = &"fx.reveal_starburst"
-	eq(plan.big_reveal_fx(4), &"fx.reveal_starburst", "a Mythic's own pick")
+	plan.mythic_fx = &"fx.legendary_rays"
+	eq(plan.big_reveal_fx(4), &"fx.legendary_rays", "a Mythic's own pick")
 	plan.mythic_fx = &"none"
 	eq(plan.big_reveal_fx(4), &"", "none is none")
 	var registry := load("res://presentation/demo/fx/fx_registry.tres") as FxRegistry
 	var ids := registry.all()
-	for id in [&"fx.reveal_rays", &"fx.reveal_starburst", &"fx.reveal_halo", &"fx.reveal_foil"]:
+	for id in [&"fx.reveal_rays", &"fx.reveal_halo"]:
 		check(ids.has(id), "%s is registered" % id)
 	check(ids[&"fx.reveal_rays"].layers[0].duration < ids[&"fx.legendary_rays"].layers[0].duration, "the short rays are shorter")
 	for id in [&"fx.reveal_rays", &"fx.reveal_halo"]:
@@ -1793,5 +1793,78 @@ func test_the_3d_pack_bulges_toward_the_camera_and_the_foil_demo_builds() -> voi
 	host.add_child(demo)
 	_nodes.append(demo)
 	await _frames(3)
-	eq([demo._flat.size(), demo._solid.size()], [5, 2], "five flat looks and two 3D packs")
-	check(demo._flat[1].foil != null and demo._flat[0].foil == null, "the foils are on all but today's pack")
+	eq(demo._solid.size(), 2, "the metallic and the holographic 3D pack")
+
+
+func test_a_cancelled_pack_never_takes_the_next_ones_3d_model() -> void:
+	var stage := PackStage.new()
+	stage.size = Vector2(1200, 800)
+	host.add_child(stage)
+	_nodes.append(stage)
+	var look := CardStyle.current().pack("descent-pack")
+	stage.socket_pack(look, "A")
+	await _frames(2)
+	var first := stage.pack_3d
+	stage.cancel_pack()
+	stage.socket_pack(look, "B")
+	var second := stage.pack_3d
+	await host.get_tree().create_timer(0.4).timeout
+	check(not is_instance_valid(first), "the cancelled pack's 3D model is gone")
+	check(is_instance_valid(second) and stage.pack_3d == second, "the new pack's 3D model is still there after the fade")
+
+
+func test_enter_under_a_dialog_opens_nothing_and_done_leaves_the_focus_on_the_column() -> void:
+	var bridge := _pack_bridge()
+	bridge.answers["OpenPack"] = [[true, _open_response()]]
+	var game := _card_game(bridge)
+	var screen := await _open_packs(game)
+	game.ui.notify("a notice")
+	await _frames(2)
+	var accept := InputEventAction.new()
+	accept.action = &"ui_accept"
+	accept.pressed = true
+	screen._unhandled_input(accept)
+	await _frames(3)
+	eq(bridge.count("OpenPack"), 0, "Enter with a dialog up opens no pack behind it")
+	check(await _answer(game, true), "the notice closes")
+	await screen.open_pack("descent-pack")
+	await screen.reveal_all()
+	await _frames(20)
+	await screen.done()
+	await _frames(2)
+	var owner := screen.get_viewport().gui_get_focus_owner()
+	check(owner != null and screen.is_ancestor_of(owner), "after Done the focus is on the screen (%s), not lost" % owner)
+
+
+func test_a_refresh_behind_the_buy_confirm_does_not_drop_the_buy() -> void:
+	var bridge := _bridge()
+	bridge.answers["BuyPack"] = [[true, {"packId": "descent-pack", "packVersion": 1, "count": 1, "gemsSpent": 100, "gems": 240,
+		"owned": 3}]]
+	var game := _game(bridge)
+	var shop := await _open_shop(game)
+	shop.get_node("%Offers").get_child(0).get_node("%Buy1").pressed.emit()
+	await _frames(2)
+	shop._on_session_changed()   # a session change while the pop-up is up
+	check(not shop.loading, "no refresh starts behind the confirm")
+	shop.refresh()   # one started anyway (the screen's own)
+	check(await _answer(game, true), "Buy")
+	var deadline := Time.get_ticks_msec() + 5000
+	while bridge.count("BuyPack") == 0 and Time.get_ticks_msec() < deadline:
+		await _frames(1)
+	eq(bridge.count("BuyPack"), 1, "the confirmed buy goes through once the refresh is done")
+
+
+func test_a_session_change_behind_the_buy_confirm_refreshes_once_it_is_answered() -> void:
+	var game := _game(_bridge())
+	var shop := await _open_shop(game)
+	var reads := [0]
+	shop.loaded.connect(func() -> void: reads[0] += 1)
+	shop.get_node("%Offers").get_child(0).get_node("%Buy1").pressed.emit()
+	await _frames(2)
+	shop._on_session_changed()
+	check(not shop.loading, "nothing refreshes behind the pop-up")
+	check(await _answer(game, false), "Cancel")
+	var deadline := Time.get_ticks_msec() + 5000
+	while reads[0] == 0 and Time.get_ticks_msec() < deadline:
+		await _frames(1)
+	eq(reads[0], 1, "the skipped refresh runs once the pop-up is answered")

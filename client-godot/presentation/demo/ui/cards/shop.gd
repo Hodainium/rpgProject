@@ -19,6 +19,8 @@ extends DemoMenuFrame
 @export var confirm_buy_text: String = "Buy %d pack%s of %s for %d gems?"
 @export var confirm_buy_yes_text: String = "Buy"
 @export var confirm_buy_no_text: String = "Cancel"
+## The confirmed pack left the Shop while the pop-up was up.
+@export var offer_gone_text: String = "That pack is no longer on sale."
 @export var not_enough_text: String = "Not enough gems (need %d, have %d)."
 @export var wait_text: String = "Talking to the Shop…"
 @export var reconnecting_text: String = "Reconnecting to the server…"
@@ -44,11 +46,12 @@ var loading: bool = false
 var _generation: int = 0
 var _offers: Array[Dictionary] = []
 var _gems: int = -1
-var _shown_gems: float = -1.0
 var _buying: bool = false
 ## A Buy press is waiting on its confirm pop-up (the buttons lock meanwhile).
 var _asking: bool = false
-var _gems_tween: Tween
+## A refresh asked for while the confirm was up: it runs once the pop-up is answered.
+var _refresh_after_ask: bool = false
+var _gems_counter: UICountUp
 var _note: String = ""  # a line the next refreshes keep (after giving up), cleared by the next buy
 var _refresh_when_free: bool = false  # given up: refetch once the last try is back
 
@@ -89,7 +92,9 @@ func on_activated() -> void:
 
 ## Spec account-session 2.3 (review fix): a 1412 from any call (a run start, the console) shows the gate at once.
 func _on_session_changed() -> void:
-	if active and not loading and not _buying:
+	if _asking:
+		_refresh_after_ask = true   # review fix: never behind the buy's confirm, but right after it
+	elif active and not loading and not _buying:
 		refresh()
 
 
@@ -101,6 +106,9 @@ func on_deactivated() -> void:
 
 ## After giving up, the try still out may land on the server: once it is back, show the server's state again.
 func _on_busy_changed() -> void:
+	if _asking and _refresh_when_free:
+		_refresh_after_ask = true
+		return
 	if not _refresh_when_free or not active or _buying or ctx == null or ctx.main.server == null:
 		return
 	if not ctx.main.server.card_account().busy():
@@ -272,10 +280,30 @@ func _buy(pack_id: String, count: int) -> void:
 		confirm_buy_yes_text, confirm_buy_no_text)
 	if not is_instance_valid(self):
 		return
+	while yes and loading and is_instance_valid(self) and is_inside_tree():
+		await loaded   # review fix: a refresh started meanwhile: buy once it is done, not into a refusal that says nothing
+	if not is_instance_valid(self):
+		return
 	_asking = false
 	_update_offers()
-	if yes:
-		await buy(pack_id, count)
+	if not is_inside_tree():
+		return   # the Shop closed meanwhile: nothing is bought
+	if _refresh_after_ask:
+		_refresh_after_ask = false
+		_refresh_when_free = false
+		await refresh()   # what changed meanwhile (a replaced session, a given-up try's result) shows first
+		if not is_instance_valid(self):
+			return
+	if not yes:
+		return
+	var now := offer_for(pack_id)
+	if now.is_empty():
+		_refuse(offer_gone_text)
+		return
+	if int(now.get("price", 0)) * count != price:
+		_buy(pack_id, count)   # the price changed while the pop-up was up: ask again with what is on sale now
+		return
+	await buy(pack_id, count)
 
 
 func _update_offers() -> void:
@@ -313,19 +341,9 @@ func _refusal_line(answer: Dictionary) -> String:
 ## The gems total; `animate` counts it to the new value.
 func _set_gems(gems: int, animate: bool) -> void:
 	_gems = gems
-	%Gems.visible = gems >= 0
-	if _gems_tween != null:
-		_gems_tween.kill()
-	if not animate or _shown_gems < 0.0 or not is_inside_tree():
-		_show_gems(float(gems))
-		return
-	_gems_tween = create_tween()
-	_gems_tween.tween_method(_show_gems, _shown_gems, float(gems), gems_tween_seconds)
-
-
-func _show_gems(value: float) -> void:
-	_shown_gems = value
-	%Gems.text = gems_text % roundi(value)
+	if _gems_counter == null:
+		_gems_counter = UICountUp.new(%Gems, gems_text, gems_tween_seconds)
+	_gems_counter.set_value(gems, animate)
 
 
 func _say(text: String) -> void:

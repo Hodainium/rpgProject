@@ -12,8 +12,6 @@ const EFFECTS := {
 	&"fx.reveal_halo": "Halo (Legendary now)",
 	&"fx.reveal_rays": "Rays, short (Mythic now)",
 	&"fx.legendary_rays": "Rays, long",
-	&"fx.reveal_starburst": "Starburst",
-	&"fx.reveal_foil": "Foil sweep",
 	&"": "None",
 }
 const PACKS := {

@@ -29,15 +29,6 @@ extends Control
 @export var badge_color: Color = Color(0.106, 0.145, 0.467)
 @export var badge_font_size: int = 16
 @export var glare_color: Color = Color(1, 1, 1, 0.22)
-## Optional foil drawn over the pack's body (a ShaderMaterial on game/cards/shaders/pack_foil.gdshader, UV 0..1 over the pack;
-## its `pack_size` is kept up to date). None = no foil.
-@export var foil: ShaderMaterial:
-	set(value):
-		foil = value
-		_sync_foil()
-
-var _foil_layer: Control
-
 ## Shows the pack as the 3D metallic foil pouch (CardPack3D in a small 3D view of its own, swaying, tilting toward the pointer)
 ## instead of drawing it flat; the count badge is drawn over it. The user's pick for Open packs, 2026-11-18.
 @export var solid: bool = false:
@@ -53,6 +44,7 @@ var _solid_pack: CardPack3D
 var _badge_layer: Control
 var _sway: float = 0.0
 var _tilt := Vector2.ZERO
+var _refresh_queued: bool = false
 
 const CRIMPS: int = 20
 ## The part of each glare period the glare moves; it rests for the rest.
@@ -62,8 +54,6 @@ var _time: float = 0.0
 
 
 func _ready() -> void:
-	resized.connect(_sync_foil)
-	_sync_foil()
 	if custom_minimum_size == Vector2.ZERO:
 		custom_minimum_size = Vector2(150, 228)
 	resized.connect(_size_solid)
@@ -113,34 +103,6 @@ func _draw() -> void:
 		_draw_badge(area, pack)
 
 
-## The foil layer: a child over the pack drawing its crimped body with the foil's material (made when a foil is set).
-func _sync_foil() -> void:
-	if foil == null:
-		if _foil_layer != null:
-			_foil_layer.visible = false
-		return
-	if _foil_layer == null:
-		_foil_layer = Control.new()
-		_foil_layer.name = "Foil"
-		_foil_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_foil_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
-		_foil_layer.draw.connect(_draw_foil)
-		add_child(_foil_layer, false, Node.INTERNAL_MODE_FRONT)
-	_foil_layer.visible = true
-	_foil_layer.material = foil
-	foil.set_shader_parameter(&"pack_size", size)
-	_foil_layer.queue_redraw()
-
-
-func _draw_foil() -> void:
-	var area := Rect2(Vector2.ZERO, size)
-	var body := _crimped(area)
-	var uvs := PackedVector2Array()
-	for point in body:
-		uvs.append(point / Vector2(maxf(size.x, 1.0), maxf(size.y, 1.0)))
-	_foil_layer.draw_polygon(body, PackedColorArray([Color.WHITE]), uvs)
-
-
 ## Builds or removes the 3D view (a SubViewport with its own world: camera, sky to reflect, lights, the pack) and the badge layer.
 func _sync_solid() -> void:
 	if not solid:
@@ -165,20 +127,7 @@ func _sync_solid() -> void:
 		camera.position = Vector3(0, 0, 3.3)   # the pack (1.52 tall) fills the view with room to sway
 		_solid_port.add_child(camera)
 		var environment := WorldEnvironment.new()
-		var env := Environment.new()
-		env.background_mode = Environment.BG_CLEAR_COLOR
-		var sky := Sky.new()
-		var sky_material := ProceduralSkyMaterial.new()
-		sky_material.sky_top_color = Color(0.35, 0.4, 0.6)
-		sky_material.sky_horizon_color = Color(0.9, 0.85, 0.8)
-		sky_material.ground_bottom_color = Color(0.08, 0.06, 0.12)
-		sky_material.ground_horizon_color = Color(0.5, 0.45, 0.5)
-		sky.sky_material = sky_material
-		env.sky = sky
-		env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-		env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-		env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-		environment.environment = env
+		environment.environment = CardPack3D.foil_environment()   # review fix: one shared environment and sky
 		_solid_port.add_child(environment)
 		var key := DirectionalLight3D.new()
 		key.rotation_degrees = Vector3(-30, 25, 0)
@@ -206,16 +155,32 @@ func _sync_solid() -> void:
 			if count > 0:
 				_draw_badge_on(_badge_layer, Rect2(Vector2.ZERO, size), look if look != null else CardPackLook.new()))
 		add_child(_badge_layer, false, Node.INTERNAL_MODE_FRONT)
+	_size_solid()
+	_solid_pack.picture_height = _picture_height()
 	_solid_pack.show_pack(look, label, name_font)
 	_badge_layer.queue_redraw()
-	_size_solid()
 	set_process(true)
 
 
-## A new look or label redraws the 3D pack's picture.
+## A new look or label redraws the 3D pack's picture, once a frame (set_item sets several fields in a row).
 func _refresh_solid() -> void:
-	if solid and _solid_pack != null and is_inside_tree():
+	if solid and _solid_pack != null and is_inside_tree() and not _refresh_queued:
+		_refresh_queued = true
+		_redraw_solid.call_deferred()
+
+
+func _redraw_solid() -> void:
+	_refresh_queued = false
+	if solid and _solid_pack != null and is_instance_valid(_solid_pack):
+		_solid_pack.picture_height = _picture_height()
 		_solid_pack.show_pack(look, label, name_font)
+
+
+## The pack's picture at about the pack's height on screen (sharp, never the stage's 912 px for a thumbnail).
+func _picture_height() -> int:
+	if _solid_port == null:
+		return 912
+	return clampi(_solid_port.size.y, 228, 912)
 
 
 ## The 3D view renders at the pack's size on screen (sharp at 4K).
@@ -224,6 +189,8 @@ func _size_solid() -> void:
 		return
 	var ratio := maxf(get_viewport().get_screen_transform().get_scale().x * get_global_transform().get_scale().x, 0.25)
 	_solid_port.size = Vector2i(maxi(1, roundi(size.x * ratio)), maxi(1, roundi(size.y * ratio)))
+	if _solid_pack != null and _picture_height() != _solid_pack.picture_height:
+		_refresh_solid()   # review fix: a pack laid out after it was built gets a picture at its real size
 
 
 ## A slow sway, and a tilt toward the pointer while it is over the pack.

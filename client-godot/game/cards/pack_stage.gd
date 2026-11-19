@@ -69,10 +69,10 @@ func _init() -> void:
 
 func _ready() -> void:
 	stage.match_screen_pixels()
-	(style if style != null else CardStyle.current()).warm_art()   # the faces' art loads off the main thread now
 	resized.connect(_on_resized)
 	if style == null:
 		style = CardStyle.current()
+	style.warm_art()   # the faces' art loads off the main thread now (review fix: on the style the faces use)
 	set_process(false)
 
 
@@ -80,14 +80,7 @@ func _ready() -> void:
 ## and a light in front of the socket.
 func _give_the_foil_a_sky() -> void:
 	var env := stage.environment.environment
-	var sky := Sky.new()
-	var sky_material := ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color(0.35, 0.4, 0.6)
-	sky_material.sky_horizon_color = Color(0.9, 0.85, 0.8)
-	sky_material.ground_bottom_color = Color(0.08, 0.06, 0.12)
-	sky_material.ground_horizon_color = Color(0.5, 0.45, 0.5)
-	sky.sky_material = sky_material
-	env.sky = sky
+	env.sky = CardPack3D.foil_sky()
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	var light := OmniLight3D.new()
 	light.name = "PackLight"
@@ -168,15 +161,25 @@ func socket_pack(look: CardPackLook, label: String, from_rect: Rect2 = Rect2()) 
 func cancel_pack() -> void:
 	if pack != null and is_instance_valid(pack):
 		var leaving := pack
+		var leaving_3d := pack_3d   # review fix: this pack's 3D model, not whatever pack_3d holds when the fade ends
 		pack = null
+		pack_3d = null
 		_stop_wait()
 		if is_inside_tree():
-			var tween := create_tween()
+			var tween := create_tween().set_parallel(true)
 			tween.tween_property(leaving, "modulate:a", 0.0, 0.25)
-			tween.tween_callback(leaving.queue_free)
-			tween.tween_callback(_free_pack_3d)
+			if leaving_3d != null and is_instance_valid(leaving_3d):
+				tween.tween_property(leaving_3d, "scale", Vector3.ONE * 0.001, 0.25)
+			tween.chain().tween_callback(leaving.queue_free)
+			if leaving_3d != null and is_instance_valid(leaving_3d):
+				tween.tween_callback(leaving_3d.queue_free)
+			tween.tween_callback(func() -> void:
+				if slots.is_empty() and pack == null:
+					set_process(false))   # review fix: nothing left to place
 		else:
 			leaving.queue_free()
+			if leaving_3d != null and is_instance_valid(leaving_3d):
+				leaving_3d.queue_free()
 
 
 # --- Beats 2 to 4: burst, fan, tells ---------------------------------------------------------------------------------------

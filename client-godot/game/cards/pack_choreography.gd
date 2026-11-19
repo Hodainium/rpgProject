@@ -48,8 +48,8 @@ extends Resource
 @export var flash_intensity: Array[float] = [0.5, 0.9, 1.3, 1.8, 2.4]
 @export var rays_fx: StringName = &"fx.reveal_halo"   # the user's pick, 2026-11-18
 @export var rays_from_tier: int = 3
-## The Mythic's own big reveal (empty = `rays_fx`, `none` = no big reveal effect). The alternatives (fx.reveal_rays, fx.reveal_starburst, fx.reveal_halo,
-## fx.reveal_foil) are compared in game/dev/pack_reveal_demo.tscn.
+## The Mythic's own big reveal (empty = `rays_fx`, `none` = no big reveal effect). game/dev/pack_reveal_demo.tscn compares
+## the reveal effects.
 @export var mythic_fx: StringName = &"fx.reveal_rays"   # the user's pick, 2026-11-18
 @export var shake_fx: StringName = &"fx.screen_shake"
 @export var shake_from_tier: int = 3

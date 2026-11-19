@@ -1,5 +1,5 @@
 ## The pack reveal's alternative big-reveal effects (playtest 2026-11-18: the user asked for shorter rays and a few alternatives to
-## pick from in the pack reveal demo, game/dev/pack_reveal_demo.tscn). Creates new files in presentation/demo/fx/ only and never
+## pick from in the pack reveal demo, game/dev/pack_reveal_demo.tscn; the user picked these two, the others were removed). Creates new files in presentation/demo/fx/ only and never
 ## overwrites one (`--force` rewrites this builder's own files, which discards tuning), then adds the new files to the registry
 ## through RegistryPatch (the approved additive patch). The existing fx.legendary_rays is left as it is.
 ##   godot --headless --path client-godot --quit-after 600 res://game/tools/build_pack_reveal_fx.tscn [-- --force]
@@ -8,7 +8,7 @@ extends "res://game/tools/build_fx_set.gd"
 
 func _ready() -> void:
 	_force = OS.get_cmdline_user_args().has("--force")
-	for definition in [_reveal_rays(), _reveal_starburst(), _reveal_halo(), _reveal_foil()]:
+	for definition in [_reveal_rays(), _reveal_halo()]:
 		_save_definition(definition)
 	var added := RegistryPatch.add_missing_effects()
 	print("build_pack_reveal_fx: wrote %d, kept %d existing; registry: %s" % [_written.size(), _kept.size(), added])
@@ -54,28 +54,6 @@ func _reveal_rays() -> FxDefinition:
 		"A big card reveal: short spinning rays and motes, no screen flash.", [&"Fx.Kind.Burst"])
 
 
-## Two shockwave rings one after the other and a ring of motes thrown outward: a punchy reveal with no spin.
-func _reveal_starburst() -> FxDefinition:
-	var ring := _quad("ring", "radial_burst", false)
-	ring.size = Vector2(1300, 1300)
-	ring.duration = 0.75
-	ring.shader_params = {"ring_width": 0.08, "flash": 1.4}
-	ring.bindings = [_bind("material:shader_parameter/color", &"color"), _bind("material:shader_parameter/intensity", &"intensity")]
-	var echo := _quad("echo", "radial_burst", false)
-	echo.size = Vector2(900, 900)
-	echo.start_delay = 0.16
-	echo.duration = 0.6
-	echo.shader_params = {"ring_width": 0.05, "flash": 0.0}
-	echo.bindings = [_bind("material:shader_parameter/color", &"color"), _bind("material:shader_parameter/intensity", &"intensity", 0.8)]
-	var motes := _motes(60, 0.9, 380.0, 720.0)
-	motes.explosiveness = 1.0
-	motes.gravity = Vector3.ZERO
-	motes.damping = 400.0
-	return _define(&"fx.reveal_starburst", "Reveal starburst", FxDefinition.Space.HYBRID, [ring, echo, motes],
-		_color_params(Color(1.0, 0.7, 0.2), "Colour of the rings and motes (the card's rarity)."),
-		"A big card reveal: two shockwave rings and motes thrown outward.", [&"Fx.Kind.Burst"])
-
-
 ## A glow hugging the card that swells and fades, with sparkles rising off it: a calmer reveal that stays on the card.
 func _reveal_halo() -> FxDefinition:
 	var glow := _quad("glow", "glow_aura", false)
@@ -104,22 +82,4 @@ func _reveal_halo() -> FxDefinition:
 	return _define(&"fx.reveal_halo", "Reveal halo", FxDefinition.Space.UI, [glow, sparkles],
 		_color_params(Color(1.0, 0.7, 0.2), "Colour of the halo (the card's rarity)."),
 		"A big card reveal: a halo swells around the card and sparkles rise from it. Anchor it on the card's control.",
-		[&"Fx.Kind.Burst"])
-
-
-## A rainbow foil band sweeps across the card twice over a soft glow: the card itself shines.
-func _reveal_foil() -> FxDefinition:
-	var foil := _quad("foil", "foil_shimmer", false)
-	foil.duration = 1.25
-	foil.shader_params = {"rainbow": 1.0, "speed": 1.6, "band_width": 0.3, "angle": 0.7, "corner": 18.0, "sweep_from": -0.4,
-		"sweep_to": 1.4}
-	foil.bindings = [_bind("material:shader_parameter/tint", &"color"), _bind("material:shader_parameter/strength", &"intensity", 1.4)]
-	var glow := _quad("glow", "glow_aura", false)
-	glow.duration = 1.25
-	glow.grow = 34.0
-	glow.shader_params = {"corner": 18.0, "falloff": 0.1, "pulse_amount": 0.0, "fade_in": 0.1, "fade_out": 0.5}
-	glow.bindings = [_bind("material:shader_parameter/color", &"color"), _bind("material:shader_parameter/intensity", &"intensity")]
-	return _define(&"fx.reveal_foil", "Reveal foil sweep", FxDefinition.Space.UI, [glow, foil],
-		_color_params(Color(1.0, 0.7, 0.2), "Tint of the foil and glow (the card's rarity)."),
-		"A big card reveal: a rainbow foil band sweeps across the card twice over a soft glow. Anchor it on the card's control.",
 		[&"Fx.Kind.Burst"])

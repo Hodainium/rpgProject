@@ -60,8 +60,8 @@ var _generation: int = 0
 var _packs: Variant = null
 var _gems: int = -1
 var _dust: int = -1
-var _shown: Dictionary = {"gems": -1.0, "dust": -1.0}
-var _tweens: Dictionary = {}
+var _gems_counter: UICountUp
+var _dust_counter: UICountUp
 var _note: String = ""
 var _refresh_when_free: bool = false
 var _leaving: bool = false
@@ -139,6 +139,8 @@ func _reveal_then_leave() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not active or event.is_echo() or not event.is_action_pressed(&"ui_accept"):
 		return
+	if ctx != null and ctx.ui.top(&"UI.Layer.Modal") != null:
+		return   # review fix: a dialog is up; the key is not for the screen under it (an open refuses on its own while a wait is on)
 	get_viewport().set_input_as_handled()
 	if reveal != null and not reveal.done():
 		flip_next()
@@ -233,11 +235,12 @@ func refresh(with_refunds: bool = false) -> void:
 	collection = read["data"]
 	_show_entries(OpenPacksModel.entries(_packs, collection))
 	var gems := int(collection.get("gems", 0))
-	if not notices.is_empty() and float(_shown["gems"]) < 0.0:
+	_make_counters()
+	if not notices.is_empty() and _gems_counter.shown < 0.0:
 		var paid := 0
 		for row in refunded:
 			paid += int(row["gemsRefunded"])
-		_shown["gems"] = float(maxi(gems - paid, 0))   # review fix: the refund counts up from what the player had
+		_gems_counter.shown = float(maxi(gems - paid, 0))   # review fix: the refund counts up from what the player had
 	_set_totals(gems, int(collection.get("dust", 0)), not notices.is_empty())
 	_say("\n".join(notices) if not notices.is_empty() else _note)
 	_pending_notices = PackedStringArray()
@@ -456,8 +459,26 @@ func done() -> void:
 	if was_demo or ctx.main.server == null:
 		_hint(hint_text if not entries.is_empty() else "")
 		_update_locks()
+		_focus_column()
 		return
 	await refresh()
+	if is_instance_valid(self):
+		_focus_column()
+
+
+## Review fix: the focused card left with the cards; the focus goes to the column's first pack (hidden until the keyboard or pad
+## moves it), else Back, so a keyboard or pad player is never left with nothing focused.
+func _focus_column() -> void:
+	if not is_inside_tree() or get_viewport().gui_get_focus_owner() != null:
+		return
+	for entry in %PackList.get_children():
+		var button: Control = entry.get_node_or_null("%PackButton")
+		if button != null and button.is_visible_in_tree():
+			button.grab_focus(true)
+			return
+	var back: Control = get_node_or_null("Content/Stack/Body/Column/Margin/Stack/Back")   # the column's Back (the frame's is hidden)
+	if back != null and back.is_visible_in_tree():
+		back.grab_focus(true)
 
 
 func _show_buttons() -> void:
@@ -557,27 +578,16 @@ func _show_online(on: bool) -> void:
 func _set_totals(gems: int, dust: int, animate: bool) -> void:
 	_gems = gems
 	_dust = dust
-	_count_to(%Gems, "gems", gems_text, gems, animate)
-	_count_to(%Dust, "dust", dust_text, dust, animate)
+	_make_counters()
+	_gems_counter.set_value(gems, animate)
+	_dust_counter.set_value(dust, animate)
 
 
-func _count_to(label: Label, key: String, template: String, value: int, animate: bool) -> void:
-	label.visible = value >= 0
-	var tween: Tween = _tweens.get(key)
-	if tween != null:
-		tween.kill()
-	var from: float = _shown[key]
-	if not animate or from < 0.0 or not is_inside_tree() or value < 0:
-		_show_total(float(value), label, key, template)
-		return
-	tween = create_tween()
-	tween.tween_method(_show_total.bind(label, key, template), from, float(value), tween_seconds)
-	_tweens[key] = tween
-
-
-func _show_total(value: float, label: Label, key: String, template: String) -> void:
-	_shown[key] = value
-	label.text = template % roundi(value)
+## The gems and dust counters (made on first use; they read tween_seconds as it is then).
+func _make_counters() -> void:
+	if _gems_counter == null:
+		_gems_counter = UICountUp.new(%Gems, gems_text, tween_seconds)
+		_dust_counter = UICountUp.new(%Dust, dust_text, tween_seconds)
 
 
 func _say(text: String) -> void:

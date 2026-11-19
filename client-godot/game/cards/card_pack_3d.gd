@@ -36,6 +36,36 @@ var material: ShaderMaterial
 var back_material: ShaderMaterial
 
 
+static var _sky: Sky
+static var _environment: Environment
+
+
+## The sky the foil reflects (one, shared by the stage, every 3D pack view and the demo).
+static func foil_sky() -> Sky:
+	if _sky == null:
+		_sky = Sky.new()
+		var sky_material := ProceduralSkyMaterial.new()
+		sky_material.sky_top_color = Color(0.35, 0.4, 0.6)
+		sky_material.sky_horizon_color = Color(0.9, 0.85, 0.8)
+		sky_material.ground_bottom_color = Color(0.08, 0.06, 0.12)
+		sky_material.ground_horizon_color = Color(0.5, 0.45, 0.5)
+		_sky.sky_material = sky_material
+	return _sky
+
+
+## The environment of a 3D pack shown on its own (CardPackView.solid, the demo): its clear colour behind, lit and reflected by
+## foil_sky(), filmic. Shared, so every pack view uses one environment.
+static func foil_environment() -> Environment:
+	if _environment == null:
+		_environment = Environment.new()
+		_environment.background_mode = Environment.BG_CLEAR_COLOR
+		_environment.sky = foil_sky()
+		_environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+		_environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+		_environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	return _environment
+
+
 ## Shows the pack of `look` labelled `label`.
 func show_pack(look: CardPackLook, label: String, name_font: Font = null) -> void:
 	var picture := Vector2i(int(picture_height * 150.0 / 228.0), picture_height)
