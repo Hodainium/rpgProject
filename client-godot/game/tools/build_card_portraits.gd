@@ -4,13 +4,17 @@
 ## presentation/demo/cards/portraits/<character id>.png; then card_portraits.tres (a CardArtSet) lists them. New files only: an
 ## existing PNG or set is kept unless --force. Re-run after a look changes (the validator's card_portrait_stale says when).
 ##   godot --path client-godot --screen 2 res://game/tools/build_card_portraits.tscn [-- --only <id,id>] [--force]
-##     [--content-root res://content/] [--settle <seconds, default 1.5>] [--size <px, default 768>]
+##     [--content-root res://content/] [--settle <seconds, default 1.5>] [--size <px, default 2160>]
 ## Then `godot --headless --path client-godot --import` so the PNGs become textures.
+## The PNGs are 4K masters (2160 px, MSAA 4x; user, 2026-11-18); the game loads them at IMPORT_SIZE_LIMIT with mipmaps,
+## lossless. A new portrait gets those import settings from a .import file written next to it; an existing .import is kept.
 extends Node
 
 const STUDIO: String = "res://presentation/demo/cards/portrait_studio.tscn"
 const UNIT_VIEW: String = "res://presentation/demo/unit_view.tscn"
 const OUT_DIR: String = "res://presentation/demo/cards/portraits"
+## The largest a portrait is drawn is the card detail's big card, about 760 px wide on a 4K screen.
+const IMPORT_SIZE_LIMIT: int = 1024
 
 
 func _ready() -> void:
@@ -23,7 +27,7 @@ func _ready() -> void:
 	var only := _arg(args, "--only", "").split(",", false)
 	var force := args.has("--force")
 	var settle := float(_arg(args, "--settle", "1.5"))
-	var size := int(_arg(args, "--size", "768"))
+	var size := int(_arg(args, "--size", "2160"))
 	var viewport := SubViewport.new()
 	viewport.size = Vector2i(size, size)
 	viewport.own_world_3d = true
@@ -66,6 +70,7 @@ func _ready() -> void:
 		var image := viewport.get_texture().get_image()
 		var error := image.save_png(ProjectSettings.globalize_path(path))
 		print("shot %s%s" % [path, "" if error == OK else " (error %d)" % error])
+		_write_import(path)
 		shot += 1
 		view.queue_free()
 		await get_tree().process_frame
@@ -74,6 +79,20 @@ func _ready() -> void:
 	_write_set(ids, force)
 	print("build_card_portraits: %d shot; run godot --import so they become textures" % shot)
 	get_tree().quit(0)
+
+
+## A new portrait's import settings (mipmaps, IMPORT_SIZE_LIMIT, lossless): Godot's import step fills in everything else
+## (uid, the imported paths). An existing .import is the user's and is never touched.
+func _write_import(path: String) -> void:
+	var import_path := path + ".import"
+	if FileAccess.file_exists(import_path):
+		return
+	var file := FileAccess.open(import_path, FileAccess.WRITE)
+	file.store_string("\n".join(PackedStringArray(['[remap]', '', 'importer="texture"', 'type="CompressedTexture2D"', '',
+		'[deps]', '', 'source_file="%s"' % path, '', '[params]', '', 'compress/mode=0', 'mipmaps/generate=true',
+		'process/size_limit=%d' % IMPORT_SIZE_LIMIT, 'detect_3d/compress_to=1'])) + "\n")
+	file.close()
+	print("wrote ", import_path)
 
 
 ## card_portraits.tres listing every portrait PNG there is (new file only unless forced).
