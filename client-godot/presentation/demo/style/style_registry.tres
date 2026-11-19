@@ -22,7 +22,6 @@
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/burning_hood.tres" id="22_pyro"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/welding_mask_crown_fire.tres" id="23_ember"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/fire_ring.tres" id="24_fire"]
-[ext_resource type="Resource" path="res://presentation/demo/style/attachments/beak_mask.tres" id="25_plague"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/shard_orbit.tres" id="26_shatter"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/bubble_ring.tres" id="27_bubbles"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/frost_ring.tres" id="28_frost"]
@@ -195,6 +194,9 @@
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/lich_crown.tres" id="lich_3"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/bone_staff.tres" id="lich_4"]
 [ext_resource type="Resource" path="res://presentation/demo/fx/soul_wisps.tres" id="lich_6"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/plague_mask_glow.tres" id="plague_mask"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/plague_hat.tres" id="plague_hat"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/plague_flask.tres" id="plague_flask"]
 
 [sub_resource type="Resource" id="Resource_f1a1"]
 script = ExtResource("2_b37kx")
@@ -857,8 +859,6 @@ effect = ExtResource("29_holy")
 [sub_resource type="Resource" id="Resource_i6477"]
 script = ExtResource("2_b37kx")
 shape = ExtResource("6_6yhn0")
-offset = Vector3(0, 0.05, 0)
-rotation_degrees = Vector3(0, 0, 6)
 
 [sub_resource type="Resource" id="Resource_wasn7"]
 script = ExtResource("1_avbba")
@@ -959,12 +959,22 @@ effect = ExtResource("24_fire")
 
 [sub_resource type="Resource" id="Resource_plague_att"]
 script = ExtResource("2_b37kx")
-shape = ExtResource("25_plague")
+shape = ExtResource("plague_mask")
 socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_plague_hat"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("plague_hat")
+
+[sub_resource type="Resource" id="Resource_plague_flask"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("plague_flask")
+socket = &"Right"
+offset = Vector3(-0.18, -0.12, 0)
 
 [sub_resource type="Resource" id="Resource_plague"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_plague_att")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_plague_att"), SubResource("Resource_plague_hat"), SubResource("Resource_plague_flask")])
 effect = ExtResource("27_bubbles")
 
 [sub_resource type="Resource" id="Resource_shatter_att"]

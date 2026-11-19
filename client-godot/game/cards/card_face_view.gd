@@ -19,6 +19,13 @@ var style: CardStyle
 var _time: float = 0.0
 
 
+## The portraits are imported at 1024 with mipmaps and drawn smaller on most cards: the whole face samples with mipmaps
+## (a texture without mipmaps, like an icon, falls back to its full-size level). Set here, not on a viewport, so every
+## place that shows a face (the Collection's CardView3D, the card gallery) draws it the same way.
+func _init() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+
+
 ## Fills the face. Subclasses draw it; this keeps what they need.
 func show_face(card: CardFace, card_style: CardStyle) -> void:
 	face = card
