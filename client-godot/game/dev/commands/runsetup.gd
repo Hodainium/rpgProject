@@ -25,9 +25,9 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 			if ctx.game.ui.push(&"UI.Layer.Modal", load(MODAL)) == null:
 				return ctx.fail("could not open the run setup")
 		"clear":
-			if ctx.game.mode != "menu" and ctx.game.dev_run_setup.has("content_root"):
-				return ctx.fail("the content root changes only from the menus (mode is %s)" % ctx.game.mode)
-			clear(ctx.game)
+			var refused := clear(ctx.game)
+			if refused != "":
+				return ctx.fail(refused)
 		"content":
 			if ctx.game.mode != "menu":
 				return ctx.fail("the content root changes only from the menus (mode is %s)" % ctx.game.mode)
@@ -65,10 +65,16 @@ static func use_content_root(game: GameMain, root: String) -> void:
 
 
 ## Back to the defaults: the default content root, the default run, a random or server-issued seed.
-static func clear(game: GameMain) -> void:
-	if game.dev_run_setup.has("content_root") and game.content_root != GameMain.CONTENT_ROOTS[0]:
-		use_content_root(game, GameMain.CONTENT_ROOTS[0])
+## Also a root an older build saved in the Settings (the old title menu's picker wrote it): back to the default for good. A
+## root change reloads the content, so it is refused outside the menus. "" or why it was refused.
+static func clear(game: GameMain) -> String:
+	var default_root := GameMain.CONTENT_ROOTS[0]
+	if game.content_root != default_root or GameMain.load_setting("game", "content_root", default_root) != default_root:
+		if game.mode != "menu":
+			return "the content root changes only from the menus (mode is %s)" % game.mode
+		game.set_content_root(default_root)
 	game.dev_run_setup.clear()
+	return ""
 
 
 static func describe(game: GameMain) -> String:

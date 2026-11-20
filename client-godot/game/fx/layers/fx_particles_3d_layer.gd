@@ -124,6 +124,8 @@ static var _points: Dictionary = {}
 
 func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, definition: FxDefinition) -> void:
 	super(node, params, anchor, quality, definition)
+	if node is GPUParticles3D:
+		(node as GPUParticles3D).local_coords = local_coords   # every play: a pooled instance may come back changed (the class pick)
 	var draw := _stencil_material(node)
 	if draw != null:
 		draw.stencil_unit = stencil_value(anchor, PARTICLE_SHADER, over_own_unit)

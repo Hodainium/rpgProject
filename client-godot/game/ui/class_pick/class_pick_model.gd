@@ -109,15 +109,19 @@ static func remove(party: Array, slot: int, max_party: int) -> Array:
 	return result
 
 
-## A preset in its order; a class that is not pickable (or unknown) leaves its slot empty. {party, missing}.
+## A preset in its order; a class that is not pickable (or unknown) leaves its slot empty and counts as missing; a class listed
+## twice keeps only its first slot and is counted at most once. {party, missing}.
 static func apply_preset(members: Array, states: Dictionary, max_party: int) -> Dictionary:
 	var party: Array = []
 	var missing := 0
+	var seen := {}
 	for index in max_party:
 		var id: StringName = StringName(members[index]) if index < members.size() else &""
-		if id == &"":
-			party.append(&"")
-		elif states.has(String(id)) and pickable(states[String(id)]) and not party.has(id):
+		var repeat := id != &"" and seen.has(id)
+		seen[id] = true
+		if id == &"" or repeat:
+			party.append(&"")   # an empty slot, or a repeat (counted once, at its first slot)
+		elif states.has(String(id)) and pickable(states[String(id)]):
 			party.append(id)
 		else:
 			party.append(&"")
@@ -144,14 +148,14 @@ static func members(party: Array) -> Array:
 
 
 ## The footer line (D9): "" for a full party, "Only N slots filled." below it, `empty_text` with nobody.
-static func footer(party: Array, max_party: int, short_text: String = "Only %d slot%s filled.",
-		empty_text: String = "Pick at least one class.") -> String:
+static func footer(party: Array, max_party: int, short_text: String = "Only %d slots filled.",
+		one_text: String = "Only 1 slot filled.", empty_text: String = "Pick at least one class.") -> String:
 	var count := members(party).size()
 	if count == 0:
 		return empty_text
 	if count >= max_party:
 		return ""
-	return short_text % [count, "" if count == 1 else "s"]
+	return one_text if count == 1 else short_text % count
 
 
 static func _ability(scene: PackedScene) -> Dictionary:

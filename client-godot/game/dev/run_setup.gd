@@ -31,7 +31,9 @@ func bind(context: UIContext) -> void:
 		ctx.main.dev_run_setup["seed"] = %Seed.text
 		_changed())
 	%Clear.pressed.connect(func() -> void:
-		RunSetupCommand.clear(ctx.main)
+		var refused: String = RunSetupCommand.clear(ctx.main)
+		if refused != "":
+			ctx.main.show_message(refused)
 		refresh())
 	context.main.content_changed.connect(func(_content: ContentIndex) -> void: refresh())
 

@@ -113,6 +113,8 @@ static func _state(screen: UIScreen) -> String:
 	lines.append("party: [%s]" % ", ".join(screen.party.map(func(id) -> String: return String(id) if id != &"" else "-")))
 	lines.append("footer: " + screen.get_node("%Footer").text)
 	lines.append("lockin: %s" % ("disabled" if screen.get_node("%LockIn").disabled else "enabled"))
+	if screen.loading:
+		lines.append("loading: the account's answer is on its way")
 	if screen.get_node("%Message").visible:
 		lines.append("message: " + screen.get_node("%Message").text)
 	if screen.get_node("%DevLine").visible:

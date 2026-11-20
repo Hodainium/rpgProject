@@ -48,6 +48,12 @@ var _color_t: float = 1.0
 
 
 func _ready() -> void:
+	# A quality change re-applies the running effects' layers (their own particle space): take the ring's space again after it.
+	FxManager.quality_changed.connect(func(_tier: int) -> void:
+		for view in views:
+			var anchor: Node3D = view.look_anchor if view is UnitAnimator else null
+			if anchor != null and is_instance_valid(anchor):
+				anchor.remove_meta(&"carousel_children"))
 	_ring = Node3D.new()
 	_ring.name = "Ring"
 	add_child(_ring)

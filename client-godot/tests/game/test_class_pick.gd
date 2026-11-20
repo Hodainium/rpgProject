@@ -66,8 +66,13 @@ func _collection(owned: Array) -> Dictionary:
 		"accountVersion": 3, "activeRunId": null, "activeRunStatus": null, "pity": [], "ownedPacks": []}
 
 
-func _card_bridge(owned: Array) -> FakeBridge:
+func _catalog() -> Dictionary:
+	return {"catalogVersion": 1, "catalogHash": "x", "cards": Array(CardCatalog.cards(CardWorld.content()))}
+
+
+func _card_bridge(owned: Array, catalog: Variant = null) -> FakeBridge:
 	var bridge := FakeBridge.new()
+	bridge.answers["GetCardCatalog"] = [[true, catalog if catalog != null else _catalog()]]
 	bridge.answers["StartAccountSession"] = [[true, {"session": 1, "collection": _collection(owned)}]]
 	bridge.answers["GetCollection"] = [[true, _collection(owned)]]
 	bridge.answers["GetCurrentRun"] = [[true, null]]
@@ -418,3 +423,98 @@ func test_the_look_anchor_is_measured_as_its_view() -> void:
 	eq(FxAnchor.node3d(plain).measured_node(), plain, "any other node is measured as itself")
 	plain.free()
 	view.free()
+
+
+
+# --- Final review fixes (2026-11-19) -----------------------------------------------------------------------------------
+
+func test_a_server_without_a_catalog_locks_nothing() -> void:
+	var game := _game(_card_bridge([], {"catalogVersion": 0, "catalogHash": "", "cards": []}), true)
+	var screen := await _open(game)
+	eq(screen.states["card.hero.m2"], ClassPickModel.OPEN, "cards off or unseeded: the run start accepts any class")
+
+
+func test_edits_before_the_answer_are_kept() -> void:
+	var game := _game(_card_bridge(["card.hero.m1"]), true)
+	await _frames(2)
+	var screen := game.ui.push(MENU, load(SCREEN))
+	await _frames(1)
+	screen.apply_preset(_preset("early", ["card.hero.b"]))   # while the account is still being read
+	for i in 120:
+		if not screen.loading:
+			break
+		await _frames(1)
+	await _frames(2)
+	eq(screen.party[0], &"card.hero.b", "the player's preset stays when the answer lands")
+
+
+func test_no_edits_while_starting() -> void:
+	var game := _game()
+	var screen := await _open(game)
+	var before: Array = screen.party.duplicate()
+	var index: int = screen.get_node("%Carousel").index
+	screen._starting = true
+	screen.turn(1)
+	screen.toggle_selected()
+	screen.remove_slot(0)
+	eq([screen.party, screen.get_node("%Carousel").index], [before, index], "the party and the ring hold while Lock in starts")
+	screen._starting = false
+
+
+func test_a_repeated_preset_member_is_not_counted_missing() -> void:
+	var states := {"a": ClassPickModel.OPEN, "b": ClassPickModel.OPEN}
+	eq(ClassPickModel.apply_preset([&"a", &"a", &"b"], states, 4), {"party": [&"a", &"", &"b", &""], "missing": 0},
+		"a repeat keeps one slot and counts as owned")
+
+
+func test_a_pooled_particle_layer_gets_its_own_space_back() -> void:
+	var layer := FxParticles3DLayer.new()
+	layer.local_coords = false
+	var node := layer.build()
+	(node as GPUParticles3D).local_coords = true   # what the class pick does to a look effect on its ring
+	layer.apply(node, {}, FxAnchor.screen(), FxQuality.HIGH, FxDefinition.new())
+	check(not (node as GPUParticles3D).local_coords, "the next play uses the layer's own setting")
+	node.free()
+
+
+# --- Review round 2 fixes ------------------------------------------------------------------------------------------------
+
+func test_a_repeated_locked_member_counts_once() -> void:
+	eq(ClassPickModel.apply_preset([&"x", &"x", &"a"], {"x": ClassPickModel.LOCKED, "a": ClassPickModel.OPEN}, 4)["missing"], 1,
+		"one class not owned, however often it is listed")
+
+
+func test_an_empty_catalog_is_not_kept() -> void:
+	var bridge := _card_bridge([], {"catalogVersion": 0, "catalogHash": "", "cards": []})
+	var game := _game(bridge, true)
+	var screen := await _open(game)
+	check(game.server.card_catalog.is_empty(), "an empty catalog is read again next time, not kept on the link")
+	bridge.answers["GetCardCatalog"] = [[true, _catalog()]]
+	bridge.answers["GetCollection"] = [[true, _collection([])]]
+	await screen.load_ownership()
+	eq(screen.states["card.hero.m2"], ClassPickModel.LOCKED, "once seeded, the server's cards are enforced")
+	await _frames(3)   # let the link's deferred answers land before the game is freed
+
+
+func test_a_click_that_changes_nothing_keeps_the_saved_party_coming() -> void:
+	var game := _game(_card_bridge(["card.hero.m1"]), true)
+	await _frames(2)
+	var screen := await _open(game)
+	screen._restored = false   # as while the account is still being read
+	screen.party = ClassPickModel.normalized([&"card.hero.a"], screen.max_party)
+	screen.remove_slot(3)   # an empty slot
+	check(not screen._restored, "nothing changed: the saved party may still come")
+	screen.remove_slot(0)
+	check(screen._restored, "a real change makes the party the player's")
+
+
+func test_runsetup_clear_refuses_a_root_change_during_a_run() -> void:
+	var game := _game()
+	await _frames(2)
+	eq(game.start_run(["fixture.character.knight"], "7", StringName(RUN)), "", "a run")
+	game.set_content_root(FIXTURES, false)
+	var refused := preload("res://game/dev/commands/runsetup.gd").clear(game)
+	if game.content_root == GameMain.CONTENT_ROOTS[0]:
+		eq(refused, "", "already on the default root: nothing to change")
+	else:
+		check(refused.contains("only from the menus"), "refused: " + refused)
