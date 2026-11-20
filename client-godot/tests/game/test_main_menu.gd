@@ -28,6 +28,8 @@ func _path() -> String:
 func _game(save_path: String = "") -> GameMain:
 	var game: GameMain = load("res://game/game_main.tscn").instantiate()
 	game.skip_animations = true
+	# Never the developer's own server-mode save (user://saves/<Settings player>/run.json): set before the menu reads it.
+	game.server_save_path = _path().get_base_dir().path_join("no_server_save.json")
 	host.add_child(game)
 	_games.append(game)
 	game.content_root = FIXTURES
