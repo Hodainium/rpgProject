@@ -330,8 +330,7 @@ func enter_floor(floor_index: int, choice: StringName = &"") -> String:
 		# Spec server-authority 2.1: the floor can't be built before its seed arrives (provide_floor_seed).
 		_waiting_floor = {"floor": floor_index, "choice": choice}
 		_request_floor_seed(floor_index)
-		_notify("Connecting…")
-		floor_waiting.emit(floor_index)
+		floor_waiting.emit(floor_index)   # the connecting pop-up shows the wait (no line: user, 2026-11-19)
 		return ""
 	var slot: FloorSlot = structure.floors[floor_index]
 	var picked := slot.pick_chapter(state.run_seed, floor_index, chapter() if state.chapter_id != &"" else null, choice,
@@ -2436,8 +2435,6 @@ func _announce_resumed() -> void:
 			_waiting_floor = {}
 			announcing = false  # entering the waiting floor is a new action, not a re-announcement
 			enter_floor(int(waiting["floor"]), waiting["choice"])
-		else:
-			_notify("Connecting…")
 		return
 	floor_entered.emit(state.floor_index)
 	party_changed.emit()

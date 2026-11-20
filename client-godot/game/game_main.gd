@@ -42,7 +42,6 @@ const CONTENT_ROOTS: Array[String] = ["res://content/", "res://tests/fixtures/"]
 ## Spec card-collection 3.6: shown when the player tries to leave a won run the server has not accepted yet.
 @export var leaving_blocked_text: String = "The run is being verified. You can leave once the server accepts it."
 ## Spec playtest-fixes B11: the message line once the server answers again after a server problem was shown.
-@export var reconnected_text: String = "Connected to the server as %s"
 ## Spec main-menu M4: the mode line of the main menu and Settings.
 @export var local_mode_text: String = "Local mode (offline)"
 @export var server_mode_format: String = "Server mode: %s as %s"
@@ -289,7 +288,7 @@ func _on_server_connection(link: ServerLink) -> void:
 		return
 	if _server_problem_shown:
 		_server_problem_shown = false
-		show_message(reconnected_text % link.player)
+		show_message("")   # the server error goes; the status line (green) says the link is back (user, 2026-11-19)
 
 
 ## Spec ui-framework 2.1: the UI policy's layout under `canvas`. "" or why it failed (the game still runs headless and
@@ -351,7 +350,7 @@ var local_card_pool: Variant = null
 ## Starts a run with the chosen characters (ids) and a seed typed as a decimal string. "" or the error.
 ## `run_id` picks the RunStructure (spec playable-demo 2.2); empty = the only or the default one.
 ## In server mode the seed is ignored: the server opens the run and issues every floor seed; "" returns at once and the
-## run starts when the server answers ("Connecting…" meanwhile; a refusal shows as a Notification).
+## run starts when the server answers (the connecting pop-up meanwhile; a refusal shows as a Notification).
 ## Spec vfx-stencil 3.4: compile the effect shader copies every battle of the content can need, before any battle: at boot (the
 ## main menu, a few copies a frame, `BOOT_PREPARE_PER_FRAME`) and again at run start (whatever boot has not finished). Inert
 ## headless, with stencil off or before the room view's camera exists.
@@ -388,7 +387,6 @@ func _start_server_run(character_ids: Array, run_id: StringName) -> void:
 		run_start_refused.emit({"status": -1, "local": true, "title": picked["error"]})
 		return
 	var structure_id := String(picked["run"].id)
-	show_message("Connecting…")
 	var link := server
 	link.begin_wait(&"start", wait_start_text)
 	var result := await link.start_run(RulesetVersion.current(), structure_id, character_ids)
