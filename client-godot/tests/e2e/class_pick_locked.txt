@@ -1,0 +1,21 @@
+# Spec class-pick 6 (e2e): the class pick on the real stack with the card system on. A fresh account owns only the core
+# classes: the class pick reads the collection through the account session, a collectible class (Pyromancer) is locked and
+# Add on it is refused with the pack hint, the Firestorm preset (Pyromancer, Arcanist, Bard, Cleric) leaves the Pyromancer
+# slot empty, and Lock in starts a server run with exactly the three owned classes (no 1409).
+#! worker
+#! content real
+#! cards
+#! env Monitors__Interval=00:00:01
+classpick open
+classpick remove 1
+classpick remove 2
+classpick remove 3
+classpick remove 4
+classpick select demo.character.pyromancer
+refused Pyromancer classpick add
+classpick select demo.character.warrior
+classpick add
+classpick remove 1
+classpick preset firestorm
+classpick lockin
+wait run

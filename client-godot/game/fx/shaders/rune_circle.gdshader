@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
 
 // Rune circle (spec vfx-content-pass): a magic circle lying on the floor: concentric rings, tick marks round the edge, and an inner ring of
 // segments that turns the other way. Fades in, holds and fades out over the layer. Sanctuary's holy ground, a summoning circle.

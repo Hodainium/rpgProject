@@ -1,6 +1,6 @@
 ## Spec main-menu: the main menu in the Menu layer (Continue with a Local / Synced tag, New run, Settings, Quit, the mode
 ## line), the local save written after every action, Continue in local and server mode (fake bridge), the New run
-## confirm, the seed field following the mode, and the run menu's Save and quit / Abandon run. Fixtures only.
+## confirm, the class pick without a seed field (spec class-pick D10), and the run menu's Save and quit / Abandon run. Fixtures only.
 extends TestCase
 
 const FakeBridge = preload("res://tests/game/test_server_mode.gd").FakeBridge
@@ -113,25 +113,21 @@ func test_new_run_pushes_class_pick_and_back_returns() -> void:
 	await _frames(2)
 	_menu(game).get_node("%NewRun").pressed.emit()
 	await _frames(2)
-	check(_menu(game).name == "TitleMenu", "New run opens the class pick")
+	check(_menu(game).name == "ClassPick", "New run opens the class pick")
 	game.ui.back()
 	await _frames(2)
 	check(_menu(game).name == "MainMenu", "Back returns to the main menu")
 
 
-func test_seed_field_follows_the_mode() -> void:
+## Spec class-pick D10: the class pick has no seed field, run picker or content root (the dev console's runsetup sets them).
+func test_class_pick_has_no_seed_or_run_picker() -> void:
 	var game := _game()
 	await _frames(2)
 	_menu(game).get_node("%NewRun").pressed.emit()
 	await _frames(2)
-	var title := _menu(game)
-	check(title.get_node("%Seed").editable, "local mode: the seed can be typed")
-	game.use_server(_link(FakeBridge.new()))
-	check(not title.get_node("%Seed").editable, "linking disables the seed field at once")
-	eq(title.get_node("%Seed").placeholder_text, "Seed: issued by the server", "with the note")
-	game.use_server(null)
-	check(title.get_node("%Seed").editable, "unlinking enables it again")
-	await _frames(1)
+	var pick := _menu(game)
+	for unique in ["%Seed", "%RunPicker", "%ContentRoot", "%Random"]:
+		check(pick.get_node_or_null(unique) == null, "no " + unique)
 
 
 func test_new_run_confirms_when_a_run_can_continue() -> void:
@@ -141,11 +137,11 @@ func test_new_run_confirms_when_a_run_can_continue() -> void:
 	await _frames(3)
 	_menu(game).get_node("%NewRun").pressed.emit()
 	await _frames(2)
-	_menu(game).get_node("%Start").pressed.emit()
-	check(await _answer(game, false), "Start run asks first")
+	_menu(game).get_node("%LockIn").pressed.emit()
+	check(await _answer(game, false), "Lock in asks first")
 	await _frames(3)
 	eq(game.mode, "menu", "No starts nothing")
-	_menu(game).get_node("%Start").pressed.emit()
+	_menu(game).get_node("%LockIn").pressed.emit()
 	check(await _answer(game, true), "asked again")
 	await _frames(3)
 	eq(game.mode, "run", "Yes starts the new run")

@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_add, depth_draw_never, cull_back, shadows_disabled;
+render_mode unshaded, blend_add, depth_draw_never, cull_back, shadows_disabled, fog_disabled;
 
 // Fresnel rim glow and shell (spec vfx-content-pass 3.6): an overlay on the unit's own mesh (FxFresnelLayer sets it as the mesh's
 // material overlay): a glow brightest where the surface turns away from the camera, optionally filling the whole body, pushed a

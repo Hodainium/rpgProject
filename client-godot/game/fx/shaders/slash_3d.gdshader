@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
 
 // Slash, 3D (spec vfx-content-pass): a crescent cut that sweeps across a camera-facing quad, brightest at its head with a fading
 // tail. Physical hits, blades, claws. The cut's arc runs through the quad's centre, so it lands on the point the quad sits on (the

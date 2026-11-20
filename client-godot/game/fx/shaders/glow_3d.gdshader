@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
 
 // Glow, 3D (spec vfx-framework): a soft additive blob on a camera-facing quad (FxShaderQuadLayer with space WORLD_3D).
 // Hit flashes, heal glows, auras.

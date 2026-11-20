@@ -1,0 +1,312 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://presentation/demo/ui/class_pick/class_pick.gd" id="1_pick"]
+[ext_resource type="Script" path="res://game/ui/ui_back_button.gd" id="2_back"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/class_pick/class_carousel.tscn" id="3_carousel"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/description_window.tscn" id="4_description"]
+[ext_resource type="Script" path="res://game/ui/ui_list.gd" id="5_list"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/class_pick/party_slot.tscn" id="6_slot"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/class_pick/preset_row.tscn" id="7_row"]
+[ext_resource type="Resource" path="res://presentation/demo/ui/class_pick/party_presets.tres" id="8_presets"]
+[ext_resource type="Texture2D" path="res://presentation/demo/ui/icons/lock_filled.svg" id="9_lock"]
+
+[node name="ClassPick" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_pick")
+presets = ExtResource("8_presets")
+lock_icon = ExtResource("9_lock")
+focus_on_activate = NodePath("Margin/Columns/Left/Card/CardWindow/CardBox/ActionRow/Add")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="Columns" type="HBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Left" type="VBoxContainer" parent="Margin/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.4
+theme_override_constants/separation = 10
+
+[node name="Head" type="HBoxContainer" parent="Margin/Columns/Left"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Back" type="Button" parent="Margin/Columns/Left/Head"]
+layout_mode = 2
+text = "Back"
+script = ExtResource("2_back")
+
+[node name="Title" type="Label" parent="Margin/Columns/Left/Head"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HeaderLarge"
+text = "Choose your party"
+
+[node name="StageWindow" type="PanelContainer" parent="Margin/Columns/Left"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"WindowPanel"
+
+[node name="Stage" type="Control" parent="Margin/Columns/Left/StageWindow"]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(0, 360)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ViewportBox" type="SubViewportContainer" parent="Margin/Columns/Left/StageWindow/Stage"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 1280.0
+offset_bottom = 600.0
+mouse_filter = 2
+
+[node name="Viewport" type="SubViewport" parent="Margin/Columns/Left/StageWindow/Stage/ViewportBox"]
+unique_name_in_owner = true
+own_world_3d = true
+handle_input_locally = false
+msaa_3d = 2
+gui_disable_input = true
+size = Vector2i(1280, 600)
+render_target_update_mode = 3
+
+[node name="Carousel" parent="Margin/Columns/Left/StageWindow/Stage/ViewportBox/Viewport" instance=ExtResource("3_carousel")]
+unique_name_in_owner = true
+
+
+
+[node name="Lock" type="TextureRect" parent="Margin/Columns/Left/StageWindow/Stage"]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 1, 1, 0)
+texture_filter = 4
+layout_mode = 0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Prev" type="Button" parent="Margin/Columns/Left/StageWindow/Stage"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 12.0
+offset_top = -28.0
+offset_right = 68.0
+offset_bottom = 28.0
+grow_vertical = 2
+theme_override_font_sizes/font_size = 26
+text = "<"
+
+[node name="Next" type="Button" parent="Margin/Columns/Left/StageWindow/Stage"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -68.0
+offset_top = -28.0
+offset_right = -12.0
+offset_bottom = 28.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_font_sizes/font_size = 26
+text = ">"
+
+[node name="Dots" type="HBoxContainer" parent="Margin/Columns/Left/StageWindow/Stage"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -34.0
+offset_right = 150.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="Card" type="VBoxContainer" parent="Margin/Columns/Left"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Description" parent="Margin/Columns/Left/Card" instance=ExtResource("4_description")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+
+[node name="CardWindow" type="PanelContainer" parent="Margin/Columns/Left/Card"]
+layout_mode = 2
+theme_type_variation = &"WindowPanel"
+
+[node name="CardBox" type="VBoxContainer" parent="Margin/Columns/Left/Card/CardWindow"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Body" type="HBoxContainer" parent="Margin/Columns/Left/Card/CardWindow/CardBox"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="MovesBox" type="VBoxContainer" parent="Margin/Columns/Left/Card/CardWindow/CardBox/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="Moves" type="HFlowContainer" parent="Margin/Columns/Left/Card/CardWindow/CardBox/Body/MovesBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 22
+theme_override_constants/v_separation = 6
+
+[node name="Learns" type="Label" parent="Margin/Columns/Left/Card/CardWindow/CardBox/Body/MovesBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 3
+
+[node name="Stats" type="GridContainer" parent="Margin/Columns/Left/Card/CardWindow/CardBox/Body"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_override_constants/h_separation = 22
+columns = 2
+
+[node name="ActionRow" type="HBoxContainer" parent="Margin/Columns/Left/Card/CardWindow/CardBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Add" type="Button" parent="Margin/Columns/Left/Card/CardWindow/CardBox/ActionRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+text = "Add to party"
+
+[node name="Hint" type="Label" parent="Margin/Columns/Left/Card/CardWindow/CardBox/ActionRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Warning"
+autowrap_mode = 3
+
+[node name="Right" type="VBoxContainer" parent="Margin/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="PartyWindow" type="PanelContainer" parent="Margin/Columns/Right"]
+layout_mode = 2
+theme_type_variation = &"WindowPanel"
+
+[node name="PartyBox" type="VBoxContainer" parent="Margin/Columns/Right/PartyWindow"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PartyHead" type="HBoxContainer" parent="Margin/Columns/Right/PartyWindow/PartyBox"]
+layout_mode = 2
+
+[node name="PartyHeading" type="Label" parent="Margin/Columns/Right/PartyWindow/PartyBox/PartyHead"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Title"
+text = "Party"
+
+[node name="Count" type="Label" parent="Margin/Columns/Right/PartyWindow/PartyBox/PartyHead"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gold"
+
+[node name="Slots" type="HBoxContainer" parent="Margin/Columns/Right/PartyWindow/PartyBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+script = ExtResource("5_list")
+entry_scene = ExtResource("6_slot")
+
+[node name="PresetsWindow" type="PanelContainer" parent="Margin/Columns/Right"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"WindowPanel"
+
+[node name="PresetsBox" type="VBoxContainer" parent="Margin/Columns/Right/PresetsWindow"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PresetsHeading" type="Label" parent="Margin/Columns/Right/PresetsWindow/PresetsBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Title"
+text = "Recommended parties"
+
+[node name="Scroll" type="ScrollContainer" parent="Margin/Columns/Right/PresetsWindow/PresetsBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Presets" type="VBoxContainer" parent="Margin/Columns/Right/PresetsWindow/PresetsBox/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+script = ExtResource("5_list")
+entry_scene = ExtResource("7_row")
+
+[node name="Message" type="Label" parent="Margin/Columns/Right"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"Warning"
+autowrap_mode = 3
+
+[node name="DevLine" type="Label" parent="Margin/Columns/Right"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"Muted"
+
+[node name="FooterRow" type="HBoxContainer" parent="Margin/Columns/Right"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Footer" type="Label" parent="Margin/Columns/Right/FooterRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Muted"
+horizontal_alignment = 2
+
+[node name="LockIn" type="Button" parent="Margin/Columns/Right/FooterRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 56)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Lock in"

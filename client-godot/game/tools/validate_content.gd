@@ -17,6 +17,9 @@ func _ready() -> void:
 	# Spec ui-framework 3.5: the game's UI policy too (it's presentation, so only with the game's own content root).
 	if root == "res://content/" and ResourceLoader.exists(GameMain.UI_POLICY):
 		issues.append_array(UIPolicyCheck.validate(load(GameMain.UI_POLICY), content))
+	# Spec class-pick 3.2: the recommended parties (presentation, like the UI policy).
+	if root == "res://content/":
+		issues.append_array(ClassPickCheck.validate_screen(content))
 	# Spec vfx-framework 6: the effects registry too (presentation, like the UI policy).
 	FxManager.reload()  # the registry loads on first use
 	if root == "res://content/" and FxManager.registry != null:

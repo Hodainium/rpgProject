@@ -31,6 +31,16 @@ const GROUP: StringName = &"unit_animators"
 var tree: AnimationTree
 var display_color: Color = Color.WHITE
 var is_dead: bool = false
+## Spec class-pick 2.2: drawn in grey, standing (a locked class on the class pick), with no look effect; it keeps its idle and its
+## attachments' motion (body and parts move together). Not a death.
+var greyed: bool = false
+## Spec class-pick 2.2: a fixed facing turn for the attachments (0 = toward the camera), instead of turning toward opponents;
+## NAN = the style registry's rule (facing_degrees).
+var facing_override: float = NAN
+## Spec class-pick 2.2: the look effect hangs on a child, `look_anchor`, instead of on the view itself, so whoever turns the view
+## can hold the effect still (the class pick counter-turns it against the sway, so a floor ring never spins). Off: on the view.
+var upright_look_effect: bool = false
+var look_anchor: Node3D
 ## The unit definition this view shows (set by instantiate_for).
 var definition_id: StringName = &""
 ## Spec cube-style 3.2: the definition itself and its resolved look (UnitStyle), both set by instantiate_for; look null = no style
@@ -268,6 +278,8 @@ func _socket_on_body(socket: StringName) -> Vector3:
 ## camera): toward its opponents. The party stands on the left and turns toward +X; enemies (battle ids "E…") toward -X. How far
 ## (90 = sideways, 45 = three-quarter) is the style registry's facing().
 func facing_degrees() -> float:
+	if not is_nan(facing_override):
+		return facing_override
 	var registry := UnitStyle.registry()
 	var turn := registry.facing() if registry != null else 90.0
 	return -turn if String(unit_id).begins_with("E") else turn
@@ -292,7 +304,7 @@ func _repaint_attachments() -> void:
 			continue
 		if not painted.has(own):
 			var paint := own
-			if is_dead:
+			if shows_grey():
 				paint = own.duplicate() as StandardMaterial3D
 				paint.albedo_color = Color(0.35, 0.35, 0.35)
 				paint.emission_enabled = false
@@ -304,12 +316,38 @@ func _repaint_attachments() -> void:
 	_sync_look_effect()
 
 
+## The node the look effect plays on: the view, or its `look_anchor` child with upright_look_effect.
+func _look_effect_host() -> Node3D:
+	if not upright_look_effect:
+		return self
+	if look_anchor == null or not is_instance_valid(look_anchor):
+		look_anchor = Node3D.new()
+		look_anchor.name = "LookAnchor"
+		add_child(look_anchor)
+	return look_anchor
+
+
+## True while the view paints in grey: dead, or greyed (spec class-pick 2.2).
+func shows_grey() -> bool:
+	return is_dead or greyed
+
+
+## Spec class-pick 2.2: greys the standing view (a locked class) or gives it its colours back; its look effect follows.
+func set_greyed(on: bool) -> void:
+	if greyed == on:
+		return
+	greyed = on
+	if is_node_ready():
+		_paint()
+		_repaint_attachments()
+
+
 ## Spec cube-style 3.2: plays the look's looping effect on this view while the unit lives (a death waiting behind a cast still
 ## counts as alive), no death fade plays, the view is in the tree and effects are on (FxManager enabled, quality not off); stops
 ## it (faded) otherwise, and swaps it when the look's effect changes (a restyle). A quality change resyncs it (_on_fx_quality).
 ## Presentation only.
 func _sync_look_effect() -> void:
-	var alive := not is_dead or _pending_death
+	var alive := (not is_dead or _pending_death) and not greyed
 	var shown := _look_fx_ready and is_inside_tree() and alive and death_fade_driver() == null 		and FxManager.enabled and FxManager.quality != FxQuality.OFF
 	var wanted: FxDefinition = look.effect if look != null and shown else null
 	if _look_fx != null and (wanted != _look_fx_source or not _look_fx.is_playing()):
@@ -317,7 +355,7 @@ func _sync_look_effect() -> void:
 		_look_fx = null
 		_look_fx_source = null
 	if wanted != null and _look_fx == null:
-		_look_fx = FxManager.play(wanted, FxAnchor.node3d(self), look.effect_params)
+		_look_fx = FxManager.play(wanted, FxAnchor.node3d(_look_effect_host()), look.effect_params)
 		_look_fx_source = wanted
 
 

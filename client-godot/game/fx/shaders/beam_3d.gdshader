@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
 
 // Beam, 3D (spec vfx-content-pass): a tall column of light on a camera-facing quad: a white-hot core, a coloured halo, edges that ripple
 // upward, and a swell-and-fade over the layer. Death rays, sky beams, pillars of judgement.

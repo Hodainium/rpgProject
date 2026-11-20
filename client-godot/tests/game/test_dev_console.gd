@@ -408,7 +408,8 @@ func test_tool_parity() -> void:
 		"gear screen SWAP (spec keys-and-gear)": "swap", "gear screen Item Slot MOVE / SWAP": "move",
 		"pickup panel OPEN a chest (spec floor-chests)": "open", "chest list": "chests", "Give to panel (spec event-items)": "giveto",
 		"effects gallery and inspector preview (spec vfx-framework)": "fx",
-		"Settings battle pacing rows (playtest-fixes B18)": "pace"}
+		"Settings battle pacing rows (playtest-fixes B18)": "pace",
+		"class pick screen (spec class-pick)": "classpick", "the old title menu's run, seed and content pickers": "runsetup"}
 	for action in pairs:
 		check(console.commands.has(pairs[action]), "%s has the command %s" % [action, pairs[action]])
 	# The inspector grid commits *_result() through undo/redo; the console applies the same functions.

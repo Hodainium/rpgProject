@@ -1,0 +1,32 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/ui/class_pick/class_carousel_3d.gd" id="1_carousel"]
+[ext_resource type="PackedScene" path="res://presentation/demo/cards/portrait_studio.tscn" id="2_studio"]
+[ext_resource type="PackedScene" path="res://presentation/demo/unit_view.tscn" id="3_view"]
+
+[node name="ClassCarousel" type="Node3D" node_paths=PackedStringArray("studio")]
+script = ExtResource("1_carousel")
+studio = NodePath("Studio")
+unit_view_scene = ExtResource("3_view")
+ring_radius = 3.4
+ring_depth = 1.8
+
+[node name="Studio" parent="." instance=ExtResource("2_studio")]
+camera_target = Vector3(0, 0.3, -1.4)
+
+[node name="Camera" parent="Studio"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 7.2)
+fov = 22.0
+
+[node name="Backdrop" parent="Studio"]
+transform = Transform3D(2.2, 0, 0, 0, 2, 0, 0, 0, 1, 0, 2, -9)
+
+[node name="Floor" parent="Studio"]
+transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 2, 0, -0.405, -3)
+
+[node name="Motes" parent="Studio"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, -1)
+amount = 180
+emission_box_extents = Vector3(4, 0.1, 2.4)
+
+[editable path="Studio"]

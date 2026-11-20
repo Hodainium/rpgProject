@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
 
 // Ground cracks (spec vfx-content-pass): jagged glowing cracks running outward from a point on a quad lying on the floor, quickly at first,
 // then cooling and fading. Quake. Each crack's length and wobble come from a hash of its number, so every crack is different.
