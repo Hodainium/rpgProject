@@ -65,7 +65,8 @@ func test_server_status_line() -> void:
 	if status == null:
 		return
 	var text: Label = status.get_node("%Text")
-	check(not text.visible, "hidden in local mode")
+	check(text.visible and text.text.begins_with("Offline mode"), "local mode: a yellow offline line: " + text.text)
+	eq(text.get_theme_color(&"font_color"), status.offline_color, "in yellow")
 	var bridge := FakeBridge.new()
 	var link := _link(bridge, "tester")
 	game.use_server(link)
@@ -80,7 +81,7 @@ func test_server_status_line() -> void:
 	await link.heartbeat()
 	check(text.text.begins_with("Offline: tester"), "offline when the server stops answering: " + text.text)
 	game.use_server(null)
-	check(not text.visible, "hidden again in local mode")
+	check(text.visible and text.text.begins_with("Offline mode"), "back to the offline line in local mode")
 	await host.get_tree().process_frame  # leave the bridge's Completed emission before after_each frees the game
 
 
@@ -97,7 +98,7 @@ func test_server_error_cleared_when_connected() -> void:
 	var link := _link(FakeBridge.new(), "tester")
 	game.use_server(link)
 	await link.heartbeat()
-	eq(line.text, "Connected to the server as tester", "and is replaced once the server answers")
+	eq(line.text, "", "and is cleared once the server answers (the green status line says so)")
 	await host.get_tree().process_frame  # leave the bridge's Completed emission before after_each frees the game
 
 

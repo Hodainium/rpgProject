@@ -1,11 +1,14 @@
 ## Spec playtest-fixes B10 (a debug aid for now): the server link in the bottom left corner (UI.Slot.Overlay, always):
-## "Connected: <player> (<player id>)" in bright green while the server answers, else a yellow line. Hidden in local
-## mode.
+## "Connected: <player> (<player id>)" in bright green while the server answers, else a yellow line; in offline (local)
+## mode a yellow "Offline mode" line (user, 2026-11-19: green = connected, yellow = offline).
 extends UIScreen
 
 @export var connected_format: String = "Connected: %s (%s)"
 @export var waiting_format: String = "Connecting: %s…"
 @export var offline_format: String = "Offline: %s (no answer from the server)"
+## Offline (local) mode: with the Settings' player name, else `offline_mode_text`.
+@export var offline_mode_format: String = "Offline mode: %s"
+@export var offline_mode_text: String = "Offline mode"
 @export var connected_color: Color = Color(0.25, 1.0, 0.35)
 @export var offline_color: Color = Color(1.0, 0.8, 0.25)
 
@@ -32,7 +35,10 @@ func _watch(link: ServerLink) -> void:
 
 func refresh() -> void:
 	if _server == null or not is_instance_valid(_server):
-		%Text.hide()
+		var player := str(GameMain.load_setting("server", "player", ""))
+		%Text.text = offline_mode_format % player if player != "" else offline_mode_text
+		%Text.add_theme_color_override(&"font_color", offline_color)
+		%Text.show()
 		return
 	%Text.show()
 	if _server.connected():
