@@ -30,6 +30,8 @@ func _frames(count: int) -> void:
 func _game(bridge: FakeBridge = null, card_content: bool = false) -> GameMain:
 	var game: GameMain = load("res://game/game_main.tscn").instantiate()
 	game.skip_animations = true
+	# Never the developer's own server-mode save (user://saves/<Settings player>/run.json): set before the menu reads it.
+	game.server_save_path = "user://test_class_pick/%d_%d/no_server_save.json" % [OS.get_process_id(), Time.get_ticks_usec()]
 	host.add_child(game)
 	_games.append(game)
 	game.content_root = FIXTURES
