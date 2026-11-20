@@ -251,7 +251,7 @@ func test_a_preset_loads_in_order() -> void:
 	var ids: Array = screen.get_node("%Carousel").characters.map(func(character) -> String: return String(character.id))
 	screen.apply_preset(_preset("pair", [ids[1], ids[0]]))
 	eq(screen.party.slice(0, 2), [StringName(ids[1]), StringName(ids[0])], "the preset's order")
-	check(screen.get_node("%Message").text.contains("loaded"), "the message line says so")
+	check(not screen.get_node("%Message").visible, "no message: the slots say it (user, 2026-11-19)")
 
 
 # --- The screen, server mode ---------------------------------------------------------------------------------------------
@@ -268,7 +268,7 @@ func test_server_mode_locks_classes_the_account_lacks() -> void:
 	check(screen.get_node("%Description").get_node("%Extra").text.contains(screen.locked_chip), "and the Locked chip on the card")
 	screen.apply_preset(_preset("mixed", ["card.hero.a", "card.hero.m2", "card.hero.m1"]))
 	eq(screen.party, [&"card.hero.a", &"", &"card.hero.m1", &""], "the locked member's slot stays empty (D8)")
-	check(screen.get_node("%Message").text.contains("1 class not owned"), "the line counts it: " + screen.get_node("%Message").text)
+	check(not screen.get_node("%Message").visible, "and no message about it")
 
 
 func test_no_collection_leaves_only_the_core_classes() -> void:
@@ -518,3 +518,28 @@ func test_runsetup_clear_refuses_a_root_change_during_a_run() -> void:
 		eq(refused, "", "already on the default root: nothing to change")
 	else:
 		check(refused.contains("only from the menus"), "refused: " + refused)
+
+
+## User, 2026-11-19: a lock shows over the class in front only when it is locked and the ring has stopped.
+func test_the_lock_shows_only_over_a_locked_class_in_front() -> void:
+	var game := _game(_card_bridge([]), true)
+	var screen := await _open(game)
+	var carousel: ClassCarousel3D = screen.get_node("%Carousel")
+	carousel.select(_index_of(screen, "card.hero.m2"))
+	await host.get_tree().create_timer(carousel.turn_seconds + screen.lock_fade_seconds + 0.2).timeout
+	check(screen.get_node("%Lock").visible, "the locked class in front has its lock")
+	carousel.turn(1)
+	await _frames(2)   # the frame signal comes before the screen's own update of that frame
+	check(not screen.get_node("%Lock").visible, "gone the moment the ring turns")
+	carousel.select(_index_of(screen, "card.hero.a"))
+	await host.get_tree().create_timer(carousel.turn_seconds + screen.lock_fade_seconds + 0.2).timeout
+	check(not screen.get_node("%Lock").visible, "an owned class in front has none")
+
+
+
+## User, 2026-11-19: the role line reads like a title.
+func test_the_role_reads_like_a_title() -> void:
+	var screen_script: GDScript = load("res://presentation/demo/ui/class_pick/class_pick.gd")
+	eq(screen_script.title_case("Damage dealer / off-tank"), "Damage Dealer / Off-Tank", "every word, after a hyphen too")
+	eq(screen_script.title_case("Support: buffs and debuffs"), "Support: Buffs and Debuffs", "small words stay lower case")
+	eq(screen_script.title_case("Damage dealer: magic"), "Damage Dealer: Magic", "after a colon")

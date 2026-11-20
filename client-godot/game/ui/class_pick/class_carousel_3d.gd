@@ -131,6 +131,18 @@ func select(target_index: int) -> void:
 
 
 ## True while the ring is still easing toward the selected class.
+## The front cube on screen, in the viewport's pixels: its centre and its height (the body, without hats). Rect2() without a
+## camera. The class pick puts the lock over it (user, 2026-11-19).
+func front_on_screen(body_height: float = 0.8) -> Rect2:
+	var camera := studio.camera() if studio != null else null
+	if camera == null or _ring == null or not camera.is_inside_tree():
+		return Rect2()
+	var centre := camera.unproject_position(_ring.global_position)
+	var top := camera.unproject_position(_ring.global_position + Vector3(0.0, body_height * 0.5, 0.0))
+	var height := absf(centre.y - top.y) * 2.0
+	return Rect2(centre - Vector2(height, height) * 0.5, Vector2(height, height))
+
+
 func turning() -> bool:
 	return _turn_t < 1.0
 
