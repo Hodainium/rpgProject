@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://presentation/demo/ui/main_menu.gd" id="1_menu"]
 [ext_resource type="Script" path="res://game/ui/ui_push_button.gd" id="2_push"]
-[ext_resource type="PackedScene" path="res://presentation/demo/ui/title_menu.tscn" id="3_title"]
+[ext_resource type="PackedScene" path="res://presentation/demo/ui/class_pick/class_pick.tscn" id="3_title"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/settings.tscn" id="4_settings"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/credits.tscn" id="5_credits"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/cards/shop.tscn" id="6_shop"]

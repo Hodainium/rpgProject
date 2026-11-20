@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="PartyPresetList" format=3]
+
+[ext_resource type="Script" path="res://game/ui/class_pick/party_preset.gd" id="1_preset"]
+[ext_resource type="Script" path="res://game/ui/class_pick/party_preset_list.gd" id="2_list"]
+
+[sub_resource type="Resource" id="classic_four"]
+script = ExtResource("1_preset")
+id = &"classic_four"
+display_name = "Classic Four"
+members = Array[StringName]([&"demo.character.warrior", &"demo.character.cleric", &"demo.character.arcanist", &"demo.character.bard"])
+
+[sub_resource type="Resource" id="iron_wall"]
+script = ExtResource("1_preset")
+id = &"iron_wall"
+display_name = "Iron Wall"
+members = Array[StringName]([&"demo.character.bulwark", &"demo.character.cleric", &"demo.character.ranger", &"demo.character.bard"])
+
+[sub_resource type="Resource" id="break_squad"]
+script = ExtResource("1_preset")
+id = &"break_squad"
+display_name = "Break Squad"
+members = Array[StringName]([&"demo.character.ember_knight", &"demo.character.shatterweaver", &"demo.character.ranger", &"demo.character.cleric"])
+
+[sub_resource type="Resource" id="firestorm"]
+script = ExtResource("1_preset")
+id = &"firestorm"
+display_name = "Firestorm"
+members = Array[StringName]([&"demo.character.pyromancer", &"demo.character.arcanist", &"demo.character.bard", &"demo.character.cleric"])
+
+[sub_resource type="Resource" id="deep_freeze"]
+script = ExtResource("1_preset")
+id = &"deep_freeze"
+display_name = "Deep Freeze"
+members = Array[StringName]([&"demo.character.cryomancer", &"demo.character.warrior", &"demo.character.bard", &"demo.character.cleric"])
+
+[sub_resource type="Resource" id="plague_house"]
+script = ExtResource("1_preset")
+id = &"plague_house"
+display_name = "Plague House"
+members = Array[StringName]([&"demo.character.plaguewright", &"demo.character.bulwark", &"demo.character.bard", &"demo.character.cleric"])
+
+[resource]
+script = ExtResource("2_list")
+presets = Array[ExtResource("1_preset")]([SubResource("classic_four"), SubResource("iron_wall"), SubResource("break_squad"), SubResource("firestorm"), SubResource("deep_freeze"), SubResource("plague_house")])
