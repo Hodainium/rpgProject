@@ -23,7 +23,17 @@ func _ready() -> void:
 
 ## Colours the rim lights, the glow and the motes for `character_id`.
 func light_for(character_id: StringName) -> void:
-	var rim: Color = rim_colors.get(character_id, default_rim)
+	apply_color(rim_colors.get(character_id, default_rim))
+
+
+## The colour `character_id` is lit in, or `fallback` when the studio has none for it (spec class-pick 2.2: the class's own
+## display_color rather than the studio's default).
+func rim_color(character_id: StringName, fallback: Color) -> Color:
+	return rim_colors.get(character_id, fallback)
+
+
+## Colours the rim lights, the glow and the motes (the class pick blends this colour from one class to the next).
+func apply_color(rim: Color) -> void:
 	for light_name in ["Rim", "Rim2", "Glow"]:
 		var light := get_node_or_null(light_name) as Light3D
 		if light != null:

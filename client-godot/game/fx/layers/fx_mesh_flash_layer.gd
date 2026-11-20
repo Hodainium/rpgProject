@@ -102,6 +102,7 @@ func make_overlay() -> Material:
 	overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	overlay.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	overlay.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	overlay.disable_fog = true   # an additive skin in a foggy stage would tint as a grey shell
 	return overlay
 
 

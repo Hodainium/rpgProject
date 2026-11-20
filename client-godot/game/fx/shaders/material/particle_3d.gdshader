@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_premul_alpha, depth_draw_never, cull_disabled, shadows_disabled;
+render_mode unshaded, blend_premul_alpha, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
 
 // Particle draw material, 3D (spec vfx-content-pass 3.6): what FxParticles3DLayer draws its quads with. Camera-facing
 // particles (their rotation and scale kept), a sprite-sheet flipbook, the particle colour, additive or normal blending

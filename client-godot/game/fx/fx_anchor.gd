@@ -74,6 +74,18 @@ static func on_stage(host: FxStage, target: Node3D = null, shift: Vector3 = Vect
 	return anchor
 
 
+## The node whose meshes give the sockets and radius: the world node, except a unit view's look anchor (spec class-pick 2.2: it
+## holds a look effect still while the view sways), which has no meshes of its own and is measured as its view (it sits at the
+## view's origin, only turned about Y).
+func measured_node() -> Node3D:
+	var target := world_node()
+	if target != null and is_instance_valid(target):
+		var owner_view := target.get_parent() as UnitAnimator
+		if owner_view != null and owner_view.look_anchor == target:
+			return owner_view
+	return target
+
+
 ## Still usable: the node (if any) is alive and in the tree, the stage too.
 func is_valid() -> bool:
 	match kind:
@@ -120,8 +132,9 @@ func placed(default_socket: StringName) -> FxAnchor:
 	copy.socket = socket
 	var target := world_node()
 	if target != null and is_instance_valid(target):
-		copy.socket_offset = FxAttach.socket_position(target, socket if socket != &"" else default_socket)
-		copy.radius = FxAttach.radius(target)
+		var measured := measured_node()
+		copy.socket_offset = FxAttach.socket_position(measured, socket if socket != &"" else default_socket)
+		copy.radius = FxAttach.radius(measured)
 		if not stencil_forced and target is UnitAnimator and kind in [Kind.UNIT, Kind.NODE3D]:  # not a stage: not stamped (spec 3.5)
 			copy.stencil_value = (target as UnitAnimator).effect_stencil_value()
 	if stencil_forced:

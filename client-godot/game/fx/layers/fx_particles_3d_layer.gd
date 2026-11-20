@@ -69,6 +69,8 @@ func build() -> Node:
 	var mesh: Mesh = draw_mesh.duplicate() if draw_mesh != null else QuadMesh.new()
 	if draw_mesh == null:
 		mesh.material = _make_draw_material()
+	else:
+		FxLayer.mesh_without_fog(mesh)   # a custom mesh's own transparent materials ignore fog too
 	particles.draw_pass_1 = mesh
 	return particles
 

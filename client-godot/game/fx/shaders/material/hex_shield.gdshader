@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_add, depth_draw_never, cull_back, shadows_disabled;
+render_mode unshaded, blend_add, depth_draw_never, cull_back, shadows_disabled, fog_disabled;
 
 // Hex shield (spec vfx-content-pass): a force-field skin for a sphere mesh: a glowing rim, hexagonal plates outlined in light, and a sweep of
 // brightness that runs round it. Bastion's dome. FxMeshLayer puts it on a sphere; animate `strength` with a curve track to fade it in and out.

@@ -61,7 +61,7 @@ func apply(node: Node, params: Dictionary, anchor: FxAnchor, quality: int, defin
 	node.set_meta(META_QUALITY, quality)
 	rebind(node, params, definition)
 	if socket != &"" and node is Node3D and anchor.world_node() != null:
-		(node as Node3D).position = FxAttach.socket_position(anchor.world_node(), socket) - anchor.socket_offset
+		(node as Node3D).position = FxAttach.socket_position(anchor.measured_node(), socket) - anchor.socket_offset
 
 
 ## Re-runs the bindings (a parameter changed on a live effect).
@@ -204,6 +204,29 @@ func stencil_include_problem(shader: Shader, layer_over: int) -> String:
 		return ""
 	return "fx_stencil_include_missing: layer '%s': %s draws over its unit but does not #include %s" % [id,
 		shader.resource_path.get_file() if shader.resource_path != "" else "its shader", FxStencilShaders.INCLUDE]
+
+
+## Effects ignore fog (spec class-pick review, 2026-11-19): fog tints every pixel of an additive or transparent quad, its clear
+## edges too, so in a foggy stage each quad showed as a grey square. A standard material gets a copy with disable_fog; a shader
+## material keeps its own (the library's spatial effect shaders say fog_disabled in their render_mode). Opaque materials keep fog.
+static func without_fog(material: Material) -> Material:
+	if material is BaseMaterial3D:
+		var base := material as BaseMaterial3D
+		if base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED or base.blend_mode != BaseMaterial3D.BLEND_MODE_MIX:
+			var copy := base.duplicate() as BaseMaterial3D
+			copy.disable_fog = true
+			return copy
+	return material
+
+
+## The same for every material a mesh carries (a PrimitiveMesh's material, an ArrayMesh's surfaces); the mesh is changed in place,
+## so pass a copy.
+static func mesh_without_fog(mesh: Mesh) -> void:
+	if mesh is PrimitiveMesh:
+		(mesh as PrimitiveMesh).material = without_fog((mesh as PrimitiveMesh).material)
+	elif mesh is ArrayMesh:
+		for surface in mesh.get_surface_count():
+			(mesh as ArrayMesh).surface_set_material(surface, without_fog(mesh.surface_get_material(surface)))
 
 
 ## A node's metadata value, or null when it has none (get_meta with a null default logs an error).

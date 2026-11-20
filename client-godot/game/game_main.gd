@@ -22,6 +22,8 @@ signal content_changed(content: ContentIndex)
 signal sandbox_closed
 ## Spec playtest-fixes B10: server mode switched on (a new link) or off (null).
 signal server_changed(link: ServerLink)
+## Spec class-pick 2.5: the server refused a run start (`error` as ServerLink returns it; 1409 = a class the account lacks).
+signal run_start_refused(error: Dictionary)
 
 const VIEW_DIR: String = "res://presentation/demo/"
 const UI_POLICY: String = "res://presentation/demo/ui/ui_policy.tres"
@@ -94,6 +96,11 @@ var _server_problem_shown: bool = false
 ## needs the server, UIPushButton.debug_skips_online). True in the editor and the dev and full builds (debug), false in the
 ## player build; tests set it.
 var debug_local_mode: bool = OS.is_debug_build()
+## Spec class-pick 2.6: the dev run setup, set only by the dev console's `runsetup` (never in the player build), for this session
+## only: {"content_root", "run_id", "seed"}; missing = the defaults (the first content root, the content's default run, a random
+## or server-issued seed). The class pick's Lock in reads the run and the seed; `runsetup content` switches the root at once (as
+## the old picker did) and `runsetup clear` switches it back.
+var dev_run_setup: Dictionary = {}
 ## Spec main-menu M5 (D2): local-mode runs are saved after every action. Off headless (tests turn it on with their own
 ## `local_save_path`) and in the player build (debug_local_mode).
 var local_saves: bool = DisplayServer.get_name() != "headless" and OS.is_debug_build()
@@ -312,12 +319,15 @@ static func content_roots() -> Array[String]:
 
 
 ## Switches the content root (res://content/ or the test fixtures) and remembers it.
-func set_content_root(path: String) -> void:
+## Switches the content root and reloads the content; `persist` false keeps the Settings as they are (spec class-pick 2.6: the
+## dev run setup's root is for this session only).
+func set_content_root(path: String, persist: bool = true) -> void:
 	content_root = path
-	var settings := ConfigFile.new()
-	settings.load(SETTINGS_PATH)
-	settings.set_value("game", "content_root", path)
-	settings.save(SETTINGS_PATH)
+	if persist:
+		var settings := ConfigFile.new()
+		settings.load(SETTINGS_PATH)
+		settings.set_value("game", "content_root", path)
+		settings.save(SETTINGS_PATH)
 	load_content()
 
 
@@ -375,6 +385,7 @@ func _start_server_run(character_ids: Array, run_id: StringName) -> void:
 	var picked := RunController.pick_run(content, run_id)
 	if picked["error"] != "":
 		show_message(picked["error"])
+		run_start_refused.emit({"status": -1, "local": true, "title": picked["error"]})
 		return
 	var structure_id := String(picked["run"].id)
 	show_message("Connecting…")
@@ -385,6 +396,7 @@ func _start_server_run(character_ids: Array, run_id: StringName) -> void:
 	if not result["ok"]:
 		_server_problem_shown = true
 		show_message("Server: " + ServerLink.describe(result["error"]))
+		run_start_refused.emit(result["error"])
 		return
 	var server_run_id := str(result["data"]["runId"])
 	_new_run()

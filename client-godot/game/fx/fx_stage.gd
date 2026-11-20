@@ -93,9 +93,17 @@ func match_screen_pixels(on: bool = true) -> void:
 
 ## Screen pixels per stage unit (1 unless match_screen_pixels is on).
 func pixel_ratio() -> float:
-	if not _screen_pixels or not is_inside_tree():
+	if not _screen_pixels:
 		return 1.0
-	return maxf(get_viewport().get_screen_transform().get_scale().x * get_global_transform().get_scale().x, 0.25)
+	return screen_pixel_ratio(self)
+
+
+## Screen pixels per unit of `control` (1 outside the tree): what a SubViewport drawn in it needs for sharp 3D at any window
+## size (the class pick's stage uses it too).
+static func screen_pixel_ratio(control: Control) -> float:
+	if control == null or not control.is_inside_tree():
+		return 1.0
+	return maxf(control.get_viewport().get_screen_transform().get_scale().x * control.get_global_transform().get_scale().x, 0.25)
 
 
 ## A point in the stage's own coordinates as a point in the viewport (what Camera3D.project_position takes).

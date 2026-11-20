@@ -33,7 +33,7 @@ func build() -> Node:
 		# plain copy of its material, next_pass and all.
 		instance.material_override = _stencil_copy(material as ShaderMaterial)
 	elif material != null:
-		instance.material_override = material.duplicate()
+		instance.material_override = FxLayer.without_fog(material.duplicate())
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if cast_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return instance
 

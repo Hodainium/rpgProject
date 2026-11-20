@@ -1,0 +1,70 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/dev/run_setup.gd" id="1_setup"]
+[ext_resource type="Script" path="res://game/ui/ui_back_button.gd" id="2_back"]
+
+[node name="RunSetup" type="CenterContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_setup")
+focus_on_activate = NodePath("Panel/Box/RunPicker")
+
+[node name="Panel" type="PanelContainer" parent="."]
+custom_minimum_size = Vector2(620, 0)
+layout_mode = 2
+theme_type_variation = &"WindowPanel"
+
+[node name="Box" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Back" type="Button" parent="Panel/Box"]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Back"
+script = ExtResource("2_back")
+
+[node name="Title" type="Label" parent="Panel/Box"]
+layout_mode = 2
+theme_type_variation = &"Title"
+text = "Dev run setup"
+
+[node name="ContentRoot" type="OptionButton" parent="Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RunPicker" type="OptionButton" parent="Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SeedRow" type="HBoxContainer" parent="Panel/Box"]
+layout_mode = 2
+
+[node name="SeedLabel" type="Label" parent="Panel/Box/SeedRow"]
+layout_mode = 2
+text = "Seed:"
+
+[node name="Seed" type="LineEdit" parent="Panel/Box/SeedRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Random" type="Button" parent="Panel/Box/SeedRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Random"
+
+[node name="Summary" type="Label" parent="Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+autowrap_mode = 3
+
+[node name="Clear" type="Button" parent="Panel/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Clear (defaults)"

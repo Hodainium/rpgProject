@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
 
 // Rune glyphs (spec cube-style 3.2, a look's idle effect): a steady ring of glyphs lying on the floor under a unit. Two thin rings hold a
 // band of runes (each built from a few strokes picked by a hash, so every rune differs) that turns slowly; each rune glows up and down on

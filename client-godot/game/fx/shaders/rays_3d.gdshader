@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
 
 // Rays, 3D (spec vfx-framework): god rays on a camera-facing quad. Ults, bosses, a legendary card in the 3D stage.
 // @uniform progress   0..1 over the layer (driven)
