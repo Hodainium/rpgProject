@@ -8,6 +8,11 @@ extends UIScreen
 
 ## The number of party slots.
 @export var max_party: int = 4
+## The lock over a locked class in front (only the front one, once the ring stops; user, 2026-11-19): its icon, its size as a
+## share of the cube's height (0.7: the mock-up's "medium"), and how fast it fades in (it goes at once when the ring turns).
+@export var lock_icon: Texture2D
+@export var lock_size: float = 0.7
+@export var lock_fade_seconds: float = 0.15
 ## The description's height in lines, whatever the class (the card keeps one size).
 @export var description_lines: int = 2
 ## Picked on first launch, before a party was saved.
@@ -31,9 +36,6 @@ extends UIScreen
 @export var learn_entry: String = "Lv %d %s"
 @export var move_labels: Dictionary = {"Basic": "Basic", "Skill": "Skill", "FollowUp": "Follow-up", "Passive": "Passive",
 	"Ultimate": "Ult"}
-@export var preset_loaded_text: String = "%s loaded."
-@export var preset_missing_one_text: String = "%s loaded. 1 class not owned, its slot is empty."
-@export var preset_missing_text: String = "%s loaded. %d classes not owned, their slots are empty."
 @export var collection_failed_text: String = "Couldn't check your collection. Only starter classes can be picked."
 @export var session_replaced_text: String = "Your account was opened somewhere else. Only starter classes can be picked here."
 @export var locked_start_text: String = "%s is not on your account any more. Pick another class."
@@ -136,6 +138,26 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+## "Damage dealer / off-tank: break" → "Damage Dealer / Off-Tank: Break" (the role line reads like a title; user, 2026-11-19):
+## every word's first letter, including after a hyphen, in upper case; the rest as written. Small words (`title_small_words`)
+## stay lower case unless they open the text or follow a colon.
+const TITLE_SMALL_WORDS: Array[String] = ["a", "an", "and", "as", "at", "but", "by", "for", "in", "of", "on", "or", "the", "to", "with"]
+
+
+static func title_case(text: String) -> String:
+	var words := text.split(" ")
+	for index in words.size():
+		var word := words[index]
+		var opens := index == 0 or words[index - 1].ends_with(":")
+		if word == "" or (not opens and TITLE_SMALL_WORDS.has(word.to_lower())):
+			continue
+		var parts := word.split("-")
+		for part in parts.size():
+			parts[part] = parts[part].left(1).to_upper() + parts[part].substr(1)
+		words[index] = "-".join(parts)
+	return " ".join(words)
+
+
 ## Redraws the footer and the dev run setup line (the console's runsetup calls it).
 func refresh() -> void:
 	_show_footer()
@@ -177,20 +199,13 @@ func remove_slot(slot: int) -> void:
 	_show_class()
 
 
-## Loads `preset`: a class that is not pickable leaves its slot empty (D8); the message line says how many.
+## Loads `preset`: a class that is not pickable leaves its slot empty (D8); no message (the empty slot says it; user, 2026-11-19).
 func apply_preset(preset: PartyPreset) -> void:
 	if preset == null or _starting:
 		return
 	_restored = true
 	var applied := ClassPickModel.apply_preset(Array(preset.members), states, max_party)
 	party = applied["party"]
-	var missing: int = applied["missing"]
-	if missing == 0:
-		_message(preset_loaded_text % preset.display_name)
-	elif missing == 1:
-		_message(preset_missing_one_text % preset.display_name)
-	else:
-		_message(preset_missing_text % [preset.display_name, missing])
 	_show_party()
 	_show_class()
 
@@ -350,7 +365,7 @@ func _show_class() -> void:
 		chips.append(locked_chip)
 	if in_party:
 		chips.append(in_party_chip)
-	%Description.show_info({"name": character.display_name, "kind": character.role, "text": character.description,
+	%Description.show_info({"name": character.display_name, "kind": title_case(character.role), "text": character.description,
 		"extra": "  ·  ".join(chips)})
 	%Description.get_node("%Extra").visible = true   # the chips' line keeps its place when empty: the card never jumps
 	for child in %Moves.get_children():
@@ -479,6 +494,24 @@ func _on_start_refused(error: Dictionary) -> void:
 		var character: CharacterDefinition = ctx.main.content.characters.get(id)
 		return character.display_name if character != null else String(id))
 	_message(locked_start_text % ", ".join(names) if not names.is_empty() else refused_text)
+
+
+func _process(delta: float) -> void:
+	if not is_visible_in_tree():
+		return
+	var character := selected()
+	var locked: bool = character != null and lock_icon != null and not %Carousel.turning()
+	locked = locked and not ClassPickModel.pickable(states.get(String(character.id), ClassPickModel.LOCKED))
+	var lock: TextureRect = %Lock
+	lock.texture = lock_icon
+	lock.modulate.a = move_toward(lock.modulate.a, 1.0, delta / maxf(lock_fade_seconds, 0.01)) if locked else 0.0
+	lock.visible = lock.modulate.a > 0.0
+	if lock.visible:
+		var cube: Rect2 = %Carousel.front_on_screen()
+		var ratio := FxStage.screen_pixel_ratio(%Stage)
+		var side := cube.size.y * lock_size / ratio
+		lock.size = Vector2(side, side)
+		lock.position = cube.get_center() / ratio - lock.size * 0.5
 
 
 ## The stage's viewport at the window's real pixels (sharp at 4K, FxStage.screen_pixel_ratio): refitted when the stage or the

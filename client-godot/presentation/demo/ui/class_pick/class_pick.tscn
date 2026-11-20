@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/class_pick/party_slot.tscn" id="6_slot"]
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/class_pick/preset_row.tscn" id="7_row"]
 [ext_resource type="Resource" path="res://presentation/demo/ui/class_pick/party_presets.tres" id="8_presets"]
+[ext_resource type="Texture2D" path="res://presentation/demo/ui/icons/lock_filled.svg" id="9_lock"]
 
 [node name="ClassPick" type="Control"]
 layout_mode = 3
@@ -18,6 +19,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_pick")
 presets = ExtResource("8_presets")
+lock_icon = ExtResource("9_lock")
 focus_on_activate = NodePath("Margin/Columns/Left/Card/CardWindow/CardBox/ActionRow/Add")
 
 [node name="Margin" type="MarginContainer" parent="."]
@@ -89,6 +91,16 @@ render_target_update_mode = 3
 unique_name_in_owner = true
 
 
+
+[node name="Lock" type="TextureRect" parent="Margin/Columns/Left/StageWindow/Stage"]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 1, 1, 0)
+texture_filter = 4
+layout_mode = 0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Prev" type="Button" parent="Margin/Columns/Left/StageWindow/Stage"]
 unique_name_in_owner = true
