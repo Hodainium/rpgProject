@@ -24,15 +24,18 @@ extends UIScreen
 @export var in_party_chip: String = "In party"
 @export var locked_hint: String = "Find %s in a pack or craft it."
 @export var full_hint: String = "The party is full. Click a member to take it out."
-@export var short_footer: String = "Only %d slot%s filled."
+@export var short_footer: String = "Only %d slots filled."
+@export var short_footer_one: String = "Only 1 slot filled."
 @export var empty_footer: String = "Pick at least one class."
 @export var learns_format: String = "Learns: %s"
 @export var learn_entry: String = "Lv %d %s"
 @export var move_labels: Dictionary = {"Basic": "Basic", "Skill": "Skill", "FollowUp": "Follow-up", "Passive": "Passive",
 	"Ultimate": "Ult"}
 @export var preset_loaded_text: String = "%s loaded."
-@export var preset_missing_text: String = "%s loaded. %d class%s not owned, %s empty."
+@export var preset_missing_one_text: String = "%s loaded. 1 class not owned, its slot is empty."
+@export var preset_missing_text: String = "%s loaded. %d classes not owned, their slots are empty."
 @export var collection_failed_text: String = "Couldn't check your collection. Only starter classes can be picked."
+@export var session_replaced_text: String = "Your account was opened somewhere else. Only starter classes can be picked here."
 @export var locked_start_text: String = "%s is not on your account any more. Pick another class."
 ## A 1409 whose class this screen cannot name (its collection still lists it, or the read failed).
 @export var refused_text: String = "The server refused a class in this party. Check your collection and pick again."
@@ -140,6 +143,8 @@ func refresh() -> void:
 
 ## Turns the ring `steps` classes.
 func turn(steps: int) -> void:
+	if _starting:
+		return   # Lock in pressed: the party on screen is the one being started
 	%Carousel.turn(steps)
 
 
@@ -151,30 +156,41 @@ func selected() -> CharacterDefinition:
 ## Adds the class in front to the first empty slot, or takes it out when it is in the party (Add / Remove, Enter).
 func toggle_selected() -> void:
 	var character := selected()
-	if character == null or not ClassPickModel.pickable(states.get(String(character.id), ClassPickModel.LOCKED)):
+	if _starting or character == null or not ClassPickModel.pickable(states.get(String(character.id), ClassPickModel.LOCKED)):
 		return
 	var slot := party.find(character.id)
+	var before := party.duplicate()
 	party = ClassPickModel.remove(party, slot, max_party) if slot >= 0 else ClassPickModel.add(party, character.id, max_party)
+	_restored = _restored or party != before   # the player's own party now: a late answer from the account never replaces it
 	_show_party()
 	_show_class()
 
 
 ## Empties `slot` (a click on a member).
 func remove_slot(slot: int) -> void:
+	if _starting:
+		return
+	var before := party.duplicate()
 	party = ClassPickModel.remove(party, slot, max_party)
+	_restored = _restored or party != before
 	_show_party()
 	_show_class()
 
 
 ## Loads `preset`: a class that is not pickable leaves its slot empty (D8); the message line says how many.
 func apply_preset(preset: PartyPreset) -> void:
-	if preset == null:
+	if preset == null or _starting:
 		return
+	_restored = true
 	var applied := ClassPickModel.apply_preset(Array(preset.members), states, max_party)
 	party = applied["party"]
 	var missing: int = applied["missing"]
-	_message(preset_loaded_text % preset.display_name if missing == 0 else preset_missing_text % [preset.display_name,
-		missing, "" if missing == 1 else "es", "its slot is" if missing == 1 else "their slots are"])
+	if missing == 0:
+		_message(preset_loaded_text % preset.display_name)
+	elif missing == 1:
+		_message(preset_missing_one_text % preset.display_name)
+	else:
+		_message(preset_missing_text % [preset.display_name, missing])
 	_show_party()
 	_show_class()
 
@@ -218,13 +234,35 @@ func load_ownership() -> void:
 	var ids: Array = _characters.map(func(character: CharacterDefinition) -> String: return String(character.id))
 	var core: Array = CardCatalog.core_ids(ctx.main.content)
 	var link: ServerLink = ctx.main.server
+	if link != null:
+		loading = true   # from the first request on: commands and tests wait for the whole answer
+		if states.is_empty():
+			_use_states(ClassPickModel.ownership(ids, core, null, true), false)  # core only until the account first answers
+		# The server decides what counts: its catalog's core cards; an empty catalog enforces nothing (cards off or unseeded),
+		# so every class is open, as the run start would accept them. Only a catalog with cards is kept on the link (an empty
+		# one is read again next time: the server may have been seeded since).
+		var cards: Array = link.card_catalog.get("cards", []) if not link.card_catalog.is_empty() else []
+		if cards.is_empty():
+			var catalog: Dictionary = await link.get_card_catalog()
+			if generation != _generation or not is_instance_valid(self):
+				return
+			if catalog["ok"] and catalog["data"] is Dictionary:
+				cards = catalog["data"].get("cards", [])
+				if not cards.is_empty():
+					link.card_catalog = catalog["data"]
+			if catalog["ok"] and cards.is_empty():
+				link = null   # nothing enforced: every class is open
+		if not cards.is_empty():
+			var server_core: Array = []
+			for card in cards:
+				if card is Dictionary and bool(card.get("core", false)):
+					server_core.append(str(card.get("id", "")))
+			core = server_core
 	if link == null:
 		loading = false
 		_from_account = false
 		_use_states(ClassPickModel.ownership(ids, core, null, false))
 		return
-	if states.is_empty():
-		_use_states(ClassPickModel.ownership(ids, core, null, true), false)  # core only until the account first answers
 	loading = true
 	var collection: Variant = null
 	if not link.session_replaced:
@@ -244,7 +282,7 @@ func load_ownership() -> void:
 	if not collection is Dictionary:
 		collection = null
 		if not core.is_empty():
-			_message(collection_failed_text)
+			_message(session_replaced_text if link.session_replaced else collection_failed_text)
 			if _from_account:
 				return   # keep what the account last said
 	_from_account = collection != null
@@ -383,7 +421,7 @@ func _show_presets() -> void:
 
 
 func _show_footer() -> void:
-	%Footer.text = ClassPickModel.footer(party, max_party, short_footer, empty_footer)
+	%Footer.text = ClassPickModel.footer(party, max_party, short_footer, short_footer_one, empty_footer)
 	%LockIn.disabled = _starting or ClassPickModel.members(party).is_empty()
 	var setup: Dictionary = ctx.main.dev_run_setup if ctx != null else {}
 	var parts := PackedStringArray()
