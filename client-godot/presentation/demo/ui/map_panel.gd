@@ -27,15 +27,26 @@ func bind(context: UIContext) -> void:
 
 
 func _process(_delta: float) -> void:
-	var held := InputMap.has_action(hold_action) and Input.is_action_pressed(hold_action)
+	var held := _key_state()
 	if held != _key_held:
 		_key_held = held
 		set_held(held)
 
 
+## Playtest-fixes B28: Tab toggles (UIToggles: one press grows the map, the next shrinks it); an action that is not a toggle
+## still grows it while held.
+func _key_state() -> bool:
+	if UIToggles.is_toggle(hold_action):
+		return UIToggles.is_on(hold_action)
+	return InputMap.has_action(hold_action) and Input.is_action_pressed(hold_action)
+
+
 ## Grows (or shrinks back) the map: Tab, or the console and tests.
 func set_held(held: bool) -> void:
 	_held = held
+	if UIToggles.is_toggle(hold_action):
+		UIToggles.set_on(hold_action, held)
+		_key_held = held
 	refresh()
 
 

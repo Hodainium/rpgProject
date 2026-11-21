@@ -198,6 +198,8 @@
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/plague_hat.tres" id="plague_hat"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/plague_flask.tres" id="plague_flask"]
 [ext_resource type="Resource" path="res://presentation/demo/style/items/item_card_look.tres" id="item_card_look"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/shaman_face_paint.tres" id="shaman_face_paint"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/rat_eyes_tiny_brows.tres" id="rat_eyes_tiny_brows"]
 
 [sub_resource type="Resource" id="Resource_f1a1"]
 script = ExtResource("2_b37kx")
@@ -1041,9 +1043,14 @@ offset = Vector3(0.1, 0.12, 0.25)
 script = ExtResource("2_b37kx")
 shape = ExtResource("41_headdress")
 
+[sub_resource type="Resource" id="Resource_shaman_face"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("shaman_face_paint")
+socket = &"Front"
+
 [sub_resource type="Resource" id="Resource_shaman"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_shaman_staff"), SubResource("Resource_shaman_headdress")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_shaman_staff"), SubResource("Resource_shaman_headdress"), SubResource("Resource_shaman_face")])
 
 [sub_resource type="Resource" id="Resource_rat_tail"]
 script = ExtResource("2_b37kx")
@@ -1061,9 +1068,14 @@ script = ExtResource("2_b37kx")
 shape = ExtResource("43_mouse")
 socket = &"Front"
 
+[sub_resource type="Resource" id="Resource_rat_eyes"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("rat_eyes_tiny_brows")
+socket = &"Front"
+
 [sub_resource type="Resource" id="Resource_rat"]
 script = ExtResource("1_avbba")
-attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_rat_tail"), SubResource("Resource_rat_crown"), SubResource("Resource_rat_face")])
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_rat_tail"), SubResource("Resource_rat_crown"), SubResource("Resource_rat_face"), SubResource("Resource_rat_eyes")])
 
 [sub_resource type="Resource" id="Resource_warden_skull"]
 script = ExtResource("2_b37kx")

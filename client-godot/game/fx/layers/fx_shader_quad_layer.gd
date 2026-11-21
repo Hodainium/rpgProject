@@ -16,6 +16,10 @@ extends FxLayer
 @export var grow: float = 0.0
 ## 3D only: turn to face the camera every frame.
 @export var face_camera: bool = true
+## 3D, with face_camera: turn around the world's up axis only, so the quad stays upright (a beam falling onto its unit keeps its
+## foot on the unit from any camera; a full turn tilts it with the camera and an offset quad lands beside the unit, playtest-fixes
+## B34).
+@export var upright: bool = false
 @export var default_size_when_empty: Vector2 = Vector2(160, 160)
 
 ## Spec vfx-stencil 3.3: does this 3D quad draw over the unit it sits on? AUTO: a camera-facing quad does (a hit glow), a flat one
@@ -101,7 +105,7 @@ func update(node: Node, local_time: float, length_seconds: float, params: Dictio
 	elif node is Node3D and face_camera and node.is_inside_tree():
 		var camera := node.get_viewport().get_camera_3d()
 		if camera != null:
-			(node as Node3D).global_basis = camera.global_basis
+			(node as Node3D).global_basis = _facing(node as Node3D, camera)
 	node.set_meta(META_TIME, local_time)
 	var fading: Variant = FxLayer.meta_of(node, META_FADE)
 	if fading != null and node.material != null:
@@ -166,3 +170,17 @@ func _layout(rect: Control) -> void:
 func ended(node: Node) -> void:
 	super(node)
 	FxLayer.set_node_visible(node, false)
+
+
+## The basis that turns the quad (its +Z) toward the camera: the camera's own, or with `upright` a turn around Y toward it.
+func _facing(node: Node3D, camera: Camera3D) -> Basis:
+	if not upright:
+		return camera.global_basis
+	var toward := camera.global_position - node.global_position
+	toward.y = 0.0
+	if toward.length_squared() < 0.000001:
+		toward = camera.global_basis.z
+		toward.y = 0.0
+		if toward.length_squared() < 0.000001:
+			return Basis.IDENTITY
+	return Basis.looking_at(-toward.normalized(), Vector3.UP)

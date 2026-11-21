@@ -238,8 +238,9 @@ the content files.
 **Ending route (D15):** after the floor-8 boss the player picks the route at the stairs, like Isaac's light beam and
 trapdoor: the light route (Cathedral → Vault) or the dark route (Coven → Void). Floor 10 follows the route of floor 9.
 
-Item sources where there are no item rooms: every boss encounter **rewards** one `Pool.Boss` item (3.7 rewards), and
-events still appear. The Vault's treasure rooms draw from `Pool.Treasure` (they once drew from a `Pool.Vault` too; that pool was removed 2026-11-09, spec card-collection).
+Item sources where there are no item rooms: every boss encounter of floors 1-8 **rewards** one `Pool.Boss` item (3.7 rewards),
+and events still appear. **The route bosses give nothing** (user, 2026-11-21, playtest-fixes B32): the Cathedral's and the
+Coven's (floor 9) and the Vault's and the Void's (floor 10) encounters have no rewards, and no route boss has a `drop_item`. The Vault's treasure rooms draw from `Pool.Treasure` (they once drew from a `Pool.Vault` too; that pool was removed 2026-11-09, spec card-collection).
 
 **System (two battle hooks and one generator option; no wire change):**
 | Hook | Where | Rule |

@@ -11,12 +11,19 @@ extends Resource
 ## skill, the first in its table that can activate) instead of its usual choice. 0 = never (the default).
 @export var level_skill_every: int = 0
 
+## Playtest-fixes B30: abilities used on targets that carry given tags, checked in order before the usual choice
+## (EnemyTargetRule). Empty = none (the default).
+@export var target_rules: Array[EnemyTargetRule] = []
+
 
 ## Returns {"ability": StringName, "target": StringName or &""}. An empty ability means the unit passes its turn.
 func choose(unit: BattleUnit, battle: Battle) -> Dictionary:
 	var secret := level_skill_choice(unit, battle)
 	if not secret.is_empty():
 		return secret
+	var ruled := rule_choice(unit, battle)
+	if not ruled.is_empty():
+		return ruled
 	for ability in unit.action_abilities():
 		if not unit.asc.can_activate_ability(ability):
 			continue
@@ -40,6 +47,22 @@ func level_skill_choice(unit: BattleUnit, battle: Battle) -> Dictionary:
 			var choice := choice_for(unit, battle, ability)
 			if not choice.is_empty():
 				return choice
+	return {}
+
+
+## Playtest-fixes B30: {"ability", "target"} for the first target rule that fires, else {}. Reads only tags and the unit's kit;
+## draws from the RNG only for the chosen rule's target.
+func rule_choice(unit: BattleUnit, battle: Battle) -> Dictionary:
+	for rule in target_rules:
+		if rule == null or rule.ability == &"":
+			continue
+		var ability := unit.ability_by_tag(rule.ability)
+		if ability == null or ability.is_triggered() or ability.is_ultimate() or not ability.needs_target() 				or not unit.asc.can_activate_ability(ability):
+			continue
+		var candidates := target_pool(unit, battle, ability).filter(func(target: BattleUnit) -> bool: return rule.matches(target))
+		if candidates.is_empty():
+			continue
+		return {"ability": ability.ability_tag, "target": candidates[battle.rng.randi_range(0, candidates.size() - 1)].unit_id}
 	return {}
 
 

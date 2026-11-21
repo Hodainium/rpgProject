@@ -400,3 +400,56 @@ func test_use_and_status_screens() -> void:
 		status._set_tab(tab)
 		await _frames(1)
 		check(status.get_node("%Body").get_child_count() > 0, "the %s tab shows something" % tab)
+
+
+## Playtest-fixes B28: Tab toggles the grown map (one press on, the next off; holding it flips once) and never walks the
+## focused button on the run screens; a text field keeps its Tab.
+func test_tab_toggles_the_map_and_keeps_focus() -> void:
+	var game := await _game()
+	var panel := _find(game, "MapPanel")
+	var title: Label = panel.get_node("%Title")
+	var small := title.text
+	var button: Button = _find(game, "ExploreMenu").find_children("*", "Button", true, false)[0]
+	button.grab_focus()
+	await _frames(1)
+	var tab := InputEventAction.new()
+	tab.action = &"show_floor_info"
+	tab.pressed = true
+	Input.parse_input_event(tab)
+	await _frames(2)
+	check(title.text != small, "one press grows the map (%s)" % title.text)
+	eq(game.get_viewport().gui_get_focus_owner(), button, "the focus stays on its button")
+	var echo := InputEventKey.new()
+	echo.physical_keycode = KEY_TAB
+	echo.pressed = true
+	echo.echo = true
+	Input.parse_input_event(echo)
+	await _frames(2)
+	check(title.text != small, "a held key's repeat does not flip it back")
+	eq(game.get_viewport().gui_get_focus_owner(), button, "nor walks the focus")
+	var release := InputEventAction.new()
+	release.action = &"show_floor_info"
+	Input.parse_input_event(release)
+	Input.parse_input_event(tab)
+	await _frames(2)
+	eq(title.text, small, "the next press shrinks it")
+	Input.parse_input_event(release)
+	await _frames(1)
+
+
+## Playtest-fixes B31: a long pickup name (a Void altar's "costs a <curse>: <description>") wraps to several lines; the member
+## picker and the Take button keep their own height instead of stretching with the row.
+func test_pickup_row_picker_keeps_its_height() -> void:
+	var row: Control = load("res://presentation/demo/ui/pickup_row.tscn").instantiate()
+	row.custom_minimum_size = Vector2(540, 0)
+	host.add_child(row)
+	var picker: OptionButton = row.get_node("%GiveTo")
+	picker.add_item("Warrior", 1)
+	var take: Button = row.get_node("%Take")
+	(row.get_node("%Name") as Label).text = "[Epic] Corrupted Drum  5 coins  costs a Void Scar: -10% max HP for the rest of the run, " \
+		+ "and every ult costs 10 more SP."
+	await _frames(3)
+	check(row.get_node("Row").size.y > picker.get_combined_minimum_size().y * 2, "the name wraps (row %.0f)" % row.get_node("Row").size.y)
+	eq(picker.size.y, picker.get_combined_minimum_size().y, "the picker keeps its height")
+	eq(take.size.y, take.get_combined_minimum_size().y, "so does the button")
+	row.queue_free()

@@ -175,6 +175,23 @@ func test_toast_hold() -> void:
 	eq(holds, [true, false], "hold_changed tells the scene")
 
 
+## Playtest-fixes B28: Tab toggles, so the floor toast can stay pinned across floors: a pin never doubles a live toast of its
+## rule, and a new message of the pinned rule replaces the pinned text.
+func test_toast_pin_follows_the_newest() -> void:
+	var floor_rule := _rule(&"Message.Test.Floor", "Floor {count}", {"hold_action": &"test_hold", "seconds": 1.0})
+	var th := _host([floor_rule])
+	_verb(&"Message.Test.Floor", &"Verb.Enter", {}, 1)
+	eq(_titles(th), ["Floor 1"], "the floor toast shows")
+	th.hold(&"test_hold", true)
+	eq(_titles(th), ["Floor 1"], "pinned: still one toast")
+	_verb(&"Message.Test.Floor", &"Verb.Enter", {}, 2)
+	th.advance(1.5)
+	eq(_titles(th), ["Floor 2"], "a new floor replaces the pinned text")
+	check(th.toasts()[0]["pinned"], "and stays pinned")
+	th.hold(&"test_hold", false)
+	eq(th.toasts().size(), 0, "released: gone")
+
+
 func test_toast_clear_on() -> void:
 	var th := _host([_rule(&"Message.Test.Feed", "line", {"seconds": 9.0})], UIToastSet.Stack.STACK, 4, 5,
 		[&"Message.Test.Reset"])

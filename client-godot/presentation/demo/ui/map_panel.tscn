@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/map_cell.tscn" id="3_cell"]
 
 [node name="MapPanel" type="PanelContainer"]
+size_flags_horizontal = 8
 script = ExtResource("1_map")
 
 [node name="Margin" type="MarginContainer" parent="."]
