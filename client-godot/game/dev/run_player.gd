@@ -90,7 +90,30 @@ static func next_room(run: RunController) -> int:
 		var locked := _locked_target(run)
 		if locked != -1:
 			return locked
+		var challenge := _challenge_target(run)
+		if challenge != -1:
+			return challenge
 	return picked
+
+
+## Spec floor-rooms: before the boss, a challenge room not yet fought (its waves start on entry), like the locked rooms. When
+## it is not next to a visited room yet, the next unvisited room on the way (lowest index, not the boss); -1 none. Runs
+## without challenge rooms play exactly as before.
+static func _challenge_target(run: RunController) -> int:
+	var waiting := false
+	for index in run.state.map.sorted_indices():
+		var data: Dictionary = run.state.map.cells[index]
+		if str(data["content"]["kind"]) == "waves" and not data["cleared"] and not run.room_locked(index):
+			if run.can_enter(index):
+				return index
+			waiting = true
+	if not waiting:
+		return -1
+	for index in run.state.map.sorted_indices():
+		var data: Dictionary = run.state.map.cells[index]
+		if not data["visited"] and data["role"] != FloorMap.ROLE_BOSS and run.can_enter(index) and not run.room_locked(index):
+			return index
+	return -1
 
 
 ## An enterable locked room the party can open now (keys or the golden key): item rooms first, then the rest; -1 none.

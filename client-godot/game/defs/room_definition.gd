@@ -3,7 +3,8 @@
 class_name RoomDefinition
 extends Resource
 
-enum ContentMode { NONE, ENCOUNTER, ENCOUNTER_QUERY, EVENT, EVENT_QUERY }
+## WAVES (spec floor-rooms, appended so saved rooms keep their values): the room's `waves`, fought one after another.
+enum ContentMode { NONE, ENCOUNTER, ENCOUNTER_QUERY, EVENT, EVENT_QUERY, WAVES }
 
 ## Door bits, matching the `doors` flags.
 const DOOR_N: int = 1
@@ -26,6 +27,9 @@ const GRID := Vector2i(13, 7)
 @export var event: EventDefinition
 ## Pool for the *_QUERY modes. Empty uses the chapter's encounter or event query.
 @export var content_query: GameplayTagQuery
+## WAVES mode (spec floor-rooms 3.1): the battles of a challenge room, in order (at least two). Nothing drops from them; the
+## room's rolls and pedestals come once, after the last.
+@export var waves: Array[RoomWave] = []
 @export var placements: Array[RoomPlacement] = []
 
 ## Pick weight as typed. Editor-only view of weight_x100.

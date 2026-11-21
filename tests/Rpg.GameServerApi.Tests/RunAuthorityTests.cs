@@ -71,6 +71,43 @@ public class RunAuthorityTests(StackFixture stack)
     }
 
     [Fact]
+    public async Task Actions_ChallengeWavesAndArmoryOffers_Stored()
+    {
+        // Spec floor-rooms 2.3 and 3.2: a challenge room's waves are ordinary battles (one session each, ids ending /w<k>),
+        // and the armory's and the challenge's pickups carry their own OfferSource.
+        await using var factory = await ApiFactory.RunsAsync(stack);
+        var client = await ClientAsync(factory, "alice");
+        var run = await client.StartFencedRunAsync(Start, Ct);
+        var armory = new RunActionRequest(2, new RunAction("enter_room", 0, Cell: 3, Unlock: "key", CoinsAfter: 0,
+            Offers: [new ItemOffer(1, "fixture.equipment.crate_helm", 0, OfferSource.Armory, ItemKind.Equipment)]),
+            "h2", RunLog.PlayedAt);
+        var waves = Enumerable.Range(1, 3)
+            .Select(wave => RunLog.Battle(run.RunId, 3 + wave, cell: 7, battleId: $"{run.RunId}/f0/c7/w{wave}"))
+            .ToArray();
+        // The reward shows once the last wave is won: re-entering the cleared room reports it as a Challenge offer.
+        var reward = new RunActionRequest(7, new RunAction("enter_room", 0, Cell: 7, CoinsAfter: 0,
+            Offers: [new ItemOffer(5, "fixture.item.tonic", 0, OfferSource.Challenge)]), "h7", RunLog.PlayedAt);
+
+        var ack = await client.SendActionsAsync(run.RunId,
+            RunLog.Batch([RunLog.Start(), armory, RunLog.Room(3, cell: 7), .. waves, reward]), Ct);
+
+        Assert.Equal(7, ack.LastSeq);
+        Assert.Equal(1L, await ScalarAsync(factory,
+            $"SELECT count(*) FROM run_actions WHERE run_id = '{run.RunId}' AND seq = 2" +
+            " AND action @> '{\"offers\": [{\"source\": \"Armory\", \"kind\": \"Equipment\"}]}'"));
+        Assert.Equal(1L, await ScalarAsync(factory,
+            $"SELECT count(*) FROM run_actions WHERE run_id = '{run.RunId}' AND seq = 7" +
+            " AND action @> '{\"offers\": [{\"source\": \"Challenge\", \"kind\": \"Item\"}]}'"));
+        Assert.Equal(3L, await ScalarAsync(factory,
+            $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}'"));
+        Assert.Equal(3L, await ScalarAsync(factory,
+            $"SELECT count(*) FROM battle_sessions WHERE run_id = '{run.RunId}' AND battle_id IN " +
+            $"('{run.RunId}/f0/c7/w1', '{run.RunId}/f0/c7/w2', '{run.RunId}/f0/c7/w3')"));
+        foreach (var wave in new[] { 1, 2, 3 })
+            Assert.NotNull(await client.GetBattleAsync(run.RunId, 3 + wave, Ct));
+    }
+
+    [Fact]
     public async Task Actions_BatchRetry_IsIdempotent()
     {
         await using var factory = await ApiFactory.RunsAsync(stack);

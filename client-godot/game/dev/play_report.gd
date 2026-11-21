@@ -423,6 +423,14 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 				for pair in [["found", "keysFound"], ["spent", "keysSpent"], ["chestsOpened", "chestsOpened"],
 						["chestsLeft", "chestsLeft"], ["lockedLeft", "lockedLeft"]]:
 					totals[pair[0]] += int(summary.get(pair[1], 0))
+		if summary.has("challengesEntered") or summary.has("armoriesVisited"):
+			# Spec floor-rooms 6: challenge rooms and armories over the runs, and the wave each challenge death came in.
+			var rooms: Dictionary = report.get_or_add("floorRooms", {"challengesEntered": 0, "challengesCleared": 0,
+				"armoriesVisited": 0, "lostInWave": {}})
+			for key in ["challengesEntered", "challengesCleared", "armoriesVisited"]:
+				rooms[key] += int(summary.get(key, 0))
+			if summary.get("endedIn", {}).has("wave"):
+				SeedReport._count(rooms["lostInWave"], str(int(summary["endedIn"]["wave"])))
 		for entry in record["bossEntry"]:
 			var key := "floor %d" % entry["floor"]
 			if not boss_hp.has(key):
@@ -690,6 +698,10 @@ static func text(report: Dictionary) -> String:
 		var keys: Dictionary = report["keys"]
 		lines.append("  keys found %d  spent %d  ·  chests opened %d, left %d  ·  locked rooms left %d (all runs)" % [
 			keys["found"], keys["spent"], keys["chestsOpened"], keys["chestsLeft"], keys["lockedLeft"]])
+	if report.has("floorRooms"):
+		var rooms: Dictionary = report["floorRooms"]
+		lines.append("  challenges entered %d, cleared %d  ·  lost in wave: %s  ·  armories visited %d (all runs)" % [
+			rooms["challengesEntered"], rooms["challengesCleared"], _pairs(rooms["lostInWave"]), rooms["armoriesVisited"]])
 	if report["policy"] == "chaos":
 		lines.append("  illegal moves refused: %s" % _pairs(report["refused"]))
 	if not report.get("sp", {}).is_empty():

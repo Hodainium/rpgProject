@@ -98,8 +98,10 @@ public sealed record BattleSubmission(string BattleId, BattleSnapshot Conditions
 public sealed record ItemOffer(int Placement, string ItemId, int Price, OfferSource Source,
     ItemKind Kind = ItemKind.Item);
 
-/// <summary>Where an offer came from. Chest (spec floor-chests): a chest's item or armor, on the floor beside it.</summary>
-public enum OfferSource { Treasure, Shop, BossReward, Other, Chest }
+/// <summary>Where an offer came from. Chest (spec floor-chests): a chest's item or armor, on the floor beside it. Spec
+/// floor-rooms 3.2: Armory (the armory's equipment pedestal) and Challenge (the challenge room's reward, after its last
+/// wave). Values are only ever appended.</summary>
+public enum OfferSource { Treasure, Shop, BossReward, Other, Chest, Armory, Challenge }
 
 /// <summary>item-pass: pedestals and shelves offer armor; keys-and-gear: shops sell keys.</summary>
 public enum ItemKind { Item, Equipment, Keys }

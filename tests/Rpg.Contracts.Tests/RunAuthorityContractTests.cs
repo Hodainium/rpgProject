@@ -48,6 +48,16 @@ public class RunAuthorityContractTests
                          new ItemOffer(2001, "demo.equipment.iron_sword", 0, OfferSource.Chest, ItemKind.Equipment)]),
                 "aa07", Played)
         },
+        {
+            // Spec floor-rooms 3.2: the armory's equipment and the challenge room's reward name their own sources.
+            "run-action-floor-rooms.json", new RunActionBatch([
+                new RunActionRequest(8, new RunAction("enter_room", 1, Cell: 21, Unlock: "key", CoinsAfter: 4,
+                    Offers: [new ItemOffer(1, "demo.equipment.iron_sword", 0, OfferSource.Armory, ItemKind.Equipment)]),
+                    "aa08", Played),
+                new RunActionRequest(9, new RunAction("enter_room", 1, Cell: 30, CoinsAfter: 4,
+                    Offers: [new ItemOffer(5, "demo.item.whetstone", 0, OfferSource.Challenge)]), "aa09", Played),
+            ])
+        },
         { "run-action-ack.json", new RunActionAck(42) },
         { "run-end-request.json", new RunEndRequest(43, RunEndStatus.Won, "bb43", Snapshot) },
         { "run-end-response.json", new RunEndResponse(RunId, RunStatus.Verifying) },

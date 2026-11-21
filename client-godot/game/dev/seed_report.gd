@@ -70,6 +70,12 @@ static func many(content: ContentIndex, from: int, count: int, floor_index: int,
 				for enemy in cell_content["enemies"]:
 					if enemy["variantId"] != null:
 						_count(report["elites"], enemy["variantId"])
+			elif cell_content["kind"] == "waves":  # spec floor-rooms: every wave counts as an encounter
+				for wave in cell_content["waves"]:
+					_count(report["encounters"], wave["encounter"])
+					for enemy in wave["enemies"]:
+						if enemy["variantId"] != null:
+							_count(report["elites"], enemy["variantId"])
 			elif cell_content["kind"] == "event":
 				_count(report["events"], cell_content["event"])
 			for pickup in data["pickups"]:

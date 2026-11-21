@@ -126,6 +126,9 @@ func _describe(index: int, data: Dictionary) -> String:
 			what = "battle %s%s" % [cell_content["encounter"], " (%d elite)" % elites if elites > 0 else ""]
 		"event":
 			what = "event %s" % cell_content["event"]
+		"waves":
+			what = "waves %s" % " > ".join(cell_content["waves"].map(func(wave: Dictionary) -> String:
+				return String(wave["encounter"])))
 	var pickups := PackedStringArray()
 	for pickup in data["pickups"]:
 		pickups.append("%s%s" % [pickup["item"], " $%d" % pickup["price"] if pickup["price"] > 0 else ""])

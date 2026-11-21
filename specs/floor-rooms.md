@@ -1,6 +1,7 @@
 # Spec: floor-rooms (slice 5b3)
 
-Status: **draft, awaiting review** (2026-11-21). Roadmap: `specs/roadmap.md` section 5b3. Builds on `game-skeleton` (floor
+Status: **done** (built and playtested 2026-11-21 on `feat/floor-rooms`; room props and the wave toast moved to the open
+items below). Roadmap: `specs/roadmap.md` section 5b3. Builds on `game-skeleton` (floor
 generator, rooms), `item-pass` (pedestals offering items and equipment from one pool), `keys-and-gear` (locked special rooms),
 `playable-demo` 3.7 / 3.11 (rarity weights, XP, enemy drops), `card-collection` 2.5 (the run's card pool), `item-cards` (floor
 items as cards) and `cube-style` (looks).
@@ -9,7 +10,7 @@ items as cards) and `cube-style` (looks).
 
 | # | Decision | Source |
 |---|---|---|
-| D1 | **A challenge room on every floor except the last two, guaranteed.** It is a special room like the shop: one per floor, always placed, on The Descent's floors 1-9 (Cellar, Crypt, Forge, Hollow, and the Cathedral or the Coven); the final floors, the **Vault and the Void, have none**. The roadmap's "has a chance to spawn" is settled as *no chance per floor*. | User, 2026-11-21 |
+| D1 | **A challenge room on every floor except the last one, guaranteed.** It is a special room like the shop: one per floor, always placed, on The Descent's floors 1-9 (Cellar, Crypt, Forge, Hollow, and the Cathedral or the Coven); the last floor, whichever of its two chapters the route reaches (the **Vault or the Void**), has none. The roadmap's "has a chance to spawn" is settled as *no chance per floor*. | User, 2026-11-21 |
 | D2 | A challenge room is **three waves**: three battles in the same room, one after another, the party carrying HP, SP and ult charge across them (the run's usual carry-over). Clearing the third wave clears the room and shows its reward. | Roadmap 5b3 |
 | D3 | The challenge reward is **one item or one piece of equipment** (armor or a weapon), drawn from the shared pool (`offers = ANY`), on a pedestal that shows when the room is cleared, as every pedestal does today. | User, 2026-11-21 (was "rewards an item") |
 | D4 | **An armory wherever the item room or the shop spawns, and nowhere else** (today the Cellar, Crypt, Forge and Vault rules; not the Hollow, Cathedral, Coven or Void, which have neither): a special room whose pedestal offers **equipment only**, any slot (accessories too). It is **key-locked like the shop and the item room**: wherever a chapter's rules lock `Room.Type.Treasure` / `Room.Type.Shop`, they lock `Room.Type.Armory` too (from `RunStructure.unlocked_floors` on). | Roadmap 5b3; user, 2026-11-21 |
@@ -75,7 +76,8 @@ changed shape without a code change on the server; only an enum grows, additivel
      one cleared battle room, `on_room_cleared` hooks, the reward pedestal shows. `_grant_rewards` and `_roll_drops` are
      never called for a wave (D10); the coin roll's variant bonus counts the elites of every wave, as it counts a room's elites.
 4. On a loss in any wave the run is Lost, as for any battle.
-5. While a wave is pending every other run action is refused ("Finish the challenge first"), as while any battle is pending.
+5. While a wave is pending every other run action is refused with the usual texts for a pending battle (as while any battle is
+   pending; no challenge-specific text: the player is inside the battle screen, with no other action on offer).
 
 ### 2.3 Upload, verify, resume (unchanged machinery)
 
@@ -128,27 +130,34 @@ events.
 
 - New rooms in `content/demo/rooms/`: `challenge.tres` (`Room.Type.Challenge`, `Chapter.Demo`, `WAVES`, three `RoomWave`s with
   empty queries, so every chapter draws its own encounters; one `ITEM_PEDESTAL` with `item_query` `Pool.Treasure`,
-  `offers = ANY` (items and equipment, D3); four enemy spawns like `arena.tres`) and `armory.tres` (`Room.Type.Armory`, `Chapter.Demo`, `NONE`, one
+  `offers = ANY` (items and equipment, D3); four player and three enemy spawns like `arena.tres`) and `armory.tres` (`Room.Type.Armory`, `Chapter.Demo`, `NONE`, one
   `ITEM_PEDESTAL` with `item_query` `Pool.Treasure`, `offers = EQUIPMENT`). One door each (dead ends).
 - Existing `treasure.tres` and `hoard.tres`: their pedestals get `offers = ITEMS` (D5).
 - Existing `floor_rules/*.tres`: `special_room_tags` gains `Room.Type.Challenge` in `small`, `crypt`, `forge`, `hollow`,
   `cathedral`, `coven` (not `vault`, `void`), and `Room.Type.Armory` in `small`, `crypt`, `forge`, `vault` (the rules with a
-  treasure room or shop); room counts grow in all eight. Starting proposal (to be measured, 6.3): `base_rooms` +3 and `max_rooms` +4 per chapter (`small` 5/8 → 8/12, `crypt`
-  6/9 → 9/13, `forge` 7/10 → 10/14, ...), `grid_size` 11 × 10 for `small` and `crypt` (today 9 × 8), so five dead ends fit.
+  treasure room or shop); room counts grow in all eight. **Decided with the user (2026-11-21, D6): one size formula for every
+  chapter, so a floor's size depends only on its depth and grows on every floor** (a chapter's second floor is bigger than its
+  first; Isaac's 3.33 × depth + 5 or 6 was the reference, taken at +2 per floor): `base_rooms` 8, `rooms_per_depth` 2,
+  `random_extra_rooms` 1, `max_rooms` 25, `max_attempts` 300 (the first floor's five dead ends in 8 rooms need the extra tries),
+  `grid_size` 11 × 10 for `small` and `crypt` (the others already were). Floors 1-10: 8-9, 10-11, ... 24-25, 25 rooms; measured
+  over 1000 seeds per floor on both routes, 0 failures, at most 186 layout attempts.
 - Existing `floor_rules/small.tres`, `crypt.tres`, `forge.tres` (the rules that lock today): `locked_room_tags` gains
   `Room.Type.Armory` (D4). The other five lock nothing today and keep it that way, the armory included.
 - The Vault (four treasure rooms and a shop) gets an armory and no challenge room; the Void (three altars) gets neither (D1, D4).
 
 ### 4.2 Looks (presentation, user gate)
 
-- Map icons: `presentation/demo/ui/icons/map/` gains a crossed-swords icon (Challenge) and an anvil or shield (Armory) from
-  game-icons.net (CC BY 3.0, credited in `CREDITS.md`), named in `map_icons.gd` (`NAMES` "TRIAL" / "ARMORY", the legend).
-- In the room: the room view shows a look per room type (`StyleRegistry` gets an optional `room_looks` map by `Room.Type.*`
+- Map icons (built, playtested 2026-11-21): `presentation/demo/ui/icons/map/crossed_swords.svg` (Challenge) and `shield.svg`
+  (Armory, a chevron, no cross), drawn in the existing icons' own line style (24-unit grid, white stroke over a black outline;
+  no third-party art, so no credit), named in `map_icons.gd` (`NAMES` "CHALLENGE" / "ARMORY", both in the legend).
+- Between waves (built, playtest 2026-11-21): the room view stays in battle (camera, no props, no rebuild; `_between_waves`),
+  the party's victory spin plays only after the last wave, and a battle room's pedestal shows only once it is cleared.
+- **Open (not built):** in the room, the room view shows a look per room type (`StyleRegistry` gets an optional `room_looks` map by `Room.Type.*`
   tag: attachment-shape props on free tiles, as `PropView` draws pickups): proposal, weapon racks for the armory, four braziers
   in the corners for the challenge room that light one by one per wave won. Shown live before the user picks (memory: demo every
   new effect).
 - No entry confirm (D9).
-- The wave toast: one rule in `run_toasts.tres` on `Message.Run.WaveStarted` ("Wave 2 / 3"); the battle HUD shows the wave in
+- **Open (not built):** the wave toast: one rule in `run_toasts.tres` on `Message.Run.WaveStarted` ("Wave 2 / 3"); the battle HUD shows the wave in
   its turn-order header while a challenge runs.
 
 ## 5. Failure modes
@@ -159,6 +168,7 @@ events.
 | An app restart or a lost connection between waves | The won wave left a battle pending with a checkpoint snapshot; resume restores the cell's `wave` and the pending wave. | `test_floor_rooms::test_resume_between_waves` (save and server log paths) |
 | Server conflict (1103) or rollback (1108) mid-challenge | The run rebuilds from the server's state, which is a checkpoint before, between or after waves; nothing new. | covered by the existing rebuild tests plus `test_resume_between_waves` |
 | A tampered upload: a wave skipped, waves reordered, wave 2's enemies changed, a challenge cleared after one wave, rewards claimed after wave 1 | The replay builds the next wave itself, so the logged battle's conditions differ (`ConditionsMismatch`) or the claimed hash differs (`StateHashMismatch`): a **verdict with errorCode 2002**, never an HTTP error. | `test_step_runner`: one tampered copy per case; e2e `tamper-waves` (acceptance scenario 5) |
+| An API on the old contracts receives Armory or Challenge | System.Text.Json reads enums by name, so an old reader refuses the batch with a 400 and the client stops the run. Deploy order: the API (and any Redpanda consumer of run actions) first, clients after; the demo stack deploys both at once. | the contract golden pins the names |
 | A duplicate upload of a wave | Idempotent by seq as every action (scenario 1 already covers it). | existing |
 | A locked armory and no key | Refused like any locked room ("Locked: you need a key"); the map flashes the lock (spec `ui-feedback`). | existing lock tests, plus an armory case |
 | Armory with no equipment left in the pool (held, seen or outside the card pool) | No pickup on the pedestal; the room still clears. Never an item. | `test_floor_rooms::test_armory_empty_pool` |
