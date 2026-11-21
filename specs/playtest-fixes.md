@@ -191,6 +191,83 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   16-point profile and 64 slices: the Warrior's kettle helm is a true half-sphere of its old size (radius and height 0.27), the
   Bulwark's horned helm keeps its outline (0.34 wide, 0.32 high), its horns stay as they were.
 
+### Reported 2026-11-21 (floor-rooms playtest, PR #79), open: to fix soon in a new chat
+
+- **B27. Wooden and Gilded chests show their name above them** (reported 2026-11-21). The user wants no text over a chest.
+  Cause: `presentation/demo/room_view_3d.gd` `_build_chests` passes the chest's `display_name` as the label to
+  `PropView.chest(look, state, title)` (and to the plain prop fallback). Fix: no label on chests (the Open row of the pickup panel
+  still names them). Presentation only. **Fixed 2026-11-21:** `_build_chests` passes no label (the plain
+  prop fallback too: `_prop` adds no Label3D for an empty text); the `style props` showcase keeps its captions.
+- **B28. Holding Tab cycles the focused button; Tab should toggle the map** (reported 2026-11-21). Cause: Tab is Godot's
+  built-in `ui_focus_next`, so while it is held focus walks the buttons, and the map's Tab view (`map_panel.gd`,
+  `show_floor_info`) grows only while Tab is held. Fix: Tab no longer moves focus on the run screens, and one press shows the grown
+  map, the next hides it (`tab on|off` in the console stays). Check the card screens, which walk their cards with Tab on purpose
+  (`pack_stage.gd`), and every other screen that relies on Tab focus before changing the action map. **Fixed 2026-11-21:**
+  `UIToggles` (`game/ui/`, one on/off state per action, shared by every panel) and `UIManager.toggle_actions`
+  (`show_floor_info`): in `_input`, while the state has `UI.State.Run` and no text field has focus, a press flips the toggle and
+  every event of the action (echoes too) is marked handled, so it never reaches Godot's focus walk; the main menu and the card
+  screens (no run state) keep Tab as before, and so does the dev console's line. `map_panel.gd` and `UIToastHost` read the toggle
+  (an action that is not a toggle still works while held); `tab on|off` sets it. A pinned toast (Tab on across floors) no longer
+  doubles a live toast of its rule and shows the newest message of its rule. Tests: `test_tab_toggles_the_map_and_keeps_focus`,
+  `test_toast_pin_follows_the_newest`.
+- **B29. The Shaman has no face; the Rat King has no eyes** (reported 2026-11-21). Cube-style looks: the Shaman wears a totem staff
+  and a feather headdress only, the Rat King a crown, tail and mouse muzzle. Fix: a face for the Shaman and eyes for the Rat King,
+  following the cube design lessons (face details on the camera side, no clipping), shown live before the user picks.
+  Presentation files (`presentation/demo/style/`), the user's OK. **Fixed 2026-11-21 (the user's picks):** the Shaman wears
+  `attachments/shaman_face_paint.tres` (spirit-green eyes with pupils, angry brows, white war-paint stripes under the eyes, a
+  frown), the Rat King `attachments/rat_eyes_tiny_brows.tres` (tiny black eyes and angry brows above its muzzle), both on the
+  Front socket in `style_registry.tres`.
+- **B30. Cultists never attack** (reported 2026-11-21). Cause: `content/demo/enemies/cultist.tres` has only Hex (applies
+  Vulnerable) and Curse (applies Weaken), on a `PatternBrain` rotating the two, so a Cultist only ever debuffs. The user wants it
+  to check whether its target already has Vulnerable and attack when it does. Fix: a damaging ability for the Cultist and a brain
+  rule "attack a target that has Vulnerable, else Hex it". `PatternBrain` and `TacticalBrain` have no condition on the target's
+  statuses today, so this is a small brain addition (system code: a data-driven condition, no Cultist-specific code), plus the
+  Cultist's content (the user's file). Moves the balance: a smart 4-member report before committing. **Fixed 2026-11-21:**
+  `EnemyTargetRule` (`combat/`: an ability tag and `target_has` tags, children match) in `EnemyBrain.target_rules`, checked in
+  order before the usual choice (`rule_choice`; in a `PatternBrain` before the pattern, whose step does not advance): the first rule
+  whose ability can activate and has a living candidate carrying every tag fires, its target drawn with the battle RNG from those
+  candidates; checking draws nothing, so content without rules replays as before (no golden moved). Validator
+  `target_rule_invalid` (not one of the enemy's turn actions, or no tag). The Cultist gained `strike.tscn` and the rule "Strike a
+  target with `Status.Debuff.Vulnerable`" (pattern Hex, Curse unchanged). Smart 4-member report on 300 balance seeds: win rate
+  29.7% → 30.0%, 0 violations. Test `test_target_rule_fires_on_tagged_target`.
+- **B31. Shop and item choices stretch the map preview and enlarge the member picker** (reported 2026-11-21). When a pickup panel
+  (shop shelf or another item choice) opens, the map preview stretches and the "who gets it" character choice grows larger. The
+  user wants both to keep their normal size. To reproduce in a window run (`ui press`, `shot`) and find which container expands
+  (likely a size flag or a minimum size in the pickup panel's layout pushing the HUD slots). **Map fixed 2026-11-21:** the
+  pickup panel (540 wide) shares `UI.Slot.Hud.Right` with the minimap, whose panel filled the column's width; `map_panel.tscn` now
+  shrinks to its own width at the right edge (`size_flags_horizontal` SHRINK_END), also in the Tab view. **Member picker fixed
+  2026-11-21:** at a Void altar the row's name also carries the price curse's name and description, so it wraps to several lines
+  and the "give to" picker and the Take button (default fill) stretched to the row's height; both now keep their own height at the
+  row's top (`pickup_row.tscn`, `size_flags_vertical` 0). Test `test_pickup_row_picker_keeps_its_height`.
+- **B32. The route bosses still give an item** (reported 2026-11-21, fixed 2026-11-21). The user had asked before that the
+  floor 9 bosses (the Cathedral's and the Coven's) and the final bosses give nothing, but that decision was never written into a
+  spec: spec `food-items` Q4 only stopped enemy drops (`drop_item`) in the battle that wins the run, and spec `playable-demo` still
+  said every boss encounter rewards a `Pool.Boss` item. The four route bosses give theirs through encounter rewards (a GiveItem
+  on `Pool.Boss`), a separate path. Fix (option 1, content only; a chapter-level switch was rejected because it needs new code):
+  the reward removed from `content/demo/encounters/hallowed_judge.tres`, `high_witch.tres`, `collector.tres` and `nameless.tres`
+  (the `rewards` line, its GiveItem and query sub-resources and their three script references; the encounter is otherwise
+  unchanged). None of the four bosses has a `drop_item`. Spec `playable-demo` now records the rule. A future route boss must
+  be added without a reward.
+- **B33. Boss drops should land on the floor, and the player picks who gets them** (reported 2026-11-21). Today a boss's drop
+  (`EnemyDefinition.drop_item`: the Golem, the Rat King, the Mother Heart) and a CHOOSE encounter reward are gifts that wait for
+  the logged `give_to` in the Give-to panel. The user wants them to drop onto the room's floor as pickups (like a chest's items,
+  spec `floor-chests`), taken with the usual member choice. **Its own spec:** it changes how drops enter the run (pickups on the
+  cell instead of pending gifts), the run log (`take` instead of `give_to`), the hash and the bots, and it touches spec
+  `event-items` and `food-items` (food is eaten on pickup).
+
+- **B34. The Death Ray misses its target cube** (reported 2026-11-21). The Lich's ult Death Ray (`content/demo/abilities/death_ray.tscn`,
+  on `content/demo/enemies/lich.tres`, so it lands on a party cube; `cue_ult_deathray.tscn`:
+  `ult_flourish` on the caster, `deathray_strike` on each target through `FxCueNotify.target_fx`) draws its beam beside the cube,
+  not on it. `deathray_strike.tres` ("a thick beam of light drops from the sky onto the target ... a ring where it lands") mixes
+  layers anchored at the unit's `Base` socket with layers on the unit's centre, and animates a quad's `position:y` and
+  `rotation_degrees:x`. Likely cause, to confirm live (`fx play` / the FX gallery on a cube, then a real cast, shots from the
+  battle camera): the beam quad is placed or turned in the effect's own frame rather than over the target, so from the battle
+  camera's angle it lands off the cube. Presentation only (the user's effect file, OK first); demo the fix live before choosing.
+  **Cause confirmed 2026-11-21:** the beam is a camera-facing quad 9 high raised 4 above the unit's centre; it took the camera's
+  whole rotation, so in perspective its foot landed beside and below the target (worst at the frame's edge). `FxShaderQuadLayer.upright`
+  (3D, with `face_camera`: turn around the world's up axis only) keeps a beam vertical with its foot on the unit; demoed on every
+  party slot from the battle camera. **Fixed 2026-11-21** (the user's OK): `upright = true` on the beam layer of `deathray_strike.tres`.
+
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved. B9 and B10 only show the state of the client's existing calls (no new request, field or header); they are the
 player-facing side of the offline-first retries in `server-authority` 2.1–2.4.
