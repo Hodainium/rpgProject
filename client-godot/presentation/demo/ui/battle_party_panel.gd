@@ -19,6 +19,31 @@ func bind(context: UIContext) -> void:
 		GameplayMessageRouter.Match.EXACT, null, self)
 	GameplayMessages.listen(GameplayMessageRouter.UI_HINT, func(_channel, message): _on_hint(message),
 		GameplayMessageRouter.Match.EXACT, null, self)
+	UIFlash.listen(self, _refused)
+
+
+## Spec ui-feedback rows 15, 16: the caster's SP bar pulses (SP short); a refused ult flashes its ULT button; a party unit
+## named as a target or a dead caster flashes its row.
+func _refused(data: Dictionary) -> Array:
+	if battle == null or not data.has("unit"):
+		return []
+	var unit_id := StringName(str(data["unit"]))
+	var party := battle.units().filter(func(unit: BattleUnit) -> bool: return unit.is_party())
+	var index := party.find_custom(func(unit: BattleUnit) -> bool: return unit.unit_id == unit_id)
+	var row := UIFlash.entry(%Rows, index)
+	if row == null:
+		return []
+	match str(data.get(UIRefusal.TARGET, "")):
+		UIRefusal.SP:
+			return [{"control": row.get_node("%Mp"), "shake": false}]
+		UIRefusal.COMMAND:
+			var ult := StringName(str(data.get("ability", "")))
+			var unit: BattleUnit = party[index]
+			if unit.ultimate_abilities().any(func(ability) -> bool: return ability.ability_tag == ult):
+				return [row.get_node("%Ult")]
+		UIRefusal.UNIT_TARGET, UIRefusal.MEMBER:
+			return [row]
+	return []
 
 
 func _on_hint(message: VerbMessage) -> void:

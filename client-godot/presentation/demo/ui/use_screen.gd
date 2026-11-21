@@ -22,6 +22,8 @@ var _stage: Stage = Stage.LIST
 var _member: int = 0
 var _picked: Dictionary = {}
 var _busy: bool = false
+## "<slot>/<ability>" of each entry in the list, in order (spec ui-feedback: the row a refusal shakes).
+var _pool_keys: Array[String] = []
 
 
 func on_pushed(payload: Dictionary) -> void:
@@ -31,6 +33,15 @@ func on_pushed(payload: Dictionary) -> void:
 
 func bind(context: UIContext) -> void:
 	context.on_run(self, &"party_changed", func(): queue_refresh())
+	UIFlash.listen(self, _refused)
+
+
+## Spec ui-feedback row 13: the member's SP bar (SP short) or row (a bad target), or the ability's row.
+func _refused(data: Dictionary) -> Array:
+	if data.get(UIRefusal.TARGET) == UIRefusal.COMMAND:
+		var row := UIFlash.entry(%Pool, _pool_keys.find("%d/%s" % [int(data.get("slot", 0)), data.get("ability", "")]))
+		return [row] if row != null else []
+	return DemoPartyRows.refused_controls(%Rows, ctx.run if ctx != null else null, data)
 
 
 func handles_back() -> bool:
@@ -53,12 +64,14 @@ func refresh() -> void:
 		return
 	var catalog := ctx.run.field_catalog()
 	var entries: Array = []
+	_pool_keys.clear()
 	if _stage != Stage.MEMBER:
 		for entry in catalog:
 			if (mode == "item") != (entry["item"] != &""):
 				continue
 			if mode == "ability" and entry["slot"] != _member:
 				continue
+			_pool_keys.append("%d/%s" % [entry["slot"], entry["ability"]])
 			entries.append({"text": entry["name"], "detail": entry["hint"]["usage"],
 				"disabled": not entry["usable"] or _stage == Stage.TARGET,
 				"hover": _describe_entry.bind(entry), "action": _pick.bind(entry)})
@@ -117,14 +130,16 @@ func _use(entry: Dictionary, target: int) -> void:
 	_busy = true
 	var problem: Array = await ctx.run.use_field(entry["slot"], entry["ability"], target)
 	_busy = false
-	if not problem.is_empty():
-		ctx.main.refuse("%s: %s" % problem)
-	else:
-		ctx.main.show_message(used_format % [entry["name"], _member_name(target)] if target > 0
-			else used_all_format % entry["name"])
 	_picked = {}
 	_stage = Stage.LIST
 	refresh()
+	if not problem.is_empty():
+		# After the redraw, so the flash lands on the rows that stay (the state is the same: a refusal changes nothing).
+		ctx.main.refuse("%s: %s" % problem, &"", UIRefusal.for_field_use(ctx.run, str(problem[0]), entry["slot"],
+			entry["ability"], int(entry.get("hint", {}).get("spCostX100", 0)), target))
+	else:
+		ctx.main.show_message(used_format % [entry["name"], _member_name(target)] if target > 0
+			else used_all_format % entry["name"])
 
 
 func _member_name(slot: int) -> String:

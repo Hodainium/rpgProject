@@ -19,6 +19,11 @@ func bind(context: UIContext) -> void:
 	for signal_name in [&"floor_entered", &"room_entered", &"room_cleared", &"battle_finished", &"party_changed",
 			&"map_revealed"]:
 		context.on_run(self, signal_name, func(_a = null): refresh())
+	UIFlash.listen(self, func(data: Dictionary) -> Array:  # spec ui-feedback: the room's tile on the minimap
+		if data.get(UIRefusal.TARGET) in [UIRefusal.ROOM, UIRefusal.LOCK] and data.has("cell"):
+			var tile := UIFlash.entry(%Cells, int(data["cell"]))
+			return [tile] if tile != null else []
+		return [])
 
 
 func _process(_delta: float) -> void:

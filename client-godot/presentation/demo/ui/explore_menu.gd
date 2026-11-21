@@ -16,6 +16,13 @@ extends UIScreen
 func bind(context: UIContext) -> void:
 	for signal_name in [&"party_changed", &"floor_entered", &"room_entered"]:
 		context.on_run(self, signal_name, func(_a = null): queue_refresh())
+	UIFlash.listen(self, func(data: Dictionary) -> Array:  # spec ui-feedback rows 2, 6, 7: the counters pulse
+		match data.get(UIRefusal.TARGET):
+			UIRefusal.GOLD:
+				return [{"control": %Gold, "shake": false}]
+			UIRefusal.KEYS, UIRefusal.LOCK:
+				return [{"control": %Keys, "shake": false}] if %Keys.visible else []
+		return [])
 
 
 func refresh() -> void:

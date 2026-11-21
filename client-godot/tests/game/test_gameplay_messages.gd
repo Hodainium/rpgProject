@@ -227,8 +227,8 @@ func test_replay_sends_no_messages() -> void:
 	eq(_heard.size(), 0, "no message during a recorded or replayed battle")
 
 
-## GameMain.refuse: one call sends the line (Message.Notification) and Message.Ui.Refused (Verb.Refuse, who tried,
-## the data plus "text"), in that order.
+## GameMain.refuse: one call sends Message.Ui.Refused (Verb.Refuse, who tried, the data plus "text"); spec ui-feedback:
+## no line (Message.Notification) any more, the screen that owns the widget flashes it.
 func test_messages_refuse() -> void:
 	var game: GameMain = load("res://game/game_main.tscn").instantiate()
 	game.ui_policy = UI_TEST._plain_policy()
@@ -238,10 +238,8 @@ func test_messages_refuse() -> void:
 	_handles.append(GameplayMessages.listen(&"Message", func(channel: StringName, message: GameplayMessage):
 		heard.append([String(channel), message]), GameplayMessageRouter.Match.PARTIAL))
 	game.refuse("not enough coins", &"P1", {"reason": "price"})
-	eq(heard.map(func(entry) -> String: return entry[0]), ["Message.Notification", "Message.Ui.Refused"],
-		"the line, then the refusal")
-	eq(heard[0][1].text, "not enough coins", "the line's text")
-	var refused: VerbMessage = heard[1][1]
+	eq(heard.map(func(entry) -> String: return entry[0]), ["Message.Ui.Refused"], "the refusal only, no line")
+	var refused: VerbMessage = heard[0][1]
 	eq([refused.verb, refused.instigator, refused.data], [&"Verb.Refuse", &"P1",
 		{"reason": "price", "text": "not enough coins"}], "the refusal says who, why and the text")
 

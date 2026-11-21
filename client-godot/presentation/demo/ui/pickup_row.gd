@@ -3,7 +3,7 @@
 ## Item.Rarity.* tag (RarityEpic…); armor needs no "give to" picker (it goes to the armor bag).
 extends VBoxContainer
 
-## Take or Buy was pressed: "" or why it was refused.
+## Take or Buy was pressed: "" or why it was refused (then `refusal` says what about, spec ui-feedback 2.2).
 signal taken(problem: String)
 
 @export var rarity_tag_prefix: String = "Item.Rarity."
@@ -25,6 +25,8 @@ signal taken(problem: String)
 var _run: RunController
 var _placement: int = 0
 var _chest_serial: int = -1
+## The last refusal's UIRefusal data ({} = nothing to flash).
+var refusal: Dictionary = {}
 
 
 func _ready() -> void:
@@ -91,7 +93,24 @@ func _price(pickup: Dictionary) -> String:
 
 func _take() -> void:
 	if _chest_serial >= 0:
+		refusal = UIRefusal.for_chest(_run, _chest_serial)  # read before the try: a refusal changes nothing
 		taken.emit(_run.open_chest(_chest_serial))
 		return
 	var slot: int = %GiveTo.get_item_id(%GiveTo.selected) if %GiveTo.visible and %GiveTo.selected >= 0 else 0
+	refusal = UIRefusal.for_take(_run, _placement, slot)
 	taken.emit(_run.take(_placement, slot))
+
+
+## Spec ui-feedback: what of this row a refusal flashes: the price (gold), the Open button (a locked chest), the member
+## picker (a member who can't hold it).
+func refused_controls(data: Dictionary) -> Array:
+	var target: String = str(data.get(UIRefusal.TARGET, ""))
+	if _chest_serial >= 0:
+		return [%Take] if target == UIRefusal.LOCK and int(data.get("chest", -2)) == _chest_serial else []
+	if int(data.get("placement", -2)) != _placement:
+		return []
+	if target == UIRefusal.GOLD:
+		return [{"control": %Name, "shake": false}]
+	if target in [UIRefusal.MEMBER, UIRefusal.MEMBER_ITEMS] and %GiveTo.visible:
+		return [%GiveTo]
+	return []

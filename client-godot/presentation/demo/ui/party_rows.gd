@@ -29,3 +29,20 @@ static func items(run: RunController, extra: Callable = Callable()) -> Array:
 			row.merge(extra.call(member), true)
 		rows.append(row)
 	return rows
+
+
+## Spec ui-feedback 2.2: the parts of `rows` (a list of these items) a refusal names by party slot ("slot" or "slots"):
+## the member's row for `member` and `member_items`, its SP bar (a pulse) for `sp`.
+static func refused_controls(rows: Node, run: RunController, data: Dictionary) -> Array:
+	var target := str(data.get(UIRefusal.TARGET, ""))
+	if run == null or run.state == null or not target in [UIRefusal.MEMBER, UIRefusal.MEMBER_ITEMS, UIRefusal.SP]:
+		return []
+	var slots: Array = data.get("slots", [data["slot"]] if data.has("slot") else [])
+	var hits: Array = []
+	for index in run.state.party.size():
+		if not slots.has(run.state.party[index]["slot"]):
+			continue
+		var row := UIFlash.entry(rows, index)
+		if row != null:
+			hits.append({"control": row.get_node("%Mp"), "shake": false} if target == UIRefusal.SP else row)
+	return hits
