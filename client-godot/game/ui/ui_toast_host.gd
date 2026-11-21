@@ -123,6 +123,10 @@ func _on_message(_channel: StringName, message: GameplayMessage, rule: UIToastRu
 	if _resting() or not rule.matches(message):
 		return
 	_latest[rule] = message
+	if rule == _pinned_rule:  # playtest-fixes B28: the pinned toast (Tab on) shows the newest message instead of a second one
+		_pinned_rule = null
+		_update_hold()
+		return
 	var toast := _make(rule, message)
 	if toast_set.stack == UIToastSet.Stack.STACK:
 		_show(toast)
@@ -158,6 +162,7 @@ func _make(rule: UIToastRule, message: GameplayMessage, pinned: bool = false) ->
 	toast["priority"] = rule.priority
 	toast["sound"] = rule.sound
 	toast["pinned"] = pinned
+	toast["rule"] = rule
 	return toast
 
 
@@ -188,7 +193,8 @@ func _update_hold() -> void:
 	if held == _pinned_rule:
 		return
 	for live in _live.duplicate():
-		if live["until"] < 0.0:
+		# The old pin leaves; a live toast of the rule now pinned leaves too, so it never shows twice (B28).
+		if live["until"] < 0.0 or (held != null and live["toast"].get("rule") == held):
 			_remove(live)
 	_pinned_rule = held
 	if held != null:
@@ -199,6 +205,8 @@ func _update_hold() -> void:
 func _is_held(action: StringName) -> bool:
 	if _forced_holds.has(action):
 		return _forced_holds[action]
+	if UIToggles.is_toggle(action):  # playtest-fixes B28: Tab toggles the floor toast
+		return UIToggles.is_on(action)
 	return InputMap.has_action(action) and Input.is_action_pressed(action)
 
 

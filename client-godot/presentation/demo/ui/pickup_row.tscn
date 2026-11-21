@@ -20,10 +20,12 @@ autowrap_mode = 3
 [node name="GiveTo" type="OptionButton" parent="Row"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 0
 
 [node name="Take" type="Button" parent="Row"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 0
 text = "Take"
 
 [node name="Description" type="Label" parent="."]

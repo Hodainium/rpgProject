@@ -280,9 +280,6 @@ func _check_phases(enemy: EnemyDefinition) -> void:
 ## skill-points D19, a level skill: below its level the step falls back to the default choice). An ult or a triggered
 ## passive in the pattern would stop the battle with a runner error.
 func _check_pattern(enemy: EnemyDefinition) -> void:
-	var brain := enemy.brain as PatternBrain
-	if brain == null:
-		return
 	var scenes: Array = enemy.abilities.duplicate()
 	for phase in enemy.phases:
 		if phase != null and phase.ability_set != null:
@@ -290,6 +287,11 @@ func _check_pattern(enemy: EnemyDefinition) -> void:
 	for row in enemy.level_skills:
 		if row != null and row.ability != null:
 			scenes.append(row.ability)
+	if enemy.brain != null:
+		_check_target_rules(enemy.brain, scenes, enemy.resource_path + "::brain", enemy.id)
+	var brain := enemy.brain as PatternBrain
+	if brain == null:
+		return
 	_check_pattern_steps(brain, scenes, enemy.resource_path + "::brain", enemy.id)
 
 
@@ -302,6 +304,23 @@ func _check_pattern_steps(brain: PatternBrain, scenes: Array, where_brain: Strin
 			_error("pattern_unknown_ability", where, "%s's pattern step %s is not one of its abilities" % [owner, tag])
 		elif _is_ult(found[0], true) or _trigger_of(found[0]) != &"":
 			_error("pattern_unknown_ability", where, "%s's pattern step %s is an ult or a passive, not a turn action" % [owner, tag])
+
+
+## Playtest-fixes B30: every target rule names a turn action the enemy has, one that takes a target, and at least one tag.
+func _check_target_rules(brain: EnemyBrain, scenes: Array, where_brain: String, owner: StringName) -> void:
+	for index in brain.target_rules.size():
+		var rule := brain.target_rules[index]
+		var where := "%s.target_rules[%d]" % [where_brain, index]
+		if rule == null:
+			_error("target_rule_invalid", where, "%s has an empty target rule" % owner)
+			continue
+		var found: Array = scenes.filter(func(scene) -> bool: return scene != null and SkillTags.tag_of(scene) == rule.ability)
+		if found.is_empty():
+			_error("target_rule_invalid", where, "%s's target rule ability %s is not one of its abilities" % [owner, rule.ability])
+		elif _is_ult(found[0], true) or _trigger_of(found[0]) != &"":
+			_error("target_rule_invalid", where, "%s's target rule ability %s is an ult or a passive, not a turn action" % [owner, rule.ability])
+		if rule.target_has.is_empty():
+			_error("target_rule_invalid", where, "%s's target rule for %s names no tag, so it never fires" % [owner, rule.ability])
 
 
 ## Spec content-pass 2.4: a definition whose own tags give one damage type two affinities (Drain wins over Weak, Weak

@@ -14,6 +14,9 @@ extends EnemyBrain
 func choose(unit: BattleUnit, battle: Battle) -> Dictionary:
 	if pattern.is_empty():
 		return super(unit, battle)
+	var ruled := rule_choice(unit, battle)  # playtest-fixes B30: a target rule fires first; the step does not advance
+	if not ruled.is_empty():
+		return ruled
 	var tag := pattern[unit.pattern_step % pattern.size()]
 	unit.pattern_step += 1
 	var ability := unit.ability_by_tag(tag)

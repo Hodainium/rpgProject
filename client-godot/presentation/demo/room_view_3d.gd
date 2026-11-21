@@ -222,13 +222,11 @@ func _build_chests(run: RunController, data: Dictionary, room: RoomDefinition) -
 		if at == Vector2i(-1, -1):
 			break
 		free.erase(at)
-		var chest: ChestDefinition = run.content.chests.get(held["chest"])
-		var title := chest.display_name if chest != null else String(held["chest"])
 		var popping: bool = held["opened"] and int(held["serial"]) == _popping
 		var look: ChestLook = registry.chest_look(held["chest"]) if registry != null else null
 		if look != null:
-			var view := PropView.chest(look, ChestLook.State.OPEN_EMPTY if held["opened"] else ChestLook.State.CLOSED,
-				title)
+			# Playtest-fixes B27: no text over a chest (the pickup panel's Open row names it).
+			var view := PropView.chest(look, ChestLook.State.OPEN_EMPTY if held["opened"] else ChestLook.State.CLOSED, "")
 			view.position = _world(at) + FLOOR_TOP
 			_props_root.add_child(view)
 			if popping and view.lid_pivot != null:  # the lid swings up from closed
@@ -236,7 +234,7 @@ func _build_chests(run: RunController, data: Dictionary, room: RoomDefinition) -
 				view.lid_pivot.rotation_degrees.x = 0.0
 				view.create_tween().tween_property(view.lid_pivot, ^"rotation_degrees:x", open_x, LID_SECONDS)
 		else:
-			_prop(at, Color.SADDLE_BROWN, title + ("" if held["opened"] else " (closed)"))
+			_prop(at, Color.SADDLE_BROWN, "")
 		var order := 0
 		for pickup in run.chest_pickups(run.state.current_cell, int(held["serial"])):
 			if pickup["taken"]:
@@ -841,6 +839,8 @@ func _prop(cell: Vector2i, color: Color, text: String, item: ItemDefinition = nu
 		prop.material_override = material
 	prop.position = _world(cell)
 	_props_root.add_child(prop)
+	if text == "":
+		return
 	var label := Label3D.new()
 	label.text = text
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED

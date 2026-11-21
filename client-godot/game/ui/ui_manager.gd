@@ -30,10 +30,15 @@ var _rule_screens: Dictionary = {}  # UIScreenRule -> UIScreen
 var _panels: Dictionary = {}  # UIExtensionPoint -> {UIExtension: Node}
 var _parked: Dictionary = {}  # panel -> true: kept hidden while its extension's state is off (_park)
 var _dirty: bool = false
+## Playtest-fixes B28: actions that toggle on each press (UIToggles) while the run's screens are up. Their key never walks
+## focus there (Tab is also Godot's ui_focus_next); a text field keeps it (the dev console completes with Tab).
+var toggle_actions: Array[StringName] = [&"show_floor_info"]
 
 
 ## Builds the layout under `parent` (a CanvasLayer). "" or why it failed.
 func setup(main: GameMain, ui_policy: UIPolicy, parent: Node) -> String:
+	for action in toggle_actions:
+		UIToggles.set_on(action, false)  # a new game starts with the Tab view off
 	_main = main
 	policy = ui_policy
 	if policy == null or policy.layout == null:
@@ -409,6 +414,21 @@ func _on_run_changed(run: RunController) -> void:
 			run.connect(signal_name, func(_a = null, _b = null): refresh_state())
 	context._set_run(run)
 	refresh_state()
+
+
+func _input(event: InputEvent) -> void:
+	if context == null or not context.has_state(UIState.RUN):
+		return
+	for action in toggle_actions:
+		if not InputMap.has_action(action) or not event.is_action(action):
+			continue
+		var focus := get_viewport().gui_get_focus_owner()
+		if focus is LineEdit or focus is TextEdit:
+			return
+		if event.is_action_pressed(action):  # echoes excluded: holding the key flips it once
+			UIToggles.toggle(action)
+		get_viewport().set_input_as_handled()
+		return
 
 
 func _unhandled_input(event: InputEvent) -> void:

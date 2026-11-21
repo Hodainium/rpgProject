@@ -86,3 +86,39 @@ func test_tactical_ult_timing() -> void:
 	eq(careful.choose_interrupt(lich, battle), {}, "holds while every ally is above 50%")
 	Bosses.hurt(battle.unit_by_id(&"P1"), battle.unit_by_id(&"E2"), 100000)
 	check(not careful.choose_interrupt(lich, battle).is_empty(), "casts once an ally is below 50%")
+
+
+## Playtest-fixes B30: a target rule uses its ability on a target that has the rule's tags (before the pattern, whose step does not
+## advance); with no such target it draws nothing and the pattern goes on as before.
+func test_target_rule_fires_on_tagged_target() -> void:
+	var battle := new_battle(Bosses.boss_snapshot())
+	var drummer := battle.unit_by_id(&"E2")
+	var brain := PatternBrain.new()
+	brain.pattern.assign([&"Fixture.Ability.Claw"])
+	var rule := EnemyTargetRule.new()
+	rule.ability = &"Fixture.Ability.Bash"
+	rule.target_has.assign([&"Status.Debuff"])
+	brain.target_rules.append(rule)
+	var state := battle.rng.state
+	eq(String(brain.choose(drummer, battle)["ability"]), "Fixture.Ability.Claw", "no tagged target: the pattern")
+	eq(drummer.pattern_step, 1, "and its step")
+	var plain := PatternBrain.new()
+	plain.pattern.assign([&"Fixture.Ability.Claw"])
+	drummer.pattern_step = 0
+	battle.rng.state = state
+	var without_rule := plain.choose(drummer, battle)
+	battle.rng.state = state
+	drummer.pattern_step = 0
+	eq(brain.choose(drummer, battle), without_rule, "the same choice and draw as without the rule")
+	var marked := battle.unit_by_id(&"P1")
+	marked.asc.add_tag(&"Status.Debuff.Vulnerable")
+	var step := drummer.pattern_step
+	eq(brain.choose(drummer, battle), {"ability": &"Fixture.Ability.Bash", "target": &"P1"},
+		"a target with a child of the rule's tag gets the rule's ability")
+	eq(drummer.pattern_step, step, "the pattern's step does not advance")
+	marked.alive = false
+	eq(String(brain.choose(drummer, battle)["ability"]), "Fixture.Ability.Claw", "a dead target is no candidate")
+	var default_brain := EnemyBrain.new()
+	default_brain.target_rules.append(rule)
+	marked.alive = true
+	eq(default_brain.choose(drummer, battle), {"ability": &"Fixture.Ability.Bash", "target": &"P1"}, "the default brain too")

@@ -1,5 +1,6 @@
-## Spec ff7-ui 2.11 (console parity for Tab): `tab on` holds the floor-info key (the minimap grows, the floor toast
-## stays up), `tab off` releases it. Presentation only: the run never sees it.
+## Spec ff7-ui 2.11 (console parity for Tab): `tab on` turns the floor-info view on (the minimap grows, the floor toast
+## stays up), `tab off` turns it off, like one press of Tab each (playtest-fixes B28: Tab toggles, UIToggles).
+## Presentation only: the run never sees it.
 extends DevCommand
 
 const ACTION: StringName = &"show_floor_info"
@@ -8,7 +9,7 @@ const ACTION: StringName = &"show_floor_info"
 func _init() -> void:
 	name = "tab"
 	usage = "tab on|off"
-	help = "Holds or releases Tab (show_floor_info): the minimap grows and the floor toast stays up."
+	help = "Turns the Tab view (show_floor_info) on or off: the minimap grows and the floor toast stays up."
 	cheat = false
 	arg_kinds.assign(["text"])
 
@@ -19,13 +20,14 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 	if args.is_empty() or not args[0] in ["on", "off"]:
 		return ctx.fail("usage: " + usage)
 	var held := args[0] == "on"
+	UIToggles.set_on(ACTION, held)
 	var touched := 0
 	for node in _all(ctx.game):
 		if node.has_method("set_held"):
 			node.set_held(held)
 			touched += 1
 		elif node is UIToastHost:
-			node.hold(ACTION, held)
+			node.update()  # it reads UIToggles
 			touched += 1
 	return "tab %s (%d panel(s))" % [args[0], touched]
 
