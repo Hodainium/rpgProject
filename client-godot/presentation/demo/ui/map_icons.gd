@@ -8,15 +8,18 @@ const ICONS := {
 	"Treasure": preload("res://presentation/demo/ui/icons/map/gift.svg"),
 	"Shop": preload("res://presentation/demo/ui/icons/map/dollar.svg"),
 	"Altar": preload("res://presentation/demo/ui/icons/map/dollar.svg"),
+	"Armory": preload("res://presentation/demo/ui/icons/map/shield.svg"),
+	"Challenge": preload("res://presentation/demo/ui/icons/map/crossed_swords.svg"),
 	"boss": preload("res://presentation/demo/ui/icons/map/skull.svg"),
 	"event": preload("res://presentation/demo/ui/icons/map/exclamation.svg"),
 	"lock": preload("res://presentation/demo/ui/icons/map/lock.svg"),
 }
-const NAMES := {"Treasure": "ITEM", "Shop": "SHOP", "Altar": "ALTAR", "boss": "BOSS", "event": "EVENT", "lock": "LOCKED"}
-const LONG_NAMES := {"Treasure": "Item room", "Shop": "Shop", "Altar": "Altar", "boss": "Boss room",
-	"event": "Event room", "lock": "Locked (needs a key)", "": "Room"}
+const NAMES := {"Treasure": "ITEM", "Shop": "SHOP", "Altar": "ALTAR", "Armory": "ARMORY", "Challenge": "CHALLENGE",
+	"boss": "BOSS", "event": "EVENT", "lock": "LOCKED"}
+const LONG_NAMES := {"Treasure": "Item room", "Shop": "Shop", "Altar": "Altar", "Armory": "Armory",
+	"Challenge": "Challenge room", "boss": "Boss room", "event": "Event room", "lock": "Locked (needs a key)", "": "Room"}
 ## The legend lists these, in this order.
-const LEGEND: Array[String] = ["Treasure", "Shop", "Altar", "boss", "event", "lock"]
+const LEGEND: Array[String] = ["Treasure", "Shop", "Armory", "Challenge", "Altar", "boss", "event", "lock"]
 
 
 static func icon(kind: String) -> Texture2D:

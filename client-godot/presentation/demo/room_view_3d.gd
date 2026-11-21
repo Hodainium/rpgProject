@@ -96,10 +96,24 @@ func _on_party_changed() -> void:
 
 func _on_battle_finished(outcome: String) -> void:
 	_battle = null
+	if _between_waves(outcome):
+		return  # spec floor-rooms: the next wave starts at once; the room stays in battle (camera, no props, no rebuild)
 	_props_root.visible = true  # hidden for the fight (spec cube-style Set K); the rebuild below refills them
 	UnitStyle.explore_framing().tween_to(_camera, CAMERA_SECONDS)  # spec cube-style 3.9
 	_celebrate = outcome == Battle.VICTORY
 	_queue_build()
+
+
+## Spec floor-rooms: a won wave of a challenge room that is not its last (battle_finished comes just before the run starts the
+## next wave, so the cell still holds the wave that was fought).
+func _between_waves(outcome: String) -> bool:
+	var run := _main.run
+	if outcome != Battle.VICTORY or run == null or run.state == null or run.state.map == null:
+		return false
+	var data: Dictionary = run.state.map.cells[run.state.current_cell]
+	var room_content: Dictionary = data["content"]
+	return str(room_content.get("kind", "")) == "waves" and not data["cleared"] \
+		and int(data.get("wave", 0)) + 1 < room_content["waves"].size()
 
 
 ## Rebuilds the room once, at the end of this frame: a won battle fires battle_finished, party_changed (rewards, XP, drops)
@@ -120,6 +134,9 @@ func _build_now() -> void:
 		_celebrate = false
 		return
 	_build()
+	# Spec floor-rooms: between a challenge room's waves the next one is already waiting; the party celebrates only after the last.
+	if _celebrate and _main.run != null and not _main.run.pending_battle.is_empty():
+		_celebrate = false
 	if _celebrate:  # spec animation-sets: the living party celebrates
 		_celebrate = false
 		for id in _views:
@@ -158,6 +175,9 @@ func _build() -> void:
 				if not data["cleared"]:
 					_prop(placement.cell, Color.CYAN, "?")
 			RoomPlacement.Kind.ITEM_PEDESTAL, RoomPlacement.Kind.SHOP_SLOT:
+				# Spec floor-rooms: a battle room's reward shows once it is cleared (a challenge room is drawn between its waves).
+				if not data["cleared"] and str(data["content"].get("kind", "")) in ["encounter", "waves"]:
+					continue
 				for pickup in data["pickups"]:
 					if pickup["placement"] == number + 1 and not pickup["taken"]:
 						var item: ItemDefinition = run.content.items.get(pickup["item"])

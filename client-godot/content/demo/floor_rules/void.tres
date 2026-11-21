@@ -6,8 +6,9 @@
 script = ExtResource("1_aui17")
 id = &"demo.rules.void"
 grid_size = Vector2i(11, 10)
-base_rooms = 9
-rooms_per_depth = 1
+base_rooms = 8
+rooms_per_depth = 2
 random_extra_rooms = 1
-max_rooms = 13
+max_rooms = 25
+max_attempts = 300
 special_room_tags = Array[StringName]([&"Room.Type.Altar", &"Room.Type.Altar", &"Room.Type.Altar"])
