@@ -1,6 +1,6 @@
 # Spec: ui-feedback: feedback on the thing involved, no white message line
 
-Status: **spec written and reviewed 2026-11-19 (answers in section 7); slice 5b5, next after 5b4 `class-pick`.** Follows the class-pick playtest (user, 2026-11-19): "I don't want any of that
+Status: **done: built, playtested by the user and merged 2026-11-20 (PR #75); spec synced to the build (section 7, Q3, and the "built" notes in 2.2, 2.3 and 2.4). Spec written and reviewed 2026-11-19; slice 5b5, after 5b4 `class-pick`.** Follows the class-pick playtest (user, 2026-11-19): "I don't want any of that
 white text in the bottom left. The green and yellow server status text is all I need." Every message the white line showed was
 reviewed one by one on https://claude.ai/artifact/8Fzn5KWjwUmnknGujVFC99 and **all 27 proposals were accepted** (section 2.4). Already
 done before this spec (PR #71): the "Connected to the server as" and "Connecting…" lines are gone and the server status line sits alone
