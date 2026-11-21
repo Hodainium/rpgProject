@@ -6,7 +6,7 @@ extends DevCommand
 
 func _init() -> void:
 	name = "style"
-	usage = "style list | show <unit> | mood [<chapter>|off] | registry [<res://path>|default|off] | camera [explore|battle] | reload | check | death [test <unit>|all] | props"
+	usage = "style list | show <unit> | mood [<chapter>|off] | registry [<res://path>|default|off] | camera [explore|battle] | reload | check | death [test <unit>|all] | props | items [labels|shop|tiers|sizes [h,h,...]|pop|label name|price|none|auto|bake on|off]"
 	help = "Cube style (spec cube-style): list the looks, show one unit's, show a chapter's mood everywhere, use a variant registry, move the camera, reload, check."
 	cheat = false
 	arg_kinds.assign(["style_op", "text"])
@@ -124,6 +124,8 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
   %s" % [placed.size(), "
   ".join(placed)] if not placed.is_empty() else "props: the registry has no prop looks"
 			return ctx.fail("no room view")
+		"items":
+			return _items(ctx, registry, args)
 		"check":
 			if registry == null:
 				return "no style registry in use"
@@ -135,3 +137,52 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 func _restyle(ctx: DevContext) -> void:
 	if ctx.game != null and ctx.game.is_inside_tree():
 		ctx.game.get_tree().call_group(&"style_listeners", &"restyle")
+
+
+## Spec item-cards 2.1: floor cards from the console. `labels` shows the three label modes, `sizes [h,h,...]` the card at several
+## heights, `shop` everything a shop sells, `tiers` an item per tier, `pop` a chest putting items out one at a time; `label name|price|none|auto` sets the label for this session.
+func _items(ctx: DevContext, registry: StyleRegistry, args: PackedStringArray) -> String:
+	if registry == null:
+		return ctx.fail("no style registry in use")
+	var mode := args[1] if args.size() > 1 else "labels"
+	var look := registry.item_look()
+	if look == null:
+		return ctx.fail("no item look in the style registry (props.item)")
+	if mode == "label":
+		var value := args[2] if args.size() > 2 else ""
+		var index := ItemCardLook.LABEL_NAMES.find(value)
+		if index < 0 and value != "auto":
+			return ctx.fail("usage: style items label name|price|none|auto")
+		ItemPropView.override_label = index
+		_restyle(ctx)
+		return "items: label %s" % value
+	if mode == "bake":
+		var value := args[2] if args.size() > 2 else ""
+		if not value in ["on", "off"]:
+			return ctx.fail("usage: style items bake on|off")
+		var on := value == "on"
+		ItemPropView.bake_faces = on
+		_restyle(ctx)
+		return "items: faces %s" % ("baked (mipmapped)" if on else "live")
+	if not mode in ["labels", "shop", "sizes", "pop", "tiers"]:
+		return ctx.fail("usage: style items labels | shop | tiers | sizes [h,h,...] | pop | label name|price|none|auto | bake on|off")
+	if ctx.game == null or not ctx.game.is_inside_tree():
+		return ctx.fail("no views (headless)")
+	if ctx.run != null and ctx.run.current_battle != null:
+		return ctx.fail("not during a battle (no props on a fight's stage)")
+	if mode == "sizes" and args.size() > 2:
+		var values: Array = []
+		for part in args[2].split(","):
+			if part.is_valid_float():
+				values.append(part.to_float())
+		if values.is_empty():
+			return ctx.fail("usage: style items sizes [h,h,...]")
+		look = look.duplicate() as ItemCardLook
+		look.set_meta(&"showcase_sizes", values)
+	for node in ctx.game.get_tree().get_nodes_in_group(&"style_listeners"):
+		if node.has_method("show_item_showcase"):
+			var placed: PackedStringArray = node.show_item_showcase(ctx.content, mode, look)
+			if placed.is_empty():
+				return ctx.fail("items: nothing to show (no items in the content?)")
+			return "items %s: %d shown\n  %s" % [mode, placed.size(), "\n  ".join(placed)]
+	return ctx.fail("no room view")

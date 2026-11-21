@@ -1,0 +1,213 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3 uid="uid://cigu0dphiwkd1"]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_3xp4l"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_c372r"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_yhnqp"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="4_sbofb"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_xio7t"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="6_87ifu"]
+[ext_resource type="Shader" path="res://game/fx/shaders/material/item_ribbons.gdshader" id="7_o5uy1"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_mesh_layer.gd" id="8_20mkl"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="9_st05k"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="10_5ohh4"]
+
+[sub_resource type="Resource" id="Resource_o4n03"]
+script = ExtResource("2_c372r")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Curve" id="Curve_gmd5r"]
+_limits = [0.0, 1.4, 0.0, 1.0]
+_data = [Vector2(0, 0.15), 0.0, 0.8999999, 1, 1, Vector2(0.33333334, 0.45), 0.8999999, 0.30000007, 1, 1, Vector2(0.6666667, 0.55), 0.30000007, 2.55, 1, 1, Vector2(1, 1.4), 2.55, 0.0, 1, 1]
+point_count = 4
+
+[sub_resource type="Resource" id="Resource_kyyek"]
+script = ExtResource("2_c372r")
+property = "material:shader_parameter/intensity"
+param = &"tier"
+curve = SubResource("Curve_gmd5r")
+
+[sub_resource type="Curve" id="Curve_odciu"]
+_limits = [-360.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_h82mx"]
+script = ExtResource("5_xio7t")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_odciu")
+
+[sub_resource type="Resource" id="Resource_icm7v"]
+script = ExtResource("3_yhnqp")
+shader = ExtResource("4_sbofb")
+shader_params = {
+"fade_out": 0.0,
+"falloff": 2.8,
+"pulse_amount": 0.3,
+"pulse_speed": 0.45
+}
+size = Vector2(1.1, 1.1)
+face_camera = false
+id = &"pool"
+space = 2
+socket = &"Base"
+loop = true
+loop_period = 10.0
+bindings = Array[ExtResource("2_c372r")]([SubResource("Resource_o4n03"), SubResource("Resource_kyyek")])
+tracks = Array[ExtResource("5_xio7t")]([SubResource("Resource_h82mx")])
+
+[sub_resource type="Resource" id="Resource_xnr7q"]
+script = ExtResource("2_c372r")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Curve" id="Curve_rqqnf"]
+_data = [Vector2(0, 0.3), 0.0, 0.9, 1, 1, Vector2(0.33333334, 0.6), 0.9, 0.59999996, 1, 1, Vector2(0.6666667, 0.8), 0.59999996, 0.59999996, 1, 1, Vector2(1, 1), 0.59999996, 0.0, 1, 1]
+point_count = 4
+
+[sub_resource type="Resource" id="Resource_eb8tk"]
+script = ExtResource("2_c372r")
+property = "amount_ratio"
+param = &"tier"
+curve = SubResource("Curve_rqqnf")
+
+[sub_resource type="Gradient" id="Gradient_qther"]
+offsets = PackedFloat32Array(0, 0.2, 0.6, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0.6, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_yfvj8"]
+script = ExtResource("6_87ifu")
+size_min = 0.05
+size_max = 0.1
+spread = 20.0
+speed_min = 0.12
+speed_max = 0.3
+gravity = Vector3(0, 0.08, 0)
+emission_ring_radius = 0.32
+emission_offset = Vector3(0, 0.1, 0)
+amount = 14
+lifetime = 2.2
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_qther")
+id = &"motes"
+socket = &"Base"
+loop = true
+bindings = Array[ExtResource("2_c372r")]([SubResource("Resource_xnr7q"), SubResource("Resource_eb8tk")])
+
+[sub_resource type="Resource" id="Resource_5tp5a"]
+script = ExtResource("2_c372r")
+property = "process_material:color"
+param = &"color"
+scale = 1.4
+
+[sub_resource type="Curve" id="Curve_xj77d"]
+_data = [Vector2(0, 0), 0.0, 0.0, 1, 1, Vector2(0.33333334, 0), 0.0, 2.9999998, 1, 1, Vector2(0.6666667, 1), 2.9999998, 0.0, 1, 1, Vector2(1, 1), 0.0, 0.0, 1, 1]
+point_count = 4
+
+[sub_resource type="Resource" id="Resource_4r7xh"]
+script = ExtResource("2_c372r")
+property = "amount_ratio"
+param = &"tier"
+curve = SubResource("Curve_xj77d")
+
+[sub_resource type="Gradient" id="Gradient_jmufg"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_5sf7p"]
+script = ExtResource("6_87ifu")
+size_min = 0.025
+size_max = 0.05
+spread = 50.0
+speed_min = 0.6
+speed_max = 1.3
+gravity = Vector3(0, -1.2, 0)
+emission_radius = 0.28
+emission_offset = Vector3(0, 0.7, 0)
+amount = 10
+lifetime = 0.7
+explosiveness = 0.0
+color_ramp = SubResource("Gradient_jmufg")
+id = &"sparks"
+socket = &"Base"
+loop = true
+min_quality = 2
+bindings = Array[ExtResource("2_c372r")]([SubResource("Resource_5tp5a"), SubResource("Resource_4r7xh")])
+
+[sub_resource type="Resource" id="Resource_r1yk8"]
+script = ExtResource("2_c372r")
+property = "material_override:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Curve" id="Curve_6iyps"]
+_data = [Vector2(0, 0), 0.0, 0.0, 1, 1, Vector2(0.33333334, 0), 0.0, 0.0, 1, 1, Vector2(0.6666667, 0), 0.0, 3.0, 1, 1, Vector2(1, 1), 3.0, 0.0, 1, 1]
+point_count = 4
+
+[sub_resource type="Resource" id="Resource_mnvmr"]
+script = ExtResource("2_c372r")
+property = "material_override:shader_parameter/strength"
+param = &"tier"
+curve = SubResource("Curve_6iyps")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_so835"]
+render_priority = 0
+shader = ExtResource("7_o5uy1")
+shader_parameter/color = null
+shader_parameter/strength = null
+shader_parameter/intensity = null
+shader_parameter/ribbons = null
+shader_parameter/twist = null
+shader_parameter/speed = null
+shader_parameter/thickness = null
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_frjcq"]
+top_radius = 0.3
+bottom_radius = 0.42
+height = 1.5
+radial_segments = 48
+rings = 1
+cap_top = false
+cap_bottom = false
+
+[sub_resource type="Curve" id="Curve_fk435"]
+_limits = [0.0, 2.0, 0.0, 1.0]
+_data = [Vector2(0, 0.75), 0.0, 0.0, 0, 0, Vector2(1, 0.75), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_h3t7n"]
+script = ExtResource("5_xio7t")
+property = "position:y"
+curve = SubResource("Curve_fk435")
+
+[sub_resource type="Resource" id="Resource_wixhv"]
+script = ExtResource("8_20mkl")
+mesh = SubResource("CylinderMesh_frjcq")
+material = SubResource("ShaderMaterial_so835")
+seconds = 1000000.0
+id = &"ribbons"
+socket = &"Base"
+loop = true
+min_quality = 2
+bindings = Array[ExtResource("2_c372r")]([SubResource("Resource_r1yk8"), SubResource("Resource_mnvmr")])
+tracks = Array[ExtResource("5_xio7t")]([SubResource("Resource_h3t7n")])
+
+[sub_resource type="Resource" id="Resource_1eq47"]
+script = ExtResource("9_st05k")
+name = &"color"
+kind = 3
+default_value = Color(1, 0.75, 0.3, 1)
+description = "The item's rarity colour (the floor map; magenta when corrupted)."
+
+[sub_resource type="Resource" id="Resource_bufum"]
+script = ExtResource("9_st05k")
+name = &"tier"
+max_value = 3.0
+description = "0 Common, 1 Rare, 2 Epic, 3 Legendary (and corrupted): which layers show and how bright."
+
+[resource]
+script = ExtResource("10_5ohh4")
+id = &"fx.item_aura"
+display_name = "Item aura"
+params = Array[ExtResource("9_st05k")]([SubResource("Resource_1eq47"), SubResource("Resource_bufum")])
+layers = Array[ExtResource("1_3xp4l")]([SubResource("Resource_icm7v"), SubResource("Resource_yfvj8"), SubResource("Resource_5sf7p"), SubResource("Resource_wixhv")])
+tags = Array[StringName]([&"Fx.Kind.Aura"])
+description = "A floor pickup's aura in Risk of Rain 2's tiers (spec item-cards 2.2): a glow under it and motes, sparks from Epic, rising ribbons and a bright pool at Legendary."

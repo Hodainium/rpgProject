@@ -18,11 +18,16 @@ var _clock: float = 0.0
 var _effect: FxDefinition
 var _effect_params: Dictionary = {}
 var _fx: FxHandle
+## The label (or null) and its height above the floor: kept above the shape on screen, see _place_label.
+var label_node: Label3D
+var _label_height: float = 0.0
 
 
 ## A floating pickup. `color` tints the shape's tintable parts and colours the outline and the effect (an armor piece's rarity);
 ## null = the shape's own colours and the look's outline_color.
-static func pickup(look: PropLook, text: String, color: Variant = null) -> PropView:
+## Spec item-cards: `label_height` >= 0 puts the label there instead of the look's (the cards' label height, so a shop's labels
+## line up).
+static func pickup(look: PropLook, text: String, color: Variant = null, label_height: float = -1.0) -> PropView:
 	var view := PropView.new()
 	view.name = "Prop"
 	view.colour = color if color != null else look.outline_color
@@ -31,6 +36,8 @@ static func pickup(look: PropLook, text: String, color: Variant = null) -> PropV
 	if look.shape != null:
 		var shape := look.shape.build(color)
 		view.holder.get_child(0).add_child(shape)
+		var centre := bounds_centre(shape)  # spec item-cards: turn around the shape's middle, under its label (the key's ring
+		shape.position -= Vector3(centre.x, 0, centre.z)  # sat off its origin, so it swung around beside its label)
 		if look.outline > 0.0:
 			outline(shape, view.colour, look.outline)
 	view._spin = look.spin_speed
@@ -38,7 +45,7 @@ static func pickup(look: PropLook, text: String, color: Variant = null) -> PropV
 	view._bob_speed = look.bob_speed
 	view._rest = view.holder.position
 	view._set_effect(look.effect, look.effect_params, color)
-	view._label(text, look.label_height)
+	view._label(text, label_height if label_height >= 0.0 else look.label_height)
 	return view
 
 
@@ -87,6 +94,29 @@ static func outline(root: Node, color: Color, width: float) -> void:
 			material.next_pass = hull  # each part's material is its own (AttachmentPart.material makes a new one)
 
 
+## The centre of the bounds of every mesh under `shape`, in its parent's space (the shape need not be in the tree).
+static func bounds_centre(shape: Node3D) -> Vector3:
+	var box := AABB()
+	var found := false
+	var meshes: Array = shape.find_children("*", "MeshInstance3D", true, false)
+	if shape is MeshInstance3D:
+		meshes.append(shape)
+	for node in meshes:
+		var mesh_node := node as MeshInstance3D
+		if mesh_node.mesh == null:
+			continue
+		var xform := Transform3D.IDENTITY
+		var walk: Node = mesh_node
+		while walk != null and walk != shape.get_parent():
+			if walk is Node3D:
+				xform = (walk as Node3D).transform * xform
+			walk = walk.get_parent()
+		var part := xform * mesh_node.mesh.get_aabb()
+		box = part if not found else box.merge(part)
+		found = true
+	return box.get_center() if found else Vector3.ZERO  # nothing to measure: no shift
+
+
 ## The holder that moves (spin, bob) and, inside it, the node that carries the look's own rotation and scale, so a spin always
 ## turns around the world's up.
 static func _holder(offset: Vector3, rotation_deg: Vector3, scale_by: Vector3) -> Node3D:
@@ -119,6 +149,24 @@ func _label(text: String, height: float) -> void:
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.position = Vector3(0, height, 0)
 	add_child(label)
+	label_node = label
+	_label_height = height
+
+
+## Spec item-cards: the camera looks down at the room, so a label straight above its shape in the world lands beside it on
+## screen (toward the screen's edge). The label rises from the shape's centre along the camera's up instead, which keeps it
+## exactly above the shape on screen, as high on screen as a straight rise would put it.
+func _place_label() -> void:
+	if label_node == null or not is_inside_tree():
+		return
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return
+	var grown := global_basis.get_scale().y  # a chest's item grows from 0.2 as it pops out: its label stays with it
+	var centre_y := (_rest.y if holder != null else 0.0) * grown
+	var up := camera.global_basis.y.normalized()
+	var base := global_position + Vector3(0, centre_y, 0)
+	label_node.global_position = base + up * ((_label_height * grown - centre_y) * up.y)  # as high on screen as a straight rise
 
 
 ## `color` (the prop's own colour, or null) fills the effect's `color` parameter when the look's params leave it unset; with
@@ -132,11 +180,12 @@ func _set_effect(effect: FxDefinition, params: Dictionary, color: Variant) -> vo
 
 func _ready() -> void:
 	visibility_changed.connect(_sync_effect)  # the room hides its props during a battle
-	set_process(_spin != 0.0 or _bob_amount != 0.0)
+	set_process(_spin != 0.0 or _bob_amount != 0.0 or label_node != null)
 
 
 func _process(delta: float) -> void:
 	_clock += delta
+	_place_label()
 	if holder == null:
 		return
 	holder.rotation.y = _clock * _spin * TAU

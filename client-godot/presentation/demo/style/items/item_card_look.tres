@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ItemCardLook" format=3 uid="uid://diwuaco4gqo62"]
+
+[ext_resource type="Resource" path="res://presentation/demo/fx/item_aura.tres" id="1_embeo"]
+[ext_resource type="Script" path="res://game/view/item_card_look.gd" id="3_oulsx"]
+
+[resource]
+script = ExtResource("3_oulsx")
+size = 0.7
+offset = Vector3(0, 0.735, 0)
+aura = ExtResource("1_embeo")

@@ -47,6 +47,14 @@ func key_look() -> PropLook:
 	return null
 
 
+## Spec item-cards: the floor items' look, the nearest in the base chain; null = today's cube.
+func item_look() -> ItemCardLook:
+	for registry in chain():
+		if registry.props != null and registry.props.item != null:
+			return registry.props.item
+	return null
+
+
 ## The icon of an armor piece in `slot`: a look for the slot anywhere in the base chain (nearest first), else the nearest default;
 ## null = today's cube. So a variant that sets only a default never hides its base's slot looks.
 func armor_look(slot: StringName) -> PropLook:
