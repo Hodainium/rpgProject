@@ -29,6 +29,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 4d. `economy-challenges` | ✅ Done (a reward per challenge id paid once per cycle, no tiers (a score band is independent stars), weekly ISO-week cycles from battle time, event expiry, manual resets for everyone or one player, a Development clock offset, data-driven challenge conditions and stars in Godot content; 377 .NET, 558 Godot, e2e `reward_challenge`, `reward_stars`, `reward_clock_offset`, `reward_reset`) | 2026-11-06 |
 | 4c. `economy-rewards` | ✅ Done (commit f501e4e; spec `specs/economy-rewards.md`): per-boss reward rules in a server-owned table, the economy boundary (Godot run inventory vs account economy), admin endpoint and console command, and trace continuity through the outbox | |
 | 4a. `run-verify` | ✅ Done (spec synced; steps cut at the claimed snapshots with a genesis anchor the server builds at run start, a worker pool replaying each step in headless Godot with a battle simulated once, the fan-in aggregator (verified prefix, links, floors, win, rollback with epoch, `MaxRollbacks`), the stairs gate 1107 and epoch gate 1108, pending gems claimed at release, the floor read model, run hash `run-v2` covering everything that decides play; the per-battle worker is removed; 416 .NET, 582 Godot, the e2e scenarios and the Linux golden check pass; open: routing by ruleset (9), retention (7b)) | 2026-11-08 |
+| 4e. `player-inbox` | 📝 Spec written 2026-11-21 (`specs/player-inbox.md`; a server inbox: the verifier writes a reward message in the paying transaction, support and developers send messages and gems through an admin endpoint (the web dashboard later), notices on the main menu Isaac-style; a finished run is verified before the menu, uploaded when back online; Go offline on every server wait; questions Q1-Q7 open; built just before 4b, not now (user, 2026-11-21)) | 2026-11-21 |
 | 4b. `game-analytics` | ⬜ Not started | |
 | 5. `card-collection` | ✅ Done (spec synced; the account's cards on the server: catalog, packs with Epic / Legendary / Mythic pity and a Rare guarantee, dust and craft, the run lock, the run's item pool as a verified input, `POST /runs/{id}/abandon`; Godot: the pool in the run hash and steps, card tags on all 160 demo cards, core-set proposal, console commands, run-end gate; no Vault pool; 535 .NET, 626 Godot, 5 card e2e scenarios; not built: the Grafana row; the screens are 5b, the numbers 5c) | 2026-11-09 |
 | 5a. `vfx-framework` | ✅ Done, accepted by the user 2026-11-15 (`specs/vfx-framework.md`; data-driven FX in 2D, 3D and hybrid, the GodotGAS cue bridge, the hybrid stage, a shader library, a proof set of 12 effects, dev tools, the gallery; built on by 5a2 `vfx-content-pass` and 5a3 `vfx-stencil`) | 2026-11-15 |
@@ -213,6 +214,8 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   owned unopened, as in Hearthstone (user), so the server half becomes its own sub-slice **5b0 `pack-shop`**, built first.
   Order: 5b0, 5b, 5b2, 5b3, 5d, 5c.
 - 2026-11-15: 5b0 `pack-shop` built, with the openability rule, 5-card packs and retire-with-refund (user); next: 5b `card-ui`.
+- 2026-11-21: 4e `player-inbox` added (spec written; it grew out of a run-rewards pop-up): built just before 4b `game-analytics`,
+  because the web dashboard will message players and send gems; not now, the 5b2 → 5b3 → 5d → 5c order goes on first (user).
 
 
 ## Design tuning: any time, not just in breaks
@@ -510,6 +513,14 @@ Changes `combat/` and the combat-replay-core contract, so it goes in with the re
 request with an unknown encounter id → Rejected 2002, one attempt.
 
 > 🎨 Suggested design break 2, reward loop: payouts, post-battle results screen, progression pacing, more encounters.
+
+### 4e. `player-inbox`
+Added 2026-11-21 at the user's request (spec `specs/player-inbox.md`). A server inbox per player: rewards a verified run paid (written
+by the verifier worker in the transaction that pays them), messages and gems from support or the developers (an admin endpoint now,
+the web dashboard later); the game shows unread messages on the main menu one at a time, Isaac-style, and marks them read on the
+server. With it: a finished run, won or lost, is verified before the main menu when online; offline or after Go offline it is kept in
+the save and uploaded when the game is back online; every wait on the server offers Go offline. **Built just before 4b**, after the
+5-series slices now in progress (user, 2026-11-21).
 
 ### 4b. `game-analytics`
 **Purpose:** understand how the game is played (`specs/design/game-design.md` section 10): general player
