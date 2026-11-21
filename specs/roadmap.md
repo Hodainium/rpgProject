@@ -46,7 +46,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5b2. `item-cards` | ✅ Built 2026-11-21 on `feat/item-cards` (`specs/item-cards.md`, synced; every floor item is its own spinning Grimoire card at 0.7 with a rarity rim and one tiered aura `fx.item_aura` (motes, a glow pool, sparks from Epic, ribbons at Legendary, corrupted magenta), shared with armor; name-and-price labels for cards, keys and armor alike, kept above their pickup on screen; keys x1.2 and armor x1.3 game-wide; floor faces baked into mipmapped textures; picked in two live gates (concepts A-F, sizes, labels, auras; no drop flash); Godot 1109, .NET 616) | 2026-11-21 |
 | 5b4. `class-pick` | ✅ Built, playtested and spec synced 2026-11-19 on `feat/class-pick` (`specs/class-pick.md`; Part 1 the Arcanist and Plaguewright looks and 4K portraits, merged #68; Part 2 the Mewgenics-style class pick: a live 3D turntable of the cubes (only the arrows turn it, oval ring, cubes shrink away at the back, floor effects hold still), the class card as two stacked windows, portrait party slots, six developer presets, unowned classes greyed with a lock over the one in front (card-ui 2.6); effects ignore fog framework-wide; the run picker and seed moved to the dev `runsetup`; e2e `class_pick_locked`) | 2026-11-19 |
 | 5b5. `ui-feedback` | ✅ Done, playtested 2026-11-20, merged in PR #75 (spec synced; `specs/ui-feedback.md`; no white message line: a refusal flashes the widget it is about (SP bar, equipment slot, Gold and Keys counters, room tile, stairs, member rows, battle command and target), rare problems are one-button dialogs, dev text goes to the dev console; all 27 messages decided one by one with the user; next after 5b4, before 5b2) | 2026-11-19 |
-| 5b3. `floor-rooms` | ⬜ Not started (added 2026-11-15: bigger floors, a challenge room (three waves, an item reward), an armory (armor or a weapon) on every floor, item rooms give items only; before 5c) | 2026-11-15 |
+| 5b3. `floor-rooms` | ✅ Built and playtested 2026-11-21 on `feat/floor-rooms` (`specs/floor-rooms.md`; map icons for both rooms, the room kept in battle between waves; open: room props and the wave toast; challenge rooms with three waves, armories, items-only item rooms, floors growing +2 rooms per depth to 25; Godot 1125, .NET 619; added 2026-11-15: bigger floors, a challenge room (three waves, an item reward), an armory (armor or a weapon) on every floor, item rooms give items only; before 5c) | 2026-11-15 |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; its own slice after 5b3 `floor-rooms`, before 5c (user, 2026-11-15)) | 2026-11-09 |
 | 6. `observability` | ⬜ Not started | |
@@ -721,9 +721,9 @@ their own 3D icons in 5a4 `cube-style` (Set K). Presentation only.
 Added 2026-11-15 at the user's request, **its own slice before 5c `card-balance`** (the room changes first, then 5d `unique-events`, then the balance on top).
 The user's playtest note: players barely get the chance to find items, and the floors are too small. Room changes:
 - **Bigger floors**: more rooms per floor (the floor generator's room counts per chapter or floor).
-- **A challenge room on every floor**: three waves of enemies, one after another; it **has a chance to spawn** on a floor
-  (user's words; the spec settles whether that chance is per floor or per wave), and clearing it **rewards an item**.
-- **An armory on every floor**: it gives an **armor piece or a weapon** (equipment only).
+- **A challenge room on every floor**: three waves of enemies, one after another; it **spawns on every floor except the
+  last one (the Vault or the Void, by route)** (guaranteed, user 2026-11-21; was "has a chance to spawn"), and clearing it **rewards an item**.
+- **An armory wherever the item room or shop spawns** (user, 2026-11-21; key-locked like them): it gives an **armor piece or a weapon** (equipment only).
 - **Item rooms give items only** (today item rooms and pedestals draw from one pool with equipment; the armory takes over the
   equipment).
 A rule change: the floor generator, the run hash and the run goldens change, the bots learn the new rooms, and the balance gate is

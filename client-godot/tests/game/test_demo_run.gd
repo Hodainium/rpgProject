@@ -49,12 +49,15 @@ func test_demo_run_full_descent() -> void:
 	eq(structure.floors[8].pick, FloorSlot.Pick.CHOICE, "floor 9 is a choice")
 	eq(structure.floors[8].chapters.map(func(chapter): return chapter.id), [&"demo.chapter.cathedral", &"demo.chapter.coven"], "light or dark")
 	eq(structure.floors[9].pick, FloorSlot.Pick.ROUTE, "floor 10 follows the route")
-	var specials := {"cellar": {"Room.Type.Treasure": 1, "Room.Type.Shop": 1}, "crypt": {"Room.Type.Treasure": 1, "Room.Type.Shop": 1},
-		"forge": {"Room.Type.Treasure": 1, "Room.Type.Shop": 1}, "hollow": {}, "cathedral": {}, "coven": {},
-		"vault": {"Room.Type.Treasure": 4, "Room.Type.Shop": 1}, "void": {"Room.Type.Altar": 3}}
+	# Spec floor-rooms D1 / D4: a challenge room on every floor but the last; an armory beside every item room or shop.
+	var item_floor := {"Room.Type.Treasure": 1, "Room.Type.Shop": 1, "Room.Type.Armory": 1, "Room.Type.Challenge": 1}
+	var specials := {"cellar": item_floor, "crypt": item_floor, "forge": item_floor, "hollow": {"Room.Type.Challenge": 1},
+		"cathedral": {"Room.Type.Challenge": 1}, "coven": {"Room.Type.Challenge": 1},
+		"vault": {"Room.Type.Treasure": 4, "Room.Type.Shop": 1, "Room.Type.Armory": 1}, "void": {"Room.Type.Altar": 3}}
 	for route in [&"demo.chapter.cathedral", &"demo.chapter.coven"]:
 		for seed_value in range(1, 13):
 			var bosses := {}
+			var last_size := 0
 			for floor_index in 10:
 				var result := SeedReport.floor_of(content, seed_value, floor_index, null, DESCENT, route)
 				var where := "%s seed %d floor %d" % [route, seed_value, floor_index + 1]
@@ -64,6 +67,10 @@ func test_demo_run_full_descent() -> void:
 				var name := String(result["chapter"]).trim_prefix("demo.chapter.")
 				var chapter: ChapterDefinition = content.chapters[result["chapter"]]
 				var map: FloorMap = result["map"]
+				# Spec floor-rooms D6 (user, 2026-11-21): floors grow with depth, never shrink.
+				check(map.cells.size() >= last_size, where + ": at least as big as the floor before (%d < %d)" % [
+					map.cells.size(), last_size])
+				last_size = map.cells.size()
 				var counts := {}
 				for index in map.sorted_indices():
 					var cell: Dictionary = map.cells[index]

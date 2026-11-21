@@ -837,6 +837,10 @@ func _on_battle_requested(_snapshot: Dictionary) -> void:
 	if skip_animations:
 		gate.skip_all = true
 	await get_tree().process_frame
+	# Spec floor-rooms: a wave chained inside fight(), or a rebuild that restored a pending battle, may ask again; only one
+	# fight runs, on the pending battle as it is now.
+	if run == null or run.pending_battle.is_empty() or run.current_battle != null:
+		return
 	await run.fight(recorder, gate)
 
 

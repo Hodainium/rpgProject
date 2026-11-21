@@ -3,8 +3,10 @@
 ## cells: index (y * width + x) → {
 ##   "cell": Vector2i, "role": "start" | "normal" | "boss" | "special", "special_tag": StringName,
 ##   "room": StringName, "doors": int (RoomDefinition.DOOR_* bits),
-##   "content": {"kind": "none" | "encounter" | "event", "encounter": StringName, "event": StringName,
-##               "enemies": Array of EnemySnapshot dictionaries},
+##   "content": {"kind": "none" | "encounter" | "event" | "waves", "encounter": StringName, "event": StringName,
+##               "enemies": Array of EnemySnapshot dictionaries,
+##               "waves": Array of {"encounter", "enemies"} (spec floor-rooms: only for "waves"; wave 1 is also above)},
+##   "wave": int (spec floor-rooms: a challenge cell's wave reached, 0-based, once wave 1 is won),
 ##   "pickups": Array of {"placement": int (1-based), "item": StringName, "price": int, "taken": bool},
 ##   "visited": bool, "cleared": bool,
 ##   "opened": true (spec keys-and-gear 2.2: only on a locked room a key opened) }

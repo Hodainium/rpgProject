@@ -32,6 +32,7 @@ script = ExtResource("1_ahhn3")
 cell = Vector2i(6, 3)
 kind = 3
 item_query = SubResource("Resource_8d302")
+offers = 1
 
 [resource]
 script = ExtResource("3_6ka60")

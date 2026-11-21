@@ -6,8 +6,9 @@
 script = ExtResource("1_be257")
 id = &"demo.rules.vault"
 grid_size = Vector2i(11, 10)
-base_rooms = 10
-rooms_per_depth = 1
+base_rooms = 8
+rooms_per_depth = 2
 random_extra_rooms = 1
-max_rooms = 14
-special_room_tags = Array[StringName]([&"Room.Type.Treasure", &"Room.Type.Treasure", &"Room.Type.Treasure", &"Room.Type.Treasure", &"Room.Type.Shop"])
+max_rooms = 25
+max_attempts = 300
+special_room_tags = Array[StringName]([&"Room.Type.Treasure", &"Room.Type.Treasure", &"Room.Type.Treasure", &"Room.Type.Treasure", &"Room.Type.Shop", &"Room.Type.Armory"])

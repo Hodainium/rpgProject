@@ -1,0 +1,15 @@
+# Spec floor-rooms 5 and acceptance scenario 5 on a challenge room: the real content's one-floor run (the Cellar, so a
+# challenge room with three waves) is played by a four-member party on the smart policy; every wave is an ordinary battle
+# upload. After the upload the stored conditions of wave 2 are altered (a fight the run never produces there, as a client
+# swapping a hard wave would claim). The worker only starts after the tampering: the step that ends on wave 2 finds the
+# conditions are not what the run produces (ConditionsMismatch, a 2002 verdict), the run is rolled back to its last verified
+# checkpoint, and the client learns it at its next request (409 1108) and rebuilds from the server.
+#! content real
+#! env Monitors__Interval=00:00:01
+new demo.character.warrior,demo.character.cleric,demo.character.arcanist,demo.character.bard run=demo.run.one_floor
+wait run
+autorun policy=smart
+e2e tamper-wave
+e2e worker-start 120
+wait epoch 1 300
+server steps

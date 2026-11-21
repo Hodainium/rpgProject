@@ -218,7 +218,8 @@ func _resolve(map: FloorMap, chapter: ChapterDefinition, pools: Dictionary, over
 				data["pickups"].append({"placement": number + 1, "item": KEYS_KIND, "price": maxi(placement.price, 0),
 					"taken": false, "kind": KEYS_KIND, "keys": placement.keys})
 				continue
-			var picked := pick_pickup(placement.item, placement.equipment, placement.item_query, loot_rng, pools)
+			var picked := pick_pickup(placement.item, placement.equipment, placement.item_query, loot_rng, pools,
+				placement.offers)
 			if picked == null:
 				continue
 			pools["seen"].append(picked.id)
@@ -261,12 +262,46 @@ func _resolve_content(room: RoomDefinition, chapter: ChapterDefinition, is_boss:
 				event = RunSeeds.pick_weighted(stream, _matching(content.events, query))
 				if event == null:
 					return {"error": "no event matches the event query"}
+			RoomDefinition.ContentMode.WAVES:
+				return resolve_waves(room, chapter, stream)
 	if encounter != null:
 		return {"kind": "encounter", "encounter": encounter.id, "event": &"",
 			"enemies": resolve_enemies(encounter, room, is_boss, chapter.scaling, stream)}
 	if event != null:
 		return {"kind": "event", "encounter": &"", "event": event.id, "enemies": []}
 	return {"kind": "none", "encounter": &"", "event": &"", "enemies": []}
+
+
+## Spec floor-rooms 2.1: a challenge room's waves, in order, on the content stream. A wave without a fixed encounter picks
+## from its query (empty: the chapter's encounter query), skipping encounters this room already picked while another one
+## is left. The content's encounter and enemies are wave 1's; "waves" holds them all.
+func resolve_waves(room: RoomDefinition, chapter: ChapterDefinition, stream: RandomNumberGenerator) -> Dictionary:
+	var waves: Array = []
+	var picked: Array[String] = []
+	for wave in room.waves:  # a fixed wave anywhere in the list counts as picked for the query waves
+		if wave != null and wave.encounter != null:
+			picked.append(String(wave.encounter.id))
+	for number in room.waves.size():
+		var wave: RoomWave = room.waves[number]
+		if wave == null:
+			return {"error": "wave %d is empty" % (number + 1)}
+		var encounter := wave.encounter
+		if encounter == null:
+			var query := wave.content_query if wave.content_query != null else chapter.encounter_query
+			var candidates := _matching(content.encounters, query)
+			var fresh := candidates.filter(func(entry: EncounterDefinition) -> bool:
+				return entry.weight_x100 > 0 and not picked.has(String(entry.id)))
+			encounter = RunSeeds.pick_weighted(stream, fresh if not fresh.is_empty() else candidates)
+			if encounter == null:
+				return {"error": "no encounter matches wave %d's query" % (number + 1)}
+		if not picked.has(String(encounter.id)):
+			picked.append(String(encounter.id))
+		waves.append({"encounter": encounter.id,
+			"enemies": resolve_enemies(encounter, room, false, chapter.scaling, stream)})
+	if waves.is_empty():
+		return {"error": "a WAVES room has no waves"}
+	return {"kind": "waves", "encounter": waves[0]["encounter"], "event": &"", "enemies": waves[0]["enemies"],
+		"waves": waves}
 
 
 ## Spec playable-demo 3.8 (boss rotation): the chapter's boss candidates (sorted ids, weight above 0), shuffled once per
@@ -369,14 +404,21 @@ func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNum
 ## Spec item-pass 3.5: what a pedestal or shop slot offers. A fixed item or piece, else one pick from the items and
 ## the equipment matching the query together (items first, then equipment, each by id, so content without pooled
 ## equipment picks exactly as before). Falls back to the run structure's fallback_item.
+## Spec floor-rooms 3.1: `offers` keeps only items (ITEMS) or only equipment (EQUIPMENT, which never falls back to the
+## fallback item: null when no piece is left).
 func pick_pickup(fixed_item: ItemDefinition, fixed_equipment: EquipmentDefinition, query: GameplayTagQuery,
-		stream: RandomNumberGenerator, pools: Dictionary) -> Resource:
+		stream: RandomNumberGenerator, pools: Dictionary, offers: int = RoomPlacement.Offers.ANY) -> Resource:
 	if fixed_item != null:
 		return fixed_item
 	if fixed_equipment != null:
 		return fixed_equipment
+	var tables: Array = [content.items, content.equipment]
+	if offers == RoomPlacement.Offers.ITEMS:
+		tables = [content.items]
+	elif offers == RoomPlacement.Offers.EQUIPMENT:
+		tables = [content.equipment]
 	var candidates: Array = []
-	for table in [content.items, content.equipment]:
+	for table in tables:
 		for id in _sorted_ids(table):
 			var entry: Resource = table[id]
 			if not Unlocks.is_unlocked(entry) or not TagMatch.matches(query, entry.tags) or TagMatch.has(entry.tags, DEV_TAG):
@@ -387,7 +429,7 @@ func pick_pickup(fixed_item: ItemDefinition, fixed_equipment: EquipmentDefinitio
 				continue
 			candidates.append(entry)
 	var picked: Resource = _pick_pooled(stream, candidates)
-	if picked == null and run_structure != null:
+	if picked == null and run_structure != null and offers != RoomPlacement.Offers.EQUIPMENT:
 		picked = run_structure.fallback_item
 	return picked
 

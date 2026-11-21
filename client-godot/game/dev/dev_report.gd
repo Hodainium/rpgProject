@@ -100,6 +100,9 @@ static func map_text(run: RunController) -> String:
 				what = "battle %s" % content["encounter"]
 			"event":
 				what = "event %s" % content["event"]
+			"waves":  # spec floor-rooms
+				what = "waves %s" % " > ".join(content["waves"].map(func(wave: Dictionary) -> String:
+					return String(wave["encounter"])))
 		var pickups := PackedStringArray()
 		for pickup in data["pickups"]:
 			if not pickup["taken"]:

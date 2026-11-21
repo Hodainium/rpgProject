@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="RoomDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/room_placement.gd" id="1_armpl"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_armq"]
+[ext_resource type="Script" path="res://game/defs/room_definition.gd" id="3_armr"]
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("1_armpl")
+cell = Vector2i(2, 2)
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("1_armpl")
+cell = Vector2i(2, 4)
+slot = 2
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("1_armpl")
+cell = Vector2i(1, 1)
+slot = 3
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("1_armpl")
+cell = Vector2i(1, 5)
+slot = 4
+
+[sub_resource type="Resource" id="Resource_q"]
+script = ExtResource("2_armq")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_gear"]
+script = ExtResource("1_armpl")
+cell = Vector2i(6, 3)
+kind = 3
+item_query = SubResource("Resource_q")
+offers = 2
+
+[resource]
+script = ExtResource("3_armr")
+id = &"demo.room.armory"
+display_name = "Armory"
+tags = Array[StringName]([&"Room.Type.Armory", &"Chapter.Demo"])
+placements = Array[ExtResource("1_armpl")]([SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_gear")])

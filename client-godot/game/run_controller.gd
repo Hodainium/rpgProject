@@ -480,6 +480,13 @@ func run_summary() -> Dictionary:
 		"endedIn": {"floor": state.floor_index + 1, "room": String(room.id) if room != null else "",
 			"encounter": _tally.get("lastEncounter", "") if state.status == RunState.LOST else ""},
 	}
+	# Spec floor-rooms 6: only when above 0, so older summaries are unchanged.
+	for key in ["challengesEntered", "challengesCleared", "armoriesVisited"]:
+		if int(_tally.get(key, 0)) > 0:
+			summary[key] = int(_tally[key])
+	if state.status == RunState.LOST and room != null and not state.map.cells[state.current_cell]["cleared"] \
+			and str(state.map.cells[state.current_cell]["content"]["kind"]) == "waves":
+		summary["endedIn"]["wave"] = int(state.map.cells[state.current_cell].get("wave", 0)) + 1  # the wave that was lost
 	if counts["give_to"] > 0:
 		summary["giftsGiven"] = counts["give_to"]  # spec event-items: only when the player picked, so older summaries match
 	if structure != null and structure.uses_keys():
@@ -569,6 +576,8 @@ func _do_enter_room(index: int) -> String:
 func _enter_cell(index: int) -> void:
 	state.current_cell = index
 	var data: Dictionary = state.map.cells[index]
+	if not data["visited"] and RunWire.room_kind(data["special_tag"]) == RunWire.ARMORY_KIND:
+		_tally["armoriesVisited"] = int(_tally.get("armoriesVisited", 0)) + 1  # spec floor-rooms 6
 	data["visited"] = true
 	room_entered.emit(index)
 	if data["cleared"]:
@@ -581,6 +590,11 @@ func _enter_cell(index: int) -> void:
 			pending_battle = {"cell": index, "encounter": room_content["encounter"], "enemies": room_content["enemies"],
 				"label": ""}
 			battle_requested.emit(battle_snapshot())
+		"waves":
+			# Spec floor-rooms 2.2: entering starts the sequence (no confirm); a wave already won resumes at the next one.
+			if not data.has("wave"):
+				_tally["challengesEntered"] = int(_tally.get("challengesEntered", 0)) + 1
+			_start_wave(index)
 		"event":
 			state.event = {"cell": index, "event": room_content["event"], "page": 0}
 			event_page_shown.emit(room_content["event"], 0)
@@ -621,6 +635,8 @@ func fight(controller: Object, gate: PresentationGate = null) -> String:
 func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 	if pending_battle.is_empty():
 		return "no battle is waiting"
+	if current_battle != null:
+		return "a battle is already being fought"
 	var snapshot := battle_snapshot()
 	if journal:
 		_battle_conditions[snapshot["battleId"]] = snapshot
@@ -666,6 +682,9 @@ func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 		return runner_error
 	if won:
 		_tally["enemiesDefeated"] += snapshot["enemies"].size()
+		if is_wave(cell, str(snapshot["battleId"])):
+			_wave_won(cell)
+			return ""
 		_grant_rewards(content.encounters.get(StringName(_tally["lastEncounter"])), cell)
 		if not _active():
 			return runner_error
@@ -675,6 +694,54 @@ func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 	else:
 		_end(RunState.LOST)
 	return ""
+
+
+# --- Challenge rooms (spec floor-rooms 2.2) --------------------------------------------------------------------------
+
+## The cell's next wave becomes the pending battle: wave k (1-based) is labelled "/w<k>", so its battle id and seed are its
+## own. The wave index lives on the cell (absent until wave 1 is won), so a snapshot between waves restores it.
+func _start_wave(cell: int) -> void:
+	var data: Dictionary = state.map.cells[cell]
+	var number := int(data.get("wave", 0))
+	var wave: Dictionary = data["content"]["waves"][number]
+	pending_battle = {"cell": cell, "encounter": wave["encounter"], "enemies": wave["enemies"], "label": "/w%d" % (number + 1)}
+	battle_requested.emit(battle_snapshot())
+
+
+## D10: a won wave gives nothing; the next one starts inside the same action (a replay of the log sets it up again). After
+## the last: XP for every wave's enemies, then the room clears once (coins, key and chest rolls on the room's own streams,
+## exactly as one cleared battle room; the pedestal). No enemy drop and no encounter reward, in any wave.
+func _wave_won(cell: int) -> void:
+	var data: Dictionary = state.map.cells[cell]
+	var waves: Array = data["content"]["waves"]
+	var next := int(data.get("wave", 0)) + 1
+	if next < waves.size():
+		data["wave"] = next
+		_send(GameplayMessageRouter.RUN_WAVE_STARTED, &"Verb.Start", &"", &"room", next + 1, [],
+			{"of": waves.size(), "cell": cell})
+		_start_wave(cell)
+		return
+	_award_xp(room_enemies(data))
+	_tally["challengesCleared"] = int(_tally.get("challengesCleared", 0)) + 1
+	_clear_room(cell, true, room_enemies(data))
+
+
+## True when the battle `battle_id` is a wave of `cell`'s challenge (its label "/w<k>"; a dev spawn there is not).
+func is_wave(cell: int, battle_id: String) -> bool:
+	var data: Dictionary = state.map.cells[cell]
+	return str(data["content"]["kind"]) == "waves" and not data["cleared"] \
+		and battle_id.ends_with("/w%d" % (int(data.get("wave", 0)) + 1))
+
+
+## Every enemy a cell's battles hold: all its waves in a challenge room, else its one encounter's.
+static func room_enemies(data: Dictionary) -> Array:
+	var room_content: Dictionary = data["content"]
+	if not room_content.has("waves"):
+		return room_content["enemies"]
+	var enemies: Array = []
+	for wave in room_content["waves"]:
+		enemies.append_array(wave["enemies"])
+	return enemies
 
 
 # --- Experience, levels and drops (spec playable-demo 3.11) -----------------------------------------------------------
@@ -946,11 +1013,12 @@ func _apply_used_items(used: Array[Dictionary], won: bool) -> void:
 				use_slot["cooldown"] = maxi(use_slot["cooldown"] - 1, 0)
 
 
-func _clear_room(index: int, after_battle: bool) -> void:
+## `enemies`: the beaten enemies whose variants add to the coin roll (a challenge passes every wave's); null = the cell's.
+func _clear_room(index: int, after_battle: bool, enemies: Variant = null) -> void:
 	var data: Dictionary = state.map.cells[index]
 	data["cleared"] = true
 	if after_battle:
-		_drop_coins(index, data)
+		_drop_coins(index, data, enemies if enemies != null else data["content"]["enemies"])
 		if data["role"] != FloorMap.ROLE_BOSS:
 			_drop_keys_and_chests(index)
 		_run_hooks("on_room_cleared")
@@ -964,14 +1032,14 @@ func _clear_room(index: int, after_battle: bool) -> void:
 		_end(RunState.WON)
 
 
-func _drop_coins(index: int, data: Dictionary) -> void:
+func _drop_coins(index: int, _data: Dictionary, enemies: Array) -> void:
 	var scaling: ScalingRules = chapter().scaling
 	var amount := 0
 	if scaling != null:
 		var drop_rng := state.seeds().floor_rng(state.floor_index, "drop/%d" % index)
 		if RunSeeds.roll(drop_rng, scaling.coin_drop_chance_x100):
 			amount = drop_rng.randi_range(mini(scaling.coin_drop_min, scaling.coin_drop_max), scaling.coin_drop_max)
-	for enemy in data["content"]["enemies"]:
+	for enemy in enemies:
 		if enemy["variantId"] != null:
 			var variant: EnemyVariant = content.variants.get(StringName(str(enemy["variantId"])))
 			if variant != null:

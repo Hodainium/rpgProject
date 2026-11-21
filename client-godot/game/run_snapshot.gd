@@ -188,6 +188,20 @@ static func shape_problem(saved: Variant) -> String:
 			for key in CELL_KEYS:
 				if not cell.has(key):
 					return "a map cell has no \"%s\"" % key
+			var content: Variant = cell["content"]
+			if not content is Dictionary:
+				return "a map cell's content must be an object"
+			if str(content.get("kind", "")) == "waves" and not content.has("waves"):
+				return "a map cell of kind waves has no waves"
+			if content.has("waves"):  # spec floor-rooms: optional, but whole when present
+				if not content["waves"] is Array or content["waves"].is_empty():
+					return "a map cell's waves must be a non-empty array"
+				for wave in content["waves"]:
+					if not wave is Dictionary or not wave.has("encounter") or not wave.get("enemies") is Array:
+						return "a map cell's wave needs encounter and enemies"
+			if cell.has("wave") and (not (cell["wave"] is int or cell["wave"] is float) or not content.has("waves")
+					or int(cell["wave"]) < 0 or int(cell["wave"]) >= content["waves"].size()):
+				return "a map cell's wave must be one of its waves"
 			if cell.has("chests"):  # spec floor-chests: optional, but whole when present
 				if not cell["chests"] is Array:
 					return "a map cell's chests must be an array"
@@ -226,6 +240,11 @@ static func _load_map(saved: Dictionary) -> FloorMap:
 		}
 		if cell.has("opened"):
 			data["opened"] = cell["opened"]
+		if content.has("waves"):  # spec floor-rooms 3.1: a challenge room's waves, and the wave reached once one is won
+			data["content"]["waves"] = content["waves"].map(func(wave: Dictionary) -> Dictionary:
+				return {"encounter": StringName(wave["encounter"]), "enemies": wave["enemies"]})
+		if cell.has("wave"):
+			data["wave"] = int(cell["wave"])
 		if cell.has("chests"):  # spec floor-chests: only in a cell that ever held a chest
 			data["chests"] = cell["chests"].map(func(held: Dictionary) -> Dictionary:
 				return {"chest": StringName(held["chest"]), "serial": held["serial"], "opened": held["opened"]})

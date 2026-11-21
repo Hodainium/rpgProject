@@ -11,6 +11,16 @@ const CHECKPOINTS: Array[String] = ["start_run", "battle", "next_floor"]
 ## Spec run-verify 2.2: a snapshot is also attached once this many actions have gone by since the last one, so a step stays short.
 const CHECKPOINT_EVERY: int = 100
 const TREASURE_TAG: StringName = &"Room.Type.Treasure"
+## Spec floor-rooms 3.2: the armory's pickups upload as OfferSource.Armory, a challenge room's (a WAVES room) as Challenge.
+## Room types are read by their tag's last segment, as the map names them (MapCells), so a content set's own room-type
+## tags (fixtures: Fixture.Room.Type.Armory) count too.
+const ARMORY_KIND: String = "Armory"
+
+
+## The room type a special tag names: its last segment ("Room.Type.Armory" -> "Armory").
+static func room_kind(tag: StringName) -> String:
+	var text := String(tag)
+	return text.get_slice(".", text.get_slice_count(".") - 1)
 
 
 ## The RunActionRequest for `entry` (logged as seq `seq`): {seq, action, stateHash, playedAt[, snapshot]}.
@@ -133,6 +143,10 @@ static func offers(state: RunState, cell: int) -> Array:
 			source = "Chest"  # spec floor-chests 3.1
 		elif data["role"] == FloorMap.ROLE_BOSS:
 			source = "BossReward"
+		elif str(data["content"].get("kind", "")) == "waves":
+			source = "Challenge"
+		elif data["role"] == FloorMap.ROLE_SPECIAL and room_kind(data["special_tag"]) == ARMORY_KIND:
+			source = "Armory"
 		elif int(pickup["price"]) > 0 or pickup.has("priceItem"):
 			source = "Shop"
 		elif data["role"] == FloorMap.ROLE_SPECIAL and data["special_tag"] == TREASURE_TAG:

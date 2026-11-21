@@ -22,6 +22,10 @@ enum Kind {
 @export var item: ItemDefinition
 @export var equipment: EquipmentDefinition
 @export var item_query: GameplayTagQuery
+## Spec floor-rooms 3.1: what a pooled pick may be. ANY (items and equipment together, as before), ITEMS (item rooms; the
+## fallback item when none is left) or EQUIPMENT (the armory; no pickup when none is left, never the fallback item).
+enum Offers { ANY, ITEMS, EQUIPMENT }
+@export var offers: Offers = Offers.ANY
 ## SHOP_SLOT: price override; -1 uses the item's price.
 @export var price: int = -1
 ## Spec playable-demo 3.8 (the Void's altars): taking this pickup also gives the taker this item (a curse such as Void

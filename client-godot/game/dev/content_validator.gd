@@ -700,6 +700,20 @@ func _check_room(room: RoomDefinition) -> void:
 		RoomDefinition.ContentMode.EVENT_QUERY:
 			if room.content_query != null and content != null:
 				_check_pool(content.events, room.content_query, path + "::content_query", "event")
+		RoomDefinition.ContentMode.WAVES:
+			# Spec floor-rooms 3.1: a challenge room fights at least two waves.
+			if room.waves.size() < 2:
+				_error("waves_too_few", path + "::waves", "%s is a WAVES room with %d wave(s); it needs at least 2"
+					% [room.id, room.waves.size()])
+			for number in room.waves.size():
+				var wave: RoomWave = room.waves[number]
+				if wave == null:
+					_error("dangling_ref", "%s::waves[%d]" % [path, number], "an empty wave entry")
+				elif wave.encounter == null and wave.content_query != null and content != null:
+					_check_pool(content.encounters, wave.content_query, "%s::waves[%d].content_query" % [path, number],
+						"encounter")
+	if not room.waves.is_empty() and room.content_mode != RoomDefinition.ContentMode.WAVES:
+		_warning("waves_outside_mode", path + "::waves", "%s lists waves but its content mode is not WAVES" % room.id)
 	var used_cells := {}
 	var enemy_spawns := 0
 	var player_spawns := 0
@@ -725,7 +739,11 @@ func _check_room(room: RoomDefinition) -> void:
 				player_spawns += 1
 			RoomPlacement.Kind.ITEM_PEDESTAL, RoomPlacement.Kind.SHOP_SLOT:
 				if placement.item == null and placement.equipment == null and placement.item_query != null and content != null:
-					_check_item_pool(placement.item_query, where + ".item_query")
+					_check_item_pool(placement.item_query, where + ".item_query", placement.offers)
+		# Spec floor-rooms 3.1: a fixed pick must be what the placement offers.
+		if (placement.offers == RoomPlacement.Offers.ITEMS and placement.equipment != null) \
+				or (placement.offers == RoomPlacement.Offers.EQUIPMENT and placement.item != null):
+			_error("offers_mismatch", where, "the placement's fixed pick is not what its offers field allows")
 		if placement.item != null and placement.equipment != null:
 			_error("placement_both", where, "a placement offers one thing: an item or a piece of equipment, not both")
 		if placement.price >= 0 and placement.kind != K.SHOP_SLOT:
@@ -735,22 +753,37 @@ func _check_room(room: RoomDefinition) -> void:
 			_warning("placement_kind", where, "an item only matters on an item pedestal or shop slot")
 		if placement.loadout != null and placement.kind != K.ENEMY_SPAWN:
 			_warning("placement_kind", where, "a loadout only matters on an enemy spawn")
-	var has_encounter := room.content_mode in [RoomDefinition.ContentMode.ENCOUNTER, RoomDefinition.ContentMode.ENCOUNTER_QUERY]
+	var has_encounter := room.content_mode in [RoomDefinition.ContentMode.ENCOUNTER, RoomDefinition.ContentMode.ENCOUNTER_QUERY,
+		RoomDefinition.ContentMode.WAVES]
 	if room.content_mode == RoomDefinition.ContentMode.ENCOUNTER and room.encounter != null \
 			and enemy_spawns < room.encounter.slots.size():
 		_warning("spawn_mismatch", path + "::placements",
 			"%s has %d enemy spawn(s) for %d encounter slot(s)" % [room.id, enemy_spawns, room.encounter.slots.size()])
+	if room.content_mode == RoomDefinition.ContentMode.WAVES:
+		for wave in room.waves:
+			if wave != null and wave.encounter != null and enemy_spawns < wave.encounter.slots.size():
+				_warning("spawn_mismatch", path + "::placements", "%s has %d enemy spawn(s) for wave %s's %d slot(s)"
+					% [room.id, enemy_spawns, wave.encounter.id, wave.encounter.slots.size()])
 	if has_encounter and player_spawns == 0:
 		_warning("spawn_mismatch", path + "::placements", "%s has an encounter but no player spawn" % room.id)
 
 
-func _check_item_pool(query: GameplayTagQuery, where: String) -> void:
-	for id in content.items:
-		if TagMatch.matches(query, content.items[id].tags):
-			return
-	for id in content.equipment:
-		if not content.equipment[id].tags.is_empty() and TagMatch.matches(query, content.equipment[id].tags):
-			return
+func _check_item_pool(query: GameplayTagQuery, where: String, offers: int = RoomPlacement.Offers.ANY) -> void:
+	if offers != RoomPlacement.Offers.EQUIPMENT:
+		for id in content.items:
+			if TagMatch.matches(query, content.items[id].tags):
+				return
+	if offers != RoomPlacement.Offers.ITEMS:
+		for id in content.equipment:
+			var piece: EquipmentDefinition = content.equipment[id]
+			# What pick_pickup can offer: pooled, unlocked, not a dev piece.
+			if not piece.tags.is_empty() and TagMatch.matches(query, piece.tags) and Unlocks.is_unlocked(piece) \
+					and not TagMatch.has(piece.tags, FloorGenerator.DEV_TAG):
+				return
+	if offers == RoomPlacement.Offers.EQUIPMENT:
+		# Spec floor-rooms 3.1: an equipment-only pedestal never falls back to an item.
+		_error("offers_equipment_no_pool", where, "no pooled equipment matches this pool")
+		return
 	if _has_fallback_item():
 		_warning("empty_item_pool", where, "no item matches this pool; the run's fallback_item is used")
 	else:
@@ -762,6 +795,18 @@ func _has_fallback_item() -> bool:
 		if content.runs[id].fallback_item != null:
 			return true
 	return false
+
+
+## The first floor (0-based) a run structure plays `chapter` on; 0 when no run lists it (a sandbox or a test may).
+func _shallowest_depth(chapter: ChapterDefinition) -> int:
+	var depth := -1
+	for id in _sorted(content.runs):
+		var structure: RunStructure = content.runs[id]
+		for index in structure.floors.size():
+			var slot: FloorSlot = structure.floors[index]
+			if slot != null and slot.chapters.any(func(other: ChapterDefinition) -> bool: return other != null and other.id == chapter.id):
+				depth = index if depth == -1 else mini(depth, index)
+	return maxi(depth, 0)
 
 
 func _check_chapter(chapter: ChapterDefinition) -> void:
@@ -785,6 +830,21 @@ func _check_chapter(chapter: ChapterDefinition) -> void:
 		elif not rules.special_room_tags.has(tag):
 			_warning("locked_room_tag_unknown", rules.resource_path + "::locked_room_tags",
 				"%s locks %s, which is not one of its special_room_tags" % [rules.id, tag])
+	# Spec floor-rooms D4: an armory only beside an item room or a shop. Room types are read by their tag's last segment, as
+	# the map names them (MapCells), so a content set's own room-type tags (fixtures: Fixture.Room.Type.*) follow the rule.
+	var kinds: Array = rules.special_room_tags.map(func(tag: StringName) -> String: return RunWire.room_kind(tag))
+	if kinds.has(RunWire.ARMORY_KIND) and not kinds.has("Treasure") and not kinds.has("Shop"):
+		_error("armory_without_item_room", rules.resource_path + "::special_room_tags",
+			"%s places an armory but no item room or shop" % rules.id)
+	# Spec floor-rooms 5: every special room and the boss need a dead end; fewer rooms than that plus the start and one
+	# corridor never fit (the generator would fail after max_attempts).
+	var needed := 1 + rules.special_room_tags.size()
+	var depth := _shallowest_depth(chapter)
+	var fewest := mini(rules.max_rooms, rules.base_rooms + rules.rooms_per_depth * depth)
+	if fewest < needed + 2:
+		_warning("floor_rules_too_small", rules.resource_path + "::base_rooms",
+			"%s can roll %d rooms on floor %d for %d dead ends (the boss and %d special rooms)"
+			% [rules.id, fewest, depth + 1, needed, needed - 1])
 	var uses_encounter_query := {"normal": false, "boss": false}
 	var uses_event_query := false
 	for role in roles:
@@ -806,10 +866,19 @@ func _check_chapter(chapter: ChapterDefinition) -> void:
 			_warning("doors_unsatisfiable", path + "::room_query", "no %s room of %s fits doors %s; a seed needing one fails"
 				% [role[0], chapter.id, ", ".join(unmet)])
 		for room in candidates:
+			if role[0] == "boss" and room.content_mode == RoomDefinition.ContentMode.WAVES:
+				_error("waves_boss_room", room.resource_path + "::content_mode",
+					"%s is a boss room of %s in WAVES mode; a boss room fights its boss encounter" % [room.id, chapter.id])
+			if role[0] == "start" and room.content_mode == RoomDefinition.ContentMode.WAVES:
+				_error("waves_start_room", room.resource_path + "::content_mode",
+					"%s is a start room of %s in WAVES mode; the waves would start before the first move" % [room.id, chapter.id])
 			if room.content_mode == RoomDefinition.ContentMode.ENCOUNTER_QUERY and room.content_query == null:
 				uses_encounter_query["boss" if role[0] == "boss" else "normal"] = true
 			if room.content_mode == RoomDefinition.ContentMode.EVENT_QUERY and room.content_query == null:
 				uses_event_query = true
+			if room.content_mode == RoomDefinition.ContentMode.WAVES and room.waves.any(func(wave: RoomWave) -> bool:
+					return wave != null and wave.encounter == null and wave.content_query == null):
+				uses_encounter_query["normal"] = true
 	if uses_encounter_query["normal"]:
 		_check_pool(content.encounters, chapter.encounter_query, path + "::encounter_query", "encounter")
 	if uses_encounter_query["boss"]:
