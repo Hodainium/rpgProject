@@ -44,6 +44,7 @@ shader_params = {
 "sharpness": 9.0
 }
 size = Vector2(1.8, 9)
+upright = true
 id = &"beam"
 space = 2
 duration = 0.95
