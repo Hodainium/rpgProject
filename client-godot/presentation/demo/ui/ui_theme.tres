@@ -601,3 +601,6 @@ Title/fonts/font = ExtResource("font_bold")
 Title/font_sizes/font_size = 22
 Warning/base_type = &"Label"
 Warning/colors/font_color = Color(1, 0.6039, 0.5412, 1)
+UIFlash/colors/refuse = Color(1, 0.6039, 0.5412, 1)
+UIFlash/constants/flash_ms = 350
+UIFlash/constants/shake_px = 6

@@ -44,6 +44,30 @@ func bind(context: UIContext) -> void:
 	%Equip.pressed.connect(_on_equip)
 	%TakeOff.pressed.connect(_on_take_off)
 	%Cancel.pressed.connect(_close_menu)
+	UIFlash.listen(self, _refused)
+
+
+## Spec ui-feedback rows 11, 12: the slot tried (gear_slot), or every item slot of the members named (member_items).
+func _refused(data: Dictionary) -> Array:
+	var hits: Array = []
+	var target := str(data.get(UIRefusal.TARGET, ""))
+	var slots: Array = data.get("slots", [data["slot"]] if data.has("slot") else [])
+	for entry in _buttons:
+		var column: GearColumn = entry["column"]
+		if not slots.has(entry["member"]) or not is_instance_valid(entry["button"]):
+			continue
+		var wanted: Variant = data.get("equipment_slot")
+		var key: Variant = _slot_key(column)
+		if target == UIRefusal.GEAR_SLOT and typeof(wanted) == typeof(key) and wanted == key:  # a tag or a use slot's number
+			hits.append(entry["button"])
+		elif target == UIRefusal.MEMBER_ITEMS and column.is_use_slot():
+			hits.append(entry["button"])
+	return hits
+
+
+## What names a column in a refusal: its Equipment.Slot.* tag, or the use slot's number.
+static func _slot_key(column: GearColumn) -> Variant:
+	return column.use_slot if column.is_use_slot() else column.slot
 
 
 func handles_back() -> bool:
@@ -284,30 +308,36 @@ func _on_equip() -> void:
 	var run := ctx.run
 	var me: int = _selected["member"]
 	var problem := ""
+	var why: Dictionary  # spec ui-feedback: what a refusal is about, read before the try (a refusal changes nothing)
 	if _picked["use"]:
 		# Spec keys-and-gear 2.5: one logged move (or swap with what this slot holds), checked before anything changes.
-		problem = run.move_item(_picked["holder"], _picked["id"], me, _piece_in(_selected))
+		var swap := _piece_in(_selected)
+		why = UIRefusal.for_move(run, _picked["holder"], me, swap != &"")
+		problem = run.move_item(_picked["holder"], _picked["id"], me, swap)
 	elif _picked["holder"] > 0:
 		# Spec keys-and-gear 2.4: one logged swap; the wearer gets my old piece (or nothing) back.
+		why = UIRefusal.for_gear(run, me, _slot_key(_selected["column"]))
 		problem = run.swap_gear(me, _picked["id"])
 	else:
+		why = UIRefusal.for_gear(run, me, _slot_key(_selected["column"]))
 		problem = run.equip(me, _picked["id"])
-	_after(problem)
+	_after(problem, why)
 
 
 func _on_take_off() -> void:
 	if _selected == null:
 		return
-	_after(ctx.run.unequip(_selected["member"], _selected["column"].slot))
+	var why := UIRefusal.for_gear(ctx.run, _selected["member"], _slot_key(_selected["column"]))
+	_after(ctx.run.unequip(_selected["member"], _selected["column"].slot), why)
 
 
-func _after(problem: String) -> void:
-	if problem != "":
-		ctx.main.refuse(problem)
-	else:
+func _after(problem: String, why: Dictionary = {}) -> void:
+	if problem == "":
 		get_tree().call_group("sound_board", "play", "Item")
 	_close_menu()
 	refresh()
+	if problem != "":
+		ctx.main.refuse(problem, &"", why)  # after the redraw, so the flash lands on the buttons that stay
 
 
 # --- Data -----------------------------------------------------------------------------------------------------------

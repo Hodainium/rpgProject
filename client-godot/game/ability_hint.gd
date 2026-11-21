@@ -24,12 +24,15 @@ const USAGE_TEXT := {
 
 ## {"name", "cost", "description", "target", "usage", "unit", "spCost"} for `ability` (unit may be null; with one,
 ## the cost is that unit's, after its cost multiplier). "unit" (its id, "" without one) and "spCost" (whole SP, 0 when
-## free) let the party window preview the SP the move would spend (spec skill-points).
+## free) let the party window preview the SP the move would spend (spec skill-points); "spCostX100" is the exact cost
+## (spec ui-feedback: "SP short" compares it with the caster's SP ×100, a fraction included).
 static func of(unit: BattleUnit, ability: BattleAbility) -> Dictionary:
 	if ability == null:
-		return {"name": "?", "cost": "", "description": "", "target": "", "usage": "", "unit": "", "spCost": 0}
+		return {"name": "?", "cost": "", "description": "", "target": "", "usage": "", "unit": "", "spCost": 0,
+			"spCostX100": 0}
+	var exact := CostReader.sp_cost(ability, unit.asc if unit != null else null)
 	@warning_ignore("integer_division")
-	var sp := CostReader.sp_cost(ability, unit.asc if unit != null else null) / 100
+	var sp := exact / 100
 	return {
 		"name": AbilityName.of(ability),
 		"cost": cost_text(ability, unit),
@@ -38,6 +41,7 @@ static func of(unit: BattleUnit, ability: BattleAbility) -> Dictionary:
 		"usage": USAGE_TEXT[ability.usage()],
 		"unit": String(unit.unit_id) if unit != null else "",
 		"spCost": sp,
+		"spCostX100": exact,
 	}
 
 

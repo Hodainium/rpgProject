@@ -40,6 +40,12 @@ var _ult_flow: bool = false
 var _target_from_list: bool = false
 var _speed_index: int = 0
 var _hints: bool = true
+## Spec ui-feedback: what each unit last tried ({unit id: {"ability", "target"}}), so a rejection names its row; and
+## what each entry of the open page stands for (an ability tag, "ability" / "item" for the two lists, or a target id).
+var _tries: Dictionary = {}
+var _entry_keys: Array = []
+## A turn action's refusal whose rows flash once the battle asks the unit again ({"unit_id", "data", "ability"}).
+var _flash_next: Dictionary = {}
 
 
 func bind(context: UIContext) -> void:
@@ -60,6 +66,29 @@ func bind(context: UIContext) -> void:
 	_show_speed()
 	GameplayMessages.listen(GameplayMessageRouter.UI_ULT_PRESSED, _on_ult_pressed, GameplayMessageRouter.Match.EXACT,
 		VerbMessage, self)
+	UIFlash.listen(self, _refused)
+
+
+## Spec ui-feedback rows 15, 16: the skill's row shakes (SP short or it can't be used now), a target's row on the TARGET
+## page shakes.
+func _refused(data: Dictionary) -> Array:
+	var target := str(data.get(UIRefusal.TARGET, ""))
+	var key: Variant = null
+	if target in [UIRefusal.SP, UIRefusal.COMMAND] and _unit != null and StringName(str(data.get("unit", ""))) == _unit.unit_id:
+		var tag := StringName(str(data.get("ability", "")))
+		key = tag
+		if not _entry_keys.has(tag) and _page == Page.COMMANDS:
+			# A skill or an item sits behind its list's row; an ult has no row here (its ULT button flashes).
+			if _items(_unit).any(func(ability) -> bool: return ability.ability_tag == tag):
+				key = "item"
+			elif _skills(_unit).any(func(ability) -> bool: return ability.ability_tag == tag):
+				key = "ability"
+	elif target == UIRefusal.UNIT_TARGET and _page == Page.TARGET:
+		key = StringName(str(data.get("unit", "")))
+		if not _entry_keys.has(key):
+			return [%Title]  # that target is gone from the list: the page's title shakes
+	var row := UIFlash.entry(%Entries, _entry_keys.find(key)) if key != null else null
+	return [row] if row != null else []
 
 
 func on_deactivated() -> void:
@@ -91,6 +120,8 @@ func on_battle(_battle: Battle) -> void:
 
 
 func on_battle_end() -> void:
+	_tries.clear()  # unit ids repeat in the next battle
+	_flash_next = {}
 	_unit = null
 	_pending = null
 	_caster = null
@@ -107,16 +138,44 @@ func battle_changed() -> void:
 func _on_action_requested(unit_id: StringName, _turn: int) -> void:
 	if battle == null:
 		return
+	_forget_turn_try(unit_id)
 	_unit = battle.unit_by_id(unit_id)
 	_ult_flow = false
-	_set_page(Page.COMMANDS)
+	var refused := _flash_next
+	_flash_next = {}
+	if refused.get("unit_id") == unit_id and refused.get("ability") != null:
+		# Row 16: back on the TARGET page of the same skill, so the refused target's row is there to shake.
+		_target_from_list = refused.get("from_list", false)  # Back returns where the pick came from
+		_list_kind = refused.get("list_kind", _list_kind)
+		_pending = refused["ability"]
+		_caster = _unit
+		_set_page(Page.TARGET)
+		_send_prompt(_pending)
+	else:
+		_set_page(Page.COMMANDS)
+	if refused.get("unit_id") == unit_id:
+		for hit in _refused(refused["data"]):
+			UIFlash.refuse(hit)
 
 
 func _on_action_rejected(unit_id: StringName, reason: String, detail: String) -> void:
-	ctx.main.refuse("%s: %s" % [reason, detail], unit_id, {"reason": reason, "detail": detail})
+	var tried: Dictionary = _tries.get(unit_id, {})
+	var caster := battle.unit_by_id(unit_id) if battle != null else null
+	var ability: BattleAbility = caster.ability_by_tag(tried["ability"]) if caster != null and tried.has("ability") else null
+	var data := UIRefusal.for_battle(reason, caster, ability, tried.get("target", &""))
+	if data.is_empty() and caster != null and tried.has("ability"):
+		data = UIRefusal.make(UIRefusal.COMMAND, {"unit": unit_id, "ability": tried["ability"]})
+	data.merge({"reason": reason, "detail": detail})
+	var retarget: bool = data.get(UIRefusal.TARGET) == UIRefusal.UNIT_TARGET and ability != null and ability.needs_target() \
+		and not caster.ultimate_abilities().has(ability)
 	if battle != null and recorder != null and recorder.waiting_for == unit_id:
-		_unit = battle.unit_by_id(unit_id)
-		_set_page(Page.COMMANDS)
+		_unit = caster
+		_set_page(Page.COMMANDS)  # a press refused while the unit waits (a queued ult): its rows are shown now
+	elif caster != null and caster.is_party() and not caster.ultimate_abilities().has(ability):
+		# A turn action refused: the battle asks this unit again at once; its rows flash on that redraw.
+		_flash_next = {"unit_id": unit_id, "data": data, "ability": ability if retarget else null,
+			"from_list": _target_from_list, "list_kind": _list_kind}
+	ctx.main.refuse("%s: %s" % [reason, detail], unit_id, data)  # the sound, the party window; the rows shown now
 
 
 ## Auto takes a waiting decision at once: clear the choices first, since the battle may run on inside the hand-over.
@@ -164,6 +223,7 @@ func _draw() -> void:
 	match _page:
 		Page.IDLE:
 			%Title.text = ""
+			_entry_keys = []
 			%Entries.set_items([])
 		Page.COMMANDS:
 			_draw_commands()
@@ -190,6 +250,8 @@ func _draw_commands() -> void:
 		{"text": item_text, "variation": &"CommandButton", "disabled": _items(_unit).is_empty(),
 			"action": func(): _open_list("item")},
 	]
+	_entry_keys = [basic.ability_tag if basic != null else &"", "ability", guard.ability_tag if guard != null else &"",
+		"item"]
 	%Entries.set_items(items)
 
 
@@ -227,7 +289,9 @@ func _draw_list() -> void:
 	var title := ability_title if _list_kind == "ability" else (item_title if _list_kind == "item" else ult_title)
 	%Title.text = title % _name(caster).to_upper()
 	var items: Array = []
+	_entry_keys = []
 	for ability in _list_abilities():
+		_entry_keys.append(ability.ability_tag)
 		items.append({"text": AbilityName.of(ability),
 			"detail": item_detail if caster.item_abilities.has(ability.ability_tag) else AbilityHint.cost_text(ability),
 			"disabled": not caster.alive or not caster.asc.can_activate_ability(ability),
@@ -241,7 +305,9 @@ func _draw_targets() -> void:
 		return
 	%Title.text = target_title % AbilityName.of(_pending)
 	var items: Array = []
+	_entry_keys = []
 	for target in battle.target_candidates(_caster, _pending):
+		_entry_keys.append(target.unit_id)
 		items.append({"text": _name(target) + ("" if target.alive else down_suffix), "detail": _target_detail(target),
 			"action": _choose_target.bind(target.unit_id)})
 	%Entries.set_items(items)
@@ -284,7 +350,17 @@ func _choose_target(target_id: StringName) -> void:
 	_submit(_caster, _pending, target_id)
 
 
+## A new decision: the unit's last turn action is settled (a queued ult press is kept: it can still be refused later).
+func _forget_turn_try(unit_id: StringName) -> void:
+	var tried: Dictionary = _tries.get(unit_id, {})
+	var unit := battle.unit_by_id(unit_id) if battle != null else null
+	if tried.has("ability") and (unit == null or not unit.ultimate_abilities().any(
+			func(ult) -> bool: return ult.ability_tag == tried["ability"])):
+		_tries.erase(unit_id)
+
+
 func _submit(caster: BattleUnit, ability: BattleAbility, target_id: StringName) -> void:
+	_tries[caster.unit_id] = {"ability": ability.ability_tag, "target": target_id}
 	if ability.ability_tag in caster.ultimate_abilities().map(func(ult) -> StringName: return ult.ability_tag):
 		recorder.submit_ult(caster.unit_id, ability.ability_tag, target_id)
 		if recorder.pending_interrupts() > 0:

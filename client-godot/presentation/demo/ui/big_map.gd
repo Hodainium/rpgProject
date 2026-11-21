@@ -13,6 +13,10 @@ extends DemoMenuFrame
 @export var here_help: String = "Drag or scroll to look around; hover a room for what it is."
 @export var visited_text: String = "A room you have been in."
 @export var unexplored_text: String = "Next to a room you have been in."
+## Spec ui-feedback rows 1, 2: the refusal's text (the dev log's; on screen the tile flashes).
+@export var out_of_reach_text: String = "can't enter that room now"
+@export var locked_text: String = "Locked: you need a key"
+@export var gift_text: String = "choose who gets %s first"
 
 var _pan := Vector2.ZERO
 var _drag_from: Variant = null
@@ -25,6 +29,14 @@ func bind(context: UIContext) -> void:
 	%Help.pressed.connect(func(): ctx.ui.push(&"UI.Layer.Modal", legend))
 	for signal_name in [&"room_entered", &"room_cleared", &"map_revealed"]:
 		context.on_run(self, signal_name, func(_a = null): refresh())
+	UIFlash.listen(self, _refused)  # spec ui-feedback: a room you can't enter, a lock with no key
+
+
+func _refused(data: Dictionary) -> Array:
+	if data.get(UIRefusal.TARGET) in [UIRefusal.ROOM, UIRefusal.LOCK] and data.has("cell"):
+		var tile := UIFlash.entry(%Grid, int(data["cell"]))
+		return [tile] if tile != null else []
+	return []
 
 
 func on_activated() -> void:
@@ -76,14 +88,23 @@ func _describe_cell(cell: Dictionary) -> void:
 func _travel(index: int) -> void:
 	if _dragged or ctx.run == null:
 		return
-	if not ctx.run.can_enter(index):
-		ctx.main.refuse("can't enter that room now")
+	# Spec ui-feedback rows 1, 2: refused with the map still open, so the room's tile flashes.
+	var why := UIRefusal.for_enter(ctx.run, index)
+	if not why.is_empty():
+		var text := out_of_reach_text
+		match why[UIRefusal.TARGET]:
+			UIRefusal.LOCK:
+				text = locked_text
+			UIRefusal.GIFT:
+				var gift := ctx.run.pending_gift()
+				text = gift_text % (gift.display_name if gift != null else "")
+		ctx.main.refuse(text, &"", why)
 		return
 	var run := ctx.run
 	ctx.ui.remove(self)  # close first: the room may start a battle or an event
 	var problem := run.enter_room(index)
 	if problem != "":
-		ctx.main.refuse(problem)
+		ctx.main.refuse(problem, &"", UIRefusal.for_enter(run, index))  # a refusal changes nothing: the same reading
 
 
 func _input(event: InputEvent) -> void:

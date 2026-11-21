@@ -28,6 +28,9 @@ signal queue_changed
 signal resumed(source: String)
 ## Spec playtest-fixes B9: the player now waits on the server (`text` says for what) or no longer does ("").
 signal waiting_changed(text: String)
+## Spec ui-feedback: a rare, important notice for the player (the run rebuilt after a 1103, rolled back after a 1108);
+## GameMain shows it as a one-button dialog. Also broadcast on Message.Notification for the log.
+signal notice(text: String)
 ## Spec playtest-fixes B10: the server answered or stopped answering, or the player signed in (connected(), player_id).
 signal connection_changed
 
@@ -64,6 +67,8 @@ var wait_rebuild_text: String = "Restoring the run from the server…"
 var wait_verify_text: String = "Verifying the previous floor…"
 ## Shown when the verifier rolled the run back (spec run-verify 2.4).
 var rollback_text: String = "The server rolled your run back to its last verified checkpoint"
+## After a 1103 rebuild (spec ui-feedback: a dialog, through `notice`).
+var conflict_text: String = "The run continues from the server's log"
 ## How often a resume asks again while the server has no start snapshot yet (its genesis job runs for a few seconds).
 var resume_attempts: int = 10
 var poll_seconds: float = 2.0
@@ -912,8 +917,8 @@ func _rebuild_after_conflict(run: RunController) -> void:
 	if error != "":
 		run.stop_on_server_error(error)
 	else:
-		GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION,
-			NotificationMessage.make("The run continues from the server's log"))
+		GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION, NotificationMessage.make(conflict_text))
+		notice.emit(conflict_text)
 
 
 ## A 1108 (or a poll that shows a new epoch): the verifier rolled the run back to its last verified checkpoint. Like a 1103 the
@@ -936,6 +941,7 @@ func _rebuild_after_rollback(run: RunController) -> void:
 		run.stop_on_server_error(error)
 	else:
 		GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION, NotificationMessage.make(rollback_text))
+		notice.emit(rollback_text)
 
 
 func _resumed(run: RunController, source: String) -> void:

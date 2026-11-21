@@ -40,7 +40,8 @@ const CONTENT_ROOTS: Array[String] = ["res://content/", "res://tests/fixtures/"]
 @export var wait_start_text: String = "Starting the run…"
 @export var wait_resume_text: String = "Resuming your run…"
 ## Spec card-collection 3.6: shown when the player tries to leave a won run the server has not accepted yet.
-@export var leaving_blocked_text: String = "The run is being verified. You can leave once the server accepts it."
+## Spec ui-feedback row 23: a one-button dialog.
+@export var leaving_blocked_text: String = "Your win is being verified. You can leave once it is."
 ## Spec playtest-fixes B11: the message line once the server answers again after a server problem was shown.
 ## Spec main-menu M4: the mode line of the main menu and Settings.
 @export var local_mode_text: String = "Local mode (offline)"
@@ -167,6 +168,7 @@ func use_server(link: ServerLink) -> void:
 		add_child(server)
 	if changed and server != null:
 		server.connection_changed.connect(_on_server_connection.bind(server))
+		server.notice.connect(_on_server_notice.bind(server))
 	if changed:
 		server_changed.emit(server)
 
@@ -383,7 +385,7 @@ func start_run(character_ids: Array, seed_text: String, run_id: StringName = &""
 func _start_server_run(character_ids: Array, run_id: StringName) -> void:
 	var picked := RunController.pick_run(content, run_id)
 	if picked["error"] != "":
-		show_message(picked["error"])
+		show_problem(picked["error"])  # row 22: the class pick shows only a 1409 itself
 		run_start_refused.emit({"status": -1, "local": true, "title": picked["error"]})
 		return
 	var structure_id := String(picked["run"].id)
@@ -393,7 +395,13 @@ func _start_server_run(character_ids: Array, run_id: StringName) -> void:
 	link.end_wait(&"start")
 	if not result["ok"]:
 		_server_problem_shown = true
-		show_message("Server: " + ServerLink.describe(result["error"]))
+		# Spec ui-feedback row 22: a dialog in plain words; a 1409 the class pick shows itself, a 1412 the connecting
+		# pop-up's own dialog (Use it here / Go offline).
+		var code: Variant = result["error"].get("errorCode")
+		if code != null and int(code) in [1409, 1412]:
+			show_message("Server: " + ServerLink.describe(result["error"]))
+		else:
+			show_problem(ServerLink.describe(result["error"]))
 		run_start_refused.emit(result["error"])
 		return
 	var server_run_id := str(result["data"]["runId"])
@@ -698,7 +706,7 @@ func leaving_blocked() -> bool:
 
 
 func _blocked_message() -> void:
-	show_message(leaving_blocked_text)
+	show_problem(leaving_blocked_text)
 
 
 ## Spec main-menu M9: leaves the run for the main menu with the run saved (local mode: the file is written now).
@@ -732,21 +740,47 @@ func set_mode(new_mode: String) -> void:
 	mode_changed.emit(mode)
 
 
-## A line for the player (refusals, content problems): broadcast on Message.Notification; the policy's message line
-## (and any other listener) shows it. "" clears the line.
+## A line for the log (content problems, run warnings, what just happened): broadcast on Message.Notification. Spec
+## ui-feedback: nothing on screen listens to it (the message line is gone); the dev console logs it in debug builds and
+## the console's `messages` shows it. "" says nothing.
 func show_message(text: String) -> void:
 	GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION, NotificationMessage.make(text))
+	_dev_log(text)
 
 
-## A player's action was refused: `text` on Message.Notification (the message line) and Message.Ui.Refused (sounds, a
-## shake) with Verb.Refuse, `instigator` (who tried) and `data` plus "text". Screens refuse through this, never by
-## playing a sound themselves.
-func refuse(text: String, instigator: StringName = &"", data: Dictionary = {}) -> void:
+## Spec ui-feedback 2.4 (rows 22-24): a rare, important problem: a one-button dialog (UIManager.notify) with `text`, and
+## the same text on Message.Notification for the log.
+func show_problem(text: String) -> void:
 	show_message(text)
+	if ui != null and text != "":
+		ui.notify(text)
+
+
+## The last refusal (for the console's `ui refused`): {"text", "instigator", "data"}; {} before any.
+var last_refusal: Dictionary = {}
+
+
+## A player's action was refused: Message.Ui.Refused (the refused sound; the screen that owns `data.target` flashes it,
+## spec ui-feedback 2.2) with Verb.Refuse, `instigator` (who tried) and `data` plus "text". Nothing is written on screen:
+## the text goes to the dev console in debug builds. Screens refuse through this, never by playing a sound themselves;
+## `data` comes from UIRefusal.
+func refuse(text: String, instigator: StringName = &"", data: Dictionary = {}) -> void:
 	var extras := data.duplicate()
 	extras["text"] = text
+	last_refusal = {"text": text, "instigator": instigator, "data": data.duplicate()}
+	_dev_log("refused: %s%s" % [text, " [%s]" % data.get(UIRefusal.TARGET) if data.has(UIRefusal.TARGET) else ""])
 	GameplayMessages.broadcast(GameplayMessageRouter.UI_REFUSED,
 		VerbMessage.make(&"Verb.Refuse", instigator, &"", 0, [], extras))
+
+
+## Spec ui-feedback rows 26, 27: a line for the developer, in the dev console's log in debug builds; nothing in the player
+## build and nothing on screen.
+func _dev_log(text: String) -> void:
+	if text == "" or not OS.is_debug_build():
+		return
+	var dev := get_node_or_null("/root/Dev")
+	if dev != null and dev.get("console") != null:
+		dev.console.log_line(text)
 
 
 ## Spec vfx-content-pass 2.2: the battle effect rules listen on the message bus for as long as the game shell lives.
@@ -762,11 +796,23 @@ func _attach_fx_rules() -> void:
 		rules.attach(self)
 
 
-## A runner error stopped the run (its text went out as a Notification): show the end screen.
-func _on_run_stopped(_error: String) -> void:
+## A runner error stopped the run (its text went out as a Notification): show the end screen, under a dialog with the
+## error (spec ui-feedback row 24). Outside a run (Save and quit while the queue still drains) the dialog alone says it.
+## Deferred: `stopped` can fire deep inside run code or a screen's refresh; the UI's own deferred apply (the end screen)
+## runs first, the dialog opens over it.
+func _on_run_stopped(error: String) -> void:
 	delete_local_save()
 	if mode == "run":
 		set_mode("end")
+	if ui != null and error != "":
+		ui.notify.call_deferred(error)
+
+
+## Spec ui-feedback: the server link's rare notices (a run rebuilt or rolled back) as a one-button dialog (already on
+## Message.Notification for the log).
+func _on_server_notice(text: String, link: ServerLink) -> void:
+	if link == server and ui != null and text != "":
+		ui.notify.call_deferred(text)
 
 
 func _on_battle_started(battle: Battle) -> void:

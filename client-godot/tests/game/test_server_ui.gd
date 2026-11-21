@@ -85,20 +85,26 @@ func test_server_status_line() -> void:
 	await host.get_tree().process_frame  # leave the bridge's Completed emission before after_each frees the game
 
 
-## Spec playtest-fixes B11: a server error on the message line is replaced once the server answers again, also
-## through a new link (the console's `server <url>` after starting the server).
-func test_server_error_cleared_when_connected() -> void:
+## Spec playtest-fixes B11 as replaced by ui-feedback: a resume the server can't answer writes no line on screen (the
+## message line is gone; the main menu's Continue shows the returned error on its own line, the status line turns
+## yellow), and no dialog repeats it; the status line goes green once the server answers again.
+func test_server_error_is_no_line() -> void:
 	var game := _game()
-	var line: Label = game.find_child("MessageLine", true, false).get_node("%Text")
+	check(game.find_child("MessageLine", true, false) == null, "no message line")
 	var offline := FakeBridge.new()
 	offline.offline = true
 	game.use_server(_link(offline, "tester"))
-	eq(await game.resume_server_run(), "no connection: HttpRequestException", "the server is off")
-	check(line.text.begins_with("Server: no connection"), "the message line says so: " + line.text)
+	eq(await game.resume_server_run(), "no connection: HttpRequestException", "the server is off: the caller gets why")
+	var labels := game.find_children("*", "Label", true, false)
+	check(labels.all(func(label: Label) -> bool: return not label.text.begins_with("Server: no connection")),
+		"nothing writes it at the bottom of the screen")
+	var stack: UILayerStack = game.ui._stacks.get(&"UI.Layer.Modal")
+	check(stack == null or stack.screens().all(func(screen) -> bool: return not (screen is UIConfirm)),
+		"and no dialog repeats the menu's own line")
 	var link := _link(FakeBridge.new(), "tester")
 	game.use_server(link)
 	await link.heartbeat()
-	eq(line.text, "", "and is cleared once the server answers (the green status line says so)")
+	check(link.connected(), "the server answers again")
 	await host.get_tree().process_frame  # leave the bridge's Completed emission before after_each frees the game
 
 

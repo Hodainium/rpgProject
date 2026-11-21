@@ -7,6 +7,8 @@ func bind(context: UIContext) -> void:
 	for signal_name in [&"party_changed", &"floor_entered", &"room_entered", &"room_cleared", &"battle_finished",
 			&"event_page_shown"]:
 		context.on_run(self, signal_name, func(_a = null, _b = null): queue_refresh())  # event_page_shown has 2
+	UIFlash.listen(self, func(data: Dictionary) -> Array:  # spec ui-feedback rows 8, 9, 12, 13
+		return DemoPartyRows.refused_controls(%Rows, ctx.run if ctx != null else null, data))
 
 
 func refresh() -> void:

@@ -257,6 +257,18 @@ func _on_message(channel: StringName, message: GameplayMessage) -> void:
 	message_logged.emit(line)
 
 
+## Spec ui-feedback 2.4: what GameMain used to write on the message line (refusals, notices, content problems, run
+## warnings), in debug builds only; the overlay shows each line, nothing else on screen does. Newest last, capped.
+var player_log: Array[String] = []
+
+
+func log_line(text: String) -> void:
+	player_log.append(text)
+	if player_log.size() > MESSAGE_LOG_SIZE:
+		player_log = player_log.slice(player_log.size() - MESSAGE_LOG_SIZE)
+	message_logged.emit("[ui] " + text)
+
+
 func _on_notice(_channel: StringName, message: GameplayMessage) -> void:
 	if message is NotificationMessage:
 		notices.append(message.text)

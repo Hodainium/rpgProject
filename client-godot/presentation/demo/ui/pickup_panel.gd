@@ -11,8 +11,15 @@ func bind(context: UIContext) -> void:
 	for signal_name in [&"pickups_shown", &"room_entered", &"room_cleared", &"party_changed"]:
 		context.on_run(self, signal_name, func(_a = null): queue_refresh())
 	%Rows.entry_filled.connect(func(row, _item):
-		if not row.taken.is_connected(_after_take):
-			row.taken.connect(_after_take))
+		if not row.has_meta(&"taken_wired"):
+			row.set_meta(&"taken_wired", true)
+			row.taken.connect(_after_take.bind(row)))
+	UIFlash.listen(self, func(data: Dictionary) -> Array:  # spec ui-feedback rows 2, 6, 8, 9
+		var hits: Array = []
+		for row in UIFlash.entries(%Rows):
+			if row.has_method("refused_controls"):
+				hits.append_array(row.refused_controls(data))
+		return hits)
 
 
 func refresh() -> void:
@@ -52,7 +59,7 @@ func refresh() -> void:
 	%Rows.set_items(rows)
 
 
-func _after_take(problem: String) -> void:
+func _after_take(problem: String, row: Node = null) -> void:
 	if problem != "":
-		ctx.main.refuse(problem)
+		ctx.main.refuse(problem, &"", row.refusal if row != null and "refusal" in row else {})
 	refresh()

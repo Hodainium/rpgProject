@@ -240,9 +240,12 @@ from C#.**
   window runs driven with the console's `ui press <name or text> [n]` / `ui back` / `ui`.
 - **Events reach screens as gameplay messages** (spec `gameplay-messages`, Lyra's message router): a screen listens
   with `GameplayMessages.listen(channel, callback, GameplayMessageRouter.Match.EXACT or PARTIAL, payload type, self)`
-  (the listener leaves with the screen) and reads `VerbMessage` / `NotificationMessage` fields; a line for the player
-  is `ctx.main.show_message(text)` (`Message.Notification`), a refused action `ctx.main.refuse(text, who, data)`
-  (the line plus `Message.Ui.Refused`; never play the Refused sound yourself). An ability's on-screen name is
+  (the listener leaves with the screen) and reads `VerbMessage` / `NotificationMessage` fields. Spec `ui-feedback`:
+  nothing writes a line at the bottom of the screen. A refused action is `ctx.main.refuse(text, who, UIRefusal.for_...(...))`
+  (`Message.Ui.Refused` with `data.target`: the refused sound, and the screen that owns that widget flashes it with
+  `UIFlash.listen(self, resolve)`; never play the Refused sound yourself); a rare, important problem is
+  `ctx.main.show_problem(text)` (a one-button dialog); `ctx.main.show_message(text)` (`Message.Notification`) only reaches
+  the dev log and listeners, never the screen. An ability's on-screen name is
   `AbilityName.of(ability)` (GodotGAS `ability_name` when set, else the scene file's name), never its tag. Messages are for things that happen;
   panels that redraw state stay on the run's signals. A kill feed or toast stack is a listener + a policy entry.
   Listeners never change run or battle state; the battle kernel never broadcasts (`BattleMessages` bridges the

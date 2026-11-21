@@ -43,8 +43,7 @@ is still broadcast (the dev console's `messages` logs it; tests read it), so the
 | `lock` | `cell` or `chest` serial | the lock on that tile, or the chest's Open row (pickup panel) |
 | `keys` | | the Keys counter (explore menu) |
 | `gold` | | the Gold counter (explore menu) |
-| `price` | `placement` | the item's price on its pickup / shop row |
-| `stairs` | | the stairs button (stairs panel) |
+| `gold` + `placement` | | the item's price on its pickup / shop row (built 2026-11-20: sent with `gold`, not as its own `price` target, so one refusal flashes both) |
 | `member` | `slot` | that member's row (party strip, the open panel's member list) |
 | `member_items` | `slot` | that member's item slots (party strip, gear and gift screens) |
 | `gear_slot` | `slot`, `equipment_slot` | the equipment slot on the gear screen |
@@ -66,9 +65,11 @@ static func refuse(control: Control, shake: bool = true) -> void   ## the standa
 static func pulse(control: Control) -> void                       ## the red pulse only (counters, bars)
 ```
 
-- The pulse tints `self_modulate` toward the theme's refusal colour and back, twice, over `flash_seconds`; the shake moves the control a
-  few pixels left and right over the same time and puts it back exactly (a Tween on `position` with the start position restored, so a
-  container re-layout never keeps an offset). Values from the theme: a `UIFlash` type with constants `flash_ms` (default 350),
+- The pulse tints `modulate` toward the theme's refusal colour and back, twice, over `flash_ms` (built 2026-11-20: `modulate`, not
+  `self_modulate`, so a row or a bar box tints with its children; `self_modulate` only tints a control's own drawing, and the SP bar box
+  draws nothing); the shake moves the control a few pixels left and right over the same time and puts it back exactly (the start position
+  is read on the tween's first step, after a container placed the control, and restored at the end, and the parent container re-sorts,
+  so a re-layout never keeps an offset). Values from the theme: a `UIFlash` type with constants `flash_ms` (default 350),
   `shake_px` (6) and colour `refuse` (the theme's Warning red); a new look goes into the theme, not overrides (ff7-ui 2.12).
 - A flash on a control that is already flashing restarts it; a freed control ends it quietly.
 - Screens listen with `GameplayMessages.listen(UI_REFUSED, callable, EXACT, VerbMessage, self)` and flash only the targets they own.
@@ -94,8 +95,8 @@ static func pulse(control: Control) -> void                       ## the red pul
 |---|---|---|---|
 | 1 | can't enter that room now | the big map, a room not reachable | `room`: the tile flashes red and shakes |
 | 2 | Locked: you need a key | a locked room or chest with no key | `lock` pulses red + `keys` |
-| 3 | the next floor is not open | the stairs before the boss | `stairs` flashes; its hint says "Beat the floor's boss first." The user notes this should not be possible: the stairs control is disabled until the floor is open, and the flash is the safety net |
-| 4 | clear the room first | a pickup or chest in a room still fighting | the rows show greyed with "Clear the room first" on the panel until the room is cleared; the flash is the safety net (user: should not be possible) |
+| 3 | the next floor is not open | the stairs before the boss | none: the stairs panel only shows once the floor's boss is beaten (`UI.State.Run.Stairs` needs `boss_cleared`), so the control is never there to press; a refusal from elsewhere (the console) plays the refused sound only |
+| 4 | clear the room first | a pickup or chest in a room still fighting | none: the pickup panel and its rows only show in a cleared room (`UI.State.Run.Pickup` needs `cleared`; user, 2026-11-20: "pickup rows shouldn't even be available until the room is cleared", "pickup rows don't need to flash as they won't be visible"); a refusal from elsewhere plays the refused sound only |
 | 6 | not enough coins | a shop buy | `gold` + `price` |
 | 7 | you can't carry more keys | a key bought at 99 | `keys` |
 | 8 | `<Member>` has no free use slot / item slot | take, buy, gift or move to a full member | `member_items` |
@@ -115,7 +116,7 @@ ability's row (field) shakes.
 
 | # | Said today | Dialog |
 |---|---|---|
-| 22 | Server: `<error>` (a refused run start, resume or stairs; not 1409, which the class pick shows itself) | the error in plain words (`ServerLink.describe`) |
+| 22 | Server: `<error>` (a refused run start, resume or stairs; not 1409, which the class pick shows itself) | the error in plain words (`ServerLink.describe`). Built 2026-11-20: a run start (not 1409, nor 1412, which the connecting pop-up's own dialog shows); stairs refusals stop the run, so they are row 24; a resume or an offline Continue returns its error to the main menu, whose own `%Error` line shows it (no dialog, so it is not said twice) |
 | 23 | leaving to the main menu while a won run waits for its verdict | "Your win is being verified. You can leave once it is." |
 | 24 | a run stopped on a runner error | the error, before the run-end screen |
 
@@ -125,6 +126,10 @@ ability's row (field) shakes.
 |---|---|
 | 26 | Content problems in `<root>` |
 | 27 | unknown run / `RunController` warnings |
+
+**Found at build time (2026-11-20, not in the 27):** the server link's "The server rolled your run back to its last verified checkpoint"
+(a 1108) and "The run continues from the server's log" (a 1103 rebuild) are one-button dialogs (`ServerLink.notice` → `GameMain`):
+rare, and the player would otherwise find the run moved back with no word.
 
 In debug builds `GameMain.show_message` and `refuse` print their text to the dev console's log (`Dev`); in the player build nothing.
 
@@ -176,8 +181,8 @@ Idempotency, retries, dead letters: N/A. Acceptance scenarios of the root `CLAUD
 - No on-screen listener of `Message.Notification`: the UI policy has no message line; `show_message` draws nothing.
 - `UIFlash.refuse` and `pulse`: the control ends at its start position and colour; a restart mid-flash; a freed control.
 - One test per row of 2.4 "New feedback": the action is refused, `Message.Ui.Refused` carries the right `target` and extras, and the
-  owning screen flashes that control (rows 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16); rows 3 and 4: the stairs control is disabled
-  before the boss and the rows are greyed in an uncleared room.
+  owning screen flashes that control (rows 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16); row 4: an uncleared room has no pickup state,
+  so no rows show.
 - "Cannot activate now": SP short flashes `sp`; a controlled caster with enough SP flashes `command`, not `sp`.
 - The three dialogs (rows 22–24) open through `UIManager.notify` with the plain-words text.
 - Rows 26–27: the text reaches the dev console's log in a debug build and nothing on screen.
@@ -196,7 +201,7 @@ Idempotency, retries, dead letters: N/A. Acceptance scenarios of the root `CLAUD
 |---|---|---|
 | Q1 | Delete `message_line.tscn/.gd` and the layout's empty `UI.Slot.Footer` | Yes, in the build PR (2.5). |
 | Q2 | The flash: red, two pulses over 0.35 s, a 6 px shake | Yes, as theme constants (2.3). |
-| Q3 | Rows 3 and 4: disable the stairs control until the floor is open, grey the pickup rows in an uncleared room | Yes, in this slice; the flash stays as the safety net (2.4). |
+| Q3 | Rows 3 and 4: disable the stairs control until the floor is open, grey the pickup rows in an uncleared room | Superseded at build time (user, 2026-11-20): the rows are not shown at all until the room is cleared, and neither panel flashes; both panels already show only when their action is possible (2.4). |
 | Q4 | Roadmap place | 5b5 `ui-feedback`, after 5b4 `class-pick`, before 5b2 `item-cards`. |
 
 Status after review: **ready for `/implement ui-feedback`.**
