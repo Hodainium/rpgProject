@@ -14,6 +14,11 @@
 // @uniform glare_radius the glare's radius in UV
 // @uniform flash_color the flash's colour (a rarity's)
 // @uniform flash 0..1: the flash's strength (a crafted card)
+// @uniform face_baked spec item-cards: the face baked once into a mipmapped texture (a small floor card: no shimmer)
+// @uniform use_baked 1 = draw face_baked instead of the live face_tex
+// @uniform rim_color spec item-cards: an outline around the card in this colour (a floor card's rarity)
+// @uniform rim_width the outline's width in design pixels, inside the margin (0 = none)
+// @uniform rim_energy the outline's brightness (above 1 blooms with the room's glow)
 shader_type spatial;
 render_mode unshaded, blend_mix, cull_back, depth_draw_opaque, shadows_disabled;
 
@@ -28,6 +33,11 @@ uniform float glare_strength : hint_range(0.0, 1.0) = 0.0;
 uniform float glare_radius = 0.55;
 uniform vec3 flash_color : source_color = vec3(1.0);
 uniform float flash : hint_range(0.0, 1.0) = 0.0;
+uniform sampler2D face_baked : source_color, filter_linear_mipmap_anisotropic;
+uniform float use_baked = 0.0;
+uniform vec3 rim_color : source_color = vec3(1.0);
+uniform float rim_width = 0.0;
+uniform float rim_energy = 1.0;
 
 float rounded_box(vec2 p, vec2 half_size, float radius) {
 	vec2 q = abs(p) - half_size + vec2(radius);
@@ -35,7 +45,7 @@ float rounded_box(vec2 p, vec2 half_size, float radius) {
 }
 
 void fragment() {
-	vec3 face = texture(face_tex, UV).rgb;
+	vec3 face = use_baked > 0.5 ? texture(face_baked, UV).rgb : texture(face_tex, UV).rgb;
 	vec2 p = UV * texture_size - (card_box.xy + card_box.zw * 0.5);
 	float d = rounded_box(p, card_box.zw * 0.5, corner);
 	float px = max(fwidth(d), 0.0001);
@@ -51,6 +61,11 @@ void fragment() {
 	float glare = glare_strength * pow(clamp(1.0 - g / glare_radius, 0.0, 1.0), 2.0) * 0.45 * inside;
 	color += vec3(glare);
 	color = mix(color, flash_color, flash * 0.7 * inside);
+	if (rim_width > 0.0) {   // spec item-cards: the rarity outline just outside the card's edge
+		float rim = clamp(0.5 - (d - rim_width) / px, 0.0, 1.0) * (1.0 - inside);
+		color = mix(color, rim_color * rim_energy, rim);
+		alpha = max(alpha, rim);
+	}
 	ALBEDO = color;
 	ALPHA = alpha;
 }

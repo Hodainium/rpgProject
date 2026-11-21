@@ -163,7 +163,7 @@ func _build() -> void:
 						var item: ItemDefinition = run.content.items.get(pickup["item"])
 						var piece: EquipmentDefinition = run.content.equipment.get(pickup["item"])  # armor (item-pass)
 						var price := " (%d)" % pickup["price"] if pickup["price"] > 0 else ""
-						if _styled_prop(placement.cell, pickup, piece, price):
+						if _styled_prop(placement.cell, pickup, piece, price, run.content):
 							continue  # spec cube-style Set K: a key or an armor piece drawn by the style registry
 						var title := item.display_name if item != null else (piece.display_name if piece != null else "?")
 						_prop(placement.cell, Color.GOLD if piece == null else Color.SILVER, title + price, item)
@@ -228,7 +228,7 @@ func _build_chests(run: RunController, data: Dictionary, room: RoomDefinition) -
 			var before := _props_root.get_child_count()
 			var item: ItemDefinition = run.content.items.get(pickup["item"])
 			var piece: EquipmentDefinition = run.content.equipment.get(pickup["item"])
-			if not _styled_prop(tile, pickup, piece, ""):
+			if not _styled_prop(tile, pickup, piece, "", run.content):
 				var name_text := item.display_name if item != null else (piece.display_name if piece != null else "?")
 				_prop(tile, Color.GOLD if piece == null else Color.SILVER, name_text, item)
 			if popping:
@@ -497,20 +497,29 @@ func _wall(cell: Vector2i) -> void:
 
 ## Spec cube-style 6a Set K: a shop key or an armor piece as the style registry draws it (an armor icon by its slot, in its rarity's
 ## colour); false when the registry has no look for it (today's cube then).
-func _styled_prop(cell: Vector2i, pickup: Dictionary, piece: EquipmentDefinition, price: String) -> bool:
+func _styled_prop(cell: Vector2i, pickup: Dictionary, piece: EquipmentDefinition, price: String, content: ContentIndex = null) -> bool:
 	var registry := UnitStyle.registry()
 	if registry == null:
 		return false
 	var view: PropView = null
+	var item_look := registry.item_look()
 	if pickup.get("kind", "") == FloorGenerator.KEYS_KIND:
 		var look := registry.key_look()
 		var keys := int(pickup.get("keys", 1))
 		if look != null:
-			view = PropView.pickup(look, ("Key" if keys == 1 else "%d Keys" % keys) + price)
+			var key_name := "Key" if keys == 1 else "%d Keys" % keys
+			view = PropView.pickup(look, key_name + price) if item_look == null else \
+				_beside_cards(look, ItemPropView.label_for(item_look, key_name, int(pickup.get("price", 0))), null, item_look)
 	elif piece != null:
 		var look := registry.armor_look(piece.slot)
 		if look != null:
-			view = PropView.pickup(look, piece.display_name + price, registry.rarity_color(piece.tags, null))  # no rarity: own colours
+			var color: Variant = registry.rarity_color(piece.tags, null)  # no rarity: own colours
+			view = PropView.pickup(look, piece.display_name + price, color) if item_look == null else \
+				_beside_cards(look, ItemPropView.label_for(item_look, piece.display_name, int(pickup.get("price", 0))), color, item_look)
+			_armor_aura(view, piece, item_look, registry)
+	elif item_look != null and content != null and content.items.has(pickup.get("item", &"")):
+		# Spec item-cards: an item as its card, its price on a shop shelf.
+		view = ItemPropView.for_item(item_look, content, pickup["item"], registry, int(pickup.get("price", 0)))
 	if view == null:
 		return false
 	view.position = _world(cell) + FLOOR_TOP
@@ -549,8 +558,9 @@ func show_prop_showcase(content: ContentIndex) -> PackedStringArray:  # empty in
 			var look := registry.armor_look(slot)
 			if look != null:
 				var text := "%s %s" % [String(rarities[r]).get_slice(".", 2), String(slot).get_slice(".", 2)] if r == 0 else ""
-				entries.append([r + 1, PropView.pickup(look, text, registry.rarity_color([rarities[r]], look.outline_color)),
-					"armor %s %s" % [slot, rarities[r]]])
+				var armor_view := PropView.pickup(look, text, registry.rarity_color([rarities[r]], look.outline_color))
+				_armor_aura(armor_view, null, registry.item_look(), registry, [rarities[r]])
+				entries.append([r + 1, armor_view, "armor %s %s" % [slot, rarities[r]]])
 	_units_root.visible = false  # the party would stand in the way; the next build shows it again
 	var per_row: Dictionary = {}
 	for entry in entries:
@@ -565,6 +575,220 @@ func show_prop_showcase(content: ContentIndex) -> PackedStringArray:  # empty in
 		_props_root.add_child(view)
 		lines.append(entry[2])
 	return lines
+
+
+## Spec item-cards: a key or an armor piece on the floor beside the cards, labelled at the cards' label height (a shop's labels
+## line up) and the way the cards are. Its size is its own look's (user, 2026-11-21: keys x1.2, armor x1.3, in the registry).
+func _beside_cards(look: PropLook, text: String, color: Variant, item_look: ItemCardLook) -> PropView:
+	return PropView.pickup(look, text, color, item_look.label_height)
+
+
+## Spec item-cards Q2: with an item look, an armor piece plays the items' tiered aura in its rarity's colour (the same map) instead
+## of its own glow; its shape stays.
+func _armor_aura(view: PropView, piece: EquipmentDefinition, item_look: ItemCardLook, registry: StyleRegistry, tags: Array = []) -> void:
+	if view == null or item_look == null or item_look.aura == null:
+		return
+	var piece_tags: Array = piece.tags if piece != null else tags
+	view._set_effect(item_look.aura, {&"tier": float(item_look.tier_of(piece_tags))}, registry.rarity_color(piece_tags, view.colour))
+
+
+## Spec item-cards 2.1 (console `style items`): floor cards laid out in the current room until the next rebuild.
+## `mode` "labels": a row per label mode (name and price, price only, none), each with three items lying free and two for sale;
+## "sizes": a row per card height (the look's meta `showcase_sizes`), a column per tier (Common, Rare, Epic, Legendary,
+## corrupted); "tiers": an item per tier; "shop": everything a shop sells; "pop": one open chest putting out one item at a time, its tier written above. Returns one line each.
+func show_item_showcase(content: ContentIndex, mode: String, item_look: ItemCardLook) -> PackedStringArray:
+	var lines := PackedStringArray()
+	var registry := UnitStyle.registry()
+	if registry == null or _battle != null or content == null or item_look == null:
+		return lines
+	if _build_queued:
+		_build_now()
+	_props_root.visible = true
+	for child in _props_root.get_children():
+		child.queue_free()
+	_units_root.visible = false
+	var picks := showcase_items(content)
+	var tier_names := ["Common", "Rare", "Epic", "Legendary", "Corrupted"]
+	var tier_ids: Array = [picks["common"], picks["rare"], picks["epic"], picks["legendary"], picks["void"]]
+	var saved_label := ItemPropView.override_label
+	match mode:
+		"labels":
+			# Free items: Common, Epic, corrupted; for sale: a Rare at 15 and a Legendary at 30 gold.
+			var row_items: Array = [[picks["common"], 0], [picks["epic"], 0], [picks["void"], 0], [picks["shop"], 15],
+				[picks["legendary"], 30]]
+			for mode_index in ItemCardLook.LABEL_NAMES.size():
+				ItemPropView.override_label = mode_index
+				var z := -2.4 + mode_index * 2.0
+				_showcase_text(ItemCardLook.LABEL_TITLES[mode_index], Vector3(-6.0, 0.6, z))
+				for i in row_items.size():
+					if row_items[i][0] == &"":
+						continue
+					var view := ItemPropView.for_item(item_look, content, row_items[i][0], registry, row_items[i][1])
+					view.position = Vector3((i - 2) * 2.2, 0, z) + FLOOR_TOP
+					_props_root.add_child(view)
+					lines.append("%s %s price=%d" % [ItemCardLook.LABEL_NAMES[mode_index], row_items[i][0], row_items[i][1]])
+		"shop":
+			# Everything a shop can sell, priced: an item per tier and a food item (cards), then a key and an armor piece for each
+			# slot, each labelled the way the look says (the same label for cards, keys and armor).
+			var front: Array = []  # [view, line]
+			var prices := [5, 15, 25, 40, 30]
+			for r in tier_ids.size():
+				if tier_ids[r] != &"":
+					front.append([ItemPropView.for_item(item_look, content, tier_ids[r], registry, prices[r]),
+						"%s %s %d" % [tier_names[r], tier_ids[r], prices[r]]])
+			if picks["food"] != &"":
+				front.append([ItemPropView.for_item(item_look, content, picks["food"], registry, 5), "food %s 5" % picks["food"]])
+			var back := _key_and_armor_row(content, registry, item_look)
+			for row in [[front, -1.6], [back, 1.2]]:
+				_showcase_row(row[0], row[1], 1.6, lines)
+		"tiers":
+			# The aura's tiers side by side (gate 2): an item per tier, no labels, its tier written above it.
+			ItemPropView.override_label = ItemCardLook.LabelMode.NONE
+			var entries: Array = []
+			for r in tier_ids.size():
+				if tier_ids[r] != &"":
+					entries.append([ItemPropView.for_item(item_look, content, tier_ids[r], registry), "tier %s %s" % [tier_names[r], tier_ids[r]],
+						tier_names[r]])
+			_showcase_row(entries, 0.0, 2.2, lines)
+			for entry in entries:  # each caption over its own card, however many tiers the content has
+				var placed: Node3D = entry[0]
+				_showcase_text(entry[2], placed.position - FLOOR_TOP + Vector3(0, 2.0, 0))
+		"sizes":
+			# One row per card height (the look's `size`, raised so the card clears the floor), a column per tier, no labels.
+			ItemPropView.override_label = ItemCardLook.LabelMode.NONE
+			var heights: Array = item_look.get_meta(&"showcase_sizes", [0.7, 0.9, 1.1, 1.3])
+			var gap := 4.8 / maxf(heights.size() - 1, 1)
+			for row in heights.size():
+				var sized := item_look.duplicate() as ItemCardLook
+				sized.size = float(heights[row])
+				sized.offset = Vector3(0, 0.35 + sized.size * 0.55, 0)
+				_showcase_text("%.2f" % sized.size, Vector3(-6.2, 0.6, -2.6 + row * gap))
+				for r in tier_ids.size():
+					if tier_ids[r] == &"":
+						continue
+					var view := ItemPropView.for_item(sized, content, tier_ids[r], registry)
+					view.position = Vector3((r - 2) * 2.2, 0, -2.6 + row * gap) + FLOOR_TOP
+					_props_root.add_child(view)
+					lines.append("size %.2f %s %s" % [sized.size, tier_names[r], tier_ids[r]])
+		"pop":
+			# One chest in the middle putting out one item at a time (Common, Rare, Epic, Legendary, corrupted, round and round,
+			# every 2.5 s), the tier written above it.
+			var ids := _chest_ids(content)
+			var one_chest: ChestLook = registry.chest_look(ids[0] if not ids.is_empty() else &"")
+			var from := Vector3(0, 0, -0.6) + FLOOR_TOP
+			if one_chest != null:
+				var chest := PropView.chest(one_chest, ChestLook.State.OPEN_EMPTY, "")
+				chest.position = from
+				_props_root.add_child(chest)
+			var caption := Label3D.new()
+			caption.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			caption.font_size = 56
+			caption.position = Vector3(0, 2.6, 0.6) + FLOOR_TOP
+			_props_root.add_child(caption)
+			var ticker := Timer.new()
+			ticker.wait_time = 2.5
+			_props_root.add_child(ticker)
+			var state := {"next": 0}
+			var drop := func() -> void:
+				for node in _props_root.get_children():
+					if node is ItemPropView:
+						node.queue_free()
+				var r: int = state["next"] % tier_ids.size()
+				state["next"] = r + 1
+				if tier_ids[r] == &"":
+					return
+				var view := ItemPropView.for_item(item_look, content, tier_ids[r], registry)
+				view.position = from + Vector3(0, 0, 1.6)
+				_props_root.add_child(view)
+				_pop_out(view, from, 0)
+				caption.text = tier_names[r]
+			ticker.timeout.connect(drop)
+			drop.call()
+			ticker.start()
+			for r in tier_ids.size():
+				lines.append("pop %s %s" % [tier_names[r], tier_ids[r]])
+	ItemPropView.override_label = saved_label
+	return lines
+
+
+## The showcase's items: the first Common, Rare, Epic and Legendary item by id (not corrupted, not food), the first corrupted
+## one, a shop item (the second Rare) and the first food item. Missing ones are &"".
+static func showcase_items(content: ContentIndex) -> Dictionary:
+	var ids: Array[String] = []
+	for id in content.items:
+		ids.append(String(id))
+	ids.sort()
+	var picks := {"common": &"", "rare": &"", "epic": &"", "legendary": &"", "void": &"", "food": &"", "shop": &""}
+	for id in ids:
+		var item: ItemDefinition = content.items[StringName(id)]
+		if TagMatch.has(item.tags, FloorGenerator.DEV_TAG):
+			continue
+		if TagMatch.has(item.tags, &"Item.Corrupted"):
+			if picks["void"] == &"":
+				picks["void"] = StringName(id)
+			continue
+		if TagMatch.has_any(item.tags, CardFaces.FOOD_TAGS):
+			if picks["food"] == &"":
+				picks["food"] = StringName(id)
+			continue
+		for rarity in ["Common", "Rare", "Epic", "Legendary"]:
+			if picks[rarity.to_lower()] == &"" and TagMatch.has(item.tags, StringName("Item.Rarity." + rarity)):
+				picks[rarity.to_lower()] = StringName(id)
+		if picks["shop"] == &"" and picks["rare"] != StringName(id) and TagMatch.has(item.tags, &"Item.Rarity.Rare"):
+			picks["shop"] = StringName(id)
+	return picks
+
+
+## A key for sale and one armor piece per equipment slot (the first by id in each, in its own rarity), priced by rarity, as the
+## look draws them beside the cards: [[view, line], ...].
+func _key_and_armor_row(content: ContentIndex, registry: StyleRegistry, item_look: ItemCardLook) -> Array:
+	var entries: Array = []
+	var key_look := registry.key_look()
+	if key_look != null:
+		entries.append([_beside_cards(key_look, ItemPropView.label_for(item_look, "Key", 5), null, item_look), "key 5"])
+	var price_by_tier := [5, 15, 25, 40]
+	for slot in _slots(content):
+		var piece := _showcase_piece(content, slot)
+		var armor_look := registry.armor_look(slot) if piece != null else null
+		if armor_look == null:
+			continue
+		var price: int = price_by_tier[clampi(item_look.tier_of(piece.tags), 0, 3)]
+		var armor := _beside_cards(armor_look, ItemPropView.label_for(item_look, piece.display_name, price),
+			registry.rarity_color(piece.tags, null), item_look)
+		_armor_aura(armor, piece, item_look, registry)
+		entries.append([armor, "armor %s %s %d" % [slot, piece.id, price]])
+	return entries
+
+
+## Lays `entries` ([view, line]) out in a row at depth `z`, `spread` apart, centred.
+func _showcase_row(entries: Array, z: float, spread: float, lines: PackedStringArray) -> void:
+	for i in entries.size():
+		var view: PropView = entries[i][0]
+		view.position = Vector3((i - (entries.size() - 1) / 2.0) * spread, 0, z) + FLOOR_TOP
+		_props_root.add_child(view)
+		lines.append(entries[i][1])
+
+
+## The first armor piece by id in `slot` (not corrupted), or null.
+func _showcase_piece(content: ContentIndex, slot: StringName) -> EquipmentDefinition:
+	var ids: Array[String] = []
+	for id in content.equipment:
+		ids.append(String(id))
+	ids.sort()
+	for id in ids:
+		var piece: EquipmentDefinition = content.equipment[StringName(id)]
+		if piece.slot == slot and not TagMatch.has(piece.tags, &"Item.Corrupted"):
+			return piece
+	return null
+
+
+func _showcase_text(text: String, at: Vector3) -> void:
+	var label := Label3D.new()
+	label.text = text
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 40
+	label.position = at + FLOOR_TOP
+	_props_root.add_child(label)
 
 
 func _chest_ids(content: ContentIndex) -> Array:

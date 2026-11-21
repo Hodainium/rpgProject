@@ -12,6 +12,8 @@ extends Resource
 @export var armor_default: PropLook
 ## Item.Rarity.* tag -> its colour (the UI's rarity colours, ui_theme.tres); a piece's first rarity tag picks it.
 @export var rarity_colors: Dictionary[StringName, Color] = {}
+## Spec item-cards: how items look on the floor (null = the base's, else today's cube).
+@export var item: ItemCardLook
 ## Chest definition id -> its look.
 @export var chests: Dictionary[StringName, ChestLook] = {}
 ## A chest with no look above.

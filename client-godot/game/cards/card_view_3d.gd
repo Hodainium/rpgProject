@@ -43,6 +43,8 @@ var _raised: bool = false
 var _tilt: Vector2 = Vector2.ZERO
 var _lift: float = 0.0
 var _flash_tween: Tween
+## The style the face was drawn with (part of a baked face's cache key).
+var _style_id: int = 0
 
 const SHADER: Shader = preload("res://game/cards/shaders/card_view.gdshader")
 
@@ -79,6 +81,7 @@ func _init() -> void:
 func show_face(card: CardFace, style: CardStyle, scene: PackedScene, height: float, pixels_per_design_pixel: float) -> void:
 	face = card
 	card_height = height
+	_style_id = style.get_instance_id() if style != null else 0
 	if face_view != null:
 		face_view.queue_free()
 		face_view = null
@@ -211,6 +214,85 @@ func flip(seconds: float, lift: float = 0.35) -> Tween:
 	_flip_tween.tween_property(flipper, "position:z", height, seconds * 0.4).set_ease(Tween.EASE_OUT)
 	_flip_tween.tween_property(flipper, "position:z", 0.0, seconds * 0.6).set_ease(Tween.EASE_IN_OUT).set_delay(seconds * 0.4)
 	return _flip_tween
+
+
+## Spec item-cards: baked faces by key ("<card id>", "back"), so a room rebuild reuses them; capped (a full set is ~1 MB each).
+static var _baked: Dictionary = {}
+const BAKED_CAP: int = 48
+
+
+## Spec item-cards: for a small card in the world (a floor item). Godot 4.7.2 gives a viewport's texture no mipmaps, so a
+## 360 x 480 face drawn on a quad a few dozen pixels tall shimmers. This renders the face (and the back) once, copies each into a
+## texture with mipmaps (sampled anisotropically) and stops the viewports; a looping face (Legendary sheen) holds still. Baked
+## faces are cached by what they show (the face's data, the style, the render scale), so a style, content or size change bakes
+## anew. The waiting runs in a static function holding only a weak reference: a card freed mid-bake (a room rebuild) simply ends it.
+func bake() -> void:
+	if face_view != null:  # held at the start of its loops: a sheen starts fully off the card
+		face_view.animate = false
+		face_view.set_process(false)
+		face_view._tick(0.0)
+	# Called through the class, not the instance: the coroutine holds no instance, only the weak reference.
+	CardView3D._bake_into(weakref(self), false, baked_face_key())
+	if back_mesh != null:
+		CardView3D._bake_into(weakref(self), true, "back:%d:%s" % [_style_id, maxf(render_scale, 0.5)])
+
+
+## The bake of one side (the back when `back`) of the card `ref` points at; nothing when the card is gone by then.
+static func _bake_into(ref: WeakRef, back: bool, key: String) -> void:
+	var texture: ImageTexture = _baked.get(key)
+	if texture == null:
+		var card := ref.get_ref() as CardView3D
+		if card == null:
+			return
+		var source: SubViewport = card.back_viewport if back else card.viewport
+		if source == null:
+			return
+		source.render_target_update_mode = SubViewport.UPDATE_ONCE
+		card = null  # hold no strong reference across the waits
+		await RenderingServer.frame_post_draw
+		await RenderingServer.frame_post_draw   # the viewport drew after it entered the tree
+		card = ref.get_ref() as CardView3D
+		if card == null or not card.is_inside_tree():
+			return
+		source = card.back_viewport if back else card.viewport
+		var image := source.get_texture().get_image() if source != null else null
+		if image == null or image.is_empty():
+			return
+		image.generate_mipmaps()
+		texture = ImageTexture.create_from_image(image)
+		_store_baked(key, texture)
+	_use_baked(ref, back, texture)
+
+
+static func _use_baked(ref: WeakRef, back: bool, texture: ImageTexture) -> void:
+	var card := ref.get_ref() as CardView3D
+	if card == null:
+		return
+	var target: ShaderMaterial = (card.back_mesh.material_override as ShaderMaterial) if back else card.material
+	var source: SubViewport = card.back_viewport if back else card.viewport
+	if target == null or source == null:
+		return
+	target.set_shader_parameter(&"face_baked", texture)
+	target.set_shader_parameter(&"use_baked", 1.0)
+	source.render_target_update_mode = SubViewport.UPDATE_DISABLED
+
+
+## Keeps a baked face; at the cap the oldest goes first (a Dictionary keeps insertion order).
+static func _store_baked(key: String, texture: ImageTexture) -> void:
+	_baked.erase(key)
+	while _baked.size() >= BAKED_CAP:
+		_baked.erase(_baked.keys()[0])
+	_baked[key] = texture
+
+
+## Forgets every baked face.
+static func clear_baked() -> void:
+	_baked.clear()
+
+
+## The cache key of this card's face as bake() makes it (for tests and the console).
+func baked_face_key() -> String:
+	return "face:%d:%d:%s" % [hash(face.to_dict()) if face != null else 0, _style_id, render_scale]
 
 
 ## A missing card: greyed and tinted.
