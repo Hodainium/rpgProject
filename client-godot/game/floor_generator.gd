@@ -3,11 +3,16 @@
 ## generate() and from_layout() return {"map": FloorMap, "error": String}. The "pools" argument carries what the
 ## item pools must know: {"party": Array[StringName] character ids, "held": Array[StringName], "seen": Array[StringName]}
 ## ("seen" is extended with every item placed, so no item appears twice in a run).
+## Spec unique-events: "seen_events" (event ids placed from a query so far; extended with every one placed here, so a query
+## event appears once per run) and the optional "unholdable" (food ids no living member can hold; absent = any food can be
+## held).
 class_name FloorGenerator
 extends RefCounted
 
 ## Items tagged Dev (the dev stat items, spec dev-tools 3.3) are never in a pool.
 const DEV_TAG: StringName = &"Dev"
+## Spec unique-events 2.4: a drained pool gives one of these (spec food-items).
+const FOOD_POOL: StringName = &"Pool.Food"
 ## A pickup's "kind" when it is a piece of equipment (spec item-pass 3.5).
 const EQUIPMENT_KIND: String = "equipment"
 ## A pickup's "kind" (and "item") when it sells keys (spec keys-and-gear D12); "keys" holds how many.
@@ -19,6 +24,10 @@ var run_seed: int
 var depth: int
 ## Spec server-authority 3.5: where the streams come from; local(run_seed) unless a seed source is given.
 var seeds: SeedSource
+## Spec unique-events 2.4: pool picks that found nothing left (each one gave food, the fallback item or nothing).
+var pools_drained: int = 0
+## Problems the caller should warn about (a drained pick with no food and no fallback item).
+var warnings: PackedStringArray = []
 
 
 func _init(content_index: ContentIndex, structure: RunStructure, seed_value: int, floor_depth: int,
@@ -105,7 +114,7 @@ func generate(chapter: ChapterDefinition, any_chapter: bool, pools: Dictionary) 
 			return _error("no room for cell %s (role %s, tag %s, doors %d) in chapter %s"
 				% [map.cell_of(index), data["role"], type_tag, data["doors"], chapter.id])
 		data["room"] = room.id
-	return _resolve(map, chapter, pools)
+	return _resolve(map, chapter, pools, {}, any_chapter, true)
 
 
 ## A hand-made floor (steps 6-7 only). Checked: cells inside the grid, connected, one start and one boss.
@@ -138,7 +147,17 @@ func single_room(room: RoomDefinition, chapter: ChapterDefinition, pools: Dictio
 		override.encounter = encounter
 		override.event = event
 		overrides[0] = override
-	return _resolve(map, chapter, pools, overrides)
+	# Spec unique-events (review): the sandbox plays the room it was asked for, so its event query ignores what the run has seen
+	# (the floor it replaces placed its own events on a map nobody plays); an event it places is still recorded once.
+	var sandbox_pools := pools.duplicate()
+	sandbox_pools["seen_events"] = []
+	var result := _resolve(map, chapter, sandbox_pools, overrides)
+	if not pools.has("seen_events"):
+		pools["seen_events"] = []
+	for id in sandbox_pools["seen_events"]:
+		if not pools["seen_events"].has(id):
+			pools["seen_events"].append(id)
+	return result
 
 
 ## Everything from_layout checks, plus that every room's doors cover its neighbours (spec dev-tools 3.7, bad_layout).
@@ -195,13 +214,28 @@ static func layout_map(layout: FloorLayout) -> Dictionary:
 
 
 ## Steps 6 (content) and 7 (pickups).
-func _resolve(map: FloorMap, chapter: ChapterDefinition, pools: Dictionary, overrides: Dictionary = {}) -> Dictionary:
+func _resolve(map: FloorMap, chapter: ChapterDefinition, pools: Dictionary, overrides: Dictionary = {},
+		any_chapter: bool = false, generated: bool = false) -> Dictionary:
 	var content_rng := seeds.floor_rng(depth, "content")
+	if not pools.has("seen_events"):
+		pools["seen_events"] = []
 	for index in map.sorted_indices():
 		var data: Dictionary = map.cells[index]
 		var room: RoomDefinition = content.rooms[data["room"]]
 		var override: FloorLayoutCell = overrides.get(index)
-		var resolved := _resolve_content(room, chapter, data["role"] == FloorMap.ROLE_BOSS, content_rng, override)
+		if (override == null or (override.encounter == null and override.event == null)) \
+				and room.content_mode == RoomDefinition.ContentMode.EVENT_QUERY and _events_ran_out(room, chapter, pools):
+			# Spec unique-events 2.2: every matching event is seen; on a generated floor an ordinary room of the cell's type takes its
+			# place, picked on its own stream (so the content stream draws as before until this happens). No room fits, or an
+			# authored room (a layout cell, the sandbox's room) that is never swapped: the room stays and its content is none.
+			var replacement := _swap_room(map, index, chapter, any_chapter) if generated else null
+			data["fallback"] = true
+			if replacement == null:
+				data["content"] = {"kind": "none", "encounter": &"", "event": &"", "enemies": []}
+				continue
+			data["room"] = replacement.id
+			room = replacement
+		var resolved := _resolve_content(room, chapter, data["role"] == FloorMap.ROLE_BOSS, content_rng, override, pools)
 		if resolved.has("error"):
 			return _error("cell %s (%s): %s" % [map.cell_of(index), room.id, resolved["error"]])
 		data["content"] = resolved
@@ -234,7 +268,7 @@ func _resolve(map: FloorMap, chapter: ChapterDefinition, pools: Dictionary, over
 
 
 func _resolve_content(room: RoomDefinition, chapter: ChapterDefinition, is_boss: bool, stream: RandomNumberGenerator,
-		override: FloorLayoutCell) -> Dictionary:
+		override: FloorLayoutCell, pools: Dictionary) -> Dictionary:
 	var encounter: EncounterDefinition = null
 	var event: EventDefinition = null
 	if override != null and override.encounter != null:
@@ -258,10 +292,12 @@ func _resolve_content(room: RoomDefinition, chapter: ChapterDefinition, is_boss:
 			RoomDefinition.ContentMode.EVENT:
 				event = room.event
 			RoomDefinition.ContentMode.EVENT_QUERY:
-				var query := room.content_query if room.content_query != null else chapter.event_query
-				event = RunSeeds.pick_weighted(stream, _matching(content.events, query))
+				# Spec unique-events 2.1: once per run; placing it marks it seen (so two rooms of one floor differ too). _resolve
+				# swapped the room when nothing unseen is left, so this always finds one.
+				event = RunSeeds.pick_weighted(stream, _unseen_events(room, chapter, pools))
 				if event == null:
 					return {"error": "no event matches the event query"}
+				pools["seen_events"].append(event.id)
 			RoomDefinition.ContentMode.WAVES:
 				return resolve_waves(room, chapter, stream)
 	if encounter != null:
@@ -270,6 +306,39 @@ func _resolve_content(room: RoomDefinition, chapter: ChapterDefinition, is_boss:
 	if event != null:
 		return {"kind": "event", "encounter": &"", "event": event.id, "enemies": []}
 	return {"kind": "none", "encounter": &"", "event": &"", "enemies": []}
+
+
+## Spec unique-events 2.1: the events an EVENT_QUERY room may still draw: matching its query (else the chapter's), weight
+## above 0, not placed from a query earlier in the run.
+func _unseen_events(room: RoomDefinition, chapter: ChapterDefinition, pools: Dictionary) -> Array:
+	var query := room.content_query if room.content_query != null else chapter.event_query
+	var seen: Array = pools.get("seen_events", [])
+	return _matching(content.events, query).filter(func(event: EventDefinition) -> bool:
+		return event.weight_x100 > 0 and not seen.has(event.id))
+
+
+## Spec unique-events 2.2: true when the room's query has no event left to draw: every match is seen, or it matches none (user,
+## 2026-11-22: running out is game design, like food for drained items, so an empty query falls back too; the validator warns).
+func _events_ran_out(room: RoomDefinition, chapter: ChapterDefinition, pools: Dictionary) -> bool:
+	return _unseen_events(room, chapter, pools).is_empty()
+
+
+## Spec unique-events 2.2: the room replacing an exhausted event room: one with the cell's type tag in the chapter, fitting its
+## doors, whose content is no event, picked on floor/<n>/room_swap/<cell>. Null when none fits (or the chapter has no rules).
+func _swap_room(map: FloorMap, index: int, chapter: ChapterDefinition, any_chapter: bool) -> RoomDefinition:
+	var rules := chapter.floor_gen_rules
+	if rules == null:
+		return null
+	var data: Dictionary = map.cells[index]
+	var type_tag := _type_tag(rules, data)
+	var candidates: Array = []
+	for room_id in _sorted_ids(content.rooms):
+		var room: RoomDefinition = content.rooms[room_id]
+		if room.content_mode in [RoomDefinition.ContentMode.EVENT, RoomDefinition.ContentMode.EVENT_QUERY]:
+			continue
+		if TagMatch.has(room.tags, type_tag) and _in_chapter(room, chapter, any_chapter) and room.fits(data["doors"]):
+			candidates.append(room)
+	return RunSeeds.pick_weighted(seeds.floor_rng(depth, "room_swap/%d" % index), candidates)
 
 
 ## Spec floor-rooms 2.1: a challenge room's waves, in order, on the content stream. A wave without a fixed encounter picks
@@ -382,7 +451,8 @@ static func _in_card_pool(pools: Dictionary, id: StringName) -> bool:
 
 
 ## A fixed item, or one picked from the pool (unlocked, not held, not seen this run).
-## Falls back to the run structure's fallback_item, unless `use_fallback` is false (then null when nothing is left).
+## Nothing left: food, else the run structure's fallback_item (spec unique-events 2.4), unless `use_fallback` is false (then
+## null).
 func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNumberGenerator, pools: Dictionary,
 		use_fallback: bool = true) -> ItemDefinition:
 	if fixed != null:
@@ -396,16 +466,16 @@ func pick_item(fixed: ItemDefinition, query: GameplayTagQuery, stream: RandomNum
 			continue
 		candidates.append(item)
 	var picked: ItemDefinition = _pick_pooled(stream, candidates)
-	if picked == null and run_structure != null and use_fallback:
-		picked = run_structure.fallback_item
+	if picked == null and use_fallback:
+		picked = _drained(stream, pools, true)  # spec unique-events 2.4
 	return picked
 
 
 ## Spec item-pass 3.5: what a pedestal or shop slot offers. A fixed item or piece, else one pick from the items and
 ## the equipment matching the query together (items first, then equipment, each by id, so content without pooled
-## equipment picks exactly as before). Falls back to the run structure's fallback_item.
-## Spec floor-rooms 3.1: `offers` keeps only items (ITEMS) or only equipment (EQUIPMENT, which never falls back to the
-## fallback item: null when no piece is left).
+## equipment picks exactly as before). Spec unique-events 2.4: nothing left gives a food item, else the run structure's
+## fallback_item. Spec floor-rooms 3.1: `offers` keeps only items (ITEMS) or only equipment (EQUIPMENT: nothing left gives a
+## food item too, but never the fallback item; null without food).
 func pick_pickup(fixed_item: ItemDefinition, fixed_equipment: EquipmentDefinition, query: GameplayTagQuery,
 		stream: RandomNumberGenerator, pools: Dictionary, offers: int = RoomPlacement.Offers.ANY) -> Resource:
 	if fixed_item != null:
@@ -429,8 +499,9 @@ func pick_pickup(fixed_item: ItemDefinition, fixed_equipment: EquipmentDefinitio
 				continue
 			candidates.append(entry)
 	var picked: Resource = _pick_pooled(stream, candidates)
-	if picked == null and run_structure != null and offers != RoomPlacement.Offers.EQUIPMENT:
-		picked = run_structure.fallback_item
+	if picked == null:
+		# Spec unique-events 2.4: food; the armory (EQUIPMENT) too, but never the fallback item.
+		picked = _drained(stream, pools, offers != RoomPlacement.Offers.EQUIPMENT)
 	return picked
 
 
@@ -453,6 +524,32 @@ func pick_equipment(query: GameplayTagQuery, stream: RandomNumberGenerator, pool
 		if prefer_slots.has(piece.slot):
 			preferred.append(piece)
 	return _pick_pooled(stream, preferred if not preferred.is_empty() else candidates)
+
+
+## Spec unique-events 2.4: what a pool pick with nothing left gives: a food item (Pool.Food, unlocked, not a dev item, in the
+## card pool, held and seen ones too, not in pools["unholdable"]) on `stream`, which the empty pick left untouched; no food
+## → the run's fallback item when `use_fallback`; neither → null, with a warning. Counted in pools_drained.
+func drained_food(stream: RandomNumberGenerator, pools: Dictionary, use_fallback: bool = true) -> ItemDefinition:
+	return _drained(stream, pools, use_fallback)
+
+
+func _drained(stream: RandomNumberGenerator, pools: Dictionary, use_fallback: bool) -> ItemDefinition:
+	pools_drained += 1
+	var unholdable: Array = pools.get("unholdable", [])
+	var candidates: Array = []
+	for item_id in _sorted_ids(content.items):
+		var item: ItemDefinition = content.items[item_id]
+		if not TagMatch.has(item.tags, FOOD_POOL) or not Unlocks.is_unlocked(item) or TagMatch.has(item.tags, DEV_TAG):
+			continue
+		if unholdable.has(item_id) or not _in_card_pool(pools, item_id):
+			continue
+		candidates.append(item)
+	var picked: ItemDefinition = _pick_pooled(stream, candidates)
+	if picked == null and use_fallback and run_structure != null:
+		picked = run_structure.fallback_item
+	if picked == null and use_fallback:
+		warnings.append("a drained item pool found no food a member can hold and no fallback item")
+	return picked
 
 
 ## A room pickup: {"placement", "item": the item or equipment id, "price", "taken"}, plus "kind": "equipment" for a

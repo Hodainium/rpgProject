@@ -850,10 +850,22 @@ func _check_item_pool(query: GameplayTagQuery, where: String, offers: int = Room
 		# Spec floor-rooms 3.1: an equipment-only pedestal never falls back to an item.
 		_error("offers_equipment_no_pool", where, "no pooled equipment matches this pool")
 		return
-	if _has_fallback_item():
-		_warning("empty_item_pool", where, "no item matches this pool; the run's fallback_item is used")
+	# Spec unique-events 2.4: a drained pick gives food first, then the run's fallback item.
+	if _has_food():
+		_warning("empty_item_pool", where, "no item matches this pool; a food item (Pool.Food) is given, else the run's fallback_item")
+	elif _has_fallback_item():
+		_warning("empty_item_pool", where, "no item matches this pool and there is no food (Pool.Food); the run's fallback_item is given")
 	else:
-		_error("empty_item_pool", where, "no item matches this pool and the run structure has no fallback_item")
+		_error("empty_item_pool", where, "no item matches this pool, there is no food (Pool.Food) and the run structure has no fallback_item")
+
+
+func _has_food() -> bool:
+	for id in content.items:
+		var item: ItemDefinition = content.items[id]
+		if TagMatch.has(item.tags, FloorGenerator.FOOD_POOL) and Unlocks.is_unlocked(item) and item.weight_x100 > 0 \
+				and not TagMatch.has(item.tags, FloorGenerator.DEV_TAG):
+			return true
+	return false
 
 
 func _has_fallback_item() -> bool:
@@ -951,18 +963,114 @@ func _check_chapter(chapter: ChapterDefinition) -> void:
 		_check_pool(content.encounters, chapter.boss_encounter_query, path + "::boss_encounter_query", "boss encounter")
 	if uses_event_query:
 		_check_pool(content.events, chapter.event_query, path + "::event_query", "event")
+	_check_event_fallback(chapter)
 
 
-## A query a floor depends on: no matches → empty_query; all weights 0 → zero_weights.
+## Spec unique-events 2.2: an event room whose events run out becomes a non-event Normal room of its chapter fitting its doors.
+## event_fallback_room_missing: some door set an event room fits that no such room fits (that cell would stay empty).
+## Checked per room type as the swap picks (the normal tag and each special tag; special rooms sit in dead ends, one door), with
+## the chapter's own rooms (a rooms_from_any_chapter floor may have more to swap in). Event rooms of weight 0 are never placed.
+func _check_event_fallback(chapter: ChapterDefinition) -> void:
+	var rules := chapter.floor_gen_rules
+	var types: Array = [[rules.normal_room_tag, range(1, 16)]]
+	for tag in rules.special_room_tags:
+		types.append([tag, SINGLE_DOOR_MASKS])
+	for type in types:
+		var event_rooms: Array = []
+		var others: Array = []
+		for id in _sorted(content.rooms):
+			var room: RoomDefinition = content.rooms[id]
+			if not TagMatch.has(room.tags, type[0]) or not TagMatch.matches(chapter.room_query, room.tags) or room.weight_x100 <= 0:
+				continue
+			if room.content_mode == RoomDefinition.ContentMode.EVENT_QUERY:
+				event_rooms.append(room)
+			elif room.content_mode != RoomDefinition.ContentMode.EVENT:
+				others.append(room)
+		for room in event_rooms:
+			var unmet := PackedStringArray()
+			for mask in type[1]:
+				if room.fits(mask) and not others.any(func(other: RoomDefinition) -> bool: return other.fits(mask)):
+					unmet.append(_mask_name(mask))
+			if not unmet.is_empty():
+				_warning("event_fallback_room_missing", room.resource_path + "::doors",
+					"%s (a %s event room of %s) fits doors %s, which no other %s room of %s fits; once its events run out such a cell stays empty"
+					% [room.id, type[0], chapter.id, ", ".join(unmet), type[0], chapter.id])
+
+
+## Spec unique-events 3: event_pool_short (a warning, about variety): a chapter of `structure` whose event query matches fewer
+## events than its floors' event rooms are expected to ask for. Expected per floor: the floor's normal rooms (the rules' room
+## count at that depth with half the random extra, less the start, the boss and the special rooms) times the event rooms'
+## share of the chapter's normal-room weight; summed over every floor slot of the structure that lists the chapter. Review: the
+## seen list is run-wide and chapters may share events, so the run is checked as a whole too (the events any chapter matches
+## against every floor's expected event rooms, a floor offering several chapters counted at its largest).
+@warning_ignore("integer_division")
+func _check_event_pools(structure: RunStructure) -> void:
+	var expected_x100 := {}
+	var chapters := {}
+	var run_expected_x100 := 0
+	for depth in structure.floors.size():
+		var floor_most_x100 := 0
+		var slot: FloorSlot = structure.floors[depth]
+		if slot == null or slot.layout != null:
+			continue
+		for chapter in slot.chapters:
+			if chapter == null or chapter.floor_gen_rules == null or chapter.event_query == null:
+				continue
+			var rules := chapter.floor_gen_rules
+			var total := 0
+			var events := 0
+			for id in _sorted(content.rooms):
+				var room: RoomDefinition = content.rooms[id]
+				if TagMatch.has(room.tags, rules.normal_room_tag) and TagMatch.matches(chapter.room_query, room.tags):
+					total += maxi(room.weight_x100, 0)
+					if room.content_mode == RoomDefinition.ContentMode.EVENT_QUERY and room.content_query == null:
+						events += maxi(room.weight_x100, 0)
+			if total <= 0 or events <= 0:
+				continue
+			var rooms := mini(rules.max_rooms, rules.base_rooms + rules.rooms_per_depth * depth
+				+ maxi(rules.random_extra_rooms, 0) / 2)
+			var normal := maxi(rooms - 2 - rules.special_room_tags.size(), 0)
+			expected_x100[chapter.id] = int(expected_x100.get(chapter.id, 0)) + normal * events * 100 / total
+			floor_most_x100 = maxi(floor_most_x100, normal * events * 100 / total)
+			chapters[chapter.id] = chapter
+		run_expected_x100 += floor_most_x100
+	var union := {}
+	for id in _sorted(chapters):
+		var chapter: ChapterDefinition = chapters[id]
+		var matching := 0
+		for event_id in content.events:
+			var event: EventDefinition = content.events[event_id]
+			if event.weight_x100 > 0 and TagMatch.matches(chapter.event_query, event.tags):
+				matching += 1
+				union[event_id] = true
+		var wanted: int = (int(expected_x100[id]) + 99) / 100
+		if matching < wanted:
+			_warning("event_pool_short", chapter.resource_path + "::event_query",
+				"%s's event query matches %d events, but %s's floors of it are expected to hold about %d event rooms; the rest become normal rooms"
+				% [chapter.id, matching, structure.id, wanted])
+	var run_wanted: int = (run_expected_x100 + 99) / 100
+	if not chapters.is_empty() and union.size() < run_wanted:
+		_warning("event_pool_short", structure.resource_path + "::floors",
+			"%s's chapters match %d events in all, but its floors are expected to hold about %d event rooms; the rest become normal rooms"
+			% [structure.id, union.size(), run_wanted])
+
+
+## A query a floor depends on: no matches → empty_query; all weights 0 → zero_weights. Spec unique-events (user, 2026-11-22): for
+## events both are warnings: an event room with nothing to draw becomes a normal room of its type, like a drained pool's food.
 func _check_pool(index: Dictionary, query: GameplayTagQuery, where: String, what: String) -> void:
 	var matches: Array = []
 	for id in _sorted(index):
 		if TagMatch.matches(query, index[id].tags):
 			matches.append(index[id])
+	var report := func(code: String, message: String) -> void:
+		if what == "event":
+			_warning(code, where, message + "; its event rooms become normal rooms")
+		else:
+			_error(code, where, message)
 	if matches.is_empty():
-		_error("empty_query", where, "no %s matches this query" % what)
+		report.call("empty_query", "no %s matches this query" % what)
 	elif matches.all(func(entry) -> bool: return int(entry.get("weight_x100")) <= 0):
-		_error("zero_weights", where, "every %s matching this query has weight 0" % what)
+		report.call("zero_weights", "every %s matching this query has weight 0" % what)
 
 
 func _check_weight(resource: Resource, path: String) -> void:
@@ -1386,6 +1494,7 @@ func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 	if structure.chest_drop_chance_x100 > 0 and structure.chest_drops.is_empty():
 		_error("bad_chest", path + "::chest_drops", "%s drops chests but lists no chest_drops" % structure.id)
 	_check_routes(structure)
+	_check_event_pools(structure)
 	# Spec playable-demo 3.11: the XP curve rises; a rest stop can't start a fight (it has no room).
 	for index in range(1, structure.xp_to_level.size()):
 		if structure.xp_to_level[index] <= structure.xp_to_level[index - 1]:
@@ -1423,7 +1532,7 @@ func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 				continue
 			for seed_value in range(1, generate_seeds + 1):
 				var generator := FloorGenerator.new(content, structure, seed_value, floor_index)
-				var result: Dictionary = generator.generate(chapter, slot.rooms_from_any_chapter, {"party": [], "held": [], "seen": []})
+				var result: Dictionary = generator.generate(chapter, slot.rooms_from_any_chapter, {"party": [], "held": [], "seen": [], "seen_events": []})
 				if result["error"] != "":
 					_error("generation_fails", where, "floor %d, chapter %s, seed %d: %s" % [floor_index, chapter.id, seed_value, result["error"]])
 					break

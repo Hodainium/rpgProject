@@ -24,6 +24,9 @@ var party: Array[Dictionary] = []
 var coins: int = 0
 ## Every item placed or given this run (no item appears twice). Equipment offered on pedestals is listed here too.
 var seen_items: Array[StringName] = []
+## Spec unique-events 2.1: every event placed from a query so far (any floor), in placement order; none is placed twice.
+## Fixed room events and the rest stop are not listed. Hashed only when not empty.
+var seen_events: Array[StringName] = []
 ## Spec item-pass 3.5: the party's armor inventory, equipment ids in pickup order. Pieces found in the run land here
 ## and are equipped from here; they are never dropped. Hashed only when not empty.
 var armor: Array[StringName] = []
@@ -211,6 +214,8 @@ func canonical_lines() -> PackedStringArray:
 		lines.append(line)
 	if not armor.is_empty():
 		lines.append("armor=%s" % ",".join(armor))
+	if not seen_events.is_empty():
+		lines.append("events_seen=%s" % ",".join(seen_events))  # spec unique-events 2.3; runs without query events hash as before
 	if keys > 0 or golden_key or chest_serial > 0:
 		# Spec keys-and-gear 3.1: only on runs that ever saw a key or a chest, so older runs hash as before. Spec floor-chests:
 		# the chests themselves are in their cells, hashed with the map.
