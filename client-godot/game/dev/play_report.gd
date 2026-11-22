@@ -433,6 +433,11 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 				rooms[key] += int(summary.get(key, 0))
 			if summary.get("endedIn", {}).has("wave"):
 				SeedReport._count(rooms["lostInWave"], str(int(summary["endedIn"]["wave"])))
+		if summary.has("eventsSeen") or summary.has("poolsDrained"):
+			# Spec unique-events 5: query events placed, event rooms swapped for normal ones, drained pool picks, over the runs.
+			var unique: Dictionary = report.get_or_add("uniqueEvents", {"eventsSeen": 0, "eventFallbacks": 0, "poolsDrained": 0})
+			for key in ["eventsSeen", "eventFallbacks", "poolsDrained"]:
+				unique[key] += int(summary.get(key, 0))
 		if summary.has("eventsEntered"):
 			# Spec event-pass 5: events over the runs: how often each opened and which choices were picked.
 			var events: Dictionary = report.get_or_add("events", {"entered": 0, "memberDeaths": 0, "byEvent": {}})
@@ -715,6 +720,10 @@ static func text(report: Dictionary) -> String:
 		var rooms: Dictionary = report["floorRooms"]
 		lines.append("  challenges entered %d, cleared %d  ·  lost in wave: %s  ·  armories visited %d (all runs)" % [
 			rooms["challengesEntered"], rooms["challengesCleared"], _pairs(rooms["lostInWave"]), rooms["armoriesVisited"]])
+	if report.has("uniqueEvents"):
+		var unique: Dictionary = report["uniqueEvents"]
+		lines.append("  query events placed %d  ·  event rooms out of events (swapped, or empty when nothing fits) %d  ·  drained pool picks %d (all runs)" % [
+			unique["eventsSeen"], unique["eventFallbacks"], unique["poolsDrained"]])
 	if report.has("events"):
 		var events: Dictionary = report["events"]
 		var played := maxi(int(report["won"]) + int(report["lost"]) + int(report["stopped"]), 1)

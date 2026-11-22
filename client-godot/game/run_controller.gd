@@ -230,7 +230,7 @@ func enter_sandbox_floor(request: SandboxRequest) -> String:
 		result = generator.single_room(request.room, chapter, pools, request.encounter, request.event)
 	if result["error"] != "":
 		return _stop("sandbox: %s" % result["error"])
-	_install_floor(result["map"], pools, request.layout != null)
+	_install_floor(result["map"], pools, request.layout != null, generator)
 	if request.room != null and runner_error == "":
 		_enter_cell(state.map.start)
 	return runner_error
@@ -368,7 +368,7 @@ func enter_floor(floor_index: int, choice: StringName = &"") -> String:
 		result = generator.generate(chapter, slot.rooms_from_any_chapter, pools)
 	if result["error"] != "":
 		return _stop("floor %d: %s" % [floor_index, result["error"]])
-	_install_floor(result["map"], pools, true)
+	_install_floor(result["map"], pools, true, generator)
 	return runner_error
 
 
@@ -386,8 +386,16 @@ func _reset_floor(floor_index: int, chapter: ChapterDefinition) -> void:
 
 ## The generated map becomes the current floor; the start cell is visited (and cleared, except a sandbox room, whose
 ## content plays when it is entered).
-func _install_floor(map: FloorMap, pools: Dictionary, clear_start: bool) -> void:
+func _install_floor(map: FloorMap, pools: Dictionary, clear_start: bool, generator: FloorGenerator = null) -> void:
 	state.seen_items.assign(pools["seen"])
+	state.seen_events.assign(pools.get("seen_events", []))  # spec unique-events 2.1
+	var fallbacks := 0
+	for index in map.cells:
+		if map.cells[index].get("fallback", false):
+			fallbacks += 1
+	if fallbacks > 0:
+		_tally["eventFallbacks"] = int(_tally.get("eventFallbacks", 0)) + fallbacks  # spec unique-events 2.2
+	_count_drained(generator)
 	_tally_left_behind(state.map)  # spec floor-chests 2.4: what the floor being left still held (once the new one exists)
 	state.map = map
 	state.current_cell = state.map.start
@@ -500,8 +508,10 @@ func run_summary() -> Dictionary:
 		"endedIn": {"floor": state.floor_index + 1, "room": String(room.id) if room != null else "",
 			"encounter": _tally.get("lastEncounter", "") if state.status == RunState.LOST else ""},
 	}
-	# Spec floor-rooms 6: only when above 0, so older summaries are unchanged.
-	for key in ["challengesEntered", "challengesCleared", "armoriesVisited"]:
+	# Spec floor-rooms 6 and unique-events 5: only when above 0, so older summaries are unchanged.
+	if not state.seen_events.is_empty():
+		summary["eventsSeen"] = state.seen_events.size()
+	for key in ["challengesEntered", "challengesCleared", "armoriesVisited", "eventFallbacks", "poolsDrained"]:
 		if int(_tally.get(key, 0)) > 0:
 			summary[key] = int(_tally[key])
 	if state.status == RunState.LOST and room != null and not state.map.cells[state.current_cell]["cleared"] \
@@ -921,6 +931,7 @@ func _pooled_drop(item: ItemDefinition, stream: RandomNumberGenerator) -> ItemDe
 	pools["held"] = pools["held"] + unholdable
 	var picked := generator.pick_item(null, treasure, stream, pools, false)
 	if picked == null:
+		_tally["poolsDrained"] = int(_tally.get("poolsDrained", 0)) + 1  # spec unique-events 2.4: a drained drop gives food
 		picked = generator.pick_item(null, food, stream, {"card_pool": state.card_pool, "held": unholdable}, false)
 	if picked != null and not state.seen_items.has(picked.id):
 		state.seen_items.append(picked.id)
@@ -2139,6 +2150,7 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 			state.gifts_on_floor += 1
 		var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
 		item = generator.pick_item(null, query, gift_rng, _pools())
+		_count_drained(generator)
 		if item == null:
 			return
 	if _opening_chest >= 0:
@@ -2270,7 +2282,7 @@ func give_equipment(piece: EquipmentDefinition, on_floor: bool = false) -> void:
 
 ## Spec keys-and-gear 3.2: a pooled piece matching `query` (GiveEquipment with no fixed piece), from the chest's stream
 ## while a chest opens, else the floor's gift stream. prefer_open_slot: a slot some living member has empty first.
-## Nothing left: the run's fallback item instead (as item pools do).
+## Nothing left: a food item instead, else the run's fallback item (as item pools do, spec unique-events 2.4).
 func give_equipment_from(query: GameplayTagQuery, prefer_open_slot: bool, on_floor: bool = false,
 		only_slot: StringName = &"") -> void:
 	var gift_rng := _chest_rng
@@ -2284,12 +2296,15 @@ func give_equipment_from(query: GameplayTagQuery, prefer_open_slot: bool, on_flo
 				if member["alive"] and not member["equipment"].has(slot_tag) and not open_slots.has(slot_tag):
 					open_slots.append(slot_tag)
 	var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
-	var piece := generator.pick_equipment(query, gift_rng, _pools(), open_slots, only_slot)
+	var pools := _pools()
+	var piece := generator.pick_equipment(query, gift_rng, pools, open_slots, only_slot)
 	if piece != null:
 		give_equipment(piece, on_floor)
-	elif structure != null and structure.fallback_item != null:
-		give_item(structure.fallback_item, null, null,
-			GiveItem.Recipient.FLOOR if on_floor else GiveItem.Recipient.FIRST)
+		return
+	var food := generator.drained_food(gift_rng, pools)  # the empty pick drew nothing, so this is the stream's next draw
+	_count_drained(generator)
+	if food != null:
+		give_item(food, null, null, GiveItem.Recipient.FLOOR if on_floor else GiveItem.Recipient.FIRST)
 
 
 func event_go_to_page(page: int) -> void:
@@ -2676,7 +2691,8 @@ func dev_spawn_item(item: Resource, pool_tag: StringName, price: int) -> String:
 	if item == null:
 		var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
 		item = generator.pick_pickup(null, null, _pool_query(pool_tag), stream, _pools())
-		if item == null:
+		# A cheat asks for an item of that pool: a drained pick's food or fallback item is not one (nor counted in poolsDrained).
+		if item == null or generator.pools_drained > 0:
 			return "no item in the pool %s" % pool_tag
 	var data: Dictionary = state.map.cells[state.current_cell]
 	var number: int = 1000 + data["pickups"].filter(func(pickup) -> bool:
@@ -3002,10 +3018,30 @@ func _run_hooks(kind: String) -> void:
 
 func _pools() -> Dictionary:
 	var pools := {"party": state.party_characters(), "held": state.held_items() + state.held_equipment(),
-		"seen": state.seen_items.duplicate()}
+		"seen": state.seen_items.duplicate(), "seen_events": state.seen_events.duplicate()}
 	if state.card_pool_set:
 		pools["card_pool"] = state.card_pool  # spec card-collection 2.5; absent when the run has no pool
+	# Spec unique-events 2.4: the food a drained pool may give is food some living member can hold.
+	var unholdable: Array = []
+	for item_id in content.items:
+		var item: ItemDefinition = content.items[item_id]
+		if TagMatch.has(item.tags, FloorGenerator.FOOD_POOL) \
+				and not state.party.any(func(member) -> bool: return can_hold(member["slot"], item) == ""):
+			unholdable.append(item_id)
+	if not unholdable.is_empty():
+		pools["unholdable"] = unholdable
 	return pools
+
+
+## Spec unique-events 2.4: counts the generator's drained pool picks (run_summary's poolsDrained) and warns its problems.
+func _count_drained(generator: FloorGenerator) -> void:
+	if generator == null:
+		return
+	if generator.pools_drained > 0:
+		_tally["poolsDrained"] = int(_tally.get("poolsDrained", 0)) + generator.pools_drained
+		generator.pools_drained = 0
+	_warn_all(generator.warnings)
+	generator.warnings.clear()
 
 
 func _active() -> bool:

@@ -17,7 +17,7 @@ static func floor_of(content: ContentIndex, seed_value: int, floor_index: int, r
 	var structure: RunStructure = picked["run"]
 	if floor_index < 0 or floor_index >= structure.floors.size():
 		return {"map": null, "chapter": &"", "error": "floors are 0 to %d" % (structure.floors.size() - 1)}
-	var pools := {"party": [], "held": [], "seen": []}
+	var pools := {"party": [], "held": [], "seen": [], "seen_events": []}  # spec unique-events: the run's pools keys
 	var result := {}
 	var previous: ChapterDefinition = null
 	for index in floor_index + 1:
@@ -64,6 +64,9 @@ static func many(content: ContentIndex, from: int, count: int, floor_index: int,
 		for index in map.sorted_indices():
 			var data: Dictionary = map.cells[index]
 			_count(report["rooms_used"], data["room"])
+			if data.get("fallback", false):
+				# Spec unique-events 2.2: an event room whose events ran out; the key only when there is one.
+				report["fallbacks"] = int(report.get("fallbacks", 0)) + 1
 			var cell_content: Dictionary = data["content"]
 			if cell_content["kind"] == "encounter":
 				_count(report["encounters"], cell_content["encounter"])
@@ -101,6 +104,8 @@ static func text(report: Dictionary) -> String:
 		var ids := counts.keys()
 		ids.sort_custom(func(a, b) -> bool: return counts[a] > counts[b] or (counts[a] == counts[b] and a < b))
 		lines.append("  %s: %s" % [key, ", ".join(ids.map(func(id) -> String: return "%s ×%d" % [id, counts[id]]))])
+	if int(report.get("fallbacks", 0)) > 0:
+		lines.append("  event rooms out of events (swapped, or empty when nothing fits): %d" % report["fallbacks"])
 	for failure in report["failures"].slice(0, 10):
 		lines.append("  FAILED seed %d: %s" % [failure["seed"], failure["error"]])
 	return "\n".join(lines)

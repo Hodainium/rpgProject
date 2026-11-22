@@ -3,5 +3,5 @@ cell=13|{cell=(4,1),cleared=0,content={encounter=fixture.encounter.boss,enemies=
 cell=22|{cell=(4,2),cleared=0,content={encounter=,enemies=[],event=fixture.event.coin,kind=event},doors=7,pickups=[],role=normal,room=fixture.room.shrine,special_tag=,visited=0}
 cell=23|{cell=(5,2),cleared=0,content={encounter=,enemies=[],event=,kind=none},doors=8,pickups=[{item=fixture.item.banner,placement=1,price=0,taken=0}],role=special,room=fixture.room.vault,special_tag=Fixture.Room.Type.Treasure,visited=0}
 cell=30|{cell=(3,3),cleared=0,content={encounter=,enemies=[],event=,kind=none},doors=2,pickups=[{item=fixture.item.flask,placement=1,price=3,taken=0},{item=fixture.item.feather,placement=2,price=3,taken=0},{item=fixture.item.crumb,placement=3,price=1,taken=0}],role=special,room=fixture.room.market,special_tag=Fixture.Room.Type.Shop,visited=0}
-cell=31|{cell=(4,3),cleared=0,content={encounter=,enemies=[],event=fixture.event.coin,kind=event},doors=13,pickups=[],role=normal,room=fixture.room.shrine,special_tag=,visited=0}
+cell=31|{cell=(4,3),cleared=0,content={encounter=,enemies=[],event=fixture.event.toll,kind=event},doors=13,pickups=[],role=normal,room=fixture.room.shrine,special_tag=,visited=0}
 cell=40|{cell=(4,4),cleared=0,content={encounter=,enemies=[],event=,kind=none},doors=1,pickups=[],role=start,room=fixture.room.start,special_tag=,visited=0}

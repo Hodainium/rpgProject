@@ -45,7 +45,7 @@ static func capture(run: RunController) -> Dictionary:
 		"run": {
 			"runId": state.run_id, "runSeed": str(state.run_seed), "floorSeeds": floor_seeds,
 			"structure": String(state.run_structure_id), "party": party, "coins": state.coins,
-			"seenItems": _strings(state.seen_items), "armor": _strings(state.armor), "floor": state.floor_index,
+			"seenItems": _strings(state.seen_items), "seenEvents": _strings(state.seen_events), "armor": _strings(state.armor), "floor": state.floor_index,
 			"chapter": String(state.chapter_id), "currentCell": state.current_cell, "bossCleared": state.boss_cleared,
 			"fieldActions": state.field_actions_on_floor, "gifts": state.gifts_on_floor,
 			"event": _plain(state.event), "pendingGifts": _strings(state.pending_gifts), "status": state.status,
@@ -101,6 +101,7 @@ static func restore(run: RunController, content_index: ContentIndex, snapshot: D
 			"equipment": equipment})
 	state.coins = saved["coins"]
 	state.seen_items.assign(_names(saved["seenItems"]))
+	state.seen_events.assign(_names(saved.get("seenEvents", [])))  # spec unique-events 2.3: older saves have none
 	state.armor.assign(_names(saved["armor"]))
 	state.floor_index = saved["floor"]
 	state.chapter_id = StringName(saved["chapter"])
@@ -170,6 +171,14 @@ static func shape_problem(saved: Variant) -> String:
 	if not saved["run"]["party"] is Array or not saved["run"]["floorSeeds"] is Dictionary or not saved["log"] is Array \
 			or not saved["requestedFloors"] is Array or not saved["tally"] is Dictionary:
 		return "a snapshot field has the wrong type"
+	if saved["run"].has("seenEvents"):  # spec unique-events 2.3: optional (older saves have none)
+		if not saved["run"]["seenEvents"] is Array:
+			return "snapshot.run.seenEvents must be an array"
+		for id in saved["run"]["seenEvents"]:
+			# Security review: the hash joins the ids with commas, so an id holding one ("a,b") would hash like two ids while
+			# matching no event (a forged checkpoint resetting the once-per-run rule). Ids are plain names.
+			if not id is String or id.is_empty() or id.contains(",") or id.contains("\n"):
+				return "snapshot.run.seenEvents holds an invalid event id"
 	for member in saved["run"]["party"]:
 		if not member is Dictionary:
 			return "a party member must be an object"
@@ -245,6 +254,8 @@ static func _load_map(saved: Dictionary) -> FloorMap:
 				return {"encounter": StringName(wave["encounter"]), "enemies": wave["enemies"]})
 		if cell.has("wave"):
 			data["wave"] = int(cell["wave"])
+		if cell.get("fallback") == true:
+			data["fallback"] = true  # spec unique-events 2.2: an event room swapped for an ordinary one
 		if cell.has("chests"):  # spec floor-chests: only in a cell that ever held a chest
 			data["chests"] = cell["chests"].map(func(held: Dictionary) -> Dictionary:
 				return {"chest": StringName(held["chest"]), "serial": held["serial"], "opened": held["opened"]})

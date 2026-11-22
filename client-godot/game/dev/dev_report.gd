@@ -25,6 +25,8 @@ static func state_of(run: RunController) -> Dictionary:
 		"dev": state.dev, "sandbox": state.sandbox, "runHash": state.run_hash(),
 		"warnings": Array(run.warnings), "runnerError": run.runner_error,
 	}
+	if not state.seen_events.is_empty():
+		data["seenEvents"] = _strings(state.seen_events)  # spec unique-events 5: only when there are any
 	if (run.structure != null and run.structure.uses_keys()) or state.keys > 0 or state.golden_key or state.chest_serial > 0:
 		# Spec keys-and-gear 3.5: keys and chests, only on runs that have them (older reports are unchanged).
 		data["keys"] = state.keys
@@ -73,6 +75,8 @@ static func state_text(run: RunController) -> String:
 			", ".join(member["items"]), ", ".join(member["useSlots"]), ", ".join(member["equipment"])])
 	if not data["armor"].is_empty():
 		lines.append("  armor inventory [%s]" % ", ".join(data["armor"]))
+	if data.has("seenEvents"):
+		lines.append("  events seen [%s]" % ", ".join(data["seenEvents"]))
 	if data.has("keys"):
 		lines.append("  keys %d%s  chests [%s]" % [data["keys"], " + golden key" if data["goldenKey"] else "",
 			", ".join(data["chests"].map(func(chest: Dictionary) -> String: return "%d:%s%s" % [chest["serial"], chest["chest"],
