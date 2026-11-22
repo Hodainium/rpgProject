@@ -48,7 +48,7 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5b5. `ui-feedback` | ✅ Done, playtested 2026-11-20, merged in PR #75 (spec synced; `specs/ui-feedback.md`; no white message line: a refusal flashes the widget it is about (SP bar, equipment slot, Gold and Keys counters, room tile, stairs, member rows, battle command and target), rare problems are one-button dialogs, dev text goes to the dev console; all 27 messages decided one by one with the user; next after 5b4, before 5b2) | 2026-11-19 |
 | 5b3. `floor-rooms` | ✅ Built and playtested 2026-11-21 on `feat/floor-rooms` (`specs/floor-rooms.md`; map icons for both rooms, the room kept in battle between waves; open: room props and the wave toast; challenge rooms with three waves, armories, items-only item rooms, floors growing +2 rooms per depth to 25; Godot 1125, .NET 619; added 2026-11-15: bigger floors, a challenge room (three waves, an item reward), an armory (armor or a weapon) on every floor, item rooms give items only; before 5c) | 2026-11-15 |
 | 5c. `card-balance` | ⬜ Not started | |
-| 5d. `unique-events` | 📝 Spec written and decided (`specs/unique-events.md`; its own slice after 5b3 `floor-rooms`, before 5c (user, 2026-11-15)) | 2026-11-09 |
+| 5d. `event-pass` + `unique-events` | 📝 Specs written (`specs/event-pass.md`, draft 2026-11-21 awaiting review: 42 new events (50 in all), event rooms 40-50 → ~15 per run, member-targeted outcomes, class choices, choice tags for the bots; `specs/unique-events.md`, revised 2026-11-21: once per run with the normal-room fallback); after 5b3 `floor-rooms`, before 5c (user, 2026-11-15) | 2026-11-21 |
 | 6. `observability` | ⬜ Not started | |
 | 7. `live-dashboard` | ⬜ Not started | |
 | 7b. `data-retention` | ⬜ Not started | |
@@ -184,7 +184,7 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   sized like Isaac's starting item pools, with the existing room pool tags on each card. Market mentions in 4b, 7, the Redis plan and the other
   specs and docs are removed.
 - 2026-11-09: Slice 5 review answers: 6 core characters, characters are Mythic (above Legendary), Hearthstone-style pity timers for Legendary and Mythic, new Food items, new card fixtures, a Verifying run blocks leaving to the main menu. Numbers open for tuning. See `specs/card-collection.md` section 8.
-- 2026-11-09: Added slice 5d `unique-events` next to 5c: an event drawn from a query appears once per run, and a named item already seen falls back to the fallback item (gap found reviewing slice 5; at the user's request).
+- 2026-11-09: Added slice 5d `unique-events` next to 5c: an event drawn from a query appears once per run, and a named item already seen falls back to the fallback item (gap found reviewing slice 5; at the user's request). Revised 2026-11-21: named items may repeat; a drained pool gives food.
 - 2026-11-08: Added slice 7b `data-retention` before 8, at the user's request: outbox, step, voided and settled-session
   tables grow forever and slice 8 should measure it. Also dropped the per-battle verifier role (`verify.battle`) with 4a:
   a battle is verified inside its step, so legacy runs (started before 4a) are simply never verified.
@@ -217,6 +217,8 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
 - 2026-11-15: 5b0 `pack-shop` built, with the openability rule, 5-card packs and retire-with-refund (user); next: 5b `card-ui`.
 - 2026-11-21: 4e `player-inbox` added (spec written; it grew out of a run-rewards pop-up): built just before 4b `game-analytics`,
   because the web dashboard will message players and send gems; not now, the 5b2 → 5b3 → 5d → 5c order goes on first (user).
+- 2026-11-21: 5d split in two specs (user): `event-pass` (part 1: the events, fewer event rooms, member targeting, class
+  choices, bot choice tags) and `unique-events` (part 2, revised: an exhausted pool gives a normal room instead of an empty one).
 
 
 ## Design tuning: any time, not just in breaks
@@ -738,9 +740,9 @@ and craft costs and refunds, and the gem income per run against them. Also here 
 Added 2026-11-09, next to 5c (the gate moves, so both are measured together). **Order (user, 2026-11-15):** its own slice
 after 5b3 `floor-rooms` and **before 5c `card-balance`**, since it changes the balance before the last tweaks. Spec `specs/unique-events.md`: an event picked
 from a chapter's event query appears at most once per run (seen = placed on a floor, so it holds inside a floor too; an exhausted
-pool gives an empty room; fixed room events and the rest stop stay repeatable), and a named item the run already saw becomes a
-food item (like Isaac's drops), so no route hands out a second copy (pool picks already did not). Decided 2026-11-09; implemented before 5c (user, 2026-11-15). **More events** in the demo content come with it (moved here from
-5c, user 2026-11-15), so the one-event-per-run rule rarely runs a chapter dry. Client only; the run hash gains `events_seen=`
+pool gives a normal room of the same type (user, 2026-11-21; first an empty room); fixed room events and the rest stop stay repeatable), and a drained item pool gives a food item instead of the
+fallback item (like Isaac's drops; named items may repeat, user 2026-11-21). Decided 2026-11-09; implemented before 5c (user, 2026-11-15). **More events** in the demo content come with it (moved here from
+5c, user 2026-11-15), so the one-event-per-run rule rarely runs a chapter dry. **2026-11-21 (user):** the events are spec `specs/event-pass.md` (part 1 of 5d): 50 events (general, found, per chapter), event rooms cut from 40-50 to ~15 per run, class choices (FTL-style), choice tags for the bots, and event-only curse and boon items. Client only; the run hash gains `events_seen=`
 when not empty, so the committed run goldens may change and the balance gate is re-measured.
 
 ### 5e. `audio-pass`
