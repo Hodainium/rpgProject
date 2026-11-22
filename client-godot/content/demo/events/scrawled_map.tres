@@ -1,0 +1,103 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_vnvap"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_grsrl"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_3l1ci"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_4jriy"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="5_11vl6"]
+[ext_resource type="Resource" path="res://content/demo/characters/arcanist.tres" id="6_8v65x"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="7_n6tj4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/reveal_rooms.gd" id="8_c27j1"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_golden_key.gd" id="9_gg4rn"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="10_7nxwt"]
+
+[sub_resource type="Resource" id="Resource_ohv4v"]
+script = ExtResource("5_11vl6")
+page = 1
+
+[sub_resource type="Resource" id="Resource_34nqu"]
+script = ExtResource("2_grsrl")
+label = "Study it"
+outcomes = Array[ExtResource("4_4jriy")]([SubResource("Resource_ohv4v")])
+tags = Array[StringName]([&"Choice.Gain.Reveal"])
+
+[sub_resource type="Resource" id="Resource_7ncb7"]
+script = ExtResource("7_n6tj4")
+character = ExtResource("6_8v65x")
+
+[sub_resource type="Resource" id="Resource_er86o"]
+script = ExtResource("5_11vl6")
+page = 2
+
+[sub_resource type="Resource" id="Resource_phfrk"]
+script = ExtResource("2_grsrl")
+label = "Decipher the margins"
+conditions = Array[ExtResource("3_3l1ci")]([SubResource("Resource_7ncb7")])
+outcomes = Array[ExtResource("4_4jriy")]([SubResource("Resource_er86o")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Reveal", &"Choice.Gain.Keys"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_pbug2"]
+script = ExtResource("5_11vl6")
+page = 3
+
+[sub_resource type="Resource" id="Resource_vt5wx"]
+script = ExtResource("2_grsrl")
+label = "Leave"
+outcomes = Array[ExtResource("4_4jriy")]([SubResource("Resource_pbug2")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_obo1n"]
+script = ExtResource("1_vnvap")
+text = "A map scratched into the wall."
+choices = Array[ExtResource("2_grsrl")]([SubResource("Resource_34nqu"), SubResource("Resource_phfrk"), SubResource("Resource_vt5wx")])
+
+[sub_resource type="Resource" id="Resource_7fbwl"]
+script = ExtResource("2_grsrl")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_nns2y"]
+script = ExtResource("8_c27j1")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_ov0fv"]
+script = ExtResource("1_vnvap")
+text = "You trace the lines with a finger until the whole floor makes sense."
+choices = Array[ExtResource("2_grsrl")]([SubResource("Resource_7fbwl")])
+on_enter = Array[ExtResource("4_4jriy")]([SubResource("Resource_nns2y")])
+
+[sub_resource type="Resource" id="Resource_3p7yg"]
+script = ExtResource("2_grsrl")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_u8dv6"]
+script = ExtResource("8_c27j1")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_in2ht"]
+script = ExtResource("9_gg4rn")
+
+[sub_resource type="Resource" id="Resource_5a1yo"]
+script = ExtResource("1_vnvap")
+text = "The Arcanist reads the tiny runes in the margin: a map of the floor, and directions to a hidden golden key."
+choices = Array[ExtResource("2_grsrl")]([SubResource("Resource_3p7yg")])
+on_enter = Array[ExtResource("4_4jriy")]([SubResource("Resource_u8dv6"), SubResource("Resource_in2ht")])
+
+[sub_resource type="Resource" id="Resource_clfw2"]
+script = ExtResource("2_grsrl")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_06rqw"]
+script = ExtResource("1_vnvap")
+text = "You trust your own sense of direction."
+choices = Array[ExtResource("2_grsrl")]([SubResource("Resource_clfw2")])
+
+[resource]
+script = ExtResource("10_7nxwt")
+id = &"demo.event.scrawled_map"
+display_name = "Scrawled Map"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_vnvap")]([SubResource("Resource_obo1n"), SubResource("Resource_ov0fv"), SubResource("Resource_5a1yo"), SubResource("Resource_06rqw")])

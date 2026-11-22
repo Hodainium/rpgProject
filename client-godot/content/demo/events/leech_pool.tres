@@ -1,0 +1,114 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_ehs5n"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_1ekv2"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_ojwty"]
+[ext_resource type="Script" path="res://game/defs/conditions/member_at.gd" id="4_6er03"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_cl8tw"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="6_fbaww"]
+[ext_resource type="Resource" path="res://content/demo/characters/bulwark.tres" id="7_fuito"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_1nyyy"]
+[ext_resource type="Resource" path="res://content/demo/items/leech.tres" id="9_m255s"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="10_v6s72"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/heal_20.tres" id="11_xxiae"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="12_mq5ht"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="13_xbqjl"]
+
+[sub_resource type="Resource" id="Resource_dic16"]
+script = ExtResource("4_6er03")
+slot = 4
+
+[sub_resource type="Resource" id="Resource_v5wmt"]
+script = ExtResource("6_fbaww")
+page = 1
+
+[sub_resource type="Resource" id="Resource_wkd6j"]
+script = ExtResource("2_1ekv2")
+label = "{member:4} bathes"
+conditions = Array[ExtResource("3_ojwty")]([SubResource("Resource_dic16")])
+outcomes = Array[ExtResource("5_cl8tw")]([SubResource("Resource_v5wmt")])
+tags = Array[StringName]([&"Choice.Cost.Curse", &"Choice.Gain.Heal"])
+
+[sub_resource type="Resource" id="Resource_o0iux"]
+script = ExtResource("8_1nyyy")
+character = ExtResource("7_fuito")
+
+[sub_resource type="Resource" id="Resource_8nfxr"]
+script = ExtResource("6_fbaww")
+page = 2
+
+[sub_resource type="Resource" id="Resource_xbihw"]
+script = ExtResource("2_1ekv2")
+label = "Wade in armoured"
+conditions = Array[ExtResource("3_ojwty")]([SubResource("Resource_o0iux")])
+outcomes = Array[ExtResource("5_cl8tw")]([SubResource("Resource_8nfxr")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Heal"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_d8iam"]
+script = ExtResource("6_fbaww")
+page = 3
+
+[sub_resource type="Resource" id="Resource_xqrp7"]
+script = ExtResource("2_1ekv2")
+label = "Leave"
+outcomes = Array[ExtResource("5_cl8tw")]([SubResource("Resource_d8iam")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_xnj3b"]
+script = ExtResource("1_ehs5n")
+text = "A warm pool, thick with leeches. The water heals, they say."
+choices = Array[ExtResource("2_1ekv2")]([SubResource("Resource_wkd6j"), SubResource("Resource_xbihw"), SubResource("Resource_xqrp7")])
+
+[sub_resource type="Resource" id="Resource_nes6s"]
+script = ExtResource("2_1ekv2")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_aedix"]
+script = ExtResource("10_v6s72")
+item = ExtResource("9_m255s")
+recipient = 3
+slot = 4
+
+[sub_resource type="Resource" id="Resource_fdak8"]
+script = ExtResource("12_mq5ht")
+effect = ExtResource("11_xxiae")
+
+[sub_resource type="Resource" id="Resource_ve8t7"]
+script = ExtResource("1_ehs5n")
+text = "The water heals the party's wounds, but when {member:4} climbs out a fat leech stays behind, and it won't let go."
+choices = Array[ExtResource("2_1ekv2")]([SubResource("Resource_nes6s")])
+on_enter = Array[ExtResource("5_cl8tw")]([SubResource("Resource_aedix"), SubResource("Resource_fdak8")])
+
+[sub_resource type="Resource" id="Resource_aq8so"]
+script = ExtResource("2_1ekv2")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_0e7kt"]
+script = ExtResource("12_mq5ht")
+effect = ExtResource("11_xxiae")
+
+[sub_resource type="Resource" id="Resource_0pj3v"]
+script = ExtResource("1_ehs5n")
+text = "The Bulwark wades in plated to the neck. The leeches find nothing to bite, and the water does its work."
+choices = Array[ExtResource("2_1ekv2")]([SubResource("Resource_aq8so")])
+on_enter = Array[ExtResource("5_cl8tw")]([SubResource("Resource_0e7kt")])
+
+[sub_resource type="Resource" id="Resource_m4bnr"]
+script = ExtResource("2_1ekv2")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_dvfx6"]
+script = ExtResource("1_ehs5n")
+text = "You leave the leeches to their pool."
+choices = Array[ExtResource("2_1ekv2")]([SubResource("Resource_m4bnr")])
+
+[resource]
+script = ExtResource("13_xbqjl")
+id = &"demo.event.leech_pool"
+display_name = "Leech Pool"
+tags = Array[StringName]([&"Event.Hollow"])
+pages = Array[ExtResource("1_ehs5n")]([SubResource("Resource_xnj3b"), SubResource("Resource_ve8t7"), SubResource("Resource_0pj3v"), SubResource("Resource_dvfx6")])

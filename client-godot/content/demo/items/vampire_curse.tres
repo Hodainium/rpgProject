@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/events/blood_drain.tscn" id="1_xjxm3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/vampire_fang.tscn" id="2_llacb"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_hpcci"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/vampire_curse.tres" id="4_a0hh8"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="5_f6c88"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="6_1pleo"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="7_pcf4h"]
+
+[sub_resource type="Resource" id="Resource_bajo5"]
+script = ExtResource("5_f6c88")
+abilities = Array[PackedScene]([ExtResource("1_xjxm3"), ExtResource("2_llacb")])
+effects = Array[ExtResource("3_hpcci")]([ExtResource("4_a0hh8")])
+
+[resource]
+script = ExtResource("7_pcf4h")
+id = &"demo.item.vampire_curse"
+display_name = "Curse of the Vampire"
+description = "Learn Blood Drain; every hit you deal heals you. -15% max HP."
+tags = Array[StringName]([&"Item.Curse"])
+price = 0
+grants = SubResource("Resource_bajo5")

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_oj5wy"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_d2vxi"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_c348t"]
+
+[sub_resource type="Resource" id="Resource_4nuim"]
+script = ExtResource("2_d2vxi")
+attribute_name = "hp"
+operation = 4
+
+[resource]
+script = ExtResource("3_c348t")
+modifiers = Array[ExtResource("2_d2vxi")]([SubResource("Resource_4nuim")])

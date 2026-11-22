@@ -1,0 +1,139 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_e3c6j"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_wh3cm"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_24883"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="4_cc0wc"]
+[ext_resource type="Script" path="res://game/defs/conditions/holds_item_tag.gd" id="5_lw8jn"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="6_ucj4o"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="7_q1gny"]
+[ext_resource type="Resource" path="res://content/demo/characters/bard.tres" id="8_834te"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="9_v2h8h"]
+[ext_resource type="Script" path="res://game/defs/outcomes/remove_item.gd" id="10_wn147"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="11_7a8pc"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="12_sjqde"]
+
+[sub_resource type="Resource" id="Resource_to727"]
+script = ExtResource("4_cc0wc")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_u08lt"]
+script = ExtResource("5_lw8jn")
+query = SubResource("Resource_to727")
+slot = 1
+
+[sub_resource type="Resource" id="Resource_s0xuo"]
+script = ExtResource("7_q1gny")
+page = 1
+
+[sub_resource type="Resource" id="Resource_7tsq7"]
+script = ExtResource("2_wh3cm")
+label = "Sell {member:1}'s treasure"
+conditions = Array[ExtResource("3_24883")]([SubResource("Resource_u08lt")])
+outcomes = Array[ExtResource("6_ucj4o")]([SubResource("Resource_s0xuo")])
+tags = Array[StringName]([&"Choice.Cost.Item", &"Choice.Gain.Coins"])
+
+[sub_resource type="Resource" id="Resource_1xayq"]
+script = ExtResource("9_v2h8h")
+character = ExtResource("8_834te")
+
+[sub_resource type="Resource" id="Resource_i8wke"]
+script = ExtResource("4_cc0wc")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_p7s1w"]
+script = ExtResource("5_lw8jn")
+query = SubResource("Resource_i8wke")
+slot = 1
+
+[sub_resource type="Resource" id="Resource_gwcx1"]
+script = ExtResource("7_q1gny")
+page = 2
+
+[sub_resource type="Resource" id="Resource_ibdyx"]
+script = ExtResource("2_wh3cm")
+label = "Haggle"
+conditions = Array[ExtResource("3_24883")]([SubResource("Resource_1xayq"), SubResource("Resource_p7s1w")])
+outcomes = Array[ExtResource("6_ucj4o")]([SubResource("Resource_gwcx1")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Cost.Item", &"Choice.Gain.Coins"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_i3jfb"]
+script = ExtResource("7_q1gny")
+page = 3
+
+[sub_resource type="Resource" id="Resource_dvtmv"]
+script = ExtResource("2_wh3cm")
+label = "Leave"
+outcomes = Array[ExtResource("6_ucj4o")]([SubResource("Resource_i3jfb")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_6s18l"]
+script = ExtResource("1_e3c6j")
+text = "An appraiser peers through a loupe. \"I buy treasures. Fair prices.\""
+choices = Array[ExtResource("2_wh3cm")]([SubResource("Resource_7tsq7"), SubResource("Resource_ibdyx"), SubResource("Resource_dvtmv")])
+
+[sub_resource type="Resource" id="Resource_o6qel"]
+script = ExtResource("2_wh3cm")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_io8u3"]
+script = ExtResource("4_cc0wc")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_upv1i"]
+script = ExtResource("10_wn147")
+item_query = SubResource("Resource_io8u3")
+from = 1
+
+[sub_resource type="Resource" id="Resource_gganl"]
+script = ExtResource("11_7a8pc")
+amount = 40
+
+[sub_resource type="Resource" id="Resource_aqbrs"]
+script = ExtResource("1_e3c6j")
+text = "The appraiser turns {member:1}'s treasure over twice, sniffs, and counts out forty coins."
+choices = Array[ExtResource("2_wh3cm")]([SubResource("Resource_o6qel")])
+on_enter = Array[ExtResource("6_ucj4o")]([SubResource("Resource_upv1i"), SubResource("Resource_gganl")])
+
+[sub_resource type="Resource" id="Resource_o3ro5"]
+script = ExtResource("2_wh3cm")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_0gyaa"]
+script = ExtResource("4_cc0wc")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_i3b6t"]
+script = ExtResource("10_wn147")
+item_query = SubResource("Resource_0gyaa")
+from = 1
+
+[sub_resource type="Resource" id="Resource_83x21"]
+script = ExtResource("11_7a8pc")
+amount = 60
+
+[sub_resource type="Resource" id="Resource_1klal"]
+script = ExtResource("1_e3c6j")
+text = "The Bard talks the appraiser up, then up again, and walks away sixty coins richer."
+choices = Array[ExtResource("2_wh3cm")]([SubResource("Resource_o3ro5")])
+on_enter = Array[ExtResource("6_ucj4o")]([SubResource("Resource_i3b6t"), SubResource("Resource_83x21")])
+
+[sub_resource type="Resource" id="Resource_3luyo"]
+script = ExtResource("2_wh3cm")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_0dun4"]
+script = ExtResource("1_e3c6j")
+text = "\"My prices won't be this fair tomorrow,\" he calls after you."
+choices = Array[ExtResource("2_wh3cm")]([SubResource("Resource_3luyo")])
+
+[resource]
+script = ExtResource("12_sjqde")
+id = &"demo.event.appraiser"
+display_name = "Appraiser"
+tags = Array[StringName]([&"Event.Vault"])
+pages = Array[ExtResource("1_e3c6j")]([SubResource("Resource_6s18l"), SubResource("Resource_aqbrs"), SubResource("Resource_1klal"), SubResource("Resource_0dun4")])

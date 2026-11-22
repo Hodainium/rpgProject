@@ -9,6 +9,15 @@
 [ext_resource type="Resource" path="res://content/demo/effects/medic_heal.tres" id="7_f2uog"]
 [ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="8_6j4ql"]
 [ext_resource type="Script" path="res://game/defs/event_definition.gd" id="9_bixhk"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="10_endpg"]
+
+[sub_resource type="Resource" id="Resource_endgo1"]
+script = ExtResource("10_endpg")
+page = 1
+
+[sub_resource type="Resource" id="Resource_endgo2"]
+script = ExtResource("10_endpg")
+page = 2
 
 [sub_resource type="Resource" id="Resource_2ya58"]
 script = ExtResource("4_1j8qb")
@@ -26,21 +35,39 @@ include_dead = true
 [sub_resource type="Resource" id="Resource_le1ub"]
 script = ExtResource("2_hrr7d")
 label = "Pay 15 coins (full heal, the fallen get up)"
+tags = Array[StringName]([&"Choice.Cost.Coins", &"Choice.Gain.Heal"])
 conditions = Array[ExtResource("3_4qhgi")]([SubResource("Resource_2ya58")])
-outcomes = Array[ExtResource("5_tlik4")]([SubResource("Resource_7dqll"), SubResource("Resource_t3uye")])
+outcomes = Array[ExtResource("5_tlik4")]([SubResource("Resource_7dqll"), SubResource("Resource_t3uye"), SubResource("Resource_endgo1")])
 
 [sub_resource type="Resource" id="Resource_3ayj5"]
 script = ExtResource("2_hrr7d")
 label = "Decline"
+tags = Array[StringName]([&"Choice.Leave"])
+outcomes = Array[ExtResource("5_tlik4")]([SubResource("Resource_endgo2")])
 
 [sub_resource type="Resource" id="Resource_775vx"]
 script = ExtResource("1_q7cuh")
 text = "\"Fifteen coins and I'll patch up the lot of you, even the ones lying down.\""
 choices = Array[ExtResource("2_hrr7d")]([SubResource("Resource_le1ub"), SubResource("Resource_3ayj5")])
 
+[sub_resource type="Resource" id="Resource_endcont"]
+script = ExtResource("2_hrr7d")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_endpage1"]
+script = ExtResource("1_q7cuh")
+text = "The medic works fast: bandages, salves, and a sharp slap for anyone still lying down. Before long the whole party is on its feet again."
+choices = Array[ExtResource("2_hrr7d")]([SubResource("Resource_endcont")])
+
+[sub_resource type="Resource" id="Resource_endpage2"]
+script = ExtResource("1_q7cuh")
+text = "\"Your funeral,\" the medic says cheerfully, and goes looking for someone who bleeds more."
+choices = Array[ExtResource("2_hrr7d")]([SubResource("Resource_endcont")])
+
 [resource]
 script = ExtResource("9_bixhk")
 id = &"demo.event.wandering_medic"
 display_name = "Wandering Medic"
 tags = Array[StringName]([&"Event.Demo"])
-pages = Array[ExtResource("1_q7cuh")]([SubResource("Resource_775vx")])
+pages = Array[ExtResource("1_q7cuh")]([SubResource("Resource_775vx"), SubResource("Resource_endpage1"), SubResource("Resource_endpage2")])

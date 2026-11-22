@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_c6itt"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_ewa8r"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_1gggk"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_rhdmk"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="5_bc1h1"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="6_0hml2"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="7_o5tsj"]
+
+[sub_resource type="Resource" id="Resource_kvvu7"]
+script = ExtResource("5_bc1h1")
+page = 1
+
+[sub_resource type="Resource" id="Resource_khyl7"]
+script = ExtResource("2_ewa8r")
+label = "Pick them up"
+outcomes = Array[ExtResource("4_rhdmk")]([SubResource("Resource_kvvu7")])
+tags = Array[StringName]([&"Choice.Gain.Coins"])
+
+[sub_resource type="Resource" id="Resource_7ws0e"]
+script = ExtResource("5_bc1h1")
+page = 2
+
+[sub_resource type="Resource" id="Resource_2abig"]
+script = ExtResource("2_ewa8r")
+label = "Leave"
+outcomes = Array[ExtResource("4_rhdmk")]([SubResource("Resource_7ws0e")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_go7pl"]
+script = ExtResource("1_c6itt")
+text = "A torn purse, coins spilling out."
+choices = Array[ExtResource("2_ewa8r")]([SubResource("Resource_khyl7"), SubResource("Resource_2abig")])
+
+[sub_resource type="Resource" id="Resource_w3qtr"]
+script = ExtResource("2_ewa8r")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_05bvc"]
+script = ExtResource("6_0hml2")
+amount = 25
+
+[sub_resource type="Resource" id="Resource_m6jln"]
+script = ExtResource("1_c6itt")
+text = "You scoop up every coin, even the one that rolled under the door."
+choices = Array[ExtResource("2_ewa8r")]([SubResource("Resource_w3qtr")])
+on_enter = Array[ExtResource("4_rhdmk")]([SubResource("Resource_05bvc")])
+
+[sub_resource type="Resource" id="Resource_sbmeb"]
+script = ExtResource("2_ewa8r")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_d6cij"]
+script = ExtResource("1_c6itt")
+text = "Finders keepers, but not you."
+choices = Array[ExtResource("2_ewa8r")]([SubResource("Resource_sbmeb")])
+
+[resource]
+script = ExtResource("7_o5tsj")
+id = &"demo.event.coin_purse"
+display_name = "Coin Purse"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_c6itt")]([SubResource("Resource_go7pl"), SubResource("Resource_m6jln"), SubResource("Resource_d6cij")])

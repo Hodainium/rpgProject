@@ -1,0 +1,130 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_r0v24"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_g824b"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_0bl7o"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="4_wkpqb"]
+[ext_resource type="Script" path="res://game/defs/conditions/holds_item_tag.gd" id="5_ajjgh"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="6_m6yjs"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="7_vhdci"]
+[ext_resource type="Resource" path="res://content/demo/characters/pyromancer.tres" id="8_gkp0u"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="9_ec5nt"]
+[ext_resource type="Script" path="res://game/defs/outcomes/remove_item.gd" id="10_yvbuf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="11_mkdc1"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="12_wdjix"]
+
+[sub_resource type="Resource" id="Resource_6gyhu"]
+script = ExtResource("4_wkpqb")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_8px2v"]
+script = ExtResource("5_ajjgh")
+query = SubResource("Resource_6gyhu")
+
+[sub_resource type="Resource" id="Resource_ndsia"]
+script = ExtResource("7_vhdci")
+page = 1
+
+[sub_resource type="Resource" id="Resource_jr4kj"]
+script = ExtResource("2_g824b")
+label = "Throw in a treasure"
+conditions = Array[ExtResource("3_0bl7o")]([SubResource("Resource_8px2v")])
+outcomes = Array[ExtResource("6_m6yjs")]([SubResource("Resource_ndsia")])
+tags = Array[StringName]([&"Choice.Cost.Item", &"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_6h1hd"]
+script = ExtResource("9_ec5nt")
+character = ExtResource("8_gkp0u")
+
+[sub_resource type="Resource" id="Resource_4khel"]
+script = ExtResource("7_vhdci")
+page = 2
+
+[sub_resource type="Resource" id="Resource_4ggs5"]
+script = ExtResource("2_g824b")
+label = "Melt something out of the slag"
+conditions = Array[ExtResource("3_0bl7o")]([SubResource("Resource_6h1hd")])
+outcomes = Array[ExtResource("6_m6yjs")]([SubResource("Resource_4khel")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Item"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_f30up"]
+script = ExtResource("7_vhdci")
+page = 3
+
+[sub_resource type="Resource" id="Resource_slj6j"]
+script = ExtResource("2_g824b")
+label = "Leave"
+outcomes = Array[ExtResource("6_m6yjs")]([SubResource("Resource_f30up")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_khmwb"]
+script = ExtResource("1_r0v24")
+text = "A pit of cooling slag. Things thrown in come out... changed."
+choices = Array[ExtResource("2_g824b")]([SubResource("Resource_jr4kj"), SubResource("Resource_4ggs5"), SubResource("Resource_slj6j")])
+
+[sub_resource type="Resource" id="Resource_dwfo1"]
+script = ExtResource("2_g824b")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_rw3fm"]
+script = ExtResource("4_wkpqb")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_rtbr6"]
+script = ExtResource("10_yvbuf")
+item_query = SubResource("Resource_rw3fm")
+from = 2
+
+[sub_resource type="Resource" id="Resource_rhg3m"]
+script = ExtResource("4_wkpqb")
+require_all_tags = Array[StringName]([&"Pool.Chest"])
+
+[sub_resource type="Resource" id="Resource_ttlhr"]
+script = ExtResource("11_mkdc1")
+item_query = SubResource("Resource_rhg3m")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_55rox"]
+script = ExtResource("1_r0v24")
+text = "You toss a treasure into the slag. It sinks, bubbles, and something new rises from the glow."
+choices = Array[ExtResource("2_g824b")]([SubResource("Resource_dwfo1")])
+on_enter = Array[ExtResource("6_m6yjs")]([SubResource("Resource_rtbr6"), SubResource("Resource_ttlhr")])
+
+[sub_resource type="Resource" id="Resource_0j3ek"]
+script = ExtResource("2_g824b")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_fh081"]
+script = ExtResource("4_wkpqb")
+require_all_tags = Array[StringName]([&"Pool.Chest"])
+
+[sub_resource type="Resource" id="Resource_xy6qk"]
+script = ExtResource("11_mkdc1")
+item_query = SubResource("Resource_fh081")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_eau2d"]
+script = ExtResource("1_r0v24")
+text = "The Pyromancer heats the slag until it runs, and a forgotten treasure floats to the top."
+choices = Array[ExtResource("2_g824b")]([SubResource("Resource_0j3ek")])
+on_enter = Array[ExtResource("6_m6yjs")]([SubResource("Resource_xy6qk")])
+
+[sub_resource type="Resource" id="Resource_ojwfo"]
+script = ExtResource("2_g824b")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_f2jko"]
+script = ExtResource("1_r0v24")
+text = "The slag can keep its secrets."
+choices = Array[ExtResource("2_g824b")]([SubResource("Resource_ojwfo")])
+
+[resource]
+script = ExtResource("12_wdjix")
+id = &"demo.event.slag_pit"
+display_name = "Slag Pit"
+tags = Array[StringName]([&"Event.Forge"])
+pages = Array[ExtResource("1_r0v24")]([SubResource("Resource_khmwb"), SubResource("Resource_55rox"), SubResource("Resource_eau2d"), SubResource("Resource_f2jko")])

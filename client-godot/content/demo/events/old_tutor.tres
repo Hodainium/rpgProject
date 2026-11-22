@@ -8,6 +8,19 @@
 [ext_resource type="Script" path="res://game/defs/outcomes/gain_xp.gd" id="6_61pmj"]
 [ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="7_qjks2"]
 [ext_resource type="Script" path="res://game/defs/event_definition.gd" id="8_0asu6"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="9_endpg"]
+
+[sub_resource type="Resource" id="Resource_endgo1"]
+script = ExtResource("9_endpg")
+page = 1
+
+[sub_resource type="Resource" id="Resource_endgo2"]
+script = ExtResource("9_endpg")
+page = 2
+
+[sub_resource type="Resource" id="Resource_endgo3"]
+script = ExtResource("9_endpg")
+page = 3
 
 [sub_resource type="Resource" id="Resource_2671q"]
 script = ExtResource("5_hqtb4")
@@ -15,7 +28,8 @@ script = ExtResource("5_hqtb4")
 [sub_resource type="Resource" id="Resource_0m5on"]
 script = ExtResource("2_0vyne")
 label = "Take the lesson (everyone gains a level)"
-outcomes = Array[ExtResource("4_mca1i")]([SubResource("Resource_2671q")])
+tags = Array[StringName]([&"Choice.Gain.Level"])
+outcomes = Array[ExtResource("4_mca1i")]([SubResource("Resource_2671q"), SubResource("Resource_endgo1")])
 
 [sub_resource type="Resource" id="Resource_vbqw1"]
 script = ExtResource("6_61pmj")
@@ -28,20 +42,43 @@ amount = 10
 [sub_resource type="Resource" id="Resource_s3qdg"]
 script = ExtResource("2_0vyne")
 label = "Take the purse (40 XP each and 10 coins)"
-outcomes = Array[ExtResource("4_mca1i")]([SubResource("Resource_vbqw1"), SubResource("Resource_ik6s0")])
+tags = Array[StringName]([&"Choice.Gain.Xp", &"Choice.Gain.Coins"])
+outcomes = Array[ExtResource("4_mca1i")]([SubResource("Resource_vbqw1"), SubResource("Resource_ik6s0"), SubResource("Resource_endgo2")])
 
 [sub_resource type="Resource" id="Resource_bc5kt"]
 script = ExtResource("2_0vyne")
 label = "Leave"
+tags = Array[StringName]([&"Choice.Leave"])
+outcomes = Array[ExtResource("4_mca1i")]([SubResource("Resource_endgo3")])
 
 [sub_resource type="Resource" id="Resource_qhsg1"]
 script = ExtResource("1_nda24")
 text = "An old tutor offers a lesson, or a purse for listening."
 choices = Array[ExtResource("2_0vyne")]([SubResource("Resource_0m5on"), SubResource("Resource_s3qdg"), SubResource("Resource_bc5kt")])
 
+[sub_resource type="Resource" id="Resource_endcont"]
+script = ExtResource("2_0vyne")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_endpage1"]
+script = ExtResource("1_nda24")
+text = "The old tutor talks for an hour, chalk squeaking on the wall. Somehow it all makes sense, and everyone walks away sharper than they came."
+choices = Array[ExtResource("2_0vyne")]([SubResource("Resource_endcont")])
+
+[sub_resource type="Resource" id="Resource_endpage2"]
+script = ExtResource("1_nda24")
+text = "He presses a small purse into your hands and, while you count it, shares a few hard-won lessons anyway."
+choices = Array[ExtResource("2_0vyne")]([SubResource("Resource_endcont")])
+
+[sub_resource type="Resource" id="Resource_endpage3"]
+script = ExtResource("1_nda24")
+text = "He waves you off, already dozing over his notes."
+choices = Array[ExtResource("2_0vyne")]([SubResource("Resource_endcont")])
+
 [resource]
 script = ExtResource("8_0asu6")
 id = &"demo.event.old_tutor"
 display_name = "Old Tutor"
 tags = Array[StringName]([&"Event.Demo"])
-pages = Array[ExtResource("1_nda24")]([SubResource("Resource_qhsg1")])
+pages = Array[ExtResource("1_nda24")]([SubResource("Resource_qhsg1"), SubResource("Resource_endpage1"), SubResource("Resource_endpage2"), SubResource("Resource_endpage3")])

@@ -119,10 +119,11 @@ func _settle() -> void:
 
 
 func _copy_commands(folder: String) -> void:
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(DevConsole.USER_COMMANDS_DIR))
+	var target := DevConsole.user_commands_dir()
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(target))
 	for file in DirAccess.get_files_at(folder):
 		if file.ends_with(".gd"):
-			DirAccess.copy_absolute(folder.path_join(file), ProjectSettings.globalize_path(DevConsole.USER_COMMANDS_DIR.path_join(file)))
+			DirAccess.copy_absolute(folder.path_join(file), ProjectSettings.globalize_path(target.path_join(file)))
 
 
 static func _arg(args: PackedStringArray, name: String, fallback: String) -> String:

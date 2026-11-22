@@ -2,7 +2,8 @@
 ## report and `autorun`). Dev and tests only.
 ##
 ## Policy, all deterministic: battles use ScriptedController (or `battle`, which must fight the pending battle); events
-## take the first enabled choice; in a cleared room take every free pickup and buy what is affordable (for the first
+## (spec event-pass 2.8) take a class choice when one is enabled, else a random enabled choice (`events` "random") or the
+## best-scoring one ("smart"), drawn from the bots' own stream dev/event/...; in a cleared room take every free pickup and buy what is affordable (for the first
 ## member who can hold it); once per floor use the first field option; then enter the unvisited room with the lowest
 ## index next to a visited one; after the boss go to the next floor (a route choice drawn from the policy's own stream
 ## dev/route/<floor>). Stops when the run ends or after `max_steps`.
@@ -21,7 +22,8 @@ const RUN_CASES: Array[String] = ["chest_no_key", "chest_missing", "locked_no_ke
 const TREASURE_TAG: StringName = &"Room.Type.Treasure"
 
 
-static func play(run: RunController, max_steps: int = 400, battle: Callable = Callable(), chaos: Dictionary = {}) -> String:
+static func play(run: RunController, max_steps: int = 400, battle: Callable = Callable(), chaos: Dictionary = {},
+		events: String = EventScorer.POLICY_RANDOM) -> String:
 	var used_field_on := -1
 	for step in max_steps:
 		if run.state.status != RunState.ACTIVE or run.runner_error != "":
@@ -41,12 +43,13 @@ static func play(run: RunController, max_steps: int = 400, battle: Callable = Ca
 				return "stuck"
 			continue
 		if not run.state.event.is_empty():
+			# Spec event-pass 2.8: class choices first, then the smart scorer or a random enabled choice (the bots' stream).
 			var page := run.current_page()
-			var picked := -1
+			var enabled: Array = []
 			for index in page.choices.size():
 				if run.choice_enabled(index):
-					picked = index
-					break
+					enabled.append(index)
+			var picked := EventScorer.pick(run, enabled, events)
 			if picked == -1:
 				return "stuck"
 			run.choose(picked)

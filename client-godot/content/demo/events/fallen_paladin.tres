@@ -1,0 +1,130 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_rqiqf"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_bx2k1"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_dnb08"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_itekk"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_paladin.tres" id="5_lcjd4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="6_holim"]
+[ext_resource type="Script" path="res://game/defs/conditions/member_at.gd" id="7_ugw7a"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="8_l8gbq"]
+[ext_resource type="Resource" path="res://content/demo/characters/warrior.tres" id="9_eunei"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="10_p6rqa"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/hurt_40.tres" id="11_dagwk"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_member_effect.gd" id="12_htlps"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="13_i727b"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="14_cyb0e"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_paladin_warrior.tres" id="15_oj3bv"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="16_plcop"]
+
+[sub_resource type="Resource" id="Resource_nnbwi"]
+script = ExtResource("6_holim")
+encounter = ExtResource("5_lcjd4")
+
+[sub_resource type="Resource" id="Resource_jltnq"]
+script = ExtResource("2_bx2k1")
+label = "Fight!"
+outcomes = Array[ExtResource("4_itekk")]([SubResource("Resource_nnbwi")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.BossItem"])
+
+[sub_resource type="Resource" id="Resource_vivt0"]
+script = ExtResource("7_ugw7a")
+
+[sub_resource type="Resource" id="Resource_bljm7"]
+script = ExtResource("8_l8gbq")
+page = 1
+
+[sub_resource type="Resource" id="Resource_kmt2j"]
+script = ExtResource("2_bx2k1")
+label = "{member:1} kneels"
+conditions = Array[ExtResource("3_dnb08")]([SubResource("Resource_vivt0")])
+outcomes = Array[ExtResource("4_itekk")]([SubResource("Resource_bljm7")])
+tags = Array[StringName]([&"Choice.Cost.Hp", &"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_gjrnu"]
+script = ExtResource("10_p6rqa")
+character = ExtResource("9_eunei")
+
+[sub_resource type="Resource" id="Resource_7kwfq"]
+script = ExtResource("8_l8gbq")
+page = 2
+
+[sub_resource type="Resource" id="Resource_snv53"]
+script = ExtResource("2_bx2k1")
+label = "Fight shield to shield"
+conditions = Array[ExtResource("3_dnb08")]([SubResource("Resource_gjrnu")])
+outcomes = Array[ExtResource("4_itekk")]([SubResource("Resource_7kwfq")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Fight", &"Choice.Gain.BossItem"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_sehcb"]
+script = ExtResource("8_l8gbq")
+page = 3
+
+[sub_resource type="Resource" id="Resource_iwsnk"]
+script = ExtResource("2_bx2k1")
+label = "Leave"
+outcomes = Array[ExtResource("4_itekk")]([SubResource("Resource_sehcb")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_1eqbe"]
+script = ExtResource("1_rqiqf")
+text = "A paladin kneels in a ruined chapel, armour cracked, eyes burning. \"Kneel, or fall.\""
+choices = Array[ExtResource("2_bx2k1")]([SubResource("Resource_jltnq"), SubResource("Resource_kmt2j"), SubResource("Resource_snv53"), SubResource("Resource_iwsnk")])
+
+[sub_resource type="Resource" id="Resource_ahp1w"]
+script = ExtResource("2_bx2k1")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_cjmbi"]
+script = ExtResource("12_htlps")
+effect = ExtResource("11_dagwk")
+target = 1
+
+[sub_resource type="Resource" id="Resource_a437v"]
+script = ExtResource("13_i727b")
+require_all_tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+
+[sub_resource type="Resource" id="Resource_qd1uw"]
+script = ExtResource("14_cyb0e")
+item_query = SubResource("Resource_a437v")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_2r046"]
+script = ExtResource("1_rqiqf")
+text = "{member:1} kneels. The paladin's gauntlet comes down hard, then lifts, and leaves a gift in the kneeling hands."
+choices = Array[ExtResource("2_bx2k1")]([SubResource("Resource_ahp1w")])
+on_enter = Array[ExtResource("4_itekk")]([SubResource("Resource_cjmbi"), SubResource("Resource_qd1uw")])
+
+[sub_resource type="Resource" id="Resource_rixrq"]
+script = ExtResource("6_holim")
+encounter = ExtResource("15_oj3bv")
+
+[sub_resource type="Resource" id="Resource_6wve0"]
+script = ExtResource("2_bx2k1")
+label = "Fight!"
+outcomes = Array[ExtResource("4_itekk")]([SubResource("Resource_rixrq")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.BossItem"])
+
+[sub_resource type="Resource" id="Resource_1i1wk"]
+script = ExtResource("1_rqiqf")
+text = "The Warrior answers the challenge with a shield raised high. The party falls in behind, ready and quick!"
+choices = Array[ExtResource("2_bx2k1")]([SubResource("Resource_6wve0")])
+
+[sub_resource type="Resource" id="Resource_nsohm"]
+script = ExtResource("2_bx2k1")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_u6lrl"]
+script = ExtResource("1_rqiqf")
+text = "The paladin watches you go, still kneeling, still burning."
+choices = Array[ExtResource("2_bx2k1")]([SubResource("Resource_nsohm")])
+
+[resource]
+script = ExtResource("16_plcop")
+id = &"demo.event.fallen_paladin"
+display_name = "Fallen Paladin"
+tags = Array[StringName]([&"Event.Cathedral"])
+pages = Array[ExtResource("1_rqiqf")]([SubResource("Resource_1eqbe"), SubResource("Resource_2r046"), SubResource("Resource_1i1wk"), SubResource("Resource_u6lrl")])

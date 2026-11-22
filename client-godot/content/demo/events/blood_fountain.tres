@@ -1,0 +1,122 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_nxlb2"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_30i2h"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_iir5s"]
+[ext_resource type="Script" path="res://game/defs/conditions/member_at.gd" id="4_6tq46"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_wksw3"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="6_cnbim"]
+[ext_resource type="Resource" path="res://content/demo/characters/cleric.tres" id="7_d1e7j"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_r8gqo"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/hurt_30.tres" id="9_nsg5m"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_member_effect.gd" id="10_s203q"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="11_tenb3"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="12_1d0fl"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="13_weq5x"]
+
+[sub_resource type="Resource" id="Resource_gkei5"]
+script = ExtResource("4_6tq46")
+
+[sub_resource type="Resource" id="Resource_qr8dm"]
+script = ExtResource("6_cnbim")
+page = 1
+
+[sub_resource type="Resource" id="Resource_btwus"]
+script = ExtResource("2_30i2h")
+label = "{member:1} drinks"
+conditions = Array[ExtResource("3_iir5s")]([SubResource("Resource_gkei5")])
+outcomes = Array[ExtResource("5_wksw3")]([SubResource("Resource_qr8dm")])
+tags = Array[StringName]([&"Choice.Cost.Hp", &"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_6vwsd"]
+script = ExtResource("8_r8gqo")
+character = ExtResource("7_d1e7j")
+
+[sub_resource type="Resource" id="Resource_jg3ji"]
+script = ExtResource("6_cnbim")
+page = 2
+
+[sub_resource type="Resource" id="Resource_gfy6q"]
+script = ExtResource("2_30i2h")
+label = "Purify it"
+conditions = Array[ExtResource("3_iir5s")]([SubResource("Resource_6vwsd")])
+outcomes = Array[ExtResource("5_wksw3")]([SubResource("Resource_jg3ji")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Item"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_a033v"]
+script = ExtResource("6_cnbim")
+page = 3
+
+[sub_resource type="Resource" id="Resource_8c3gi"]
+script = ExtResource("2_30i2h")
+label = "Leave"
+outcomes = Array[ExtResource("5_wksw3")]([SubResource("Resource_a033v")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_mmaqr"]
+script = ExtResource("1_nxlb2")
+text = "A fountain runs red. Those who drink are said to find what they seek."
+choices = Array[ExtResource("2_30i2h")]([SubResource("Resource_btwus"), SubResource("Resource_gfy6q"), SubResource("Resource_8c3gi")])
+
+[sub_resource type="Resource" id="Resource_7bbyh"]
+script = ExtResource("2_30i2h")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_6devm"]
+script = ExtResource("10_s203q")
+effect = ExtResource("9_nsg5m")
+target = 1
+
+[sub_resource type="Resource" id="Resource_ejnuh"]
+script = ExtResource("11_tenb3")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_518n6"]
+script = ExtResource("12_1d0fl")
+item_query = SubResource("Resource_ejnuh")
+recipient = 3
+
+[sub_resource type="Resource" id="Resource_426vq"]
+script = ExtResource("1_nxlb2")
+text = "{member:1} drinks deep. The blood burns all the way down, and something heavy settles into their pack."
+choices = Array[ExtResource("2_30i2h")]([SubResource("Resource_7bbyh")])
+on_enter = Array[ExtResource("5_wksw3")]([SubResource("Resource_6devm"), SubResource("Resource_518n6")])
+
+[sub_resource type="Resource" id="Resource_no8hc"]
+script = ExtResource("2_30i2h")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_2i6py"]
+script = ExtResource("11_tenb3")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_e5fe1"]
+script = ExtResource("12_1d0fl")
+item_query = SubResource("Resource_2i6py")
+character = ExtResource("7_d1e7j")
+
+[sub_resource type="Resource" id="Resource_melga"]
+script = ExtResource("1_nxlb2")
+text = "The Cleric's prayer turns the blood to clear water. At the bottom of the basin lies an offering, free for the taking."
+choices = Array[ExtResource("2_30i2h")]([SubResource("Resource_no8hc")])
+on_enter = Array[ExtResource("5_wksw3")]([SubResource("Resource_e5fe1")])
+
+[sub_resource type="Resource" id="Resource_xx5i3"]
+script = ExtResource("2_30i2h")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_s42ar"]
+script = ExtResource("1_nxlb2")
+text = "The fountain gurgles behind you, disappointed."
+choices = Array[ExtResource("2_30i2h")]([SubResource("Resource_xx5i3")])
+
+[resource]
+script = ExtResource("13_weq5x")
+id = &"demo.event.blood_fountain"
+display_name = "Blood Fountain"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_nxlb2")]([SubResource("Resource_mmaqr"), SubResource("Resource_426vq"), SubResource("Resource_melga"), SubResource("Resource_s42ar")])

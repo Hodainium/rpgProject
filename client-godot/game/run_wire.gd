@@ -120,6 +120,11 @@ static func action(run: RunController, entry: Dictionary, conditions: Dictionary
 			return placements.has(int(offer["placement"])))
 		if not put_out.is_empty():
 			fields["offers"] = put_out
+	if type in ["choose", "give_to"] and entry.has("found"):
+		# Spec event-pass 2.1: what the choice (or the give_to that finished it) put on the event room's floor, as Other offers.
+		var found: Array = entry["found"].map(func(placement) -> int: return int(placement))
+		fields["offers"] = offers(state, int(entry["cell"])).filter(func(offer: Dictionary) -> bool:
+			return found.has(int(offer["placement"])))
 	if type == "battle" and entry.has("drops"):
 		# Spec boss-drops 3.2: what the battle put on the room's floor, as Drop / Reward offers (none: the field is left out).
 		var placements: Array = entry["drops"].map(func(placement) -> int: return int(placement))
@@ -146,6 +151,8 @@ static func offers(state: RunState, cell: int) -> Array:
 		var source := "Other"
 		if pickup.has("chest"):
 			source = "Chest"  # spec floor-chests 3.1
+		elif pickup.has("found"):
+			source = "Other"  # spec event-pass 2.1: an event's FLOOR gift
 		elif pickup.has("drop"):
 			source = "Drop" if int(pickup["drop"]) > 0 else "Reward"  # spec boss-drops 3.2
 		elif data["role"] == FloorMap.ROLE_BOSS:

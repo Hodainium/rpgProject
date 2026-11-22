@@ -1,0 +1,73 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_1firk"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_qe4ae"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_xf05c"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_0phi4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="5_si6q1"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="6_d5chu"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_equipment.gd" id="7_44g6b"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="8_3adq8"]
+
+[sub_resource type="Resource" id="Resource_clihx"]
+script = ExtResource("5_si6q1")
+page = 1
+
+[sub_resource type="Resource" id="Resource_1yk8p"]
+script = ExtResource("2_qe4ae")
+label = "Take it down"
+outcomes = Array[ExtResource("4_0phi4")]([SubResource("Resource_clihx")])
+tags = Array[StringName]([&"Choice.Gain.Armor"])
+
+[sub_resource type="Resource" id="Resource_htfef"]
+script = ExtResource("5_si6q1")
+page = 2
+
+[sub_resource type="Resource" id="Resource_tnx5d"]
+script = ExtResource("2_qe4ae")
+label = "Leave"
+outcomes = Array[ExtResource("4_0phi4")]([SubResource("Resource_htfef")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_qbina"]
+script = ExtResource("1_1firk")
+text = "A dusty stand still holds its armor."
+choices = Array[ExtResource("2_qe4ae")]([SubResource("Resource_1yk8p"), SubResource("Resource_tnx5d")])
+
+[sub_resource type="Resource" id="Resource_psmfs"]
+script = ExtResource("2_qe4ae")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_n2vwp"]
+script = ExtResource("6_d5chu")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_67mkp"]
+script = ExtResource("7_44g6b")
+query = SubResource("Resource_n2vwp")
+prefer_open_slot = true
+on_floor = true
+
+[sub_resource type="Resource" id="Resource_2r8uq"]
+script = ExtResource("1_1firk")
+text = "You lift the piece off its stand and blow away a cloud of dust. It's still sound."
+choices = Array[ExtResource("2_qe4ae")]([SubResource("Resource_psmfs")])
+on_enter = Array[ExtResource("4_0phi4")]([SubResource("Resource_67mkp")])
+
+[sub_resource type="Resource" id="Resource_jb748"]
+script = ExtResource("2_qe4ae")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_xxxm3"]
+script = ExtResource("1_1firk")
+text = "The armor stays on its stand, watching the door."
+choices = Array[ExtResource("2_qe4ae")]([SubResource("Resource_jb748")])
+
+[resource]
+script = ExtResource("8_3adq8")
+id = &"demo.event.armor_stand"
+display_name = "Armor Stand"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_1firk")]([SubResource("Resource_qbina"), SubResource("Resource_2r8uq"), SubResource("Resource_xxxm3")])

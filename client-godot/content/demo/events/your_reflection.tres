@@ -1,0 +1,101 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_fq2j5"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_5de7m"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_sipao"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_nlyhx"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="5_dw2sn"]
+[ext_resource type="Resource" path="res://content/demo/characters/shatterweaver.tres" id="6_msd6m"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="7_luaji"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_reflection.tres" id="8_g7mdu"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="9_oa60u"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_reflection_broken.tres" id="10_ywveh"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="11_dfg0w"]
+
+[sub_resource type="Resource" id="Resource_5ruhn"]
+script = ExtResource("5_dw2sn")
+page = 1
+
+[sub_resource type="Resource" id="Resource_71el1"]
+script = ExtResource("2_5de7m")
+label = "Face it"
+outcomes = Array[ExtResource("4_nlyhx")]([SubResource("Resource_5ruhn")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.BossItem"])
+
+[sub_resource type="Resource" id="Resource_rf4ui"]
+script = ExtResource("7_luaji")
+character = ExtResource("6_msd6m")
+
+[sub_resource type="Resource" id="Resource_rpklh"]
+script = ExtResource("5_dw2sn")
+page = 2
+
+[sub_resource type="Resource" id="Resource_qjn1g"]
+script = ExtResource("2_5de7m")
+label = "Break the mirror first"
+conditions = Array[ExtResource("3_sipao")]([SubResource("Resource_rf4ui")])
+outcomes = Array[ExtResource("4_nlyhx")]([SubResource("Resource_rpklh")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Fight", &"Choice.Gain.BossItem"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_7c03n"]
+script = ExtResource("5_dw2sn")
+page = 3
+
+[sub_resource type="Resource" id="Resource_peswp"]
+script = ExtResource("2_5de7m")
+label = "Leave"
+outcomes = Array[ExtResource("4_nlyhx")]([SubResource("Resource_7c03n")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_oytli"]
+script = ExtResource("1_fq2j5")
+text = "A mirror of black glass. Your party looks back, holding everything you hold."
+choices = Array[ExtResource("2_5de7m")]([SubResource("Resource_71el1"), SubResource("Resource_qjn1g"), SubResource("Resource_peswp")])
+
+[sub_resource type="Resource" id="Resource_2lw4r"]
+script = ExtResource("9_oa60u")
+encounter = ExtResource("8_g7mdu")
+
+[sub_resource type="Resource" id="Resource_3m8qs"]
+script = ExtResource("2_5de7m")
+label = "Fight!"
+outcomes = Array[ExtResource("4_nlyhx")]([SubResource("Resource_2lw4r")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.BossItem"])
+
+[sub_resource type="Resource" id="Resource_e2aof"]
+script = ExtResource("1_fq2j5")
+text = "The reflection smiles your smile and steps out of the glass!"
+choices = Array[ExtResource("2_5de7m")]([SubResource("Resource_3m8qs")])
+
+[sub_resource type="Resource" id="Resource_vl8r8"]
+script = ExtResource("9_oa60u")
+encounter = ExtResource("10_ywveh")
+
+[sub_resource type="Resource" id="Resource_bwaj4"]
+script = ExtResource("2_5de7m")
+label = "Fight!"
+outcomes = Array[ExtResource("4_nlyhx")]([SubResource("Resource_vl8r8")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.BossItem"])
+
+[sub_resource type="Resource" id="Resource_6g0bb"]
+script = ExtResource("1_fq2j5")
+text = "The Shatterweaver cracks the glass before it can wake. The reflection stumbles out, broken and slow!"
+choices = Array[ExtResource("2_5de7m")]([SubResource("Resource_bwaj4")])
+
+[sub_resource type="Resource" id="Resource_aoslj"]
+script = ExtResource("2_5de7m")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_4odrn"]
+script = ExtResource("1_fq2j5")
+text = "You turn away. In the glass, your reflection doesn't."
+choices = Array[ExtResource("2_5de7m")]([SubResource("Resource_aoslj")])
+
+[resource]
+script = ExtResource("11_dfg0w")
+id = &"demo.event.your_reflection"
+display_name = "Your Reflection"
+tags = Array[StringName]([&"Event.Void"])
+pages = Array[ExtResource("1_fq2j5")]([SubResource("Resource_oytli"), SubResource("Resource_e2aof"), SubResource("Resource_6g0bb"), SubResource("Resource_4odrn")])

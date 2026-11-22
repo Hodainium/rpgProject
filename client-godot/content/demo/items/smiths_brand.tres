@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/events/molten_strike.tscn" id="1_8bhff"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_ecyyd"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_p18id"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_im5nr"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_odart"]
+
+[sub_resource type="Resource" id="Resource_w01bq"]
+script = ExtResource("3_p18id")
+abilities = Array[PackedScene]([ExtResource("1_8bhff")])
+tags = Array[StringName]([&"Weakness.Ice"])
+
+[resource]
+script = ExtResource("5_odart")
+id = &"demo.item.smiths_brand"
+display_name = "Smith's Brand"
+description = "Learn Molten Strike. The brand never cools: weak to Ice."
+tags = Array[StringName]([&"Item.Boon"])
+price = 0
+grants = SubResource("Resource_w01bq")

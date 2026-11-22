@@ -11,6 +11,9 @@ extends Resource
 ## Spec playable-demo 3.7: granted to every enemy of the encounter (tags such as Drain.Ice, effects, abilities), after
 ## each enemy's variant. Run battles (v2 snapshots) only.
 @export var grants: AbilitySet
+## Spec event-pass 2.4: granted to every living party member at battle start, after their own loadout and items (an
+## ambush that starts the party Slowed). Run battles (v2 snapshots) only; rebuilt from content by encounter id.
+@export var party_grants: AbilitySet
 ## Spec playable-demo 3.7: applied in order after a won battle against this encounter (an item, armor, coins...).
 @export var rewards: Array[RunOutcome] = []
 

@@ -1,0 +1,119 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_0i57l"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_usc2o"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_ot8jx"]
+[ext_resource type="Script" path="res://game/defs/conditions/member_at.gd" id="4_he3vx"]
+[ext_resource type="Script" path="res://game/defs/conditions/keys_at_least.gd" id="5_q2pir"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="6_a7d5g"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_keys.gd" id="7_pho8b"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="8_4cbk7"]
+[ext_resource type="Resource" path="res://content/demo/characters/bulwark.tres" id="9_dpp7c"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="10_hb40b"]
+[ext_resource type="Resource" path="res://content/demo/items/void_mark.tres" id="11_w5v6r"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="12_3rj85"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="13_ud3do"]
+
+[sub_resource type="Resource" id="Resource_kh1u1"]
+script = ExtResource("4_he3vx")
+slot = 3
+
+[sub_resource type="Resource" id="Resource_mlmlu"]
+script = ExtResource("5_q2pir")
+amount = 2
+
+[sub_resource type="Resource" id="Resource_ka3f3"]
+script = ExtResource("7_pho8b")
+amount = 2
+
+[sub_resource type="Resource" id="Resource_2fcn5"]
+script = ExtResource("8_4cbk7")
+page = 1
+
+[sub_resource type="Resource" id="Resource_ubnri"]
+script = ExtResource("2_usc2o")
+label = "Accept"
+conditions = Array[ExtResource("3_ot8jx")]([SubResource("Resource_kh1u1"), SubResource("Resource_mlmlu")])
+outcomes = Array[ExtResource("6_a7d5g")]([SubResource("Resource_ka3f3"), SubResource("Resource_2fcn5")])
+tags = Array[StringName]([&"Choice.Cost.Keys", &"Choice.Cost.Curse"])
+
+[sub_resource type="Resource" id="Resource_dky7q"]
+script = ExtResource("10_hb40b")
+character = ExtResource("9_dpp7c")
+
+[sub_resource type="Resource" id="Resource_mwbh5"]
+script = ExtResource("8_4cbk7")
+page = 2
+
+[sub_resource type="Resource" id="Resource_yy5iv"]
+script = ExtResource("2_usc2o")
+label = "Take the mark yourself"
+conditions = Array[ExtResource("3_ot8jx")]([SubResource("Resource_dky7q")])
+outcomes = Array[ExtResource("6_a7d5g")]([SubResource("Resource_mwbh5")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Cost.Curse"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_ku8ot"]
+script = ExtResource("8_4cbk7")
+page = 3
+
+[sub_resource type="Resource" id="Resource_45jrg"]
+script = ExtResource("2_usc2o")
+label = "Leave"
+outcomes = Array[ExtResource("6_a7d5g")]([SubResource("Resource_ku8ot")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_shq63"]
+script = ExtResource("1_0i57l")
+text = "A voice with no mouth offers {member:3} a mark. \"Two keys, and a little of yourself.\""
+choices = Array[ExtResource("2_usc2o")]([SubResource("Resource_ubnri"), SubResource("Resource_yy5iv"), SubResource("Resource_45jrg")])
+
+[sub_resource type="Resource" id="Resource_lrqfp"]
+script = ExtResource("2_usc2o")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_p83ax"]
+script = ExtResource("12_3rj85")
+item = ExtResource("11_w5v6r")
+recipient = 3
+slot = 3
+
+[sub_resource type="Resource" id="Resource_b07cy"]
+script = ExtResource("1_0i57l")
+text = "The keys vanish. The mark settles on {member:3}'s skin, cold and quiet, and something is missing."
+choices = Array[ExtResource("2_usc2o")]([SubResource("Resource_lrqfp")])
+on_enter = Array[ExtResource("6_a7d5g")]([SubResource("Resource_p83ax")])
+
+[sub_resource type="Resource" id="Resource_wjb1d"]
+script = ExtResource("2_usc2o")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_v6xy8"]
+script = ExtResource("12_3rj85")
+item = ExtResource("11_w5v6r")
+character = ExtResource("9_dpp7c")
+
+[sub_resource type="Resource" id="Resource_shxkh"]
+script = ExtResource("1_0i57l")
+text = "The Bulwark takes the mark instead, and the voice is too surprised to ask for the keys."
+choices = Array[ExtResource("2_usc2o")]([SubResource("Resource_wjb1d")])
+on_enter = Array[ExtResource("6_a7d5g")]([SubResource("Resource_v6xy8")])
+
+[sub_resource type="Resource" id="Resource_eabfh"]
+script = ExtResource("2_usc2o")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_vuc5y"]
+script = ExtResource("1_0i57l")
+text = "\"Another time,\" says the voice, from everywhere."
+choices = Array[ExtResource("2_usc2o")]([SubResource("Resource_eabfh")])
+
+[resource]
+script = ExtResource("13_ud3do")
+id = &"demo.event.nameless_gift"
+display_name = "Nameless Gift"
+tags = Array[StringName]([&"Event.Void"])
+pages = Array[ExtResource("1_0i57l")]([SubResource("Resource_shq63"), SubResource("Resource_b07cy"), SubResource("Resource_shxkh"), SubResource("Resource_vuc5y")])

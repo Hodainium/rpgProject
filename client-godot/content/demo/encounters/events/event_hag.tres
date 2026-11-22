@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_57wmu"]
+[ext_resource type="Resource" path="res://content/demo/effects/weaken.tres" id="2_kvl02"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_skypr"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_hdev8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_15hu6"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="6_e4ncx"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="7_tkkjw"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="8_2qnjv"]
+[ext_resource type="Resource" path="res://content/demo/enemies/hag_sister.tres" id="9_5syej"]
+[ext_resource type="Resource" path="res://content/demo/enemies/coven_familiar.tres" id="10_lkigj"]
+
+[sub_resource type="Resource" id="Resource_wedvy"]
+script = ExtResource("3_skypr")
+effects = Array[ExtResource("1_57wmu")]([ExtResource("2_kvl02")])
+
+[sub_resource type="Resource" id="Resource_wwq6h"]
+script = ExtResource("5_15hu6")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_ac3xx"]
+script = ExtResource("6_e4ncx")
+item_query = SubResource("Resource_wwq6h")
+
+[sub_resource type="Resource" id="Resource_s6m7r"]
+script = ExtResource("8_2qnjv")
+enemy = ExtResource("9_5syej")
+level_bonus = 2
+
+[sub_resource type="Resource" id="Resource_i74qx"]
+script = ExtResource("8_2qnjv")
+enemy = ExtResource("10_lkigj")
+level_bonus = 1
+
+[sub_resource type="Resource" id="Resource_euiib"]
+script = ExtResource("8_2qnjv")
+enemy = ExtResource("10_lkigj")
+level_bonus = 1
+
+[resource]
+script = ExtResource("7_tkkjw")
+id = &"demo.encounter.event_hag"
+display_name = "Hag's Bargain"
+tags = Array[StringName]([&"Encounter.Event"])
+slots = Array[ExtResource("8_2qnjv")]([SubResource("Resource_s6m7r"), SubResource("Resource_i74qx"), SubResource("Resource_euiib")])
+party_grants = SubResource("Resource_wedvy")
+rewards = Array[ExtResource("4_hdev8")]([SubResource("Resource_ac3xx")])

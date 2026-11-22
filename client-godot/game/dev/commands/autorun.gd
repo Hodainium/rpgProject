@@ -42,7 +42,11 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 	var game_fights: bool = ctx.game != null and run.battle_requested.is_connected(ctx.game._on_battle_requested)
 	if game_fights:
 		run.battle_requested.disconnect(ctx.game._on_battle_requested)
-	var stop := await RunPlayer.play(run, int(options["max_steps"]), fight)
+	var events := EventScorer.POLICY_SMART if options["policy"] == "smart" else EventScorer.POLICY_RANDOM
+	var results := run.event_results
+	run.event_results = false  # review fix: no result dialog per event while the bot plays (and no receipt battles)
+	var stop := await RunPlayer.play(run, int(options["max_steps"]), fight, {}, events)
+	run.event_results = results
 	if game_fights and is_instance_valid(run):
 		run.battle_requested.connect(ctx.game._on_battle_requested)
 	var summary := run.run_summary()

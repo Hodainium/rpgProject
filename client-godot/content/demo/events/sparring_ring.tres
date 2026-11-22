@@ -1,0 +1,101 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_gcm7w"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_himll"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_rneig"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_0dwld"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="5_3qaqs"]
+[ext_resource type="Resource" path="res://content/demo/characters/warrior.tres" id="6_5oaxl"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="7_bbfrr"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_sparring.tres" id="8_4y6og"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="9_bj51h"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_xp.gd" id="10_6hra5"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="11_juorh"]
+
+[sub_resource type="Resource" id="Resource_fawah"]
+script = ExtResource("5_3qaqs")
+page = 1
+
+[sub_resource type="Resource" id="Resource_m3xth"]
+script = ExtResource("2_himll")
+label = "Spar"
+outcomes = Array[ExtResource("4_0dwld")]([SubResource("Resource_fawah")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Xp"])
+
+[sub_resource type="Resource" id="Resource_leteh"]
+script = ExtResource("7_bbfrr")
+character = ExtResource("6_5oaxl")
+
+[sub_resource type="Resource" id="Resource_nlo0d"]
+script = ExtResource("5_3qaqs")
+page = 2
+
+[sub_resource type="Resource" id="Resource_d6skk"]
+script = ExtResource("2_himll")
+label = "Teach them a lesson"
+conditions = Array[ExtResource("3_rneig")]([SubResource("Resource_leteh")])
+outcomes = Array[ExtResource("4_0dwld")]([SubResource("Resource_nlo0d")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Xp"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_bmi7b"]
+script = ExtResource("5_3qaqs")
+page = 3
+
+[sub_resource type="Resource" id="Resource_ow0qv"]
+script = ExtResource("2_himll")
+label = "Leave"
+outcomes = Array[ExtResource("4_0dwld")]([SubResource("Resource_bmi7b")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_65hmv"]
+script = ExtResource("1_gcm7w")
+text = "A chalk ring on the floor and a bored knight. \"One bout. Loser buys nothing, winner learns something.\""
+choices = Array[ExtResource("2_himll")]([SubResource("Resource_m3xth"), SubResource("Resource_d6skk"), SubResource("Resource_ow0qv")])
+
+[sub_resource type="Resource" id="Resource_5nwwc"]
+script = ExtResource("9_bj51h")
+encounter = ExtResource("8_4y6og")
+
+[sub_resource type="Resource" id="Resource_lr8jq"]
+script = ExtResource("2_himll")
+label = "Fight!"
+outcomes = Array[ExtResource("4_0dwld")]([SubResource("Resource_5nwwc")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Xp"])
+
+[sub_resource type="Resource" id="Resource_rqdqi"]
+script = ExtResource("1_gcm7w")
+text = "The knight grins, rolls his shoulders and raises his blade. \"First to fall loses.\""
+choices = Array[ExtResource("2_himll")]([SubResource("Resource_lr8jq")])
+
+[sub_resource type="Resource" id="Resource_ib3os"]
+script = ExtResource("2_himll")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_0dd2b"]
+script = ExtResource("10_6hra5")
+amount = 100
+
+[sub_resource type="Resource" id="Resource_wu05t"]
+script = ExtResource("1_gcm7w")
+text = "The Warrior steps into the ring and disarms the knight in three moves. He laughs, bows, and spends an hour showing everyone his best tricks."
+choices = Array[ExtResource("2_himll")]([SubResource("Resource_ib3os")])
+on_enter = Array[ExtResource("4_0dwld")]([SubResource("Resource_0dd2b")])
+
+[sub_resource type="Resource" id="Resource_voefu"]
+script = ExtResource("2_himll")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_n4rdu"]
+script = ExtResource("1_gcm7w")
+text = "\"Another time, then,\" the knight shrugs, and goes back to being bored."
+choices = Array[ExtResource("2_himll")]([SubResource("Resource_voefu")])
+
+[resource]
+script = ExtResource("11_juorh")
+id = &"demo.event.sparring_ring"
+display_name = "Sparring Ring"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_gcm7w")]([SubResource("Resource_65hmv"), SubResource("Resource_rqdqi"), SubResource("Resource_wu05t"), SubResource("Resource_n4rdu")])

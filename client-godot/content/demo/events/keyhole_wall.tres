@@ -1,0 +1,104 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_ck0ej"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_7o8p3"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_avj51"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_bel3o"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_keys.gd" id="5_q122s"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="6_5jtb2"]
+[ext_resource type="Resource" path="res://content/demo/characters/ranger.tres" id="7_y3nyt"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_vlaj3"]
+[ext_resource type="Resource" path="res://content/demo/chests/wooden_chest.tres" id="9_v17g5"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_chest.gd" id="10_uk0cu"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="11_bn46y"]
+
+[sub_resource type="Resource" id="Resource_0owrp"]
+script = ExtResource("5_q122s")
+
+[sub_resource type="Resource" id="Resource_wt2kb"]
+script = ExtResource("6_5jtb2")
+page = 1
+
+[sub_resource type="Resource" id="Resource_bh6eg"]
+script = ExtResource("2_7o8p3")
+label = "Use a key"
+outcomes = Array[ExtResource("4_bel3o")]([SubResource("Resource_0owrp"), SubResource("Resource_wt2kb")])
+tags = Array[StringName]([&"Choice.Cost.Keys", &"Choice.Gain.Chest"])
+
+[sub_resource type="Resource" id="Resource_6niy2"]
+script = ExtResource("8_vlaj3")
+character = ExtResource("7_y3nyt")
+
+[sub_resource type="Resource" id="Resource_jg1ra"]
+script = ExtResource("6_5jtb2")
+page = 2
+
+[sub_resource type="Resource" id="Resource_mmanb"]
+script = ExtResource("2_7o8p3")
+label = "Pick the lock"
+conditions = Array[ExtResource("3_avj51")]([SubResource("Resource_6niy2")])
+outcomes = Array[ExtResource("4_bel3o")]([SubResource("Resource_jg1ra")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Chest"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_jiyry"]
+script = ExtResource("6_5jtb2")
+page = 3
+
+[sub_resource type="Resource" id="Resource_csytf"]
+script = ExtResource("2_7o8p3")
+label = "Leave"
+outcomes = Array[ExtResource("4_bel3o")]([SubResource("Resource_jiyry")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_ecdfm"]
+script = ExtResource("1_ck0ej")
+text = "A wall with a single keyhole. Something behind it rattles."
+choices = Array[ExtResource("2_7o8p3")]([SubResource("Resource_bh6eg"), SubResource("Resource_mmanb"), SubResource("Resource_csytf")])
+
+[sub_resource type="Resource" id="Resource_bd2ri"]
+script = ExtResource("2_7o8p3")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_mx6l5"]
+script = ExtResource("10_uk0cu")
+chest = ExtResource("9_v17g5")
+
+[sub_resource type="Resource" id="Resource_f5cek"]
+script = ExtResource("1_ck0ej")
+text = "The key turns with a heavy clunk. A section of wall swings inward, and a chest slides out into the room."
+choices = Array[ExtResource("2_7o8p3")]([SubResource("Resource_bd2ri")])
+on_enter = Array[ExtResource("4_bel3o")]([SubResource("Resource_mx6l5")])
+
+[sub_resource type="Resource" id="Resource_ub7j6"]
+script = ExtResource("2_7o8p3")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_gwbqf"]
+script = ExtResource("10_uk0cu")
+chest = ExtResource("9_v17g5")
+
+[sub_resource type="Resource" id="Resource_8uouy"]
+script = ExtResource("1_ck0ej")
+text = "The Ranger works the lock with a bent pin and a patient ear. Click. A chest slides out of the wall."
+choices = Array[ExtResource("2_7o8p3")]([SubResource("Resource_ub7j6")])
+on_enter = Array[ExtResource("4_bel3o")]([SubResource("Resource_gwbqf")])
+
+[sub_resource type="Resource" id="Resource_saom1"]
+script = ExtResource("2_7o8p3")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_dr1rm"]
+script = ExtResource("1_ck0ej")
+text = "Whatever rattles behind the wall can keep rattling."
+choices = Array[ExtResource("2_7o8p3")]([SubResource("Resource_saom1")])
+
+[resource]
+script = ExtResource("11_bn46y")
+id = &"demo.event.keyhole_wall"
+display_name = "Keyhole Wall"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_ck0ej")]([SubResource("Resource_ecdfm"), SubResource("Resource_f5cek"), SubResource("Resource_8uouy"), SubResource("Resource_dr1rm")])

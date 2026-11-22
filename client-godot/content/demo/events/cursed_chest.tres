@@ -9,6 +9,7 @@
 [ext_resource type="Resource" path="res://content/demo/effects/curse_wound.tres" id="7_dswys"]
 [ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="8_j5tyf"]
 [ext_resource type="Script" path="res://game/defs/event_definition.gd" id="9_m6tgc"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="10_endpg"]
 
 [sub_resource type="Resource" id="Resource_bg305"]
 script = ExtResource("5_gh1n5")
@@ -23,23 +24,54 @@ recipient = 1
 script = ExtResource("8_j5tyf")
 effect = ExtResource("7_dswys")
 
+[sub_resource type="Resource" id="Resource_endgo1"]
+script = ExtResource("10_endpg")
+page = 1
+
+[sub_resource type="Resource" id="Resource_endgo2"]
+script = ExtResource("10_endpg")
+page = 2
+
 [sub_resource type="Resource" id="Resource_oeelf"]
 script = ExtResource("2_4lsqc")
 label = "Open it (an item; everyone loses 20% max HP)"
-outcomes = Array[ExtResource("4_j071w")]([SubResource("Resource_0sown"), SubResource("Resource_2srn8")])
+tags = Array[StringName]([&"Choice.Gain.Item", &"Choice.Cost.Hp"])
+outcomes = Array[ExtResource("4_j071w")]([SubResource("Resource_0sown"), SubResource("Resource_2srn8"), SubResource("Resource_endgo1")])
 
 [sub_resource type="Resource" id="Resource_kriy8"]
 script = ExtResource("2_4lsqc")
 label = "Leave it"
+tags = Array[StringName]([&"Choice.Leave"])
+outcomes = Array[ExtResource("4_j071w")]([SubResource("Resource_endgo2")])
 
 [sub_resource type="Resource" id="Resource_sooab"]
 script = ExtResource("1_w3txt")
 text = "A chest bound in black chains. Something inside is worth having; the chains want blood."
 choices = Array[ExtResource("2_4lsqc")]([SubResource("Resource_oeelf"), SubResource("Resource_kriy8")])
 
+[sub_resource type="Resource" id="Resource_endcont1"]
+script = ExtResource("2_4lsqc")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_endpage1"]
+script = ExtResource("1_w3txt")
+text = "The chains bite as they fall away, drawing blood from everyone close enough to touch them. The lid creaks open on something worth having."
+choices = Array[ExtResource("2_4lsqc")]([SubResource("Resource_endcont1")])
+
+[sub_resource type="Resource" id="Resource_endcont2"]
+script = ExtResource("2_4lsqc")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_endpage2"]
+script = ExtResource("1_w3txt")
+text = "You leave the chest to its chains. They rattle softly as you go, almost disappointed."
+choices = Array[ExtResource("2_4lsqc")]([SubResource("Resource_endcont2")])
+
 [resource]
 script = ExtResource("9_m6tgc")
 id = &"demo.event.cursed_chest"
 display_name = "Cursed chest"
 tags = Array[StringName]([&"Event.Demo"])
-pages = Array[ExtResource("1_w3txt")]([SubResource("Resource_sooab")])
+pages = Array[ExtResource("1_w3txt")]([SubResource("Resource_sooab"), SubResource("Resource_endpage1"), SubResource("Resource_endpage2")])

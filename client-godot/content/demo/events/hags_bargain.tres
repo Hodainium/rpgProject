@@ -1,0 +1,133 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_pbd17"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_pa6ns"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_muocq"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_hpaa1"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_hag.tres" id="5_mkjp8"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="6_r86no"]
+[ext_resource type="Script" path="res://game/defs/conditions/keys_at_least.gd" id="7_ibubb"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_keys.gd" id="8_pi80j"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="9_m40mn"]
+[ext_resource type="Resource" path="res://content/demo/characters/arcanist.tres" id="10_8efyx"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="11_ooqn8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="12_edevc"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="13_578hq"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="14_jcxn5"]
+
+[sub_resource type="Resource" id="Resource_c8van"]
+script = ExtResource("6_r86no")
+encounter = ExtResource("5_mkjp8")
+
+[sub_resource type="Resource" id="Resource_0ancr"]
+script = ExtResource("2_pa6ns")
+label = "Fight!"
+outcomes = Array[ExtResource("4_hpaa1")]([SubResource("Resource_c8van")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.BossItem"])
+
+[sub_resource type="Resource" id="Resource_opee4"]
+script = ExtResource("7_ibubb")
+amount = 2
+
+[sub_resource type="Resource" id="Resource_ijm87"]
+script = ExtResource("8_pi80j")
+amount = 2
+
+[sub_resource type="Resource" id="Resource_o8w20"]
+script = ExtResource("9_m40mn")
+page = 1
+
+[sub_resource type="Resource" id="Resource_4ffbe"]
+script = ExtResource("2_pa6ns")
+label = "Pay 2 keys"
+conditions = Array[ExtResource("3_muocq")]([SubResource("Resource_opee4")])
+outcomes = Array[ExtResource("4_hpaa1")]([SubResource("Resource_ijm87"), SubResource("Resource_o8w20")])
+tags = Array[StringName]([&"Choice.Cost.Keys", &"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_05yul"]
+script = ExtResource("11_ooqn8")
+character = ExtResource("10_8efyx")
+
+[sub_resource type="Resource" id="Resource_gfvrn"]
+script = ExtResource("9_m40mn")
+page = 2
+
+[sub_resource type="Resource" id="Resource_blsov"]
+script = ExtResource("2_pa6ns")
+label = "Out-hex the hag"
+conditions = Array[ExtResource("3_muocq")]([SubResource("Resource_05yul")])
+outcomes = Array[ExtResource("4_hpaa1")]([SubResource("Resource_gfvrn")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Item"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_pmleg"]
+script = ExtResource("9_m40mn")
+page = 3
+
+[sub_resource type="Resource" id="Resource_rvvkb"]
+script = ExtResource("2_pa6ns")
+label = "Leave"
+outcomes = Array[ExtResource("4_hpaa1")]([SubResource("Resource_pmleg")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_x52or"]
+script = ExtResource("1_pbd17")
+text = "A hag grins over a table of trinkets. \"Two keys and it's yours. Or take it from me.\""
+choices = Array[ExtResource("2_pa6ns")]([SubResource("Resource_0ancr"), SubResource("Resource_4ffbe"), SubResource("Resource_blsov"), SubResource("Resource_rvvkb")])
+
+[sub_resource type="Resource" id="Resource_mi8p2"]
+script = ExtResource("2_pa6ns")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_oce1k"]
+script = ExtResource("12_edevc")
+require_all_tags = Array[StringName]([&"Pool.Void"])
+
+[sub_resource type="Resource" id="Resource_i1ylb"]
+script = ExtResource("13_578hq")
+item_query = SubResource("Resource_oce1k")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_30v6x"]
+script = ExtResource("1_pbd17")
+text = "The hag snatches the keys and pushes a trinket across. It hums with the Void."
+choices = Array[ExtResource("2_pa6ns")]([SubResource("Resource_mi8p2")])
+on_enter = Array[ExtResource("4_hpaa1")]([SubResource("Resource_i1ylb")])
+
+[sub_resource type="Resource" id="Resource_1usjt"]
+script = ExtResource("2_pa6ns")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_y4vwk"]
+script = ExtResource("12_edevc")
+require_all_tags = Array[StringName]([&"Pool.Void"])
+
+[sub_resource type="Resource" id="Resource_bk060"]
+script = ExtResource("13_578hq")
+item_query = SubResource("Resource_y4vwk")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_3f2g5"]
+script = ExtResource("1_pbd17")
+text = "The Arcanist answers her hex with a better one. The hag pays up to make it stop."
+choices = Array[ExtResource("2_pa6ns")]([SubResource("Resource_1usjt")])
+on_enter = Array[ExtResource("4_hpaa1")]([SubResource("Resource_bk060")])
+
+[sub_resource type="Resource" id="Resource_xyr0f"]
+script = ExtResource("2_pa6ns")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_4cox7"]
+script = ExtResource("1_pbd17")
+text = "Her laughter follows you down the hall."
+choices = Array[ExtResource("2_pa6ns")]([SubResource("Resource_xyr0f")])
+
+[resource]
+script = ExtResource("14_jcxn5")
+id = &"demo.event.hags_bargain"
+display_name = "Hag's Bargain"
+tags = Array[StringName]([&"Event.Coven"])
+pages = Array[ExtResource("1_pbd17")]([SubResource("Resource_x52or"), SubResource("Resource_30v6x"), SubResource("Resource_3f2g5"), SubResource("Resource_4cox7")])

@@ -246,6 +246,37 @@ func test_a_flipped_state_hash_is_named_at_its_action() -> void:
 	await _expect(base["content"], step, "StateHashMismatch", int(target["seq"]), "a flipped hash")
 
 
+## Spec event-pass F7: a client that fakes an event outcome (another choice than it played, keeping the hashes it
+## claimed) is rejected with 2002 at that action.
+func test_a_faked_event_choice_is_rejected() -> void:
+	var base := await _tamper_base()
+	var faked: Dictionary = {}
+	var seq := -1
+	for step in base["steps"]:
+		if step["kind"] != "Segment":
+			continue
+		for action in step["actions"]:
+			if str(action.get("action", action).get("type", "")) == "choose":
+				faked = step.duplicate(true)
+				seq = int(action["seq"])
+				break
+		if not faked.is_empty():
+			break
+	check(not faked.is_empty(), "the committed two-floor run makes an event choice")
+	if faked.is_empty():
+		return
+	for action in faked["actions"]:
+		if int(action["seq"]) == seq:
+			var body: Dictionary = action.get("action", action)
+			body["choice"] = 1 - int(body["choice"]) if int(body["choice"]) <= 1 else 0
+	var verdict := await _verify(base["content"], faked)
+	eq(verdict.get("status"), "Rejected", "a faked choice is rejected")
+	eq(verdict.get("errorCode"), 2002, "with 2002")
+	check(verdict["mismatch"]["reason"] in ["StateHashMismatch", "ActionRefused"], "as a wrong hash or a refused choice: %s"
+		% verdict["mismatch"])
+	eq(int(verdict["mismatch"]["seq"]), seq, "at the faked action")
+
+
 func test_a_dropped_action_is_refused_or_hashes_wrong() -> void:
 	var base := await _tamper_base()
 	var step := _first_segment(base["steps"], 3)

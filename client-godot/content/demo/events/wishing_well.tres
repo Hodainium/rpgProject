@@ -1,0 +1,157 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_6gpnu"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_tglaf"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_gmlq5"]
+[ext_resource type="Script" path="res://game/defs/conditions/coins_at_least.gd" id="4_s6ic5"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_i3uwg"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_coins.gd" id="6_ilfkr"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_random_page.gd" id="7_hggxb"]
+[ext_resource type="Resource" path="res://content/demo/characters/cryomancer.tres" id="8_m2b8l"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="9_p7khr"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="10_417o0"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="11_lulpq"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="12_ah8qm"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="13_xp24i"]
+
+[sub_resource type="Resource" id="Resource_aj24m"]
+script = ExtResource("4_s6ic5")
+amount = 5
+
+[sub_resource type="Resource" id="Resource_aweog"]
+script = ExtResource("6_ilfkr")
+amount = 5
+
+[sub_resource type="Resource" id="Resource_62xhj"]
+script = ExtResource("7_hggxb")
+pages = Array[int]([1, 2])
+weights_x100 = Array[int]([100, 300])
+
+[sub_resource type="Resource" id="Resource_fljnq"]
+script = ExtResource("2_tglaf")
+label = "Throw in 5 coins"
+conditions = Array[ExtResource("3_gmlq5")]([SubResource("Resource_aj24m")])
+outcomes = Array[ExtResource("5_i3uwg")]([SubResource("Resource_aweog"), SubResource("Resource_62xhj")])
+tags = Array[StringName]([&"Choice.Cost.Coins", &"Choice.Gamble", &"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_18u74"]
+script = ExtResource("9_p7khr")
+character = ExtResource("8_m2b8l")
+
+[sub_resource type="Resource" id="Resource_x1op0"]
+script = ExtResource("10_417o0")
+page = 3
+
+[sub_resource type="Resource" id="Resource_3gpwp"]
+script = ExtResource("2_tglaf")
+label = "Freeze the water and climb down"
+conditions = Array[ExtResource("3_gmlq5")]([SubResource("Resource_18u74")])
+outcomes = Array[ExtResource("5_i3uwg")]([SubResource("Resource_x1op0")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Item"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_0hxx0"]
+script = ExtResource("10_417o0")
+page = 4
+
+[sub_resource type="Resource" id="Resource_k4mai"]
+script = ExtResource("2_tglaf")
+label = "Leave"
+outcomes = Array[ExtResource("5_i3uwg")]([SubResource("Resource_0hxx0")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_vb106"]
+script = ExtResource("1_6gpnu")
+text = "A mossy well. Coins glint far below the dark water."
+choices = Array[ExtResource("2_tglaf")]([SubResource("Resource_fljnq"), SubResource("Resource_3gpwp"), SubResource("Resource_k4mai")])
+
+[sub_resource type="Resource" id="Resource_ky8fb"]
+script = ExtResource("7_hggxb")
+pages = Array[int]([1, 2])
+weights_x100 = Array[int]([100, 300])
+
+[sub_resource type="Resource" id="Resource_yhiyi"]
+script = ExtResource("2_tglaf")
+label = "Throw in another 5 coins"
+conditions = Array[ExtResource("3_gmlq5")]([SubResource("Resource_aj24m")])
+outcomes = Array[ExtResource("5_i3uwg")]([SubResource("Resource_aweog"), SubResource("Resource_ky8fb")])
+tags = Array[StringName]([&"Choice.Cost.Coins", &"Choice.Gamble", &"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_oyf0f"]
+script = ExtResource("2_tglaf")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_uiq3x"]
+script = ExtResource("11_lulpq")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_37ont"]
+script = ExtResource("12_ah8qm")
+item_query = SubResource("Resource_uiq3x")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_hpep1"]
+script = ExtResource("1_6gpnu")
+text = "The water churns, and something rises to the brim and settles at your feet."
+choices = Array[ExtResource("2_tglaf")]([SubResource("Resource_yhiyi"), SubResource("Resource_oyf0f")])
+on_enter = Array[ExtResource("5_i3uwg")]([SubResource("Resource_37ont")])
+
+[sub_resource type="Resource" id="Resource_mlofd"]
+script = ExtResource("7_hggxb")
+pages = Array[int]([1, 2])
+weights_x100 = Array[int]([100, 300])
+
+[sub_resource type="Resource" id="Resource_8gc4n"]
+script = ExtResource("2_tglaf")
+label = "Throw in another 5 coins"
+conditions = Array[ExtResource("3_gmlq5")]([SubResource("Resource_aj24m")])
+outcomes = Array[ExtResource("5_i3uwg")]([SubResource("Resource_aweog"), SubResource("Resource_mlofd")])
+tags = Array[StringName]([&"Choice.Cost.Coins", &"Choice.Gamble", &"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_vnj68"]
+script = ExtResource("2_tglaf")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_owpwu"]
+script = ExtResource("1_6gpnu")
+text = "The coin sinks out of sight. The well keeps its secrets."
+choices = Array[ExtResource("2_tglaf")]([SubResource("Resource_8gc4n"), SubResource("Resource_vnj68")])
+
+[sub_resource type="Resource" id="Resource_kqlnm"]
+script = ExtResource("2_tglaf")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_m0xa4"]
+script = ExtResource("11_lulpq")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_23p7u"]
+script = ExtResource("12_ah8qm")
+item_query = SubResource("Resource_m0xa4")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_nobt5"]
+script = ExtResource("1_6gpnu")
+text = "The Cryomancer turns the well to ice. The party climbs down the frozen column and pries a wish-worn treasure from the bottom."
+choices = Array[ExtResource("2_tglaf")]([SubResource("Resource_kqlnm")])
+on_enter = Array[ExtResource("5_i3uwg")]([SubResource("Resource_23p7u")])
+
+[sub_resource type="Resource" id="Resource_winwq"]
+script = ExtResource("2_tglaf")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_5s23x"]
+script = ExtResource("1_6gpnu")
+text = "You keep your coins and your wishes to yourself."
+choices = Array[ExtResource("2_tglaf")]([SubResource("Resource_winwq")])
+
+[resource]
+script = ExtResource("13_xp24i")
+id = &"demo.event.wishing_well"
+display_name = "Wishing Well"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_6gpnu")]([SubResource("Resource_vb106"), SubResource("Resource_hpep1"), SubResource("Resource_owpwu"), SubResource("Resource_nobt5"), SubResource("Resource_5s23x")])
