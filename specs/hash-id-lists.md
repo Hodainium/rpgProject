@@ -140,6 +140,12 @@ report records it (`hashTiming`: mean and max microseconds per hash, and the flo
 the report, not in a flaky test. If it is ever needed, a per-cell cache of encoded cells (most actions change one cell) makes
 the hash cheaper than `run-v2`; not built now.
 
+**Measured on the build (2026-11-22, the real content, smart policy, 4 members, 6 seeds, one process):** mean 0.94-0.95 ms per
+action; the slowest single hash 1.9-3.3 ms between identical runs, which is machine noise (other processes, memory clean-up),
+not the code. **The budget is judged on the mean** (about 1 ms against 3 ms); `maxUsec` in the report is kept as a pointer to
+outliers, not as the gate. Tried and dropped: replacing the encoder's per-dictionary key check with a plain loop gave about 4% on
+the mean (35 µs) and nothing measurable on the max.
+
 ## 3. Data contracts
 
 N/A on the wire: no `Rpg.Contracts` record changes, no queue, topic or Redis key, the snapshot JSON unchanged. Run hashes
