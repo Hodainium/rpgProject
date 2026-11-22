@@ -1,6 +1,6 @@
 # Spec: hash-id-lists (a small slice after unique-events): run hash v3, the snapshot hashed
 
-Status: **spec written 2026-11-22; decisions taken with the user the same day (section 7); implemented 2026-11-22 with one
+Status: **spec written 2026-11-22; decisions taken with the user the same day (section 7); implemented and playtested 2026-11-22 (done; PR #86) with one
 amendment the user approved during `/implement` (H12: steps and resumes start from the verifier's own checkpoint state).** Found by the security review of `unique-events` (2026-11-22). Builds on `specs/run-verify.md` (steps,
 checkpoint snapshots bound by the run hash) and `specs/server-authority.md` (snapshots, `RunSnapshot`).
 
