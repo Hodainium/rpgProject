@@ -1,7 +1,8 @@
 # Spec: event-pass (slice 5d, part 1 of 2)
 
-Status: **draft 2026-11-21, awaiting the user's review.** Written together with the revision of `specs/unique-events.md`
-(part 2: once per run, the normal-room fallback). Both land in slice 5d, before 5c `card-balance`. Builds on
+Status: **built 2026-11-21 on `feat/event-pass`; playtested, extended and signed off by the user 2026-11-22 (spec synced
+to the build the same day).** Written together with the revision of `specs/unique-events.md` (part 2: once per run, the
+normal-room fallback; not built yet). Both land in slice 5d, before 5c `card-balance`. Builds on
 `specs/game-skeleton.md` (events, pages, choices), `specs/event-items.md` (gift recipients), `specs/playable-demo.md`
 (encounter grants and rewards, field effects), `specs/boss-drops.md` (rewards land on the floor) and `specs/food-items.md`
 (holder effects).
@@ -52,8 +53,15 @@ pickup in the event's cell, numbered from `DROP_PLACEMENT` and taken with the or
 can be left behind, in which case it counts in `dropsLeftBehind` and the map shows its leftover tile. Its source name
 (the pickup row, `Message.Run.ItemDropped`) is the event's display name. It is counted as seen when it lands, like every
 drop. The room view draws it on the free tiles like a drop. Outside a room (an item hook, the rest stop) FLOOR falls back
-to FIRST, and the validator flags it (`give_floor_outside_room`). A chest needs nothing new: `GiveChest` already lands a
-closed chest in the event's room (spec `floor-chests`), opened as any chest (a Gilded one takes a key).
+to FIRST, and the validator flags it (`give_floor_outside_room`). The pickup also carries `"found": <event id>` (its
+source name; `RunWire` uploads it as an `Other` offer, no contract change) and the placement is recorded on the action that
+put it out, a `choose` or the `give_to` that finished it (an ending page's outcomes run inside either). A FLOOR gift that
+also names a `character` lands on the floor, and the validator warns (`floor_ignores_character`). A chest needs nothing
+new: `GiveChest` already lands a closed chest in the event's room (spec `floor-chests`), opened as any chest (a Gilded one
+takes a key).
+**`GiveEquipment.only_slot`** (built 2026-11-22): with a query, only pieces for that equipment slot (`Equipment.Slot.Weapon`
+for the Weapon Rack; a piece's slot is a field, not a tag). An `on_floor` gift whose pool is empty puts the fallback item on
+the floor too.
 **SLOT fallback:** when that position is empty, dead, or cannot hold the item, the item goes to the **first** member who
 can (as FIRST), and the run warns in the dev log. An event whose text promises a member a gift should guard the choice
 with `MemberAt(slot)` (2.3), so the text stays true. `GiveEquipment` needs no recipient: armor goes to the armor inventory.
@@ -66,20 +74,22 @@ with `MemberAt(slot)` (2.3), so the text stays true. `GiveEquipment` needs no re
 | `RemoveItem` (extended) | + `item_query`, + `from` (ANY, SLOT, RANDOM), + `slot` | Today: one item by id from everyone. Added: one held item matching `item_query`, from the member `from` names (RANDOM: a seeded pick among the matching held items). Nothing matches: nothing happens. |
 | `GoToRandomPage` | `pages: Array[int]`, `weights: Array[float]` (×100 when stored) | Weighted pick of the next page. It is a gamble (*bet 15 coins*), and it can point back to the page it is on, so a choice can be taken again (*throw another coin*). |
 
-**Every seeded draw inside an event** (RANDOM recipients and targets, RANDOM removals, random pages) uses the stream
-`floor/<n>/event_roll/<cell>/<k>`. The counter `k` lives in `state.event["draws"]` (hashed and saved with the open event),
-not in a `RunController` field. This fixes a latent problem: today's `_recipient_draws` lives on the controller and
-restarts at 0 after a snapshot taken in the middle of an event, so a resumed or verified run could draw differently from
-the client. The existing `recipient/<cell>/<k>` stream stays for runs that never use the new outcomes, so the goldens hold
-(section 4, F9).
+**Every seeded draw of the new outcomes inside an event** (RANDOM targets, RANDOM removals, random pages) uses the stream
+`floor/<n>/event_roll/<cell>/<k>`; `k` lives in `state.event["draws"]` (hashed and saved with the open event, written only
+once a draw happens, so an event without one hashes as before). That matters because a page can loop back to itself: the
+old per-choice counter restarted at every choose and would draw the same result each time. (The draft's claim that a
+mid-event snapshot broke the old counter was wrong: it reset per choose, and a choose is one action.) RANDOM gifts keep
+their `recipient/<cell>/<k>` stream, so existing events draw as before (F9), with their counter carried in
+`state.event["recipient_draws"]` across the event's choices, its ending pages and `give_to`. Outside an event and a chest
+(an item hook after a take) a RANDOM gift draws on the floor's saved gift counter, so a resumed run picks the same member.
 
 ### 2.3 New conditions
 
 | Condition | Fields | True when |
 |---|---|---|
 | `MemberAt` | `slot`, `alive_only` (true), `hp_at_least` (percent, 0 = any) | that party position holds a (living) member with at least that HP share |
-| `FloorAtLeast` | `floor` (1-based, as the player counts) | the run is on that floor or deeper |
-| `HoldsItemTag` | `query` (tag query), `slot` (0 = anyone) | a member (or that member) holds an item matching `query` |
+| `FloorAtLeast` | `min_floor` (1-based, as the player counts; not `floor`, which would shadow the global `floor()`) | the run is on that floor or deeper |
+| `HoldsItemTag` | `query` (tag query), `slot` (0 = anyone) | a living member (or that member) holds an item matching `query` (`RemoveItem` by query also takes from the living only) |
 | `AnyOf` / `NotCondition` | `conditions` / `condition` | any of them holds / it does not hold |
 
 `HasCharacter`, `HasItem`, `CoinsAtLeast`, `KeysAtLeast` and `PartyHpAtLeast` are unchanged.
@@ -100,10 +110,9 @@ the client. The existing `recipient/<cell>/<k>` stream stays for runs that never
 
 ### 2.5 Fewer event rooms
 
-Event rooms are the `nook` room, one of four equally weighted `Room.Type.Normal` rooms (a 25% share). Its weight goes
-from **1 → 0.3** (a ~9% share), which predicts ~15 event rooms per run (~0.4 on floor 1, ~2.2 on floor 10). The number
-is checked with `seed_report` over 200 seeds after the change. The target band is an average of 10–20 per run, and the
-weight is re-tuned until it holds. Spec `unique-events` (part 2) handles the case where a chapter has no unseen event
+Event rooms are the `nook` room, one of four equally weighted `Room.Type.Normal` rooms (a 25% share). Its weight is
+**0.2** in `content/demo/rooms/nook.tres` (the source of truth): 0.3 measured 21.4 event rooms per run, 0.2 measured
+**14.9** (`seed_report`, 200 seeds; ~0.4 on floor 1 rising to ~2.5 on floor 9), inside the 10–20 band. Spec `unique-events` (part 2) handles the case where a chapter has no unseen event
 left: the room becomes a normal battle room.
 
 ### 2.6 Curses and boons: event-only items
@@ -122,9 +131,13 @@ The Collector (H9 mirror) copies held items' passives. Whether it copies curses 
 
 ### 2.7 Event text names the members
 
-Page text and choice labels may contain `{member:<n>}` (the display name of the character at party position n, or "an
-empty place" when there is none) and `{party}` (the party's names). They are resolved by a pure `EventText.format(text,
-state)` in `game/` that the event screen calls. Presentation only: never hashed, never logged.
+Page text and choice labels may contain `{member:<n>}` (the display name of the character at party position n, or
+`EventResultText.empty_place` when there is none) and `{party}` (the party's names). They are resolved by the pure
+`EventText.format(text, run)` / `EventText.page_text(page, run)` in `game/` that the event panel calls; a malformed token is
+left as typed (the validator warns). Presentation only: never hashed, never logged.
+**`EventPage.text_variants`** (user, 2026-11-22): other ways to tell a page. Each time it shows, one of `text` and its
+variants is picked by the run's seed, floor, event and page (never a run stream: stable for a run, different floor to floor),
+so a page seen every floor reads differently. The waystation's Rest, Train and Move on endings carry 4-5 each.
 
 ### 2.8 How the bots play events
 
@@ -154,6 +167,11 @@ The tags are read only by the bots and analytics. The run never reads them, and 
   - `Gamble` halves its gains;
   - `Heal` is worth more the lower the HP;
   - `Leave` scores 0.
+- **Who pays and how much** (user, 2026-11-22; `EventScorer.hp_risk`): for an HP cost or a gamble the bot reads the
+  choice's outcomes and every page it can lead to (each outcome of a gamble apart), resolves the targets as the game does
+  (a RANDOM target at its worst) and the effect's real size (a percent of max HP or a flat amount). A member who would not
+  survive refuses the choice; otherwise the HP cost follows the hardest-hit member, not the party's average. A deliberate
+  slay keeps the `Cost.Life` rule.
 - It takes the highest score. Ties are broken on the policy's own stream (below).
 - The weights are bot code, not game balance, and live as constants in `EventScorer`.
 
@@ -173,8 +191,8 @@ run itself is unchanged, since the pick is an ordinary logged `choose`.
     `Cost.Hp`, a heal without `Gain.Heal`;
   - an outcome-less choice that ends the event without `Leave`.
 
-  Outcomes behind a `GoToPage` / `GoToRandomPage` are counted for the choice that leads there (one level deep). So a
-  gamble's tags cover what its pages can give.
+  Outcomes behind a `GoToPage` / `GoToRandomPage` are counted for the choice that leads there (one level deep: the
+  target page's `on_enter` and its choices). So a gamble's tags cover what its pages can give.
 
 ### 2.9 Class choices (FTL's blue options)
 
@@ -191,6 +209,29 @@ skips the cost, skips the roll, or tilts the fight.
   Cleric receives the item or takes the hit.
 - **Validator:** `class_choice_without_character` (error: a `Choice.Class` choice with no `HasCharacter` among its
   conditions), `when_met_without_conditions` (warning: a `WHEN_MET` choice that can never be hidden).
+
+### 2.10 Event endings (user, 2026-11-22)
+
+Every choice ends on a page that tells what happened, like a book: no choice closes the event silently.
+- **`EventPage.on_enter`:** outcomes that run when a choice leads to the page (GoToPage or GoToRandomPage), inside the same
+  logged choose. They run once, also when a chosen gift made the event wait (`state.event["after"]["entered"]`, saved).
+  Not run for page 0; no page, random-page or fight directive in them.
+- **Fights:** a choice that describes an action ("Steal his keys") leads to a setup page ("...he raises his fists!") whose
+  **Fight!** choice starts the fight. A plain fight needs no second page: a first-page choice labelled exactly **Fight!**
+  starts it at once (Ambush, Fallen Paladin, Hag's Bargain; the page itself sets the scene).
+- **What changed is listed under the story** (`RunController.last_event_result`, shown by the event panel): HP first (one
+  "The party lost 25% HP" line when every living member changed alike), then deaths and revivals, levels, "Cleric got
+  Rations" (one line per item with its count), armor and floor finds, then coins, keys and reveals. The formats are
+  exports on `EventResultText` (GameMain's `event_result_text`, else the defaults). Presentation only; results are built
+  only when someone can see them (`RunController.event_results`, off headless and in replays).
+- **Fallback:** a choice that still ends without a page emits `event_resolved` and GameMain shows the list in a one-button
+  dialog. The validator makes that rare: `event_ending_missing` (a first-page choice without a page, or a later choice
+  that changes the run and ends), `fight_without_intro` (a first-page fight not labelled Fight!), `page_outcome_directive`
+  (error), `on_enter_first_page`.
+- **Keys toast:** `GainKeys` gives keys through `RunController.gain_keys`, which sends the key toast and sound (not inside
+  a chest, whose own toast lists them); items' pickup hooks too (user, 2026-11-22: keep).
+- Content: the builder writes every new event in this shape (`_story`: `_end`, `_fight`, `_gamble`); the 9 original events
+  (and the waystation) got their ending pages, and setup pages for Rob him and Challenge him, by hand.
 
 **Analytics bonus:** a logged `choose` already names the choice. Tags let the dashboard aggregate, for example, "risky
 choices taken" without knowing any event.
@@ -210,6 +251,8 @@ confirms the diff is this change. The balance gate is re-measured (5c re-tunes i
 - `EventText` (presentation helper);
 - `EventChoice.tags` and the `Choice.*` tags (2.8); `EventScorer` in `game/auto/`;
 - `EventChoice.show` (`ALWAYS` / `WHEN_MET`) and `EventChoice.badge` (2.9);
+- `EventPage.on_enter`, `EventPage.text_variants`, `RunController.last_event_result` / `event_resolved` / `event_results` /
+  `gain_keys`, `EventResultText`, `GiveEquipment.only_slot`, `EventScorer.hp_risk` (2.7, 2.8, 2.10);
 - tags: `Event.Cellar`, `Event.Crypt`, `Event.Forge`, `Event.Hollow`, `Event.Cathedral`, `Event.Vault`, `Event.Coven`,
   `Event.Void`, `Encounter.Event`, `Item.Boon` (through `sync_tags`; `godot_gas/` edits prompt);
 - validator codes: `member_slot_out_of_range` (a slot outside 1..the run's party size, error), `event_encounter_in_pool`
@@ -217,12 +260,17 @@ confirms the diff is this change. The balance gate is re-measured (5c re-tunes i
   with a `Pool.*` tag, warning), `random_page_invalid` (no pages, a page out of range or a weight ≤ 0, error),
   `party_grants_not_turn_based` (error), `event_text_token_unknown` (warning), `choice_tags_missing` and
   `choice_tag_mismatch` (warnings, 2.8), `give_floor_outside_room` (FLOOR / `on_floor` in an item hook or at the
-  rest stop, warning), `class_choice_without_character` (error) and `when_met_without_conditions` (warning) (2.9).
+  rest stop, a rest page's `on_enter` included, warning), `class_choice_without_character` (error) and
+  `when_met_without_conditions` (warning) (2.9), `event_ending_missing` / `fight_without_intro` / `on_enter_first_page`
+  (warnings) and `page_outcome_directive` (error) (2.10), `floor_ignores_character` (warning, 2.1), `event_encounter_boss`
+  (warning: an event encounter holding an `Enemy.Boss` unit would pay boss gems, D3);
+- `event_encounter_in_pool` checks a room's own query and a challenge wave's query too, not only the chapters'.
 
 ### 3.1 Content changes to existing design files (shown as old → new before editing)
 
 - The 8 chapters' `event_query`: `require_all_tags [Event.Demo]` → `require_any_tags [Event.Demo, Event.<Chapter>]`.
-- `rooms/nook.tres` weight 1 → 0.3 (2.5).
+- `rooms/nook.tres` weight 1 → 0.2 (2.5).
+- Ending pages on the 9 original events (2.10), the waystation's endings with `text_variants`.
 - `Choice.*` tags added to every choice of the 8 existing events (each event's tags listed before editing).
 - The new tags `Choice.Gain.*`, `Choice.Cost.*`, `Choice.Fight`, `Choice.Gamble`, `Choice.Leave` and `Choice.Class` in the
   registry (`sync_tags`).
@@ -244,7 +292,7 @@ carries the `Choice.*` tags its outcomes call for (2.8), read off the event tabl
 | Curse of the Vampire | `Item.Curse` | new ability **Blood Drain** (Physical damage, heals the user for part of it); −15% max HP while held | Vampire's Crypt |
 | Leech | `Item.Curse` | +12% ATK; −10% DEF | Leech Pool |
 | Smith's Brand | `Item.Boon` | new ability **Molten Strike** (Fire damage, breaks toughness well); takes +15% Ice damage | Smith's Brand |
-| Void Mark | `Item.Curse` | new ability **Unmake** (dispels a buff, then damages); −10% max SP | Nameless Gift |
+| Void Mark | `Item.Curse` | new ability **Unravel** (strips one enemy's buffs; `Unmake` was taken); −10% max SP | Nameless Gift |
 
 The new abilities reuse existing animations and carry the usual `Ability.Usage.*` / `Ability.Role.*` tags and SP costs
 (`build_cost_pass` rules).
@@ -264,7 +312,7 @@ Weakened; a `Pool.Boss` item), `event_reflection` (a new event-only enemy, a Hol
 | G1 | Gambler's Table | Bet 15 coins (`CoinsAtLeast` 15) → random page 50/50: +35 coins / lost · Leave |
 | G2 | Wishing Well | Throw 5 coins → random: 25% a Treasure item (CHOOSE) / 75% "nothing"; both pages offer another throw · Leave |
 | G3 | Blood Fountain | "{member:1} drinks" (`MemberAt` 1) → slot 1 hurt 30%, a Treasure item to SLOT 1 · Leave |
-| G4 | Weapon Rack | Take a weapon → a pooled weapon (GiveEquipment query), then random 50%: the rack falls on {member:2} (hurt 25%) / fine · Leave |
+| G4 | Weapon Rack | Take a weapon → a pooled weapon (GiveEquipment query, `only_slot` Weapon), then random 50%: the rack falls on {member:2} (hurt 25%) / fine · Leave |
 | G5 | Keyhole Wall | Spend a key (`KeysAtLeast` 1) → GiveChest Wooden · Pick the lock (`HasCharacter` Ranger) → the same, free · Leave |
 | G6 | Idol of the Last | Offer {member:4} (`MemberAt` 4) → slot 4 slain, the party gains 1 level · Leave |
 | G7 | Ambush! | Fight (the only choice) → `event_ambush`; win: 25 coins and a Treasure item |
@@ -344,7 +392,7 @@ cost tags. Every class appears at least twice.
 | C13 Confessional | Cleric | Absolve (`HoldsItemTag` Item.Curse too) → remove a curse, the party heals fully and gains 1 level |
 | C14 Choir Loft | Bard | Sing along → XP of two battles (already in the row) |
 | C15 Fallen Paladin | Warrior | Fight shield to shield → `event_paladin_warrior` (the same fight, the party starts Warded and Hasted) |
-| C16 Tax Collector | Arcanist | Forge the receipt → pay nothing |
+| C16 Tax Collector | Arcanist | Forge a receipt (and a refund) → +25 coins, nothing paid |
 | C17 Golden Idol | Ranger | Swap it for a sandbag → the `Pool.Boss` item, no trap roll |
 | C18 Appraiser | Bard | Haggle → +60 coins instead of 40 |
 | C19 Witch's Brew | Plaguewright | Drink it safely → the Plaguewright heals fully |
@@ -368,15 +416,16 @@ only for the final boss (D5).
 |---|---|---|---|
 | F0 | A FLOOR item from an event, taken or left | A free pickup in the event's room: taken with `take`, or left (`dropsLeftBehind`). Its offer travels with the logged action, and the replay matches | `test_floor_recipient_lands_in_room` |
 | F1 | SLOT names an empty, dead or full position | The gift goes to the first member who can hold it (warns), and an effect applies to nobody | `test_slot_recipient_falls_back` |
-| F2 | An event kills the last living member | The run ends Lost, as any wipe does | `test_event_wipe_loses_the_run` |
-| F3 | An event slays a member | The member is dead (revivable like any death), and their items stay held | `test_event_slay_marks_dead` |
+| F2, F3 | An event slays a member; one kills the last living member | The member is dead (revivable like any death); a wipe ends the run Lost | `test_event_slay_marks_dead_and_wipe_loses` |
 | F4 | A random page or recipient after a snapshot taken mid-event | Same draw: `state.event["draws"]` restores with the event | `test_event_draws_survive_restore` |
-| F5 | `party_grants` and replay | The verifier rebuilds them by encounter id, and the hash matches. An encounter id changed in the log gives ConditionsMismatch | `test_party_grants_replay`, `test_step_runner` |
+| F5 | `party_grants` and replay | The verifier rebuilds them by encounter id, and the replay verifies; the same log without the grant is rejected | `test_party_grants_apply_at_battle_start`, `test_party_grants_replay` |
 | F6 | RemoveItem matches nothing | Nothing happens. The choice should be guarded by `HoldsItemTag` | `test_remove_by_query` |
-| F7 | A client fakes an outcome (another member, another page) | The state hash differs: rejected 2002, rollback | `test_faked_event_outcome_rejected` (step tamper case) |
-| F8 | An event-only encounter or item leaks into a pool | Validator errors/warnings (`event_encounter_in_pool`, `event_item_pooled`) | `test_event_pass_validator` |
+| F7 | A client fakes an outcome (another choice) | The state hash differs: rejected 2002 at that action, rollback | `test_step_runner::test_a_faked_event_choice_is_rejected` |
+| F8 | An event-only encounter or item leaks into a pool | Validator errors/warnings (`event_encounter_in_pool`, `event_item_pooled`) | `test_validator_codes` |
 | F9 | Runs that use none of the new outcomes | Hash, streams and goldens unchanged (the old `recipient/` stream stays for the existing RANDOM gift) | the existing goldens |
-| F10 | An event boss win | No gems (not `Enemy.Boss`), and the item lands on the floor | `test_event_boss_pays_no_gems` (settlement facts) |
+| F10 | An event boss win | No gems (no `Enemy.Boss` unit in an event encounter; `event_encounter_boss` warns otherwise), and the item lands on the floor | `test_event_encounter_boss_is_flagged` |
+| F11 | Every choice ends on a page; a page's outcomes run once, also after a chosen gift and across a resume | 2.10 | `test_ending_page_runs_its_outcomes`, `test_ending_page_with_a_chosen_gift_runs_once`, `test_ending_page_random_gift_after_a_wait_survives_restore`, `test_ending_page_floor_gift_is_uploaded`, `test_ending_validator_codes` |
+| F12 | The smart bot meets a choice a member would not survive | Refused (a slot, a random target at its worst, the whole party, one outcome of a gamble) | `test_scorer_refuses_a_choice_that_would_kill`, `test_scorer_checks_each_outcome_of_a_gamble` |
 
 Replay mismatches follow the root error contract: a verdict with `errorCode` 2002, never an HTTP 422.
 
@@ -385,7 +434,8 @@ Replay mismatches follow the root error contract: a verdict with `errorCode` 200
 No Prometheus change. The play report (`seed_report --play`) gains `eventsEntered` per run, a per-event table (times
 entered, choice picked, members slain, run lost in or right after it) and `eventMemberDeaths`. `seed_report` (not
 playing) already counts events per floor and adds the run total, so the 10–20 band is visible. Console: `event <id>` opens
-an event in the current room (dev, local mode, logged cheat) so every event can be played headless.
+an event in the current room (dev, local mode, logged cheat) so every event can be played headless: only in an event room
+or a room with nothing in it, and a fight it starts in an already cleared room clears it without the room's loot rolls.
 
 ## 6. Test plan
 
@@ -419,7 +469,7 @@ Godot, on fixtures (an in-memory event world like `keys_world.gd`, with small ev
 
 ## 7. Decisions, open questions, what stays out
 
-**Proposed (for the user to confirm):**
+**Decided (confirmed by the user, 2026-11-21 / 22):**
 - D1. Recipients use party position (1–4) with a FIRST fallback. Guarded choices keep the text true.
 - D2. Curses and boons are unpooled items (2.6), never a direct AbilitySet grant.
 - D3. Event bosses are elites with `level_bonus`, not `Enemy.Boss` (no gems, no rotation effect). The alternative: real
@@ -434,10 +484,9 @@ Godot, on fixtures (an in-memory event world like `keys_world.gd`, with small ev
 - D8. Class choices (2.9): `WHEN_MET` and badged, one in each new general and chapter event and in the Scrawled Map (the
   other found events stay simple), every class at least twice, and all bots pick them first (user, 2026-11-21).
 
-**Open:** how a FLOOR item from an event is uploaded. The plan is the `choose` action carrying an `ItemOffer` with
-source `Other`, the same way boss-drops put `Drop` offers on the `battle` action. If analytics needs a separate `Event`
-source, that is a new `OfferSource` value, which is a contract change in `Rpg.Contracts`, so it would be raised before
-building.
+**Decided:** a FLOOR item from an event is uploaded as an `ItemOffer` with source `Other` on the `choose` (or `give_to`)
+that put it out, like boss-drops' `Drop` offers on the `battle` action; no contract change. Its untaken pickup counts in
+`dropsLeftBehind` like a drop (user, 2026-11-22: keep). Balance is measured, not tuned, in this slice (section 8).
 
 **Open:** can a member refuse a curse (an event that says "{member:1} is bitten" with no choice)? Proposed no: curses
 always come from a choice.
@@ -445,3 +494,35 @@ always come from a choice.
 **Stays out:** events that unlock across runs, statuses carried from the field into the next battle (would need the
 battle snapshot to carry them), choosing which member a random outcome hits (CHOOSE for effects), events offered in
 shops, and any server change.
+
+## 8. Balance findings (2026-11-22, measured, nothing tuned)
+
+The gold-standard report (`game/tools/play_sharded.sh 12 <out> --seeds game/dev/balance_seeds.json 600 --policy smart
+--party-size 4 --check`), on the same 600 seeds. The user chose not to rebalance in this slice (2026-11-22); 5c
+`card-balance` starts from these numbers.
+
+| Build | Win rate | Event rooms entered per run | Members killed by events |
+|---|---|---|---|
+| `main` before 5d (8 events, nook weight 1) | **31.2%** (187/600) | – | – |
+| this slice, the smart bot reading only tags | 13.0% (78/600) | 7.8 | 23 |
+| this slice, the smart bot reading who pays and how much (2.8) | **11.8%** (71/600) | 7.8 | 7 |
+| the same, nook weight back to 1 (in-memory `--set`, no file change) | **18.3%** (110/600) | 28.2 | 32 |
+
+What it says:
+- **Event frequency explains about a third of the drop** (18.3 - 11.8 = 6.5 points). The nook at 0.2 places ~15 event
+  rooms per full run (`seed_report`, 200 seeds), but most runs now die before the deep floors, so 7.8 are entered.
+- **The rest (about 13 points, at the old frequency too) comes from the event mix:**
+  1. healing is diluted: on `main` 3 of 8 events healed (Healing Spring, Shrine, Wandering Medic); now those 3 are among
+     50, and most new events cost HP or give items, so the party reaches the Forge worn down;
+  2. event fights: the Runaway Furnace (the party starts Burning) killed 14 parties at the old frequency;
+  3. the bots score choices instead of taking the first one (on `main` usually the heal or the free item).
+- **Event deaths are not the cause:** the bot reading who pays cut them by about 70% (23 to 7; the rest are deliberate
+  sacrifices for boss items) and the win rate stayed within the report's noise (about +-1.4 points).
+- **Where runs die now:** the Forge (Hound Pack 68, Foundry 37, Forgemaster 25, Iron Anvil 23 of 600), then the
+  Collector (109) and the Nameless (87).
+- **Turn caps:** 3 to 4 battles per 600 runs hit the 500-turn cap, all ordinary late fights where one member is left
+  holding every item against enemies with no overtime (they are absent on `main`). A balance item for 5c (overtime on
+  regular enemies, or how the bots hand out items), not an event rule.
+
+Levers for 5c: more healing among the events (or a healing room on every floor), the Furnace's opening Burn, the nook's
+weight, and the lone-survivor stalemates.
