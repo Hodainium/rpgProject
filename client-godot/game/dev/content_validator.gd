@@ -670,6 +670,44 @@ func _check_encounter(encounter: EncounterDefinition) -> void:
 			_check_pattern_steps(pattern, scenes, where + ".brain", slot.enemy.id)
 	if encounter.grants != null:
 		_check_ability_set(encounter.grants, path + "::grants")
+	if encounter.party_grants != null:
+		# Spec event-pass 2.4: on the party at battle start; real-time durations never run in a turn-based battle.
+		_check_ability_set(encounter.party_grants, path + "::party_grants")
+		for index in encounter.party_grants.effects.size():
+			var granted: GameplayEffect = encounter.party_grants.effects[index]
+			var realtime: bool = granted != null and (granted.policy == GameplayEffect.DurationPolicy.DURATION
+				or (granted.period > 0.0 and granted.policy != GameplayEffect.DurationPolicy.TURN_BASED))
+			if realtime:
+				_error("party_grants_not_turn_based", "%s::party_grants.effects[%d]" % [path, index],
+					"%s's party_grants effect %d uses a real-time duration or period; use TURN_BASED" % [encounter.id, index])
+	if encounter.tags.has(EVENT_ENCOUNTER_TAG):
+		# Spec event-pass 2.4 (D3, F10): an event boss is an elite with a level bonus, never an Enemy.Boss unit, so a win
+		# pays no boss gems (settlement pays only Enemy.Boss in the battle's facts) and boss rotation is untouched.
+		for index in encounter.slots.size():
+			var slot: EncounterSlot = encounter.slots[index]
+			if slot != null and slot.enemy != null and slot.enemy.tags.has(&"Enemy.Boss"):
+				_warning("event_encounter_boss", "%s::slots[%d]" % [path, index],
+					"%s is an event encounter but %s is an Enemy.Boss unit (a win would pay that boss's gems)" % [encounter.id, slot.enemy.id])
+	if encounter.tags.has(EVENT_ENCOUNTER_TAG) and content != null:
+		# Spec event-pass 2.4: an event-only encounter is started by its event, never picked by a query: a chapter's
+		# encounter and boss queries, an ENCOUNTER_QUERY room's own query, or a challenge wave's query.
+		var pickers: Array = []
+		for chapter_id in content.chapters:
+			var chapter: ChapterDefinition = content.chapters[chapter_id]
+			pickers.append(["chapter " + String(chapter_id), chapter.encounter_query])
+			pickers.append(["chapter " + String(chapter_id), chapter.boss_encounter_query])
+		for room_id in content.rooms:
+			var room: RoomDefinition = content.rooms[room_id]
+			if room.content_mode == RoomDefinition.ContentMode.ENCOUNTER_QUERY:
+				pickers.append(["room " + String(room_id), room.content_query])
+			for wave in room.waves:
+				if wave != null and wave.encounter == null:
+					pickers.append(["room %s's waves" % room_id, wave.content_query])
+		for picker in pickers:
+			if picker[1] != null and TagMatch.matches(picker[1], encounter.tags):
+				_error("event_encounter_in_pool", path,
+					"%s is an event encounter (%s) but %s's query picks it" % [encounter.id, EVENT_ENCOUNTER_TAG, picker[0]])
+				break
 	for index in encounter.rewards.size():
 		var reward_outcome: RunOutcome = encounter.rewards[index]
 		if reward_outcome is GiveItem and (reward_outcome.recipient != GiveItem.Recipient.FIRST or reward_outcome.character != null):
@@ -679,6 +717,10 @@ func _check_encounter(encounter: EncounterDefinition) -> void:
 		# A CHOOSE reward is no error (it lands on the floor, reward_recipient_ignored above).
 		_check_outcome(encounter.rewards[index], "%s::rewards[%d]" % [path, index], null, true)
 	_check_weight(encounter, path)
+
+
+const EVENT_ENCOUNTER_TAG: StringName = &"Encounter.Event"
+const EVENT_ITEM_TAGS: Array[StringName] = [&"Item.Curse", &"Item.Boon"]
 
 
 func _check_loadout_ref(loadout: Loadout, owner_id: StringName, number: String, where: String) -> void:
@@ -953,6 +995,10 @@ func _check_item(item: ItemDefinition) -> void:
 	var path := item.resource_path
 	if item.description == "" and not TagMatch.has(item.tags, FloorGenerator.DEV_TAG):
 		_warning("no_description", path + "::description", "%s has no description" % item.id)
+	if item.tags.any(func(tag: StringName) -> bool: return EVENT_ITEM_TAGS.has(tag)) \
+			and item.tags.any(func(tag: StringName) -> bool: return String(tag).begins_with("Pool.")):
+		# Spec event-pass 2.6: a curse or boon only an event gives; a pool tag would offer it (and make it a card).
+		_warning("event_item_pooled", path + "::tags", "%s is a curse or boon but has a Pool.* tag" % item.id)
 	if item.kind == ItemDefinition.Kind.USABLE:
 		if item.use_ability == null:
 			_error("bad_item", path + "::use_ability", "%s is USABLE but has no use_ability" % item.id)
@@ -1013,7 +1059,167 @@ func _check_event(event: EventDefinition) -> void:
 			for index in choice.outcomes.size():
 				_check_outcome(choice.outcomes[index], "%s.choices[%d].outcomes[%d]" % [where, choice_index, index], event,
 					true)
+			_check_choice(event, choice, "%s.choices[%d]" % [where, choice_index])
+			_check_conditions(choice.conditions, "%s.choices[%d]" % [where, choice_index])
+			_check_ending(choice, page_index, "%s.choices[%d]" % [where, choice_index])
+		for index in page.on_enter.size():
+			var entered: RunOutcome = page.on_enter[index]
+			var at := "%s.on_enter[%d]" % [where, index]
+			_check_outcome(entered, at, event, true)
+			if entered is GoToPage or entered is GoToRandomPage or entered is StartEncounter:
+				_error("page_outcome_directive", at, "%s's page %d: on_enter cannot go to a page or start a fight (the choice that leads here decides that)" % [event.id, page_index])
+		if page_index == 0 and not page.on_enter.is_empty():
+			_warning("on_enter_first_page", where, "%s: page 0's on_enter never runs (an event opens on page 0 without a choice)" % event.id)
+		for text in [page.text] + Array(page.text_variants):
+			for token in EventText.unknown_tokens(text):
+				_warning("event_text_token_unknown", where, "%s's page %d has the unknown token %s" % [event.id, page_index, token])
 	_check_weight(event, path)
+
+
+## Spec event-pass 2.8 and 2.9: a choice's Choice.* tags against its outcomes (and those of the pages it leads to, one
+## level deep), class choices, WHEN_MET, and its label's tokens.
+func _check_choice(event: EventDefinition, choice: EventChoice, where: String) -> void:
+	for token in EventText.unknown_tokens(choice.label):
+		_warning("event_text_token_unknown", where, "the choice '%s' has the unknown token %s" % [choice.label, token])
+	if choice.tags.has(EventScorer.CLASS_TAG) and EventText.characters_named(choice.conditions).is_empty():
+		_error("class_choice_without_character", where,
+			"'%s' is a class choice (Choice.Class) but none of its conditions is a HasCharacter" % choice.label)
+	if choice.show == EventChoice.Show.WHEN_MET and choice.conditions.filter(func(c) -> bool: return c != null).is_empty():
+		_warning("when_met_without_conditions", where, "'%s' is WHEN_MET but has no conditions, so it is never hidden" % choice.label)
+	if choice.outcomes.is_empty():
+		if not choice.tags.has(EventScorer.LEAVE_TAG):
+			_warning("choice_tag_mismatch" if not choice.tags.is_empty() else "choice_tags_missing", where,
+				"'%s' ends the event with no outcome but has no Choice.Leave tag" % choice.label)
+		return
+	if choice.tags.is_empty():
+		_warning("choice_tags_missing", where, "'%s' has outcomes but no Choice.* tags (the bots read them)" % choice.label)
+		return
+	var outcomes: Array = choice.outcomes.duplicate()
+	for outcome in choice.outcomes:
+		var pages: Array = []
+		if outcome is GoToPage:
+			pages = [outcome.page]
+		elif outcome is GoToRandomPage:
+			pages = outcome.pages
+		for page_index in pages:
+			if page_index >= 0 and page_index < event.pages.size() and event.pages[page_index] != null:
+				outcomes.append_array(event.pages[page_index].on_enter)  # event endings: what the page itself does
+				for next in event.pages[page_index].choices:
+					if next != null and next != choice:
+						outcomes.append_array(next.outcomes)
+	var missing := PackedStringArray()
+	for outcome in outcomes:
+		for tag in choice_tags_for(outcome):
+			if not choice.tags.has(tag) and not missing.has(String(tag)):
+				missing.append(String(tag))
+	if not missing.is_empty():
+		_warning("choice_tag_mismatch", where, "'%s' lacks %s for what its outcomes do" % [choice.label, ", ".join(missing)])
+
+
+## A first-page choice labelled exactly this starts its fight with no page of its own (the page sets the scene).
+const FIGHT_LABEL: String = "Fight!"
+
+
+## Event endings (user, 2026-11-22): every choice ends with a page that tells what happened. A first-page choice must
+## lead to a page (a fight first to a page that sets it up); a later page's choice that still changes something must too
+## (or start the fight its page set up).
+func _check_ending(choice: EventChoice, page_index: int, where: String) -> void:
+	var leads := choice.outcomes.any(func(outcome) -> bool: return outcome is GoToPage or outcome is GoToRandomPage)
+	if leads:
+		return
+	var fights := choice.outcomes.any(func(outcome) -> bool: return outcome is StartEncounter)
+	if page_index == 0 and fights and choice.label == FIGHT_LABEL:
+		return  # user, 2026-11-22: a plain "Fight!" on the first page; the page itself sets the fight up
+	if page_index == 0:
+		_warning("fight_without_intro" if fights else "event_ending_missing", where,
+			"'%s' %s" % [choice.label, "starts a fight with no page setting it up" if fights
+				else "ends the event without a page telling what happened"])
+		return
+	var changes := choice.outcomes.any(func(outcome) -> bool: return outcome != null and not outcome is StartEncounter)
+	if changes:
+		_warning("event_ending_missing", where, "'%s' changes the run and ends the event without a page telling what happened"
+			% choice.label)
+
+
+## Spec event-pass 2.8: the Choice.* tags an outcome calls for (any one of a pair is enough is not modelled: each listed
+## tag is required).
+static func choice_tags_for(outcome: RunOutcome) -> Array[StringName]:
+	var tags: Array[StringName] = []
+	if outcome is GiveItem:
+		if outcome.item != null and outcome.item.tags.has(&"Item.Curse"):
+			tags.append(&"Choice.Cost.Curse")
+		elif _query_names(outcome.item_query, &"Pool.Boss"):
+			tags.append(&"Choice.Gain.BossItem")
+		else:
+			tags.append(&"Choice.Gain.Item")
+	elif outcome is GiveEquipment:
+		tags.append(&"Choice.Gain.Armor")
+	elif outcome is GainCoins:
+		tags.append(&"Choice.Gain.Coins")
+	elif outcome is LoseCoins:
+		tags.append(&"Choice.Cost.Coins")
+	elif outcome is GainKeys or outcome is GiveGoldenKey:
+		tags.append(&"Choice.Gain.Keys")
+	elif outcome is LoseKeys:
+		tags.append(&"Choice.Cost.Keys")
+	elif outcome is GiveChest:
+		tags.append(&"Choice.Gain.Chest")
+	elif outcome is GainXp:
+		tags.append(&"Choice.Gain.Xp")
+	elif outcome is GainLevel:
+		tags.append(&"Choice.Gain.Level")
+	elif outcome is RevealRooms:
+		tags.append(&"Choice.Gain.Reveal")
+	elif outcome is StartEncounter:
+		tags.append(&"Choice.Fight")
+	elif outcome is GoToRandomPage:
+		tags.append(&"Choice.Gamble")
+	elif outcome is RemoveItem and not (outcome.item == null and _query_names(outcome.item_query, &"Item.Curse")):
+		tags.append(&"Choice.Cost.Item")
+	elif outcome is ApplyPartyEffect or outcome is ApplyMemberEffect:
+		match effect_kind(outcome.effect):
+			"slay":
+				tags.append(&"Choice.Cost.Life")
+			"hurt":
+				tags.append(&"Choice.Cost.Hp")
+			"heal":
+				tags.append(&"Choice.Gain.Heal")
+	return tags
+
+
+## "slay", "hurt", "heal" or "" for an effect's HP change: an hp modifier (OVERRIDE to 0 or less slays, ADD below 0
+## hurts, above 0 heals) or an execution with a percent_x100 (ExecCalcPercentOfMax: -100% or less slays).
+static func effect_kind(effect: GameplayEffect) -> String:
+	if effect == null:
+		return ""
+	for modifier in effect.modifiers:
+		if modifier == null or modifier.attribute_name != "hp":
+			continue
+		# CombatModifier (the project's decimal modifier) keeps its amount in value_x100; magnitude is unused there.
+		var amount: float = float(modifier.get("value_x100")) if "value_x100" in modifier else modifier.magnitude
+		var fixed: bool = modifier.magnitude_calculation == GameplayEffectModifier.MagnitudeCalculationType.STATIC
+		if modifier.operation == GameplayEffectModifier.Operation.OVERRIDE:
+			if fixed:
+				return "slay" if amount <= 0.0 else "heal"
+			return "heal"  # an override from an attribute (back to max HP)
+		if modifier.operation == GameplayEffectModifier.Operation.ADD and fixed and amount != 0.0:
+			return "hurt" if amount < 0.0 else "heal"
+	for execution in effect.executions:
+		if execution == null or not "percent_x100" in execution:
+			continue
+		if "attribute" in execution and str(execution.get("attribute")) != "hp":
+			continue
+		var percent := int(execution.get("percent_x100"))
+		if percent <= -10000:
+			return "slay"
+		if percent != 0:
+			return "hurt" if percent < 0 else "heal"
+	return ""
+
+
+static func _query_names(query: GameplayTagQuery, tag: StringName) -> bool:
+	return query != null and (query.require_all_tags.has(tag) or query.require_any_tags.has(tag)
+		or query.require_exact_tags.has(tag))
 
 
 ## `can_choose`: the outcome runs in an event choice, a chest or an encounter reward, where the player can pick an
@@ -1045,6 +1251,63 @@ func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition, 
 		_error("dangling_ref", where, "ApplyHolderEffect has no effect")
 	elif outcome is GoToPage and event != null and (outcome.page < 0 or outcome.page >= event.pages.size()):
 		_error("bad_event", where, "GoToPage %d, but %s has %d page(s)" % [outcome.page, event.id, event.pages.size()])
+	elif outcome is ApplyMemberEffect and outcome.effect == null:
+		_error("dangling_ref", where, "ApplyMemberEffect has no effect")
+	elif outcome is ApplyMemberEffect and outcome.target == ApplyMemberEffect.Target.CHARACTER and outcome.character == null:
+		_error("dangling_ref", where, "ApplyMemberEffect targets CHARACTER but names none")
+	elif outcome is RemoveItem and outcome.item == null and outcome.item_query == null and not item_hook:
+		_error("dangling_ref", where, "RemoveItem has neither an item nor an item query (only an item hook removes its own item)")
+	elif outcome is GoToRandomPage:
+		var count: int = event.pages.size() if event != null else 0
+		var bad: bool = outcome.pages.is_empty() or outcome.weights_x100.size() != outcome.pages.size() \
+			or outcome.weights_x100.any(func(weight: int) -> bool: return weight <= 0) \
+			or (event != null and outcome.pages.any(func(page: int) -> bool: return page < 0 or page >= count))
+		if event == null:
+			_error("random_page_invalid", where, "GoToRandomPage only works in an event choice")
+		elif bad:
+			_error("random_page_invalid", where, "GoToRandomPage needs one weight above 0 per page, pages 0..%d" % (count - 1))
+	# Spec event-pass 2.1-2.3: party positions are 1..4.
+	var named_slot := -1
+	if outcome is GiveItem and outcome.recipient == GiveItem.Recipient.SLOT:
+		named_slot = outcome.slot
+	elif outcome is ApplyMemberEffect and outcome.target == ApplyMemberEffect.Target.SLOT:
+		named_slot = outcome.slot
+	elif outcome is RemoveItem and outcome.from == RemoveItem.From.SLOT:
+		named_slot = outcome.slot
+	if named_slot != -1 and (named_slot < 1 or named_slot > MAX_PARTY):
+		_error("member_slot_out_of_range", where, "party place %d is outside 1..%d" % [named_slot, MAX_PARTY])
+	if outcome is GiveItem and outcome.recipient == GiveItem.Recipient.FLOOR and outcome.character != null:
+		# User, 2026-11-22 (option a): FLOOR wins, so the character the gift names would be silently ignored.
+		_warning("floor_ignores_character", where,
+			"this gift lands on the floor (recipient FLOOR), so its character %s is ignored" % outcome.character.id)
+	if item_hook and _puts_on_floor(outcome):
+		_warning("give_floor_outside_room", where,
+			"FLOOR / on_floor in an item hook lands on the floor only while an event is open; otherwise it is given directly")
+
+
+## Spec event-pass 2.1: a FLOOR gift or an on_floor piece (it needs an event room to land in).
+static func _puts_on_floor(outcome: RunOutcome) -> bool:
+	var floor_gift: bool = outcome is GiveItem and outcome.recipient == GiveItem.Recipient.FLOOR
+	return floor_gift or (outcome is GiveEquipment and outcome.on_floor)
+
+
+## Spec event-pass 2.1: the largest party (MemberAt, SLOT recipients and targets name places 1..4).
+const MAX_PARTY: int = 4
+
+
+## Spec event-pass 2.3: conditions that name a party place, checked wherever choices are.
+func _check_conditions(conditions: Array, where: String) -> void:
+	for condition in conditions:
+		if condition is MemberAt and (condition.slot < 1 or condition.slot > MAX_PARTY):
+			_error("member_slot_out_of_range", where, "MemberAt names party place %d, outside 1..%d" % [condition.slot, MAX_PARTY])
+		elif condition is HoldsItemTag and (condition.slot < 0 or condition.slot > MAX_PARTY):
+			_error("member_slot_out_of_range", where, "HoldsItemTag names party place %d, outside 0..%d" % [condition.slot, MAX_PARTY])
+		elif condition is HoldsItemTag and condition.query == null:
+			_error("dangling_ref", where, "HoldsItemTag has no query")
+		elif condition is AnyOf:
+			_check_conditions(condition.conditions, where)
+		elif condition is NotCondition and condition.condition != null:
+			_check_conditions([condition.condition], where)
 
 
 func _check_layout(layout: FloorLayout) -> void:
@@ -1131,9 +1394,16 @@ func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 			break
 	if structure.rest_event != null:
 		for page in structure.rest_event.pages:
-			for choice in (page.choices if page != null else []):
+			# Event endings: a page's on_enter runs at the rest stop too, so it is checked like a choice's outcomes.
+			var entered := EventChoice.new()
+			entered.outcomes.assign(page.on_enter if page != null else [])
+			for choice in (page.choices if page != null else []) + [entered]:
 				if choice != null and choice.outcomes.any(func(outcome) -> bool: return outcome is StartEncounter):
 					_error("rest_event_encounter", path + "::rest_event", "%s starts an encounter; a rest stop has no room" % structure.rest_event.id)
+				if choice != null and choice.outcomes.any(_puts_on_floor):
+					# Spec event-pass 2.1: FLOOR needs a room to land in, and a rest stop has none.
+					_warning("give_floor_outside_room", path + "::rest_event",
+						"%s puts something on the floor; a rest stop has no room, so it is given directly" % structure.rest_event.id)
 				if choice != null and choice.outcomes.any(func(outcome) -> bool: return outcome is GiveChest):
 					# Spec floor-chests 2.1 (Q2): a chest lands in the current room, and a rest stop has none.
 					_error("give_chest_outside_room", path + "::rest_event",

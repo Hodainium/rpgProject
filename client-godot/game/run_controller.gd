@@ -14,6 +14,9 @@ signal battle_requested(snapshot: Dictionary)
 signal battle_started(battle: Battle)
 signal battle_finished(outcome: String)
 signal event_page_shown(event_id: StringName, page: int)
+## Event results (user, 2026-11-22): a choice ended its event; `result` is {"event", "title", "text", "lines"} (what it
+## changed, read from the run's state before and after). Presentation only: never hashed, logged or saved.
+signal event_resolved(result: Dictionary)
 signal pickups_shown(cell: int)
 signal party_changed
 signal room_cleared(cell: int)
@@ -89,6 +92,15 @@ var _drop_cell: int = -1
 var _drop_encounter: EncounterDefinition
 ## Spec event-items: RANDOM recipients drawn in the current action (the k in "floor/<n>/recipient/<cell>/<k>").
 var _recipient_draws: int = 0
+## Event results: the state a choice started from (set in _do_choose, read when it resolves), and the last choice's
+## result while its event goes on ({} when none). Presentation only.
+var _receipt_before: Dictionary = {}
+var last_event_result: Dictionary = {}
+## Whether choices build their result (review fix): off headless (the verifier, the bots, the seed tools), so a choose
+## costs no field battles there; a test that checks results turns it on.
+var event_results: bool = DisplayServer.get_name() != "headless"
+## The result lines' formats (GameMain's `event_result_text`; none = the defaults).
+var result_text: EventResultText = EventResultText.defaults()
 ## Spec server-authority 2.1 (server mode): the floor enter_floor() waits on until its seed arrives
 ## ({"floor": int, "choice": StringName}, else empty), and the floors whose seed was asked for.
 var _waiting_floor: Dictionary:
@@ -495,6 +507,12 @@ func run_summary() -> Dictionary:
 	if state.status == RunState.LOST and room != null and not state.map.cells[state.current_cell]["cleared"] \
 			and str(state.map.cells[state.current_cell]["content"]["kind"]) == "waves":
 		summary["endedIn"]["wave"] = int(state.map.cells[state.current_cell].get("wave", 0)) + 1  # the wave that was lost
+	# Spec event-pass 5: events entered and the choices picked ("<page>:<choice>"); only when there are any.
+	if not _tally.get("events", {}).is_empty():
+		summary["eventsEntered"] = int(_tally.get("eventsEntered", 0))
+		summary["events"] = _tally["events"].duplicate(true)
+	if int(_tally.get("eventMemberDeaths", 0)) > 0:
+		summary["eventMemberDeaths"] = int(_tally["eventMemberDeaths"])
 	if counts["give_to"] > 0:
 		summary["giftsGiven"] = counts["give_to"]  # spec event-items: only when the player picked, so older summaries match
 	# Spec boss-drops 3.3: drops left behind on earlier floors and still untaken on this one; only when above 0.
@@ -609,6 +627,7 @@ func _enter_cell(index: int) -> void:
 			_start_wave(index)
 		"event":
 			state.event = {"cell": index, "event": room_content["event"], "page": 0}
+			_tally_event(StringName(str(room_content["event"])), "")
 			event_page_shown.emit(room_content["event"], 0)
 		_:
 			_clear_room(index, false)
@@ -650,6 +669,7 @@ func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 	if current_battle != null:
 		return "a battle is already being fought"
 	var snapshot := battle_snapshot()
+	var no_loot := bool(pending_battle.get("no_loot", false))  # see dev_open_event
 	if journal:
 		_battle_conditions[snapshot["battleId"]] = snapshot
 	var battle := Battle.new()
@@ -709,7 +729,9 @@ func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 			func(pickup: Dictionary) -> int: return int(pickup["placement"]))
 		if not dropped.is_empty():
 			battle_entry["drops"] = dropped
-		_clear_room(cell, true)
+		# A fight from an event the `event <id>` cheat opened in an already cleared room clears it without the room's
+		# loot rolls again: no coins, keys, chests or on_room_cleared hooks a second time (review fix).
+		_clear_room(cell, not no_loot)
 	else:
 		_end(RunState.LOST)
 	return ""
@@ -1314,6 +1336,9 @@ func drop_pickups(cell: int) -> Array[Dictionary]:
 func drop_source_name(cell: int, pickup: Dictionary) -> String:
 	if not pickup.has("drop") or state == null or state.map == null or not state.map.cells.has(cell):
 		return ""
+	if pickup.has("found"):  # spec event-pass 2.1: an event's FLOOR gift; "found" is that event's id
+		var event: EventDefinition = content.events.get(StringName(str(pickup["found"])))
+		return event.display_name if event != null else ""
 	var enemies: Array = state.map.cells[cell]["content"].get("enemies", [])
 	var from := int(pickup["drop"])
 	var picked: UnitDefinition = null
@@ -1423,6 +1448,15 @@ func choice_enabled(choice_index: int) -> bool:
 	return true
 
 
+## Spec event-pass 2.9: whether the event panel lists choice `choice_index` (a WHEN_MET choice only while its conditions
+## hold). Display only: hidden choices keep their index, and choose() and choice_enabled() are unchanged.
+func choice_shown(choice_index: int) -> bool:
+	var page := current_page()
+	if page == null or choice_index < 0 or choice_index >= page.choices.size():
+		return false
+	return page.choices[choice_index].show == EventChoice.Show.ALWAYS or choice_enabled(choice_index)
+
+
 ## Picks a choice: its outcomes run in order. Ends the event unless an outcome went to a page or started a battle.
 func choose(choice_index: int) -> String:
 	return _commit_after(_do_choose(choice_index))
@@ -1434,17 +1468,24 @@ func _do_choose(choice_index: int) -> String:
 	if not _active() or not choice_enabled(choice_index):
 		return "that choice isn't available"
 	var cell: int = state.event["cell"]
-	run_log.append({"type": "choose", "floor": state.floor_index, "cell": cell, "page": state.event["page"],
-		"choice": choice_index})
+	var entry := {"type": "choose", "floor": state.floor_index, "cell": cell, "page": state.event["page"],
+		"choice": choice_index}
+	run_log.append(entry)
 	_send(GameplayMessageRouter.RUN_CHOICE, &"Verb.Choose", &"", StringName(str(state.event["event"])), choice_index,
 		[], {"page": state.event["page"]})
 	_directive = ""
-	_recipient_draws = 0
+	_receipt_before = _receipt_state() if event_results and not silent else {}  # a replayed tail shows nothing
+	# Spec event-pass 2.2 (review fix): RANDOM gifts keep counting across the event's choices, so a page that loops
+	# draws a new member; the first choice starts at 0 as before, so existing events draw exactly as they did.
+	_recipient_draws = int(state.event.get("recipient_draws", 0))
+	if not state.event.has("rest_to"):  # the rest stop is not an event room; only rooms' events are counted
+		_tally_event(StringName(str(state.event["event"])), "%d:%d" % [int(state.event["page"]), choice_index])
 	for outcome in current_page().choices[choice_index].outcomes:
 		if outcome != null:
 			outcome.apply(self)
 		if not _active():
 			return runner_error
+	_save_recipient_draws()
 	if state.event.has("rest_to") and _directive == "encounter":
 		_directive = ""  # a rest stop has no room to fight in (validator: rest_event_encounter)
 	var after := {"kind": _directive if _directive != "" else "end", "page": _directive_page,
@@ -1459,22 +1500,40 @@ func _do_choose(choice_index: int) -> String:
 ## start an encounter, or end the event. "" or the error.
 func _after_choice(after: Dictionary) -> String:
 	var cell: int = state.event["cell"]
+	if str(after["kind"]) == "page" and not after.get("entered", false):
+		state.event["page"] = int(after["page"])
+		_recipient_draws = int(state.event.get("recipient_draws", _recipient_draws))  # a resumed give_to too
+		_enter_page()  # the ending page's own outcomes, inside this choose
+		_save_recipient_draws()
+		if not _active():
+			return runner_error
+		if not state.pending_gifts.is_empty():
+			state.event["after"] = {"kind": "page", "page": int(after["page"]), "encounter": &"", "entered": true}
+			return ""
+	var result := _event_result()
 	match str(after["kind"]):
 		"page":
-			state.event["page"] = int(after["page"])
+			last_event_result = result  # the page shows what the choice (and the page) changed
 			event_page_shown.emit(state.event["event"], int(after["page"]))
 		"encounter":
+			last_event_result = {}  # the fight is the feedback
 			var encounter: EncounterDefinition = content.encounters[StringName(after["encounter"])]
 			var room: RoomDefinition = content.rooms[state.map.cells[cell]["room"]]
 			var event_rng := state.seeds().floor_rng(state.floor_index, "event/%d" % cell)
 			var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
+			var no_loot: bool = state.event.get("dev_in_cleared_room", false)
 			state.event = {}
 			pending_battle = {"cell": cell, "encounter": encounter.id,
 				"enemies": generator.resolve_enemies(encounter, room, false, chapter().scaling, event_rng),
 				"label": "/event"}
+			if no_loot:
+				pending_battle["no_loot"] = true  # a cheat's fight in a cleared room (dev runs only)
 			state.map.cells[cell]["content"]["enemies"] = pending_battle["enemies"]
 			battle_requested.emit(battle_snapshot())
 		_:
+			last_event_result = {}
+			if not result.is_empty():
+				event_resolved.emit(result)
 			if state.event.has("rest_to"):
 				var rest: Dictionary = state.event
 				state.event = {}
@@ -2056,8 +2115,13 @@ func apply_member_effect(effect: GameplayEffect, slots: Array, include_dead: boo
 	for member in state.party:
 		if (member["alive"] or include_dead) and (slots.is_empty() or slots.has(member["slot"])):
 			ids.append(StringName("P%d" % member["slot"]))
+	var alive_before := state.party.filter(func(member: Dictionary) -> bool: return member["alive"]).size()
 	battle.apply_to_units(effect, ids)
 	_read_back(battle)
+	if not state.event.is_empty() and not state.event.has("rest_to"):  # spec event-pass 5: members an event killed
+		var died := alive_before - state.party.filter(func(member: Dictionary) -> bool: return member["alive"]).size()
+		if died > 0:
+			_tally["eventMemberDeaths"] = int(_tally.get("eventMemberDeaths", 0)) + died
 	battle.free()
 	if not state.anyone_alive():
 		_end(RunState.LOST)
@@ -2067,7 +2131,7 @@ func apply_member_effect(effect: GameplayEffect, slots: Array, include_dead: boo
 ## FIRST, RANDOM, or CHOOSE, which waits for give_to). A given item toasts. While a chest opens (spec floor-chests) the item
 ## becomes a pickup beside the chest instead, whatever `recipient` and `character` say.
 func give_item(item: ItemDefinition, query: GameplayTagQuery, character: CharacterDefinition,
-		recipient: int = GiveItem.Recipient.FIRST) -> void:
+		recipient: int = GiveItem.Recipient.FIRST, slot_named: int = 1) -> void:
 	if item == null:
 		var gift_rng := _chest_rng
 		if gift_rng == null:  # spec keys-and-gear 2.3: a chest's gifts draw from the chest's own stream
@@ -2083,6 +2147,12 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 	if _drop_cell >= 0:
 		_reward_pickup(item)  # spec boss-drops D1: on the battle room's floor; the taker is chosen at take()
 		return
+	if recipient == GiveItem.Recipient.FLOOR:
+		if _event_room() >= 0:
+			_found_pickup(item, _event_room())  # spec event-pass 2.1: on the event room's floor, taken with take()
+			return
+		_warn("%s: FLOOR outside a room; given to the first member who can hold it" % item.id)
+		recipient = GiveItem.Recipient.FIRST
 	if _choose_off and recipient == GiveItem.Recipient.CHOOSE:
 		recipient = GiveItem.Recipient.FIRST  # the battle that wins the run: no pick can follow
 	var holders: Array[int] = []
@@ -2096,13 +2166,27 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 		state.pending_gifts.append(item.id)  # spec event-items: the player picks with give_to
 		party_changed.emit()
 		return
+	elif recipient == GiveItem.Recipient.SLOT and holders.has(slot_named) and state.member(slot_named)["alive"]:
+		slot = slot_named  # spec event-pass 2.1
+	elif recipient == GiveItem.Recipient.LOWEST_HP and not holders.is_empty():
+		slot = _lowest_hp_slot(holders.filter(func(held: int) -> bool: return state.member(held)["alive"]))
+		if slot == 0:
+			slot = holders[0]
 	elif not holders.is_empty() and recipient == GiveItem.Recipient.RANDOM:
-		var cell := int(state.event.get("cell", state.current_cell))
-		var rng := state.seeds().floor_rng(state.floor_index, "recipient/%d/%d" % [cell, _recipient_draws])
-		_recipient_draws += 1
+		var rng: RandomNumberGenerator
+		if state.event.is_empty() and _opening_chest < 0:
+			# Review fix (event-pass): outside an event and a chest (an item hook after a take), the in-memory counter was
+			# never saved, so a resumed run could pick another member; the floor's gift counter is hashed and saved.
+			rng = _event_rng()
+		else:
+			var cell := int(state.event.get("cell", state.current_cell))
+			rng = state.seeds().floor_rng(state.floor_index, "recipient/%d/%d" % [cell, _recipient_draws])
+			_recipient_draws += 1
 		slot = holders[rng.randi_range(0, holders.size() - 1)]
 	elif not holders.is_empty():
-		slot = holders[0]  # FIRST, or CHOOSE with one possible holder (D4)
+		if recipient == GiveItem.Recipient.SLOT:
+			_warn("%s: party place %d cannot take it; given to the first member who can" % [item.id, slot_named])
+		slot = holders[0]  # FIRST, or CHOOSE with one possible holder (D4), or SLOT's fallback (event-pass 2.1)
 	if slot == 0 or can_hold(slot, item) != "":
 		_warn("nobody can hold %s; it is lost" % item.id)
 		return
@@ -2126,7 +2210,9 @@ func _do_give_to(slot: int) -> String:
 	state.pending_gifts.remove_at(0)
 	run_log.append({"type": "give_to", "floor": state.floor_index,
 		"cell": int(state.event.get("cell", state.current_cell)), "item": String(item.id), "slot": slot})
+	_recipient_draws = int(state.event.get("recipient_draws", 0))  # review fix: a resumed give_to draws the same
 	_give_to(slot, item)
+	_save_recipient_draws()
 	if state.pending_gifts.is_empty() and state.event.has("after"):
 		var after: Dictionary = state.event["after"]
 		state.event.erase("after")
@@ -2165,7 +2251,7 @@ func remove_item(item: ItemDefinition) -> void:
 
 
 ## Spec playable-demo 3.7 (D9): armor from outcomes goes to the armor inventory; nothing is worn on its own.
-func give_equipment(piece: EquipmentDefinition) -> void:
+func give_equipment(piece: EquipmentDefinition, on_floor: bool = false) -> void:
 	if piece == null:
 		return
 	if _opening_chest >= 0:
@@ -2174,13 +2260,19 @@ func give_equipment(piece: EquipmentDefinition) -> void:
 	if _drop_cell >= 0:
 		_reward_pickup(piece)  # spec boss-drops D2: armor lands on the battle room's floor too
 		return
+	if on_floor:
+		if _event_room() >= 0:
+			_found_pickup(piece, _event_room())  # spec event-pass 2.1
+			return
+		_warn("%s: on_floor outside a room; it goes to the armor inventory" % piece.id)
 	_receive_equipment(piece)
 
 
 ## Spec keys-and-gear 3.2: a pooled piece matching `query` (GiveEquipment with no fixed piece), from the chest's stream
 ## while a chest opens, else the floor's gift stream. prefer_open_slot: a slot some living member has empty first.
 ## Nothing left: the run's fallback item instead (as item pools do).
-func give_equipment_from(query: GameplayTagQuery, prefer_open_slot: bool) -> void:
+func give_equipment_from(query: GameplayTagQuery, prefer_open_slot: bool, on_floor: bool = false,
+		only_slot: StringName = &"") -> void:
 	var gift_rng := _chest_rng
 	if gift_rng == null:
 		gift_rng = state.seeds().floor_rng(state.floor_index, "gift/%d" % state.gifts_on_floor)
@@ -2192,11 +2284,12 @@ func give_equipment_from(query: GameplayTagQuery, prefer_open_slot: bool) -> voi
 				if member["alive"] and not member["equipment"].has(slot_tag) and not open_slots.has(slot_tag):
 					open_slots.append(slot_tag)
 	var generator := FloorGenerator.new(content, structure, state.run_seed, state.floor_index, state.seeds())
-	var piece := generator.pick_equipment(query, gift_rng, _pools(), open_slots)
+	var piece := generator.pick_equipment(query, gift_rng, _pools(), open_slots, only_slot)
 	if piece != null:
-		give_equipment(piece)
+		give_equipment(piece, on_floor)
 	elif structure != null and structure.fallback_item != null:
-		give_item(structure.fallback_item, null, null)
+		give_item(structure.fallback_item, null, null,
+			GiveItem.Recipient.FLOOR if on_floor else GiveItem.Recipient.FIRST)
 
 
 func event_go_to_page(page: int) -> void:
@@ -2212,6 +2305,185 @@ func event_start_encounter(encounter: EncounterDefinition) -> void:
 	if encounter != null:
 		_directive = "encounter"
 		_directive_encounter = encounter
+
+
+# --- Event building blocks (spec event-pass 2.1-2.3) ----------------------------------------------------------------
+
+## The cell of the open event's room, or -1 (no event, the rest stop, or no map).
+func _event_room() -> int:
+	if state == null or state.map == null or state.event.is_empty() or state.event.has("rest_to"):
+		return -1
+	var cell := int(state.event.get("cell", -1))
+	return cell if state.map.cells.has(cell) else -1
+
+
+## Spec event-pass 2.2: the stream of the next seeded draw inside the open event, floor/<n>/event_roll/<cell>/<k>. `k`
+## counts the event's draws in state.event["draws"] (hashed and saved with the event; written only once a draw happens,
+## so an event without one hashes as before), so a choice taken again (a page that loops) draws anew. Outside an event:
+## a chest's own stream, else the floor's gift counter.
+func _event_rng() -> RandomNumberGenerator:
+	if not state.event.is_empty():
+		var draws := int(state.event.get("draws", 0))
+		state.event["draws"] = draws + 1
+		var cell := int(state.event.get("cell", state.current_cell))
+		return state.seeds().floor_rng(state.floor_index, "event_roll/%d/%d" % [cell, draws])
+	if _chest_rng != null:
+		return _chest_rng
+	var rng := state.seeds().floor_rng(state.floor_index, "gift/%d" % state.gifts_on_floor)
+	state.gifts_on_floor += 1
+	return rng
+
+
+## The member's HP share x10000 (full, 10000, for an unknown max HP, as party_hp_at_least treats it).
+func _hp_share(slot: int, stats: Dictionary) -> int:
+	var max_hp := int(stats.get(slot, {}).get(BattleUnit.MAX_HP, 0))
+	return int(state.member(slot)["hp"]) * 10000 / max_hp if max_hp > 0 else 10000
+
+
+## The slot with the lowest HP share among `slots` (ties: the lowest slot), or 0 when empty.
+func _lowest_hp_slot(slots: Array) -> int:
+	if slots.is_empty():
+		return 0
+	var stats := party_stats()
+	var ordered := slots.duplicate()
+	ordered.sort()  # sort-ok: party slots are ints
+	var best: int = ordered[0]
+	for slot in ordered:
+		if _hp_share(slot, stats) < _hp_share(best, stats):
+			best = slot
+	return best
+
+
+## Spec event-pass 2.2 (ApplyMemberEffect): `effect` on the member(s) `target` names, through the field context.
+func event_member_effect(effect: GameplayEffect, target: int, slot: int, character: CharacterDefinition,
+		include_dead: bool) -> void:
+	if effect == null or state == null:
+		return
+	var eligible: Array = []
+	for member in state.party:
+		if member["alive"] or include_dead:
+			eligible.append(int(member["slot"]))
+	eligible.sort()  # sort-ok: party slots are ints
+	var living := eligible.filter(func(held: int) -> bool: return state.member(held)["alive"])
+	var slots: Array = []
+	match target:
+		ApplyMemberEffect.Target.ALL:
+			if not eligible.is_empty():
+				apply_member_effect(effect, [], include_dead)
+			return
+		ApplyMemberEffect.Target.FIRST:
+			if not living.is_empty():
+				slots = [living[0]]
+		ApplyMemberEffect.Target.SLOT:
+			if eligible.has(slot):
+				slots = [slot]
+		ApplyMemberEffect.Target.RANDOM:
+			if not eligible.is_empty():
+				slots = [eligible[_event_rng().randi_range(0, eligible.size() - 1)]]
+		ApplyMemberEffect.Target.LOWEST_HP:
+			var lowest := _lowest_hp_slot(living)
+			if lowest > 0:
+				slots = [lowest]
+		ApplyMemberEffect.Target.CHARACTER:
+			var found := state.member_slot(character.id, not include_dead) if character != null else 0
+			if found > 0:
+				slots = [found]
+	if slots.is_empty():
+		_warn("ApplyMemberEffect: nobody to apply %s to" % effect.resource_path.get_file())
+		return
+	apply_member_effect(effect, slots, include_dead)
+
+
+## Spec event-pass 2.3 (MemberAt): party position `slot` holds a member (living with alive_only) with at least
+## hp_x100 of their max HP.
+func member_at(slot: int, alive_only: bool, hp_x100: int) -> bool:
+	var member := state.member(slot) if state != null else {}
+	if member.is_empty() or (alive_only and not member["alive"]):
+		return false
+	return hp_x100 <= 0 or _hp_share(slot, party_stats()) >= hp_x100
+
+
+## Spec event-pass 2.3 (HoldsItemTag) and 2.2 (RemoveItem by query): the items living members hold matching `query`, as
+## [slot, item id] pairs in slot order, then each member's items, then their use slots. `slot` 0: every living member.
+func held_items_matching(query: GameplayTagQuery, slot: int = 0) -> Array:
+	var result: Array = []
+	if state == null or query == null:
+		return result
+	var slots: Array = state.party.map(func(member: Dictionary) -> int: return int(member["slot"]))
+	slots.sort()  # sort-ok: party slots are ints
+	for held_by in slots:
+		if slot > 0 and held_by != slot:
+			continue
+		var member := state.member(held_by)
+		if not member["alive"]:
+			continue  # a dead member's items count for nothing here, as gifts and effects skip the dead
+		var ids: Array = member["items"].duplicate()
+		for use_slot in member["use_slots"]:
+			ids.append(use_slot["item"])
+		for item_id in ids:
+			var item: ItemDefinition = content.items.get(item_id)
+			if item != null and TagMatch.matches(query, item.tags):
+				result.append([held_by, item_id])
+	return result
+
+
+## Spec event-pass 2.2: removes one held item matching `query` (RemoveItem.From: ANY the first, SLOT the member at
+## `slot`'s first, RANDOM a seeded pick among them all). Nothing matches: nothing happens.
+func remove_item_matching(query: GameplayTagQuery, from: int, slot: int) -> void:
+	var matches := held_items_matching(query, slot if from == RemoveItem.From.SLOT else 0)
+	if matches.is_empty():
+		return
+	var picked: Array = matches[0]
+	if from == RemoveItem.From.RANDOM:
+		picked = matches[_event_rng().randi_range(0, matches.size() - 1)]
+	var member := state.member(int(picked[0]))
+	if member["items"].has(picked[1]):
+		member["items"].erase(picked[1])
+	else:
+		for index in member["use_slots"].size():
+			if member["use_slots"][index]["item"] == picked[1]:
+				member["use_slots"].remove_at(index)
+				break
+	party_changed.emit()
+
+
+## Spec event-pass 2.2 (GoToRandomPage): a weighted pick of the next page on the event's stream. Bad data (no pages, a
+## missing or non-positive weight): the event ends, as a choice without a page does (the validator flags it).
+func event_random_page(pages: Array[int], weights_x100: Array[int]) -> void:
+	if pages.is_empty() or weights_x100.size() != pages.size():
+		_warn("GoToRandomPage: pages and weights do not match")
+		return
+	var total := 0
+	for weight in weights_x100:
+		if weight <= 0:
+			_warn("GoToRandomPage: a weight is not above 0")
+			return
+		total += weight
+	var roll := _event_rng().randi_range(0, total - 1)
+	for index in pages.size():
+		roll -= weights_x100[index]
+		if roll < 0:
+			event_go_to_page(pages[index])
+			return
+
+
+## Spec event-pass 2.1: an event's FLOOR gift as a free pickup in `cell`, through the boss-drops path (numbered from
+## DROP_PLACEMENT, "drop": 0) carrying "found": the event's id (its source; RunWire uploads it as an Other offer).
+func _found_pickup(thing: Resource, cell: int) -> void:
+	var placement := _drop_pickup(thing, cell, 0)
+	var pickup: Dictionary = drop_pickups(cell)[-1]
+	pickup["found"] = String(state.event.get("event", ""))
+	# Spec event-pass 2.1 (review fix): it travels with the action that put it out, a choose or a give_to (an ending
+	# page's outcomes run inside either), as an Other offer.
+	if not run_log.is_empty() and str(run_log[-1].get("type", "")) in ["choose", "give_to"]:
+		var entry: Dictionary = run_log[-1]
+		var found: Array = entry.get_or_add("found", [])
+		found.append(placement)
+	var source := drop_source_name(cell, pickup)
+	var tags: Array = thing.tags if thing is ItemDefinition or thing is EquipmentDefinition else []
+	_send(GameplayMessageRouter.RUN_ITEM_DROPPED, &"Verb.Drop", StringName(str(state.event.get("event", ""))),
+		thing.id, 0, tags, {"instigatorName": source, "targetName": thing.display_name, "cell": cell,
+			"placement": placement})
 
 
 # --- Dev tools (spec dev-tools 3.2-3.4) ------------------------------------------------------------------------------
@@ -2437,6 +2709,207 @@ func dev_goto(index: int) -> String:
 		return "already in cell %d" % index
 	dev_log("goto", [index])
 	_enter_cell(index)
+	return ""
+
+
+## Spec keys-and-gear 3.2 (GainKeys) with event results: keys from an outcome, with the key toast and sound (a chest's
+## own toast lists them instead).
+func gain_keys(amount: int) -> void:
+	var before := state.keys
+	add_keys(amount)
+	if _chest_rng == null and state.keys > before:
+		_send_key_found(state.keys - before, false)
+
+
+# --- Event results (user, 2026-11-22): what a choice changed, for the result dialog -----------------------------------
+
+## What the result compares: coins, keys, the golden key, every member (items, alive, HP, level), the armor inventory,
+## the event room's chests and pickups, the reveal flags.
+func _receipt_state() -> Dictionary:
+	var members := {}
+	for member in state.party:
+		var held: Array = member["items"].duplicate()
+		for use_slot in member["use_slots"]:
+			held.append(use_slot["item"])
+		members[int(member["slot"])] = {"character": member["character"], "items": held, "alive": member["alive"],
+			"hp": int(member["hp"]), "level": int(member.get("level", 1))}
+	var cell := _event_room()
+	var data: Dictionary = state.map.cells[cell] if cell >= 0 else {}
+	return {"coins": state.coins, "keys": state.keys, "golden": state.golden_key, "members": members,
+		"armor": state.armor.duplicate(), "chests": data.get("chests", []).size(), "pickups": data.get("pickups", []).duplicate(true),
+		"revealed": state.revealed, "reveal_events": state.reveal_events}
+
+
+## {"event", "title", "text", "lines"} for the choice that just resolved, or {} when nothing changed and it has no text.
+func _event_result() -> Dictionary:
+	if _receipt_before.is_empty() or state == null:
+		return {}
+	var before := _receipt_before
+	var after := _receipt_state()
+	_receipt_before = {}
+	# Grouped (user, 2026-11-22): HP for every member first (one party line when all changed alike), then deaths and
+	# revivals, levels, what members got or lost, armor and floor finds, then coins, keys and the map.
+	var hp_lines := PackedStringArray()
+	var fate_lines := PackedStringArray()
+	var level_lines := PackedStringArray()
+	var item_lines := PackedStringArray()
+	var find_lines := PackedStringArray()
+	var purse_lines := PackedStringArray()
+	var shares := {}  # slot -> HP change in whole percent, for members that stayed alive and changed
+	var stats := {}  # max HP is read (a field battle) only when some member's HP changed
+	for slot in after["members"]:
+		if int(after["members"][slot]["hp"]) != int(before["members"].get(slot, after["members"][slot])["hp"]):
+			stats = party_stats()
+			break
+	var slots: Array = after["members"].keys()
+	slots.sort()  # sort-ok: party slots are ints
+	for slot in slots:
+		var now: Dictionary = after["members"][slot]
+		var then: Dictionary = before["members"].get(slot, now)
+		var who := _member_name(slot)
+		if then["alive"] and not now["alive"]:
+			fate_lines.append(result_text.slain % who)
+		elif now["alive"] and not then["alive"]:
+			fate_lines.append(result_text.revived % who)
+		elif now["hp"] != then["hp"] and int(stats.get(slot, {}).get(BattleUnit.MAX_HP, 0)) > 0:
+			var percent: int = (int(now["hp"]) - int(then["hp"])) * 100 / int(stats[slot][BattleUnit.MAX_HP])
+			if percent == 0:
+				percent = 1 if int(now["hp"]) > int(then["hp"]) else -1  # under 1% still says which way
+			shares[slot] = percent
+		if int(now["level"]) > int(then["level"]):
+			level_lines.append(result_text.level_reached % [who, int(now["level"])])
+		# One line per item id, with how many copies changed (review fix: a second Rations said "got Rations" twice).
+		for item_id in _distinct(now["items"]):
+			var gained: int = now["items"].count(item_id) - then["items"].count(item_id)
+			if gained > 0:
+				item_lines.append(result_text.got_item % [who, _thing_name(item_id) + _copies(gained)])
+		for item_id in _distinct(then["items"]):
+			var lost: int = then["items"].count(item_id) - now["items"].count(item_id)
+			if lost > 0:
+				item_lines.append(result_text.lost_item % [who, _thing_name(item_id) + _copies(lost)])
+	var living: Array = slots.filter(func(slot) -> bool: return after["members"][slot]["alive"])
+	var values: Array = shares.values()
+	if living.size() > 1 and shares.size() == living.size() and values.all(func(value) -> bool: return value == values[0]):
+		hp_lines.append(_hp_line(result_text.party_name, int(values[0])))
+	else:
+		for slot in slots:
+			if shares.has(slot):
+				hp_lines.append(_hp_line(_member_name(slot), int(shares[slot])))
+	for piece_id in _distinct(after["armor"]):
+		var gained: int = after["armor"].count(piece_id) - before["armor"].count(piece_id)
+		if gained > 0:
+			find_lines.append(result_text.to_armor % (_thing_name(piece_id) + _copies(gained)))
+	var placements: Array = before["pickups"].map(func(pickup: Dictionary) -> int: return int(pickup["placement"]))
+	for pickup in after["pickups"]:
+		if not placements.has(int(pickup["placement"])):
+			find_lines.append(result_text.on_floor % _thing_name(pickup["item"]))
+	if int(after["chests"]) > int(before["chests"]):
+		find_lines.append(result_text.chest_appeared)
+	var coins := int(after["coins"]) - int(before["coins"])
+	if coins != 0:
+		purse_lines.append(result_text.coins % coins)
+	var keys := int(after["keys"]) - int(before["keys"])
+	if keys != 0:
+		purse_lines.append((result_text.key if absi(keys) == 1 else result_text.keys) % keys)
+	if after["golden"] and not before["golden"]:
+		purse_lines.append(result_text.golden_key)
+	if after["revealed"] and not before["revealed"]:
+		purse_lines.append(result_text.floor_revealed)
+	elif after["reveal_events"] and not before["reveal_events"]:
+		purse_lines.append(result_text.event_rooms_revealed)
+	var lines := PackedStringArray()
+	for group in [hp_lines, fate_lines, level_lines, item_lines, find_lines, purse_lines]:
+		lines.append_array(group)
+	if lines.is_empty():
+		return {}
+	var event := current_event()
+	return {"event": String(event.id) if event != null else "", "title": event.display_name if event != null else "",
+		"text": "", "lines": lines}
+
+
+## Spec event-pass 2.2: RANDOM gifts' counter goes with the open event (hashed and saved), so a resumed run or a
+## verifier step that starts mid-event draws the same member.
+func _save_recipient_draws() -> void:
+	if _recipient_draws > 0 and not state.event.is_empty():
+		state.event["recipient_draws"] = _recipient_draws
+
+
+## Event endings (user, 2026-11-22): the current page's on_enter outcomes, in order. A page, random-page or fight
+## directive among them is ignored (the choice that led here already decided where the event goes).
+func _enter_page() -> void:
+	var page := current_page()
+	if page == null or page.on_enter.is_empty():
+		return
+	var directive := _directive
+	for outcome in page.on_enter:
+		if outcome != null and _active():
+			outcome.apply(self)
+	_directive = directive
+
+
+## "Warrior lost 25% HP", "The party recovered 30% HP".
+func _hp_line(who: String, percent: int) -> String:
+	return (result_text.hp_recovered if percent > 0 else result_text.hp_lost) % [who, absi(percent)]
+
+
+## The ids of `ids` once each, in first-seen order.
+static func _distinct(ids: Array) -> Array:
+	var result: Array = []
+	for id in ids:
+		if not result.has(id):
+			result.append(id)
+	return result
+
+
+## " x2" for two copies, "" for one.
+func _copies(count: int) -> String:
+	return result_text.copies_format % count if count > 1 else ""
+
+
+func _member_name(slot: int) -> String:
+	var character: UnitDefinition = content.units.get(state.member(slot)["character"])
+	return character.display_name if character != null else "Slot %d" % slot
+
+
+func _thing_name(id: Variant) -> String:
+	var thing: Resource = content.items.get(StringName(str(id)))
+	if thing == null:
+		thing = content.equipment.get(StringName(str(id)))
+	return thing.display_name if thing != null else str(id)
+
+
+## Spec event-pass 5: counts an event entered (`picked` "") or a choice picked ("<page>:<choice>") for run_summary.
+## Analytics only: the tally is never hashed (it travels in snapshots with the rest of the tally).
+func _tally_event(event_id: StringName, picked: String) -> void:
+	var events: Dictionary = _tally.get_or_add("events", {})
+	var entry: Dictionary = events.get_or_add(String(event_id), {"entered": 0, "choices": {}})
+	if picked == "":
+		entry["entered"] = int(entry["entered"]) + 1
+		_tally["eventsEntered"] = int(_tally.get("eventsEntered", 0)) + 1
+	else:
+		entry["choices"][picked] = int(entry["choices"].get(picked, 0)) + 1
+
+
+## Spec event-pass 5 (`event <id>`): opens `event` in the current room as if the room had placed it (a cheat; logged).
+## The room's own content is untouched; the event's FLOOR gifts land in this room, and its end clears it.
+func dev_open_event(event: EventDefinition) -> String:
+	if not _active():
+		return "no run"
+	if event == null or content.events.get(event.id) != event:
+		return "no such event in the run's content"
+	if not pending_battle.is_empty() or not state.event.is_empty():
+		return "not while a battle or an event is open"
+	var kind := str(state.map.cells[state.current_cell]["content"].get("kind", "none"))
+	if not kind in ["event", "none"]:
+		return "only in an event room or a room with nothing in it (a battle room would roll its loot again)"
+	if _gift_block() != "":
+		return _gift_block()
+	dev_log("event", [event.id])
+	state.event = {"cell": state.current_cell, "event": event.id, "page": 0}
+	if state.map.cells[state.current_cell]["cleared"]:
+		state.event["dev_in_cleared_room"] = true  # a fight it starts will not roll the room's loot again
+	_tally_event(event.id, "")
+	event_page_shown.emit(event.id, 0)
 	return ""
 
 

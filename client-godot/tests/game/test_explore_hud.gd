@@ -377,6 +377,135 @@ func test_gift_panel() -> void:
 	check(_find(game, "GiftPanel") == null, "and the panel goes away")
 
 
+## Spec event-pass 2.7, 2.9: the event panel fills in member tokens, hides a WHEN_MET choice whose class is missing, shows
+## a class choice with its badge and look, and a press still runs the choice by its own index.
+func test_event_panel_class_choices_and_tokens() -> void:
+	var game := await _game()
+	var run := game.run
+	var medic := HasCharacter.new()
+	medic.character = run.content.units[&"fixture.character.medic"]
+	var cantor := HasCharacter.new()
+	cantor.character = run.content.units[&"fixture.character.cantor"]
+	var choices: Array[EventChoice] = []
+	for entry in [["Leave", [], [&"Choice.Leave"], EventChoice.Show.ALWAYS],
+			["Sing", [cantor], [&"Choice.Class", &"Choice.Gain.Xp"], EventChoice.Show.WHEN_MET],
+			["Bless the dice", [medic], [&"Choice.Class", &"Choice.Gain.Heal"], EventChoice.Show.WHEN_MET]]:
+		var choice := EventChoice.new()
+		choice.label = entry[0]
+		choice.conditions.assign(entry[1])
+		choice.tags.assign(entry[2])
+		choice.show = entry[3]
+		choices.append(choice)
+	var page := EventPage.new()
+	page.text = "{member:1} looks at the dice."
+	page.choices = choices
+	var event := EventDefinition.new()
+	event.id = &"fixture.event.panel_probe"
+	event.display_name = "Dice"
+	event.pages.assign([page])
+	run.content.events[event.id] = event  # this game's own content index, freed with it
+	eq(run.dev_open_event(event), "", "the event opens")
+	await _frames(3)
+	var panel := _find(game, "EventPanel")
+	check(panel != null, "the event panel shows")
+	if panel == null:
+		return
+	var knight: String = run.content.units[&"fixture.character.knight"].display_name
+	eq(panel.get_node("%Text").text, knight + " looks at the dice.", "the member token is filled in")
+	var buttons: Array = panel.get_node("%Choices").get_children().filter(func(node: Node) -> bool: return node is Button)
+	eq(buttons.size(), 2, "the class choice for a missing class is hidden")
+	eq(buttons[1].text, "[%s] Bless the dice" % medic.character.display_name, "the class choice has its badge")
+	eq(buttons[1].theme_type_variation, &"EventChoiceClass", "and its look")
+	buttons[1].pressed.emit()
+	await _frames(3)
+	eq(run.run_log[-1]["choice"], 2, "a press runs the choice by its own index")
+	run.content.events.erase(event.id)
+
+
+## Event endings (user, 2026-11-22): a choice leads to its ending page, which tells the story and lists what changed;
+## a choice with no ending page (content the validator warns about) falls back to the result dialog.
+func test_event_ending_page_and_fallback_dialog() -> void:
+	var game := await _game()
+	var run := game.run
+	var keys := GainKeys.new()
+	keys.amount = 2
+	var go := GoToPage.new()
+	go.page = 1
+	var drink := EventChoice.new()
+	drink.label = "Drink with him"
+	drink.outcomes.assign([go])
+	var bare := GainCoins.new()
+	bare.amount = 3
+	var grab := EventChoice.new()
+	grab.label = "Grab a coin"
+	grab.outcomes.assign([bare])
+	var start := EventPage.new()
+	start.text = "A watchman snores."
+	start.choices.assign([drink, grab])
+	var cont := EventChoice.new()
+	cont.label = "Continue"
+	var ending := EventPage.new()
+	ending.text = "The Bard drinks him under the table, and the party lifts his keys."
+	ending.choices.assign([cont])
+	var on_enter: Array[RunOutcome] = [keys]
+	ending.on_enter = on_enter
+	var event := EventDefinition.new()
+	event.id = &"fixture.event.result_probe"
+	event.display_name = "Watchman"
+	event.pages.assign([start, ending])
+	run.content.events[event.id] = event
+	run.event_results = true  # off headless by default (review fix)
+	eq(run.dev_open_event(event), "", "the event opens")
+	await _frames(2)
+	eq(run.choose(0), "", "drink")
+	await _frames(3)
+	var panel := _find(game, "EventPanel")
+	check(panel != null, "the event panel shows the ending")
+	if panel != null:
+		var text: String = panel.get_node("%Text").text
+		check(text.contains("lifts his keys") and text.contains("+2 keys"), "the story and what changed: %s" % text)
+	eq(run.choose(0), "", "Continue")
+	await _frames(3)
+	check(_visible_dialogs(game).is_empty(), "an ending page needs no dialog")
+	eq(run.dev_open_event(event), "", "again, for the fallback")
+	await _frames(2)
+	eq(run.choose(1), "", "grab a coin (no ending page)")
+	await _frames(3)
+	var dialog := _visible_dialogs(game)
+	check(not dialog.is_empty(), "the fallback result dialog shows")
+	if not dialog.is_empty():
+		check(_texts(dialog[0]).contains("+3 coins"), "with what changed: %s" % _texts(dialog[0]))
+	run.content.events.erase(event.id)
+
+
+func _visible_dialogs(game: GameMain) -> Array:
+	return game.find_children("*", "UIConfirm", true, false).filter(func(node: Node) -> bool: return node.is_visible_in_tree())
+
+
+func _texts(node: Node) -> String:
+	var parts := PackedStringArray()
+	for child in node.find_children("*", "", true, false):
+		if child is Label or child is RichTextLabel:
+			parts.append(child.text)
+	return " | ".join(parts)
+
+
+## User, 2026-11-22: the stairs panel (Next floor) is exactly as wide as the minimap above it, never the widest panel.
+func test_stairs_panel_matches_the_map_width() -> void:
+	var game := await _game()
+	var run := game.run
+	if run.is_last_floor():
+		return
+	eq(run.dev_boss_done(), "", "the boss counts as beaten")
+	await _frames(4)
+	var stairs := _find(game, "StairsPanel") as Control
+	var map := _find(game, "MapPanel") as Control
+	check(stairs != null and map != null, "the stairs panel and the map show")
+	if stairs == null or map == null:
+		return
+	eq(stairs.size.x, map.size.x, "Next floor is as wide as the map")
+
+
 ## Spec ui-fixes B7: an event page shown while the party strip is up (entering an event room from the map) redraws the
 ## strip with no error (event_page_shown has two arguments; any engine error fails this test).
 func test_party_strip_takes_event_pages() -> void:

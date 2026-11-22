@@ -50,6 +50,10 @@ const CONTENT_ROOTS: Array[String] = ["res://content/", "res://tests/fixtures/"]
 @export var going_online_text: String = "Connecting to the server…"
 ## Seconds between Go online's sign-in tries (doubled after each, up to the second number).
 @export var go_online_retry_seconds: Vector2 = Vector2(1.0, 10.0)
+## Event results (user, 2026-11-22): the result dialog's button.
+@export var event_result_ok: String = "Continue"
+## Event results: the formats of the lines an ending page and the result dialog list; none = EventResultText's defaults.
+@export var event_result_text: EventResultText
 ## The 3D room (a Node3D with setup(main)); not UI.
 @export var room_view: PackedScene
 @export var unit_view: PackedScene
@@ -478,6 +482,9 @@ func _new_run() -> void:
 	run.stopped.connect(_on_run_stopped)
 	run.action_committed.connect(save_local_run)
 	run.battle_requested.connect(_on_battle_requested)
+	run.event_resolved.connect(_on_event_resolved)
+	if event_result_text != null:
+		run.result_text = event_result_text
 	run.battle_started.connect(_on_battle_started)
 	run.battle_finished.connect(func(_outcome):
 		battle_messages = null
@@ -746,6 +753,18 @@ func set_mode(new_mode: String) -> void:
 func show_message(text: String) -> void:
 	GameplayMessages.broadcast(GameplayMessageRouter.NOTIFICATION, NotificationMessage.make(text))
 	_dev_log(text)
+
+
+## Event results (user, 2026-11-22): a choice ended its event; the result dialog says what it changed.
+func _on_event_resolved(result: Dictionary) -> void:
+	if ui == null:
+		return
+	var parts := PackedStringArray([result.get("title", "")])
+	if str(result.get("text", "")) != "":
+		parts.append(str(result["text"]))
+	if not result.get("lines", PackedStringArray()).is_empty():
+		parts.append("\n".join(result["lines"]))
+	ui.notify("\n\n".join(parts), event_result_ok)
 
 
 ## Spec ui-feedback 2.4 (rows 22-24): a rare, important problem: a one-button dialog (UIManager.notify) with `text`, and

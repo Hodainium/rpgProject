@@ -437,13 +437,15 @@ func pick_pickup(fixed_item: ItemDefinition, fixed_equipment: EquipmentDefinitio
 ## Spec keys-and-gear 3.2: a piece of pooled equipment matching `query` (not held, not seen; rarity weights). With
 ## `prefer_slots`, pieces for those slot tags are picked first when there are any. Null when nothing is left.
 func pick_equipment(query: GameplayTagQuery, stream: RandomNumberGenerator, pools: Dictionary,
-		prefer_slots: Array[StringName] = []) -> EquipmentDefinition:
+		prefer_slots: Array[StringName] = [], only_slot: StringName = &"") -> EquipmentDefinition:
 	var candidates: Array = []
 	var preferred: Array = []
 	for id in _sorted_ids(content.equipment):
 		var piece: EquipmentDefinition = content.equipment[id]
 		if piece.tags.is_empty() or not Unlocks.is_unlocked(piece) or not TagMatch.matches(query, piece.tags):
 			continue
+		if only_slot != &"" and piece.slot != only_slot:
+			continue  # spec event-pass: GiveEquipment.only_slot (a weapon rack gives a weapon)
 		if TagMatch.has(piece.tags, DEV_TAG) or pools.get("held", []).has(id) or pools.get("seen", []).has(id) \
 				or not _in_card_pool(pools, id):
 			continue

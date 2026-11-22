@@ -272,9 +272,15 @@ static func _event(saved: Dictionary) -> Dictionary:
 	event["event"] = StringName(saved["event"])
 	if saved.has("chapter"):
 		event["chapter"] = str(saved["chapter"])
+	if saved.has("draws"):
+		event["draws"] = int(saved["draws"])  # spec event-pass 2.2: the event's draw counter
+	if saved.has("recipient_draws"):
+		event["recipient_draws"] = int(saved["recipient_draws"])
 	if saved.has("after"):
 		event["after"] = {"kind": str(saved["after"]["kind"]), "page": saved["after"]["page"],
 			"encounter": StringName(saved["after"]["encounter"])}
+		if saved["after"].has("entered"):
+			event["after"]["entered"] = bool(saved["after"]["entered"])  # event endings: the page already ran its outcomes
 	return event
 
 

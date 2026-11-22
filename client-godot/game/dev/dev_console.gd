@@ -60,7 +60,14 @@ func load_commands(debug_build: bool = OS.is_debug_build()) -> void:
 	warnings.clear()
 	_load_dir(COMMANDS_DIR, false)
 	if debug_build:
-		_load_dir(USER_COMMANDS_DIR, true)
+		_load_dir(user_commands_dir(), true)
+
+
+## The throwaway commands' folder: user://dev_commands/, or the one RPG_DEV_COMMANDS_DIR names (a test gives its child
+## process a folder of its own, so parallel test shards never load each other's half-written files).
+static func user_commands_dir() -> String:
+	var folder := OS.get_environment("RPG_DEV_COMMANDS_DIR")
+	return folder if folder != "" else USER_COMMANDS_DIR
 
 
 func _load_dir(directory: String, throwaway: bool) -> void:

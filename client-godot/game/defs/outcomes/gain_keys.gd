@@ -7,4 +7,4 @@ extends RunOutcome
 
 
 func apply(run: Object) -> void:
-	run.add_keys(amount)
+	run.gain_keys(amount)

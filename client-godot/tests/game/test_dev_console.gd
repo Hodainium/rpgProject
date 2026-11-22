@@ -66,7 +66,8 @@ static func _quiet_cell(run: RunController) -> int:
 func test_console_registry() -> void:
 	var console := DevConsole.new()
 	console.keep_history = false
-	console.load_commands()
+	# Built-ins only: user://dev_commands/ is shared with parallel shards (test_script_runner's boom.gd comes and goes).
+	console.load_commands(false)
 	eq(Array(console.warnings), [], "every command file loads")
 	for name in console.commands:
 		var command: DevCommand = console.commands[name]
@@ -74,12 +75,14 @@ func test_console_registry() -> void:
 	check(not console.commands.has("example"), "_template.gd is not registered")
 	for name in ["help", "new", "state", "map", "enter", "give", "stat", "kill", "spawn", "create", "grid", "play"]:
 		check(console.commands.has(name), "built-in command %s" % name)
-	# Throwaway commands in user://dev_commands/: picked up without code changes, can't replace a built-in.
-	var folder := ProjectSettings.globalize_path(DevConsole.USER_COMMANDS_DIR)
+	# Throwaway commands: picked up without code changes, can't replace a built-in. In a folder of this process's own
+	# (RPG_DEV_COMMANDS_DIR), so parallel shards' child processes never load these files mid-write.
+	OS.set_environment("RPG_DEV_COMMANDS_DIR", SCRATCH + "registry_commands_%d/" % OS.get_process_id())
+	var folder := ProjectSettings.globalize_path(DevConsole.user_commands_dir())
 	DirAccess.make_dir_recursive_absolute(folder)
 	var probe := 'extends DevCommand\n\n\nfunc _init() -> void:\n\tname = "%s"\n\tusage = "%s"\n\thelp = "test"\n\n\nfunc run(_ctx: DevContext, _args: PackedStringArray) -> String:\n\treturn "probe ok"\n'
-	_write(DevConsole.USER_COMMANDS_DIR + "zz_probe.gd", probe % ["zzprobe", "zzprobe"])
-	_write(DevConsole.USER_COMMANDS_DIR + "zz_shadow.gd", probe % ["give", "give"])
+	_write(DevConsole.user_commands_dir() + "zz_probe.gd", probe % ["zzprobe", "zzprobe"])
+	_write(DevConsole.user_commands_dir() + "zz_shadow.gd", probe % ["give", "give"])
 	console.load_commands()
 	check(console.commands.has("zzprobe"), "a throwaway command is loaded")
 	eq(console.commands["give"].get_script().resource_path, "res://game/dev/commands/give.gd", "a built-in can't be replaced")
@@ -90,6 +93,8 @@ func test_console_registry() -> void:
 	check(console.commands.has("give"), "but keeps the built-ins")
 	DirAccess.remove_absolute(folder.path_join("zz_probe.gd"))
 	DirAccess.remove_absolute(folder.path_join("zz_shadow.gd"))
+	DirAccess.remove_absolute(folder)
+	OS.unset_environment("RPG_DEV_COMMANDS_DIR")
 
 
 func test_console_autocomplete() -> void:
@@ -369,8 +374,14 @@ func run(_ctx: DevContext, _args: PackedStringArray) -> String:
 boom
 state
 " % PARTY)
+	# The child gets a commands folder of its own: user://dev_commands/ is shared with parallel shards, whose throwaway
+	# files it would otherwise load mid-write (errors at its startup).
+	var own := SCRATCH + "boom_user_commands_%d/" % OS.get_process_id()
+	OS.set_environment("RPG_DEV_COMMANDS_DIR", own)
 	var code := _runner(script, out, ["--commands", ProjectSettings.globalize_path(folder)])
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(DevConsole.USER_COMMANDS_DIR + "boom.gd"))
+	OS.unset_environment("RPG_DEV_COMMANDS_DIR")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(own + "boom.gd"))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(own))
 	eq(code, 2, "a script error fails the run")
 	var state: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(out))
 	eq(state["failed"].size(), 1, "one failed line")
@@ -698,3 +709,16 @@ func test_console_trace() -> void:
 	check((await _ok(session, "trace off"))["text"] == "trace off", "trace off")
 	for file in DirAccess.get_files_at(console.traces_dir):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(console.traces_dir.path_join(file)))
+
+
+## Spec event-pass 5: `event <id>` opens any event in the current room (a cheat), then `choose` plays it.
+func test_event_command_opens_an_event() -> void:
+	var session := _session()
+	await _ok(session, "new %s 7" % PARTY)
+	await _ok(session, "event fixture.event.coin")
+	var game: GameMain = session[0]
+	eq(String(game.run.state.event.get("event", "")), "fixture.event.coin", "the event is open")
+	check(game.run.state.dev, "it is a logged cheat")
+	check(not (await _run(session, "event fixture.event.coin"))["ok"], "refused while one is open")
+	await _ok(session, "choose 0")
+	check(game.run.state.event.is_empty(), "choose plays it")

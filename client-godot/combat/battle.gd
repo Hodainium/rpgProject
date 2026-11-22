@@ -170,11 +170,13 @@ func setup(snapshot: Dictionary, content: ContentIndex, presentation_gate: Prese
 	if error != "":
 		return error
 
-	var party_error := _add_party(snapshot.get("party", []), content)
+	var encounter: EncounterDefinition = content.encounters.get(StringName(str(snapshot.get("encounterId", ""))))
+	# Spec event-pass 2.4: the encounter's party_grants go to every living party member, from content by encounter id.
+	var party_error := _add_party(snapshot.get("party", []), content,
+		encounter.party_grants if encounter != null and schema_version >= 2 else null)
 	if party_error != "":
 		return party_error
 
-	var encounter: EncounterDefinition = content.encounters.get(StringName(str(snapshot.get("encounterId", ""))))
 	if encounter == null:
 		return _fail("unknown encounterId '%s'" % snapshot.get("encounterId"))
 	if schema_version < 2:
@@ -219,7 +221,7 @@ func _setup_common(snapshot: Dictionary, content: ContentIndex, presentation_gat
 	return ""
 
 
-func _add_party(party: Array, content: ContentIndex) -> String:
+func _add_party(party: Array, content: ContentIndex, party_grants: AbilitySet = null) -> String:
 	# Party-wide passives from every member, in slot order (spec 3.4 step 2).
 	var party_sets: Array = []
 	if schema_version >= 2:
@@ -241,6 +243,8 @@ func _add_party(party: Array, content: ContentIndex) -> String:
 			kit = _party_kit(member, definition, content, party_sets)
 			if runner_error != "":
 				return runner_error
+			if party_grants != null and (member.get("hp") == null or int(member.get("hp")) > 0):
+				kit["grants"].append({"set": party_grants})
 		var slot := int(member.get("slot", 0))
 		_add_unit(StringName("P%d" % slot), BattleUnit.Side.PARTY, slot, definition, int(member.get("level", 1)), kit)
 	return ""

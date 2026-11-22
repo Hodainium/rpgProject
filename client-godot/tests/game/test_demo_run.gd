@@ -247,6 +247,8 @@ func test_demo_events() -> void:
 	run = _start(content)
 	_open(run, &"demo.event.wounded_knight")
 	eq(run.choose(1), "", "challenge him")
+	eq(run.state.event.get("page"), 2, "a page sets the fight up first (event endings, user 2026-11-22)")
+	eq(run.choose(0), "", "Fight!")
 	eq(run.pending_battle.get("encounter"), &"demo.encounter.knight_duel", "the duel starts")
 	run.free()
 	# Librarian: read, then take one of two books.

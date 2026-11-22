@@ -89,7 +89,9 @@ static func play_one(content: ContentIndex, host: Node, seed_value: int, options
 	if opts["policy"] == "chaos":
 		run_chaos = {"rng": RunSeeds.rng(seed_value, "dev/chaos/run"), "illegal_x100": int(opts["illegal"]) * 100,
 			"violations": record["violations"], "refused": record.get_or_add("runRefused", {})}
-	record["stop"] = await RunPlayer.play(run, int(opts["max_steps"]), fight, run_chaos)
+	# Spec event-pass 2.8: the smart policy scores event choices; auto and chaos pick at random.
+	var events := EventScorer.POLICY_SMART if opts["policy"] == "smart" else EventScorer.POLICY_RANDOM
+	record["stop"] = await RunPlayer.play(run, int(opts["max_steps"]), fight, run_chaos, events)
 	record["status"] = run.state.status
 	record["runnerError"] = run.runner_error
 	record["summary"] = run.run_summary()
@@ -431,6 +433,17 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 				rooms[key] += int(summary.get(key, 0))
 			if summary.get("endedIn", {}).has("wave"):
 				SeedReport._count(rooms["lostInWave"], str(int(summary["endedIn"]["wave"])))
+		if summary.has("eventsEntered"):
+			# Spec event-pass 5: events over the runs: how often each opened and which choices were picked.
+			var events: Dictionary = report.get_or_add("events", {"entered": 0, "memberDeaths": 0, "byEvent": {}})
+			events["entered"] += int(summary["eventsEntered"])
+			events["memberDeaths"] += int(summary.get("eventMemberDeaths", 0))
+			for event_id in summary.get("events", {}):
+				var seen: Dictionary = summary["events"][event_id]
+				var total: Dictionary = events["byEvent"].get_or_add(event_id, {"entered": 0, "choices": {}})
+				total["entered"] += int(seen["entered"])
+				for picked in seen["choices"]:
+					total["choices"][picked] = int(total["choices"].get(picked, 0)) + int(seen["choices"][picked])
 		for entry in record["bossEntry"]:
 			var key := "floor %d" % entry["floor"]
 			if not boss_hp.has(key):
@@ -702,6 +715,11 @@ static func text(report: Dictionary) -> String:
 		var rooms: Dictionary = report["floorRooms"]
 		lines.append("  challenges entered %d, cleared %d  ·  lost in wave: %s  ·  armories visited %d (all runs)" % [
 			rooms["challengesEntered"], rooms["challengesCleared"], _pairs(rooms["lostInWave"]), rooms["armoriesVisited"]])
+	if report.has("events"):
+		var events: Dictionary = report["events"]
+		var played := maxi(int(report["won"]) + int(report["lost"]) + int(report["stopped"]), 1)
+		lines.append("  events entered %d (%.1f per run), %d distinct  ·  members killed by events %d" % [events["entered"],
+			float(events["entered"]) / played, events["byEvent"].size(), events["memberDeaths"]])
 	if report["policy"] == "chaos":
 		lines.append("  illegal moves refused: %s" % _pairs(report["refused"]))
 	if not report.get("sp", {}).is_empty():
