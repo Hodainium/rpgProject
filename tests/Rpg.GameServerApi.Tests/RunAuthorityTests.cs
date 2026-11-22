@@ -71,6 +71,39 @@ public class RunAuthorityTests(StackFixture stack)
     }
 
     [Fact]
+    public async Task Actions_BattleWithDropOffers_Stored()
+    {
+        // Spec boss-drops 3.1: a won battle reports what landed on its room's floor (OfferSource.Drop and Reward), and the
+        // drop is then taken with an ordinary take.
+        await using var factory = await ApiFactory.RunsAsync(stack);
+        var client = await ClientAsync(factory, "alice");
+        var run = await client.StartFencedRunAsync(Start, Ct);
+        var fought = RunLog.Battle(run.RunId, 3);
+        var battle = fought with
+        {
+            Action = fought.Action with
+            {
+                Offers = [new ItemOffer(3000, "fixture.item.tonic", 0, OfferSource.Reward),
+                    new ItemOffer(3001, "fixture.equipment.crate_helm", 0, OfferSource.Reward, ItemKind.Equipment),
+                    new ItemOffer(3002, "fixture.item.tonic", 0, OfferSource.Drop)],
+            },
+        };
+        var take = new RunActionRequest(4, new RunAction("take", 0, Cell: 5, Placement: 3002, ItemId: "fixture.item.tonic",
+            Kind: ItemKind.Item, CharacterId: "fixture.character.duelist", Price: 0, CoinsAfter: 0), "h4", RunLog.PlayedAt);
+
+        var ack = await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2), battle, take), Ct);
+
+        Assert.Equal(4, ack.LastSeq);
+        Assert.Equal(1L, await ScalarAsync(factory,
+            $"SELECT count(*) FROM run_actions WHERE run_id = '{run.RunId}' AND seq = 3" +
+            " AND action @> '{\"type\": \"battle\", \"offers\": [{\"source\": \"Reward\", \"kind\": \"Equipment\"}," +
+            " {\"placement\": 3002, \"source\": \"Drop\"}]}'"));
+        Assert.Equal(1L, await ScalarAsync(factory,
+            $"SELECT count(*) FROM run_actions WHERE run_id = '{run.RunId}' AND seq = 4" +
+            " AND action @> '{\"type\": \"take\", \"placement\": 3002}'"));
+    }
+
+    [Fact]
     public async Task Actions_ChallengeWavesAndArmoryOffers_Stored()
     {
         // Spec floor-rooms 2.3 and 3.2: a challenge room's waves are ordinary battles (one session each, ids ending /w<k>),

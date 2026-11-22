@@ -146,10 +146,12 @@ func test_enemy_drops() -> void:
 	var run := _start(fixtures().overlay([grunt]))
 	_inject(run)
 	await run.fight(KillFirst.new())
-	# Spec food-items Q2: every drop waits for the player's choice (give_to), in roll order.
-	eq(run.state.pending_gifts.count(food.id), 2, "both grunts drop at 100%, waiting for their holder")
-	for gift in run.state.pending_gifts.duplicate():
-		eq(run.give_to(run.state.party[0]["slot"]), "", "give_to")
+	# Spec boss-drops: every drop lands on the room's floor, in roll order, and is taken with take().
+	var dropped := run.drop_pickups(run.state.current_cell)
+	eq(dropped.filter(func(pickup: Dictionary) -> bool: return pickup["item"] == food.id).size(), 2,
+		"both grunts drop at 100%, on the floor")
+	for pickup in dropped:
+		eq(run.take(pickup["placement"], run.state.party[0]["slot"]), "", "take")
 	var held := 0
 	for member in run.state.party:
 		held += member["items"].count(food.id)
@@ -162,4 +164,4 @@ func test_enemy_drops() -> void:
 	for member in none.state.party:
 		held += member["items"].count(food.id)
 	eq(held, 0, "no drop at 0%")
-	check(none.state.pending_gifts.is_empty(), "and nothing waits")
+	check(none.drop_pickups(none.state.current_cell).is_empty(), "and nothing lies on the floor")

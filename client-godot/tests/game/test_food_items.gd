@@ -1,5 +1,5 @@
 ## Spec food-items (section 6): food is passive, eaten on pickup (ApplyHolderEffect heals the holder), keeps a stacking
-## bonus, every drop waits for the player's choice, the bots feed the lowest HP share, the mirror skips food but counts it,
+## bonus, every drop lands on the floor (spec boss-drops), the bots feed the lowest HP share, the mirror skips food but counts it,
 ## and a run with food drops verifies step by step. The system part runs on the fixtures with a food item built in memory
 ## (its bonus is the saved fixture effect elite.tres, +50% max HP); the demo part reads res://content/ and is skipped
 ## without it.
@@ -133,23 +133,28 @@ func test_holder_effect_outside_an_item_hook_does_nothing() -> void:
 	check(Array(run.warnings).any(func(text: String) -> bool: return text.contains("ApplyHolderEffect")), "it warns")
 
 
-# --- Drops (Q2) ---------------------------------------------------------------------------------------------------------
+# --- Drops (Q2; spec boss-drops: on the floor) -------------------------------------------------------------------------
 
-func test_drops_wait_for_the_players_choice_in_roll_order() -> void:
+## The ids of the drops lying in `cell`, in placement order.
+static func _dropped(run: RunController, cell: int) -> Array:
+	return run.drop_pickups(cell).map(func(pickup: Dictionary) -> StringName: return pickup["item"])
+
+
+func test_drops_land_on_the_floor_in_roll_order() -> void:
 	var snack := food()
 	var whetstone: ItemDefinition = fixtures().items[&"fixture.item.whetstone"]
 	var run := _run(fixtures().overlay([snack, _dropper("fixture.enemy.snack_grunt", snack),
 		_dropper("fixture.enemy.whet_grunt", whetstone)]))
-	run._roll_drops([{"unitDefId": "fixture.enemy.snack_grunt"}, {"unitDefId": "fixture.enemy.whet_grunt"}],
-		run.state.current_cell)
-	eq(run.state.pending_gifts, [snack.id, whetstone.id] as Array[StringName], "both drops wait, in roll order")
-	check(run.next_floor().begins_with("choose who gets"), "other actions are refused meanwhile")
-	eq(run.give_to(3), "", "the first goes to slot 3")
+	var cell := run.state.current_cell
+	run._roll_drops([{"unitDefId": "fixture.enemy.snack_grunt"}, {"unitDefId": "fixture.enemy.whet_grunt"}], cell)
+	eq(_dropped(run, cell), [snack.id, whetstone.id], "both drops land, in roll order")
+	check(run.state.pending_gifts.is_empty(), "nothing waits for give_to")
+	run.state.map.cells[cell]["cleared"] = true
+	eq(run.take(RunController.DROP_PLACEMENT, 3), "", "the first goes to slot 3")
 	eq(run.state.holder_of(snack.id), 3, "who the player picked")
-	eq(run.state.pending_gifts, [whetstone.id] as Array[StringName], "the second still waits")
-	eq(run.give_to(1), "", "then slot 1")
+	eq(run.take(RunController.DROP_PLACEMENT + 1, 1), "", "then slot 1")
 	eq(run.state.holder_of(whetstone.id), 1, "the second goes to its pick")
-	eq(run.run_log.filter(func(entry) -> bool: return entry["type"] == "give_to").size(), 2, "two logged give_to")
+	eq(run.run_log.filter(func(entry) -> bool: return entry["type"] == "take").size(), 2, "two logged take")
 
 
 func test_the_battle_that_wins_the_run_drops_nothing() -> void:
@@ -161,20 +166,21 @@ func test_the_battle_that_wins_the_run_drops_nothing() -> void:
 			boss = index
 	check(boss >= 0, "the floor has a boss room")
 	var last := run.structure.floors.size() - 1
+	var landed := 0
 	if run.state.floor_index < last:
 		run._roll_drops([{"unitDefId": "fixture.enemy.snack_grunt"}], boss)
-		eq(run.state.pending_gifts.size(), 1, "a boss before the last floor still drops")
-		eq(run.give_to(run.state.party[0]["slot"]), "", "give_to")
+		eq(_dropped(run, boss).size(), 1, "a boss before the last floor still drops")
+		landed = 1
 	run.state.floor_index = last
 	run._roll_drops([{"unitDefId": "fixture.enemy.snack_grunt"}], boss)
-	check(run.state.pending_gifts.is_empty(), "the last floor's boss drops nothing")
+	eq(_dropped(run, boss).size(), landed, "the last floor's boss drops nothing")
 	run._roll_drops([{"unitDefId": "fixture.enemy.snack_grunt"}], run.state.current_cell)
-	eq(run.state.pending_gifts.size(), 1, "another room of the last floor still drops")
+	eq(_dropped(run, run.state.current_cell).size(), 1, "another room of the last floor still drops")
 
 
-## User, 2026-11-13: an encounter reward may be CHOOSE; it waits like a drop, except in the battle that wins the run,
+## Spec boss-drops D1: a CHOOSE encounter reward lands on the floor like a drop, except in the battle that wins the run,
 ## where it goes to the first member who can hold it.
-func test_choose_encounter_rewards_wait_except_in_the_winning_battle() -> void:
+func test_choose_encounter_rewards_land_except_in_the_winning_battle() -> void:
 	var whetstone: ItemDefinition = fixtures().items[&"fixture.item.whetstone"]
 	var gift := GiveItem.new()
 	gift.item = whetstone
@@ -183,9 +189,8 @@ func test_choose_encounter_rewards_wait_except_in_the_winning_battle() -> void:
 	encounter.rewards = [gift] as Array[RunOutcome]
 	var run := _run(fixtures().overlay([encounter]))
 	run._grant_rewards(encounter, run.state.current_cell)
-	eq(run.state.pending_gifts, [whetstone.id] as Array[StringName], "the reward waits for give_to")
-	eq(run.give_to(2), "", "give_to")
-	eq(run.state.holder_of(whetstone.id), 2, "who the player picked")
+	check(run.state.pending_gifts.is_empty(), "nothing waits for give_to")
+	eq(_dropped(run, run.state.current_cell), [whetstone.id], "the reward lies on the floor")
 	var boss := -1
 	for index in run.state.map.sorted_indices():
 		if run.state.map.cells[index]["role"] == FloorMap.ROLE_BOSS:
@@ -197,13 +202,14 @@ func test_choose_encounter_rewards_wait_except_in_the_winning_battle() -> void:
 	eq(run._choose_off, false, "the flag is cleared after the rewards")
 
 
-func test_a_drop_with_one_possible_holder_is_given_at_once() -> void:
+func test_a_drop_with_one_possible_holder_lands_too() -> void:
 	var snack := food()
 	var run := _run(fixtures().overlay([snack, _dropper("fixture.enemy.snack_grunt", snack)]),
 		["fixture.character.knight"])
 	run._roll_drops([{"unitDefId": "fixture.enemy.snack_grunt"}], run.state.current_cell)
 	check(run.state.pending_gifts.is_empty(), "nothing waits")
-	eq(run.state.holder_of(snack.id), run.state.party[0]["slot"], "the only member got it")
+	eq(_dropped(run, run.state.current_cell), [snack.id], "it lies on the floor (spec boss-drops: one rule)")
+	eq(run.state.holder_of(snack.id), 0, "nobody holds it until a take")
 
 
 # --- The bots (D4) ------------------------------------------------------------------------------------------------------
@@ -274,7 +280,7 @@ func test_validator_food_rules() -> void:
 # --- A run with food drops verifies -------------------------------------------------------------------------------------
 
 ## Every fixture enemy drops the fixture food; a server-mode run played by the bots, cut into steps as the server cuts
-## them, verifies step by step (the give_to entries and the eaten food replay like any run action).
+## them, verifies step by step (the takes of dropped food and the eaten food replay like any run action).
 func test_a_run_with_food_drops_verifies_step_by_step() -> void:
 	var snack := food()
 	var droppers: Array = [snack]
@@ -291,8 +297,9 @@ func test_a_run_with_food_drops_verifies_step_by_step() -> void:
 	_helpers.append(helper)
 	var played: Dictionary = await helper._play(content, StepRunnerTest.TWO_FLOORS)
 	var run: RunController = played["run"]
-	var gifts: int = run.run_log.filter(func(entry) -> bool: return entry["type"] == "give_to").size()
-	check(gifts > 0, "the bots gave dropped food (%d give_to)" % gifts)
+	var gifts: int = run.run_log.filter(func(entry) -> bool:
+		return entry["type"] == "take" and int(entry["placement"]) >= RunController.DROP_PLACEMENT).size()
+	check(gifts > 0, "the bots took dropped food (%d take)" % gifts)
 	# The battle that wins the run drops nothing, so no gift is left waiting at the end.
 	check(run.state.pending_gifts.is_empty(), "no gift waits (stopped: %s, status %s, pending %s)" % [played["stopped"],
 		run.state.status, run.state.pending_gifts])

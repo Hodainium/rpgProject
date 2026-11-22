@@ -58,6 +58,13 @@ public class RunAuthorityContractTests
                     Offers: [new ItemOffer(5, "demo.item.whetstone", 0, OfferSource.Challenge)]), "aa09", Played),
             ])
         },
+        {
+            // Spec boss-drops 3.1 and 3.2: a won battle reports what it put on the room's floor (Drop and Reward offers).
+            "run-action-battle-drops.json", new RunAction(RunActionTypes.Battle, 1, Cell: 12, CoinsAfter: 9,
+                Offers: [new ItemOffer(3000, "demo.item.whetstone", 0, OfferSource.Reward),
+                         new ItemOffer(3001, "demo.equipment.iron_sword", 0, OfferSource.Reward, ItemKind.Equipment),
+                         new ItemOffer(3002, "demo.item.rations", 0, OfferSource.Drop)])
+        },
         { "run-action-ack.json", new RunActionAck(42) },
         { "run-end-request.json", new RunEndRequest(43, RunEndStatus.Won, "bb43", Snapshot) },
         { "run-end-response.json", new RunEndResponse(RunId, RunStatus.Verifying) },

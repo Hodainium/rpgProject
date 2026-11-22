@@ -201,7 +201,7 @@ func test_keys_line() -> void:
 
 
 ## Spec floor-chests 2.6: the room's closed chests are rows of the pickup panel (Open, Open · 1 key); an open chest's armor
-## follows as an ordinary row, "from the Crate"; the Use Item screen lists no chest any more.
+## follows as an ordinary row naming only the piece (no "from the Crate": user, 2026-11-21); the Use Item screen lists no chest any more.
 func test_pickup_panel_opens_chests() -> void:
 	var game := await _keyed_game()
 	var run := game.run
@@ -220,8 +220,11 @@ func test_pickup_panel_opens_chests() -> void:
 	await _frames(3)
 	eq([run.run_log[-1]["type"], run.state.armor.size()], ["open_chest", 0], "Open is one logged open_chest; the gear is not taken yet")
 	rows = panel.get_node("%Rows").get_children().filter(func(row) -> bool: return row.visible)
-	var gear = rows.filter(func(row) -> bool: return row.get_node("%Name").text.ends_with("from the Crate"))
-	eq(gear.size(), 1, "its armor is a row, from the Crate (got %s)" % [rows.map(func(row): return row.get_node("%Name").text)])
+	var put_out := run.chest_pickups(run.state.current_cell, 0)
+	var piece_name: String = run.content.equipment[put_out[0]["item"]].display_name if not put_out.is_empty() else "?"
+	var gear = rows.filter(func(row) -> bool: return row.get_node("%Name").text.contains(piece_name))
+	eq(gear.size(), 1, "its armor is a row (got %s)" % [rows.map(func(row): return row.get_node("%Name").text)])
+	check(not rows.any(func(row) -> bool: return row.get_node("%Name").text.contains("from the")), "no row says \"from the X\"")
 	if not gear.is_empty():
 		gear[0].get_node("%Take").pressed.emit()
 		await _frames(2)

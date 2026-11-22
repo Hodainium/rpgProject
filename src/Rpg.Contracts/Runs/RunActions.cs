@@ -42,7 +42,7 @@ public sealed record RunActionRequest(int Seq, RunAction Action, string StateHas
 /// <param name="PriceItemId">buy: the curse item paid with, if any (<c>RoomPlacement.price_item</c>).</param>
 /// <param name="CoinsAfter">Every action: the run's coins afterwards.</param>
 /// <param name="Offers">enter_room: every pickup on offer in that room; open_chest: what the chest put out (Source
-/// Chest, spec floor-chests).</param>
+/// Chest, spec floor-chests); battle: what the battle put on the room's floor (Source Drop / Reward, spec boss-drops).</param>
 /// <param name="Battle">battle: what was played.</param>
 public sealed record RunAction(
     string Type,
@@ -100,8 +100,9 @@ public sealed record ItemOffer(int Placement, string ItemId, int Price, OfferSou
 
 /// <summary>Where an offer came from. Chest (spec floor-chests): a chest's item or armor, on the floor beside it. Spec
 /// floor-rooms 3.2: Armory (the armory's equipment pedestal) and Challenge (the challenge room's reward, after its last
-/// wave). Values are only ever appended.</summary>
-public enum OfferSource { Treasure, Shop, BossReward, Other, Chest, Armory, Challenge }
+/// wave). Spec boss-drops: Drop (an enemy's drop) and Reward (an item or armor piece of the encounter's rewards), on the floor
+/// of the room the battle was fought in, offered on the battle action. Values are only ever appended.</summary>
+public enum OfferSource { Treasure, Shop, BossReward, Other, Chest, Armory, Challenge, Drop, Reward }
 
 /// <summary>item-pass: pedestals and shelves offer armor; keys-and-gear: shops sell keys.</summary>
 public enum ItemKind { Item, Equipment, Keys }

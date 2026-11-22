@@ -35,21 +35,27 @@ Proposed decisions (the open questions are in section 7):
   and the player may take them in any order, give each to any member who can hold it, or **leave them**. A drop left
   behind stays in its room (the map's leftover colour, `floor-chests` D5, already covers an untaken free pickup) and is
   lost at the stairs, like a chest's item. An item **nobody can hold right now** (every use slot full) is no longer lost:
-  it waits on the floor until a `move_item` frees a slot.
-- **D4. The rolls stay the same.** The drop stream, the roll order, `_pooled_drop` (the card-pool substitute, still
-  checked against who could hold it so the stream draws the same), the reward pick streams (`gift/<k>`) and the encounter's
-  reward order are unchanged. A battle gives exactly the same items as before. Only where they go changes.
+  it waits on the floor until someone can hold it (a consumable used on the map frees its slot; a member with a free slot
+  can take it, or `move_item` makes room on the one the player wants).
+- **D4. The rolls stay the same.** The drop stream, the roll order, `_pooled_drop` (the card-pool substitute), the reward
+  pick streams (`gift/<k>`) and the encounter's reward order are unchanged. Without a card pool (local mode, every golden) a
+  battle gives exactly the same items as before; only where they go changes. Two small differences follow from nothing being
+  held until a take (review 2026-11-21): with a card pool, `_pooled_drop`'s "who could hold it" check reads the party
+  without the battle's earlier rewards and drops (they are still on the floor), so a substitute may differ from the old
+  rule's; and a RANDOM reward no longer draws from the floor's recipient stream (`recipient/<cell>/<k>`), so a later RANDOM
+  gift on that floor may go to another member. No demo encounter has a RANDOM reward.
 - **D5. The battle that wins the run** (`_wins_run`) is unchanged: it drops nothing, and a reward item there still goes to
   the first member who can hold it (no take can follow; the route bosses give nothing anyway since B32). Challenge-room waves
   are unchanged too: no drop and no encounter reward in any wave (`floor-rooms` D10).
-- **D6. Where it lands (presentation, Q4: in the middle).** Every drop and reward pops out from the room's middle onto the
-  free tiles nearest it (in placement order), whichever enemy dropped it. It uses the chest's arc
-  (`RoomView3D` pop, `floor-chests` D4) and is drawn as an item card (`item-cards`) or an armor prop (Set K).
+- **D6. Where it lands (presentation, Q4: in the middle).** Every drop and reward simply appears on the free tiles nearest the
+  room's middle (in placement order) once the fight is over, whichever enemy dropped it, drawn as an item card (`item-cards`)
+  or an armor prop (Set K). No pop-out animation and no toast (user, 2026-11-21, playtest).
 - **D7. Food is eaten on the take** (spec `food-items`): `take` already runs `_receive_item` and its `on_pickup` hooks on
   the taker, so a food drop heals the member the player picks. Nothing new is needed.
 - **D8. `give_to` stays** for event gifts (the Librarian, the Shady merchant: `GiveItem` CHOOSE inside an event choice,
-  spec `event-items`). It is no longer used after a battle. A CHOOSE reward on an encounter now only draws a validator
-  warning (`reward_recipient_ignored`) and no longer counts as allowed by `give_choose_outside_event`.
+  spec `event-items`). It is no longer used after a battle. A CHOOSE reward on an encounter now only draws the validator
+  warning `reward_recipient_ignored` (as a chest's does, `chest_recipient_ignored`); it raises no
+  `give_choose_outside_event` error (decided when built, 2026-11-21: one finding, not two).
 
 **Enterprise mapping: a run rule change with one small contract addition, no new infrastructure.** The ruleset version
 changes (its content hash covers `game/`), so the run goldens are re-recorded. A battle's items become ordinary `take`
@@ -70,11 +76,12 @@ won, not a wave:
   _grant_rewards(encounter, cell)         reward outcomes in order; the hook "_dropping" is set to "reward"
      GiveItem → give_item(...)            item picked as today (query on gift/<k>), then:
         _dropping set and not _choose_off → _drop_pickup(item, cell, 0)  instead of pending_gifts / _give_to
-     GiveEquipment → _receive_equipment   while _dropping: → _drop_pickup(piece, cell, 0)
+     GiveEquipment → give_equipment       while _dropping: → _drop_pickup(piece, cell, 0)  (beside the _opening_chest check;
+                                           never in _receive_equipment, which take() also calls)
      anything else                         applied at once (coins, keys, chest in this room, ...)
   _award_xp(...)                           unchanged
   _roll_drops(enemies, cell)               same stream, same rolls, same _pooled_drop
-     hit → Message.Run.ItemDropped (unchanged toast "<enemy> dropped <item>")
+     hit → Message.Run.ItemDropped (no toast listens to it: D6)
          → _drop_pickup(item, cell, enemy slot)   instead of give_item(CHOOSE)
   _clear_room(cell, true)                  unchanged: coins, key, chest rolls; room_cleared; pickups_shown(cell)
 ```
@@ -88,7 +95,7 @@ skips the hook and gives FIRST as today.
 ### 2.2 Taking it (`take`, unchanged code path)
 
 ```
-player: pickup panel row "Golem's Heart (from the Golem)" → Take → member picker (as for a pedestal or chest item)
+player: pickup panel row "Golem's Heart" → Take → member picker (as for a pedestal or chest item)
 RunController.take(3000, slot)       refused while a battle is pending or an event gift waits (unchanged); room is cleared
    can_hold(slot, item) → _receive_item(slot, item) (on_pickup hooks: food eaten, D7) → Message.Run.ItemTaken (source take)
    armor: take(placement, any) → armor inventory, as an armor pedestal
@@ -127,10 +134,11 @@ No new record. `RunAction.Offers` (already on the record, used by `enter_room` a
 ### 3.3 Run state, hash, snapshot
 
 - A drop pickup is an ordinary cell pickup `{placement, item, price: 0, taken, [kind], drop}`. The run hash covers it
-  through the map's canonical form (every field of every cell). Rooms with no drop hash as before, but every run that
-  wins a battle with a drop or a reward item hashes differently, so the goldens move (section 6).
-- `RunSnapshot._pickup` restores `drop` as an int (JSON gives a float). `test_snapshot_fields_are_covered` gets the new
-  leaf.
+  through the map's canonical form (every field of every cell). Rooms with no drop hash as before, so a run that wins a
+  battle with a drop or a reward item hashes differently. (No committed golden moved: the fixtures have no drops and no
+  item rewards.)
+- `RunSnapshot._pickup` restores `drop` as an int (JSON gives a float). The committed runs hold no drop, so
+  `test_boss_drops::test_the_run_hash_covers_the_drop_leaf` changes the leaf instead of `test_snapshot_fields_are_covered`.
 - `RunController.DROP_PLACEMENT = 3000`. `dev_spawn_item`'s range (1000 to <2000) and chests' (2000 to <3000) are kept
   apart. A cell is unlikely to hold 1000 chest pickups; the validator does not check that.
 - `run_summary`: `dropsLeftBehind` (untaken drop pickups on a floor when it is left, counted like `chestItemsLeft`; only
@@ -142,16 +150,15 @@ No new record. `RunAction.Offers` (already on the record, used by `enter_room` a
 
 - No content change is required. The demo's `GiveItem` rewards (FIRST) land on the floor under D1.
 - Validator: `reward_recipient_ignored` (warning) for a `GiveItem` in `EncounterDefinition.rewards` with `recipient` ≠
-  FIRST or a `character` set. `give_choose_outside_event` then allows CHOOSE inside event choices only (item hooks were
-  already refused). `holder_effect_outside_item` is unchanged.
+  FIRST or a `character` set (D8: a warning only, no `give_choose_outside_event` error; its text now names event choices
+  only). `holder_effect_outside_item` is unchanged.
 
 ### 3.5 Presentation (no hash, no wire)
 
-- Pickup panel: a drop row reads "from the <enemy name>" (the encounter slot's unit, from the cell's `content.enemies`),
-  and a reward row reads "from the <encounter name>", like the chest row's "from the X".
-- `RoomView3D`: drop pickups on the free tiles nearest the room's middle (D6), in placement order, popping out on
-  the chest's arc only for the build right after the battle the player just won (a replay, resume or rebuild shows them
-  already there), the same guard as `_on_chest_opened`.
+- Pickup panel: every row names the item only, with no "from the X" (user, 2026-11-21, playtest; this also removed the
+  chest item's "from the <chest>" of spec `floor-chests` 2.6 and `pickup_row.gd`'s `from_chest_format`). `RunController.drop_source_name` (the enemy in the drop's slot; for a reward the room's
+  `Enemy.Boss` unit, else its first enemy) names the source of the `ItemDropped` message only.
+- `RoomView3D`: drop pickups on the free tiles nearest the room's middle (D6), in placement order, with no animation.
 - The Give-to panel remains for event gifts only.
 
 Redis / RabbitMQ / Redpanda: N/A. The feature adds no key, queue or topic. The offers travel inside the stored action JSON.
@@ -170,8 +177,10 @@ Redis / RabbitMQ / Redpanda: N/A. The feature adds no key, queue or topic. The o
 - **Card pool:** a drop still obeys the run's card pool (`_pooled_drop`, unchanged); a reward still picks from the pool.
 - **Acceptance scenario 5 (tampered action log → 2002):** covered for this rule by two new `test_step_runner` cases. A
   claimed `take` of a drop placement the battle never put out is a `StepVerdict` Rejected with code 2002 (the client
-  refuses it locally too). A `battle` whose claimed `offers` / state hash describe a drop that the replay does not roll is
-  Rejected 2002 with the step's mismatch reason. Neither is an HTTP 4xx.
+  refuses it locally too). A claimed start state holding a drop the replay never rolled is Rejected 2002
+  (`SnapshotHashMismatch`). Neither is an HTTP 4xx. The `offers` themselves are analytics claims the step verifier does not
+  compare (as for `enter_room` and `open_chest` today); a projection that needs trusted offers must rebuild them from the
+  verified replay (open, slice 4b).
 - Scenarios 1-4 and 7: N/A (no settlement, outbox, cache or load path changes).
 
 ## 5. Observability
@@ -187,11 +196,12 @@ with a `GiveItem` reward and a `GiveEquipment` reward; added by the fixture buil
 1. A won battle puts each hit drop and each reward item / armor piece on the room's floor (`drop` = slot / 0, placements
    from 3000 in reward-then-roll order, price 0, not taken). `pending_gifts` stays empty and no action is refused
    afterwards.
-2. The rolled items are the same as before the change: a drop-stream table computed with the old rule on the same seed,
-   pinned as a small golden in the test.
+2. The rolled items are the same as before the change: the drop stream, its roll order and `_pooled_drop` are untouched
+   code (not pinned by a new golden: `test_food_items` and `test_route_enemies` keep testing the rolls).
 3. `take(3000+k, slot)` gives the item to the chosen member, logs `take`, toasts `ItemTaken`. Food heals the taker (D7),
    and armor goes to the armor inventory.
-4. A drop nobody can hold is not lost: `take` refuses with the use-slot reason, and after a `move_item` the take works.
+4. A drop nobody can hold is not lost: `take` refuses with the use-slot reason, and once a slot frees (a consumable used
+   on the map) the take works.
 5. Leaving the room and going down the stairs with drops untaken: allowed, `dropsLeftBehind` counted, the map's
    `leftover` set on the room.
 6. The run-winning battle drops nothing and gives its reward to the first holder (D5). A challenge room gives neither (D5).
@@ -204,17 +214,17 @@ with a `GiveItem` reward and a `GiveEquipment` reward; added by the fixture buil
     battle and a drop `take` to the same hash. The two tampered `test_step_runner` cases (section 4) give Rejected 2002.
 11. Bots: `RunPlayer` takes drop pickups with `gift_holder` (food to the lowest HP share), like chest pickups. Chaos adds
     `take_drop_twice` (refused). The play report stays error-free on the demo (`seed_report --play`, smart policy).
-12. UI: the pickup panel's "from the X" rows, and no Give-to panel after a battle (`test_ui_feedback` / pickup panel test).
-    View: the drops on the free tiles nearest the middle and the pop guard (no pop on a replayed battle).
+12. UI: no pickup row says "from the X" (`test_explore_hud::test_pickup_panel_opens_chests`); no gift waits after a battle
+    (`pending_gifts` empty, test 1), so the Give-to panel never opens. View: checked by hand in a window (drops in the
+    middle, a chest on the centre tile, its item under it, gone after re-entry; playtest-fixes B35).
 
 .NET: `Rpg.Contracts.Tests` golden JSON for `OfferSource.Drop` / `Reward` on a `battle` action, and
 `Rpg.GameServerApi.Tests` `Actions_BattleWithDropOffers_Stored` (the new enum values round-trip through the actions
 endpoint).
 
-Goldens (re-recorded in one `--update-goldens` run, diff reviewed: only pickups added, `give_to` lines replaced by
-`take` lines, hashes and the ruleset version): `golden/game/run_scripted.json`, `run_keyed.json`, the seed report golden
-and the step-runner runs. Combat goldens do not move (no battle changes). e2e: `verify_demo_content` and `full_run` keep
-passing on the real worker (a demo boss drop taken and verified).
+Goldens: none moved (the fixtures have no drops and no item rewards; combat is unchanged). The tests that pinned the old
+rule were updated: `test_food_items`, `test_progression`, `test_encounter_features`, `test_demo_run`, `test_keys_and_gear`,
+`test_floor_rooms`, `test_explore_hud`. e2e: `verify_demo_content` and `full_run` pass on the real worker.
 
 ## 7. Decisions (the user's review, 2026-11-21)
 
@@ -222,5 +232,5 @@ passing on the real worker (a demo boss drop taken and verified).
 - **Q2. The boss's reward item too?** Yes: the `Pool.Boss` item lands on the floor and the player picks who takes it (D1).
 - **Q3. Armor rewards?** On the floor, like a chest's armor (D2).
 - **Q4. Where they land?** In the room's middle, every drop and reward alike (D6). The pickup keeps `drop` (the enemy's
-  slot) only for the "from the X" label and analytics.
+  slot) for analytics and the `ItemDropped` message's source; no pickup row says "from the X" (playtest, 2026-11-21).
 - **Q5. Analytics names?** Yes: new `OfferSource.Drop` and `Reward`; `BossReward` kept as it is (3.1).

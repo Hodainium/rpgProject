@@ -119,7 +119,8 @@ func test_entering_starts_the_waves_and_only_the_last_one_gives_anything() -> vo
 		eq(run.state.coins, coins, "no coins after wave %d (not even the encounter's reward)" % (wave - 1))
 		eq(run.state.keys, keys, "no key after wave %d" % (wave - 1))
 		eq(_xp(run), xp, "no XP after wave %d" % (wave - 1))
-		check(run.state.pending_gifts.is_empty() and not _holds(run, WHETSTONE), "no drop after wave %d" % (wave - 1))
+		check(run.state.pending_gifts.is_empty() and not _holds(run, WHETSTONE) and run.drop_pickups(cell).is_empty(),
+			"no drop after wave %d (none on the floor either, spec boss-drops)" % (wave - 1))
 		check(not run.state.map.cells[cell]["cleared"], "the room is not cleared yet")
 	eq(run.state.map.cells[cell]["wave"], 2, "the cell knows the wave it reached")
 	# What one cleared battle room rolls, on the room's own stream, over every wave's enemies.
@@ -139,7 +140,8 @@ func test_entering_starts_the_waves_and_only_the_last_one_gives_anything() -> vo
 	var after := _xp(run)
 	for index in after.size():
 		check(after[index] > xp[index] or not run.state.party[index]["alive"], "XP arrives after the last wave (slot %d)" % index)
-	check(run.state.pending_gifts.is_empty() and not _holds(run, WHETSTONE), "no enemy ever drops in a challenge room")
+	check(run.state.pending_gifts.is_empty() and not _holds(run, WHETSTONE) and run.drop_pickups(cell).is_empty(),
+		"no enemy ever drops in a challenge room (none on the floor either, spec boss-drops)")
 	check(not run.state.map.cells[cell]["pickups"].is_empty(), "the reward pedestal is there")
 	var summary := run.run_summary()
 	eq(summary.get("challengesEntered"), 1, "the summary counts the challenge entered")
