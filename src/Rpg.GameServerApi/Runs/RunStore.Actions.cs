@@ -375,12 +375,14 @@ public sealed partial class RunStore
         }
 
         // Spec run-verify 2.6: the latest *verified* checkpoint (a legacy run: the latest claimed one, as before). Seq 1 is
-        // served from the server's own genesis snapshot; a run with no uploads yet gets that snapshot at seq 0.
+        // served from the server's own genesis snapshot; a run with no uploads yet gets that snapshot at seq 0. Spec hash-id-lists
+        // H12: the verifier's own state at that checkpoint when the step ending there wrote it, so every hashed field is one the
+        // replay produced (the unhashed bookkeeping, such as the compact log, still comes from the step's claimed start).
         var checkpointSeq = 0;
         var snapshot = JsonDocument.Parse("null").RootElement;
         await using (var select = Command(connection, transaction,
                          """
-                         SELECT seq, snapshot FROM run_actions
+                         SELECT seq, COALESCE(verified_snapshot, snapshot) FROM run_actions
                          WHERE run_id = $1 AND snapshot IS NOT NULL AND ($2 OR seq <= GREATEST($3, 1))
                          ORDER BY seq DESC LIMIT 1
                          """, runId, legacy, verifiedSeq))

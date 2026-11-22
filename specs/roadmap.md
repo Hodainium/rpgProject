@@ -49,6 +49,8 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5b3. `floor-rooms` | ✅ Built and playtested 2026-11-21 on `feat/floor-rooms` (`specs/floor-rooms.md`; map icons for both rooms, the room kept in battle between waves; open: room props and the wave toast; challenge rooms with three waves, armories, items-only item rooms, floors growing +2 rooms per depth to 25; Godot 1125, .NET 619; added 2026-11-15: bigger floors, a challenge room (three waves, an item reward), an armory (armor or a weapon) on every floor, item rooms give items only; before 5c) | 2026-11-15 |
 | 5c. `card-balance` | ⬜ Not started | |
 | 5d. `event-pass` + `unique-events` | 🔨 `event-pass` built 2026-11-21 on `feat/event-pass`, playtested, signed off and spec synced 2026-11-22 (event rooms ~15 per run; gate measured, not tuned, spec section 8); `unique-events` (part 2, the no-repeat rule) not started: next, in a new chat. 5d is done only after both. Specs (`specs/event-pass.md`: 42 new events (50 in all), event rooms 40-50 → ~15 per run, member-targeted outcomes, class choices, choice tags for the bots; `specs/unique-events.md`, revised 2026-11-21: once per run with the normal-room fallback); after 5b3 `floor-rooms`, before 5c (user, 2026-11-15) | 2026-11-21 |
+| 5d2. `hash-id-lists` | ✅ Built 2026-11-22 on `feat/hash-id-lists` (`specs/hash-id-lists.md`; run hash `run-v3`: the snapshot encoded one to one (`RunCanonical`, `RunHash`), so merged or split ids hash differently; H12: steps and resumes start from the verifier's own checkpoint state (`run_actions.verified_snapshot`, migration 0013); Godot 1226, .NET 625, e2e `snapshot_ids_forged`) | 2026-11-22 |
+| 5f. `upload-compression` | ⏭️ Next (spec to write; gzip on the client's uploads, measured 2026-11-22 at about 4x on stored checkpoints (5.6 KB → 1.4 KB average); request decompression on the server with a size limit against zip bombs; checkpoints stay as often as today: they keep steps short and the stairs gate quick; storage is retention's job, 7b) | 2026-11-22 |
 | 6. `observability` | ⬜ Not started | |
 | 7. `live-dashboard` | ⬜ Not started | |
 | 7b. `data-retention` | ⬜ Not started | |
@@ -219,6 +221,8 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   because the web dashboard will message players and send gems; not now, the 5b2 → 5b3 → 5d → 5c order goes on first (user).
 - 2026-11-21: 5d split in two specs (user): `event-pass` (part 1: the events, fewer event rooms, member targeting, class
   choices, bot choice tags) and `unique-events` (part 2, revised: an exhausted pool gives a normal room instead of an empty one).
+- 2026-11-22: 5d2 `hash-id-lists` built (run hash v3, H12). Next: 5f `upload-compression` (user: compression is the lever; per-battle
+  checkpoints stay, they keep the stairs wait short), then the `unique-events` playtest and 5c.
 
 
 ## Design tuning: any time, not just in breaks

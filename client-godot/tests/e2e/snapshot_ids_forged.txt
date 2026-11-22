@@ -1,0 +1,21 @@
+# Spec hash-id-lists H11 and H12, acceptance scenario 5 for a checkpoint: a stored checkpoint snapshot is forged after the upload
+# (two seen item ids merged into one, "a,b", as a client forging its checkpoint would send it). Under run-v3 the forged claim no
+# longer hashes to its claimed state, and since H12 a step starts from the verifier's own state at a checkpoint whenever the step
+# ending there is verified, never from the claim. With one consumer the steps verify in order, so the step ending at the forged
+# checkpoint verifies first (its end hash is honest), keeps the verifier's state beside the claim, and the next step starts from
+# that: the run is played to a verified win and the forged claim is never the state it continues from (it stays, as claimed,
+# for the audit). The rejection of a forged start and the rollback to the verifier's state are StepProcessorTests'
+# AVerifiedStepKeepsTheStateItReached_TheNextStepStartsFromIt_AndAForgedClaimNeverComesBack and test_step_runner's H1 test.
+# The party is the fixtures' titan, so the run ends Won whatever the dice say. The worker only starts after the tampering.
+#! env Monitors__Interval=00:00:01
+#! worker-env Verifier__Segment__Concurrency=1
+new fixture.character.titan run=fixture.run.two_floors
+wait run
+autorun policy=smart
+e2e tamper-snapshot-ids
+e2e worker-start 120
+wait floor 1 240
+autorun policy=smart
+wait ended 120
+wait verdict all 240
+server steps

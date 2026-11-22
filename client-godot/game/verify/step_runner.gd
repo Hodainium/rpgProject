@@ -80,11 +80,16 @@ func run_on(request: Dictionary, content: ContentIndex, host: Node) -> Dictionar
 	_run.floor_entered.connect(func(_floor: int) -> void: _digest = _run.floor_digest())
 	_run.battle_started.connect(_on_battle_started)
 	_run.battle_finished.connect(_on_battle_finished)
+	var refused_before := RunCanonical.failures
 	var result: Dictionary
 	if str(request["kind"]) == "Genesis":
 		result = _genesis(request)
 	else:
 		result = await _replay(request)
+	if RunCanonical.failures != refused_before:
+		# Spec hash-id-lists H5: the run hash met a value it cannot encode. A claimed snapshot's non-whole numbers are refused as
+		# malformed before (RunSnapshot.shape_problem), so this is a bug of ours, never the client's data.
+		result = _error("the run hash met a value it cannot encode (RunCanonical)")
 	_run.queue_free()
 	_run = null
 	return result
@@ -200,7 +205,11 @@ func _replay(request: Dictionary) -> Dictionary:
 			return _reject("NotWon", last_seq, "the run ends at %s, the end claims %s" % [_run.state.run_hash(), request["endRunHash"]])
 	# The run hash covers everything that decides play, so the next step's check of its restored start against the hash claimed
 	# here binds the claimed snapshot to this replay: no separate comparison of snapshots is needed.
-	return _verified(start_hash, _run.state.run_hash(), {}, _digest)
+	# Spec hash-id-lists H12: the state the replay reached comes with the verdict; the server keeps it beside the client's claim and
+	# the next step and a resume start from it. Only when it is the claimed end (it always is here), so it never hashes otherwise.
+	var end_hash := _run.state.run_hash()
+	var reached: Dictionary = _run.snapshot() if end_hash == str(request["actions"][-1]["stateHash"]) else {}
+	return _verified(start_hash, end_hash, reached, _digest)
 
 
 ## Spec card-collection 2.5: the run's item pool, the server's own (from `runs`): null when the run was started without cards.

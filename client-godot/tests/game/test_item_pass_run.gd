@@ -86,7 +86,7 @@ func test_armor_inventory() -> void:
 	eq(run.run_log[-1]["kind"], "equipment", "the take is logged as equipment")
 	check(not run.run_log[-1].has("slot"), "with no character")
 	eq(run.take(_placement_of(run, HELM), 1), "already taken", "and can't be taken twice")
-	check(run.state.canonical_lines().has("armor=%s" % HELM), "the inventory is in the run hash")
+	check(run.state.canonical_lines().has('run.armor=["%s"]' % HELM), "the inventory is in the run hash")
 
 	eq(run.equip(1, HELM), "", "equip from the inventory")
 	eq(run.state.member(1)["equipment"][HEAD], HELM, "the piece is worn")

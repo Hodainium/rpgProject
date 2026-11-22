@@ -88,10 +88,7 @@ func distances() -> Dictionary:
 	return result
 
 
-## Canonical text lines for hashing. Spec run-verify: every field of a cell is in its line (StateHasher.canonical), so a field
-## added to the map later, a pickup's kind or an enemy's loadout can't fall outside the run hash.
+## Canonical text lines for hashing: the run hash's `map.` lines (spec hash-id-lists 2.3), every field of every cell encoded
+## one-to-one, so a field added to the map later can't fall outside the hash.
 func canonical_lines() -> PackedStringArray:
-	var lines := PackedStringArray(["map=%dx%d|start=%d|boss=%d" % [size.x, size.y, start, boss]])
-	for index in sorted_indices():
-		lines.append("cell=%d|%s" % [index, StateHasher.canonical(cells[index])])
-	return lines
+	return RunHash.map_lines(RunSnapshot._map(self))

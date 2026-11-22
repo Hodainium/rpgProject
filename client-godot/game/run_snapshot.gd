@@ -1,6 +1,7 @@
 ## RunSnapshot v1 (spec server-authority 3.5): everything needed to continue a run, as a JSON-ready dictionary with
 ## `schemaVersion` 1: the RunState (party, inventory, armor, keys, chests, XP, pending gifts, the open event or rest
-## stop), the floor map, the controller's pending battle, a floor waiting for its seed, the tallies the summary reads,
+## stop), the floor map, the pending battle and a floor waiting for its seed (both on RunState; capture_state, the part the run
+## hash is built from, spec hash-id-lists), the tallies the summary reads,
 ## and a compact copy of the run log (types only, so run_summary() and seq numbers continue). No RNG positions: every
 ## stream is derived fresh from a seed and a label.
 ##
@@ -18,7 +19,25 @@ const LOG_FIELDS: Array[String] = ["type", "outcome", "kind", "status", "party"]
 
 
 static func capture(run: RunController) -> Dictionary:
-	var state := run.state
+	var state_part := capture_state(run.state)
+	var log: Array = []
+	for entry in run.run_log:
+		var compact := {}
+		for field in LOG_FIELDS:
+			if entry.has(field):
+				compact[field] = entry[field]
+		log.append(compact)
+	# The keys in the order they always had, so the snapshot's JSON is unchanged.
+	return {
+		"schemaVersion": state_part["schemaVersion"], "run": state_part["run"], "map": state_part["map"],
+		"pendingBattle": state_part["pendingBattle"], "waitingFloor": state_part["waitingFloor"],
+		"requestedFloors": run._requested_floors.duplicate(), "log": log, "tally": _plain(run._tally),
+	}
+
+
+## Spec hash-id-lists 2.2: the part of a snapshot that describes the run's state, from the RunState alone (the run hash is built from
+## it, RunHash). capture() adds what only the controller holds: the compact log, the tallies and the requested floors.
+static func capture_state(state: RunState) -> Dictionary:
 	var floor_seeds := {}
 	for floor_index in state.floor_seeds:
 		floor_seeds[str(floor_index)] = str(state.floor_seeds[floor_index])
@@ -33,13 +52,6 @@ static func capture(run: RunController) -> Dictionary:
 			"useSlots": member["use_slots"].map(func(use_slot: Dictionary) -> Dictionary:
 				return {"item": String(use_slot["item"]), "cooldown": use_slot["cooldown"]}),
 			"equipment": equipment})
-	var log: Array = []
-	for entry in run.run_log:
-		var compact := {}
-		for field in LOG_FIELDS:
-			if entry.has(field):
-				compact[field] = entry[field]
-		log.append(compact)
 	return {
 		"schemaVersion": SCHEMA_VERSION,
 		"run": {
@@ -53,12 +65,9 @@ static func capture(run: RunController) -> Dictionary:
 			"keys": state.keys, "goldenKey": state.golden_key, "chestSerial": state.chest_serial, "devCommands": state.dev_commands,
 		},
 		"map": _map(state.map) if state.map != null else null,
-		"pendingBattle": _plain(run.pending_battle) if not run.pending_battle.is_empty() else null,
-		"waitingFloor": {"floor": run._waiting_floor["floor"], "choice": String(run._waiting_floor["choice"])}
-			if not run._waiting_floor.is_empty() else null,
-		"requestedFloors": run._requested_floors.duplicate(),
-		"log": log,
-		"tally": _plain(run._tally),
+		"pendingBattle": _plain(state.pending_battle) if not state.pending_battle.is_empty() else null,
+		"waitingFloor": {"floor": state.waiting_floor["floor"], "choice": String(state.waiting_floor["choice"])}
+			if not state.waiting_floor.is_empty() else null,
 	}
 
 
@@ -171,14 +180,14 @@ static func shape_problem(saved: Variant) -> String:
 	if not saved["run"]["party"] is Array or not saved["run"]["floorSeeds"] is Dictionary or not saved["log"] is Array \
 			or not saved["requestedFloors"] is Array or not saved["tally"] is Dictionary:
 		return "a snapshot field has the wrong type"
-	if saved["run"].has("seenEvents"):  # spec unique-events 2.3: optional (older saves have none)
-		if not saved["run"]["seenEvents"] is Array:
-			return "snapshot.run.seenEvents must be an array"
-		for id in saved["run"]["seenEvents"]:
-			# Security review: the hash joins the ids with commas, so an id holding one ("a,b") would hash like two ids while
-			# matching no event (a forged checkpoint resetting the once-per-run rule). Ids are plain names.
-			if not id is String or id.is_empty() or id.contains(",") or id.contains("\n"):
-				return "snapshot.run.seenEvents holds an invalid event id"
+	# Spec unique-events 2.3: optional (older saves have none). Spec hash-id-lists: no check on the ids themselves; the run hash
+	# encodes every id one-to-one (RunCanonical), so a merged or split id simply hashes differently.
+	if saved["run"].has("seenEvents") and not saved["run"]["seenEvents"] is Array:
+		return "snapshot.run.seenEvents must be an array"
+	# Spec hash-id-lists H5 (review fix): the run state holds whole numbers only. A claimed snapshot with another number would restore
+	# and then be refused by the run hash's encoder (a runner error, retried and dead-lettered); refused here it is a verdict.
+	if _has_fraction(saved):
+		return "a snapshot number is not a whole number"
 	for member in saved["run"]["party"]:
 		if not member is Dictionary:
 			return "a party member must be an object"
@@ -219,6 +228,20 @@ static func shape_problem(saved: Variant) -> String:
 						return "a map cell's chest needs chest, serial and opened"
 	return ""
 
+
+
+static func _has_fraction(value: Variant) -> bool:
+	if value is float:
+		return not is_finite(value) or value != floorf(value)
+	if value is Dictionary:
+		for key in value:
+			if _has_fraction(value[key]):
+				return true
+	elif value is Array:
+		for item in value:
+			if _has_fraction(item):
+				return true
+	return false
 
 
 static func _map(map: FloorMap) -> Dictionary:

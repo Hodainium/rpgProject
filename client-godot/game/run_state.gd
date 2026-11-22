@@ -45,8 +45,7 @@ var event: Dictionary = {}
 ## next, so they belong to the state the run hash covers (RunController reads and writes them through its own properties).
 var pending_battle: Dictionary = {}
 var waiting_floor: Dictionary = {}
-## Spec event-items: items waiting for the player to pick their holder (give_to), in order. Not hashed: the hash is
-## taken between actions, and a given item is hashed in its holder's line.
+## Spec event-items: items waiting for the player to pick their holder (give_to), in order.
 var pending_gifts: Array[StringName] = []
 var status: String = ACTIVE
 ## Dev tools (spec dev-tools 3.4): a cheat or a sandbox happened in this run. Hashed only when true, so it can never pass
@@ -54,9 +53,9 @@ var status: String = ACTIVE
 var dev: bool = false
 ## A sandbox run (one room or one hand-made floor); never a next floor.
 var sandbox: bool = false
-## The console's `reveal`: the map view shows every room. A view flag, not hashed.
+## The console's `reveal`: the map view shows every room. A view flag (hashed when set, like every snapshot field).
 var revealed: bool = false
-## Spec keys-and-gear 2.7: event rooms show their type on this floor (a RevealRooms outcome). A view flag, not hashed.
+## Spec keys-and-gear 2.7: event rooms show their type on this floor (a RevealRooms outcome). Hashed when set.
 var reveal_events: bool = false
 ## Spec keys-and-gear 3.1: keys (0-99), the golden key (this floor only) and the next chest serial (its contents stream is
 ## "chest/<serial>"). Spec floor-chests: a chest lives in its room (the cell's "chests"), so there is no chest inventory.
@@ -180,73 +179,11 @@ func anyone_alive() -> bool:
 	return false
 
 
-## Canonical lines for the run hash (spec 3.6).
+## Canonical lines for the run hash (spec hash-id-lists 2.3: the snapshot, encoded one-to-one by RunHash).
 func canonical_lines() -> PackedStringArray:
-	var lines := PackedStringArray([
-		"run-v2",
-		"seed=%d" % run_seed,
-		"structure=%s" % run_structure_id,
-		"status=%s" % status,
-		"floor=%d|chapter=%s|cell=%d|boss_cleared=%d" % [floor_index, chapter_id, current_cell, 1 if boss_cleared else 0],
-		"coins=%d" % coins,
-		"counters=%d|%d" % [field_actions_on_floor, gifts_on_floor],
-		"seen=%s" % ",".join(seen_items),
-	])
-	if not floor_seeds.is_empty():
-		# Spec server-authority 3.5: server mode only, so local runs hash exactly as before.
-		lines.insert(2, "floor_seed=%d" % int(floor_seeds.get(floor_index, 0)))
-	for entry in party:
-		var slots := PackedStringArray()
-		for use_slot in entry["use_slots"]:
-			slots.append("%s:%d" % [use_slot["item"], use_slot["cooldown"]])
-		var gear := PackedStringArray()
-		var slot_tags: Array = entry["equipment"].keys()
-		# By name: a plain sort() orders StringNames by their interned pointer, which differs between processes (a windowed game and
-		# the headless verifier), so two worn pieces could hash in either order and every later step was rejected (2002).
-		slot_tags.sort_custom(func(a, b) -> bool: return String(a) < String(b))
-		for tag in slot_tags:
-			gear.append("%s=%s" % [tag, entry["equipment"][tag]])
-		var line := "member=%d|%s|%d|%s|%s|%s|%d|%s|%s|%s|%s" % [entry["slot"], entry["character"], entry["level"],
-			entry["hp"], entry["mp"], entry["energy"], 1 if entry["alive"] else 0, ",".join(entry["skills"]),
-			",".join(entry["items"]), ",".join(slots), ",".join(gear)]
-		if int(entry.get("xp", 0)) > 0:
-			line += "|xp=%d" % entry["xp"]  # spec playable-demo 3.11; never on a run without XP
-		lines.append(line)
-	if not armor.is_empty():
-		lines.append("armor=%s" % ",".join(armor))
-	if not seen_events.is_empty():
-		lines.append("events_seen=%s" % ",".join(seen_events))  # spec unique-events 2.3; runs without query events hash as before
-	if keys > 0 or golden_key or chest_serial > 0:
-		# Spec keys-and-gear 3.1: only on runs that ever saw a key or a chest, so older runs hash as before. Spec floor-chests:
-		# the chests themselves are in their cells, hashed with the map.
-		lines.append("keys=%d|golden=%d|serial=%d" % [keys, 1 if golden_key else 0, chest_serial])
-	if map != null:
-		lines.append_array(map.canonical_lines())
-	# Spec run-verify: everything else that decides play, each only when set (so most lines are absent most of the time). Left out on
-	# purpose, with the reason: run_id (identity, which a step compares against the run itself), the seeds of floors not entered yet
-	# (the server's own are the reference), dev_commands (a counter of console cheats), and the log, tallies and requested floors
-	# (summaries and network bookkeeping, never read by a rule).
-	if not event.is_empty():
-		lines.append("event=" + StateHasher.canonical(event))
-	if not pending_gifts.is_empty():
-		lines.append("gifts=" + ",".join(pending_gifts))
-	if revealed:
-		lines.append("revealed=1")
-	if reveal_events:
-		lines.append("reveal_events=1")
-	if sandbox:
-		lines.append("sandbox=1")
-	if not pending_battle.is_empty():
-		lines.append("pending=" + StateHasher.canonical(pending_battle))
-	if not waiting_floor.is_empty():
-		lines.append("waiting=" + StateHasher.canonical(waiting_floor))
-	if card_pool_set:
-		lines.append("card_pool=" + card_pool_digest())  # spec card-collection 2.5
-	if dev:
-		lines.append("dev=1")
-	return lines
+	return RunHash.lines(self)
 
 
 ## SHA-256 of the canonical lines, lowercase hex.
 func run_hash() -> String:
-	return StateHasher.sha256_hex("\n".join(canonical_lines()))
+	return RunHash.of(self)

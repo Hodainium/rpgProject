@@ -66,9 +66,12 @@ func _refused(run: RunController, action: Callable, label: String) -> String:
 
 # --- Keys, the golden key, drops ------------------------------------------------------------------------------------
 
-func test_runs_without_keys_hash_as_before() -> void:
+## Spec hash-id-lists: run-v3 hashes the key counters as the snapshot holds them (0 on a run without keys) and no golden key line.
+func test_runs_without_keys_hash_their_empty_key_state() -> void:
 	var run := _plain()
-	check(not "\n".join(run.state.canonical_lines()).contains("keys="), "no keys line on a run without keys")
+	var hashed := run.state.canonical_lines()
+	check(hashed.has("run.keys=0") and hashed.has("run.chestSerial=0"), "the key counters at 0")
+	check(not "\n".join(hashed).contains("run.goldenKey="), "and no golden key line (false writes none)")
 	check(not run.run_summary().has("keysFound"), "no key counters in its summary")
 	check(not DevReport.state_of(run).has("keys"), "nor in its state report")
 	run._clear_room(KeysWorld.normal(run), true)
@@ -89,7 +92,9 @@ func test_key_and_chest_drops() -> void:
 		eq(held.size(), 1, "and a chest, in the room just cleared (spec floor-chests)")
 		eq([keys.size(), keys[0].data["targetName"]], [1, "a key"], "Message.Run.KeyFound: 'a key'")
 		eq(chests.size(), 1, "Message.Run.ChestFound")
-		check("\n".join(run.state.canonical_lines()).contains("keys=1|golden=0|serial=1"), "keys and the chest serial are hashed")
+		var hashed := run.state.canonical_lines()
+		check(hashed.has("run.keys=1") and hashed.has("run.chestSerial=1") and not "\n".join(hashed).contains("goldenKey"),
+			"keys and the chest serial are hashed")
 		found.append([held[0]["chest"] if not held.is_empty() else &"", run.state.run_hash()])
 		run._clear_room(run.state.map.boss, true)
 		eq(run.state.keys, 1, "the boss room drops no key (D2)")
@@ -186,7 +191,7 @@ func test_locked_rooms() -> void:
 	eq([run.state.keys, run.run_log[-1]["unlock"], run.state.map.cells[vault]["opened"]], [0, "key", true],
 		"one key spent, logged, the room stays open")
 	check(not run.room_locked(vault), "no longer locked")
-	check(Array(run.state.map.canonical_lines()).any(func(line: String) -> bool: return line.contains("opened=1")),
+	check(Array(run.state.map.canonical_lines()).any(func(line: String) -> bool: return line.contains('"opened":true')),
 		"an opened room is hashed")
 	eq(run.enter_room(run.state.map.start), "", "back to the start")
 	eq(run.enter_room(vault), "", "re-entering")

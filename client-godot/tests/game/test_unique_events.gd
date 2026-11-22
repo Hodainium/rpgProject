@@ -193,10 +193,10 @@ func test_fixed_and_rest_events_repeat() -> void:
 
 func test_events_seen_hash_line() -> void:
 	var state := RunState.new()
-	check(not "\n".join(state.canonical_lines()).contains("events_seen="), "absent while empty")
+	check(not "\n".join(state.canonical_lines()).contains("run.seenEvents="), "absent while empty")
 	var before := state.run_hash()
 	state.seen_events.assign([COIN, TOLL])
-	check(state.canonical_lines().has("events_seen=%s,%s" % [COIN, TOLL]), "present after, in placement order")
+	check(state.canonical_lines().has('run.seenEvents=["%s","%s"]' % [COIN, TOLL]), "present after, in placement order")
 	var forward := state.run_hash()
 	check(forward != before, "it moves the hash")
 	state.seen_events.assign([TOLL, COIN])
@@ -435,11 +435,14 @@ func test_authored_rooms_are_not_swapped() -> void:
 	check(not issues.is_empty() and not issues[0].is_error(), "the validator warns about it, not an error")
 
 
-## Security review: an event id holding a comma would hash like two ids; the shape check refuses it.
-func test_snapshot_refuses_joined_event_ids() -> void:
+## Spec hash-id-lists: an event id holding a comma needs no shape check; it hashes differently from the two ids it joins.
+func test_joined_event_ids_hash_differently() -> void:
+	var split := RunState.new()
+	split.seen_events.assign([COIN, TOLL])
+	var joined := RunState.new()
+	joined.seen_events.assign([StringName("%s,%s" % [COIN, TOLL])])
+	check(split.run_hash() != joined.run_hash(), "a merged id is another hash")
 	var run := _seeded_run()
 	var saved: Dictionary = JSON.parse_string(WireJson.stringify(RunSnapshot.capture(run)))
-	eq(RunSnapshot.shape_problem(saved), "", "the honest snapshot is fine")
-	for bad in [["%s,%s" % [COIN, TOLL]], [3], [""]]:
-		saved["run"]["seenEvents"] = bad
-		check(RunSnapshot.shape_problem(saved) != "", "seenEvents %s is refused" % [bad])
+	saved["run"]["seenEvents"] = ["%s,%s" % [COIN, TOLL]]
+	eq(RunSnapshot.shape_problem(saved), "", "the shape check no longer looks at the ids (the hash does)")

@@ -78,6 +78,12 @@ func test_new_and_wait_in_server_mode() -> void:
 	var stopped := await _run(session, "wait stopped 0.2")
 	check(not stopped["ok"] and stopped["text"].contains("waited"), "a wait that never holds fails with the state: " + stopped["text"])
 	check(not (await _run(session, "wait notice nothing-like-this 0.2"))["ok"], "an absent notice fails")
+	check(not (await _run(session, "wait popup Connecting 0.2"))["ok"], "no pop-up while nothing waits")
+	session[0].server.begin_wait(&"test", "Connecting to the server…")
+	var popup := await _run(session, "wait popup Connecting 1")
+	session[0].server.end_wait(&"test")
+	check(popup["ok"], "wait popup sees the connecting pop-up's text: " + popup["text"])
+	check(not (await _run(session, "wait popup"))["ok"], "popup takes a text")
 	check(not (await _run(session, "wait"))["ok"], "usage")
 	check(not (await _run(session, "wait floor x"))["ok"], "floor takes a number")
 

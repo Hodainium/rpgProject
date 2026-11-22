@@ -10,7 +10,7 @@
 # then dev_run.tscn --server --player e2e-<scenario> --control <folder>, then the scenario's .sql (every line returns t),
 # .metrics (every line is a regex the final server /metrics scrape matches) and .worker-metrics (the same for the verifier
 # worker's /metrics). Fault steps (`e2e <action>` in a script) reach the control loop here: server-stop, server-start,
-# redis-flush, worker-start, worker-stop (a kill), tamper-battle (spec battle-verify 6), tamper-genesis (spec run-verify 4 F23), tamper-conditions (spec run-verify 4 F15), tamper-wave (spec floor-rooms 5), redpanda-stop and
+# redis-flush, worker-start, worker-stop (a kill), tamper-battle (spec battle-verify 6), tamper-genesis (spec run-verify 4 F23), tamper-conditions (spec run-verify 4 F15), tamper-wave (spec floor-rooms 5), tamper-snapshot-ids (spec hash-id-lists H11), redpanda-stop and
 # redpanda-start (spec settlement-outbox 6: the shared Redpanda container is stopped, and started again once the outbox of
 # the scenario has drained; run such a scenario alone, other scenarios share the broker), redpanda-check (every outbox row
 # of the scenario marked published is on the topics: the topics are read from the start for 6 s each and the event ids
@@ -295,6 +295,9 @@ run_scenario() {  # <name> <index 1-15>
 						[[ $(psql -d "$db" -c "UPDATE battle_sessions SET conditions = jsonb_set(conditions, '{depth}', to_jsonb(coalesce((conditions->>'depth')::int, 0) + 7), true) WHERE run_seq = (SELECT min(run_seq) FROM battle_sessions) RETURNING 1" 2>&1 | head -1 | tr -d '') == 1 ]] 							|| answer="no battle to tamper with" ;;
 					tamper-genesis)  # the claimed hash of the run's start (seq 1) is replaced, as a client with a richer start would send it
 						[[ $(psql -d "$db" -c "UPDATE run_actions SET state_hash = repeat('f', 64) WHERE seq = 1 RETURNING 1" 2>&1 | head -1 | tr -d '') == 1 ]] 							|| answer="no start to tamper with" ;;
+					tamper-snapshot-ids)  # spec hash-id-lists H11: the first stored checkpoint after seq 1 that has a later one and two seen items gets them merged into one id ("a,b"), as a client forging its checkpoint would send it
+						[[ $(psql -d "$db" -c "UPDATE run_actions SET snapshot = jsonb_set(snapshot, '{run,seenItems}', jsonb_build_array((snapshot #>> '{run,seenItems,0}') || ',' || (snapshot #>> '{run,seenItems,1}')) || ((snapshot #> '{run,seenItems}') - 0 - 0)) WHERE seq = (SELECT min(a.seq) FROM run_actions a WHERE a.snapshot IS NOT NULL AND a.seq > 1 AND jsonb_array_length(a.snapshot #> '{run,seenItems}') >= 2 AND EXISTS (SELECT 1 FROM run_actions b WHERE b.snapshot IS NOT NULL AND b.seq > a.seq)) RETURNING 1" 2>&1 | head -1 | tr -d '\r') == 1 ]] \
+							|| answer="no checkpoint with two seen items and a later one to tamper with" ;;
 					tamper-pool)  # the run's stored item pool is narrowed, as a client playing with another pool would look to the verifier
 							[[ $(psql -d "$db" -c "UPDATE runs SET card_pool = (SELECT jsonb_agg(v) FROM (SELECT v FROM jsonb_array_elements(card_pool) AS e(v) LIMIT 5) t) WHERE card_pool IS NOT NULL RETURNING 1" 2>&1 | head -1 | tr -d '\r') == 1 ]] \
 								|| answer="no run with a card pool to tamper with" ;;

@@ -8,7 +8,9 @@ extends RefCounted
 const POLICIES: Array[String] = ["auto", "smart", "chaos"]
 ## chaos: the share of chaotic decisions (percent; the rest are smart) and the first floor (1-based) it plays on.
 const DEFAULTS: Dictionary = {"run": "", "party": [], "policy": "auto", "illegal": 20, "check": false,
-	"max_steps": 2000, "trace": false, "chaos": 100, "chaos_from": 1, "party_size": 4}
+	"max_steps": 2000, "trace": false, "chaos": 100, "chaos_from": 1, "party_size": 4, "time_hashes": false}
+## Spec hash-id-lists 2.4: at most 3 ms per run hash on a 25-room floor.
+const HASH_BUDGET_USEC: int = 3000
 
 
 ## Plays seeds from..from+count-1. options: DEFAULTS keys ("party" [] = drawn per seed, see party_for();
@@ -37,6 +39,8 @@ static func many_seeds(content: ContentIndex, host: Node, seeds: Array, options:
 		_beat("seed %d" % seed_value)  # an error between seeds goes to the next seed's record
 		var record := await play_one(content, host, seed_value, opts)
 		record["errors"] = errors.take()
+		if int(record.get("hashRefused", 0)) > 0:  # spec hash-id-lists H5: push_error alone would pass silently
+			record["errors"].append("RunCanonical refused %d value(s) the run hash cannot encode" % record["hashRefused"])
 		failures.append_array(record["failures"])
 		runs.append(record)
 	OS.remove_logger(errors)
@@ -62,6 +66,25 @@ static func merge(shards: Array) -> Dictionary:
 		if opts[key] is float and opts[key] == floorf(opts[key]):
 			opts[key] = int(opts[key])  # whole numbers come back from JSON as floats
 	return summarize(runs, opts, from, runs.size())
+
+
+## Spec hash-id-lists 2.4: the run hash's cost over every seed: {"hashes", "meanUsec", "maxUsec", "maxFloor" (0-based, the floor of
+## the slowest hash), "budgetUsec"}. Machine time, so it is reported, never checked by a test.
+static func hash_timing(runs: Array[Dictionary]) -> Dictionary:
+	var hashes := 0
+	var total := 0
+	var slowest := 0
+	var slowest_floor := -1
+	for record in runs:
+		var timing: Dictionary = record.get("hashTiming", {})
+		hashes += int(timing.get("hashes", 0))
+		total += int(timing.get("totalUsec", 0))
+		if int(timing.get("maxUsec", 0)) > slowest:
+			slowest = int(timing["maxUsec"])
+			slowest_floor = int(timing["maxFloor"])
+	@warning_ignore("integer_division")
+	var mean: int = total / hashes if hashes > 0 else 0
+	return {"hashes": hashes, "meanUsec": mean, "maxUsec": slowest, "maxFloor": slowest_floor, "budgetUsec": HASH_BUDGET_USEC}
 
 
 ## One seed: {"seed", "status", "stop", "runnerError", "summary", "bossEntry", "battles", "violations", "runHash",
@@ -91,7 +114,22 @@ static func play_one(content: ContentIndex, host: Node, seed_value: int, options
 			"violations": record["violations"], "refused": record.get_or_add("runRefused", {})}
 	# Spec event-pass 2.8: the smart policy scores event choices; auto and chaos pick at random.
 	var events := EventScorer.POLICY_SMART if opts["policy"] == "smart" else EventScorer.POLICY_RANDOM
+	# Spec hash-id-lists 2.4: with "time_hashes" (seed_report --play sets it; machine time, so never in a test's report), one run
+	# hash after every action, as a server-mode client takes it, timed (hashTiming).
+	var refused_before := RunCanonical.failures
+	# Only these hashes are timed (the journal's, the checks' and the replays' are not): RunHash.timing_on is set around this one call.
+	var hash_each := func() -> void:
+		RunHash.timing_on = true
+		run.state.run_hash()
+		RunHash.timing_on = false
+	if opts["time_hashes"]:
+		RunHash.reset_timing()
+		run.action_committed.connect(hash_each)
 	record["stop"] = await RunPlayer.play(run, int(opts["max_steps"]), fight, run_chaos, events)
+	if opts["time_hashes"]:
+		run.action_committed.disconnect(hash_each)
+		record["hashTiming"] = RunHash.timing()
+	record["hashRefused"] = RunCanonical.failures - refused_before
 	record["status"] = run.state.status
 	record["runnerError"] = run.runner_error
 	record["summary"] = run.run_summary()
@@ -475,6 +513,8 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 			"runnerError": record["runnerError"], "party": record["party"], "floorReached": summary.get("floorReached", 0),
 			"battles": record["battles"].size(), "violations": record["violations"].size(), "runHash": record["runHash"]})
 	report["winPercentX100"] = report["won"] * 10000 / count if count > 0 else 0
+	if runs.any(func(record: Dictionary) -> bool: return record.has("hashTiming")):
+		report["hashTiming"] = hash_timing(runs)
 	for key in boss_hp:
 		report["bossEntryHpPercent"][key] = spread(boss_hp[key])
 	var boss_sp_spread := {}
@@ -757,6 +797,10 @@ static func text(report: Dictionary) -> String:
 	for violation in report["violations"].slice(0, 20):
 		lines.append("    seed %d, floor %d, battle %d (%s): %s %s" % [violation["seed"], violation["floor"],
 			violation["battle"], violation["encounter"], violation["invariant"], violation.get("detail", "")])
+	if report.has("hashTiming"):
+		var timing: Dictionary = report["hashTiming"]
+		lines.append("  run hash: %d hashes, mean %d us, max %d us (floor %d), budget %d us" % [timing["hashes"], timing["meanUsec"],
+			timing["maxUsec"], int(timing["maxFloor"]) + 1, timing["budgetUsec"]])
 	lines.append("  script or engine errors: %d" % report["errors"].size())
 	for entry in report["errors"].slice(0, 20):
 		lines.append("    seed %d: %s" % [entry["seed"], entry["error"]])

@@ -513,6 +513,30 @@ public class RunVerifyTests(StackFixture stack)
         Assert.Equal(JsonValueKind.Null, resumed.Snapshot.ValueKind);   // not the client's {"marker":1,…}
     }
 
+    /// <summary>Spec hash-id-lists H12: a verified checkpoint is served as the verifier's own state when the step ending there
+    /// wrote it (a claim that hashes to something else must never be what a rolled-back run is rebuilt from), else as claimed.</summary>
+    [Fact]
+    public async Task Resume_ServesTheVerifiersSnapshotOfACheckpoint_OverTheClaim()
+    {
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: Quiet);
+        var client = await ClientAsync(factory, "alice");
+        var run = await client.StartFencedRunAsync(Start, Ct);
+        await client.SendActionsAsync(run.RunId, RunLog.Batch(RunLog.Start(), RunLog.Room(2), RunLog.NextFloor(3)), Ct);
+        await ExecuteAsync(factory, $"UPDATE runs SET genesis_hash = 'g', verified_seq = 3 WHERE run_id = '{run.RunId}'");
+
+        var claimed = await client.ResumeAsync(run.RunId, Ct);
+        await ExecuteAsync(factory,
+            $"UPDATE run_actions SET verified_snapshot = '{{\"schemaVersion\":1,\"verifier\":true}}' WHERE run_id = '{run.RunId}' AND seq = 3");
+        var verified = await client.ResumeAsync(run.RunId, Ct);
+
+        Assert.Equal((3, 3), (claimed.CheckpointSeq, verified.CheckpointSeq));
+        Assert.False(claimed.Snapshot.TryGetProperty("verifier", out _));   // no verified state yet: the claim, as before
+        Assert.True(verified.Snapshot.GetProperty("verifier").GetBoolean());
+        Assert.Empty(verified.Tail);
+        Assert.Equal(1L, await ScalarAsync(factory,
+            $"SELECT count(*) FROM run_actions WHERE run_id = '{run.RunId}' AND seq = 3 AND snapshot IS NOT NULL AND NOT snapshot ? 'verifier'"));
+    }
+
     [Fact]
     public async Task FloorDigest_Is404UntilVerified_ThenServedFromPostgresAndRedis_AndSurvivesAFlush()
     {

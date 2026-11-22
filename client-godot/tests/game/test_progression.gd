@@ -64,7 +64,7 @@ func test_xp_and_levels() -> void:
 	for member in run.state.party:
 		eq(member["xp"], 60, "two enemies × 30 XP")
 		eq(member["level"], 2, "60 XP reaches level 2 (50)")
-	check("\n".join(run.state.canonical_lines()).contains("|xp=60"), "XP is part of the run hash")
+	check("\n".join(run.state.canonical_lines()).contains('"xp":60'), "XP is part of the run hash")
 	run.gain_xp(100, null)
 	eq(run.state.member(1)["level"], 3, "160 XP: level 3 (120); not 4 (400)")
 	run.gain_levels(1, fixtures().characters[&"fixture.character.medic"])

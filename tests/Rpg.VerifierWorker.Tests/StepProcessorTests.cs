@@ -245,6 +245,47 @@ public class StepProcessorTests(Stack stack)
         Assert.True(worker.Metrics.Count("rpg.fanin", "result=waiting") >= 1);   // the later step waited for the earlier one
     }
 
+    /// <summary>The honest verdict, carrying the state the replay reached as the real step runner does (spec hash-id-lists H12).</summary>
+    private static StepRun Reaching(WorkerHarness worker, StepRequest request) =>
+        FakeStepRunner.Ok(worker.StepRunner.Honest(request).Verdict! with
+        {
+            EndSnapshot = JsonDocument.Parse($$"""{"schemaVersion":1,"verifierAt":{{request.ToSeq}}}""").RootElement.Clone(),
+        });
+
+    /// <summary>
+    /// Spec hash-id-lists H12: a verified step's end state is kept beside the client's claim, the next step starts from it, and it
+    /// stays out of the stored verdict. A checkpoint forged after its step verified is rejected at the next step's start, and the
+    /// rollback to it leaves the verifier's state as the one a resume serves, so the rebuilt run is never the forged one.
+    /// </summary>
+    [Fact]
+    public async Task AVerifiedStepKeepsTheStateItReached_TheNextStepStartsFromIt_AndAForgedClaimNeverComesBack()
+    {
+        await using var worker = await CreateAsync(stack);
+        var run = await VerifiedStartAsync(worker);
+        await worker.UploadAsync(run, 2, RunActionTypes.NextFloor, snapshot: true);              // step 1: 1 to 2
+        await worker.UploadAsync(run, 3, RunActionTypes.NextFloor, snapshot: true, floor: 1);    // step 2: 2 to 3
+        worker.StepRunner.Handler = (request, _) => Task.FromResult(request.ToSeq == 3
+            ? FakeStepRunner.Rejected(StepMismatchReason.SnapshotHashMismatch, request.FromSeq)   // the claim at 2 is forged
+            : Reaching(worker, request));
+
+        await worker.Steps.ProcessAsync(StepJobOf(run, 1), Ct);
+
+        Assert.Equal(1L, await worker.ScalarAsync<long>(
+            "SELECT count(*) FROM run_actions WHERE run_id = $1 AND seq = 2 AND verified_snapshot @> '{\"verifierAt\": 2}' AND snapshot @> '{\"marker\": 1}'",
+            run.RunId));   // the claim stays as claimed, for the audit
+        Assert.Equal(0L, await worker.ScalarAsync<long>(
+            "SELECT count(*) FROM run_steps WHERE run_id = $1 AND verdict ? 'endSnapshot' AND kind <> 'genesis'", run.RunId));
+
+        await worker.Steps.ProcessAsync(StepJobOf(run, 2), Ct);
+
+        Assert.Equal(2, worker.StepRunner.Requests[^1].StartSnapshot!.Value.GetProperty("verifierAt").GetInt32());   // not the claim
+        var state = await worker.RunStateAsync(run);
+        Assert.Equal(("Active", 1, 2, 2), (state.Status, state.Epoch, state.VerifiedSeq, state.LastSeq));   // rolled back to 2
+        Assert.Equal(1L, await worker.ScalarAsync<long>(
+            "SELECT count(*) FROM run_actions WHERE run_id = $1 AND seq = 2 AND COALESCE(verified_snapshot, snapshot) @> '{\"verifierAt\": 2}'",
+            run.RunId));   // what GET /resume serves (RunVerifyTests.Resume_ServesTheVerifiersSnapshotOfACheckpoint_OverTheClaim)
+    }
+
     [Fact]
     public async Task ABrokenLink_RollsTheRunBack_BlamingTheLaterStep()
     {

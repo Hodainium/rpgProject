@@ -83,8 +83,10 @@ public sealed class StepStore(NpgsqlDataSource dataSource)
         string? endRunHash = null;
         if (kind != StepKind.Genesis)
         {
+            // Spec hash-id-lists H12: the verifier's own state at the checkpoint once the step ending there is verified, else the
+            // client's claim (checked against its claimed hash by the step itself).
             await using (var select = new NpgsqlCommand(
-                "SELECT snapshot::text, state_hash FROM run_actions WHERE run_id = $1 AND seq = $2", connection))
+                "SELECT COALESCE(verified_snapshot, snapshot)::text, state_hash FROM run_actions WHERE run_id = $1 AND seq = $2", connection))
             {
                 select.Parameters.Add(new NpgsqlParameter { Value = step.RunId });
                 select.Parameters.Add(new NpgsqlParameter { Value = step.FromSeq });
@@ -175,6 +177,10 @@ public sealed class StepStore(NpgsqlDataSource dataSource)
         }
 
         var verified = verdict.Status == ReplayVerdict.Verified;
+        // Spec hash-id-lists H12: a replay step's end snapshot is kept beside the claim it verified (run_actions.verified_snapshot),
+        // not in the stored verdict; genesis keeps its own in runs.genesis_snapshot as before.
+        var endSnapshot = step.Kind != "genesis" ? verdict.EndSnapshot : null;
+        var stored = endSnapshot is null ? verdict : verdict with { EndSnapshot = null };
         await using (var update = new NpgsqlCommand(
             """
             UPDATE run_steps
@@ -188,7 +194,7 @@ public sealed class StepStore(NpgsqlDataSource dataSource)
             update.Parameters.Add(new NpgsqlParameter { Value = verified ? "Verified" : "Rejected" });
             update.Parameters.Add(new NpgsqlParameter
             {
-                NpgsqlDbType = NpgsqlDbType.Jsonb, Value = JsonSerializer.Serialize(verdict, RpgJson.Options),
+                NpgsqlDbType = NpgsqlDbType.Jsonb, Value = JsonSerializer.Serialize(stored, RpgJson.Options),
             });
             update.Parameters.Add(new NpgsqlParameter { Value = (object?)NullIfEmpty(verdict.StartHash) ?? DBNull.Value });
             update.Parameters.Add(new NpgsqlParameter { Value = (object?)NullIfEmpty(verdict.EndHash) ?? DBNull.Value });
@@ -209,6 +215,19 @@ public sealed class StepStore(NpgsqlDataSource dataSource)
             genesis.Parameters.Add(new NpgsqlParameter { Value = verdict.EndHash });
             genesis.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb, Value = snapshot.GetRawText() });
             await genesis.ExecuteNonQueryAsync(ct);
+        }
+
+        if (verified && endSnapshot is { } reached)
+        {
+            // Only where the claim's hash is the one the replay reached (the step's own end), so it can never land on another state.
+            await using var keep = new NpgsqlCommand(
+                "UPDATE run_actions SET verified_snapshot = $4 WHERE run_id = $1 AND seq = $2 AND state_hash = $3",
+                connection, transaction);
+            keep.Parameters.Add(new NpgsqlParameter { Value = step.RunId });
+            keep.Parameters.Add(new NpgsqlParameter { Value = step.ToSeq });
+            keep.Parameters.Add(new NpgsqlParameter { Value = verdict.EndHash });
+            keep.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb, Value = reached.GetRawText() });
+            await keep.ExecuteNonQueryAsync(ct);
         }
 
         var settlements = new List<CommitResult>();

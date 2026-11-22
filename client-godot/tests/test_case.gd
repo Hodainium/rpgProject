@@ -59,6 +59,21 @@ func expect_error(part: String) -> void:
 	expected_errors.append(part)
 
 
+## Spec hash-id-lists H5: a value the run hash cannot encode (RunCanonical) only logs a push_error, which passes silently, so the
+## runner fails any test during which the encoder refused a value, unless the test expects exactly that many refusals.
+var expected_hash_refusals: int = 0
+
+
+func expect_hash_refusals(count: int) -> void:
+	expected_hash_refusals += count
+
+
+## Called by run_tests.gd with how many values RunCanonical refused during the test.
+func check_hash_refusals(found: int) -> void:
+	if found != expected_hash_refusals:
+		failures.append("the run hash refused %d value(s) it cannot encode (RunCanonical; expected %d): something put an Object, a Vector or a fractional number into the run state" % [found, expected_hash_refusals])
+
+
 ## Called by run_tests.gd with the errors caught during the test: expected ones are consumed, the rest are failures.
 func check_errors(found: Array[String]) -> void:
 	for text in found:
