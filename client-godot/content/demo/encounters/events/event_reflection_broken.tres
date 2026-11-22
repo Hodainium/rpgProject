@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_tuxcu"]
+[ext_resource type="Resource" path="res://content/demo/effects/weaken.tres" id="2_ptc6o"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_2j2b6"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_be742"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_n41f2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="6_irfky"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="7_ecrd2"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="8_ebpeo"]
+[ext_resource type="Resource" path="res://content/demo/enemies/reflection.tres" id="9_7jp6y"]
+
+[sub_resource type="Resource" id="Resource_ra11d"]
+script = ExtResource("3_2j2b6")
+effects = Array[ExtResource("1_tuxcu")]([ExtResource("2_ptc6o")])
+
+[sub_resource type="Resource" id="Resource_wwq6h"]
+script = ExtResource("5_n41f2")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_ac3xx"]
+script = ExtResource("6_irfky")
+item_query = SubResource("Resource_wwq6h")
+
+[sub_resource type="Resource" id="Resource_vo2sx"]
+script = ExtResource("8_ebpeo")
+enemy = ExtResource("9_7jp6y")
+level_bonus = 2
+
+[resource]
+script = ExtResource("7_ecrd2")
+id = &"demo.encounter.event_reflection_broken"
+display_name = "Your Reflection (broken)"
+tags = Array[StringName]([&"Encounter.Event"])
+slots = Array[ExtResource("8_ebpeo")]([SubResource("Resource_vo2sx")])
+grants = SubResource("Resource_ra11d")
+rewards = Array[ExtResource("4_be742")]([SubResource("Resource_ac3xx")])

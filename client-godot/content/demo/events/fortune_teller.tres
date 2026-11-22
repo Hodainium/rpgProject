@@ -1,0 +1,151 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_x1v2c"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_k4dam"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_svmf5"]
+[ext_resource type="Script" path="res://game/defs/conditions/coins_at_least.gd" id="4_7a1i6"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_f11ec"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_coins.gd" id="6_a3ljp"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="7_mjxpr"]
+[ext_resource type="Resource" path="res://content/demo/characters/shatterweaver.tres" id="8_6mmd1"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="9_tume7"]
+[ext_resource type="Script" path="res://game/defs/outcomes/reveal_rooms.gd" id="10_mbxou"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_golden_key.gd" id="11_vqfd6"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="12_pkkqi"]
+
+[sub_resource type="Resource" id="Resource_volge"]
+script = ExtResource("4_7a1i6")
+amount = 10
+
+[sub_resource type="Resource" id="Resource_sv2ka"]
+script = ExtResource("6_a3ljp")
+amount = 10
+
+[sub_resource type="Resource" id="Resource_78rvi"]
+script = ExtResource("7_mjxpr")
+page = 1
+
+[sub_resource type="Resource" id="Resource_yb4ma"]
+script = ExtResource("2_k4dam")
+label = "Pay 10 coins"
+conditions = Array[ExtResource("3_svmf5")]([SubResource("Resource_volge")])
+outcomes = Array[ExtResource("5_f11ec")]([SubResource("Resource_sv2ka"), SubResource("Resource_78rvi")])
+tags = Array[StringName]([&"Choice.Cost.Coins", &"Choice.Gain.Reveal"])
+
+[sub_resource type="Resource" id="Resource_r0bow"]
+script = ExtResource("4_7a1i6")
+amount = 25
+
+[sub_resource type="Resource" id="Resource_rsaox"]
+script = ExtResource("6_a3ljp")
+amount = 25
+
+[sub_resource type="Resource" id="Resource_dl2e3"]
+script = ExtResource("7_mjxpr")
+page = 2
+
+[sub_resource type="Resource" id="Resource_2r2df"]
+script = ExtResource("2_k4dam")
+label = "Pay 25 coins"
+conditions = Array[ExtResource("3_svmf5")]([SubResource("Resource_r0bow")])
+outcomes = Array[ExtResource("5_f11ec")]([SubResource("Resource_rsaox"), SubResource("Resource_dl2e3")])
+tags = Array[StringName]([&"Choice.Cost.Coins", &"Choice.Gain.Reveal", &"Choice.Gain.Keys"])
+
+[sub_resource type="Resource" id="Resource_dwdnq"]
+script = ExtResource("9_tume7")
+character = ExtResource("8_6mmd1")
+
+[sub_resource type="Resource" id="Resource_xdw3s"]
+script = ExtResource("7_mjxpr")
+page = 3
+
+[sub_resource type="Resource" id="Resource_vklqm"]
+script = ExtResource("2_k4dam")
+label = "Gaze through your own crystal"
+conditions = Array[ExtResource("3_svmf5")]([SubResource("Resource_dwdnq")])
+outcomes = Array[ExtResource("5_f11ec")]([SubResource("Resource_xdw3s")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Reveal", &"Choice.Gain.Keys"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_t2ns2"]
+script = ExtResource("7_mjxpr")
+page = 4
+
+[sub_resource type="Resource" id="Resource_laaow"]
+script = ExtResource("2_k4dam")
+label = "Leave"
+outcomes = Array[ExtResource("5_f11ec")]([SubResource("Resource_t2ns2")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_q0cmh"]
+script = ExtResource("1_x1v2c")
+text = "A veiled woman taps a crystal ball. \"Ten coins for the floor. Twenty-five for the floor and a little more.\""
+choices = Array[ExtResource("2_k4dam")]([SubResource("Resource_yb4ma"), SubResource("Resource_2r2df"), SubResource("Resource_vklqm"), SubResource("Resource_laaow")])
+
+[sub_resource type="Resource" id="Resource_ev4r7"]
+script = ExtResource("2_k4dam")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_h6esc"]
+script = ExtResource("10_mbxou")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_u2nl4"]
+script = ExtResource("1_x1v2c")
+text = "She peers into the glass and traces the floor's rooms in the air. The whole floor unfolds in your mind."
+choices = Array[ExtResource("2_k4dam")]([SubResource("Resource_ev4r7")])
+on_enter = Array[ExtResource("5_f11ec")]([SubResource("Resource_h6esc")])
+
+[sub_resource type="Resource" id="Resource_gan4r"]
+script = ExtResource("2_k4dam")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_qlmrm"]
+script = ExtResource("10_mbxou")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_3rlja"]
+script = ExtResource("11_vqfd6")
+
+[sub_resource type="Resource" id="Resource_w51om"]
+script = ExtResource("1_x1v2c")
+text = "She shows you the floor, then presses a golden key into your palm. \"You'll know the door.\""
+choices = Array[ExtResource("2_k4dam")]([SubResource("Resource_gan4r")])
+on_enter = Array[ExtResource("5_f11ec")]([SubResource("Resource_qlmrm"), SubResource("Resource_3rlja")])
+
+[sub_resource type="Resource" id="Resource_xiyvw"]
+script = ExtResource("2_k4dam")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_oaqim"]
+script = ExtResource("10_mbxou")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_nb6cr"]
+script = ExtResource("11_vqfd6")
+
+[sub_resource type="Resource" id="Resource_whpaj"]
+script = ExtResource("1_x1v2c")
+text = "The Shatterweaver holds up a shard of their own. The two crystals sing together, the floor shows itself, and the old woman hands over a golden key in awe."
+choices = Array[ExtResource("2_k4dam")]([SubResource("Resource_xiyvw")])
+on_enter = Array[ExtResource("5_f11ec")]([SubResource("Resource_oaqim"), SubResource("Resource_nb6cr")])
+
+[sub_resource type="Resource" id="Resource_wxl1a"]
+script = ExtResource("2_k4dam")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_chafp"]
+script = ExtResource("1_x1v2c")
+text = "\"The future will find you anyway,\" she says to your back."
+choices = Array[ExtResource("2_k4dam")]([SubResource("Resource_wxl1a")])
+
+[resource]
+script = ExtResource("12_pkkqi")
+id = &"demo.event.fortune_teller"
+display_name = "Fortune Teller"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_x1v2c")]([SubResource("Resource_q0cmh"), SubResource("Resource_u2nl4"), SubResource("Resource_w51om"), SubResource("Resource_whpaj"), SubResource("Resource_chafp")])

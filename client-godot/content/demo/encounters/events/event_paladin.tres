@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_8bbp7"]
+[ext_resource type="Resource" path="res://content/demo/effects/ward.tres" id="2_phb82"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_pt5eh"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_eaani"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_ecg2f"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="6_5mqjc"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="7_m2xjw"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="8_bkmme"]
+[ext_resource type="Resource" path="res://content/demo/enemies/glass_saint.tres" id="9_ogsya"]
+[ext_resource type="Resource" path="res://content/demo/enemies/penitent_knight.tres" id="10_1qy1y"]
+
+[sub_resource type="Resource" id="Resource_3aksw"]
+script = ExtResource("3_pt5eh")
+effects = Array[ExtResource("1_8bbp7")]([ExtResource("2_phb82")])
+
+[sub_resource type="Resource" id="Resource_wwq6h"]
+script = ExtResource("5_ecg2f")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_ac3xx"]
+script = ExtResource("6_5mqjc")
+item_query = SubResource("Resource_wwq6h")
+
+[sub_resource type="Resource" id="Resource_e1t55"]
+script = ExtResource("8_bkmme")
+enemy = ExtResource("9_ogsya")
+level_bonus = 2
+
+[sub_resource type="Resource" id="Resource_jmgru"]
+script = ExtResource("8_bkmme")
+enemy = ExtResource("10_1qy1y")
+level_bonus = 2
+
+[resource]
+script = ExtResource("7_m2xjw")
+id = &"demo.encounter.event_paladin"
+display_name = "Fallen Paladin"
+tags = Array[StringName]([&"Encounter.Event"])
+slots = Array[ExtResource("8_bkmme")]([SubResource("Resource_e1t55"), SubResource("Resource_jmgru")])
+party_grants = SubResource("Resource_3aksw")
+rewards = Array[ExtResource("4_eaani")]([SubResource("Resource_ac3xx")])

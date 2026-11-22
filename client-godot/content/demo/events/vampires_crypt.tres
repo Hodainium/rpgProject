@@ -1,0 +1,139 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_46atd"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_8cjrb"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_7ehvi"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_csps1"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="5_sauut"]
+[ext_resource type="Script" path="res://game/defs/conditions/member_at.gd" id="6_38bvu"]
+[ext_resource type="Resource" path="res://content/demo/characters/ranger.tres" id="7_fupdn"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_30obb"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_vampire.tres" id="9_c6l17"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="10_ytw30"]
+[ext_resource type="Resource" path="res://content/demo/items/vampire_curse.tres" id="11_1fjs0"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="12_11k08"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="13_agb2p"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="14_y2rje"]
+
+[sub_resource type="Resource" id="Resource_pvpx6"]
+script = ExtResource("5_sauut")
+page = 1
+
+[sub_resource type="Resource" id="Resource_oqar3"]
+script = ExtResource("2_8cjrb")
+label = "Stake it"
+outcomes = Array[ExtResource("4_csps1")]([SubResource("Resource_pvpx6")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_3rhrh"]
+script = ExtResource("6_38bvu")
+
+[sub_resource type="Resource" id="Resource_ked2a"]
+script = ExtResource("5_sauut")
+page = 2
+
+[sub_resource type="Resource" id="Resource_aqy27"]
+script = ExtResource("2_8cjrb")
+label = "Let it bite {member:1}"
+conditions = Array[ExtResource("3_7ehvi")]([SubResource("Resource_3rhrh")])
+outcomes = Array[ExtResource("4_csps1")]([SubResource("Resource_ked2a")])
+tags = Array[StringName]([&"Choice.Cost.Curse"])
+
+[sub_resource type="Resource" id="Resource_yadq1"]
+script = ExtResource("8_30obb")
+character = ExtResource("7_fupdn")
+
+[sub_resource type="Resource" id="Resource_4lhal"]
+script = ExtResource("5_sauut")
+page = 3
+
+[sub_resource type="Resource" id="Resource_ywwcy"]
+script = ExtResource("2_8cjrb")
+label = "Stake it in its sleep"
+conditions = Array[ExtResource("3_7ehvi")]([SubResource("Resource_yadq1")])
+outcomes = Array[ExtResource("4_csps1")]([SubResource("Resource_4lhal")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Item"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_y3i3i"]
+script = ExtResource("5_sauut")
+page = 4
+
+[sub_resource type="Resource" id="Resource_idw2a"]
+script = ExtResource("2_8cjrb")
+label = "Leave"
+outcomes = Array[ExtResource("4_csps1")]([SubResource("Resource_y3i3i")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_saagi"]
+script = ExtResource("1_46atd")
+text = "A coffin, its lid ajar. Something inside is breathing."
+choices = Array[ExtResource("2_8cjrb")]([SubResource("Resource_oqar3"), SubResource("Resource_aqy27"), SubResource("Resource_ywwcy"), SubResource("Resource_idw2a")])
+
+[sub_resource type="Resource" id="Resource_02q5n"]
+script = ExtResource("10_ytw30")
+encounter = ExtResource("9_c6l17")
+
+[sub_resource type="Resource" id="Resource_0eku4"]
+script = ExtResource("2_8cjrb")
+label = "Fight!"
+outcomes = Array[ExtResource("4_csps1")]([SubResource("Resource_02q5n")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_rkaqp"]
+script = ExtResource("1_46atd")
+text = "You heave the lid aside. A swarm of bats bursts from the coffin, shrieking!"
+choices = Array[ExtResource("2_8cjrb")]([SubResource("Resource_0eku4")])
+
+[sub_resource type="Resource" id="Resource_yk17u"]
+script = ExtResource("2_8cjrb")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_jf5he"]
+script = ExtResource("12_11k08")
+item = ExtResource("11_1fjs0")
+recipient = 3
+
+[sub_resource type="Resource" id="Resource_8l8jp"]
+script = ExtResource("1_46atd")
+text = "A pale hand pulls {member:1} close. The bite is cold, and when it's over {member:1} feels both weaker and hungrier than ever."
+choices = Array[ExtResource("2_8cjrb")]([SubResource("Resource_yk17u")])
+on_enter = Array[ExtResource("4_csps1")]([SubResource("Resource_jf5he")])
+
+[sub_resource type="Resource" id="Resource_uk7ao"]
+script = ExtResource("2_8cjrb")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_il40l"]
+script = ExtResource("13_agb2p")
+require_all_tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+
+[sub_resource type="Resource" id="Resource_02ftj"]
+script = ExtResource("12_11k08")
+item_query = SubResource("Resource_il40l")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_a070l"]
+script = ExtResource("1_46atd")
+text = "The Ranger slips the stake in before the thing can wake. In the coffin lies its hoard."
+choices = Array[ExtResource("2_8cjrb")]([SubResource("Resource_uk7ao")])
+on_enter = Array[ExtResource("4_csps1")]([SubResource("Resource_02ftj")])
+
+[sub_resource type="Resource" id="Resource_xgyuv"]
+script = ExtResource("2_8cjrb")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_b4wtx"]
+script = ExtResource("1_46atd")
+text = "You ease the lid shut and walk away quietly."
+choices = Array[ExtResource("2_8cjrb")]([SubResource("Resource_xgyuv")])
+
+[resource]
+script = ExtResource("14_y2rje")
+id = &"demo.event.vampires_crypt"
+display_name = "Vampire's Crypt"
+tags = Array[StringName]([&"Event.Crypt"])
+pages = Array[ExtResource("1_46atd")]([SubResource("Resource_saagi"), SubResource("Resource_rkaqp"), SubResource("Resource_8l8jp"), SubResource("Resource_a070l"), SubResource("Resource_b4wtx")])

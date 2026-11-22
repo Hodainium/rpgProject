@@ -1,0 +1,122 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_a72k8"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_2dt3o"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_w5t3y"]
+[ext_resource type="Script" path="res://game/defs/conditions/coins_at_least.gd" id="4_io8fh"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_4drhm"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_coins.gd" id="6_q1b2v"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_random_page.gd" id="7_odaku"]
+[ext_resource type="Resource" path="res://content/demo/characters/bard.tres" id="8_u80q5"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="9_a8n0p"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="10_xvus2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="11_dodgt"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="12_uaiq3"]
+
+[sub_resource type="Resource" id="Resource_r2lgb"]
+script = ExtResource("4_io8fh")
+amount = 15
+
+[sub_resource type="Resource" id="Resource_a2okv"]
+script = ExtResource("6_q1b2v")
+amount = 15
+
+[sub_resource type="Resource" id="Resource_hem4i"]
+script = ExtResource("7_odaku")
+pages = Array[int]([1, 2])
+weights_x100 = Array[int]([100, 100])
+
+[sub_resource type="Resource" id="Resource_5jxjf"]
+script = ExtResource("2_2dt3o")
+label = "Bet 15 coins"
+conditions = Array[ExtResource("3_w5t3y")]([SubResource("Resource_r2lgb")])
+outcomes = Array[ExtResource("5_4drhm")]([SubResource("Resource_a2okv"), SubResource("Resource_hem4i")])
+tags = Array[StringName]([&"Choice.Cost.Coins", &"Choice.Gamble", &"Choice.Gain.Coins"])
+
+[sub_resource type="Resource" id="Resource_c0pqc"]
+script = ExtResource("9_a8n0p")
+character = ExtResource("8_u80q5")
+
+[sub_resource type="Resource" id="Resource_pemw2"]
+script = ExtResource("10_xvus2")
+page = 3
+
+[sub_resource type="Resource" id="Resource_c1iwg"]
+script = ExtResource("2_2dt3o")
+label = "Charm the dealer"
+conditions = Array[ExtResource("3_w5t3y")]([SubResource("Resource_c0pqc")])
+outcomes = Array[ExtResource("5_4drhm")]([SubResource("Resource_pemw2")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Coins"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_d4bmo"]
+script = ExtResource("10_xvus2")
+page = 4
+
+[sub_resource type="Resource" id="Resource_k8lo7"]
+script = ExtResource("2_2dt3o")
+label = "Leave"
+outcomes = Array[ExtResource("5_4drhm")]([SubResource("Resource_d4bmo")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_c8vsl"]
+script = ExtResource("1_a72k8")
+text = "A grinning gambler shuffles a greasy deck. \"Fifteen coins. Double or nothing, near enough.\""
+choices = Array[ExtResource("2_2dt3o")]([SubResource("Resource_5jxjf"), SubResource("Resource_c1iwg"), SubResource("Resource_k8lo7")])
+
+[sub_resource type="Resource" id="Resource_5341x"]
+script = ExtResource("2_2dt3o")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_v2bep"]
+script = ExtResource("11_dodgt")
+amount = 35
+
+[sub_resource type="Resource" id="Resource_pqd27"]
+script = ExtResource("1_a72k8")
+text = "The card turns: the queen of skulls. You win! The gambler shoves the coins across, smile gone."
+choices = Array[ExtResource("2_2dt3o")]([SubResource("Resource_5341x")])
+on_enter = Array[ExtResource("5_4drhm")]([SubResource("Resource_v2bep")])
+
+[sub_resource type="Resource" id="Resource_bjten"]
+script = ExtResource("2_2dt3o")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_8i0ps"]
+script = ExtResource("1_a72k8")
+text = "The card turns: the two of rags. The gambler sweeps up your coins with a wink."
+choices = Array[ExtResource("2_2dt3o")]([SubResource("Resource_bjten")])
+
+[sub_resource type="Resource" id="Resource_8esp7"]
+script = ExtResource("2_2dt3o")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_bg15q"]
+script = ExtResource("11_dodgt")
+amount = 35
+
+[sub_resource type="Resource" id="Resource_hwtdy"]
+script = ExtResource("1_a72k8")
+text = "The Bard plays three bars of a tavern song the gambler's mother used to sing. Misty-eyed, he pays out without dealing a card."
+choices = Array[ExtResource("2_2dt3o")]([SubResource("Resource_8esp7")])
+on_enter = Array[ExtResource("5_4drhm")]([SubResource("Resource_bg15q")])
+
+[sub_resource type="Resource" id="Resource_irfcj"]
+script = ExtResource("2_2dt3o")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_opbqq"]
+script = ExtResource("1_a72k8")
+text = "\"Cowards never win,\" the gambler calls after you. Cowards never lose either."
+choices = Array[ExtResource("2_2dt3o")]([SubResource("Resource_irfcj")])
+
+[resource]
+script = ExtResource("12_uaiq3")
+id = &"demo.event.gambler"
+display_name = "Gambler's Table"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_a72k8")]([SubResource("Resource_c8vsl"), SubResource("Resource_pqd27"), SubResource("Resource_8i0ps"), SubResource("Resource_hwtdy"), SubResource("Resource_opbqq")])

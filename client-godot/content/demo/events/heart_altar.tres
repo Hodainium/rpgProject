@@ -1,0 +1,127 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_e85yl"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_cvdi5"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_ceeek"]
+[ext_resource type="Script" path="res://game/defs/conditions/party_hp_at_least.gd" id="4_wi0ub"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_3uoar"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="6_7ruo8"]
+[ext_resource type="Resource" path="res://content/demo/characters/plaguewright.tres" id="7_0f1up"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_v25er"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/hurt_25.tres" id="9_r41mm"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="10_tmca4"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="11_kf27x"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="12_7mgqg"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/hurt_10.tres" id="13_uby5t"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="14_s58c0"]
+
+[sub_resource type="Resource" id="Resource_0xrf1"]
+script = ExtResource("4_wi0ub")
+percent_x100 = 4000
+
+[sub_resource type="Resource" id="Resource_xi87y"]
+script = ExtResource("6_7ruo8")
+page = 1
+
+[sub_resource type="Resource" id="Resource_oy8w4"]
+script = ExtResource("2_cvdi5")
+label = "Offer blood"
+conditions = Array[ExtResource("3_ceeek")]([SubResource("Resource_0xrf1")])
+outcomes = Array[ExtResource("5_3uoar")]([SubResource("Resource_xi87y")])
+tags = Array[StringName]([&"Choice.Cost.Hp", &"Choice.Gain.BossItem"])
+
+[sub_resource type="Resource" id="Resource_8ktbl"]
+script = ExtResource("8_v25er")
+character = ExtResource("7_0f1up")
+
+[sub_resource type="Resource" id="Resource_kpbsv"]
+script = ExtResource("6_7ruo8")
+page = 2
+
+[sub_resource type="Resource" id="Resource_ecpqa"]
+script = ExtResource("2_cvdi5")
+label = "Feed it poison instead"
+conditions = Array[ExtResource("3_ceeek")]([SubResource("Resource_8ktbl")])
+outcomes = Array[ExtResource("5_3uoar")]([SubResource("Resource_kpbsv")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Cost.Hp", &"Choice.Gain.BossItem"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_j1b83"]
+script = ExtResource("6_7ruo8")
+page = 3
+
+[sub_resource type="Resource" id="Resource_cywkm"]
+script = ExtResource("2_cvdi5")
+label = "Leave"
+outcomes = Array[ExtResource("5_3uoar")]([SubResource("Resource_j1b83")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_e18py"]
+script = ExtResource("1_e85yl")
+text = "A heart beats on an altar of bone. It wants blood."
+choices = Array[ExtResource("2_cvdi5")]([SubResource("Resource_oy8w4"), SubResource("Resource_ecpqa"), SubResource("Resource_cywkm")])
+
+[sub_resource type="Resource" id="Resource_b8uxx"]
+script = ExtResource("2_cvdi5")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_ookyd"]
+script = ExtResource("10_tmca4")
+effect = ExtResource("9_r41mm")
+
+[sub_resource type="Resource" id="Resource_7ddyo"]
+script = ExtResource("11_kf27x")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_lg656"]
+script = ExtResource("12_7mgqg")
+item_query = SubResource("Resource_7ddyo")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_rcuoj"]
+script = ExtResource("1_e85yl")
+text = "The party bleeds into the altar's grooves. The heart beats faster and offers up something precious."
+choices = Array[ExtResource("2_cvdi5")]([SubResource("Resource_b8uxx")])
+on_enter = Array[ExtResource("5_3uoar")]([SubResource("Resource_ookyd"), SubResource("Resource_lg656")])
+
+[sub_resource type="Resource" id="Resource_tkip7"]
+script = ExtResource("2_cvdi5")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_qjod7"]
+script = ExtResource("10_tmca4")
+effect = ExtResource("13_uby5t")
+
+[sub_resource type="Resource" id="Resource_qrf1m"]
+script = ExtResource("11_kf27x")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_tmh08"]
+script = ExtResource("12_7mgqg")
+item_query = SubResource("Resource_qrf1m")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_4dw1x"]
+script = ExtResource("1_e85yl")
+text = "The Plaguewright's poison makes the heart seize. It coughs up its treasure and goes still."
+choices = Array[ExtResource("2_cvdi5")]([SubResource("Resource_tkip7")])
+on_enter = Array[ExtResource("5_3uoar")]([SubResource("Resource_qjod7"), SubResource("Resource_tmh08")])
+
+[sub_resource type="Resource" id="Resource_flc1e"]
+script = ExtResource("2_cvdi5")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_3op6n"]
+script = ExtResource("1_e85yl")
+text = "The heart beats on, hungry, as you leave."
+choices = Array[ExtResource("2_cvdi5")]([SubResource("Resource_flc1e")])
+
+[resource]
+script = ExtResource("14_s58c0")
+id = &"demo.event.heart_altar"
+display_name = "Heart Altar"
+tags = Array[StringName]([&"Event.Hollow"])
+pages = Array[ExtResource("1_e85yl")]([SubResource("Resource_e18py"), SubResource("Resource_rcuoj"), SubResource("Resource_4dw1x"), SubResource("Resource_3op6n")])

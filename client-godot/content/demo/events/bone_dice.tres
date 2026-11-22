@@ -1,0 +1,118 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_4v40h"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_j8yl3"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_p8jjr"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_l6cyt"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_random_page.gd" id="5_rcrre"]
+[ext_resource type="Resource" path="res://content/demo/characters/cleric.tres" id="6_owh26"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="7_w6tq4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="8_23kpg"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/heal_30.tres" id="9_xkeuf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="10_o6ydn"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/hurt_15.tres" id="11_6h6hu"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="12_7qvyb"]
+
+[sub_resource type="Resource" id="Resource_50xqv"]
+script = ExtResource("5_rcrre")
+pages = Array[int]([1, 2])
+weights_x100 = Array[int]([100, 100])
+
+[sub_resource type="Resource" id="Resource_a2w82"]
+script = ExtResource("2_j8yl3")
+label = "Roll"
+outcomes = Array[ExtResource("4_l6cyt")]([SubResource("Resource_50xqv")])
+tags = Array[StringName]([&"Choice.Gamble", &"Choice.Gain.Heal", &"Choice.Cost.Hp"])
+
+[sub_resource type="Resource" id="Resource_revyj"]
+script = ExtResource("7_w6tq4")
+character = ExtResource("6_owh26")
+
+[sub_resource type="Resource" id="Resource_qewsr"]
+script = ExtResource("8_23kpg")
+page = 3
+
+[sub_resource type="Resource" id="Resource_jn4tk"]
+script = ExtResource("2_j8yl3")
+label = "Bless the dice"
+conditions = Array[ExtResource("3_p8jjr")]([SubResource("Resource_revyj")])
+outcomes = Array[ExtResource("4_l6cyt")]([SubResource("Resource_qewsr")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Heal"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_6s68x"]
+script = ExtResource("8_23kpg")
+page = 4
+
+[sub_resource type="Resource" id="Resource_ifh8n"]
+script = ExtResource("2_j8yl3")
+label = "Leave"
+outcomes = Array[ExtResource("4_l6cyt")]([SubResource("Resource_6s68x")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_fsl2p"]
+script = ExtResource("1_4v40h")
+text = "Dice carved from finger bones sit on a slab. \"Roll,\" the slab seems to say."
+choices = Array[ExtResource("2_j8yl3")]([SubResource("Resource_a2w82"), SubResource("Resource_jn4tk"), SubResource("Resource_ifh8n")])
+
+[sub_resource type="Resource" id="Resource_ea8eq"]
+script = ExtResource("2_j8yl3")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_e17tq"]
+script = ExtResource("10_o6ydn")
+effect = ExtResource("9_xkeuf")
+
+[sub_resource type="Resource" id="Resource_mcyx5"]
+script = ExtResource("1_4v40h")
+text = "Sixes! Warmth spreads through the party, as if the dead were pleased."
+choices = Array[ExtResource("2_j8yl3")]([SubResource("Resource_ea8eq")])
+on_enter = Array[ExtResource("4_l6cyt")]([SubResource("Resource_e17tq")])
+
+[sub_resource type="Resource" id="Resource_xj1wv"]
+script = ExtResource("2_j8yl3")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_3gptq"]
+script = ExtResource("10_o6ydn")
+effect = ExtResource("11_6h6hu")
+
+[sub_resource type="Resource" id="Resource_s6s67"]
+script = ExtResource("1_4v40h")
+text = "Ones. A chill goes through your bones, and the slab seems to laugh."
+choices = Array[ExtResource("2_j8yl3")]([SubResource("Resource_xj1wv")])
+on_enter = Array[ExtResource("4_l6cyt")]([SubResource("Resource_3gptq")])
+
+[sub_resource type="Resource" id="Resource_s0p0b"]
+script = ExtResource("2_j8yl3")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_pmrxt"]
+script = ExtResource("10_o6ydn")
+effect = ExtResource("9_xkeuf")
+
+[sub_resource type="Resource" id="Resource_hm2ch"]
+script = ExtResource("1_4v40h")
+text = "The Cleric blesses the bones before they roll. They come up sixes, every one, and warmth fills the room."
+choices = Array[ExtResource("2_j8yl3")]([SubResource("Resource_s0p0b")])
+on_enter = Array[ExtResource("4_l6cyt")]([SubResource("Resource_pmrxt")])
+
+[sub_resource type="Resource" id="Resource_uf6cx"]
+script = ExtResource("2_j8yl3")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_tem0u"]
+script = ExtResource("1_4v40h")
+text = "You leave the dice unrolled. The slab seems disappointed."
+choices = Array[ExtResource("2_j8yl3")]([SubResource("Resource_uf6cx")])
+
+[resource]
+script = ExtResource("12_7qvyb")
+id = &"demo.event.bone_dice"
+display_name = "Bone Dice"
+tags = Array[StringName]([&"Event.Crypt"])
+pages = Array[ExtResource("1_4v40h")]([SubResource("Resource_fsl2p"), SubResource("Resource_mcyx5"), SubResource("Resource_s6s67"), SubResource("Resource_hm2ch"), SubResource("Resource_tem0u")])

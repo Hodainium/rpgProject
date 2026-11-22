@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_ye563"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="2_1sw4k"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="3_wmkgq"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="4_acto2"]
+[ext_resource type="Resource" path="res://content/demo/enemies/tally_clerk.tres" id="5_rteco"]
+
+[sub_resource type="Resource" id="Resource_pdsdw"]
+script = ExtResource("2_1sw4k")
+amount = 50
+
+[sub_resource type="Resource" id="Resource_m35ld"]
+script = ExtResource("4_acto2")
+enemy = ExtResource("5_rteco")
+level_bonus = 1
+
+[sub_resource type="Resource" id="Resource_jli6k"]
+script = ExtResource("4_acto2")
+enemy = ExtResource("5_rteco")
+level_bonus = 1
+
+[sub_resource type="Resource" id="Resource_u31p0"]
+script = ExtResource("4_acto2")
+enemy = ExtResource("5_rteco")
+level_bonus = 1
+
+[resource]
+script = ExtResource("3_wmkgq")
+id = &"demo.encounter.event_tax"
+display_name = "Tax Collector"
+tags = Array[StringName]([&"Encounter.Event"])
+slots = Array[ExtResource("4_acto2")]([SubResource("Resource_m35ld"), SubResource("Resource_jli6k"), SubResource("Resource_u31p0")])
+rewards = Array[ExtResource("1_ye563")]([SubResource("Resource_pdsdw")])

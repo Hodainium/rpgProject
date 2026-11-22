@@ -1,0 +1,56 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_3rct8"]
+[ext_resource type="Resource" path="res://content/demo/effects/haste.tres" id="2_wh4w5"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_xccfm"]
+[ext_resource type="Resource" path="res://content/demo/effects/slow.tres" id="4_tj6tf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_mlgl0"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="6_j60g0"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="7_lx2b7"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="8_l38pf"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="9_0a47w"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="10_7g1rk"]
+[ext_resource type="Resource" path="res://content/demo/enemies/knight.tres" id="11_3ipb6"]
+[ext_resource type="Resource" path="res://content/demo/enemies/bat.tres" id="12_e3h56"]
+
+[sub_resource type="Resource" id="Resource_bxluq"]
+script = ExtResource("3_xccfm")
+effects = Array[ExtResource("1_3rct8")]([ExtResource("2_wh4w5")])
+
+[sub_resource type="Resource" id="Resource_c5186"]
+script = ExtResource("3_xccfm")
+effects = Array[ExtResource("1_3rct8")]([ExtResource("4_tj6tf")])
+
+[sub_resource type="Resource" id="Resource_hw7ga"]
+script = ExtResource("6_j60g0")
+amount = 25
+
+[sub_resource type="Resource" id="Resource_mw1ln"]
+script = ExtResource("7_lx2b7")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_65cns"]
+script = ExtResource("8_l38pf")
+item_query = SubResource("Resource_mw1ln")
+
+[sub_resource type="Resource" id="Resource_6lpgb"]
+script = ExtResource("10_7g1rk")
+enemy = ExtResource("11_3ipb6")
+
+[sub_resource type="Resource" id="Resource_yicmj"]
+script = ExtResource("10_7g1rk")
+enemy = ExtResource("12_e3h56")
+
+[sub_resource type="Resource" id="Resource_370is"]
+script = ExtResource("10_7g1rk")
+enemy = ExtResource("12_e3h56")
+
+[resource]
+script = ExtResource("9_0a47w")
+id = &"demo.encounter.event_ambush"
+display_name = "Ambush"
+tags = Array[StringName]([&"Encounter.Event"])
+slots = Array[ExtResource("10_7g1rk")]([SubResource("Resource_6lpgb"), SubResource("Resource_yicmj"), SubResource("Resource_370is")])
+grants = SubResource("Resource_bxluq")
+party_grants = SubResource("Resource_c5186")
+rewards = Array[ExtResource("5_mlgl0")]([SubResource("Resource_hw7ga"), SubResource("Resource_65cns")])

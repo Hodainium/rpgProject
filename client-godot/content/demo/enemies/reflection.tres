@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/echo_strike.tscn" id="1_wpk00"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/strike.tscn" id="2_6ele5"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/resound.tscn" id="3_25x15"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="4_npdng"]
+[ext_resource type="Script" path="res://combat/pattern_brain.gd" id="5_2hcwn"]
+[ext_resource type="Script" path="res://combat/enemy_target_rule.gd" id="6_tlh2t"]
+[ext_resource type="Resource" path="res://content/demo/items/hearty_feast.tres" id="7_cxnst"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="8_s8xme"]
+[ext_resource type="Script" path="res://combat/boss_phase.gd" id="9_0uf42"]
+[ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="10_n6d8f"]
+[ext_resource type="Script" path="res://combat/enemy_variant.gd" id="11_68itq"]
+
+[sub_resource type="Resource" id="Resource_e7ppf"]
+script = ExtResource("5_2hcwn")
+pattern = Array[StringName]([&"Ability.Echostrike", &"Ability.Strike", &"Ability.Echostrike"])
+
+[resource]
+script = ExtResource("10_n6d8f")
+mirror_party_items = true
+mirror_skip_tags = Array[StringName]([&"Item.Food", &"Item.Curse"])
+drop_item = ExtResource("7_cxnst")
+drop_chance_x100 = 400
+id = &"demo.enemy.reflection"
+attribute_set = ExtResource("4_npdng")
+abilities = Array[PackedScene]([ExtResource("1_wpk00"), ExtResource("2_6ele5"), ExtResource("3_25x15")])
+brain = SubResource("Resource_e7ppf")
+display_name = "Your Reflection"
+display_color = Color(0.46666667, 0.53333336, 0.6, 1)
+tags = Array[StringName]([&"Enemy.Type.Echo", &"Resist.Fire", &"Weakness.Ice"])
+stats_x100 = Dictionary[String, int]({
+"atk": 33000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 22000,
+"energy": 0,
+"hp": 70000,
+"max_hp": 70000,
+"max_toughness": 10000,
+"spd": 11500,
+"toughness": 10000,
+"weakness_dmg": 15000
+})

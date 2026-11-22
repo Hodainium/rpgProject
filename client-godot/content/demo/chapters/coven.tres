@@ -16,7 +16,7 @@ ignore_tags = Array[StringName]([&"Encounter.Boss"])
 
 [sub_resource type="Resource" id="Resource_lx1th"]
 script = ExtResource("1_kp13m")
-require_all_tags = Array[StringName]([&"Event.Demo"])
+require_any_tags = Array[StringName]([&"Event.Demo", &"Event.Coven"])
 
 [sub_resource type="Resource" id="Resource_lbs5q"]
 script = ExtResource("1_kp13m")

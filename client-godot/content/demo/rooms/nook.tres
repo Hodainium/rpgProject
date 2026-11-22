@@ -34,3 +34,4 @@ display_name = "Quiet nook"
 tags = Array[StringName]([&"Room.Type.Normal", &"Chapter.Demo"])
 content_mode = 4
 placements = Array[ExtResource("1_senix")]([SubResource("Resource_hrs0h"), SubResource("Resource_sp3ln"), SubResource("Resource_agehj"), SubResource("Resource_qltj2"), SubResource("Resource_bn1oc")])
+weight_x100 = 20

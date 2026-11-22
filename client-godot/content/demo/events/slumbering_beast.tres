@@ -1,0 +1,155 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_qxi42"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_hecmd"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_yfclo"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_a6c7e"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="5_q7y02"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_random_page.gd" id="6_iq6xm"]
+[ext_resource type="Resource" path="res://content/demo/characters/ember_knight.tres" id="7_wwxus"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_7qcqh"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_beast.tres" id="9_57d18"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="10_1t56q"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="11_jg8dl"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="12_rhhkp"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_beast_awake.tres" id="13_lwnlo"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="14_0wy38"]
+
+[sub_resource type="Resource" id="Resource_4bceo"]
+script = ExtResource("5_q7y02")
+page = 1
+
+[sub_resource type="Resource" id="Resource_xcsur"]
+script = ExtResource("2_hecmd")
+label = "Wake it"
+outcomes = Array[ExtResource("4_a6c7e")]([SubResource("Resource_4bceo")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.BossItem", &"Choice.Gain.Coins"])
+
+[sub_resource type="Resource" id="Resource_b3jef"]
+script = ExtResource("6_iq6xm")
+pages = Array[int]([2, 3])
+weights_x100 = Array[int]([300, 200])
+
+[sub_resource type="Resource" id="Resource_oxx53"]
+script = ExtResource("2_hecmd")
+label = "Sneak past"
+outcomes = Array[ExtResource("4_a6c7e")]([SubResource("Resource_b3jef")])
+tags = Array[StringName]([&"Choice.Gamble", &"Choice.Gain.Item", &"Choice.Fight", &"Choice.Gain.BossItem", &"Choice.Gain.Coins"])
+
+[sub_resource type="Resource" id="Resource_uyqi0"]
+script = ExtResource("8_7qcqh")
+character = ExtResource("7_wwxus")
+
+[sub_resource type="Resource" id="Resource_7ww1t"]
+script = ExtResource("5_q7y02")
+page = 4
+
+[sub_resource type="Resource" id="Resource_a2wk5"]
+script = ExtResource("2_hecmd")
+label = "Smoke it out"
+conditions = Array[ExtResource("3_yfclo")]([SubResource("Resource_uyqi0")])
+outcomes = Array[ExtResource("4_a6c7e")]([SubResource("Resource_7ww1t")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Item"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_s4igy"]
+script = ExtResource("5_q7y02")
+page = 5
+
+[sub_resource type="Resource" id="Resource_7l6le"]
+script = ExtResource("2_hecmd")
+label = "Leave"
+outcomes = Array[ExtResource("4_a6c7e")]([SubResource("Resource_s4igy")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_7td0n"]
+script = ExtResource("1_qxi42")
+text = "Something huge sleeps across the passage, a glint of treasure under its claws."
+choices = Array[ExtResource("2_hecmd")]([SubResource("Resource_xcsur"), SubResource("Resource_oxx53"), SubResource("Resource_a2wk5"), SubResource("Resource_7l6le")])
+
+[sub_resource type="Resource" id="Resource_m88ri"]
+script = ExtResource("10_1t56q")
+encounter = ExtResource("9_57d18")
+
+[sub_resource type="Resource" id="Resource_1v6gm"]
+script = ExtResource("2_hecmd")
+label = "Fight!"
+outcomes = Array[ExtResource("4_a6c7e")]([SubResource("Resource_m88ri")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.BossItem", &"Choice.Gain.Coins"])
+
+[sub_resource type="Resource" id="Resource_rea6t"]
+script = ExtResource("1_qxi42")
+text = "You hit it with everything you have. It wakes, still groggy, and roars!"
+choices = Array[ExtResource("2_hecmd")]([SubResource("Resource_1v6gm")])
+
+[sub_resource type="Resource" id="Resource_4q7ho"]
+script = ExtResource("2_hecmd")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_bw3it"]
+script = ExtResource("11_jg8dl")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_wclep"]
+script = ExtResource("12_rhhkp")
+item_query = SubResource("Resource_bw3it")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_cmqnb"]
+script = ExtResource("1_qxi42")
+text = "You slip past and pry something from under a claw. The beast sleeps on."
+choices = Array[ExtResource("2_hecmd")]([SubResource("Resource_4q7ho")])
+on_enter = Array[ExtResource("4_a6c7e")]([SubResource("Resource_wclep")])
+
+[sub_resource type="Resource" id="Resource_88jlj"]
+script = ExtResource("10_1t56q")
+encounter = ExtResource("13_lwnlo")
+
+[sub_resource type="Resource" id="Resource_vtubu"]
+script = ExtResource("2_hecmd")
+label = "Fight!"
+outcomes = Array[ExtResource("4_a6c7e")]([SubResource("Resource_88jlj")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.BossItem", &"Choice.Gain.Coins"])
+
+[sub_resource type="Resource" id="Resource_1lw4f"]
+script = ExtResource("1_qxi42")
+text = "A pebble rolls. An eye the size of a shield opens, and the beast rises, wide awake!"
+choices = Array[ExtResource("2_hecmd")]([SubResource("Resource_vtubu")])
+
+[sub_resource type="Resource" id="Resource_4474d"]
+script = ExtResource("2_hecmd")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_5eh2x"]
+script = ExtResource("11_jg8dl")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_gihwx"]
+script = ExtResource("12_rhhkp")
+item_query = SubResource("Resource_5eh2x")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_3yait"]
+script = ExtResource("1_qxi42")
+text = "The Ember Knight smokes the passage until the beast shuffles off, coughing. It leaves its treasure behind."
+choices = Array[ExtResource("2_hecmd")]([SubResource("Resource_4474d")])
+on_enter = Array[ExtResource("4_a6c7e")]([SubResource("Resource_gihwx")])
+
+[sub_resource type="Resource" id="Resource_idrc6"]
+script = ExtResource("2_hecmd")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_044x8"]
+script = ExtResource("1_qxi42")
+text = "You let sleeping beasts lie."
+choices = Array[ExtResource("2_hecmd")]([SubResource("Resource_idrc6")])
+
+[resource]
+script = ExtResource("14_0wy38")
+id = &"demo.event.slumbering_beast"
+display_name = "Slumbering Beast"
+tags = Array[StringName]([&"Event.Hollow"])
+pages = Array[ExtResource("1_qxi42")]([SubResource("Resource_7td0n"), SubResource("Resource_rea6t"), SubResource("Resource_cmqnb"), SubResource("Resource_1lw4f"), SubResource("Resource_3yait"), SubResource("Resource_044x8")])

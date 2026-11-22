@@ -1,0 +1,118 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_hauux"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_yiq8b"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_mvuy0"]
+[ext_resource type="Script" path="res://game/defs/conditions/member_at.gd" id="4_1ws2a"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_csegs"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="6_wej6f"]
+[ext_resource type="Resource" path="res://content/demo/characters/cryomancer.tres" id="7_rhcdl"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_c83qy"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/hurt_25.tres" id="9_mr8yc"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_member_effect.gd" id="10_oh6s8"]
+[ext_resource type="Script" path="res://game/defs/outcomes/reveal_rooms.gd" id="11_vhv1m"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_golden_key.gd" id="12_72cur"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="13_7k37k"]
+
+[sub_resource type="Resource" id="Resource_clnvr"]
+script = ExtResource("4_1ws2a")
+
+[sub_resource type="Resource" id="Resource_47kk1"]
+script = ExtResource("6_wej6f")
+page = 1
+
+[sub_resource type="Resource" id="Resource_lr7no"]
+script = ExtResource("2_yiq8b")
+label = "{member:1} steps in"
+conditions = Array[ExtResource("3_mvuy0")]([SubResource("Resource_clnvr")])
+outcomes = Array[ExtResource("5_csegs")]([SubResource("Resource_47kk1")])
+tags = Array[StringName]([&"Choice.Cost.Hp", &"Choice.Gain.Reveal", &"Choice.Gain.Keys"])
+
+[sub_resource type="Resource" id="Resource_vwsvv"]
+script = ExtResource("8_c83qy")
+character = ExtResource("7_rhcdl")
+
+[sub_resource type="Resource" id="Resource_fvqhx"]
+script = ExtResource("6_wej6f")
+page = 2
+
+[sub_resource type="Resource" id="Resource_ce5i8"]
+script = ExtResource("2_yiq8b")
+label = "Freeze the rift's edge"
+conditions = Array[ExtResource("3_mvuy0")]([SubResource("Resource_vwsvv")])
+outcomes = Array[ExtResource("5_csegs")]([SubResource("Resource_fvqhx")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Reveal", &"Choice.Gain.Keys"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_adfrw"]
+script = ExtResource("6_wej6f")
+page = 3
+
+[sub_resource type="Resource" id="Resource_3royw"]
+script = ExtResource("2_yiq8b")
+label = "Leave"
+outcomes = Array[ExtResource("5_csegs")]([SubResource("Resource_adfrw")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_f4sm5"]
+script = ExtResource("1_hauux")
+text = "A tear in the air. Through it, the whole floor, from above."
+choices = Array[ExtResource("2_yiq8b")]([SubResource("Resource_lr7no"), SubResource("Resource_ce5i8"), SubResource("Resource_3royw")])
+
+[sub_resource type="Resource" id="Resource_8rjim"]
+script = ExtResource("2_yiq8b")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_71yfd"]
+script = ExtResource("10_oh6s8")
+effect = ExtResource("9_mr8yc")
+target = 1
+
+[sub_resource type="Resource" id="Resource_d7ltv"]
+script = ExtResource("11_vhv1m")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_sfw5h"]
+script = ExtResource("12_72cur")
+
+[sub_resource type="Resource" id="Resource_dnk62"]
+script = ExtResource("1_hauux")
+text = "{member:1} steps through and comes back pale and shaking, but now you know the whole floor and hold a golden key."
+choices = Array[ExtResource("2_yiq8b")]([SubResource("Resource_8rjim")])
+on_enter = Array[ExtResource("5_csegs")]([SubResource("Resource_71yfd"), SubResource("Resource_d7ltv"), SubResource("Resource_sfw5h")])
+
+[sub_resource type="Resource" id="Resource_21tli"]
+script = ExtResource("2_yiq8b")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_kifxc"]
+script = ExtResource("11_vhv1m")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_7gtgx"]
+script = ExtResource("12_72cur")
+
+[sub_resource type="Resource" id="Resource_q23i2"]
+script = ExtResource("1_hauux")
+text = "The Cryomancer freezes the rift open. Everyone takes a careful look, and a golden key drifts out."
+choices = Array[ExtResource("2_yiq8b")]([SubResource("Resource_21tli")])
+on_enter = Array[ExtResource("5_csegs")]([SubResource("Resource_kifxc"), SubResource("Resource_7gtgx")])
+
+[sub_resource type="Resource" id="Resource_e6ltx"]
+script = ExtResource("2_yiq8b")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_7jo4e"]
+script = ExtResource("1_hauux")
+text = "The rift closes behind you with a sound like a sigh."
+choices = Array[ExtResource("2_yiq8b")]([SubResource("Resource_e6ltx")])
+
+[resource]
+script = ExtResource("13_7k37k")
+id = &"demo.event.void_rift"
+display_name = "Void Rift"
+tags = Array[StringName]([&"Event.Void"])
+pages = Array[ExtResource("1_hauux")]([SubResource("Resource_f4sm5"), SubResource("Resource_dnk62"), SubResource("Resource_q23i2"), SubResource("Resource_7jo4e")])

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_avg2f"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/leech_bond.tres" id="2_11di7"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_y1c3s"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_751xq"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_5q44v"]
+
+[sub_resource type="Resource" id="Resource_j1m6f"]
+script = ExtResource("3_y1c3s")
+effects = Array[ExtResource("1_avg2f")]([ExtResource("2_11di7")])
+
+[resource]
+script = ExtResource("5_5q44v")
+id = &"demo.item.leech"
+display_name = "Leech"
+description = "A fat leech feeds and gives back: +12% ATK, -10% DEF."
+tags = Array[StringName]([&"Item.Curse"])
+price = 0
+grants = SubResource("Resource_j1m6f")

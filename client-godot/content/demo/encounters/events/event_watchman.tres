@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_p6m1a"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_keys.gd" id="2_ka3fx"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="3_and7f"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="4_ip7bh"]
+[ext_resource type="Resource" path="res://content/demo/enemies/knight.tres" id="5_kqllv"]
+
+[sub_resource type="Resource" id="Resource_b7bhv"]
+script = ExtResource("2_ka3fx")
+amount = 2
+
+[sub_resource type="Resource" id="Resource_jqb4r"]
+script = ExtResource("4_ip7bh")
+enemy = ExtResource("5_kqllv")
+level_bonus = 1
+
+[resource]
+script = ExtResource("3_and7f")
+id = &"demo.encounter.event_watchman"
+display_name = "Drunk Watchman"
+tags = Array[StringName]([&"Encounter.Event"])
+slots = Array[ExtResource("4_ip7bh")]([SubResource("Resource_jqb4r")])
+rewards = Array[ExtResource("1_p6m1a")]([SubResource("Resource_b7bhv")])

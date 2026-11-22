@@ -1,0 +1,138 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_dboqg"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_6q14u"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_c2gy6"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_o6amp"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_random_page.gd" id="5_kkkfm"]
+[ext_resource type="Resource" path="res://content/demo/characters/ranger.tres" id="6_hchwh"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="7_51yie"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="8_u6g1k"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="9_xrl5a"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="10_th8s2"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/hurt_30.tres" id="11_6vg0h"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="12_p1i0d"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="13_ymn5r"]
+
+[sub_resource type="Resource" id="Resource_cftph"]
+script = ExtResource("5_kkkfm")
+pages = Array[int]([1, 2])
+weights_x100 = Array[int]([100, 100])
+
+[sub_resource type="Resource" id="Resource_pqueu"]
+script = ExtResource("2_6q14u")
+label = "Take it"
+outcomes = Array[ExtResource("4_o6amp")]([SubResource("Resource_cftph")])
+tags = Array[StringName]([&"Choice.Gamble", &"Choice.Gain.BossItem", &"Choice.Cost.Hp"])
+
+[sub_resource type="Resource" id="Resource_lm1u6"]
+script = ExtResource("7_51yie")
+character = ExtResource("6_hchwh")
+
+[sub_resource type="Resource" id="Resource_p0kdj"]
+script = ExtResource("8_u6g1k")
+page = 3
+
+[sub_resource type="Resource" id="Resource_c4tad"]
+script = ExtResource("2_6q14u")
+label = "Swap it for a sandbag"
+conditions = Array[ExtResource("3_c2gy6")]([SubResource("Resource_lm1u6")])
+outcomes = Array[ExtResource("4_o6amp")]([SubResource("Resource_p0kdj")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.BossItem"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_jju8u"]
+script = ExtResource("8_u6g1k")
+page = 4
+
+[sub_resource type="Resource" id="Resource_8xut7"]
+script = ExtResource("2_6q14u")
+label = "Leave"
+outcomes = Array[ExtResource("4_o6amp")]([SubResource("Resource_jju8u")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_gdhvi"]
+script = ExtResource("1_dboqg")
+text = "A golden idol on a pressure plate. Obviously a trap. Obviously worth it."
+choices = Array[ExtResource("2_6q14u")]([SubResource("Resource_pqueu"), SubResource("Resource_c4tad"), SubResource("Resource_8xut7")])
+
+[sub_resource type="Resource" id="Resource_k0ftd"]
+script = ExtResource("2_6q14u")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_ten4u"]
+script = ExtResource("9_xrl5a")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_aji25"]
+script = ExtResource("10_th8s2")
+item_query = SubResource("Resource_ten4u")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_g7td6"]
+script = ExtResource("12_p1i0d")
+effect = ExtResource("11_6vg0h")
+
+[sub_resource type="Resource" id="Resource_mfnil"]
+script = ExtResource("1_dboqg")
+text = "You snatch the idol. Darts hiss from the walls, and nobody gets out unscathed."
+choices = Array[ExtResource("2_6q14u")]([SubResource("Resource_k0ftd")])
+on_enter = Array[ExtResource("4_o6amp")]([SubResource("Resource_aji25"), SubResource("Resource_g7td6")])
+
+[sub_resource type="Resource" id="Resource_6kxgi"]
+script = ExtResource("2_6q14u")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_0lkft"]
+script = ExtResource("9_xrl5a")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_s2r41"]
+script = ExtResource("10_th8s2")
+item_query = SubResource("Resource_0lkft")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_x1xnb"]
+script = ExtResource("1_dboqg")
+text = "You snatch the idol and freeze. Nothing happens. You can hardly believe it."
+choices = Array[ExtResource("2_6q14u")]([SubResource("Resource_6kxgi")])
+on_enter = Array[ExtResource("4_o6amp")]([SubResource("Resource_s2r41")])
+
+[sub_resource type="Resource" id="Resource_5qmgj"]
+script = ExtResource("2_6q14u")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_by2yb"]
+script = ExtResource("9_xrl5a")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_40iy2"]
+script = ExtResource("10_th8s2")
+item_query = SubResource("Resource_by2yb")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_ain6g"]
+script = ExtResource("1_dboqg")
+text = "The Ranger weighs a sandbag by hand and swaps it for the idol in one smooth motion. The plate doesn't even click."
+choices = Array[ExtResource("2_6q14u")]([SubResource("Resource_5qmgj")])
+on_enter = Array[ExtResource("4_o6amp")]([SubResource("Resource_40iy2")])
+
+[sub_resource type="Resource" id="Resource_1qwxy"]
+script = ExtResource("2_6q14u")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_ethdt"]
+script = ExtResource("1_dboqg")
+text = "Obviously a trap. You leave it."
+choices = Array[ExtResource("2_6q14u")]([SubResource("Resource_1qwxy")])
+
+[resource]
+script = ExtResource("13_ymn5r")
+id = &"demo.event.golden_idol"
+display_name = "Golden Idol"
+tags = Array[StringName]([&"Event.Vault"])
+pages = Array[ExtResource("1_dboqg")]([SubResource("Resource_gdhvi"), SubResource("Resource_mfnil"), SubResource("Resource_x1xnb"), SubResource("Resource_ain6g"), SubResource("Resource_ethdt")])

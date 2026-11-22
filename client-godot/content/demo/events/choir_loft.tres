@@ -1,0 +1,101 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_0t25y"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_lusd6"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_avuv7"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_v1rx7"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="5_vx1m7"]
+[ext_resource type="Resource" path="res://content/demo/characters/bard.tres" id="6_agxlg"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="7_u4pbq"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/heal_15.tres" id="8_uklaa"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="9_jn2df"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_xp.gd" id="10_5p2x3"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="11_75l6m"]
+
+[sub_resource type="Resource" id="Resource_kihm2"]
+script = ExtResource("5_vx1m7")
+page = 1
+
+[sub_resource type="Resource" id="Resource_028wk"]
+script = ExtResource("2_lusd6")
+label = "Listen"
+outcomes = Array[ExtResource("4_v1rx7")]([SubResource("Resource_kihm2")])
+tags = Array[StringName]([&"Choice.Gain.Heal"])
+
+[sub_resource type="Resource" id="Resource_jkv52"]
+script = ExtResource("7_u4pbq")
+character = ExtResource("6_agxlg")
+
+[sub_resource type="Resource" id="Resource_ip33a"]
+script = ExtResource("5_vx1m7")
+page = 2
+
+[sub_resource type="Resource" id="Resource_l6crc"]
+script = ExtResource("2_lusd6")
+label = "Sing along"
+conditions = Array[ExtResource("3_avuv7")]([SubResource("Resource_jkv52")])
+outcomes = Array[ExtResource("4_v1rx7")]([SubResource("Resource_ip33a")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Xp"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_j3mwc"]
+script = ExtResource("5_vx1m7")
+page = 3
+
+[sub_resource type="Resource" id="Resource_pae72"]
+script = ExtResource("2_lusd6")
+label = "Leave"
+outcomes = Array[ExtResource("4_v1rx7")]([SubResource("Resource_j3mwc")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_jl0ck"]
+script = ExtResource("1_0t25y")
+text = "An empty choir loft. The hymn sheets are still on their stands."
+choices = Array[ExtResource("2_lusd6")]([SubResource("Resource_028wk"), SubResource("Resource_l6crc"), SubResource("Resource_pae72")])
+
+[sub_resource type="Resource" id="Resource_m32uc"]
+script = ExtResource("2_lusd6")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_y02y6"]
+script = ExtResource("9_jn2df")
+effect = ExtResource("8_uklaa")
+
+[sub_resource type="Resource" id="Resource_2xrif"]
+script = ExtResource("1_0t25y")
+text = "You sit in the silence. Faintly, a hymn plays from nowhere, and old aches ease."
+choices = Array[ExtResource("2_lusd6")]([SubResource("Resource_m32uc")])
+on_enter = Array[ExtResource("4_v1rx7")]([SubResource("Resource_y02y6")])
+
+[sub_resource type="Resource" id="Resource_vpl53"]
+script = ExtResource("2_lusd6")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_db8tn"]
+script = ExtResource("10_5p2x3")
+amount = 100
+
+[sub_resource type="Resource" id="Resource_4ptik"]
+script = ExtResource("1_0t25y")
+text = "The Bard picks up a sheet and sings. Ghostly voices join in, and the party learns more from one hymn than a year of fighting."
+choices = Array[ExtResource("2_lusd6")]([SubResource("Resource_vpl53")])
+on_enter = Array[ExtResource("4_v1rx7")]([SubResource("Resource_db8tn")])
+
+[sub_resource type="Resource" id="Resource_mrp1h"]
+script = ExtResource("2_lusd6")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_mtjxm"]
+script = ExtResource("1_0t25y")
+text = "You leave the loft to its silence."
+choices = Array[ExtResource("2_lusd6")]([SubResource("Resource_mrp1h")])
+
+[resource]
+script = ExtResource("11_75l6m")
+id = &"demo.event.choir_loft"
+display_name = "Choir Loft"
+tags = Array[StringName]([&"Event.Cathedral"])
+pages = Array[ExtResource("1_0t25y")]([SubResource("Resource_jl0ck"), SubResource("Resource_2xrif"), SubResource("Resource_4ptik"), SubResource("Resource_mtjxm")])

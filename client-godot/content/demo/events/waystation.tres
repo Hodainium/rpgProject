@@ -9,6 +9,19 @@
 [ext_resource type="Resource" path="res://content/demo/effects/waystation_mp.tres" id="7_kjg0t"]
 [ext_resource type="Script" path="res://game/defs/outcomes/gain_level.gd" id="8_cssed"]
 [ext_resource type="Script" path="res://game/defs/event_definition.gd" id="9_yno3n"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="10_endpg"]
+
+[sub_resource type="Resource" id="Resource_endgo1"]
+script = ExtResource("10_endpg")
+page = 1
+
+[sub_resource type="Resource" id="Resource_endgo2"]
+script = ExtResource("10_endpg")
+page = 2
+
+[sub_resource type="Resource" id="Resource_endgo3"]
+script = ExtResource("10_endpg")
+page = 3
 
 [sub_resource type="Resource" id="Resource_51b1d"]
 script = ExtResource("6_lqh4o")
@@ -22,7 +35,8 @@ effect = ExtResource("7_kjg0t")
 [sub_resource type="Resource" id="Resource_nc3ca"]
 script = ExtResource("2_8il4e")
 label = "Rest (heal 50% HP; the fallen get up)"
-outcomes = Array[ExtResource("4_uirf1")]([SubResource("Resource_51b1d")])
+tags = Array[StringName]([&"Choice.Gain.Heal"])
+outcomes = Array[ExtResource("4_uirf1")]([SubResource("Resource_51b1d"), SubResource("Resource_endgo1")])
 
 [sub_resource type="Resource" id="Resource_j6qog"]
 script = ExtResource("8_cssed")
@@ -30,19 +44,45 @@ script = ExtResource("8_cssed")
 [sub_resource type="Resource" id="Resource_85m3n"]
 script = ExtResource("2_8il4e")
 label = "Train (everyone gains a level)"
-outcomes = Array[ExtResource("4_uirf1")]([SubResource("Resource_j6qog")])
+tags = Array[StringName]([&"Choice.Gain.Level"])
+outcomes = Array[ExtResource("4_uirf1")]([SubResource("Resource_j6qog"), SubResource("Resource_endgo2")])
 
 [sub_resource type="Resource" id="Resource_evkc7"]
 script = ExtResource("2_8il4e")
 label = "Move on"
+tags = Array[StringName]([&"Choice.Leave"])
+outcomes = Array[ExtResource("4_uirf1")]([SubResource("Resource_endgo3")])
 
 [sub_resource type="Resource" id="Resource_ik62e"]
 script = ExtResource("1_d5aet")
 text = "A quiet waystation between floors. The lamps are warm."
 choices = Array[ExtResource("2_8il4e")]([SubResource("Resource_nc3ca"), SubResource("Resource_85m3n"), SubResource("Resource_evkc7")])
 
+[sub_resource type="Resource" id="Resource_endcont"]
+script = ExtResource("2_8il4e")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_endpage1"]
+script = ExtResource("1_d5aet")
+text = "You sleep by the lamps, long and deep. In the morning the fallen are on their feet again, and the stairs down look a little less steep."
+text_variants = Array[String](["The party shares a pot of something hot and sleeps where they sit. Wounds close in the night, and even the fallen stir and stand by morning.", "Someone keeps the lamps trimmed while the others rest. When you wake, bandaged and fed, the fallen are sitting up and asking what they missed.", "You sleep the sleep of the half-dead. When you wake, the aches are gone, and the ones who fell are lacing up their boots beside you.", "A kettle sings, blankets come out of nowhere, and for one night nobody fights anything. The fallen wake with the rest of you, sore but standing."])
+choices = Array[ExtResource("2_8il4e")]([SubResource("Resource_endcont")])
+
+[sub_resource type="Resource" id="Resource_endpage2"]
+script = ExtResource("1_d5aet")
+text = "You spend the night drilling by lamplight: footwork, timing, the old lessons. By dawn everyone is better at everything."
+text_variants = Array[String](["You trade stories of every fight so far: what worked, what nearly got you killed. By dawn everyone knows a trick they didn't before.", "The party spars in the lamplight until their arms ache. It's ugly and sore, and by morning it's paying off.", "An old training dummy stands in the corner. By the time you've reduced it to splinters, the whole party is sharper for it.", "You sit up late going over what the floor taught you. Somewhere around midnight it all clicks, for everyone at once."])
+choices = Array[ExtResource("2_8il4e")]([SubResource("Resource_endcont")])
+
+[sub_resource type="Resource" id="Resource_endpage3"]
+script = ExtResource("1_d5aet")
+text = "You don't stop. The lamps flicker behind you as you take the stairs down."
+text_variants = Array[String](["No time to rest. You tighten your straps and head straight for the stairs.", "The lamps can wait for someone with more time. You press on.", "You drink some water standing up and keep moving. Whatever is down there won't wait either."])
+choices = Array[ExtResource("2_8il4e")]([SubResource("Resource_endcont")])
+
 [resource]
 script = ExtResource("9_yno3n")
 id = &"demo.event.waystation"
 display_name = "Waystation"
-pages = Array[ExtResource("1_d5aet")]([SubResource("Resource_ik62e")])
+pages = Array[ExtResource("1_d5aet")]([SubResource("Resource_ik62e"), SubResource("Resource_endpage1"), SubResource("Resource_endpage2"), SubResource("Resource_endpage3")])

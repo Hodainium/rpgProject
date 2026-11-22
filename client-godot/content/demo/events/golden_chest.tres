@@ -1,0 +1,67 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_u0sgw"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_y1gdm"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_7p0tm"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_a4taf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="5_3jomo"]
+[ext_resource type="Resource" path="res://content/demo/chests/gilded_chest.tres" id="6_jtha6"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_chest.gd" id="7_5rnfg"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="8_7g13s"]
+
+[sub_resource type="Resource" id="Resource_g1ubo"]
+script = ExtResource("5_3jomo")
+page = 1
+
+[sub_resource type="Resource" id="Resource_lpn3r"]
+script = ExtResource("2_y1gdm")
+label = "Take a closer look"
+outcomes = Array[ExtResource("4_a4taf")]([SubResource("Resource_g1ubo")])
+tags = Array[StringName]([&"Choice.Gain.Chest"])
+
+[sub_resource type="Resource" id="Resource_2ryxo"]
+script = ExtResource("5_3jomo")
+page = 2
+
+[sub_resource type="Resource" id="Resource_aqwje"]
+script = ExtResource("2_y1gdm")
+label = "Leave"
+outcomes = Array[ExtResource("4_a4taf")]([SubResource("Resource_2ryxo")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_lgper"]
+script = ExtResource("1_u0sgw")
+text = "A gilded chest sits in the middle of the room."
+choices = Array[ExtResource("2_y1gdm")]([SubResource("Resource_lpn3r"), SubResource("Resource_aqwje")])
+
+[sub_resource type="Resource" id="Resource_coj0h"]
+script = ExtResource("2_y1gdm")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_xbpn0"]
+script = ExtResource("7_5rnfg")
+chest = ExtResource("6_jtha6")
+
+[sub_resource type="Resource" id="Resource_hxvgy"]
+script = ExtResource("1_u0sgw")
+text = "Up close the chest is heavier than it looks and locked tight. It will need a key."
+choices = Array[ExtResource("2_y1gdm")]([SubResource("Resource_coj0h")])
+on_enter = Array[ExtResource("4_a4taf")]([SubResource("Resource_xbpn0")])
+
+[sub_resource type="Resource" id="Resource_xdfpt"]
+script = ExtResource("2_y1gdm")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_43qw4"]
+script = ExtResource("1_u0sgw")
+text = "Too good to be true, probably. You leave it be."
+choices = Array[ExtResource("2_y1gdm")]([SubResource("Resource_xdfpt")])
+
+[resource]
+script = ExtResource("8_7g13s")
+id = &"demo.event.golden_chest"
+display_name = "Golden Chest"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_u0sgw")]([SubResource("Resource_lgper"), SubResource("Resource_hxvgy"), SubResource("Resource_43qw4")])

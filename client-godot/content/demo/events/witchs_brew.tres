@@ -1,0 +1,127 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_xea4v"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_qc0ij"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_03c8k"]
+[ext_resource type="Script" path="res://game/defs/conditions/member_at.gd" id="4_cxuo8"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_grs6k"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_random_page.gd" id="6_s4w8t"]
+[ext_resource type="Resource" path="res://content/demo/characters/plaguewright.tres" id="7_slum7"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_hyqnr"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="9_iwul3"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/heal_full.tres" id="10_o7j67"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_member_effect.gd" id="11_t8yjc"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/hurt_40.tres" id="12_l6inh"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="13_jh32b"]
+
+[sub_resource type="Resource" id="Resource_r0fud"]
+script = ExtResource("4_cxuo8")
+
+[sub_resource type="Resource" id="Resource_gr481"]
+script = ExtResource("6_s4w8t")
+pages = Array[int]([1, 2])
+weights_x100 = Array[int]([100, 100])
+
+[sub_resource type="Resource" id="Resource_7usle"]
+script = ExtResource("2_qc0ij")
+label = "{member:1} drinks"
+conditions = Array[ExtResource("3_03c8k")]([SubResource("Resource_r0fud")])
+outcomes = Array[ExtResource("5_grs6k")]([SubResource("Resource_gr481")])
+tags = Array[StringName]([&"Choice.Gamble", &"Choice.Gain.Heal", &"Choice.Cost.Hp"])
+
+[sub_resource type="Resource" id="Resource_7ac81"]
+script = ExtResource("8_hyqnr")
+character = ExtResource("7_slum7")
+
+[sub_resource type="Resource" id="Resource_dimkp"]
+script = ExtResource("9_iwul3")
+page = 3
+
+[sub_resource type="Resource" id="Resource_11t2p"]
+script = ExtResource("2_qc0ij")
+label = "Drink it safely"
+conditions = Array[ExtResource("3_03c8k")]([SubResource("Resource_7ac81")])
+outcomes = Array[ExtResource("5_grs6k")]([SubResource("Resource_dimkp")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Heal"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_rae4y"]
+script = ExtResource("9_iwul3")
+page = 4
+
+[sub_resource type="Resource" id="Resource_7rg0c"]
+script = ExtResource("2_qc0ij")
+label = "Leave"
+outcomes = Array[ExtResource("5_grs6k")]([SubResource("Resource_rae4y")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_mclee"]
+script = ExtResource("1_xea4v")
+text = "A cauldron bubbles, unattended. It smells like a good idea."
+choices = Array[ExtResource("2_qc0ij")]([SubResource("Resource_7usle"), SubResource("Resource_11t2p"), SubResource("Resource_7rg0c")])
+
+[sub_resource type="Resource" id="Resource_cu1wr"]
+script = ExtResource("2_qc0ij")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_wpshl"]
+script = ExtResource("11_t8yjc")
+effect = ExtResource("10_o7j67")
+target = 1
+
+[sub_resource type="Resource" id="Resource_aq26x"]
+script = ExtResource("1_xea4v")
+text = "Warmth. {member:1} feels wonderful, better than in weeks."
+choices = Array[ExtResource("2_qc0ij")]([SubResource("Resource_cu1wr")])
+on_enter = Array[ExtResource("5_grs6k")]([SubResource("Resource_wpshl")])
+
+[sub_resource type="Resource" id="Resource_htwhr"]
+script = ExtResource("2_qc0ij")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_bh3jw"]
+script = ExtResource("11_t8yjc")
+effect = ExtResource("12_l6inh")
+target = 1
+
+[sub_resource type="Resource" id="Resource_qxd5b"]
+script = ExtResource("1_xea4v")
+text = "{member:1} doubles over, green to the gills. That was not a good idea."
+choices = Array[ExtResource("2_qc0ij")]([SubResource("Resource_htwhr")])
+on_enter = Array[ExtResource("5_grs6k")]([SubResource("Resource_bh3jw")])
+
+[sub_resource type="Resource" id="Resource_os25o"]
+script = ExtResource("2_qc0ij")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_bnwte"]
+script = ExtResource("11_t8yjc")
+effect = ExtResource("10_o7j67")
+target = 4
+character = ExtResource("7_slum7")
+
+[sub_resource type="Resource" id="Resource_xa8tk"]
+script = ExtResource("1_xea4v")
+text = "The Plaguewright sniffs, adds a pinch of something, and drinks. Every wound closes."
+choices = Array[ExtResource("2_qc0ij")]([SubResource("Resource_os25o")])
+on_enter = Array[ExtResource("5_grs6k")]([SubResource("Resource_bnwte")])
+
+[sub_resource type="Resource" id="Resource_qrlih"]
+script = ExtResource("2_qc0ij")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_l0kpo"]
+script = ExtResource("1_xea4v")
+text = "You leave the cauldron to whoever brewed it."
+choices = Array[ExtResource("2_qc0ij")]([SubResource("Resource_qrlih")])
+
+[resource]
+script = ExtResource("13_jh32b")
+id = &"demo.event.witchs_brew"
+display_name = "Witch's Brew"
+tags = Array[StringName]([&"Event.Coven"])
+pages = Array[ExtResource("1_xea4v")]([SubResource("Resource_mclee"), SubResource("Resource_aq26x"), SubResource("Resource_qxd5b"), SubResource("Resource_xa8tk"), SubResource("Resource_l0kpo")])

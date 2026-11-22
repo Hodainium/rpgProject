@@ -7,6 +7,15 @@
 [ext_resource type="Resource" path="res://content/demo/effects/heal.tres" id="5_i0fuw"]
 [ext_resource type="Script" path="res://game/defs/outcomes/apply_party_effect.gd" id="6_ss5vx"]
 [ext_resource type="Script" path="res://game/defs/event_definition.gd" id="7_kkdpy"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="8_endpg"]
+
+[sub_resource type="Resource" id="Resource_endgo1"]
+script = ExtResource("8_endpg")
+page = 1
+
+[sub_resource type="Resource" id="Resource_endgo2"]
+script = ExtResource("8_endpg")
+page = 2
 
 [sub_resource type="Resource" id="Resource_n2vo7"]
 script = ExtResource("6_ss5vx")
@@ -15,20 +24,38 @@ effect = ExtResource("5_i0fuw")
 [sub_resource type="Resource" id="Resource_41ryn"]
 script = ExtResource("2_uey31")
 label = "Pray (heal 300 HP)"
-outcomes = Array[ExtResource("4_uwrxs")]([SubResource("Resource_n2vo7")])
+tags = Array[StringName]([&"Choice.Gain.Heal"])
+outcomes = Array[ExtResource("4_uwrxs")]([SubResource("Resource_n2vo7"), SubResource("Resource_endgo1")])
 
 [sub_resource type="Resource" id="Resource_27tmu"]
 script = ExtResource("2_uey31")
 label = "Leave"
+tags = Array[StringName]([&"Choice.Leave"])
+outcomes = Array[ExtResource("4_uwrxs")]([SubResource("Resource_endgo2")])
 
 [sub_resource type="Resource" id="Resource_o4kbd"]
 script = ExtResource("1_2ir3n")
 text = "A cracked shrine hums softly."
 choices = Array[ExtResource("2_uey31")]([SubResource("Resource_41ryn"), SubResource("Resource_27tmu")])
 
+[sub_resource type="Resource" id="Resource_endcont"]
+script = ExtResource("2_uey31")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_endpage1"]
+script = ExtResource("1_2ir3n")
+text = "You kneel and pray. The hum rises into a warm chord, and a soft light washes over the party, knitting wounds closed."
+choices = Array[ExtResource("2_uey31")]([SubResource("Resource_endcont")])
+
+[sub_resource type="Resource" id="Resource_endpage2"]
+script = ExtResource("1_2ir3n")
+text = "The shrine keeps humming to itself as you walk on."
+choices = Array[ExtResource("2_uey31")]([SubResource("Resource_endcont")])
+
 [resource]
 script = ExtResource("7_kkdpy")
 id = &"demo.event.shrine"
 display_name = "Old shrine"
 tags = Array[StringName]([&"Event.Demo"])
-pages = Array[ExtResource("1_2ir3n")]([SubResource("Resource_o4kbd")])
+pages = Array[ExtResource("1_2ir3n")]([SubResource("Resource_o4kbd"), SubResource("Resource_endpage1"), SubResource("Resource_endpage2")])

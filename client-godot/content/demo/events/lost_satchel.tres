@@ -1,0 +1,150 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_wf8se"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_t7ith"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_n085u"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_r76ox"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_random_page.gd" id="5_1axei"]
+[ext_resource type="Resource" path="res://content/demo/characters/plaguewright.tres" id="6_i7pg2"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="7_5tcji"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="8_f8wr2"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="9_5g4ax"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="10_lcedw"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="11_kk243"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/hurt_20.tres" id="12_vu3ag"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_member_effect.gd" id="13_wqgot"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="14_atpot"]
+
+[sub_resource type="Resource" id="Resource_r3041"]
+script = ExtResource("5_1axei")
+pages = Array[int]([1, 2, 3])
+weights_x100 = Array[int]([200, 200, 100])
+
+[sub_resource type="Resource" id="Resource_6uhya"]
+script = ExtResource("2_t7ith")
+label = "Open it"
+outcomes = Array[ExtResource("4_r76ox")]([SubResource("Resource_r3041")])
+tags = Array[StringName]([&"Choice.Gamble", &"Choice.Gain.Item", &"Choice.Gain.Coins", &"Choice.Cost.Hp"])
+
+[sub_resource type="Resource" id="Resource_ldx76"]
+script = ExtResource("7_5tcji")
+character = ExtResource("6_i7pg2")
+
+[sub_resource type="Resource" id="Resource_gy6hp"]
+script = ExtResource("8_f8wr2")
+page = 4
+
+[sub_resource type="Resource" id="Resource_64ej6"]
+script = ExtResource("2_t7ith")
+label = "Check it for vermin first"
+conditions = Array[ExtResource("3_n085u")]([SubResource("Resource_ldx76")])
+outcomes = Array[ExtResource("4_r76ox")]([SubResource("Resource_gy6hp")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Item", &"Choice.Gain.Coins"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_w3qrj"]
+script = ExtResource("8_f8wr2")
+page = 5
+
+[sub_resource type="Resource" id="Resource_i77wv"]
+script = ExtResource("2_t7ith")
+label = "Leave"
+outcomes = Array[ExtResource("4_r76ox")]([SubResource("Resource_w3qrj")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_vqqpg"]
+script = ExtResource("1_wf8se")
+text = "A satchel lies under a bench. It moves, very slightly."
+choices = Array[ExtResource("2_t7ith")]([SubResource("Resource_6uhya"), SubResource("Resource_64ej6"), SubResource("Resource_i77wv")])
+
+[sub_resource type="Resource" id="Resource_jjxbk"]
+script = ExtResource("2_t7ith")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_bqtpu"]
+script = ExtResource("9_5g4ax")
+require_all_tags = Array[StringName]([&"Pool.Food"])
+
+[sub_resource type="Resource" id="Resource_46ups"]
+script = ExtResource("10_lcedw")
+item_query = SubResource("Resource_bqtpu")
+recipient = 4
+
+[sub_resource type="Resource" id="Resource_h5xec"]
+script = ExtResource("1_wf8se")
+text = "Inside: food, still wrapped and still good."
+choices = Array[ExtResource("2_t7ith")]([SubResource("Resource_jjxbk")])
+on_enter = Array[ExtResource("4_r76ox")]([SubResource("Resource_46ups")])
+
+[sub_resource type="Resource" id="Resource_32dxj"]
+script = ExtResource("2_t7ith")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_aqmis"]
+script = ExtResource("11_kk243")
+amount = 15
+
+[sub_resource type="Resource" id="Resource_3ha00"]
+script = ExtResource("1_wf8se")
+text = "Inside: a handful of coins and a mouse, which flees."
+choices = Array[ExtResource("2_t7ith")]([SubResource("Resource_32dxj")])
+on_enter = Array[ExtResource("4_r76ox")]([SubResource("Resource_aqmis")])
+
+[sub_resource type="Resource" id="Resource_a1edy"]
+script = ExtResource("2_t7ith")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_ck7dy"]
+script = ExtResource("13_wqgot")
+effect = ExtResource("12_vu3ag")
+target = 2
+
+[sub_resource type="Resource" id="Resource_28yko"]
+script = ExtResource("1_wf8se")
+text = "Inside: a snake! It bites before it slithers away."
+choices = Array[ExtResource("2_t7ith")]([SubResource("Resource_a1edy")])
+on_enter = Array[ExtResource("4_r76ox")]([SubResource("Resource_ck7dy")])
+
+[sub_resource type="Resource" id="Resource_3hjb4"]
+script = ExtResource("2_t7ith")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_q48nk"]
+script = ExtResource("9_5g4ax")
+require_all_tags = Array[StringName]([&"Pool.Food"])
+
+[sub_resource type="Resource" id="Resource_asga2"]
+script = ExtResource("10_lcedw")
+item_query = SubResource("Resource_q48nk")
+recipient = 4
+
+[sub_resource type="Resource" id="Resource_wx2vb"]
+script = ExtResource("11_kk243")
+amount = 15
+
+[sub_resource type="Resource" id="Resource_86die"]
+script = ExtResource("1_wf8se")
+text = "The Plaguewright shakes out a snake with practised hands and hands round what's left: food and coins."
+choices = Array[ExtResource("2_t7ith")]([SubResource("Resource_3hjb4")])
+on_enter = Array[ExtResource("4_r76ox")]([SubResource("Resource_asga2"), SubResource("Resource_wx2vb")])
+
+[sub_resource type="Resource" id="Resource_htec0"]
+script = ExtResource("2_t7ith")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_r4rrd"]
+script = ExtResource("1_wf8se")
+text = "Whatever is in the satchel stays in the satchel."
+choices = Array[ExtResource("2_t7ith")]([SubResource("Resource_htec0")])
+
+[resource]
+script = ExtResource("14_atpot")
+id = &"demo.event.lost_satchel"
+display_name = "Lost Satchel"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_wf8se")]([SubResource("Resource_vqqpg"), SubResource("Resource_h5xec"), SubResource("Resource_3ha00"), SubResource("Resource_28yko"), SubResource("Resource_86die"), SubResource("Resource_r4rrd")])

@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_vo0fc"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_dwfdp"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_7dstq"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_m1pmd"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_ambush.tres" id="5_6hdlg"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="6_kf2ik"]
+[ext_resource type="Resource" path="res://content/demo/characters/ranger.tres" id="7_nlyd4"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_7upge"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="9_v774g"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_ambush_spotted.tres" id="10_g2oa5"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="11_mmqp8"]
+
+[sub_resource type="Resource" id="Resource_8e444"]
+script = ExtResource("6_kf2ik")
+encounter = ExtResource("5_6hdlg")
+
+[sub_resource type="Resource" id="Resource_1x4uj"]
+script = ExtResource("2_dwfdp")
+label = "Fight!"
+outcomes = Array[ExtResource("4_m1pmd")]([SubResource("Resource_8e444")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Coins", &"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_15elx"]
+script = ExtResource("8_7upge")
+character = ExtResource("7_nlyd4")
+
+[sub_resource type="Resource" id="Resource_stj3v"]
+script = ExtResource("9_v774g")
+page = 1
+
+[sub_resource type="Resource" id="Resource_55ctm"]
+script = ExtResource("2_dwfdp")
+label = "Spot them first"
+conditions = Array[ExtResource("3_7dstq")]([SubResource("Resource_15elx")])
+outcomes = Array[ExtResource("4_m1pmd")]([SubResource("Resource_stj3v")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Fight", &"Choice.Gain.Coins", &"Choice.Gain.Item"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_nncws"]
+script = ExtResource("1_vo0fc")
+text = "Figures drop from the rafters. There is no way around them."
+choices = Array[ExtResource("2_dwfdp")]([SubResource("Resource_1x4uj"), SubResource("Resource_55ctm")])
+
+[sub_resource type="Resource" id="Resource_pg36i"]
+script = ExtResource("6_kf2ik")
+encounter = ExtResource("10_g2oa5")
+
+[sub_resource type="Resource" id="Resource_wq5l5"]
+script = ExtResource("2_dwfdp")
+label = "Fight!"
+outcomes = Array[ExtResource("4_m1pmd")]([SubResource("Resource_pg36i")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Coins", &"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_vbnki"]
+script = ExtResource("1_vo0fc")
+text = "The Ranger catches the glint of steel above and shouts a warning. The ambushers drop into a party that is ready for them!"
+choices = Array[ExtResource("2_dwfdp")]([SubResource("Resource_wq5l5")])
+
+[resource]
+script = ExtResource("11_mmqp8")
+id = &"demo.event.ambush"
+display_name = "Ambush!"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_vo0fc")]([SubResource("Resource_nncws"), SubResource("Resource_vbnki")])

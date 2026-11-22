@@ -1,0 +1,124 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_ioyo2"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_bj1eg"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_n8hcy"]
+[ext_resource type="Script" path="res://game/defs/conditions/member_at.gd" id="4_8hk3s"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_agp8i"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="6_plaw3"]
+[ext_resource type="Resource" path="res://content/demo/characters/shatterweaver.tres" id="7_skg4c"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_aswkl"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/slay.tres" id="9_23daa"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_member_effect.gd" id="10_1ihn8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="11_a3s2n"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="12_2x3oa"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="13_b3i6g"]
+
+[sub_resource type="Resource" id="Resource_6krno"]
+script = ExtResource("4_8hk3s")
+slot = 4
+
+[sub_resource type="Resource" id="Resource_wfs8p"]
+script = ExtResource("6_plaw3")
+page = 1
+
+[sub_resource type="Resource" id="Resource_sfx7g"]
+script = ExtResource("2_bj1eg")
+label = "Burn it"
+conditions = Array[ExtResource("3_n8hcy")]([SubResource("Resource_6krno")])
+outcomes = Array[ExtResource("5_agp8i")]([SubResource("Resource_wfs8p")])
+tags = Array[StringName]([&"Choice.Cost.Life", &"Choice.Gain.BossItem"])
+
+[sub_resource type="Resource" id="Resource_6vfus"]
+script = ExtResource("8_aswkl")
+character = ExtResource("7_skg4c")
+
+[sub_resource type="Resource" id="Resource_0qjqa"]
+script = ExtResource("6_plaw3")
+page = 2
+
+[sub_resource type="Resource" id="Resource_cnxy7"]
+script = ExtResource("2_bj1eg")
+label = "Shatter the effigy"
+conditions = Array[ExtResource("3_n8hcy")]([SubResource("Resource_6vfus")])
+outcomes = Array[ExtResource("5_agp8i")]([SubResource("Resource_0qjqa")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Item"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_2bp7f"]
+script = ExtResource("6_plaw3")
+page = 3
+
+[sub_resource type="Resource" id="Resource_ccy0x"]
+script = ExtResource("2_bj1eg")
+label = "Leave"
+outcomes = Array[ExtResource("5_agp8i")]([SubResource("Resource_2bp7f")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_r2tko"]
+script = ExtResource("1_ioyo2")
+text = "A straw effigy that looks exactly like {member:4}. A candle burns beside it."
+choices = Array[ExtResource("2_bj1eg")]([SubResource("Resource_sfx7g"), SubResource("Resource_cnxy7"), SubResource("Resource_ccy0x")])
+
+[sub_resource type="Resource" id="Resource_jt2rq"]
+script = ExtResource("2_bj1eg")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_1bdys"]
+script = ExtResource("10_1ihn8")
+effect = ExtResource("9_23daa")
+target = 1
+slot = 4
+
+[sub_resource type="Resource" id="Resource_lgd80"]
+script = ExtResource("11_a3s2n")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_c1hnm"]
+script = ExtResource("12_2x3oa")
+item_query = SubResource("Resource_lgd80")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_xw5p4"]
+script = ExtResource("1_ioyo2")
+text = "The straw catches. {member:4} screams and falls, and in the ashes lies something terribly valuable."
+choices = Array[ExtResource("2_bj1eg")]([SubResource("Resource_jt2rq")])
+on_enter = Array[ExtResource("5_agp8i")]([SubResource("Resource_1bdys"), SubResource("Resource_c1hnm")])
+
+[sub_resource type="Resource" id="Resource_do3gl"]
+script = ExtResource("2_bj1eg")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_7310y"]
+script = ExtResource("11_a3s2n")
+require_all_tags = Array[StringName]([&"Pool.Void"])
+
+[sub_resource type="Resource" id="Resource_fbikr"]
+script = ExtResource("12_2x3oa")
+item_query = SubResource("Resource_7310y")
+recipient = 2
+
+[sub_resource type="Resource" id="Resource_xxdpq"]
+script = ExtResource("1_ioyo2")
+text = "The Shatterweaver cracks the effigy apart. The curse breaks with it, leaving behind a sliver of the Void."
+choices = Array[ExtResource("2_bj1eg")]([SubResource("Resource_do3gl")])
+on_enter = Array[ExtResource("5_agp8i")]([SubResource("Resource_fbikr")])
+
+[sub_resource type="Resource" id="Resource_bcgq4"]
+script = ExtResource("2_bj1eg")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_u4qsv"]
+script = ExtResource("1_ioyo2")
+text = "You blow out the candle and leave the effigy alone."
+choices = Array[ExtResource("2_bj1eg")]([SubResource("Resource_bcgq4")])
+
+[resource]
+script = ExtResource("13_b3i6g")
+id = &"demo.event.blood_effigy"
+display_name = "Blood Effigy"
+tags = Array[StringName]([&"Event.Coven"])
+pages = Array[ExtResource("1_ioyo2")]([SubResource("Resource_r2tko"), SubResource("Resource_xw5p4"), SubResource("Resource_xxdpq"), SubResource("Resource_u4qsv")])

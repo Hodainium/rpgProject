@@ -1,0 +1,112 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_yfr01"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_6k6a7"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_6oaov"]
+[ext_resource type="Script" path="res://game/defs/conditions/coins_at_least.gd" id="4_s2xng"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_2tnb3"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_coins.gd" id="6_bukmh"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="7_pd0tk"]
+[ext_resource type="Resource" path="res://content/demo/characters/arcanist.tres" id="8_aa4ft"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="9_rxfl5"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_tax.tres" id="10_nntjp"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="11_siid8"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="12_wysng"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="13_j84nd"]
+
+[sub_resource type="Resource" id="Resource_ksys5"]
+script = ExtResource("4_s2xng")
+amount = 25
+
+[sub_resource type="Resource" id="Resource_j0b6n"]
+script = ExtResource("6_bukmh")
+amount = 25
+
+[sub_resource type="Resource" id="Resource_i5s0g"]
+script = ExtResource("7_pd0tk")
+page = 1
+
+[sub_resource type="Resource" id="Resource_voeg5"]
+script = ExtResource("2_6k6a7")
+label = "Pay 25 coins"
+conditions = Array[ExtResource("3_6oaov")]([SubResource("Resource_ksys5")])
+outcomes = Array[ExtResource("5_2tnb3")]([SubResource("Resource_j0b6n"), SubResource("Resource_i5s0g")])
+tags = Array[StringName]([&"Choice.Cost.Coins"])
+
+[sub_resource type="Resource" id="Resource_jcdg8"]
+script = ExtResource("7_pd0tk")
+page = 2
+
+[sub_resource type="Resource" id="Resource_58174"]
+script = ExtResource("2_6k6a7")
+label = "Refuse"
+outcomes = Array[ExtResource("5_2tnb3")]([SubResource("Resource_jcdg8")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Coins"])
+
+[sub_resource type="Resource" id="Resource_sa4dh"]
+script = ExtResource("9_rxfl5")
+character = ExtResource("8_aa4ft")
+
+[sub_resource type="Resource" id="Resource_02nn3"]
+script = ExtResource("7_pd0tk")
+page = 3
+
+[sub_resource type="Resource" id="Resource_la11s"]
+script = ExtResource("2_6k6a7")
+label = "Forge a receipt (and a refund)"
+conditions = Array[ExtResource("3_6oaov")]([SubResource("Resource_sa4dh")])
+outcomes = Array[ExtResource("5_2tnb3")]([SubResource("Resource_02nn3")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Coins"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_ifqm6"]
+script = ExtResource("1_yfr01")
+text = "A clerk blocks the door with a ledger. \"Twenty-five coins. Tax.\""
+choices = Array[ExtResource("2_6k6a7")]([SubResource("Resource_voeg5"), SubResource("Resource_58174"), SubResource("Resource_la11s")])
+
+[sub_resource type="Resource" id="Resource_v0dn1"]
+script = ExtResource("2_6k6a7")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_tvig7"]
+script = ExtResource("1_yfr01")
+text = "The clerk stamps the ledger and waves you through without looking up."
+choices = Array[ExtResource("2_6k6a7")]([SubResource("Resource_v0dn1")])
+
+[sub_resource type="Resource" id="Resource_5sksj"]
+script = ExtResource("11_siid8")
+encounter = ExtResource("10_nntjp")
+
+[sub_resource type="Resource" id="Resource_3g7ii"]
+script = ExtResource("2_6k6a7")
+label = "Fight!"
+outcomes = Array[ExtResource("5_2tnb3")]([SubResource("Resource_5sksj")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Coins"])
+
+[sub_resource type="Resource" id="Resource_7k1q8"]
+script = ExtResource("1_yfr01")
+text = "The clerk slams the ledger shut. Two more clerks step out from behind him, sharpening their quills!"
+choices = Array[ExtResource("2_6k6a7")]([SubResource("Resource_3g7ii")])
+
+[sub_resource type="Resource" id="Resource_d6n56"]
+script = ExtResource("2_6k6a7")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_km2t8"]
+script = ExtResource("12_wysng")
+amount = 25
+
+[sub_resource type="Resource" id="Resource_u33hy"]
+script = ExtResource("1_yfr01")
+text = "The Arcanist conjures a receipt so convincing the clerk apologises for the error and pays you a refund."
+choices = Array[ExtResource("2_6k6a7")]([SubResource("Resource_d6n56")])
+on_enter = Array[ExtResource("5_2tnb3")]([SubResource("Resource_km2t8")])
+
+[resource]
+script = ExtResource("13_j84nd")
+id = &"demo.event.tax_collector"
+display_name = "Tax Collector"
+tags = Array[StringName]([&"Event.Vault"])
+pages = Array[ExtResource("1_yfr01")]([SubResource("Resource_ifqm6"), SubResource("Resource_tvig7"), SubResource("Resource_7k1q8"), SubResource("Resource_u33hy")])

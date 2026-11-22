@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_w0spo"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_u2n4d"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="3_kki5a"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="4_7q0ct"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="5_yclyg"]
+[ext_resource type="Resource" path="res://content/demo/enemies/reflection.tres" id="6_8whx1"]
+
+[sub_resource type="Resource" id="Resource_wwq6h"]
+script = ExtResource("2_u2n4d")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_ac3xx"]
+script = ExtResource("3_kki5a")
+item_query = SubResource("Resource_wwq6h")
+
+[sub_resource type="Resource" id="Resource_qt3q6"]
+script = ExtResource("5_yclyg")
+enemy = ExtResource("6_8whx1")
+level_bonus = 2
+
+[resource]
+script = ExtResource("4_7q0ct")
+id = &"demo.encounter.event_reflection"
+display_name = "Your Reflection"
+tags = Array[StringName]([&"Encounter.Event"])
+slots = Array[ExtResource("5_yclyg")]([SubResource("Resource_qt3q6")])
+rewards = Array[ExtResource("1_w0spo")]([SubResource("Resource_ac3xx")])

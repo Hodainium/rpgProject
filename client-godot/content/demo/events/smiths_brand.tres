@@ -1,0 +1,109 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_sp4y1"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_n24q2"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_n2pqp"]
+[ext_resource type="Script" path="res://game/defs/conditions/member_at.gd" id="4_f3x6k"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_vbao2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="6_ty8mw"]
+[ext_resource type="Resource" path="res://content/demo/characters/ember_knight.tres" id="7_glkfn"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_jbaqu"]
+[ext_resource type="Resource" path="res://content/demo/items/smiths_brand.tres" id="9_js0y8"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="10_3agjq"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="11_x1htu"]
+
+[sub_resource type="Resource" id="Resource_m1r6u"]
+script = ExtResource("4_f3x6k")
+slot = 3
+
+[sub_resource type="Resource" id="Resource_4m4md"]
+script = ExtResource("6_ty8mw")
+page = 1
+
+[sub_resource type="Resource" id="Resource_5qiop"]
+script = ExtResource("2_n24q2")
+label = "{member:3} takes the brand"
+conditions = Array[ExtResource("3_n2pqp")]([SubResource("Resource_m1r6u")])
+outcomes = Array[ExtResource("5_vbao2")]([SubResource("Resource_4m4md")])
+tags = Array[StringName]([&"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_2p2hx"]
+script = ExtResource("8_jbaqu")
+character = ExtResource("7_glkfn")
+
+[sub_resource type="Resource" id="Resource_0n7fy"]
+script = ExtResource("6_ty8mw")
+page = 2
+
+[sub_resource type="Resource" id="Resource_cn2bh"]
+script = ExtResource("2_n24q2")
+label = "Take the brand yourself"
+conditions = Array[ExtResource("3_n2pqp")]([SubResource("Resource_2p2hx")])
+outcomes = Array[ExtResource("5_vbao2")]([SubResource("Resource_0n7fy")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Item"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_7leas"]
+script = ExtResource("6_ty8mw")
+page = 3
+
+[sub_resource type="Resource" id="Resource_eg1yl"]
+script = ExtResource("2_n24q2")
+label = "Leave"
+outcomes = Array[ExtResource("5_vbao2")]([SubResource("Resource_7leas")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_w4gox"]
+script = ExtResource("1_sp4y1")
+text = "A brand glows in the coals, still hot after all these years."
+choices = Array[ExtResource("2_n24q2")]([SubResource("Resource_5qiop"), SubResource("Resource_cn2bh"), SubResource("Resource_eg1yl")])
+
+[sub_resource type="Resource" id="Resource_ckrj7"]
+script = ExtResource("2_n24q2")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_j6yrg"]
+script = ExtResource("10_3agjq")
+item = ExtResource("9_js0y8")
+recipient = 3
+slot = 3
+
+[sub_resource type="Resource" id="Resource_t62wb"]
+script = ExtResource("1_sp4y1")
+text = "{member:3} grips the brand. It sears the skin and leaves a mark that never cools, and a new way to strike."
+choices = Array[ExtResource("2_n24q2")]([SubResource("Resource_ckrj7")])
+on_enter = Array[ExtResource("5_vbao2")]([SubResource("Resource_j6yrg")])
+
+[sub_resource type="Resource" id="Resource_l6dem"]
+script = ExtResource("2_n24q2")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_on0y5"]
+script = ExtResource("10_3agjq")
+item = ExtResource("9_js0y8")
+character = ExtResource("7_glkfn")
+
+[sub_resource type="Resource" id="Resource_hy7dd"]
+script = ExtResource("1_sp4y1")
+text = "The Ember Knight takes the brand like an old friend. The fire knows its own."
+choices = Array[ExtResource("2_n24q2")]([SubResource("Resource_l6dem")])
+on_enter = Array[ExtResource("5_vbao2")]([SubResource("Resource_on0y5")])
+
+[sub_resource type="Resource" id="Resource_xpk66"]
+script = ExtResource("2_n24q2")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_7g1mn"]
+script = ExtResource("1_sp4y1")
+text = "You leave the brand in the coals to cool for another hundred years."
+choices = Array[ExtResource("2_n24q2")]([SubResource("Resource_xpk66")])
+
+[resource]
+script = ExtResource("11_x1htu")
+id = &"demo.event.smiths_brand"
+display_name = "Smith's Brand"
+tags = Array[StringName]([&"Event.Forge"])
+pages = Array[ExtResource("1_sp4y1")]([SubResource("Resource_w4gox"), SubResource("Resource_t62wb"), SubResource("Resource_hy7dd"), SubResource("Resource_7g1mn")])

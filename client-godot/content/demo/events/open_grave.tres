@@ -1,0 +1,131 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_a6i3j"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_0w2ig"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_2727s"]
+[ext_resource type="Script" path="res://game/defs/conditions/member_at.gd" id="4_v6gfp"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_oiu77"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="6_bk70r"]
+[ext_resource type="Resource" path="res://content/demo/characters/warrior.tres" id="7_tutb3"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="8_1cqaw"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/hurt_20.tres" id="9_kb8o5"]
+[ext_resource type="Script" path="res://game/defs/outcomes/apply_member_effect.gd" id="10_87qbv"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="11_l0m5s"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_equipment.gd" id="12_ps7av"]
+[ext_resource type="Resource" path="res://content/demo/effects/events/hurt_10.tres" id="13_pml8h"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="14_xfvw0"]
+
+[sub_resource type="Resource" id="Resource_w5gb3"]
+script = ExtResource("4_v6gfp")
+slot = 2
+
+[sub_resource type="Resource" id="Resource_qjm0l"]
+script = ExtResource("6_bk70r")
+page = 1
+
+[sub_resource type="Resource" id="Resource_7aq30"]
+script = ExtResource("2_0w2ig")
+label = "{member:2} digs"
+conditions = Array[ExtResource("3_2727s")]([SubResource("Resource_w5gb3")])
+outcomes = Array[ExtResource("5_oiu77")]([SubResource("Resource_qjm0l")])
+tags = Array[StringName]([&"Choice.Cost.Hp", &"Choice.Gain.Armor"])
+
+[sub_resource type="Resource" id="Resource_ndvcx"]
+script = ExtResource("8_1cqaw")
+character = ExtResource("7_tutb3")
+
+[sub_resource type="Resource" id="Resource_jhux6"]
+script = ExtResource("6_bk70r")
+page = 2
+
+[sub_resource type="Resource" id="Resource_2hq62"]
+script = ExtResource("2_0w2ig")
+label = "Dig it out yourself"
+conditions = Array[ExtResource("3_2727s")]([SubResource("Resource_ndvcx")])
+outcomes = Array[ExtResource("5_oiu77")]([SubResource("Resource_jhux6")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Cost.Hp", &"Choice.Gain.Armor"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_0ynnb"]
+script = ExtResource("6_bk70r")
+page = 3
+
+[sub_resource type="Resource" id="Resource_xw8pb"]
+script = ExtResource("2_0w2ig")
+label = "Leave"
+outcomes = Array[ExtResource("5_oiu77")]([SubResource("Resource_0ynnb")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_gn42f"]
+script = ExtResource("1_a6i3j")
+text = "A grave lies open. Something glints in the dirt."
+choices = Array[ExtResource("2_0w2ig")]([SubResource("Resource_7aq30"), SubResource("Resource_2hq62"), SubResource("Resource_xw8pb")])
+
+[sub_resource type="Resource" id="Resource_k1tvm"]
+script = ExtResource("2_0w2ig")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_ai6cf"]
+script = ExtResource("10_87qbv")
+effect = ExtResource("9_kb8o5")
+target = 1
+slot = 2
+
+[sub_resource type="Resource" id="Resource_bhq0x"]
+script = ExtResource("11_l0m5s")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_febfo"]
+script = ExtResource("12_ps7av")
+query = SubResource("Resource_bhq0x")
+prefer_open_slot = true
+
+[sub_resource type="Resource" id="Resource_cyjwt"]
+script = ExtResource("1_a6i3j")
+text = "{member:2} digs until their hands bleed and pulls a piece of old armor from the dirt."
+choices = Array[ExtResource("2_0w2ig")]([SubResource("Resource_k1tvm")])
+on_enter = Array[ExtResource("5_oiu77")]([SubResource("Resource_ai6cf"), SubResource("Resource_febfo")])
+
+[sub_resource type="Resource" id="Resource_678er"]
+script = ExtResource("2_0w2ig")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_lqkxi"]
+script = ExtResource("10_87qbv")
+effect = ExtResource("13_pml8h")
+target = 4
+character = ExtResource("7_tutb3")
+
+[sub_resource type="Resource" id="Resource_txlpu"]
+script = ExtResource("11_l0m5s")
+require_all_tags = Array[StringName]([&"Pool.Treasure"])
+
+[sub_resource type="Resource" id="Resource_wrfei"]
+script = ExtResource("12_ps7av")
+query = SubResource("Resource_txlpu")
+prefer_open_slot = true
+
+[sub_resource type="Resource" id="Resource_o13kw"]
+script = ExtResource("1_a6i3j")
+text = "The Warrior digs like a soldier, steady and without complaint, and hauls out a piece of armor with only a few scrapes."
+choices = Array[ExtResource("2_0w2ig")]([SubResource("Resource_678er")])
+on_enter = Array[ExtResource("5_oiu77")]([SubResource("Resource_lqkxi"), SubResource("Resource_wrfei")])
+
+[sub_resource type="Resource" id="Resource_5b6ct"]
+script = ExtResource("2_0w2ig")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_84vog"]
+script = ExtResource("1_a6i3j")
+text = "Let the dead keep what they were buried with."
+choices = Array[ExtResource("2_0w2ig")]([SubResource("Resource_5b6ct")])
+
+[resource]
+script = ExtResource("14_xfvw0")
+id = &"demo.event.open_grave"
+display_name = "Open Grave"
+tags = Array[StringName]([&"Event.Crypt"])
+pages = Array[ExtResource("1_a6i3j")]([SubResource("Resource_gn42f"), SubResource("Resource_cyjwt"), SubResource("Resource_o13kw"), SubResource("Resource_84vog")])

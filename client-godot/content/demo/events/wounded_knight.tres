@@ -32,6 +32,7 @@ page = 1
 [sub_resource type="Resource" id="Resource_bibcy"]
 script = ExtResource("2_ki0n4")
 label = "Pay 15 coins"
+tags = Array[StringName]([&"Choice.Cost.Coins", &"Choice.Gain.Armor"])
 conditions = Array[ExtResource("3_rtl03")]([SubResource("Resource_eggoh")])
 outcomes = Array[ExtResource("5_bl6yw")]([SubResource("Resource_gpal7"), SubResource("Resource_seg6r"), SubResource("Resource_3elqh")])
 
@@ -39,14 +40,25 @@ outcomes = Array[ExtResource("5_bl6yw")]([SubResource("Resource_gpal7"), SubReso
 script = ExtResource("11_35vjp")
 encounter = ExtResource("10_7s5rf")
 
+[sub_resource type="Resource" id="Resource_endgo2"]
+script = ExtResource("9_yksel")
+page = 2
+
+[sub_resource type="Resource" id="Resource_endgo3"]
+script = ExtResource("9_yksel")
+page = 3
+
 [sub_resource type="Resource" id="Resource_k22nl"]
 script = ExtResource("2_ki0n4")
 label = "Challenge him"
-outcomes = Array[ExtResource("5_bl6yw")]([SubResource("Resource_6cmmk")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Armor"])
+outcomes = Array[ExtResource("5_bl6yw")]([SubResource("Resource_endgo2")])
 
 [sub_resource type="Resource" id="Resource_r5mjd"]
 script = ExtResource("2_ki0n4")
 label = "Walk past"
+tags = Array[StringName]([&"Choice.Leave"])
+outcomes = Array[ExtResource("5_bl6yw")]([SubResource("Resource_endgo3")])
 
 [sub_resource type="Resource" id="Resource_n3ee2"]
 script = ExtResource("1_rjly7")
@@ -56,15 +68,37 @@ choices = Array[ExtResource("2_ki0n4")]([SubResource("Resource_bibcy"), SubResou
 [sub_resource type="Resource" id="Resource_gte41"]
 script = ExtResource("2_ki0n4")
 label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
 
 [sub_resource type="Resource" id="Resource_15t7v"]
 script = ExtResource("1_rjly7")
 text = "He presses the helm into your hands and limps away."
 choices = Array[ExtResource("2_ki0n4")]([SubResource("Resource_gte41")])
 
+[sub_resource type="Resource" id="Resource_endfight"]
+script = ExtResource("2_ki0n4")
+label = "Fight!"
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Armor"])
+outcomes = Array[ExtResource("5_bl6yw")]([SubResource("Resource_6cmmk")])
+
+[sub_resource type="Resource" id="Resource_endpage2"]
+script = ExtResource("1_rjly7")
+text = "The knight hauls himself up on his sword, wincing, and raises it. \"Then you'll have to earn it!\""
+choices = Array[ExtResource("2_ki0n4")]([SubResource("Resource_endfight")])
+
+[sub_resource type="Resource" id="Resource_endcont3"]
+script = ExtResource("2_ki0n4")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_endpage3"]
+script = ExtResource("1_rjly7")
+text = "You step around him. The knight watches you pass in silence, one hand pressed to his wound."
+choices = Array[ExtResource("2_ki0n4")]([SubResource("Resource_endcont3")])
+
 [resource]
 script = ExtResource("12_hn55m")
 id = &"demo.event.wounded_knight"
 display_name = "Wounded knight"
 tags = Array[StringName]([&"Event.Demo"])
-pages = Array[ExtResource("1_rjly7")]([SubResource("Resource_n3ee2"), SubResource("Resource_15t7v")])
+pages = Array[ExtResource("1_rjly7")]([SubResource("Resource_n3ee2"), SubResource("Resource_15t7v"), SubResource("Resource_endpage2"), SubResource("Resource_endpage3")])

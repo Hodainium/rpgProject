@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_qnq2p"]
+[ext_resource type="Resource" path="res://content/demo/effects/ward.tres" id="2_5bdwp"]
+[ext_resource type="Resource" path="res://content/demo/effects/haste.tres" id="3_tktk4"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_uhiwf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_7045w"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="6_naxg1"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="7_dpjlh"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="8_e3xwg"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="9_864iw"]
+[ext_resource type="Resource" path="res://content/demo/enemies/glass_saint.tres" id="10_kjrnw"]
+[ext_resource type="Resource" path="res://content/demo/enemies/penitent_knight.tres" id="11_fja52"]
+
+[sub_resource type="Resource" id="Resource_d1126"]
+script = ExtResource("4_uhiwf")
+effects = Array[ExtResource("1_qnq2p")]([ExtResource("2_5bdwp"), ExtResource("3_tktk4")])
+
+[sub_resource type="Resource" id="Resource_wwq6h"]
+script = ExtResource("6_naxg1")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_ac3xx"]
+script = ExtResource("7_dpjlh")
+item_query = SubResource("Resource_wwq6h")
+
+[sub_resource type="Resource" id="Resource_ofqhc"]
+script = ExtResource("9_864iw")
+enemy = ExtResource("10_kjrnw")
+level_bonus = 2
+
+[sub_resource type="Resource" id="Resource_jrd3t"]
+script = ExtResource("9_864iw")
+enemy = ExtResource("11_fja52")
+level_bonus = 2
+
+[resource]
+script = ExtResource("8_e3xwg")
+id = &"demo.encounter.event_paladin_warrior"
+display_name = "Fallen Paladin (shield to shield)"
+tags = Array[StringName]([&"Encounter.Event"])
+slots = Array[ExtResource("9_864iw")]([SubResource("Resource_ofqhc"), SubResource("Resource_jrd3t")])
+party_grants = SubResource("Resource_d1126")
+rewards = Array[ExtResource("5_7045w")]([SubResource("Resource_ac3xx")])

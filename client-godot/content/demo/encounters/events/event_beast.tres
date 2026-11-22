@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_s2q6a"]
+[ext_resource type="Resource" path="res://content/demo/effects/weaken.tres" id="2_hkttq"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_704yr"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_mg5f3"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_g2s6r"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="6_hs8fn"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_coins.gd" id="7_ek1g0"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="8_akqey"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="9_2yi6w"]
+[ext_resource type="Resource" path="res://content/demo/enemies/gutter_maw.tres" id="10_0pmj6"]
+[ext_resource type="Resource" path="res://content/demo/enemies/vein_weaver.tres" id="11_eeekk"]
+[ext_resource type="Resource" path="res://content/demo/enemies/leech.tres" id="12_r1a0x"]
+
+[sub_resource type="Resource" id="Resource_cmyw6"]
+script = ExtResource("3_704yr")
+effects = Array[ExtResource("1_s2q6a")]([ExtResource("2_hkttq")])
+
+[sub_resource type="Resource" id="Resource_wwq6h"]
+script = ExtResource("5_g2s6r")
+require_all_tags = Array[StringName]([&"Pool.Boss"])
+
+[sub_resource type="Resource" id="Resource_ac3xx"]
+script = ExtResource("6_hs8fn")
+item_query = SubResource("Resource_wwq6h")
+
+[sub_resource type="Resource" id="Resource_nmhan"]
+script = ExtResource("7_ek1g0")
+amount = 30
+
+[sub_resource type="Resource" id="Resource_0wm21"]
+script = ExtResource("9_2yi6w")
+enemy = ExtResource("10_0pmj6")
+level_bonus = 3
+
+[sub_resource type="Resource" id="Resource_htg6y"]
+script = ExtResource("9_2yi6w")
+enemy = ExtResource("11_eeekk")
+level_bonus = 2
+
+[sub_resource type="Resource" id="Resource_ieqta"]
+script = ExtResource("9_2yi6w")
+enemy = ExtResource("12_r1a0x")
+level_bonus = 2
+
+[resource]
+script = ExtResource("8_akqey")
+id = &"demo.encounter.event_beast"
+display_name = "Slumbering Beast"
+tags = Array[StringName]([&"Encounter.Event"])
+slots = Array[ExtResource("9_2yi6w")]([SubResource("Resource_0wm21"), SubResource("Resource_htg6y"), SubResource("Resource_ieqta")])
+grants = SubResource("Resource_cmyw6")
+rewards = Array[ExtResource("4_mg5f3")]([SubResource("Resource_ac3xx"), SubResource("Resource_nmhan")])

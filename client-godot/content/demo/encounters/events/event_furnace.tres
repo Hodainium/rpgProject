@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_25mvc"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="2_xlxro"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_mxci2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_dalfj"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_keys.gd" id="5_g7hoi"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="6_jr46i"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="7_lys12"]
+[ext_resource type="Resource" path="res://content/demo/enemies/smelter.tres" id="8_byxum"]
+[ext_resource type="Resource" path="res://content/demo/enemies/anvil_guard.tres" id="9_1ai1p"]
+[ext_resource type="Resource" path="res://content/demo/enemies/cinder_hound.tres" id="10_to1tq"]
+
+[sub_resource type="Resource" id="Resource_wg3lq"]
+script = ExtResource("3_mxci2")
+effects = Array[ExtResource("1_25mvc")]([ExtResource("2_xlxro")])
+
+[sub_resource type="Resource" id="Resource_2ym8f"]
+script = ExtResource("5_g7hoi")
+amount = 3
+
+[sub_resource type="Resource" id="Resource_6td55"]
+script = ExtResource("7_lys12")
+enemy = ExtResource("8_byxum")
+level_bonus = 1
+
+[sub_resource type="Resource" id="Resource_4c42q"]
+script = ExtResource("7_lys12")
+enemy = ExtResource("9_1ai1p")
+level_bonus = 1
+
+[sub_resource type="Resource" id="Resource_mxh07"]
+script = ExtResource("7_lys12")
+enemy = ExtResource("10_to1tq")
+
+[resource]
+script = ExtResource("6_jr46i")
+id = &"demo.encounter.event_furnace"
+display_name = "Runaway Furnace"
+tags = Array[StringName]([&"Encounter.Event"])
+slots = Array[ExtResource("7_lys12")]([SubResource("Resource_6td55"), SubResource("Resource_4c42q"), SubResource("Resource_mxh07")])
+party_grants = SubResource("Resource_wg3lq")
+rewards = Array[ExtResource("4_dalfj")]([SubResource("Resource_2ym8f")])

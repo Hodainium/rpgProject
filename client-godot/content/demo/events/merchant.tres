@@ -37,6 +37,7 @@ page = 1
 [sub_resource type="Resource" id="Resource_ng6ri"]
 script = ExtResource("2_8p7l8")
 label = "Pay 5 coins"
+tags = Array[StringName]([&"Choice.Cost.Coins", &"Choice.Gain.Item"])
 conditions = Array[ExtResource("3_33qn0")]([SubResource("Resource_vwkbh")])
 outcomes = Array[ExtResource("5_rtgkw")]([SubResource("Resource_2hqsa"), SubResource("Resource_qcg6s"), SubResource("Resource_a6hop")])
 
@@ -44,14 +45,25 @@ outcomes = Array[ExtResource("5_rtgkw")]([SubResource("Resource_2hqsa"), SubReso
 script = ExtResource("11_0xsou")
 encounter = ExtResource("10_4lbjv")
 
+[sub_resource type="Resource" id="Resource_endgo2"]
+script = ExtResource("9_mqhgf")
+page = 2
+
+[sub_resource type="Resource" id="Resource_endgo3"]
+script = ExtResource("9_mqhgf")
+page = 3
+
 [sub_resource type="Resource" id="Resource_bgotn"]
 script = ExtResource("2_8p7l8")
 label = "Rob him"
-outcomes = Array[ExtResource("5_rtgkw")]([SubResource("Resource_wka6k")])
+tags = Array[StringName]([&"Choice.Fight"])
+outcomes = Array[ExtResource("5_rtgkw")]([SubResource("Resource_endgo2")])
 
 [sub_resource type="Resource" id="Resource_urgsr"]
 script = ExtResource("2_8p7l8")
 label = "Walk away"
+tags = Array[StringName]([&"Choice.Leave"])
+outcomes = Array[ExtResource("5_rtgkw")]([SubResource("Resource_endgo3")])
 
 [sub_resource type="Resource" id="Resource_uhw67"]
 script = ExtResource("1_tq7g2")
@@ -61,15 +73,37 @@ choices = Array[ExtResource("2_8p7l8")]([SubResource("Resource_ng6ri"), SubResou
 [sub_resource type="Resource" id="Resource_ignbn"]
 script = ExtResource("2_8p7l8")
 label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
 
 [sub_resource type="Resource" id="Resource_ioe82"]
 script = ExtResource("1_tq7g2")
 text = "He pockets the coins and vanishes."
 choices = Array[ExtResource("2_8p7l8")]([SubResource("Resource_ignbn")])
 
+[sub_resource type="Resource" id="Resource_endfight"]
+script = ExtResource("2_8p7l8")
+label = "Fight!"
+tags = Array[StringName]([&"Choice.Fight"])
+outcomes = Array[ExtResource("5_rtgkw")]([SubResource("Resource_wka6k")])
+
+[sub_resource type="Resource" id="Resource_endpage2"]
+script = ExtResource("1_tq7g2")
+text = "You grab for the trinket. The merchant's hand comes up holding a knife, and his friends step out of the shadows behind him!"
+choices = Array[ExtResource("2_8p7l8")]([SubResource("Resource_endfight")])
+
+[sub_resource type="Resource" id="Resource_endcont3"]
+script = ExtResource("2_8p7l8")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_endpage3"]
+script = ExtResource("1_tq7g2")
+text = "The hooded figure shrugs and melts back into the dark, trinket and all."
+choices = Array[ExtResource("2_8p7l8")]([SubResource("Resource_endcont3")])
+
 [resource]
 script = ExtResource("12_to0n3")
 id = &"demo.event.merchant"
 display_name = "Shady merchant"
 tags = Array[StringName]([&"Event.Demo"])
-pages = Array[ExtResource("1_tq7g2")]([SubResource("Resource_uhw67"), SubResource("Resource_ioe82")])
+pages = Array[ExtResource("1_tq7g2")]([SubResource("Resource_uhw67"), SubResource("Resource_ioe82"), SubResource("Resource_endpage2"), SubResource("Resource_endpage3")])

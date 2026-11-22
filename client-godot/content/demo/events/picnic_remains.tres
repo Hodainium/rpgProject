@@ -1,0 +1,72 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_v446t"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_wxh4p"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_ly2e4"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_wkj1p"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="5_hcw3e"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="6_lu8tr"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="7_cq3d7"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="8_wk3bn"]
+
+[sub_resource type="Resource" id="Resource_xsiiq"]
+script = ExtResource("5_hcw3e")
+page = 1
+
+[sub_resource type="Resource" id="Resource_oiih0"]
+script = ExtResource("2_wxh4p")
+label = "Gather it up"
+outcomes = Array[ExtResource("4_wkj1p")]([SubResource("Resource_xsiiq")])
+tags = Array[StringName]([&"Choice.Gain.Item"])
+
+[sub_resource type="Resource" id="Resource_gr78h"]
+script = ExtResource("5_hcw3e")
+page = 2
+
+[sub_resource type="Resource" id="Resource_kw225"]
+script = ExtResource("2_wxh4p")
+label = "Leave"
+outcomes = Array[ExtResource("4_wkj1p")]([SubResource("Resource_gr78h")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_wrnv1"]
+script = ExtResource("1_v446t")
+text = "Not everything has gone bad."
+choices = Array[ExtResource("2_wxh4p")]([SubResource("Resource_oiih0"), SubResource("Resource_kw225")])
+
+[sub_resource type="Resource" id="Resource_m2j0h"]
+script = ExtResource("2_wxh4p")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_atgjq"]
+script = ExtResource("6_lu8tr")
+require_all_tags = Array[StringName]([&"Pool.Food"])
+
+[sub_resource type="Resource" id="Resource_a48gb"]
+script = ExtResource("7_cq3d7")
+item_query = SubResource("Resource_atgjq")
+recipient = 5
+
+[sub_resource type="Resource" id="Resource_jp0ib"]
+script = ExtResource("1_v446t")
+text = "You pick through the crumbs and find something worth eating."
+choices = Array[ExtResource("2_wxh4p")]([SubResource("Resource_m2j0h")])
+on_enter = Array[ExtResource("4_wkj1p")]([SubResource("Resource_a48gb")])
+
+[sub_resource type="Resource" id="Resource_l5tba"]
+script = ExtResource("2_wxh4p")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_owd6w"]
+script = ExtResource("1_v446t")
+text = "You're not that hungry."
+choices = Array[ExtResource("2_wxh4p")]([SubResource("Resource_l5tba")])
+
+[resource]
+script = ExtResource("8_wk3bn")
+id = &"demo.event.picnic_remains"
+display_name = "Picnic Remains"
+tags = Array[StringName]([&"Event.Demo"])
+pages = Array[ExtResource("1_v446t")]([SubResource("Resource_wrnv1"), SubResource("Resource_jp0ib"), SubResource("Resource_owd6w")])

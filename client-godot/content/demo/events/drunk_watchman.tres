@@ -1,0 +1,136 @@
+[gd_resource type="Resource" script_class="EventDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/event_page.gd" id="1_px11q"]
+[ext_resource type="Script" path="res://game/defs/event_choice.gd" id="2_3nfw1"]
+[ext_resource type="Script" path="res://game/defs/conditions/run_condition.gd" id="3_28osl"]
+[ext_resource type="Script" path="res://game/defs/conditions/coins_at_least.gd" id="4_5m6gv"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_0bxyn"]
+[ext_resource type="Script" path="res://game/defs/outcomes/lose_coins.gd" id="6_ooj2c"]
+[ext_resource type="Script" path="res://game/defs/outcomes/go_to_page.gd" id="7_d185h"]
+[ext_resource type="Resource" path="res://content/demo/characters/bard.tres" id="8_bo52w"]
+[ext_resource type="Script" path="res://game/defs/conditions/has_character.gd" id="9_m7l6l"]
+[ext_resource type="Script" path="res://game/defs/outcomes/gain_keys.gd" id="10_1phui"]
+[ext_resource type="Resource" path="res://content/demo/encounters/events/event_watchman.tres" id="11_f3yo6"]
+[ext_resource type="Script" path="res://game/defs/outcomes/start_encounter.gd" id="12_pjele"]
+[ext_resource type="Script" path="res://game/defs/event_definition.gd" id="13_siks0"]
+
+[sub_resource type="Resource" id="Resource_j6lae"]
+script = ExtResource("4_5m6gv")
+amount = 10
+
+[sub_resource type="Resource" id="Resource_r2cgn"]
+script = ExtResource("6_ooj2c")
+amount = 10
+
+[sub_resource type="Resource" id="Resource_lwi7u"]
+script = ExtResource("7_d185h")
+page = 1
+
+[sub_resource type="Resource" id="Resource_ffmyf"]
+script = ExtResource("2_3nfw1")
+label = "Bribe him (10 coins)"
+conditions = Array[ExtResource("3_28osl")]([SubResource("Resource_j6lae")])
+outcomes = Array[ExtResource("5_0bxyn")]([SubResource("Resource_r2cgn"), SubResource("Resource_lwi7u")])
+tags = Array[StringName]([&"Choice.Cost.Coins", &"Choice.Gain.Keys"])
+
+[sub_resource type="Resource" id="Resource_m3qya"]
+script = ExtResource("7_d185h")
+page = 2
+
+[sub_resource type="Resource" id="Resource_wdn2t"]
+script = ExtResource("2_3nfw1")
+label = "Steal his keys"
+outcomes = Array[ExtResource("5_0bxyn")]([SubResource("Resource_m3qya")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Keys"])
+
+[sub_resource type="Resource" id="Resource_dxk4t"]
+script = ExtResource("9_m7l6l")
+character = ExtResource("8_bo52w")
+
+[sub_resource type="Resource" id="Resource_u2wfw"]
+script = ExtResource("7_d185h")
+page = 3
+
+[sub_resource type="Resource" id="Resource_kxrnc"]
+script = ExtResource("2_3nfw1")
+label = "Drink with him"
+conditions = Array[ExtResource("3_28osl")]([SubResource("Resource_dxk4t")])
+outcomes = Array[ExtResource("5_0bxyn")]([SubResource("Resource_u2wfw")])
+tags = Array[StringName]([&"Choice.Class", &"Choice.Gain.Keys"])
+show = 1
+
+[sub_resource type="Resource" id="Resource_yxked"]
+script = ExtResource("7_d185h")
+page = 4
+
+[sub_resource type="Resource" id="Resource_btn58"]
+script = ExtResource("2_3nfw1")
+label = "Leave"
+outcomes = Array[ExtResource("5_0bxyn")]([SubResource("Resource_yxked")])
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_e3sbg"]
+script = ExtResource("1_px11q")
+text = "A watchman snores on a barrel, a ring of keys on his belt."
+choices = Array[ExtResource("2_3nfw1")]([SubResource("Resource_ffmyf"), SubResource("Resource_wdn2t"), SubResource("Resource_kxrnc"), SubResource("Resource_btn58")])
+
+[sub_resource type="Resource" id="Resource_pyk6i"]
+script = ExtResource("2_3nfw1")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_6wbmw"]
+script = ExtResource("10_1phui")
+
+[sub_resource type="Resource" id="Resource_invp4"]
+script = ExtResource("1_px11q")
+text = "You nudge him awake and press ten coins into his hand. He bites one, grunts, and tosses you a key before nodding off again."
+choices = Array[ExtResource("2_3nfw1")]([SubResource("Resource_pyk6i")])
+on_enter = Array[ExtResource("5_0bxyn")]([SubResource("Resource_6wbmw")])
+
+[sub_resource type="Resource" id="Resource_4i2yj"]
+script = ExtResource("12_pjele")
+encounter = ExtResource("11_f3yo6")
+
+[sub_resource type="Resource" id="Resource_vm2qa"]
+script = ExtResource("2_3nfw1")
+label = "Fight!"
+outcomes = Array[ExtResource("5_0bxyn")]([SubResource("Resource_4i2yj")])
+tags = Array[StringName]([&"Choice.Fight", &"Choice.Gain.Keys"])
+
+[sub_resource type="Resource" id="Resource_id67h"]
+script = ExtResource("1_px11q")
+text = "Your hand closes on the ring, and his eyes snap open. He lurches up, red-faced, and raises his fists!"
+choices = Array[ExtResource("2_3nfw1")]([SubResource("Resource_vm2qa")])
+
+[sub_resource type="Resource" id="Resource_wwkft"]
+script = ExtResource("2_3nfw1")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_bxa50"]
+script = ExtResource("10_1phui")
+amount = 2
+
+[sub_resource type="Resource" id="Resource_5kusu"]
+script = ExtResource("1_px11q")
+text = "The Bard matches the watchman drink for drink and starts a song. By the third verse he is snoring again, and the party lifts the key ring from his belt."
+choices = Array[ExtResource("2_3nfw1")]([SubResource("Resource_wwkft")])
+on_enter = Array[ExtResource("5_0bxyn")]([SubResource("Resource_bxa50")])
+
+[sub_resource type="Resource" id="Resource_wahq1"]
+script = ExtResource("2_3nfw1")
+label = "Continue"
+tags = Array[StringName]([&"Choice.Leave"])
+
+[sub_resource type="Resource" id="Resource_nkpxd"]
+script = ExtResource("1_px11q")
+text = "You tiptoe past. He mumbles something about his mother and keeps snoring."
+choices = Array[ExtResource("2_3nfw1")]([SubResource("Resource_wahq1")])
+
+[resource]
+script = ExtResource("13_siks0")
+id = &"demo.event.drunk_watchman"
+display_name = "Drunk Watchman"
+tags = Array[StringName]([&"Event.Cellar"])
+pages = Array[ExtResource("1_px11q")]([SubResource("Resource_e3sbg"), SubResource("Resource_invp4"), SubResource("Resource_id67h"), SubResource("Resource_5kusu"), SubResource("Resource_nkpxd")])

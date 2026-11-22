@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_3yskd"]
+[ext_resource type="Resource" path="res://content/demo/effects/haste.tres" id="2_uhl88"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_mudvd"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_43d7d"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_ulmjf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="6_gjmug"]
+[ext_resource type="Script" path="res://combat/encounter_definition.gd" id="7_hhlgc"]
+[ext_resource type="Script" path="res://combat/encounter_slot.gd" id="8_e4ddr"]
+[ext_resource type="Resource" path="res://content/demo/enemies/bat.tres" id="9_ff2cs"]
+
+[sub_resource type="Resource" id="Resource_2y014"]
+script = ExtResource("3_mudvd")
+effects = Array[ExtResource("1_3yskd")]([ExtResource("2_uhl88")])
+
+[sub_resource type="Resource" id="Resource_1q5jm"]
+script = ExtResource("5_ulmjf")
+require_all_tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare"])
+
+[sub_resource type="Resource" id="Resource_wbjgi"]
+script = ExtResource("6_gjmug")
+item_query = SubResource("Resource_1q5jm")
+
+[sub_resource type="Resource" id="Resource_8tqsn"]
+script = ExtResource("8_e4ddr")
+enemy = ExtResource("9_ff2cs")
+level_bonus = 1
+
+[sub_resource type="Resource" id="Resource_2sgv2"]
+script = ExtResource("8_e4ddr")
+enemy = ExtResource("9_ff2cs")
+level_bonus = 1
+
+[sub_resource type="Resource" id="Resource_m8sye"]
+script = ExtResource("8_e4ddr")
+enemy = ExtResource("9_ff2cs")
+level_bonus = 1
+
+[resource]
+script = ExtResource("7_hhlgc")
+id = &"demo.encounter.event_vampire"
+display_name = "Vampire's Crypt"
+tags = Array[StringName]([&"Encounter.Event"])
+slots = Array[ExtResource("8_e4ddr")]([SubResource("Resource_8tqsn"), SubResource("Resource_2sgv2"), SubResource("Resource_m8sye")])
+grants = SubResource("Resource_2y014")
+rewards = Array[ExtResource("4_43d7d")]([SubResource("Resource_wbjgi")])
