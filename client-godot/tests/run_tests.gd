@@ -55,10 +55,12 @@ func _ready() -> void:
 			stray.append_array(errors.take())
 			var test: TestCase = script.new()
 			test.host = self
+			var refused_before := RunCanonical.failures
 			await test.call(method)
 			test.after_each()
 			await get_tree().process_frame  # deferred calls the test queued run now and count as its errors
 			test.check_errors(errors.take())
+			test.check_hash_refusals(RunCanonical.failures - refused_before)
 			if test.failures.is_empty() and test.skipped != "":
 				skipped += 1
 				print("  skip  ", label, " (", test.skipped, ")")

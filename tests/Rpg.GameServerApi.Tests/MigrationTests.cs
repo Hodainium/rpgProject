@@ -203,6 +203,38 @@ public class MigrationTests(StackFixture stack)
             $"SELECT gems || '|' || dust || '|' || account_version FROM wallets WHERE player_id = '{player}'"));
     }
 
+    /// <summary>Spec hash-id-lists H12: 0013 applies on a database at 0012 with checkpoints in it; their claims stay and no
+    /// verified state exists yet (a resume serves the claims until a step verifies them).</summary>
+    [Fact]
+    public async Task Migration0013_AddsTheVerifiedSnapshot_EmptyForExistingCheckpoints()
+    {
+        await using var dataSource = NpgsqlDataSource.Create(await stack.NewDatabaseAsync());
+        var player = Guid.NewGuid();
+        var run = Guid.NewGuid();
+        await using (var connection = await dataSource.OpenConnectionAsync(Ct))
+        {
+            await ExecuteAsync(connection, "CREATE TABLE schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL)");
+            foreach (var (name, sql) in MigrationRunner.Scripts.Where(s => string.CompareOrdinal(s.Name, "0013") < 0))
+            {
+                await ExecuteAsync(connection, sql);
+                await ExecuteAsync(connection, $"INSERT INTO schema_migrations (name, applied_at) VALUES ('{name}', now())");
+            }
+
+            await ExecuteAsync(connection, $"INSERT INTO players (player_id, display_name, created_at) VALUES ('{player}', 'p', now())");
+            await ExecuteAsync(connection,
+                $"INSERT INTO runs (run_id, player_id, ruleset_version, run_structure_id, character_ids, status, started_at) VALUES ('{run}', '{player}', 'r', 'descent', '{{warrior}}', 'Active', now())");
+            await ExecuteAsync(connection,
+                $"INSERT INTO run_actions (run_id, seq, floor, type, action, state_hash, snapshot, played_at, received_at) VALUES ('{run}', 1, 0, 'start_run', '{{}}', 'h', '{{\"claim\":true}}', now(), now())");
+        }
+
+        await new MigrationRunner(dataSource, NullLogger<MigrationRunner>.Instance).EnsureMigratedAsync(Ct);
+
+        Assert.Equal(["true|true"], await ListAsync(dataSource,
+            $"SELECT (snapshot->>'claim') || '|' || (verified_snapshot IS NULL) FROM run_actions WHERE run_id = '{run}'"));
+        Assert.Equal(["run_actions_voided"], await ListAsync(dataSource,   // a rollback archives the verifier's state with the claim
+            "SELECT table_name FROM information_schema.columns WHERE table_name = 'run_actions_voided' AND column_name = 'verified_snapshot'"));
+    }
+
     private static async Task ExecuteAsync(NpgsqlConnection connection, string sql)
     {
         await using var command = new NpgsqlCommand(sql, connection);

@@ -1,7 +1,7 @@
 # Spec: hash-id-lists (a small slice after unique-events): run hash v3, the snapshot hashed
 
-Status: **spec written 2026-11-22; decisions taken with the user the same day (section 7); awaiting the user's review before
-`/implement`.** Found by the security review of `unique-events` (2026-11-22). Builds on `specs/run-verify.md` (steps,
+Status: **spec written 2026-11-22; decisions taken with the user the same day (section 7); implemented 2026-11-22 with one
+amendment the user approved during `/implement` (H12: steps and resumes start from the verifier's own checkpoint state).** Found by the security review of `unique-events` (2026-11-22). Builds on `specs/run-verify.md` (steps,
 checkpoint snapshots bound by the run hash) and `specs/server-authority.md` (snapshots, `RunSnapshot`).
 
 ## 1. Purpose & enterprise mapping
@@ -43,9 +43,12 @@ step, no rule on which characters ids may hold.
 snapshot key changes every run hash (a ruleset change, like any rule change). Golden lines use the snapshot's field names
 (`run.seenItems=[...]`) instead of hand-picked ones (`seen=...`).
 
-**Enterprise mapping.** Godot only (client and verifier, which share the code). The server never computes a run hash: it
-stores the client's claimed hashes and the verifier's verdicts as strings. Postgres, Redis, RabbitMQ and Redpanda are not
-touched; no contract changes.
+**Enterprise mapping.** The hash is Godot only (client and verifier, which share the code). The server never computes a run
+hash: it stores the client's claimed hashes and the verifier's verdicts as strings. **Amendment H12 (2026-11-22, the user's
+OK):** one small server change, found while building H11: a rolled-back run was rebuilt from the client's own claimed
+snapshot at the checkpoint it rolled back to, which a forged claim had made a dead end (section 4, H12). Migration 0013 adds
+`run_actions.verified_snapshot`; Redis, RabbitMQ and Redpanda are not touched; no new contract record (the existing
+`StepVerdict.EndSnapshot` now also comes with replay steps).
 
 **Acceptance scenarios covered:** 5 (a tampered run is rejected by replay with 2002).
 
@@ -150,13 +153,14 @@ stay 64 hex characters. Godot only: `RunCanonical`, `RunHash`, `RunSnapshot.capt
 | H2 | The same merge or split in any string list of a snapshot (armor, events seen, pending gifts, a member's skills, items, use slots, equipment, a cell's pickups or enemies, ...) | Rejected the same way | `test_split_and_merge_change_the_hash`: for every string list in real snapshots, merging two neighbours and splitting one changes the hash |
 | H3 | A string forged for a number or a number for a string (`"1"` for `1`), `true` for `1` | The hash differs | `test_types_change_the_hash` |
 | H4 | A string holding a quote, a backslash, a newline, `,` `|` `=` `:` `{` `[` | Escaped; still one-to-one, and a newline cannot forge a hash line | `test_run_canonical_escapes` |
-| H5 | A value the encoder does not know (an Object left in a cell) | `!<type>` and a script error, which fails the test, the report or the step (runner error, retried, then DLQ) | `test_run_canonical_refuses_objects` |
-| H6 | A field left out because it is empty | Restoring a snapshot without it gives the same state | `test_empty_parts_restore_alike`: every empty, false or null leaf of real snapshots removed, restored, captured again: the same snapshot and hash |
+| H5 | A value the encoder does not know (an Object left in a cell, a Vector, a float that is not whole) | `!<type>` in the text, a `push_error`, and `RunCanonical.failures` counted (a `push_error` alone passes silently): the step runner turns a change into a runner error (retried, then DLQ), the play report into one of its errors. Never the client's data: JSON holds no Object or Vector, and a claimed snapshot holding a number that is not whole is refused first by `RunSnapshot.shape_problem` (Malformed, a verdict, never a retried runner error; review fix) | `test_run_canonical_refuses_objects` |
+| H6 | A part left out because it is empty | Restoring a snapshot without it gives the same state, or the snapshot is refused | `test_empty_parts_restore_alike`: every empty, false or null hashed part of real snapshots (the run's and the map's fields, the pending battle, the waiting floor; nested values are inside their part's line, so absent and empty differ there) removed: refused by `shape_problem` or the restore, or restored to the same state and hash; today `seenEvents` is the one optional part |
 | H7 | Any field of the snapshot changed | The hash moves, unless the field is in `RunHash.NOT_HASHED` | `test_snapshot_fields_are_covered` (kept; reads `RunHash.NOT_HASHED` instead of its own copy) |
 | H8 | The card pool or the current floor's seed changed | The hash moves (they are outside the snapshot) | `test_side_inputs_are_hashed` |
 | H9 | Dictionary keys that are StringNames, interned in a different order | The same text | `test_run_canonical_key_order` |
 | H10 | An honest run | Verifies as before: both committed runs cut into steps, every checkpoint, the keyed run, the floor-rooms, card-pool and unique-events runs | the existing `test_step_runner` and `test_run_authority` suites, re-recorded goldens |
-| H11 | The real stack | A forged checkpoint is rejected and the run rolls back and rebuilds | e2e `snapshot_ids_forged` (harness fault `tamper-snapshot-ids`: merges two seen item ids in the next stored checkpoint) |
+| H11 | The real stack: a stored checkpoint forged after the upload | The run never continues from it: the step ending at it verifies (its end hash is honest) and keeps the verifier's own state (H12), the next step starts from that, and the run is verified and Won; the forged claim stays in `run_actions.snapshot` for the audit. (A forged *start* is rejected and rolled back: H1 and the worker test of H12.) | e2e `snapshot_ids_forged` (harness fault `tamper-snapshot-ids`: merges two seen item ids in the first checkpoint after seq 1 that has a later one; one consumer, so the steps verify in order) |
+| H12 | A step is rejected `SnapshotHashMismatch` at its start B (a forged claim at B), and the run rolls back to B, the end of the last verified step | Before: `GET /resume` served B's claimed snapshot, so the client played on from the forged state and every later step was rejected until the run ended Rejected (`MaxRollbacks`). Now: a verified step returns the state its replay reached (`StepVerdict.EndSnapshot`, only when it hashes to the step's claimed end), the worker stores it in `run_actions.verified_snapshot` at `to_seq` (beside the claim, kept as claimed; not in the stored verdict), and the next step's start and the resume both read `COALESCE(verified_snapshot, snapshot)`, as step 1 already starts from the server's genesis snapshot. | `StepProcessorTests.AVerifiedStepKeepsTheStateItReached_TheNextStepStartsFromIt_AndAForgedClaimNeverComesBack`, `RunVerifyTests.Resume_ServesTheVerifiersSnapshotOfACheckpoint_OverTheClaim`, `MigrationTests.Migration0013_AddsTheVerifiedSnapshot_EmptyForExistingCheckpoints`, `test_step_runner::test_a_verified_step_returns_the_state_it_reached` |
 
 Replay mismatches follow the root error contract: a verdict with `errorCode` 2002, never an HTTP 422.
 
@@ -195,12 +199,15 @@ step does today. The hash's cost is in the play report (`hashTiming`, 2.4), neve
 2. JSON-quoted strings rather than length prefixes.
 3. Remove the comma check on `seenEvents` added by `unique-events` (`RunSnapshot.shape_problem`): the encoding makes it
    redundant, and a check on one field alone misleads readers. The other shape checks stay (they protect the restore).
-4. The cost is accepted with a budget (2.4), measured in the play report.
+4. The cost is accepted with a budget (2.4), measured in the play report (`hashTiming`, written by `seed_report --play`;
+   the option `time_hashes`, off in the tests, whose reports are compared for determinism).
+5. (During `/implement`) H12: a step and a resume start from the verifier's own state at a checkpoint once the step ending
+   there is verified, instead of rolling back further (which would void and replay verified, paid battles).
 
 **Open:** none.
 
 **Stays out:** checking snapshot ids against the content (a snapshot naming an unknown id hashes honestly and holds nothing
 useful), the battle state hash v1 (its inputs are rebuilt by the verifier from the run, so a client never hands it strings;
 moving it would move every combat golden and the C# cross-checks), `StateHasher.canonical` and the card catalog hash, the
-per-cell cache (2.4), any server change, and reusing a warm Godot process per worker (the real lever for the verifier's
+per-cell cache (2.4), any server change beyond H12, and reusing a warm Godot process per worker (the real lever for the verifier's
 speed; its own slice).

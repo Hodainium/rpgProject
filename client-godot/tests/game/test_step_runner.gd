@@ -424,17 +424,12 @@ func test_a_step_that_enters_a_floor_reports_its_digest() -> void:
 
 # --- G4: what the run hash covers ---------------------------------------------------------------------------------------
 
-## Snapshot paths the run hash deliberately leaves out, with the reason (RunState.canonical_lines): the run's id (identity, compared
-## by the step against the run itself), the issued seeds of floors the run is not on (the current floor's is hashed; the server's
-## own are the reference), the console-cheat counter, how many attempts the floor generator needed, and the summaries and network
-## bookkeeping that no rule reads. Paths use "/" between keys and "[n]" for arrays.
-const NOT_HASHED: Array[String] = ["run/runId", "run/devCommands", "map/attempts", "log", "tally", "requestedFloors"]
-
-
+## Snapshot paths the run hash deliberately leaves out are RunHash.NOT_HASHED (each with its reason). Paths use "/" between keys and
+## "[n]" for arrays. The issued seeds are left out as a field, but the current floor's travels beside the snapshot (floorSeed).
 func _excluded(path: String, snapshot: Dictionary) -> bool:
 	if path.begins_with("run/floorSeeds/"):
 		return path != "run/floorSeeds/%d" % int(snapshot["run"]["floor"])   # only the current floor's seed is hashed
-	for prefix in NOT_HASHED:
+	for prefix in RunHash.NOT_HASHED:
 		if path == prefix or path.begins_with(prefix + "/") or path.begins_with(prefix + "["):
 			return true
 	return false
@@ -530,10 +525,211 @@ func test_snapshot_fields_are_covered() -> void:
 			if _excluded(path, snapshot):
 				check(not moved, "%s is listed as not hashed but changing it changes the hash" % path)
 			else:
-				check(moved, "%s is not in run_hash(): hash it (RunState.canonical_lines), or list it in NOT_HASHED with a reason" % path)
+				check(moved, "%s is not in run_hash(): capture it in RunSnapshot.capture_state, or list it in RunHash.NOT_HASHED with a reason" % path)
 				covered += 1
 	check(covered > 200, "many leaves were probed (%d)" % covered)
 	check(undecided.size() < covered / 10, "few leaves escape the probe (%d): %s" % [undecided.size(), undecided.slice(0, 8)])
+
+
+# --- Spec hash-id-lists: the hash is one-to-one -------------------------------------------------------------------------------
+
+## The checkpoint snapshots of a played run, as the server stores them (through JSON).
+func _checkpoints(content: ContentIndex) -> Array:
+	var played := await _play(content, TWO_FLOORS)
+	return played["requests"].filter(func(request: Dictionary) -> bool: return request.has("snapshot")).map(
+		func(request: Dictionary) -> Dictionary: return request["snapshot"])
+
+
+func _hash_of(content: ContentIndex, snapshot: Dictionary) -> String:
+	var probe: RunController = RunController.new()
+	host.add_child(probe)
+	_nodes.append(probe)
+	if probe.load_snapshot(content, snapshot) != "":
+		return ""
+	return probe.state.run_hash()
+
+
+## Every list of strings in a snapshot (non-empty, every item a String), as paths.
+static func _string_lists(value: Variant, path: String, found: Array) -> void:
+	if value is Dictionary:
+		for key in value:
+			_string_lists(value[key], str(key) if path == "" else "%s/%s" % [path, key], found)
+	elif value is Array:
+		if not value.is_empty() and value.all(func(item: Variant) -> bool: return item is String):
+			found.append(path)
+			return
+		for index in value.size():
+			_string_lists(value[index], "%s[%d]" % [path, index], found)
+
+
+static func _with(snapshot: Dictionary, path: String, value: Variant) -> Dictionary:
+	var copy: Dictionary = snapshot.duplicate(true)
+	var steps := _steps_of(path)
+	var holder: Variant = copy
+	for index in steps.size() - 1:
+		holder = holder[steps[index]]
+	holder[steps[-1]] = value
+	return copy
+
+
+static func _at(snapshot: Dictionary, path: String) -> Variant:
+	var holder: Variant = snapshot
+	for step in _steps_of(path):
+		holder = holder[step]
+	return holder
+
+
+## H1: a checkpoint that merges two seen item ids into one ("a,b") is a forged start, rejected before any replay.
+func test_merged_ids_rejected() -> void:
+	var base := await _tamper_base()
+	var step: Dictionary = {}
+	for candidate in base["steps"]:
+		if candidate["kind"] != "Genesis" and candidate["startSnapshot"]["run"]["seenItems"].size() >= 2:
+			step = candidate.duplicate(true)
+			break
+	check(not step.is_empty(), "a step starts from a checkpoint with two seen items")
+	var seen: Array = step["startSnapshot"]["run"]["seenItems"]
+	step["startSnapshot"]["run"]["seenItems"] = ["%s,%s" % [seen[0], seen[1]]] + seen.slice(2)
+	await _expect(base["content"], step, "SnapshotHashMismatch", int(step["fromSeq"]), "two seen items merged into one")
+
+
+## H2: in every list of strings of real snapshots (seen items, armor, a member's skills and items, ...), merging two neighbours
+## with a comma and splitting one item in two both change the hash.
+func test_split_and_merge_change_the_hash() -> void:
+	var content := fixtures()
+	var snapshots: Array = await _checkpoints(content)
+	var probed := 0
+	var lists_seen := {}
+	for snapshot in [snapshots[0], snapshots[snapshots.size() / 2], snapshots[-1]]:
+		var base_hash := _hash_of(content, snapshot)
+		check(base_hash != "", "the snapshot loads")
+		var lists: Array = []
+		_string_lists(snapshot, "", lists)
+		for path in lists:
+			if _excluded(path, snapshot) or path.begins_with("run/floorSeeds"):
+				continue
+			var list: Array = _at(snapshot, path)
+			var forged: Array = []
+			if list.size() >= 2:
+				forged.append(["%s,%s" % [list[0], list[1]]] + list.slice(2))
+			var first: String = list[0]
+			if first.length() >= 2:
+				var cut := first.length() / 2
+				forged.append([first.left(cut), first.substr(cut)] + list.slice(1))
+			for changed in forged:
+				var moved := _hash_of(content, _with(snapshot, path, changed))
+				check(moved != "" and moved != base_hash, "%s: %s hashes differently from %s" % [path, changed, list])
+				probed += 1
+			lists_seen[path.get_slice("[", 0)] = true
+	check(probed >= 10, "many string lists were probed (%d): %s" % [probed, lists_seen.keys()])
+	check(lists_seen.has("run/seenItems"), "the seen items among them")
+
+
+## H6: a part that is empty writes no hash line, so a snapshot without it must restore to the same state (or be refused): every
+## empty, false or null part of real snapshots (the run's fields, the map's, the pending battle, the waiting floor) removed.
+func test_empty_parts_restore_alike() -> void:
+	var content := fixtures()
+	var snapshots: Array = await _checkpoints(content)
+	var refused := 0
+	var alike := 0
+	for snapshot in snapshots:
+		var base_hash := _hash_of(content, snapshot)
+		var base_state := ""
+		var probe: RunController = RunController.new()
+		host.add_child(probe)
+		_nodes.append(probe)
+		probe.load_snapshot(content, snapshot)
+		base_state = RunCanonical.encode(RunSnapshot.capture_state(probe.state))
+		var parts: Array = []
+		for key in snapshot["run"]:
+			parts.append("run/" + key)
+		if snapshot["map"] != null:
+			for key in snapshot["map"]:
+				parts.append("map/" + key)
+		parts.append_array(["pendingBattle", "waitingFloor"])
+		for path in parts:
+			if not RunHash._empty(_at(snapshot, path)):
+				continue
+			var removed: Dictionary = snapshot.duplicate(true)
+			var steps := _steps_of(path)
+			if steps.size() == 1:
+				removed.erase(steps[0])
+			else:
+				removed[steps[0]].erase(steps[1])
+			if RunSnapshot.shape_problem(removed) != "":
+				refused += 1
+				continue
+			var restored: RunController = RunController.new()
+			host.add_child(restored)
+			_nodes.append(restored)
+			if restored.load_snapshot(content, removed) != "":
+				refused += 1
+				continue
+			eq(restored.state.run_hash(), base_hash, "%s removed: the same hash" % path)
+			eq(RunCanonical.encode(RunSnapshot.capture_state(restored.state)), base_state, "%s removed: the same state" % path)
+			alike += 1
+	check(refused + alike > 20, "many empty parts were probed (refused %d, alike %d)" % [refused, alike])
+	# The one optional part today: seenEvents (older saves have none). Absent and empty restore alike.
+	var with_empty: Dictionary = snapshots[-1].duplicate(true)
+	with_empty["run"]["seenEvents"] = []
+	var without: Dictionary = with_empty.duplicate(true)
+	without["run"].erase("seenEvents")
+	eq(RunSnapshot.shape_problem(without), "", "seenEvents is optional")
+	eq(_hash_of(content, without), _hash_of(content, with_empty), "a missing seenEvents hashes like an empty one")
+
+
+## H12: a verified replay step returns the state it reached; it hashes to the step's end, and the next step started from it (as
+## the server now starts it, instead of the client's claim) verifies the same.
+func test_a_verified_step_returns_the_state_it_reached() -> void:
+	var content := fixtures()
+	var played := await _play(content, TWO_FLOORS)
+	var steps := _steps(content, TWO_FLOORS, played)
+	var verdicts := await _all_verify(content, steps, "reached")
+	for index in range(1, steps.size()):
+		check(verdicts[index].has("endSnapshot"), "step %d returns the state it reached" % index)
+		var reached: Dictionary = _wire(verdicts[index].get("endSnapshot", {}))
+		eq(_hash_of(content, reached), verdicts[index]["endHash"], "step %d: it hashes to the step's end" % index)
+		if index + 1 < steps.size():
+			var next: Dictionary = steps[index + 1].duplicate(true)
+			next["startSnapshot"] = reached
+			var verdict := await _verify(content, next)
+			eq(verdict.get("status"), "Verified", "step %d verifies from the verifier's own start: %s" % [index + 1, verdict.get("mismatch")])
+			eq(verdict.get("endHash"), verdicts[index + 1]["endHash"], "to the same end")
+
+
+## H5 (review fix): a claimed start snapshot holding a number that is not whole is a Malformed verdict, never a runner error (which
+## the worker would retry and dead-letter instead of rolling the run back).
+func test_a_fractional_number_in_a_claimed_snapshot_is_malformed() -> void:
+	var base := await _tamper_base()
+	var step := _first_segment(base["steps"])
+	step["startSnapshot"]["run"]["party"][0]["hp"] = 1.5
+	var runner := StepRunner.new()
+	var verdict := await runner.run_on(step, base["content"], host)
+	eq(verdict.get("status"), "Rejected", "rejected: %s" % verdict)
+	eq(verdict["mismatch"]["reason"], "MalformedRequest", "as a malformed request")
+	eq([runner.exit_code, runner.runner_error], [StepRunner.EXIT_MALFORMED, ""], "exit 3, no runner error")
+
+
+## H8: the two inputs outside the snapshot, the current floor's seed and the card pool, move the hash.
+func test_side_inputs_are_hashed() -> void:
+	var content := fixtures()
+	var snapshots: Array = await _checkpoints(content)
+	var probe: RunController = RunController.new()
+	host.add_child(probe)
+	_nodes.append(probe)
+	eq(probe.load_snapshot(content, snapshots[-1]), "", "the snapshot loads")
+	var state := probe.state
+	var base := state.run_hash()
+	var seed_before: int = state.floor_seeds[state.floor_index]
+	state.floor_seeds[state.floor_index] = seed_before + 1
+	check(state.run_hash() != base, "another seed for the current floor is another hash")
+	state.floor_seeds[state.floor_index] = seed_before
+	eq(state.run_hash(), base, "and back")
+	state.set_card_pool(["fixture.item.flask"])
+	var pooled := state.run_hash()
+	check(pooled != base, "a card pool is hashed")
+	state.set_card_pool(["fixture.item.feather"])
+	check(state.run_hash() != pooled, "another pool is another hash")
 
 
 # --- G5: a floor seed that reaches the client late ------------------------------------------------------------------

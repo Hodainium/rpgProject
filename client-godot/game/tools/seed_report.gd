@@ -70,7 +70,7 @@ func _play(content: ContentIndex, args: PackedStringArray) -> void:
 	var options := {"run": _arg(args, "--run", ""), "party": party, "policy": policy,
 		"illegal": int(_arg(args, "--illegal", "20")), "check": args.has("--check"), "trace": args.has("--trace"),
 		"max_steps": int(_arg(args, "--max-steps", "2000")), "chaos": int(_arg(args, "--chaos", "100")),
-		"chaos_from": int(_arg(args, "--chaos-from", "1")),
+		"chaos_from": int(_arg(args, "--chaos-from", "1")), "time_hashes": true,
 		"party_size": _arg(args, "--party-size", "4") if _arg(args, "--party-size", "4") == "mixed" else int(_arg(args, "--party-size", "4"))}
 	var report: Dictionary
 	var seeds_path := _arg(args, "--seeds", "")

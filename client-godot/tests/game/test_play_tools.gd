@@ -174,6 +174,15 @@ func test_seed_report_play() -> void:
 	_nodes.append(scripted)
 	await RunPlayer.play(scripted)
 	eq(one["runHash"], scripted.state.run_hash(), "the report's auto policy is RunPlayer's (same run hash)")
+	# Spec hash-id-lists 2.4: with time_hashes (seed_report --play), every action's hash is timed; machine time, so off above.
+	check(not report.has("hashTiming"), "no timing unless asked")
+	var timed := await PlayReport.many(fixtures(), host, 1, 2, {"party": PARTY, "time_hashes": true}, true)
+	var timing: Dictionary = timed["hashTiming"]
+	check(int(timing["hashes"]) > 10 and int(timing["maxUsec"]) >= int(timing["meanUsec"]), "every action's hash is timed: %s" % timing)
+	eq(int(timing["budgetUsec"]), 3000, "against the budget")
+	check(PlayReport.text(timed).contains("run hash: "), "the text says it")
+	var merged := PlayReport.merge([{"options": timed["options"], "records": timed["records"]}])
+	eq(merged["hashTiming"], timing, "a merged report keeps it")
 
 
 func test_autorun_command() -> void:

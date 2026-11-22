@@ -59,7 +59,9 @@ public sealed record StepMismatch(StepMismatchReason Reason, int Seq, string Det
 /// <c>step_main</c>'s result and the stored verdict. The same error contract as battles: Rejected is 2002, never an
 /// HTTP status.
 /// </summary>
-/// <param name="EndSnapshot">The rebuilt start state, genesis steps only.</param>
+/// <param name="EndSnapshot">The verifier's own state at the step's end, on a verified step: the rebuilt start state of a
+/// genesis step (stored as the run's genesis snapshot), and since spec hash-id-lists (H12) the state a replay step reached
+/// (stored beside the client's claim at <c>ToSeq</c>, which the next step and a resume then use).</param>
 /// <param name="Battles">One replay result per battle the step contains (outcome, final hash, facts).</param>
 /// <param name="FloorDigest">The floor read model, when the step entered a floor (opaque JSON owned by GDScript).</param>
 public sealed record StepVerdict(ReplayVerdict Status, int? ErrorCode, string? Error, StepMismatch? Mismatch,

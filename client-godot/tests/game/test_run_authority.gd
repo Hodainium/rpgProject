@@ -549,8 +549,8 @@ func test_worn_pieces_hash_in_name_order() -> void:
 	var alpha := StringName("Test.Hash.Slot.Alpha%d" % Time.get_ticks_usec())
 	var member: Dictionary = run.state.party[0]
 	member["equipment"] = {zeta: &"fixture.equipment.blade", alpha: &"fixture.equipment.hood"}
-	var line := Array(run.state.canonical_lines()).filter(func(l: String) -> bool: return l.begins_with("member=%d|" % member["slot"]))[0] as String
-	check(line.find(String(alpha)) < line.find(String(zeta)), "Alpha before Zeta in the hashed gear line: %s" % line.get_slice("|", 10))
+	var line := Array(run.state.canonical_lines()).filter(func(l: String) -> bool: return l.begins_with("run.party[0]="))[0] as String
+	check(line.find(String(alpha)) < line.find(String(zeta)), "Alpha before Zeta in the hashed member line: %s" % line)
 	var other := run.state.run_hash()
 	member["equipment"] = {alpha: &"fixture.equipment.hood", zeta: &"fixture.equipment.blade"}
 	eq(run.state.run_hash(), other, "the same pieces hash the same in any insertion order")

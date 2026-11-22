@@ -229,8 +229,8 @@ public static class RunAggregator
         await ExecuteAsync(connection, transaction, "DELETE FROM battle_sessions WHERE run_id = $1 AND run_seq > $2", ct, runId, rollbackTo);
         var voidedActions = await ExecuteCountAsync(connection, transaction,
             """
-            INSERT INTO run_actions_voided (run_id, seq, floor, type, action, state_hash, snapshot, played_at, received_at, epoch, voided_at)
-            SELECT run_id, seq, floor, type, action, state_hash, snapshot, played_at, received_at, $3, $4
+            INSERT INTO run_actions_voided (run_id, seq, floor, type, action, state_hash, snapshot, verified_snapshot, played_at, received_at, epoch, voided_at)
+            SELECT run_id, seq, floor, type, action, state_hash, snapshot, verified_snapshot, played_at, received_at, $3, $4
             FROM run_actions WHERE run_id = $1 AND seq > $2
             """, ct, runId, rollbackTo, run.Epoch, now.ToUniversalTime());
         await ExecuteAsync(connection, transaction, "DELETE FROM run_actions WHERE run_id = $1 AND seq > $2", ct, runId, rollbackTo);

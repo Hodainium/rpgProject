@@ -140,7 +140,7 @@ func test_console_play_commands_stay_clean() -> void:
 	await _ok(session, "enter %d" % cell)
 	await _ok(session, "state")
 	check(not run.state.dev, "play commands never mark the run")
-	check(not run.state.canonical_lines().has("dev=1"), "no dev line in the hash")
+	check(not run.state.canonical_lines().has("run.dev=true"), "no dev line in the hash")
 	var direct := RunController.new()
 	host.add_child(direct)
 	direct.start_run(fixtures(), Array(PARTY.split(",")), "7")
@@ -195,7 +195,7 @@ func test_console_cheats() -> void:
 	eq(run.state.floor_index, 1, "stage 1 is the second floor (0-based)")
 	var dev_entries := run.run_log.filter(func(entry) -> bool: return entry["type"] == "dev")
 	check(dev_entries.size() >= 12, "every cheat is in the run log (%d)" % dev_entries.size())
-	check(run.state.dev and run.state.canonical_lines().has("dev=1"), "the run is marked dev")
+	check(run.state.dev and run.state.canonical_lines().has("run.dev=true"), "the run is marked dev")
 	await _ok(session, "win")
 	eq(run.state.status, RunState.WON, "win")
 
