@@ -430,6 +430,9 @@ func test_chaos_run_cases_all_build() -> void:
 	run.state.map.cells[run.state.map.neighbours(vault)[0]]["visited"] = true
 	run.give_equipment(fixtures().equipment[&"fixture.equipment.hood"])  # swap_not_worn: a piece in the bag
 	run.give_item(_item("flask"), null, fixtures().characters[&"fixture.character.medic"])  # move_full: both slots full
+	run.state.map.cells[run.state.current_cell]["cleared"] = true  # take_drop_twice: a drop taken already (spec boss-drops)
+	var dropped := run._drop_pickup(fixtures().items[&"fixture.item.whetstone"], run.state.current_cell, 1)
+	eq(run.take(dropped, run.state.party[0]["slot"]), "", "the drop is taken once")
 	for case in RunPlayer.RUN_CASES:
 		var action := RunPlayer._illegal_action(run, case)
 		check(action.is_valid(), "%s builds on the prepared run" % case)
@@ -441,7 +444,7 @@ func test_chaos_run_cases_all_build() -> void:
 		RunPlayer.try_illegal(run, {"rng": RunSeeds.rng(attempt, "cases"), "illegal_x100": 10000,
 			"violations": violations, "refused": refused})
 	eq(violations, [], "chaos on the prepared run: no violation")
-	eq(refused.keys().size(), RunPlayer.RUN_CASES.size(), "and it tries all seven cases (%s)" % refused)
+	eq(refused.keys().size(), RunPlayer.RUN_CASES.size(), "and it tries every case (%s)" % refused)
 
 
 func test_chaos_refuses_run_actions() -> void:

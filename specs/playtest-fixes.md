@@ -268,6 +268,14 @@ Two layout bugs, reproduced in a window run (`dev_run --window`: `new` a four-me
   (3D, with `face_camera`: turn around the world's up axis only) keeps a beam vertical with its foot on the unit; demoed on every
   party slot from the battle camera. **Fixed 2026-11-21** (the user's OK): `upright = true` on the beam layer of `deathray_strike.tres`.
 
+- **B35. A chest stands in the middle of the room; no "from the X" on pickup rows** (reported 2026-11-21, the boss-drops
+  playtest). **Fixed 2026-11-21** (presentation only, `presentation/demo/room_view_3d.gd`, `ui/pickup_panel.gd`,
+  `ui/pickup_row.gd`): a closed chest, or one opened during this visit, stands on the room's centre tile (more chests nearest
+  it, the door lanes allowed), and what it puts out pops onto the tile right under it (nearer the camera); once the room is
+  left the opened chest is gone (`_opened_here`, cleared on `room_entered` / `floor_entered`) and its untaken items lie in the
+  middle like a battle's drops (spec `boss-drops` D6: the centre tile first). Pickup rows name only the item: the chest
+  item's "from the <chest>" (`from_chest_format`, spec `floor-chests` 2.6) is gone, and a battle's drop never had one.
+
 Enterprise mapping: N/A: these are client-only presentation fixes. No backend component, run log, hash or replay is
 involved. B9 and B10 only show the state of the client's existing calls (no new request, field or header); they are the
 player-facing side of the offline-first retries in `server-authority` 2.1–2.4.

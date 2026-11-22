@@ -82,6 +82,11 @@ var _chest_rng: RandomNumberGenerator
 var _chest_gifts := PackedStringArray()
 ## Spec floor-chests 2.2: the serial of the chest opening now (-1 = none): its items and armor become pickups beside it.
 var _opening_chest: int = -1
+## Spec boss-drops 2.1: the cell whose won battle's rewards are being granted (-1 = none): their items and armor land on its
+## floor as pickups. Transient, like _opening_chest.
+var _drop_cell: int = -1
+## Spec boss-drops 2.1: the encounter whose rewards land now (for the ItemDropped toast). Transient.
+var _drop_encounter: EncounterDefinition
 ## Spec event-items: RANDOM recipients drawn in the current action (the k in "floor/<n>/recipient/<cell>/<k>").
 var _recipient_draws: int = 0
 ## Spec server-authority 2.1 (server mode): the floor enter_floor() waits on until its seed arrives
@@ -109,6 +114,9 @@ const CHEST_DOUBLE_TAG: StringName = &"Run.Chest.Double"
 const CHEST_NO_KEY_TAG: StringName = &"Run.Chest.NoKey"
 ## Spec floor-chests 2.2: a chest's pickups are numbered from here in their cell (1000+ is the dev spawn).
 const CHEST_PLACEMENT: int = 2000
+## Spec boss-drops 2.1: what a won battle drops (its enemies' drops, its encounter's reward items and armor) is numbered from
+## here in its cell.
+const DROP_PLACEMENT: int = 3000
 
 
 # --- Run and floors -------------------------------------------------------------------------------------------------
@@ -489,6 +497,10 @@ func run_summary() -> Dictionary:
 		summary["endedIn"]["wave"] = int(state.map.cells[state.current_cell].get("wave", 0)) + 1  # the wave that was lost
 	if counts["give_to"] > 0:
 		summary["giftsGiven"] = counts["give_to"]  # spec event-items: only when the player picked, so older summaries match
+	# Spec boss-drops 3.3: drops left behind on earlier floors and still untaken on this one; only when above 0.
+	var drops_left := int(_tally.get("dropsLeftBehind", 0)) + _left_on(state.map)[2]
+	if drops_left > 0:
+		summary["dropsLeftBehind"] = drops_left
 	if structure != null and structure.uses_keys():
 		# Spec keys-and-gear 5: only on runs with keys, so older summaries are unchanged.
 		summary["keys"] = state.keys
@@ -659,11 +671,12 @@ func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 		return _stop("battle %s: %s" % [snapshot["battleId"], message_text])
 	var won := battle.outcome == Battle.VICTORY
 	_tally["lastEncounter"] = String(pending_battle["encounter"])
-	run_log.append({
+	var battle_entry := {
 		"type": "battle", "floor": state.floor_index, "cell": pending_battle["cell"], "battleId": snapshot["battleId"],
 		"outcome": battle.outcome, "finalHash": battle.final_hash,
 		"actionLog": ActionRecorder.build_log(controller.entries, battle.outcome, battle.final_hash),
-	})
+	}
+	run_log.append(battle_entry)
 	_warn_all(battle.content_warnings)
 	_read_back(battle)
 	_apply_used_items(battle.used_items, won)
@@ -685,11 +698,17 @@ func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 		if is_wave(cell, str(snapshot["battleId"])):
 			_wave_won(cell)
 			return ""
+		var dropped_before := drop_pickups(cell).size()
 		_grant_rewards(content.encounters.get(StringName(_tally["lastEncounter"])), cell)
 		if not _active():
 			return runner_error
 		_award_xp(snapshot["enemies"])
 		_roll_drops(snapshot["enemies"], cell)
+		# Spec boss-drops 3.2: the placements this battle put on the floor, for the battle action's offers (only when any).
+		var dropped := drop_pickups(cell).slice(dropped_before).map(
+			func(pickup: Dictionary) -> int: return int(pickup["placement"]))
+		if not dropped.is_empty():
+			battle_entry["drops"] = dropped
 		_clear_room(cell, true)
 	else:
 		_end(RunState.LOST)
@@ -822,14 +841,14 @@ func _announce_skills(member: Dictionary, character: UnitDefinition, shown: Stri
 
 
 ## Castlevania-style drops: one roll per beaten enemy that has a drop_item, on the stream floor/<n>/item_drop/<cell>
-## (its own stream, so the coin roll never moves).
+## (its own stream, so the coin roll never moves). Spec boss-drops: each drop lands on the cell's floor as a free pickup.
 func _roll_drops(enemies: Array, cell: int) -> void:
-	# Spec food-items (user, 2026-11-13): the battle that wins the run drops nothing; a drop waits for give_to, and a won
-	# run has nothing left to play.
+	# Spec food-items (user, 2026-11-13): the battle that wins the run drops nothing; a won run has nothing left to play.
 	if _wins_run(cell):
 		return
 	var stream := state.seeds().floor_rng(state.floor_index, "item_drop/%d" % cell)
-	for enemy in enemies:
+	for order in enemies.size():
+		var enemy: Dictionary = enemies[order]
 		var definition := content.units.get(StringName(str(enemy.get("unitDefId", "")))) as EnemyDefinition
 		if definition == null or definition.drop_item == null or definition.drop_chance_x100 <= 0:
 			continue
@@ -838,10 +857,11 @@ func _roll_drops(enemies: Array, cell: int) -> void:
 			if item == null:
 				continue
 			_notify("%s dropped %s" % [definition.display_name, item.display_name])
+			# Spec boss-drops D1: it lands on the floor; the player picks its taker at take() (food is eaten then, D7).
+			var placement := _drop_pickup(item, cell, int(enemy.get("slot", order + 1)))
 			_send(GameplayMessageRouter.RUN_ITEM_DROPPED, &"Verb.Drop", definition.id, item.id, 0,
-				item.tags, {"instigatorName": definition.display_name, "targetName": item.display_name})
-			# Spec food-items D4 / Q2: the player picks who gets every dropped item (several wait in roll order).
-			give_item(item, null, null, GiveItem.Recipient.CHOOSE)
+				item.tags, {"instigatorName": definition.display_name, "targetName": item.display_name, "cell": cell,
+					"placement": placement})
 
 
 ## True when clearing `cell` wins the run: the last floor's boss room (or any room once its boss is beaten), outside the
@@ -893,18 +913,23 @@ static func _pool_query(tag: StringName) -> GameplayTagQuery:
 
 ## Spec playable-demo 3.7: the encounter's rewards after a won battle, in order. Event directives (go to page, start
 ## an encounter) mean nothing here and are dropped.
-## A CHOOSE reward waits for give_to like a drop (user, 2026-11-13); in the battle that wins the run nothing is left to
-## play, so there it goes to the first member who can hold it.
+## Spec boss-drops D1: every item and armor piece they give lands on the cell's floor as a free pickup (whatever the
+## GiveItem's recipient or character says); in the battle that wins the run nothing is left to play, so there an item goes
+## to the first member who can hold it and armor to the armor inventory, as before.
 func _grant_rewards(encounter: EncounterDefinition, cell: int) -> void:
 	if encounter == null:
 		return
 	_choose_off = _wins_run(cell)
+	_drop_cell = -1 if _choose_off else cell
+	_drop_encounter = encounter
 	for outcome in encounter.rewards:
 		if outcome != null:
 			outcome.apply(self)
 		if not _active():
 			break
 	_choose_off = false
+	_drop_cell = -1
+	_drop_encounter = null
 	_directive = ""
 
 
@@ -1246,6 +1271,63 @@ func _chest_pickup(thing: Resource) -> void:
 		state.seen_items.append(thing.id)  # as a gift was: later pool picks never offer it again
 
 
+## Spec boss-drops 2.1: `thing` (an item or armor piece) lands on `cell`'s floor as a free pickup numbered from DROP_PLACEMENT
+## (unique in the cell), carrying "drop": the dropping enemy's encounter slot, 0 for an encounter reward. Returns its placement.
+func _drop_pickup(thing: Resource, cell: int, from: int) -> int:
+	var data: Dictionary = state.map.cells[cell]
+	var number: int = DROP_PLACEMENT + drop_pickups(cell).size()
+	var entry := FloorGenerator.pickup_entry(number, thing, 0)
+	entry["drop"] = from
+	data["pickups"].append(entry)
+	if not state.seen_items.has(thing.id):
+		state.seen_items.append(thing.id)  # as a gift was: later pool picks never offer it again
+	return number
+
+
+## An encounter reward's item or armor piece on the floor of _drop_cell, announced like a drop (Message.Run.ItemDropped), by
+## the name its pickup row shows (the room's boss, else its first enemy).
+func _reward_pickup(thing: Resource) -> void:
+	var placement := _drop_pickup(thing, _drop_cell, 0)
+	var source := drop_source_name(_drop_cell, drop_pickups(_drop_cell)[-1])
+	if source == "" and _drop_encounter != null:
+		source = _drop_encounter.display_name
+	_notify("%s dropped %s" % [source, thing.display_name])
+	var tags: Array = thing.tags if thing is ItemDefinition or thing is EquipmentDefinition else []
+	_send(GameplayMessageRouter.RUN_ITEM_DROPPED, &"Verb.Drop", _drop_encounter.id if _drop_encounter != null else &"",
+		thing.id, 0, tags, {"instigatorName": source, "targetName": thing.display_name, "cell": _drop_cell,
+			"placement": placement})
+
+
+## Spec boss-drops: the pickups won battles dropped in `cell` (taken ones too), in placement order.
+func drop_pickups(cell: int) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if state == null or state.map == null or not state.map.cells.has(cell):
+		return result
+	for pickup in state.map.cells[cell]["pickups"]:
+		if pickup.has("drop"):
+			result.append(pickup)
+	return result
+
+
+## For screens (spec boss-drops 3.5): who dropped `pickup` in `cell`: the enemy in its encounter slot, or for a reward
+## (drop 0) the room's boss (else its first enemy). "" when it is not a drop or the enemy is unknown.
+func drop_source_name(cell: int, pickup: Dictionary) -> String:
+	if not pickup.has("drop") or state == null or state.map == null or not state.map.cells.has(cell):
+		return ""
+	var enemies: Array = state.map.cells[cell]["content"].get("enemies", [])
+	var from := int(pickup["drop"])
+	var picked: UnitDefinition = null
+	for order in enemies.size():
+		var definition: UnitDefinition = content.units.get(StringName(str(enemies[order].get("unitDefId", ""))))
+		if definition == null:
+			continue
+		if from > 0 and int(enemies[order].get("slot", order + 1)) == from:
+			return definition.display_name
+		if from == 0 and (picked == null or (definition.tags.has(&"Enemy.Boss") and not picked.tags.has(&"Enemy.Boss"))):
+			picked = definition
+	return picked.display_name if picked != null and from == 0 else ""
+
+
 ## Spec floor-chests 3.3: closed chests and untaken chest pickups on `map`, counted into the tally when its floor is left.
 func _tally_left_behind(map: FloorMap) -> void:
 	var counts := _left_on(map)
@@ -1253,11 +1335,13 @@ func _tally_left_behind(map: FloorMap) -> void:
 		_tally["chestsLeftBehind"] = int(_tally.get("chestsLeftBehind", 0)) + counts[0]
 	if counts[1] > 0:
 		_tally["chestItemsLeftBehind"] = int(_tally.get("chestItemsLeftBehind", 0)) + counts[1]
+	if counts[2] > 0:
+		_tally["dropsLeftBehind"] = int(_tally.get("dropsLeftBehind", 0)) + counts[2]  # spec boss-drops 3.3
 
 
-## Closed chests and untaken chest pickups on `map`: [closed, items].
+## Closed chests, untaken chest pickups and untaken drops (spec boss-drops) on `map`: [closed, items, drops].
 static func _left_on(map: FloorMap) -> Array[int]:
-	var counts: Array[int] = [0, 0]
+	var counts: Array[int] = [0, 0, 0]
 	if map == null:
 		return counts
 	for index in map.cells:
@@ -1268,6 +1352,8 @@ static func _left_on(map: FloorMap) -> Array[int]:
 		for pickup in data["pickups"]:
 			if pickup.has("chest") and not pickup["taken"]:
 				counts[1] += 1
+			elif pickup.has("drop") and not pickup["taken"]:
+				counts[2] += 1
 	return counts
 
 
@@ -1994,6 +2080,9 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 	if _opening_chest >= 0:
 		_chest_pickup(item)  # spec floor-chests 2.2: it waits on the floor beside the chest; the taker is chosen at take()
 		return
+	if _drop_cell >= 0:
+		_reward_pickup(item)  # spec boss-drops D1: on the battle room's floor; the taker is chosen at take()
+		return
 	if _choose_off and recipient == GiveItem.Recipient.CHOOSE:
 		recipient = GiveItem.Recipient.FIRST  # the battle that wins the run: no pick can follow
 	var holders: Array[int] = []
@@ -2081,6 +2170,9 @@ func give_equipment(piece: EquipmentDefinition) -> void:
 		return
 	if _opening_chest >= 0:
 		_chest_pickup(piece)  # spec floor-chests 2.2: on the floor beside the chest, like a pedestal's armor
+		return
+	if _drop_cell >= 0:
+		_reward_pickup(piece)  # spec boss-drops D2: armor lands on the battle room's floor too
 		return
 	_receive_equipment(piece)
 

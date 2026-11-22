@@ -113,6 +113,12 @@ func test_encounter_rewards() -> void:
 	await run.fight(DevFirst.new("enemies"))
 	eq(run.state.status, RunState.ACTIVE, "the battle is won")
 	check(run.state.coins >= coins_before + 7, "the reward coins arrive (plus any drop)")
+	# Spec boss-drops D2: the reward piece lands on the room's floor; taking it puts it in the armor inventory.
+	var landed := run.drop_pickups(run.state.current_cell).filter(func(pickup: Dictionary) -> bool: return pickup["item"] == CAP)
+	eq(landed.size(), 1, "the reward piece lands on the floor")
+	eq(run.state.armor.count(CAP), 0, "not in the armor inventory before a take")
+	if not landed.is_empty():
+		eq(run.take(landed[0]["placement"], 0), "", "take it")
 	eq(run.state.armor.count(CAP), 1, "the reward piece goes to the armor inventory")
 	var lost := _run_to_battle(setup[0])
 	await lost.fight(DevFirst.new("party"))

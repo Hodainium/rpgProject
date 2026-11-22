@@ -671,7 +671,12 @@ func _check_encounter(encounter: EncounterDefinition) -> void:
 	if encounter.grants != null:
 		_check_ability_set(encounter.grants, path + "::grants")
 	for index in encounter.rewards.size():
-		# User, 2026-11-13: the gift panel asks after a battle (enemy drops do), so a reward may be CHOOSE too.
+		var reward_outcome: RunOutcome = encounter.rewards[index]
+		if reward_outcome is GiveItem and (reward_outcome.recipient != GiveItem.Recipient.FIRST or reward_outcome.character != null):
+			# Spec boss-drops 3.4: a battle's reward item lands on its room's floor and the taker is picked at take().
+			_warning("reward_recipient_ignored", "%s::rewards[%d]" % [path, index],
+				"%s's reward item lands on the room's floor; its recipient and character are ignored (they count only in the battle that wins the run)" % encounter.id)
+		# A CHOOSE reward is no error (it lands on the floor, reward_recipient_ignored above).
 		_check_outcome(encounter.rewards[index], "%s::rewards[%d]" % [path, index], null, true)
 	_check_weight(encounter, path)
 
@@ -1020,9 +1025,10 @@ func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition, 
 		# Spec food-items 3.1: the holder is the member whose item hook runs; elsewhere there is none.
 		_error("holder_effect_outside_item", where, "ApplyHolderEffect only works in an item's run hooks")
 	if outcome is GiveItem and outcome.recipient == GiveItem.Recipient.CHOOSE and not can_choose:
-		# Spec event-items D3: no screen can ask who gets it in an item hook (encounter rewards may, user 2026-11-13).
+		# Spec event-items D3: no screen can ask who gets it in an item hook (an encounter reward lands on the floor,
+		# spec boss-drops: reward_recipient_ignored).
 		_error("give_choose_outside_event", where,
-			"GiveItem recipient CHOOSE only works in an event choice or an encounter reward")
+			"GiveItem recipient CHOOSE only works in an event choice (a chest's or an encounter reward's item lands on the floor)")
 	if outcome == null:
 		_error("dangling_ref", where, "an empty outcome entry")
 	elif outcome is GiveItem and outcome.item == null and outcome.item_query == null:

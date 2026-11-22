@@ -19,8 +19,6 @@ signal taken(problem: String)
 ## Spec floor-chests 2.6: a closed chest's button, free or for a key.
 @export var open_text: String = "Open"
 @export var open_key_text: String = "Open · 1 key"
-## A chest's item, after its name.
-@export var from_chest_format: String = "  from the %s"
 
 var _run: RunController
 var _placement: int = 0
@@ -65,8 +63,7 @@ func set_item(item: Dictionary, _ctx: UIContext) -> void:
 			name_text = rarity_format % tier + name_text
 			%Name.theme_type_variation = StringName(rarity_variation_prefix + tier)
 			break
-	var chest_name: String = item.get("chest_name", "")
-	%Name.text = name_text + _price(pickup) + (from_chest_format % chest_name if chest_name != "" else "")
+	%Name.text = name_text + _price(pickup)  # the item only, no "from the X" (user, 2026-11-21)
 	%Name.tooltip_text = thing.description
 	%Description.text = thing.description
 	%Description.visible = thing.description != ""

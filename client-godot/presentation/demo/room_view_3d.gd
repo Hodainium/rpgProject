@@ -42,6 +42,9 @@ var _popping: int = -1
 var _popping_frame: int = 0
 ## A pop-out is played only by a build this many frames after the open, at most (a fresh open, never a stale one).
 const POP_FRAMES: int = 3
+## The chests opened during this visit to the room (serial -> true; cleared on room_entered / floor_entered): an opened chest
+## stays standing until the room is left; on a later visit it is gone and its items lie in the middle.
+var _opened_here: Dictionary = {}
 
 
 func setup(main: GameMain) -> void:
@@ -81,8 +84,13 @@ func _on_battle_prepared(_recorder: ActionRecorder, gate: ViewGate) -> void:
 
 func _bind(run: RunController) -> void:
 	UnitStyle.explore_framing().apply_to(_camera)  # spec cube-style 3.9: a new run never starts in a battle framing
-	run.floor_entered.connect(func(_floor): _queue_build())
-	run.room_entered.connect(func(_cell): _queue_build())
+	_opened_here.clear()
+	run.floor_entered.connect(func(_floor):
+		_opened_here.clear()
+		_queue_build())
+	run.room_entered.connect(func(_cell):
+		_opened_here.clear()  # a new visit: a chest opened on an earlier one is cleared away (user, 2026-11-21)
+		_queue_build())
 	run.room_cleared.connect(func(_cell): _queue_build())
 	run.party_changed.connect(_on_party_changed)
 	run.battle_started.connect(_on_battle_started)
@@ -190,12 +198,16 @@ func _build() -> void:
 	_build_chests(run, data, room)
 
 
-## Spec floor-chests 2.6: the room's chests on free floor tiles (not a placement, not a door lane, not under the party; nearest
-## the room's centre first), closed or open and empty, and what an open chest put out on the free tiles around it. A chest that
-## has just opened (Message.Run.ChestOpened) swings its lid up and its pickups jump out of it onto their tiles. View only.
+## Spec floor-chests 2.6 (laid out again by the user, 2026-11-21, boss-drops playtest): the room's chests and what they put out,
+## then a won battle's drops, on free floor tiles (not a placement, not under the party; the door lanes allowed). A closed chest,
+## or one opened during this visit, stands on the centre tile (more chests nearest it), and what it put out lies on the tile
+## right under it (nearer the camera), the rest nearest that. A chest that has just opened (Message.Run.ChestOpened) swings
+## its lid up and its pickups jump out of it. Once the room is left, an opened chest is gone: its untaken pickups take the
+## middle like a battle's drops (spec boss-drops D6: the centre tile first). View only.
 func _build_chests(run: RunController, data: Dictionary, room: RoomDefinition) -> void:
 	var chests: Array = data.get("chests", [])
-	if chests.is_empty():
+	var drops := run.drop_pickups(run.state.current_cell).filter(func(pickup: Dictionary) -> bool: return not pickup["taken"])
+	if chests.is_empty() and drops.is_empty():
 		_popping = -1
 		return
 	var taken := {}
@@ -214,10 +226,17 @@ func _build_chests(run: RunController, data: Dictionary, room: RoomDefinition) -
 	for y in ROWS:
 		for x in COLUMNS:
 			var cell := Vector2i(x, y)
-			if x != centre.x and y != centre.y and not taken.has(cell):  # the door lanes cross at the centre
+			if not taken.has(cell):
 				free.append(cell)
 	var registry := UnitStyle.registry()
+	var loose: Array[Dictionary] = []  # pickups of chests opened on an earlier visit, then the battle's drops
 	for held in chests:
+		if held["opened"] and not _opened_here.has(int(held["serial"])):
+			loose.append_array(run.chest_pickups(run.state.current_cell, int(held["serial"])))
+	loose.append_array(drops)
+	for held in chests:
+		if held["opened"] and not _opened_here.has(int(held["serial"])):
+			continue  # opened on an earlier visit: the chest is gone
 		var at := _nearest(free, centre)
 		if at == Vector2i(-1, -1):
 			break
@@ -239,7 +258,7 @@ func _build_chests(run: RunController, data: Dictionary, room: RoomDefinition) -
 		for pickup in run.chest_pickups(run.state.current_cell, int(held["serial"])):
 			if pickup["taken"]:
 				continue
-			var tile := _nearest(free, at)
+			var tile := _nearest(free, at + Vector2i(0, 1))  # right under the chest first
 			if tile == Vector2i(-1, -1):
 				break
 			free.erase(tile)
@@ -253,6 +272,20 @@ func _build_chests(run: RunController, data: Dictionary, room: RoomDefinition) -
 				for index in range(before, _props_root.get_child_count()):
 					_pop_out(_props_root.get_child(index), _world(at) + FLOOR_TOP, order)
 			order += 1
+	# Spec boss-drops D6: the battle's drops (and a gone chest's items) simply lie in the room's middle (no pop-out; user,
+	# 2026-11-21): the first on the centre tile itself, like a treasure or challenge room's pedestal, the rest nearest it.
+	for pickup in loose:
+		if pickup["taken"]:
+			continue
+		var tile := _nearest(free, centre)
+		if tile == Vector2i(-1, -1):
+			break
+		free.erase(tile)
+		var item: ItemDefinition = run.content.items.get(pickup["item"])
+		var piece: EquipmentDefinition = run.content.equipment.get(pickup["item"])
+		if not _styled_prop(tile, pickup, piece, "", run.content):
+			var name_text := item.display_name if item != null else (piece.display_name if piece != null else "?")
+			_prop(tile, Color.GOLD if piece == null else Color.SILVER, name_text, item)
 	_popping = -1
 
 
@@ -292,6 +325,8 @@ func _cell_of(position: Vector3) -> Vector2i:
 func _on_chest_opened(_channel: StringName, message: VerbMessage) -> void:
 	_popping = int(message.data.get("serial", -1))
 	_popping_frame = Engine.get_process_frames()
+	_opened_here[_popping] = true  # it stays standing, open, until the room is left
+
 
 
 ## Spec cube-style 3.10: the party stands in its formation out of battle too (slot order), else on the room's spawn cells. Each

@@ -31,9 +31,7 @@ func refresh() -> void:
 	# Spec floor-chests 2.6: each closed chest of the room first, as an OPEN row; what an open chest put out follows as
 	# ordinary pickup rows (the chest's pickups carry "chest").
 	var chests := run.room_chests()
-	var chest_names := {}  # serial -> name, for the "from the X" of a chest's pickup row
 	for chest in chests:
-		chest_names[chest["serial"]] = chest["name"]
 		if chest["opened"]:
 			continue
 		var shown := ItemDefinition.new()
@@ -54,8 +52,8 @@ func refresh() -> void:
 		var equipment: bool = pickup.get("kind", "") == FloorGenerator.EQUIPMENT_KIND
 		var thing: Resource = (run.content.equipment if equipment else run.content.items).get(pickup["item"])
 		if thing != null:
-			rows.append({"run": run, "pickup": pickup, "thing": thing, "equipment": equipment,
-				"chest_name": chest_names.get(int(pickup.get("chest", -1)), "")})
+			# User, 2026-11-21 (boss-drops playtest): a row names only the item, never "from the X".
+			rows.append({"run": run, "pickup": pickup, "thing": thing, "equipment": equipment})
 	%Rows.set_items(rows)
 
 

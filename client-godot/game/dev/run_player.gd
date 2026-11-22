@@ -17,7 +17,7 @@ class_name RunPlayer
 extends RefCounted
 
 const RUN_CASES: Array[String] = ["chest_no_key", "chest_missing", "locked_no_key", "swap_not_worn", "swap_self",
-	"move_not_held", "move_full", "give_nothing"]
+	"move_not_held", "move_full", "give_nothing", "take_drop_twice"]
 const TREASURE_TAG: StringName = &"Room.Type.Treasure"
 
 
@@ -234,6 +234,10 @@ static func _illegal_action(run: RunController, case: String) -> Callable:
 		"give_nothing":  # spec event-items: give_to with no gift waiting
 			if state.pending_gifts.is_empty():
 				return run.give_to.bind(state.party[0]["slot"])
+		"take_drop_twice":  # spec boss-drops 6.11: a battle's drop taken already
+			for pickup in run.drop_pickups(state.current_cell):
+				if pickup["taken"]:
+					return run.take.bind(pickup["placement"], state.party[0]["slot"])
 	return Callable()
 
 
@@ -275,8 +279,9 @@ static func _take_pickups(run: RunController) -> void:
 		if pickup.get("kind", "") == FloorGenerator.EQUIPMENT_KIND:
 			run.take(pickup["placement"], run.state.party[0]["slot"])  # armor goes to the armor inventory (item-pass 3.5)
 			continue
-		if pickup.has("chest"):
-			# Spec floor-chests 3.5: a chest's item goes where a gift would (food to the lowest HP share, spec food-items).
+		if pickup.has("chest") or pickup.has("drop"):
+			# Spec floor-chests 3.5: a chest's item goes where a gift would (food to the lowest HP share, spec food-items);
+			# spec boss-drops 6.11: so does a battle's drop.
 			var holder := gift_holder(run, run.content.items[pickup["item"]])
 			if holder != 0:
 				run.take(pickup["placement"], holder)

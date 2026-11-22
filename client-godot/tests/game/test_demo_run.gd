@@ -468,6 +468,12 @@ func test_demo_encounter_features() -> void:
 	var duel := _start(content)
 	_inject(duel, &"demo.encounter.knight_duel")
 	await duel.fight(_KillFirst.new())
+	# Spec boss-drops D2: the duel's reward helm lands on the floor and goes to the armor inventory once taken.
+	var helm := duel.drop_pickups(duel.state.current_cell).filter(
+		func(pickup: Dictionary) -> bool: return pickup["item"] == &"demo.equipment.warden_helm")
+	eq(helm.size(), 1, "the duel's reward helm lands on the floor")
+	if not helm.is_empty():
+		eq(duel.take(helm[0]["placement"], 0), "", "take the helm")
 	check(duel.state.armor.has(&"demo.equipment.warden_helm"), "the duel's reward helm is in the armor inventory")
 	duel.free()
 

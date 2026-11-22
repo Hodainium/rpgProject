@@ -259,6 +259,8 @@ static func _pickup(saved: Dictionary) -> Dictionary:
 		pickup["priceItem"] = StringName(saved["priceItem"])
 	if saved.has("kind"):
 		pickup["kind"] = str(saved["kind"])
+	if saved.has("drop"):
+		pickup["drop"] = int(saved["drop"])  # spec boss-drops 3.3: the dropping enemy's slot (JSON gives a float)
 	return pickup
 
 

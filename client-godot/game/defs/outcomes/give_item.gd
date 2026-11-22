@@ -7,7 +7,7 @@ extends RunOutcome
 enum Recipient {
 	FIRST,  ## The first living member who can hold it.
 	RANDOM,  ## A seeded pick among the living members who can hold it.
-	CHOOSE,  ## The player picks (a logged give_to); only in an event choice or an encounter reward.
+	CHOOSE,  ## The player picks (a logged give_to); only in an event choice (an encounter reward's or a chest's item lands on the floor).
 }
 
 @export var item: ItemDefinition
