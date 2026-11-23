@@ -47,7 +47,11 @@ Cycle per slice: `/spec` → `/implement` → commit `feat:` → `/sync-spec` �
 | 5b4. `class-pick` | ✅ Built, playtested and spec synced 2026-11-19 on `feat/class-pick` (`specs/class-pick.md`; Part 1 the Arcanist and Plaguewright looks and 4K portraits, merged #68; Part 2 the Mewgenics-style class pick: a live 3D turntable of the cubes (only the arrows turn it, oval ring, cubes shrink away at the back, floor effects hold still), the class card as two stacked windows, portrait party slots, six developer presets, unowned classes greyed with a lock over the one in front (card-ui 2.6); effects ignore fog framework-wide; the run picker and seed moved to the dev `runsetup`; e2e `class_pick_locked`) | 2026-11-19 |
 | 5b5. `ui-feedback` | ✅ Done, playtested 2026-11-20, merged in PR #75 (spec synced; `specs/ui-feedback.md`; no white message line: a refusal flashes the widget it is about (SP bar, equipment slot, Gold and Keys counters, room tile, stairs, member rows, battle command and target), rare problems are one-button dialogs, dev text goes to the dev console; all 27 messages decided one by one with the user; next after 5b4, before 5b2) | 2026-11-19 |
 | 5b3. `floor-rooms` | ✅ Built and playtested 2026-11-21 on `feat/floor-rooms` (`specs/floor-rooms.md`; map icons for both rooms, the room kept in battle between waves; open: room props and the wave toast; challenge rooms with three waves, armories, items-only item rooms, floors growing +2 rooms per depth to 25; Godot 1125, .NET 619; added 2026-11-15: bigger floors, a challenge room (three waves, an item reward), an armory (armor or a weapon) on every floor, item rooms give items only; before 5c) | 2026-11-15 |
-| 5c. `card-balance` | ⬜ Not started | |
+| 5g. `bot-play` | 📝 Spec written 2026-11-22 (`specs/bot-play.md`; the run bots explore by what a floor can hold (full on loot floors, straight to the boss otherwise, challenge rooms found on the way), `Unit.Role.*` / `Item.Fit.*` / `Item.Grants.*` tags with live roles, party-aware placement (survival spreads, damage may stack on a carry), gear always worn and upgraded, smarter shops and field actions, spread vs carry profiles measured; first of four before 5c) | 2026-11-22 |
+| 5h. `item-power` | 📝 Spec written 2026-11-22 (`specs/item-power.md`; 40 new strong items and gear (10 Legendary, 6 Void, 8 Epic, 8 Rare, 8 weapons and armor; Core 30, Descent 10), kernel hooks K1-K8 (ally events, DoT ticks, trigger chance, random targets, dying, event amount, echo, copies), copies only from named items and stacking in full, no Treasure/Boss overlap for new items; open: the user's OK on K5) | 2026-11-22 |
+| 5i. `level-cap` | 📝 Spec written 2026-11-22 (`specs/level-cap.md`; cap 50, a typical run ends near 30, XP curve and income set by measurement, tapering growth bands, about nine new level rows per class from 12 to 50 with passives, enemy levels by depth) | 2026-11-22 |
+| 5j. `second-pack` | 📝 Spec written 2026-11-22 (`specs/second-pack.md`; the Blood Moon pack, 24 cards: the Vampire (lifesteal, HP costs), the Lifebinder (healing meter follow-ups), a third character still to design; hooks B1-B4 (HP costs, heal events, meters, the `meter` attribute); open: the third character and 7 items, in its own chat) | 2026-11-22 |
+| 5c. `card-balance` | ⬜ Not started (after 5g-5j) | |
 | 5d. `event-pass` + `unique-events` | ✅ Done, both parts playtested (`event-pass` merged #83, signed off and spec synced 2026-11-22; `unique-events` merged #84, playtested 2026-11-22: a query event once per run, the normal-room fallback, drained pools give food; event rooms ~15 per run; gate measured, not tuned, `event-pass` section 8) | 2026-11-22 |
 | 5d2. `hash-id-lists` | ✅ Done, playtested 2026-11-22 (PR #86, `feat/hash-id-lists` (`specs/hash-id-lists.md`; run hash `run-v3`: the snapshot encoded one to one (`RunCanonical`, `RunHash`), so merged or split ids hash differently; H12: steps and resumes start from the verifier's own checkpoint state (`run_actions.verified_snapshot`, migration 0013); Godot 1226, .NET 625, e2e `snapshot_ids_forged`) | 2026-11-22 |
 | 5f. `upload-compression` | 🔨 Built 2026-11-22, awaiting playtest (`specs/upload-compression.md`, synced to the build; the rate-limit token taken before a body is inflated; one demo floor measured 13.9x on actions, the Descent measurement to do; Brotli Optimal on the client's uploads, measured at 47x on real 50-action batches (185 KB → 3 KB, 0.36 ms); request decompression on the server with per-endpoint limits (8 MB actions and end, 64 KB elsewhere) against zip bombs; checkpoints stay as often as today: they keep steps short and the stairs gate quick; storage is retention's job, 7b) | 2026-11-22 |
@@ -223,6 +227,9 @@ The roadmap is a living plan. Slices can be reordered, split, merged, added or d
   choices, bot choice tags) and `unique-events` (part 2, revised: an exhausted pool gives a normal room instead of an empty one).
 - 2026-11-22: 5d2 `hash-id-lists` built (run hash v3, H12). Next: 5f `upload-compression` (user: compression is the lever; per-battle
   checkpoints stay, they keep the stairs wait short), then the `unique-events` playtest and 5c.
+- 2026-11-22: four slices added before 5c (user: the bots play badly, items barely help, levels stop too early, one pack):
+  5g `bot-play`, 5h `item-power`, 5i `level-cap`, 5j `second-pack`, in that order; 5c re-measures and tunes on top of all
+  four. Bots first, so the items are measured with bots that play well. Analytics-driven bots wait for the analytics pipeline.
 
 
 ## Design tuning: any time, not just in breaks
@@ -735,8 +742,20 @@ The user's playtest note: players barely get the chance to find items, and the f
 A rule change: the floor generator, the run hash and the run goldens change, the bots learn the new rooms, and the balance gate is
 re-measured afterwards in 5c. Rooms need looks (the challenge room, the armory) in the cube style.
 
+### 5g-5j. `bot-play`, `item-power`, `level-cap`, `second-pack`
+Added 2026-11-22 at the user's request, **before 5c**, in this order:
+- **5g `bot-play`** (`specs/bot-play.md`): the smart run bot explores, places items, wears and upgrades gear, shops and
+  uses field actions by role and fit tags, measured as spread vs carry profiles. No rule change; the `auto` policy and
+  the run goldens stay as they are.
+- **5h `item-power`** (`specs/item-power.md`): about 40 new run-winning and stronger base items and gear, with the
+  kernel hooks the procs need; the weak items stay (5c may revisit them).
+- **5i `level-cap`** (`specs/level-cap.md`): cap 50, typical end level about 30, tapering growth, moves to 50.
+- **5j `second-pack`** (`specs/second-pack.md`): the Blood Moon pack (24 cards, the Vampire, the Lifebinder, a third
+  character to design in its own chat), on the real card backend.
+
 ### 5c. `card-balance`
-Added 2026-11-09, after 5b. The game balancing pass for cards: retune the win-rate gate on the core pool alone (30 / 30 / 21
+Added 2026-11-09, after 5b. **Now after 5g-5j (2026-11-22)**: the gate is re-measured with the new bots, items, levels
+and pack in place. The game balancing pass for cards: retune the win-rate gate on the core pool alone (30 / 30 / 21
 / 15 / 15 per room pool; the 31.8% figure was measured on the full item pool), then pack odds and prices in gems, dust
 and craft costs and refunds, and the gem income per run against them. Also here (decided 2026-11-09): **four new Food items** (Food holds 4, all core, today; this takes it to 8). Design break 3 (card feel) belongs here. Also here (user, 2026-11-15): **more player agency over items** (players barely get the chance to find items today) and **more keys in a run** (keys are very scarce), measured on top of 5b3 `floor-rooms`. **Start from 5d's measured balance (2026-11-22, `specs/event-pass.md` section 8):** the smart gate fell from 31.2% (`main`) to 11.8% with the event pass; event frequency explains about a third (18.3% with the nook back at weight 1), healing diluted among 50 events and event fights most of the rest; 3-4 lone-survivor battles per 600 runs hit the turn cap.
 
