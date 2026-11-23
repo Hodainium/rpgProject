@@ -1,6 +1,6 @@
 # Spec: item-power (before 5c `card-balance`, after `bot-play`)
 
-Status: **spec written 2026-11-22, awaiting the user's review.** The second of four slices the user asked for on 2026-11-22:
+Status: **spec written 2026-11-22; decisions confirmed by the user the same day (K5 approved).** The second of four slices the user asked for on 2026-11-22:
 `bot-play`, `item-power` (this), `level-99`, `second-pack`. Builds on `specs/item-pass.md` (hit tags, follow-ups,
 toughness and break, `per_item_effect`), `specs/content-pass.md` (statuses, DoT stacks, the trigger queue),
 `specs/playable-demo.md` 3.7-3.8 (rarity weights, the Void altars), `specs/food-items.md` (stacking bonuses),
@@ -223,16 +223,14 @@ On fixtures only (new fixtures in `tests/fixtures/`, built by `tests/tools/build
 - D5. Copies stack in full (every copy applies its whole effect again).
 - D6. Pools never offer copies; a copy comes only from something that names the item (an event outcome, a fixed
   placement, a chest or reward by id).
-- D7. K5 works at the death check, only for units holding a save; everything else dies as today. (Pending the user's
-  OK on the explanation, 2026-11-22.)
+- D7. K5 works at the death check, only for units holding a save; everything else dies as today. Approved by the
+  user, 2026-11-22.
 - D8. Names and numbers are first proposals; the user tunes them after playtest.
-
 - D9. Legendaries are in the normal pools too; pools hold a mix of rarities; the item-room and boss pools barely
   overlap (no new item is in both).
-
 - D10. No per-pool rarity weights: the run-wide `rarity_weights` keeps weighing every pool alike.
 
-**Open questions:** D7 waits for the user's OK.
+**Open questions:** none.
 
 **Stays out:** reworking or retiring the weak items (later, 5c), level changes (`level-99`), new characters
 (`second-pack`), signature VFX for the new items, pack odds and prices (5c).
