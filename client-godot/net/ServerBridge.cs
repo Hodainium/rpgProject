@@ -137,6 +137,18 @@ public partial class ServerBridge : Node
         });
 
 #if DEBUG  // admin calls exist only in debug builds (dev, full, editor, tests); the player export is a release build
+    /// <summary>
+    /// Spec upload-compression 3: request bodies of 1 KB and up go as Brotli (on from <see cref="Configure"/>). Off sends every
+    /// body plain, as an old client would; the dev console's <c>server compression off</c>, never a player setting.
+    /// </summary>
+    public void SetCompression(bool enabled)
+    {
+        if (_client is not null)
+        {
+            _client.Compression = _client.Compression with { Enabled = enabled };
+        }
+    }
+
     /// <summary>PUT /api/v1/admin/reward-rules with a RewardRuleRequest (economy-admin, spec economy-rewards); completes with a RewardRuleResponse.</summary>
     public long PutRewardRule(string requestJson) =>
         Start(client => client.PutRewardRuleAsync(Parse<RewardRuleRequest>(requestJson)));

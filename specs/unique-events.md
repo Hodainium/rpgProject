@@ -1,7 +1,7 @@
 # Spec: unique-events (slice 5d, part 2 of 2)
 
 Status: **spec written 2026-11-09, decisions confirmed by the user the same day; revised 2026-11-21 against the build
-after `floor-rooms` (5b3), `boss-drops` (B33) and the playtest fixes, with the normal-room fallback (user, 2026-11-21).**
+after `floor-rooms` (5b3), `boss-drops` (B33) and the playtest fixes, with the normal-room fallback (user, 2026-11-21). Built 2026-11-22 (PR #84, merged) and playtested 2026-11-22: done.**
 Part 2 of slice 5d. Part 1 is `specs/event-pass.md` (the new events, fewer event rooms, the new outcomes and conditions).
 Both land before 5c `card-balance`, which re-measures the win-rate gate with them in place. Builds on
 `specs/game-skeleton.md` (the floor generator and pools), `specs/playable-demo.md` (events, `rest_event`),

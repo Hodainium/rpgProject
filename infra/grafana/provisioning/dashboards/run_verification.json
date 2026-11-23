@@ -103,6 +103,23 @@
       "id": 15, "type": "timeseries", "title": "Anti-cheat alerts (per 5 minutes, by kind)",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 48 },
       "targets": [{ "expr": "sum by (kind) (increase(rpg_anticheat_events_total[5m]))", "legendFormat": "{{kind}}" }]
+    },
+    {
+      "id": 16, "type": "timeseries", "title": "Upload size by encoding (bytes per second; compression ratio on the right)",
+      "description": "Spec upload-compression 5: request bodies on the wire vs what the endpoints read after decompression, by route and encoding; the ratio is body / wire per route for Brotli bodies.",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 56 },
+      "fieldConfig": {
+        "defaults": { "unit": "Bps" },
+        "overrides": [{
+          "matcher": { "id": "byRegexp", "options": "^ratio .*" },
+          "properties": [{ "id": "unit", "value": "none" }, { "id": "custom.axisPlacement", "value": "right" }]
+        }]
+      },
+      "targets": [
+        { "expr": "sum by (route, encoding) (rate(rpg_upload_wire_bytes_sum[5m]))", "legendFormat": "wire {{route}} {{encoding}}" },
+        { "expr": "sum by (route, encoding) (rate(rpg_upload_body_bytes_sum[5m]))", "legendFormat": "body {{route}} {{encoding}}" },
+        { "expr": "sum by (route) (rate(rpg_upload_body_bytes_sum{encoding=\"br\"}[5m])) / sum by (route) (rate(rpg_upload_wire_bytes_sum{encoding=\"br\"}[5m]))", "legendFormat": "ratio {{route}} (br)" }
+      ]
     }
   ]
 }

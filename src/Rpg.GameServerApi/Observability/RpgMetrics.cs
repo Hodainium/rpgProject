@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -25,6 +26,10 @@ public sealed class RpgMetrics
     private readonly Counter<long> _runEnds;
     private readonly Counter<long> _rateLimited;
     private readonly Counter<long> _devTokens;
+    // Spec upload-compression 5.
+    private readonly Histogram<long> _uploadWire;
+    private readonly Histogram<long> _uploadBody;
+    private readonly Counter<long> _uploadRefused;
     private long _runsInProgress = -1;
     private long _playersOnline = -1;
     private long _playersInBattle = -1;
@@ -116,6 +121,16 @@ public sealed class RpgMetrics
         _runEnds = meter.CreateCounter<long>("rpg.run_ends", description: "Run ends by status.");
         _rateLimited = meter.CreateCounter<long>("rpg.rate_limited", description: "Requests refused with 429 by bucket.");
         _devTokens = meter.CreateCounter<long>("rpg.dev_tokens_issued", description: "Development tokens issued.");
+        // Spec upload-compression 5: 256 B to 8 MB, powers of 4, and the log endpoints' limit.
+        long[] uploadBuckets = [256, 1024, 4096, 16384, 65536, 262144, 1048576, 4194304, 8388608];
+        _uploadWire = meter.CreateHistogram<long>("rpg.upload_wire", unit: "By",
+            description: "Request body bytes on the wire (compressed when encoded), by route and encoding.",
+            advice: new InstrumentAdvice<long> { HistogramBucketBoundaries = uploadBuckets });
+        _uploadBody = meter.CreateHistogram<long>("rpg.upload_body", unit: "By",
+            description: "Request body bytes the endpoint read, after decompression, by route and encoding.",
+            advice: new InstrumentAdvice<long> { HistogramBucketBoundaries = uploadBuckets });
+        _uploadRefused = meter.CreateCounter<long>("rpg.upload_refused",
+            description: "Request bodies refused before the endpoint: unsupported_encoding, bad_body, too_large.");
         meter.CreateObservableGauge("rpg.players_online",
             () => Interlocked.Read(ref _playersOnline) is var count and >= 0
                 ? [new Measurement<long>(count)]
@@ -276,6 +291,17 @@ public sealed class RpgMetrics
     public void RateLimited(string bucket) => _rateLimited.Add(1, new KeyValuePair<string, object?>("bucket", bucket));
 
     public void DevTokenIssued() => _devTokens.Add(1);
+
+    /// <summary>route: actions | end | other; encoding: br | gzip | identity | other.</summary>
+    public void Upload(string route, string encoding, long wireBytes, long bodyBytes)
+    {
+        var labels = new TagList { { "route", route }, { "encoding", encoding } };
+        _uploadWire.Record(wireBytes, labels);
+        _uploadBody.Record(bodyBytes, labels);
+    }
+
+    /// <summary>reason: unsupported_encoding | bad_body | too_large.</summary>
+    public void UploadRefused(string reason) => _uploadRefused.Add(1, new KeyValuePair<string, object?>("reason", reason));
 
     /// <summary>destination: rabbit | redpanda; type: an outbox row type; result: ok | failed.</summary>
     public void OutboxPublished(string destination, string type, string result) => _outboxPublished.Add(1,

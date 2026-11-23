@@ -1,0 +1,2 @@
+rpg_upload_wire_bytes_count\{([^}]*encoding="identity"[^}]*route="actions"|[^}]*route="actions"[^}]*encoding="identity")[^}]*\} [1-9]
+rpg_run_ends_total\{[^}]*status="(won|lost)"[^}]*\} 1( |$)

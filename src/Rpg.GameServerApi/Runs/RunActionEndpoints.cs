@@ -9,6 +9,7 @@ using Rpg.GameServerApi.Auth;
 using Rpg.GameServerApi.Battle;
 using Rpg.GameServerApi.Observability;
 using Rpg.GameServerApi.RateLimiting;
+using Rpg.GameServerApi.Uploads;
 using Rpg.Verification;
 
 namespace Rpg.GameServerApi.Runs;
@@ -31,8 +32,8 @@ public static class RunActionEndpoints
 
     public static void MapRunActionEndpoints(this RouteGroupBuilder runs)
     {
-        runs.MapPost("/{runId:guid}/actions", SendActionsAsync).RateLimited(RateLimitOptions.Actions);
-        runs.MapPost("/{runId:guid}/end", EndRunAsync);
+        runs.MapPost("/{runId:guid}/actions", SendActionsAsync).RateLimited(RateLimitOptions.Actions).LogUpload("actions");
+        runs.MapPost("/{runId:guid}/end", EndRunAsync).LogUpload("end");
         runs.MapGet("/{runId:guid}/resume", ResumeAsync);
         runs.MapGet("/{runId:guid}/battles/{seq:int}", GetBattleAsync);
         runs.MapGet("/{runId:guid}/floors/{floor:int}", GetFloorAsync);

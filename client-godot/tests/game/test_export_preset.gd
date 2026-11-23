@@ -165,6 +165,8 @@ func test_admin_calls_stay_out_of_the_player_build() -> void:
 	for method in ["PutRewardRule", "ListRewardRules", "ResetRewardCycle", "PutPackType", "ListPackTypes", "PutCardRate", "ListCardRates"]:
 		var at := bridge.find("public long " + method)
 		check(at > open_at and at < close_at, "%s is compiled only in debug builds" % method)
+	var compression := bridge.find("public void SetCompression")   # spec upload-compression 3: dev builds only
+	check(compression > open_at and compression < close_at, "SetCompression is compiled only in debug builds")
 	var player: Dictionary = _presets()["Windows Desktop"]
 	var files: Array[String] = []
 	_walk("res://", files)
@@ -173,7 +175,7 @@ func test_admin_calls_stay_out_of_the_player_build() -> void:
 			continue
 		var text := FileAccess.get_file_as_string(path)
 		var names_admin := false
-		for method in ["PutRewardRule", "ListRewardRules", "ResetRewardCycle", "PutPackType", "ListPackTypes", "PutCardRate", "ListCardRates"]:
+		for method in ["PutRewardRule", "ListRewardRules", "ResetRewardCycle", "PutPackType", "ListPackTypes", "PutCardRate", "ListCardRates", "SetCompression"]:
 			names_admin = names_admin or text.contains(method)
 		check(not names_admin,
 			"%s ships in the player build and must not name the admin calls" % path)
