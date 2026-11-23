@@ -4,3 +4,4 @@ rpg_run_ends_total\{[^}]*status="(won|lost)"[^}]*\} 1( |$)
 rpg_run_action_batch_size_count(\{[^}]*\})? [1-9]
 rpg_players_online(\{[^}]*\})? 1( |$)
 rpg_dev_tokens_issued_total(\{[^}]*\})? [1-9]
+rpg_upload_wire_bytes_count\{([^}]*encoding="br"[^}]*route="actions"|[^}]*route="actions"[^}]*encoding="br")[^}]*\} [1-9]

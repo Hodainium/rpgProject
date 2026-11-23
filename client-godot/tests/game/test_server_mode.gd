@@ -20,10 +20,14 @@ class FakeBridge:
 	var answers: Dictionary = {}
 	var token: String = ""
 	var offline: bool = false
+	var compression: bool = true
 	var _next: int = 0
 
 	func SetToken(access_token: String) -> void:
 		token = access_token
+
+	func SetCompression(enabled: bool) -> void:
+		compression = enabled
 
 	func GetDevToken(json: String) -> int:
 		return _answer("GetDevToken", [json])

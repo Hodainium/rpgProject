@@ -57,6 +57,9 @@ var player: String = "dev"
 ## The server url this link was made for (the main menu and Settings show it).
 var url: String = ""
 var saves_dir: String = "user://saves"
+## Spec upload-compression 3: whether the bridge sends bodies of 1 KB and up as Brotli (on by default). Dev only: the
+## console's `server compression on|off` sets it and calls the debug-only bridge method; a new link starts with it on.
+var compression: bool = true
 var heartbeat_seconds: float = 30.0
 ## Spec playtest-fixes B12: the heartbeat's period while the server isn't answering, so its return is seen soon.
 var offline_heartbeat_seconds: float = 5.0

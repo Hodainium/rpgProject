@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -17,11 +18,16 @@ namespace Rpg.Client;
 /// <see cref="HttpClient.BaseAddress"/> (with a trailing slash); routes here are relative.
 /// <paramref name="accessToken"/>: the bearer token sent on every request (spec server-authority 3.2), also settable
 /// later through <see cref="AccessToken"/> (e.g. after <see cref="GetDevTokenAsync"/>).
+/// <paramref name="compression"/>: how request bodies are compressed (spec upload-compression 3); default on.
 /// </summary>
-public sealed class GameServerClient(HttpClient http, string? accessToken = null)
+public sealed class GameServerClient(HttpClient http, string? accessToken = null, UploadCompression? compression = null)
 {
     /// <summary>Sent as <c>Authorization: Bearer …</c> when set.</summary>
     public string? AccessToken { get; set; } = accessToken;
+
+    /// <summary>Request body compression (spec upload-compression 2): Brotli for bodies of
+    /// <see cref="UploadCompression.CompressAbove"/> bytes and up. Settable, so a dev tool can turn it off.</summary>
+    public UploadCompression Compression { get; set; } = compression ?? new UploadCompression();
 
     /// <summary>POST /api/v1/auth/dev-token (Development only): a token for a player name. Does not set
     /// <see cref="AccessToken"/>.</summary>
@@ -189,7 +195,11 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
     private async Task<T?> SendAsync<T>(HttpMethod method, string route, HttpContent? content, CancellationToken ct,
         bool allowNoContent = false) where T : class
     {
-        using var request = new HttpRequestMessage(method, route) { Content = content };
+        using var request = new HttpRequestMessage(method, route)
+        {
+            // Off the caller's thread (Godot calls in on its main thread): serializing and compressing a large batch is real work.
+            Content = content is null ? null : await Task.Run(() => EncodeAsync(content, ct)).ConfigureAwait(false),
+        };
         if (AccessToken is { Length: > 0 } token)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -204,6 +214,62 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
 
         return await response.Content.ReadFromJsonAsync<T>(RpgJson.Options, ct).ConfigureAwait(false)
                ?? throw new GameServerApiException(response.StatusCode, null, $"{route} returned an empty body.");
+    }
+
+    /// <summary>
+    /// Spec upload-compression 2.2: a body of <see cref="UploadCompression.CompressAbove"/> bytes and up goes as Brotli
+    /// (<c>CompressionLevel.Optimal</c>) with <c>Content-Encoding: br</c>; a smaller one, or any with compression off, goes
+    /// plain. Either way the body is buffered, so it has a <c>Content-Length</c>. The content headers (the JSON content type)
+    /// are kept.
+    /// </summary>
+    private async Task<HttpContent> EncodeAsync(HttpContent content, CancellationToken ct)
+    {
+        var options = Compression;
+        byte[] body;
+        try
+        {
+            body = await content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            content.Dispose();
+            throw;
+        }
+
+        if (!options.Enabled || body.Length < options.CompressAbove)
+        {
+            return content;  // ReadAsByteArrayAsync buffered it: it is sent from the buffer with its length
+        }
+
+        byte[] compressed;
+        try
+        {
+            using var packed = new MemoryStream(body.Length / 8 + 64);
+            using (var brotli = new BrotliStream(packed, CompressionLevel.Optimal, leaveOpen: true))
+            {
+                brotli.Write(body);
+            }
+
+            compressed = packed.ToArray();
+        }
+        catch
+        {
+            content.Dispose();
+            throw;
+        }
+
+        var encoded = new ByteArrayContent(compressed);
+        foreach (var header in content.Headers)
+        {
+            if (!header.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+            {
+                encoded.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+        }
+
+        encoded.Headers.ContentEncoding.Add("br");
+        content.Dispose();
+        return encoded;
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)
@@ -230,3 +296,9 @@ public sealed class GameServerClient(HttpClient http, string? accessToken = null
             retryAfter);
     }
 }
+
+/// <summary>
+/// Spec upload-compression 3: request body compression. <see cref="Enabled"/> on by default; bodies smaller than
+/// <see cref="CompressAbove"/> bytes go plain (a few hundred bytes gain nothing).
+/// </summary>
+public sealed record UploadCompression(bool Enabled = true, int CompressAbove = 1024);

@@ -1,0 +1,12 @@
+# Spec upload-compression 6 (U5): an old client. The whole run of full_run with upload compression off, so every body goes
+# plain: the server stores, verifies and ends it as before, and counts identity action uploads. (The .metrics format
+# matches lines only, so "no br at all" is not checked here; GameServerClientCompressionTests prove the switch.)
+#! env Monitors__Interval=00:00:01
+server compression off
+new fixture.character.knight,fixture.character.medic run=fixture.run.two_floors
+wait run
+autorun policy=smart
+wait floor 1
+server check
+autorun policy=smart
+wait ended 60

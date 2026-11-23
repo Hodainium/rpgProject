@@ -134,6 +134,27 @@ func test_e2e_command() -> void:
 	check(not late["ok"] and late["text"].contains("didn't do"), "no answer in time fails: " + late["text"])
 
 
+## Spec upload-compression 3: `server compression [on|off]` reports and flips the bridge's upload compression; on by
+## default, refused in local mode and for a word other than on / off.
+func test_server_compression_command() -> void:
+	var bridge := _bridge()
+	var session := _session(bridge)
+	var shown := await _run(session, "server compression")
+	check(shown["ok"] and shown["text"].contains("compression on"), "on by default: " + shown["text"])
+	check(bridge.compression, "the bridge compresses by default")
+	var off := await _run(session, "server compression off")
+	check(off["ok"] and off["text"].contains("compression off"), "turned off: " + off["text"])
+	check(not bridge.compression and not session[0].server.compression, "the bridge and the link send plain bodies")
+	check((await _run(session, "server compression on"))["ok"] and bridge.compression, "turned on again")
+	check(not (await _run(session, "server compression maybe"))["ok"], "only on or off")
+
+
+## Its own test: the console reaches the first game in the tree, so a local game must be the only one.
+func test_server_compression_command_needs_server_mode() -> void:
+	var local := await _run(_session(), "server compression off")
+	check(not local["ok"] and local["text"].contains("not in server mode"), "local mode has no uploads: " + local["text"])
+
+
 func test_server_check_command() -> void:
 	var bridge := _bridge()
 	var session := _session(bridge)

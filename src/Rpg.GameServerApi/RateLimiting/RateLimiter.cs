@@ -100,25 +100,44 @@ public sealed class RateLimiter(RedisConnection redis, IOptions<RateLimitOptions
     }
 }
 
+/// <summary>Endpoint metadata: the endpoint takes a token from this bucket (<see cref="RateLimitExtensions.RateLimited"/>).</summary>
+public sealed record RateLimitMetadata(string Bucket);
+
 public static class RateLimitExtensions
 {
-    /// <summary>Takes a token from the caller's <paramref name="bucket"/> before the endpoint runs; 429 1201 with
-    /// <c>Retry-After</c> (whole seconds, at least 1) when it's empty. The endpoint must require authorization.</summary>
-    public static RouteHandlerBuilder RateLimited(this RouteHandlerBuilder builder, string bucket) =>
-        builder.AddEndpointFilter(async (context, next) =>
-        {
-            var http = context.HttpContext;
-            var limiter = http.RequestServices.GetRequiredService<RateLimiter>();
-            if (http.User.PlayerIdOrNull() is { } playerId && await limiter.TakeAsync(playerId, bucket) is { } wait)
-            {
-                http.RequestServices.GetRequiredService<RpgMetrics>().RateLimited(bucket);
-                var seconds = Math.Max(1, (int)Math.Ceiling(wait.TotalSeconds));
-                http.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
-                return Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: "Too many requests",
-                    detail: $"Rate limit for {bucket} reached; retry in {seconds} s.",
-                    extensions: new Dictionary<string, object?> { ["errorCode"] = ApiErrors.RateLimited });
-            }
+    /// <summary>Set once the request's token was taken (by the upload gate, before the body is read).</summary>
+    private static readonly object Taken = new();
 
-            return await next(context);
-        });
+    /// <summary>Takes a token from the caller's <paramref name="bucket"/> before the endpoint runs; 429 1201 with
+    /// <c>Retry-After</c> (whole seconds, at least 1) when it's empty. The endpoint must require authorization.
+    /// Spec upload-compression (review fix): for a request with a body the upload gate takes the token before the body is
+    /// decompressed and read (<see cref="TakeAsync"/>); the filter then only takes it for a request the gate did not.</summary>
+    public static RouteHandlerBuilder RateLimited(this RouteHandlerBuilder builder, string bucket) =>
+        builder.WithMetadata(new RateLimitMetadata(bucket)).AddEndpointFilter(async (context, next) =>
+            await TakeAsync(context.HttpContext, bucket) ?? await next(context));
+
+    /// <summary>
+    /// Takes the request's token once: null when it may pass (or was already taken), else the 429 answer. A request with no
+    /// player passes (the endpoint's authorization refuses it).
+    /// </summary>
+    public static async Task<IResult?> TakeAsync(HttpContext http, string bucket)
+    {
+        if (!http.Items.TryAdd(Taken, bucket))
+        {
+            return null;
+        }
+
+        var limiter = http.RequestServices.GetRequiredService<RateLimiter>();
+        if (http.User.PlayerIdOrNull() is not { } playerId || await limiter.TakeAsync(playerId, bucket) is not { } wait)
+        {
+            return null;
+        }
+
+        http.RequestServices.GetRequiredService<RpgMetrics>().RateLimited(bucket);
+        var seconds = Math.Max(1, (int)Math.Ceiling(wait.TotalSeconds));
+        http.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
+        return Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: "Too many requests",
+            detail: $"Rate limit for {bucket} reached; retry in {seconds} s.",
+            extensions: new Dictionary<string, object?> { ["errorCode"] = ApiErrors.RateLimited });
+    }
 }

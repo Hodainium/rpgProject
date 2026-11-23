@@ -21,6 +21,7 @@ using Rpg.GameServerApi.Outbox;
 using Rpg.GameServerApi.Presence;
 using Rpg.GameServerApi.RateLimiting;
 using Rpg.GameServerApi.Runs;
+using Rpg.GameServerApi.Uploads;
 
 var builder = WebApplication.CreateBuilder(args);
 // Spec economy-rewards 8.1: Economy:SeedFile names a JSON file shaped like configuration (Economy:SeedRules), loaded last.
@@ -116,6 +117,8 @@ builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddHostedService<PresenceMonitor>();
 builder.Services.AddOptions<RateLimitOptions>().BindConfiguration(RateLimitOptions.Section);
 builder.Services.AddSingleton<RateLimiter>();
+// Spec upload-compression: request decompression and per-endpoint body limits.
+builder.Services.AddUploads();
 
 // Readiness policy (spec project-skeleton, section 4): Postgres and RabbitMQ are required, Redis only degrades.
 string[] ready = [HealthEndpoints.ReadyTag];
@@ -165,9 +168,14 @@ app.Services.GetRequiredService<RpgMetrics>();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+// Spec upload-compression 2.3: routing first, so the upload gate knows each endpoint's body limit; authentication and
+// authorization before the gate (neither reads the body), so an anonymous request is refused before anything is inflated;
+// then the gate, request decompression and the bounded body read, before the endpoints read the body.
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UsePresence();
+app.UsePresence();   // before the upload gate: a refused upload still counts as presence
+app.UseUploads();
 
 app.MapHealthEndpoints();
 app.MapPrometheusScrapingEndpoint().DisableHttpMetrics();
