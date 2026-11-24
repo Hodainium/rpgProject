@@ -15,6 +15,6 @@ script = ExtResource("5_5q44v")
 id = &"demo.item.leech"
 display_name = "Leech"
 description = "A fat leech feeds and gives back: +12% ATK, -10% DEF."
-tags = Array[StringName]([&"Item.Curse"])
+tags = Array[StringName]([&"Item.Curse", &"Item.Fit.Damage"])
 price = 0
 grants = SubResource("Resource_j1m6f")

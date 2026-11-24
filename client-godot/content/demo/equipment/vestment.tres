@@ -16,5 +16,5 @@ display_name = "Vestment"
 description = "+60 DEF, +40 max SP."
 slot = &"Equipment.Slot.Body"
 grants = SubResource("Resource_bcryd")
-tags = Array[StringName]([&"Pool.Boss",&"Item.Rarity.Epic", &"Card.Set.Core"])
+tags = Array[StringName]([&"Pool.Boss",&"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.Survival", &"Item.Fit.Sp"])
 price = 9
