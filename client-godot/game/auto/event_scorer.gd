@@ -105,7 +105,7 @@ static func score(run: RunController, choice: EventChoice) -> int:
 ## a RANDOM target is the member it would hurt most. Heals are left out, so the estimate errs on the careful side.
 static func hp_risk(run: RunController, choice: EventChoice) -> Dictionary:
 	var event := run.current_event()
-	var stats := run.party_stats()
+	var stats := BotCache.party_stats(run)
 	var paths: Array = []  # each: the outcomes one way through the choice
 	var direct: Array = choice.outcomes.duplicate()
 	var branches: Array = []
@@ -189,7 +189,7 @@ static func _hp_loss(effect: GameplayEffect, max_hp: int) -> int:
 
 ## The living members' average HP share x10000 (10000 when nobody's max HP is known).
 static func party_hp_share(run: RunController) -> int:
-	var stats := run.party_stats()
+	var stats := BotCache.party_stats(run)
 	var total := 0
 	var counted := 0
 	for member in run.state.party:

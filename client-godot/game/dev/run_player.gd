@@ -13,6 +13,13 @@
 ## Spec event-items: an item waiting for its holder goes to the first living member who can hold it.
 ## `chaos` (the chaos policy): {"rng", "illegal_x100", "violations": Array, "refused": Dictionary}: at that share of map
 ## steps it first tries a run action that must be refused (RUN_CASES) and checks that nothing changed.
+## Spec bot-play: with a BotProfile (`bot`, the smart and chaos policies) the run decisions are the smart run bot's:
+## each floor explored FULL or straight to the BOSS by what its floor rules can place (ExplorePlan), every free pickup
+## to the member who values it most and the shelf bought by value ÷ price (BotGear, LootScorer), gear worn, upgraded and
+## swapped and use items moved by the profile's margin, field actions by what the party needs. `bot = null` is the old
+## behaviour above, unchanged. `bot_stats` (bot runs only) collects the play report's blocks: "floors" (per floor: mode,
+## rooms visited of generated, things left behind, deaths), "refused" (bot actions the run refused, by action and
+## reason: a bot bug), "moves", "shop", "untagged".
 ## Returns "" (the run ended or stopped on a runner error), "stuck" (nothing left to do) or "step cap".
 class_name RunPlayer
 extends RefCounted
@@ -23,9 +30,26 @@ const TREASURE_TAG: StringName = &"Room.Type.Treasure"
 
 
 static func play(run: RunController, max_steps: int = 400, battle: Callable = Callable(), chaos: Dictionary = {},
-		events: String = EventScorer.POLICY_RANDOM) -> String:
+		events: String = EventScorer.POLICY_RANDOM, bot: BotProfile = null, bot_stats: Dictionary = {}) -> String:
+	if bot == null:
+		return await _play(run, max_steps, battle, chaos, events, null, bot_stats)
+	BotCache.begin(run)
+	var stop := await _play(run, max_steps, battle, chaos, events, bot, bot_stats)
+	BotCache.end(run)
+	_close_floor(run, bot_stats)  # however the play stopped
+	return stop
+
+
+static func _play(run: RunController, max_steps: int, battle: Callable, chaos: Dictionary, events: String, bot: BotProfile,
+		bot_stats: Dictionary) -> String:
 	var used_field_on := -1
+	var plan := {"floor": -1, "mode": "", "field_for": "", "alive": {}}
+	if bot != null:
+		for key in ["floors", "refused", "moves", "shop"]:
+			bot_stats.get_or_add(key, [] if key == "floors" else {})
 	for step in max_steps:
+		if bot != null:
+			_track_floor(run, bot, plan, bot_stats)
 		if run.state.status != RunState.ACTIVE or run.runner_error != "":
 			return ""
 		if run.waiting_for_floor() >= 0:
@@ -38,8 +62,14 @@ static func play(run: RunController, max_steps: int = 400, battle: Callable = Ca
 				await run.fight(ScriptedController.new())
 			continue
 		if not run.state.pending_gifts.is_empty():
-			var holder := gift_holder(run, run.pending_gift())
-			if holder == 0 or run.give_to(holder) != "":
+			var holder := BotGear.holder_for(run, bot, run.pending_gift()) if _uses(bot, "placement") \
+				else gift_holder(run, run.pending_gift())
+			if holder == 0:
+				return "stuck"
+			var gift_problem := run.give_to(holder)
+			if gift_problem != "":
+				if bot != null:
+					BotGear._act(run, bot_stats, "give_to", gift_problem)
 				return "stuck"
 			continue
 		if not run.state.event.is_empty():
@@ -55,11 +85,25 @@ static func play(run: RunController, max_steps: int = 400, battle: Callable = Ca
 			run.choose(picked)
 			continue
 		_open_chests(run)  # spec floor-chests: open the room's chests first, then take what they put out with the rest
-		_take_pickups(run)
-		_wear_gear(run)
+		# Spec bot-play 2.7: each of the bot's parts can be off (measured alone); an off part plays as before.
+		if _uses(bot, "placement"):
+			BotGear.take_free(run, bot, bot_stats)
+		else:
+			_take_pickups(run, true, not _uses(bot, "shop"))
+		if _uses(bot, "shop"):
+			BotGear.shop(run, bot, bot_stats)
+		elif _uses(bot, "placement"):
+			_take_pickups(run, false, true)
+		if _uses(bot, "gear"):
+			BotGear.improve(run, bot, bot_stats)
+		else:
+			_wear_gear(run)
+		if bot != null and (run.state.status != RunState.ACTIVE or run.runner_error != ""
+				or not run.pending_battle.is_empty() or not run.state.pending_gifts.is_empty()):
+			continue  # a pickup's hook ended the run or left something waiting: the loop's start handles it
 		if not chaos.is_empty():
 			try_illegal(run, chaos)
-		if used_field_on != run.state.floor_index:
+		if not _uses(bot, "field") and used_field_on != run.state.floor_index:
 			used_field_on = run.state.floor_index
 			var options := run.field_options()
 			if not options.is_empty():
@@ -74,13 +118,73 @@ static func play(run: RunController, max_steps: int = 400, battle: Callable = Ca
 			if choices.size() > 1:
 				var route_rng := RunSeeds.rng(run.state.run_seed, "dev/route/%d" % (run.state.floor_index + 1))
 				pick = choices[route_rng.randi_range(0, choices.size() - 1)].id
-			run.next_floor(pick)
+			if bot != null:
+				_close_floor(run, bot_stats)  # counted on this floor's map, before the next one replaces it
+				var floor_problem := run.next_floor(pick)
+				if floor_problem != "":
+					BotGear._act(run, bot_stats, "next_floor", floor_problem)
+					return "stuck"
+			else:
+				run.next_floor(pick)
 			continue
-		var next := next_room(run)
+		var next := ExplorePlan.next_room(run, bot, plan["mode"]) if _uses(bot, "explore") else next_room(run)
 		if next == -1:
 			return "stuck"
+		if bot != null:
+			# Spec bot-play 2.6: field actions before the room, once per room (a revive, a heal before a fight).
+			var key := "%d/%d" % [run.state.floor_index, next]
+			if _uses(bot, "field") and plan["field_for"] != key:
+				plan["field_for"] = key
+				if await BotGear.field_before(run, bot, next, bot_stats) > 0:
+					continue
+			BotGear._act(run, bot_stats, "enter_room", run.enter_room(next))
+			continue
 		run.enter_room(next)
 	return "" if run.state.status != RunState.ACTIVE or run.runner_error != "" else "step cap"
+
+
+## Spec bot-play 2.7: opens the floor's record when a new floor starts (its mode from ExplorePlan) and counts member deaths
+## on it (a member alive at the last step and dead now).
+static func _track_floor(run: RunController, bot: BotProfile, plan: Dictionary, bot_stats: Dictionary) -> void:
+	if run.state.map != null and plan["floor"] != run.state.floor_index and run.state.status == RunState.ACTIVE \
+			and run.waiting_for_floor() < 0:
+		_close_floor(run, bot_stats)
+		plan["floor"] = run.state.floor_index
+		plan["mode"] = ExplorePlan.mode(run, bot) if _uses(bot, "explore") else "lowest"
+		var current := run.chapter()
+		bot_stats["floors"].append({"floor": run.state.floor_index + 1, "chapter": String(current.id) if current != null else "",
+			"mode": plan["mode"], "rooms": run.state.map.cells.size(), "visited": 0, "leftBehind": 0, "deaths": 0,
+			"open": true})
+	if bot_stats["floors"].is_empty():
+		return
+	var record: Dictionary = bot_stats["floors"][-1]
+	for member in run.state.party:
+		if plan["alive"].get(member["slot"], false) and not member["alive"] and record.get("open", false):
+			record["deaths"] += 1
+		plan["alive"][member["slot"]] = member["alive"]
+
+
+## Closes the open floor record: rooms visited, and free things left on the floor of visited rooms (keys aside).
+static func _close_floor(run: RunController, bot_stats: Dictionary) -> void:
+	if bot_stats.get("floors", []).is_empty() or not bot_stats["floors"][-1].get("open", false):
+		return
+	var record: Dictionary = bot_stats["floors"][-1]
+	record.erase("open")
+	if run.state.map == null:
+		return
+	for index in run.state.map.sorted_indices():
+		var data: Dictionary = run.state.map.cells[index]
+		if not data["visited"]:
+			continue
+		record["visited"] += 1
+		for pickup in data["pickups"]:
+			if not pickup["taken"] and int(pickup["price"]) == 0 and str(pickup.get("kind", "")) != FloorGenerator.KEYS_KIND:
+				record["leftBehind"] += 1
+
+
+## Whether the bot (null: none) has `part` on.
+static func _uses(bot: BotProfile, part: String) -> bool:
+	return bot != null and bot.uses(part)
 
 
 static func next_room(run: RunController) -> int:
@@ -269,12 +373,16 @@ static func gift_holder(run: RunController, gift: ItemDefinition) -> int:
 	return best if best != 0 else holders[0]["slot"]
 
 
-static func _take_pickups(run: RunController) -> void:
+## Takes the room's pickups the old way (bot = null): `free` the free ones, `priced` what costs coins (spec bot-play 2.7:
+## the bot's placement and shop parts can each be off).
+static func _take_pickups(run: RunController, free: bool = true, priced: bool = true) -> void:
 	var data: Dictionary = run.state.map.cells[run.state.current_cell]
 	if not data["cleared"]:
 		return
 	for pickup in data["pickups"]:
 		if pickup["taken"] or pickup["price"] > run.state.coins:
+			continue
+		if not (priced if int(pickup["price"]) > 0 else free):
 			continue
 		if pickup.get("kind", "") == FloorGenerator.KEYS_KIND:
 			run.take(pickup["placement"], run.state.party[0]["slot"])  # spec keys-and-gear D12: keys for sale

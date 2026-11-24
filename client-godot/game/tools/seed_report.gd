@@ -7,6 +7,9 @@
 ## stopped or (chaos, --check) an invariant broke; failing battles are saved next to --out.
 ##     -- --play [--policy auto|smart|chaos] [--illegal 20] [--chaos 100] [--chaos-from 1] [--check] [--trace]
 ##        [--party a,b | --party-size 1-4|mixed (default 4)] [--max-steps 2000]   (chaos below 100% or from a later floor plays on top of smart)
+##        [--bot-profile res://game/auto/profiles/carry.tres] [--explore smart|full|boss] [--bot-parts explore,gear|none]
+##        (spec bot-play 2.7: the smart and chaos policies' run bot; default game/auto/profiles/smart.tres, its floors
+##        explored by the floor rules, every part on; a part left out plays as before the slice)
 ##   (give --quit-after a large frame count: every battle step takes frames)
 ## Spec skill-points D16, D27: --seeds <file> [--seeds-from 0] [--count n] plays a committed seed list (the balance
 ## gate: game/dev/balance_seeds.json; --count limits it, e.g. 150 for the quick set) instead of --from/--count;
@@ -22,6 +25,8 @@
 extends Node
 
 var _errors := ScriptErrorLog.new()
+## The resources --set changed: nothing else may hold them (a bot profile), and a freed one loads from disk unchanged.
+var _what_if: Array = []
 
 
 func _ready() -> void:
@@ -64,6 +69,26 @@ func _play(content: ContentIndex, args: PackedStringArray) -> void:
 		print("seed_report: --policy is one of %s" % ", ".join(PlayReport.POLICIES))
 		_quit(1)
 		return
+	# Spec bot-play 2.7: the smart run bot's profile and a forced exploration mode, for side-by-side reports.
+	var explore := _arg(args, "--explore", "")
+	if explore != "" and not BotProfile.EXPLORE_MODES.has(explore):
+		print("seed_report: --explore is one of %s" % ", ".join(BotProfile.EXPLORE_MODES))
+		_quit(1)
+		return
+	if policy == "auto" and (args.has("--bot-profile") or args.has("--explore") or args.has("--bot-parts")):
+		print("seed_report: --bot-profile, --explore and --bot-parts need --policy smart or chaos (auto plays without the bot)")
+		_quit(1)
+		return
+	var profile_path := _arg(args, "--bot-profile", "")
+	if profile_path != "" and (not ResourceLoader.exists(profile_path) or not load(profile_path) is BotProfile):
+		print("seed_report: --bot-profile %s is not a BotProfile" % profile_path)
+		_quit(1)
+		return
+	for part in _arg(args, "--bot-parts", "").split(",", false):
+		if part.strip_edges() != "none" and not BotProfile.PARTS.has(part.strip_edges()):
+			print("seed_report: --bot-parts takes %s or none, got %s" % [", ".join(BotProfile.PARTS), part])
+			_quit(1)
+			return
 	var party: Array = []
 	for id in _arg(args, "--party", "").split(",", false):
 		party.append(id.strip_edges())
@@ -71,6 +96,8 @@ func _play(content: ContentIndex, args: PackedStringArray) -> void:
 		"illegal": int(_arg(args, "--illegal", "20")), "check": args.has("--check"), "trace": args.has("--trace"),
 		"max_steps": int(_arg(args, "--max-steps", "2000")), "chaos": int(_arg(args, "--chaos", "100")),
 		"chaos_from": int(_arg(args, "--chaos-from", "1")), "time_hashes": true,
+		"bot_profile": _arg(args, "--bot-profile", ""), "explore": explore,
+		"bot_parts": _arg(args, "--bot-parts", ""),
 		"party_size": _arg(args, "--party-size", "4") if _arg(args, "--party-size", "4") == "mixed" else int(_arg(args, "--party-size", "4"))}
 	var report: Dictionary
 	var seeds_path := _arg(args, "--seeds", "")
@@ -140,7 +167,7 @@ func _merge(args: PackedStringArray) -> void:
 
 
 ## --set path:property=value, each one in memory on the cached resource the content index uses (spec skill-points
-## D27). False (printed) when one can't be applied.
+## D27), kept loaded so a later load() of it (a bot profile) gets this copy. False (printed) when one can't be applied.
 func _apply_sets(args: PackedStringArray) -> bool:
 	for at in args.size():
 		if args[at] != "--set" or at + 1 >= args.size():
@@ -154,6 +181,7 @@ func _apply_sets(args: PackedStringArray) -> bool:
 		var path := text.substr(0, colon)
 		var steps := text.substr(colon + 1, equals - colon - 1).split("/")
 		var target: Variant = load(path) if ResourceLoader.exists(path) else null
+		_what_if.append(target)
 		# A nested path (executions/0/amount_x100) walks properties and array indexes to the object that holds the last one.
 		for step in steps.slice(0, steps.size() - 1):
 			if target is Array and step.is_valid_int() and int(step) < target.size():

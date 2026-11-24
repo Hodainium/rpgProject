@@ -36,6 +36,10 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
   remove values, functions, nodes or cues you didn't add in this task. **Never change these folders through shell
   commands** (sed, mv, rm, redirection, or scripts): only `Edit`/`Write`, so every change shows as a reviewable diff.
 - **Builders only create new files (user, 2026-11-09), with one additive exception:** a builder never re-saves or rewrites an existing design file. The one exception, approved by the user the same day ("change files and their dependent registries in the same stroke"), is the effect registry through `game/tools/registry_patch.gd` (`RegistryPatch.add_missing_effects()`): a text patch that only appends an `ext_resource` line and the new entry to `definitions` / `rule_sets`, never touches or removes an existing line, and prints what it added. It is not for anything else (tag cues, the cue registry and every other existing design file still go through `Edit`). `FxValidator.sync_problems` (in `validate_content.tscn` and `test_vfx_content`) fails when a registry is missing a file, whoever forgot it.
+- **Fit pass (spec `bot-play`, the user's one-off OK 2026-11-22):** `game/tools/build_fit_pass.tscn -- --write` adds the
+  proposed `Item.Fit.*` / `Item.Grants.*` tags to the `tags` line of existing items and gear in `content/` as a text edit
+  (nothing else in a file changes; a dry run without `--write` prints what it would add). Like `build_role_pass --write`,
+  each later `--write` run needs the user's OK again.
 - **One approved exception:** `game/tools/build_demo.tscn` (spec `game-skeleton` 3.8) writes the example set through
   `ResourceSaver` into `content/demo/` and `presentation/demo/` only, and never overwrites an existing file. Run it
   only with the user's go-ahead. `game/tools/build_animation_sets.tscn` (spec `animation-sets` 3.3) works the same way

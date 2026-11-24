@@ -58,7 +58,7 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 	for tag in SYSTEM_TAGS + AutoPolicy.ROLES + UIState.ALL + GameplayMessageRouter.CHANNELS + GameplayMessageRouter.VERBS \
-			+ GameplayMessageRouter.NOTIFICATION_TAGS + EventScorer.ALL_TAGS + EventScorer.CONTENT_TAGS:
+			+ GameplayMessageRouter.NOTIFICATION_TAGS + EventScorer.ALL_TAGS + EventScorer.CONTENT_TAGS + LootScorer.ALL_TAGS:
 		_note(tag, "code (system tag)")
 	_scan(CONTENT_ROOT)
 	_scan(PRESENTATION_ROOT)

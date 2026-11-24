@@ -6,7 +6,7 @@ extends DevCommand
 
 func _init() -> void:
 	name = "autorun"
-	usage = "autorun [max_steps] [policy=auto|smart|chaos] [illegal=<percent>] [chaos=<percent>] [from=<floor>]"
+	usage = "autorun [max_steps] [policy=auto|smart|chaos] [illegal=<percent>] [chaos=<percent>] [from=<floor>] [bot=smart|<res://profile.tres>]"
 	help = "Plays the rest of the run on a policy: auto, smart, or chaos (bad and illegal moves on top of smart; every battle checked)."
 	cheat = false
 	arg_kinds.assign(["int", "text", "text"])
@@ -30,10 +30,18 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 			options["chaos"] = int(arg.trim_prefix("chaos="))
 		elif arg.begins_with("from=") and arg.trim_prefix("from=").is_valid_int():
 			options["chaos_from"] = int(arg.trim_prefix("from="))
+		elif arg.begins_with("bot="):
+			# Spec bot-play 2.1: the smart run bot, opt-in here so the e2e scenarios' runs stay as they were.
+			var path := arg.trim_prefix("bot=")
+			options["bot_profile"] = PlayReport.SMART_PROFILE if path == "smart" else path
+			if not ResourceLoader.exists(options["bot_profile"]) or not load(options["bot_profile"]) is BotProfile:
+				return ctx.fail("bot= names no BotProfile: %s" % path)
 		else:
 			return ctx.fail("usage: " + usage)
 	if not PlayReport.POLICIES.has(options["policy"]):
 		return ctx.fail("policy is one of %s" % ", ".join(PlayReport.POLICIES))
+	if options.has("bot_profile") and options["policy"] == "auto":
+		return ctx.fail("bot= needs policy=smart or policy=chaos (auto plays without the bot)")
 	var opts := PlayReport._options(run.content, options)
 	var record := {"seed": run.state.run_seed, "bossEntry": [], "battles": [], "violations": [], "failures": []}
 	var fight := func(active: RunController) -> void:
@@ -45,7 +53,9 @@ func run(ctx: DevContext, args: PackedStringArray) -> String:
 	var events := EventScorer.POLICY_SMART if options["policy"] == "smart" else EventScorer.POLICY_RANDOM
 	var results := run.event_results
 	run.event_results = false  # review fix: no result dialog per event while the bot plays (and no receipt battles)
-	var stop := await RunPlayer.play(run, int(options["max_steps"]), fight, {}, events)
+	# Spec bot-play 2.1: with bot= (smart or chaos policy) the run decisions are the smart run bot's, like the play report.
+	var bot: BotProfile = PlayReport.bot_for(PlayReport.DEFAULTS.merged(options, true)) if options.has("bot_profile") else null
+	var stop := await RunPlayer.play(run, int(options["max_steps"]), fight, {}, events, bot, {})
 	run.event_results = results
 	if game_fights and is_instance_valid(run):
 		run.battle_requested.connect(ctx.game._on_battle_requested)
