@@ -1896,7 +1896,8 @@ func _wear(member: Dictionary, piece: EquipmentDefinition) -> void:
 
 # --- Out-of-battle actions (field mode) -----------------------------------------------------------------------------
 
-## For each living member, the abilities usable on the map right now: [{"slot", "ability", "item", "targets"}].
+## For each living member, the abilities usable on the map right now: [{"slot", "ability", "item", "targets", "roles"
+## (its Ability.Role.* tags), "targeting" (BattleAbility.Targeting)}].
 ## "targets" lists the slots a SINGLE_* ability may aim at (empty for SELF / ALL_*).
 func field_options() -> Array[Dictionary]:
 	var options: Array[Dictionary] = []
@@ -1918,8 +1919,14 @@ func field_options() -> Array[Dictionary]:
 					targets.append(candidate.slot)
 				if targets.is_empty():
 					continue
+			# Spec bot-play 2.6: the ability's Ability.Role.* tags, so the bots know what a field action does.
+			var roles: Array[StringName] = []
+			for tag in ability.asset_tags:
+				if String(tag).begins_with(AutoPolicy.ROLE_PREFIX):
+					roles.append(tag)
 			options.append({"slot": member["slot"], "ability": ability.ability_tag, "name": AbilityName.of(ability),
-				"item": unit.item_abilities.get(ability.ability_tag, &""), "targets": targets})
+				"item": unit.item_abilities.get(ability.ability_tag, &""), "targets": targets, "roles": roles,
+				"targeting": int(ability.targeting)})
 	battle.free()
 	return options
 

@@ -8,7 +8,17 @@ extends RefCounted
 const POLICIES: Array[String] = ["auto", "smart", "chaos"]
 ## chaos: the share of chaotic decisions (percent; the rest are smart) and the first floor (1-based) it plays on.
 const DEFAULTS: Dictionary = {"run": "", "party": [], "policy": "auto", "illegal": 20, "check": false,
-	"max_steps": 2000, "trace": false, "chaos": 100, "chaos_from": 1, "party_size": 4, "time_hashes": false}
+	"max_steps": 2000, "trace": false, "chaos": 100, "chaos_from": 1, "party_size": 4, "time_hashes": false,
+	"bot_profile": "", "explore": "", "bot_parts": ""}
+## Spec bot-play 2.7: the run bot's profile for the smart and chaos policies when "bot_profile" names none.
+const SMART_PROFILE: String = "res://game/auto/profiles/smart.tres"
+## Spec bot-play 2.7: a fit kind and the live role it is "on" (itemLift's per-fit-on-role rows).
+const FIT_ROLES: Dictionary = {
+	&"Item.Fit.Damage": &"Unit.Role.Damage", &"Item.Fit.FollowUp": &"Unit.Role.FollowUp", &"Item.Fit.Dot": &"Unit.Role.Dot",
+	&"Item.Fit.Break": &"Unit.Role.Break", &"Item.Fit.Healing": &"Unit.Role.Healer", &"Item.Fit.Survival": &"Unit.Role.Tank",
+	&"Item.Fit.Control": &"Unit.Role.Control", &"Item.Fit.Speed": &"Unit.Role.Support", &"Item.Fit.Sp": &"Unit.Role.Support",
+	&"Item.Fit.Ult": &"Unit.Role.Damage",
+}
 ## Spec hash-id-lists 2.4: at most 3 ms per run hash on a 25-room floor.
 const HASH_BUDGET_USEC: int = 3000
 
@@ -38,6 +48,10 @@ static func many_seeds(content: ContentIndex, host: Node, seeds: Array, options:
 	for seed_value in seeds:
 		_beat("seed %d" % seed_value)  # an error between seeds goes to the next seed's record
 		var record := await play_one(content, host, seed_value, opts)
+		# The seed played within one frame; the battles its replays queued for freeing only go at a frame's end (without
+		# this every replayed battle of a shard stayed in memory: 10 GB after 75 seeds).
+		if host.is_inside_tree():
+			await host.get_tree().process_frame
 		record["errors"] = errors.take()
 		if int(record.get("hashRefused", 0)) > 0:  # spec hash-id-lists H5: push_error alone would pass silently
 			record["errors"].append("RunCanonical refused %d value(s) the run hash cannot encode" % record["hashRefused"])
@@ -125,7 +139,18 @@ static func play_one(content: ContentIndex, host: Node, seed_value: int, options
 	if opts["time_hashes"]:
 		RunHash.reset_timing()
 		run.action_committed.connect(hash_each)
-	record["stop"] = await RunPlayer.play(run, int(opts["max_steps"]), fight, run_chaos, events)
+	# Spec bot-play 2.1: the smart and chaos policies play the run with the smart run bot (a BotProfile); auto plays as before.
+	var bot := bot_for(opts)
+	var bot_stats := {}
+	record["stop"] = await RunPlayer.play(run, int(opts["max_steps"]), fight, run_chaos, events, bot, bot_stats)
+	if bot != null:
+		record["bot"] = bot_record(run, bot_stats)
+		if opts["check"] or opts["policy"] == "chaos":
+			# Spec bot-play 4: a refused bot action is a bot bug; --check fails on it.
+			for key in _sorted_keys(bot_stats.get("refused", {})):
+				record["violations"].append({"seed": seed_value, "floor": run.state.floor_index + 1, "battle": 0,
+					"encounter": "bot action", "invariant": "bot_refused", "case": key,
+					"detail": "%s (x%d)" % [key, int(bot_stats["refused"][key])]})
 	if opts["time_hashes"]:
 		run.action_committed.disconnect(hash_each)
 		record["hashTiming"] = RunHash.timing()
@@ -388,6 +413,85 @@ static func _last_battle(run: RunController) -> Dictionary:
 	return {}
 
 
+## Spec bot-play 2.7: the run bot for the options' policy (null for "auto"): "bot_profile" or the smart profile, with
+## "explore" (smart, full or boss; "" keeps the profile's) forcing the exploration mode and "bot_parts" (comma-separated BotProfile.PARTS; "none" for
+## none) choosing the parts that are on, on a copy.
+static func bot_for(opts: Dictionary) -> BotProfile:
+	if opts["policy"] == "auto":
+		return null
+	var path := str(opts.get("bot_profile", ""))
+	if path == "":
+		path = SMART_PROFILE
+	var profile := load(path) as BotProfile if ResourceLoader.exists(path) else null
+	if profile == null:
+		push_error("PlayReport: %s is not a BotProfile" % path)
+		return null
+	var explore := str(opts.get("explore", ""))
+	if explore != "" and explore != profile.explore:
+		profile = profile.duplicate(true)
+		profile.explore = explore
+	var parts := str(opts.get("bot_parts", ""))
+	if parts != "":
+		profile = profile.duplicate(true)
+		var on: Array[String] = []
+		for part in parts.split(",", false):
+			if BotProfile.PARTS.has(part.strip_edges()):
+				on.append(part.strip_edges())
+		profile.parts = on
+	return profile
+
+
+## Spec bot-play 2.7: one run's bot record: the RunPlayer stats plus where things ended up (per member: class, live
+## roles, held things by fit, worn pieces), what was held (ids) and which fit sat on its role ("<fit> on" / "<fit>
+## elsewhere"), and the carry's share of the party's damage kinds (×100).
+@warning_ignore("integer_division")
+static func bot_record(run: RunController, bot_stats: Dictionary) -> Dictionary:
+	var members: Array = []
+	var held := {}
+	var fit_on := {}
+	var damage_total := 0
+	var damage_best := 0
+	for member in run.state.party:
+		var roles := LootScorer.roles_of(run, member["slot"])
+		var fits := {}
+		var damage := 0
+		for tags in LootScorer.held_tags(run, member):
+			for fit in LootScorer.fits_of(tags):
+				fits[String(fit)] = int(fits.get(String(fit), 0)) + 1
+				if LootScorer.DAMAGE_FITS.has(fit):
+					damage += 1
+				if FIT_ROLES.has(fit):
+					var where := "on" if roles.has(FIT_ROLES[fit]) else "elsewhere"
+					fit_on["%s %s" % [String(fit).trim_prefix(LootScorer.FIT_PREFIX), where]] = true
+		for item_id in member["items"]:
+			held[String(item_id)] = true
+		for use_slot in member["use_slots"]:
+			held[String(use_slot["item"])] = true
+		for slot_tag in member["equipment"]:
+			held[String(member["equipment"][slot_tag])] = true
+		damage_total += damage
+		damage_best = maxi(damage_best, damage)
+		var role_names: Array = []
+		for role in roles:
+			role_names.append(String(role).trim_prefix(LootScorer.ROLE_PREFIX))
+		members.append({"class": String(member["character"]).get_slice(".", 2), "roles": role_names, "fits": fits,
+			"worn": member["equipment"].size()})
+	var stats := bot_stats.duplicate(true)
+	stats["members"] = members
+	stats["held"] = _sorted_keys(held)
+	stats["fitOn"] = _sorted_keys(fit_on)
+	stats["carryShareX100"] = damage_best * 10000 / damage_total if damage_total > 0 else 0
+	return stats
+
+
+static func _sorted_keys(table: Dictionary) -> Array:
+	var keys: Array = []
+	for key in table:
+		keys.append(String(key))
+	keys.sort()
+	return keys
+
+
 static func _options(_content: ContentIndex, options: Dictionary) -> Dictionary:
 	var opts := DEFAULTS.duplicate(true)
 	opts.merge(options, true)
@@ -556,7 +660,92 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 	report["levelSkills"] = SeedReport._sorted(learned)
 	report["secretSkills"] = SeedReport._sorted(secret)
 	report["analysis"] = analyze(runs, report["byCharacter"])
+	if runs.any(func(record: Dictionary) -> bool: return record.has("bot")):
+		report.merge(bot_blocks(runs, report["winPercentX100"]), true)
 	return report
+
+
+## Spec bot-play 2.7: the run bot's blocks over the runs: "explore" (per chapter), "placement" (per class, carry share,
+## moves per run), "itemLift" (per item and per fit on its role), "shop" (coins per floor, things bought by kind),
+## "botRefused" and "untagged". Whole numbers; means and rates ×100.
+@warning_ignore("integer_division")
+static func bot_blocks(runs: Array[Dictionary], overall_x100: int) -> Dictionary:
+	var explore := {}
+	var by_class := {}
+	var moves := {}
+	var carry: Array[int] = []
+	var items := {}
+	var fit_on := {}
+	var coins := {}
+	var bought := {}
+	var refused := {}
+	var untagged := 0
+	var played := 0
+	for record in runs:
+		if not record.has("bot"):
+			continue
+		played += 1
+		var bot: Dictionary = record["bot"]
+		var won := 1 if record["status"] == RunState.WON else 0
+		for floor_record in bot.get("floors", []):
+			var row: Dictionary = explore.get_or_add(str(floor_record["chapter"]), {"floors": 0, "full": 0, "boss": 0,
+				"rooms": 0, "visited": 0, "leftBehind": 0, "deaths": 0})
+			row["floors"] += 1
+			row[str(floor_record["mode"])] = int(row.get(str(floor_record["mode"]), 0)) + 1
+			for key in ["rooms", "visited", "leftBehind", "deaths"]:
+				row[key] += int(floor_record.get(key, 0))
+		for member in bot.get("members", []):
+			var row: Dictionary = by_class.get_or_add(str(member["class"]), {"runs": 0, "worn": 0, "fits": {}})
+			row["runs"] += 1
+			row["worn"] += int(member["worn"])
+			for fit in member["fits"]:
+				row["fits"][fit] = int(row["fits"].get(fit, 0)) + int(member["fits"][fit])
+		for key in bot.get("moves", {}):
+			moves[key] = int(moves.get(key, 0)) + int(bot["moves"][key])
+		carry.append(int(bot.get("carryShareX100", 0)))
+		for pair in [[items, bot.get("held", [])], [fit_on, bot.get("fitOn", [])]]:
+			for key in pair[1]:
+				var tally: Dictionary = pair[0].get_or_add(str(key), {"runs": 0, "won": 0})
+				tally["runs"] += 1
+				tally["won"] += won
+		var shop: Dictionary = bot.get("shop", {})
+		for key in shop.get("coinsByFloor", {}):
+			if not coins.has(str(key)):
+				var values: Array[int] = []
+				coins[str(key)] = values
+			coins[str(key)].append(int(shop["coinsByFloor"][key]))
+		for key in shop.get("bought", {}):
+			bought[key] = int(bought.get(key, 0)) + int(shop["bought"][key])
+		for key in bot.get("refused", {}):
+			refused[key] = int(refused.get(key, 0)) + int(bot["refused"][key])
+		untagged += int(bot.get("untagged", 0))
+	var classes := {}
+	for id in by_class:
+		var row: Dictionary = by_class[id]
+		var fits := {}
+		for fit in row["fits"]:
+			fits[fit] = int(row["fits"][fit]) * 100 / maxi(row["runs"], 1)
+		classes[id] = {"runs": row["runs"], "wornPerRunX100": row["worn"] * 100 / maxi(row["runs"], 1),
+			"fitsPerRunX100": SeedReport._sorted(fits)}
+	var per_run := {}
+	for key in moves:
+		per_run[key] = int(moves[key]) * 100 / maxi(played, 1)
+	var placement := {"byClass": SeedReport._sorted(classes), "carryShareX100": spread(carry),
+		"movesPerRunX100": SeedReport._sorted(per_run)}
+	var lift := {}
+	for pair in [["byItem", items], ["byFitOnRole", fit_on]]:
+		var rows := {}
+		for key in pair[1]:
+			var tally: Dictionary = pair[1][key]
+			var rate: int = tally["won"] * 10000 / maxi(tally["runs"], 1)
+			rows[key] = {"runs": tally["runs"], "won": tally["won"], "winX100": rate, "liftX100": rate - overall_x100}
+		lift[pair[0]] = SeedReport._sorted(rows)
+	var coin_spread := {}
+	for key in coins:
+		coin_spread[key] = spread(coins[key])
+	return {"explore": SeedReport._sorted(explore), "placement": placement, "itemLift": lift,
+		"shop": {"coinsByFloor": SeedReport._sorted(coin_spread), "bought": SeedReport._sorted(bought)},
+		"botRefused": SeedReport._sorted(refused), "untagged": untagged}
 
 
 ## Spec skill-points 4.3, 4.4, D26: the death map (where runs end), party composition (pairs, features, sound
@@ -769,6 +958,8 @@ static func text(report: Dictionary) -> String:
 		var played := maxi(int(report["won"]) + int(report["lost"]) + int(report["stopped"]), 1)
 		lines.append("  events entered %d (%.1f per run), %d distinct  ·  members killed by events %d" % [events["entered"],
 			float(events["entered"]) / played, events["byEvent"].size(), events["memberDeaths"]])
+	if report.has("explore"):
+		lines.append_array(bot_text(report))
 	if report["policy"] == "chaos":
 		lines.append("  illegal moves refused: %s" % _pairs(report["refused"]))
 	if not report.get("sp", {}).is_empty():
@@ -808,6 +999,41 @@ static func text(report: Dictionary) -> String:
 		if record["stop"] != "" or record["runnerError"] != "":
 			lines.append("  STOPPED seed %d: %s" % [record["seed"], record["runnerError"] if record["runnerError"] != "" else record["stop"]])
 	return "\n".join(lines)
+
+
+## Spec bot-play 2.7: the run bot's blocks as text.
+static func bot_text(report: Dictionary) -> PackedStringArray:
+	var lines := PackedStringArray()
+	var parts := PackedStringArray()
+	for chapter in report["explore"]:
+		var row: Dictionary = report["explore"][chapter]
+		parts.append("%s %s %d/%d rooms, %d left, %d deaths" % [String(chapter).get_slice(".", 2),
+			_most(row, ["full", "boss", "lowest"]), row["visited"], row["rooms"],
+			row["leftBehind"], row["deaths"]])
+	lines.append("  explore (per chapter, over the runs): %s" % "; ".join(parts))
+	var placement: Dictionary = report["placement"]
+	lines.append("  carry share of damage kinds: median %s  ·  moves per run: %s" % [_pct(placement["carryShareX100"]["median"]),
+		", ".join(placement["movesPerRunX100"].keys().map(func(key) -> String:
+			return "%s %.2f" % [key, placement["movesPerRunX100"][key] / 100.0]))])
+	var fit_rows := PackedStringArray()
+	for key in report["itemLift"]["byFitOnRole"]:
+		var row: Dictionary = report["itemLift"]["byFitOnRole"][key]
+		fit_rows.append("%s %s (%+.1f, %d runs)" % [key, _pct(row["winX100"]), row["liftX100"] / 100.0, row["runs"]])
+	if not fit_rows.is_empty():
+		lines.append("  fit on role: %s" % ", ".join(fit_rows))
+	lines.append("  shop bought: %s  ·  untagged items placed: %d" % [_pairs(report["shop"]["bought"], true), report["untagged"]])
+	if not report["botRefused"].is_empty():
+		lines.append("  BOT ACTIONS REFUSED: %s" % _pairs(report["botRefused"], true))
+	return lines
+
+
+## The key of `keys` with the highest count in `row` (ties to the first).
+static func _most(row: Dictionary, keys: Array) -> String:
+	var best: String = keys[0]
+	for key in keys:
+		if int(row.get(key, 0)) > int(row.get(best, 0)):
+			best = key
+	return best
 
 
 ## Spec skill-points 4.3, 4.4, D26: the analysis as text lines.

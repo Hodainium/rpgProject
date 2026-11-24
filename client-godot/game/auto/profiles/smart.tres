@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BotProfile" format=3]
+
+[ext_resource type="Script" path="res://game/auto/bot_profile.gd" id="1_bot"]
+
+[resource]
+script = ExtResource("1_bot")
+id = "smart"
+stack = {
+&"Item.Fit.Survival": {
+"mode": 0,
+"step": 25
+}
+}

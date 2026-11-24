@@ -18,6 +18,6 @@ script = ExtResource("7_pcf4h")
 id = &"demo.item.vampire_curse"
 display_name = "Curse of the Vampire"
 description = "Learn Blood Drain; every hit you deal heals you. -15% max HP."
-tags = Array[StringName]([&"Item.Curse"])
+tags = Array[StringName]([&"Item.Curse", &"Item.Fit.Damage", &"Item.Fit.Survival"])
 price = 0
 grants = SubResource("Resource_bajo5")

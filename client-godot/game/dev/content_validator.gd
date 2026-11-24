@@ -59,6 +59,7 @@ static func validate(content_index: ContentIndex, options: Dictionary = {}) -> A
 		validator._check_run(content_index.runs[id], int(options.get("generate_seeds", 0)))
 	validator._check_default_run()
 	validator._check_cards()
+	validator._check_bot_tags()
 	if options.get("tags", true):
 		validator._check_tags()
 	return validator._sorted_issues()
@@ -1608,6 +1609,48 @@ func _check_cards() -> void:
 	for pool in counts:
 		if counts[pool][0] < counts[pool][1]:
 			_warning("core_pool_short", pool, "%s holds %d core cards, its target is %d" % [pool, counts[pool][0], counts[pool][1]])
+
+
+## Spec bot-play 2.3: the run bots' tags. Content opts in by using them (the fit pass has run once any item or piece
+## carries an Item.Fit.*; any character a Unit.Role.*), so a root without them (the fixtures) is not checked:
+## fit_missing (a pooled item or piece with no Item.Fit.*: an error), fit_mismatch (the pass would propose a fit or grant
+## the tags lack: a warning), role_tag_missing (a selectable character with no Unit.Role.*: an error), grant_unknown (an
+## Item.Grants.* with no Unit.Role.* twin: an error).
+func _check_bot_tags() -> void:
+	var things: Array = []
+	for id in _sorted(content.items):
+		things.append(content.items[id])
+	for id in _sorted(content.equipment):
+		things.append(content.equipment[id])
+	var fits_used := things.any(func(thing: Resource) -> bool:
+		return thing.tags.any(func(tag) -> bool: return String(tag).begins_with(LootScorer.FIT_PREFIX)))
+	for thing in things:
+		var path: String = thing.resource_path + "::tags"
+		for tag in thing.tags:
+			if String(tag).begins_with(LootScorer.GRANT_PREFIX) \
+					and not LootScorer.ROLES.has(StringName(LootScorer.ROLE_PREFIX + String(tag).trim_prefix(LootScorer.GRANT_PREFIX))):
+				_error("grant_unknown", path, "%s: %s names no %s* role" % [thing.id, tag, LootScorer.ROLE_PREFIX])
+		if not fits_used or TagMatch.has(thing.tags, FloorGenerator.DEV_TAG):
+			continue
+		var pooled: bool = thing.tags.any(func(tag) -> bool: return String(tag).begins_with("Pool."))
+		var has_fit: bool = thing.tags.any(func(tag) -> bool: return String(tag).begins_with(LootScorer.FIT_PREFIX))
+		if pooled and not has_fit:
+			_error("fit_missing", path, "%s is in a pool but has no %s* tag: the bots can't tell who should hold it (game/tools/build_fit_pass.tscn proposes one)"
+				% [thing.id, LootScorer.FIT_PREFIX])
+		var missing := FitProposal.missing(thing)
+		if not missing.is_empty():
+			_warning("fit_mismatch", path, "%s: the fit pass would add %s" % [thing.id, ", ".join(missing)])
+	var characters: Array = []
+	for id in _sorted(content.characters):
+		characters.append(content.characters[id])
+	var roles_used := characters.any(func(character: CharacterDefinition) -> bool:
+		return character.tags.any(func(tag) -> bool: return String(tag).begins_with(LootScorer.ROLE_PREFIX)))
+	if not roles_used:
+		return
+	for character in characters:
+		if character.selectable and not character.tags.any(func(tag) -> bool: return String(tag).begins_with(LootScorer.ROLE_PREFIX)):
+			_error("role_tag_missing", character.resource_path + "::tags",
+				"%s is selectable but has no %s* tag: the bots can't tell what it does" % [character.id, LootScorer.ROLE_PREFIX])
 
 
 ## Spec playable-demo 2.2: with several runs, exactly one should be default_run (an empty run id starts it).

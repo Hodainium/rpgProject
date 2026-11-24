@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="BotProfile" format=3]
+
+[ext_resource type="Script" path="res://game/auto/bot_profile.gd" id="1_bot"]
+
+[resource]
+script = ExtResource("1_bot")
+id = "carry"
+stack = {
+&"Item.Fit.Damage": {
+"mode": 2,
+"step": 25
+},
+&"Item.Fit.Dot": {
+"mode": 2,
+"step": 25
+},
+&"Item.Fit.FollowUp": {
+"mode": 2,
+"step": 25
+},
+&"Item.Fit.Survival": {
+"mode": 0,
+"step": 25
+}
+}
