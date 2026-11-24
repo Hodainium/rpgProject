@@ -1,6 +1,6 @@
 # Spec: bot-play (before 5c `card-balance`)
 
-Status: **spec written 2026-11-22, awaiting the user's review.** The first of four slices the user asked for on 2026-11-22
+Status: **built 2026-11-22 on `feat/bot-play`, measured 2026-11-23 (section 8), awaiting the user's review.** The first of four slices the user asked for on 2026-11-22
 before 5c: `bot-play` (this), `item-power` (run-winning items, weapons and armor; copies stack), `level-99` (the level
 cap, growth and high-level moves) and `second-pack` (a second card pack with three new characters). Bots come first:
 balancing items while the bots play badly would measure the bots, not the items. Builds on `specs/game-skeleton.md`
@@ -199,13 +199,15 @@ After every pickup, battle, or member death or revive, the bot runs a bounded im
    rules allow; its passives stay (D8).
 
 Each step only makes moves that strictly raise the party's total score by the margin, and the pass stops after
-`profile.max_moves` (default 6) moves per trigger, so it cannot oscillate or flood the log.
+`profile.max_moves` (default 6) moves per trigger, so it cannot oscillate or flood the log. Moving what is already placed (steps 2-4) ignores max HP: a worn +HP piece makes its
+wearer sturdy, so a trade for frailty would look good again in reverse.
 
 ### 2.6 Shops and field actions
 
-- **Shop:** items and pieces on the shelf are ranked by best value ÷ price; buy in that order while affordable, keeping
-  `profile.key_reserve` (default 1) key's price when a locked loot room is still unopened on the floor and the shop
-  sells keys. A thing whose best value is under `profile.buy_floor` is not bought.
+- **Shop:** items and pieces on the shelf are ranked by best value ÷ price; buy in that order while affordable. Keys the floor's shown locked rooms still need are bought first, and one when none
+  is held and the next floor locks its item room (`next_floor_key_rooms`; user, 2026-11-22). Nothing is saved for a key that costs
+  too much: the bot never comes back to a shop (the planned `key_reserve` was removed in review: it only ever stopped the
+  bot buying anything). A thing whose best value is under `profile.buy_floor` is not bought; a piece counts by what wearing it would add.
 - **Field actions** (`field_options()`), read through their abilities' `Ability.Role.*` tags (spec `auto-battle`):
   Revive when a member is dead; Heal when a living member is below `profile.field_heal_below` (default 50% HP) before
   entering a room with a battle, or always before the boss room; RestoreMP when a member is below 30% SP before the boss;
@@ -215,7 +217,7 @@ Each step only makes moves that strictly raise the party's total score by the ma
 
 `BotProfile` (`game/auto/bot_profile.gd`, a Resource; system files in `game/auto/profiles/`, bot code, not game balance):
 `room_values`, `explore_threshold`, `fit_weight` (fit → role → weight), `stack` (fit → mode,
-step), `new_role_value`, `carry_seed`, `swap_margin`, `max_moves`, `key_reserve`, `buy_floor`, `field_heal_below`.
+step), `new_role_value`, `carry_seed`, `swap_margin`, `max_moves`, `buy_floor`, `field_heal_below`.
 All whole numbers, ×100 where a share. Shipped: `smart.tres` (the default, starts as `spread` or `carry`, whichever
 measures better, decision D3), `spread.tres` (every damage kind FLAT), `carry.tres` (damage, follow-ups and dots CARRY).
 
@@ -306,7 +308,23 @@ balance seeds before and after, per change and per profile, written into section
 - D9. The route at the floor-8 stairs stays random on the bots' stream `dev/route/<n>` (both endings covered).
 - D10. On a BOSS floor a challenge room found on the way to the boss is fought; no detour to find one (2.2).
 
-**Open questions:** none.
+**The run bot stays out of the player build (user, 2026-11-23):** `bot_gear`, `bot_profile`, `explore_plan`, `loot_scorer`,
+`fit_proposal` and `profiles/` are on the player preset's exclude list, like `RunPlayer`, so changing the bot never changes the
+ruleset version. Bots that generate analytics data later run headless or in a dev build of the same source, which shares the
+player build's version. `BotCache` (used by `EventScorer`), `EventScorer` and `AutoPolicy` ship and count.
+
+**Open questions (tuning, user 2026-11-23: go on and note them):**
+- **`altar_floor`** (a pickup paid with an item, the Void altars' Void Scar, is taken only when its best holder values it
+  at least this much). The default stays 0 (take them all) until a value is measured, but **0 is not the goal: not every
+  Void item is worth its scar.** 100 is too strict (section 8: 87 wins against 105): it refuses plain Speed (90),
+  SP (90), Ult (80) and Party (60) items. To try: values between, e.g. 40, 60 and 80, and counting the Void Scars the member already
+  holds (the check ignores how bad the price is). Left at 0 until the balancing after 5h-5j (user, 2026-11-23); also to consider
+  there: a role-specific item (e.g. FollowUp) only when a living member already has that role, which no single number can express,
+  because such items grant the role.
+- **`exploratory = false`** barely skips rooms (Vault 23.7 of 25 rooms, Void 20.7): `ExplorePlan.loot_done` also waits for
+  the challenge room (value 20). Proposed, not built: wait only for rooms worth the explore threshold.
+- **The default profile:** spread, the explore rule and `altar_floor = 0` stay; `carry` and straight to the boss are not
+  reliably better. Settling it needs 600 seeds that were not used to pick them.
 
 **Stays out:** the battle policy (`AutoPolicy` / smart battles), the player's Auto (no run decisions for players), new
 items and gear (`item-power`), level changes (`level-99`), analytics projections
@@ -314,4 +332,34 @@ items and gear (`item-power`), level changes (`level-99`), analytics projections
 
 ## 8. Measurements
 
-To be filled by the build: the baseline smart gate on `main`, each change alone, the profiles side by side.
+2026-11-22/23: The Descent, the 600 balance seeds (`game/dev/balance_seeds.json`), smart policy, 4 members, `--check`. Wins are
+compared seed by seed; p is the two-sided sign test on the seeds whose outcome differs (below 0.05 is usually a real
+difference, but with 11 comparisons one borderline value can be luck).
+
+| Run | Won | Win rate | Battles per run | p vs `smart` | p vs `main` |
+|---|---|---|---|---|---|
+| `main` (no bot; every part off plays the same runs) | 74 | 12.33% | | | |
+| `--explore boss` | 118 | 19.66% | 69 | 0.31 | 0.0001 |
+| `carry` | 111 | 18.50% | 90 | 0.50 | 0.001 |
+| `--explore full` | 111 | 18.50% | 107 | 0.53 | 0.001 |
+| `--bot-parts explore` | 110 | 18.33% | 86 | 0.70 | 0.001 |
+| `exploratory = false` | 106 | 17.66% | 90 | 1.00 | 0.006 |
+| **`smart` (the default: spread, every part)** | **105** | **17.50%** | 90 | | 0.009 |
+| `--bot-parts placement` | 93 | 15.50% | 81 | 0.30 | 0.05 |
+| `--bot-parts field` | 92 | 15.33% | 84 | 0.30 | 0.04 |
+| `exploratory = false`, `altar_floor = 100` | 92 | 15.33% | 90 | 0.19 | 0.10 |
+| `--bot-parts gear` | 89 | 14.83% | 82 | 0.18 | 0.09 |
+| `altar_floor = 100` | 87 | 14.50% | 90 | 0.008 | 0.26 |
+| `--bot-parts shop` | 74 | 12.33% | 80 | 0.007 | 1.00 |
+
+- **The code as built (after the last review's fixes): `smart` 101 of 600 (16.83%)**, 90 battles per run; against `main` +73 −46
+  seeds (p 0.017), against the `smart` row above +18 −22 (p 0.64: no measurable change, 327 runs played differently). The table's
+  other rows are from before those fixes. This is the number the next slices compare with.
+- The bot beats `main`; the top six runs cannot be told apart on 600 seeds. Exploration alone gives almost the whole gain.
+- No bot action was refused and no script error was raised; the only violations are turn-limit battles (`main` has them too).
+- **Reading the stats once per change** (`BotCache`): a field battle was built for every read. The same 600 run hashes, about
+  15% faster (12 seeds in one process: 130 s to 111 s).
+- **Memory:** a shard played every seed in one engine frame, so the battles its `--check` replays had queued for freeing
+  stayed until it ended (about 9.7 GB per process at 75 seeds). The report now waits a frame after each seed: 0.7 GB at most, the same 600 run hashes.
+- **`--set` on a bot profile** changed nothing until 2026-11-23 (nothing held the changed resource, so the bot loaded the file
+  again); fixed and tested. The `altar_floor` and `exploratory` rows are from after the fix.
