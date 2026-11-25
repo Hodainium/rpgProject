@@ -19,6 +19,9 @@ extends AbilitySystemComponent
 ## it into one report, so a 5-stack poison is one number and one cue. Presentation only: nothing in the kernel reads it.
 signal tick_started(effect: GameplayEffect)
 signal tick_finished(effect: GameplayEffect)
+## Spec item-power K2: one stack of a periodic effect ticked and took `amount` HP (×100, above 0) from this unit. The battle
+## turns it into Event.Damage.Dealt.Dot / Event.Damage.Taken.Dot.
+signal stack_damaged(spec: GameplayEffectSpec, amount: int)
 
 ## Effects applied while this unit is taking its own turn skip that turn's countdown (HSR rule), so a 2-turn
 ## self-buff covers the unit's next two turns.
@@ -78,7 +81,36 @@ func can_activate_ability(ability: GameplayAbility, emit_failure: bool = false) 
 		if emit_failure:
 			ability_activation_failed.emit(ability, ActivationError.FAILED_QUERY, {"message": "usage"})
 		return false
+	if ability is BattleAbility and not ult_allows(ability):
+		if emit_failure:
+			ability_activation_failed.emit(ability, ActivationError.FAILED_QUERY, {"message": "ults"})
+		return false
 	return super(ability, emit_failure)
+
+
+## Spec item-power: an HP cost never takes the last HP (GodotGAS refuses only below 0): Void Tether and the Starving Maw stop
+## rather than kill their holder.
+func can_afford_cost(effect: GameplayEffect, effect_level: float = 1.0) -> bool:
+	if not super(effect, effect_level):
+		return false
+	if effect == null or effect.policy != GameplayEffect.DurationPolicy.INSTANT or not _touches_hp(effect):
+		return true
+	var spec := GameplayEffectSpec.new(effect, GameplayEffectContext.new(get_parent()), effect_level)
+	_evaluate_spec(spec)
+	return float(_calculate_base_targets(spec).get(BattleUnit.HP, 1.0)) > 0.0
+
+
+static func _touches_hp(effect: GameplayEffect) -> bool:
+	return effect.modifiers.any(func(modifier) -> bool: return modifier != null and modifier.attribute_name == BattleUnit.HP) \
+		or effect.executions.any(func(calc) -> bool: return calc != null and calc.get("attribute") == BattleUnit.HP)
+
+
+## Spec item-power: at most Battle.ULTS_PER_TURN ults between two turns.
+func ult_allows(ability: BattleAbility) -> bool:
+	if not ability.is_ultimate():
+		return true
+	var battle := BattleContext.battle_for(self)
+	return battle == null or battle.ult_left(get_parent() as BattleUnit)
 
 
 ## Only tagged abilities are checked: Field-only needs State.Infield, Battle-only needs it absent.
@@ -108,7 +140,9 @@ func turn_start() -> void:
 			for stack_spec in active_effect.stack_specs:
 				_trigger_effect_events(stack_spec)
 				_evaluate_spec(stack_spec)
-				_commit_spec_math(stack_spec)
+				var lost := -int(_commit_spec_math(stack_spec).get(BattleUnit.HP, 0.0))
+				if lost > 0:
+					stack_damaged.emit(stack_spec, lost)
 			tick_finished.emit(spec.effect_def)
 		spec.remaining_turns -= 1
 		if spec.remaining_turns <= 0:

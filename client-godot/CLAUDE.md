@@ -7,7 +7,7 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
 ## 0. Ownership: the user's design work is protected
 | Folder | Owner | What lives there |
 |---|---|---|
-| `combat/` | System (Claude) | Battle kernel (spec `combat-replay-core`): `Battle`, `TurnManager`, `CombatASC`, `BattleAbility`, `ExecutionRow`, gates, recorder, state hasher, replay runner, headless entry `combat/headless/replay_main.tscn`. No balance numbers. |
+| `combat/` | System (Claude) | Battle kernel (spec `combat-replay-core`): `Battle`, `TurnManager`, `CombatASC`, `BattleAbility`, `ExecutionRow`, gates, recorder, state hasher, replay runner, headless entry `combat/headless/replay_main.tscn`. No balance numbers (safety limits are none: `TURN_LIMIT`, `TriggerQueue.MAX_DEPTH` and `Battle.ULTS_PER_TURN`, 3, the user's choice 2026-11-23 against endless ult loops). |
 | `game/` | System (Claude) | Run layer (spec `game-skeleton`): content types in `defs/`, floor generator, `RunState`, `RunController`, `GameMain` shell (main scene), `ViewGate`, one-time example-set builder `tools/build_demo.tscn`; the UI framework `ui/` (spec `ui-framework`) and the message bus `messages/` (spec `gameplay-messages`). No balance numbers. |
 | `game/dev/`, `addons/rpg_dev/` | System (Claude) | Dev tools (spec `dev-tools`): console and its commands, sandbox, validator, templates, room grid ops, seed runner, Play entry scene, dev content (`game/dev/content/`); our editor plugin (dock, room grid, Play buttons). |
 | `tests/` (except `fixtures/`) | System (Claude) | In-house test runner `run_tests.tscn`, `TestCase`, system tests in `tests/combat/` and `tests/game/`, fixture builder `tests/tools/`. |

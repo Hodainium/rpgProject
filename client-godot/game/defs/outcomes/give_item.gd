@@ -11,6 +11,7 @@ enum Recipient {
 	SLOT,  ## Spec event-pass 2.1: the member at party position `slot`; the first who can hold it when that one cannot.
 	LOWEST_HP,  ## Spec event-pass 2.1: the living member with the lowest HP share who can hold it (ties: the lowest slot).
 	FLOOR,  ## Spec event-pass 2.1: a free pickup on the event room's floor, taken with take() (outside a room: FIRST).
+	HOLDER,  ## Spec item-power: the member whose item's run hook this is (Philosopher's Coin); only in an item hook.
 }
 
 @export var item: ItemDefinition

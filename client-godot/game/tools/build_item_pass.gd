@@ -96,6 +96,24 @@ func _buff(changes: Dictionary, turns: int, granted: Array) -> GameplayEffect:
 	return effect
 
 
+## A heal of `typed`% of max HP, times the healed unit's heal_taken (spec item-power D19; a revive uses _percent_of_max).
+func _percent_heal(typed: float) -> GameplayEffect:
+	var effect := _percent_of_max(typed)
+	effect.executions[0].set("target_bonus", "heal_taken")
+	return effect
+
+
+## A heal of `typed` HP, times the healed unit's heal_taken.
+func _flat_heal(typed: float) -> GameplayEffect:
+	var effect := GameplayEffect.new()
+	effect.policy = GameplayEffect.DurationPolicy.INSTANT
+	var calc: GameplayExecutionCalculation = load(CONTENT + "exec_calcs/exec_calc_restore.gd").new()
+	calc.set("amount_x100", Fixed.from_typed(typed))
+	calc.set("target_bonus", "heal_taken")
+	effect.executions.append(calc)
+	return effect
+
+
 ## Instant: the target regains `typed`% of its maximum HP (a revive on a dead unit).
 func _percent_of_max(typed: float) -> GameplayEffect:
 	var effect := GameplayEffect.new()

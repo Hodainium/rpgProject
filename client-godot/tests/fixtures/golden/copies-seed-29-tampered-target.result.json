@@ -1,0 +1,1 @@
+{"schemaVersion":1,"battleId":"copies-seed-29","verdict":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"TurnMismatch","turn":24,"detail":"log entry says turn 20, P2 acts on turn 24"},"outcome":"Ongoing","turns":24,"finalStateHash":"3a3c41b2f5d4ac7a22ae7ca8f331045af6d1e4051b7e49edb1111bed27fa8894","engineVersion":"4.7.2.stable.mono.official.ed1daf0bf"}

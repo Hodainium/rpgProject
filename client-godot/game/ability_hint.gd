@@ -12,6 +12,9 @@ const TARGET_TEXT := {
 	BattleAbility.Targeting.SELF: "SELF",
 	BattleAbility.Targeting.SINGLE_DEAD_ALLY: "ONE FALLEN ALLY",
 	BattleAbility.Targeting.ALL_DEAD_ALLIES: "ALL FALLEN ALLIES",
+	BattleAbility.Targeting.RANDOM_ENEMY: "A RANDOM ENEMY",
+	BattleAbility.Targeting.RANDOM_OTHER_ENEMY: "ANOTHER RANDOM ENEMY",
+	BattleAbility.Targeting.OTHER_ENEMIES: "EVERY OTHER ENEMY",
 }
 ## Spec keys-and-gear 2.6: from BattleAbility.usage() (the Ability.Usage.* tags; untagged: ff7-ui F14's rule).
 const USAGE_FIELD := "[Field Only]"

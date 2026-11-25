@@ -237,7 +237,9 @@ static func _ability(scene: PackedScene, found: Dictionary, use: bool) -> void:
 	if deals:
 		if ability.asset_tags.has(FOLLOW_UP_TAG):
 			found[LootScorer.FIT_FOLLOW_UP] = true
-			found[LootScorer.GRANT_FOLLOW_UP] = true
+			# Spec item-power: one that only answers the holder's own follow-ups (Hollow Crown) makes nobody a follow-up character.
+			if ability.trigger_event_tag != Battle.EVENT_ATTACK_FOLLOW_UP:
+				found[LootScorer.GRANT_FOLLOW_UP] = true
 		elif triggered and String(ability.trigger_event_tag).begins_with(DAMAGE_TAKEN_EVENT):
 			pass  # a hit back: Survival and Tank above
 		elif triggered:

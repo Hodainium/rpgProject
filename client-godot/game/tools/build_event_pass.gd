@@ -78,8 +78,8 @@ func _event_effects() -> void:
 	for percent in [10, 15, 20, 25, 30, 40]:
 		_save("effects/events/hurt_%d" % percent, _percent_of_max(-percent))
 	for percent in [15, 20, 30]:
-		_save("effects/events/heal_%d" % percent, _percent_of_max(percent))
-	_save("effects/events/heal_full", _percent_of_max(100))
+		_save("effects/events/heal_%d" % percent, _percent_heal(percent))
+	_save("effects/events/heal_full", _percent_heal(100))
 	var slay := GameplayEffect.new()  # hp overridden to 0: the member dies (the validator reads it as a slay)
 	var to_zero := GameplayEffectModifier.new()
 	to_zero.attribute_name = "hp"
@@ -189,7 +189,7 @@ func _event_encounters() -> void:
 	reflection.id = &"demo.enemy.reflection"
 	reflection.display_name = "Your Reflection"
 	reflection.mirror_party_items = true
-	var skip: Array[StringName] = [&"Item.Food", CURSE]
+	var skip: Array[StringName] = [&"Item.Food", CURSE, &"Item.Gold"]
 	reflection.mirror_skip_tags = skip
 	_save("enemies/reflection", reflection)
 	var boss_item := _give_pool(&"Pool.Boss", GiveItem.Recipient.FIRST)

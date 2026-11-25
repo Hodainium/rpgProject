@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_twin.tscn" id="1_78m26"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_konkd"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_rxy0g"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_qd3kf"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_htx67"]
+
+[sub_resource type="Resource" id="Resource_k2778"]
+script = ExtResource("3_rxy0g")
+abilities = Array[PackedScene]([ExtResource("1_78m26")])
+
+[resource]
+script = ExtResource("5_htx67")
+id = &"fixture.item.ip_twin"
+display_name = "Ip Twin"
+price = 3
+grants = SubResource("Resource_k2778")

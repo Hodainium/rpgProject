@@ -306,6 +306,39 @@ func test_follow_up_attack() -> void:
 	eq((await replay(request)).get("verdict"), "Verified", "follow-ups are re-simulated on replay")
 
 
+## Spec item-power D20: a hit that brings its target to 0 HP is not followed up, for one target or for all of them.
+func test_no_follow_up_at_the_fallen() -> void:
+	for all_enemies in [false, true]:
+		var battle := new_battle(break_snapshot("brittle_one", ["fixture.item.chaser_charm"]))
+		var duelist := battle.unit_by_id(&"P1")
+		if all_enemies:
+			_ability(duelist, "Chaser").targeting = BattleAbility.Targeting.ALL_ENEMIES
+		var fired := []
+		battle.trigger_activated.connect(func(_unit, ability_tag, _event): fired.append(ability_tag))
+		battle.unit_by_id(&"E1").asc.initialize_attribute_overrides({"hp": 100.0} as Dictionary[String, float])
+		await battle._activate(duelist, _ability(duelist, "FireSlash"), battle.unit_by_id(&"E1"))
+		eq(battle.unit_by_id(&"E1").stat(BattleUnit.HP), 0, "the weakness hit fells the enemy")
+		check(battle.unit_by_id(&"E1").alive, "which is not dead until the death check")
+		await battle._drain_triggers()
+		eq(fired, [], "no follow-up, so no Event.Attack.FollowUp and no Momentum either")
+	# With nobody to answer, a single-target follow-up takes the first enemy that is up, not a fallen one.
+	var two := new_battle(break_snapshot("brittle_pair", ["fixture.item.chaser_charm"]))
+	var chaser := _ability(two.unit_by_id(&"P1"), "Chaser")
+	two.unit_by_id(&"E1").asc.initialize_attribute_overrides({"hp": 0.0} as Dictionary[String, float])
+	eq(two._trigger_target(two.unit_by_id(&"P1"), chaser, {"source": two.unit_by_id(&"P1"), "target": two.unit_by_id(&"P1")},
+		Battle.EVENT_ALLY_ULTIMATE), two.unit_by_id(&"E2"), "the enemy still standing")
+	# A follow-up at several enemies still fires while one of them is up.
+	var pair := new_battle(break_snapshot("brittle_pair", ["fixture.item.chaser_charm"]))
+	var hero := pair.unit_by_id(&"P1")
+	_ability(hero, "Chaser").targeting = BattleAbility.Targeting.ALL_ENEMIES
+	var seen := []
+	pair.trigger_activated.connect(func(_unit, ability_tag, _event): seen.append(ability_tag))
+	pair.unit_by_id(&"E1").asc.initialize_attribute_overrides({"hp": 100.0} as Dictionary[String, float])
+	await pair._activate(hero, _ability(hero, "FireSlash"), pair.unit_by_id(&"E1"))
+	await pair._drain_triggers()
+	check(seen.has(&"Fixture.Ability.Chaser"), "one enemy is still up: the sweep fires")
+
+
 ## HSR rule: a follow-up never fires from a follow-up's own hit. A plain passive on those hits still does, and a
 ## passive chain still stops at the depth cap.
 func test_follow_ups_never_feed_follow_ups() -> void:
@@ -373,6 +406,8 @@ func test_unit_killed_event() -> void:
 	modifier.value_x100 = -10000000
 	kill.modifiers.append(modifier)
 	dev.apply_to_units(kill, [&"E1"])
+	dev._check_deaths()
+	check(not dev.unit_by_id(&"E1").alive, "dead")
 	eq(dev_events.filter(func(event): return event[0] == Battle.EVENT_UNIT_KILLED), [], "a dev kill sends no Killed event")
 
 

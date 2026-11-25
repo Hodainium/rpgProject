@@ -10,6 +10,7 @@ enum DamageMode {
 	USE_EFFECT,  ## No override: the effect's own math decides.
 	FLAT,        ## Fixed damage: flat_damage.
 	SCALED,      ## Percentage of the attacker's ATK: multiplier.
+	EVENT_AMOUNT,  ## Spec item-power K6: the triggering event's amount (a hit, a tick) × multiplier; 0 outside a trigger.
 }
 
 enum Targets {
@@ -23,6 +24,10 @@ const DAMAGE_FLAT_TAG: StringName = &"Data.Damage.Flat"
 const DAMAGE_MULTIPLIER_TAG: StringName = &"Data.Damage.Multiplier"
 ## Spec item-pass 3.1: the toughness a weakness hit removes, read by the damage ExecCalc.
 const TOUGHNESS_TAG: StringName = &"Data.Toughness"
+## Spec item-power K6: the event's amount × multiplier of an EVENT_AMOUNT row, for effects that are not damage (a heal).
+const EVENT_AMOUNT_TAG: StringName = &"Data.Event.Amount"
+## Spec item-power K7: an echo's scale (×100 percent), set on every spec an echo applies; restores read it.
+const ECHO_SCALE_TAG: StringName = &"Data.Echo.Scale"
 
 ## Name the animation's execute keys refer to. Unique within the ability.
 @export var id: StringName = &""
@@ -42,7 +47,7 @@ const TOUGHNESS_TAG: StringName = &"Data.Toughness"
 		_warn_decimals("flat_damage", typed)
 		flat_damage_x100 = Fixed.from_typed(typed)
 
-## Percentage of the attacker's ATK as typed (150 = 150%), used when damage_mode is SCALED.
+## Percentage of the attacker's ATK (SCALED) or of the event's amount (EVENT_AMOUNT) as typed (150 = 150%).
 @export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var multiplier: float:
 	get:
 		return Fixed.to_display(multiplier_x100)
@@ -76,6 +81,10 @@ const TOUGHNESS_TAG: StringName = &"Data.Toughness"
 		_warn_decimals("delay", typed)
 		delay_x100 = Fixed.from_typed(typed)
 
+## Spec item-power (Plague Crown): the row applies the effect the triggering event is about (a DoT tick's own effect, with
+## its damage values and types) instead of `effect`; an event without one applies `effect`.
+@export var event_effect: bool = false
+
 ## Saved forms (×100 whole numbers).
 @export_storage var flat_damage_x100: int = 0
 @export_storage var multiplier_x100: int = 10000
@@ -86,14 +95,26 @@ const TOUGHNESS_TAG: StringName = &"Data.Toughness"
 
 ## Puts this row's damage override and toughness damage on a spec through GodotGAS's SetByCaller mechanism, and its
 ## tags (damage types) on the spec as dynamic tags, so an ExecCalc can read them with spec.has_tag().
-func apply_override(spec: GameplayEffectSpec) -> void:
+## Spec item-power: `event` is the triggering event's payload (K6; null outside a trigger), `echo_scale` an echo's scale
+## (K7; 0 = not an echo), which scales the damage, the toughness damage and (through ECHO_SCALE_TAG) restores.
+func apply_override(spec: GameplayEffectSpec, event: Variant = null, echo_scale: int = 0) -> void:
+	var scale := echo_scale if echo_scale > 0 else Fixed.ONE_HUNDRED_PERCENT
 	match damage_mode:
 		DamageMode.FLAT:
-			spec.set_set_by_caller_magnitude(DAMAGE_FLAT_TAG, float(flat_damage_x100))
+			spec.set_set_by_caller_magnitude(DAMAGE_FLAT_TAG, float(Fixed.pct(flat_damage_x100, scale)))
 		DamageMode.SCALED:
-			spec.set_set_by_caller_magnitude(DAMAGE_MULTIPLIER_TAG, float(multiplier_x100))
+			spec.set_set_by_caller_magnitude(DAMAGE_MULTIPLIER_TAG, float(Fixed.pct(multiplier_x100, scale)))
+		DamageMode.EVENT_AMOUNT:
+			var amount: int = int(event.get("amount", 0)) if event is Dictionary else 0
+			amount = Fixed.pct(Fixed.pct(amount, multiplier_x100), scale)
+			spec.set_set_by_caller_magnitude(DAMAGE_FLAT_TAG, float(amount))
+			spec.set_set_by_caller_magnitude(EVENT_AMOUNT_TAG, float(amount))
+	if echo_scale > 0:
+		spec.set_set_by_caller_magnitude(ECHO_SCALE_TAG, float(echo_scale))
+		if damage_mode == DamageMode.USE_EFFECT:  # a damage ExecCalc without an override deals 100% ATK
+			spec.set_set_by_caller_magnitude(DAMAGE_MULTIPLIER_TAG, float(echo_scale))
 	if toughness_x100 > 0:
-		spec.set_set_by_caller_magnitude(TOUGHNESS_TAG, float(toughness_x100))
+		spec.set_set_by_caller_magnitude(TOUGHNESS_TAG, float(Fixed.pct(toughness_x100, scale)))
 	for tag in tags:
 		spec.inject_tag(tag)
 
@@ -107,9 +128,67 @@ func damage_types() -> Array[String]:
 	return result
 
 
-## Whether this row's effect is a debuff: it grants a Status.Debuff.* tag (spec content-pass H8).
+## The effect this row applies for `event`: the event's own effect with `event_effect`, else `effect`.
+func effect_for(event: Variant) -> GameplayEffect:
+	if event_effect and event is Dictionary and event.get("effect") is GameplayEffect:
+		return event["effect"]
+	return effect
+
+
+## Spec item-power: copies the damage values and Damage.Type.* tags of the event's spec onto `spec`, so a spread DoT ticks
+## like the one it came from.
+static func copy_event_values(spec: GameplayEffectSpec, event: Variant) -> void:
+	var from: GameplayEffectSpec = event.get("spec") if event is Dictionary else null
+	if from == null:
+		return
+	for tag in from.set_by_caller_magnitudes:
+		spec.set_set_by_caller_magnitude(tag, from.set_by_caller_magnitudes[tag])
+	for tag in from.dynamic_tags:
+		if String(tag).begins_with(Battle.DAMAGE_TYPE_PREFIX):
+			spec.inject_tag(tag)
+	if from.effect_def == spec.effect_def:
+		spec.mutated_magnitudes = from.mutated_magnitudes.duplicate()  # an echo's smaller tick stays small
+
+
+## Spec item-power: the turns a spread turn-based effect without a stack limit (StackingPolicy.FREE) gets: what the tick it
+## came from has left after it, so each spread is shorter; 0 = keep the effect's own turns (a stacking one is bounded by its stacks), -1 = it has none left to give.
+static func spread_turns(spec: GameplayEffectSpec, event: Variant) -> int:
+	var from: GameplayEffectSpec = event.get("spec") if event is Dictionary else null
+	if from == null or from.effect_def != spec.effect_def or spec.effect_def.policy != GameplayEffect.DurationPolicy.TURN_BASED \
+			or spec.effect_def.stacking_policy != GameplayEffect.StackingPolicy.FREE:
+		return 0
+	var left := int(event.get("turns", 0))
+	return left if left > 0 else -1
+
+
+## Spec item-power K7: scales the spec's own added amounts (a buff's +20% ATK, a poison's tick, a flat heal) by an echo's scale,
+## through GodotGAS's mutable magnitudes; effects that only grant tags (a stun) land whole, overrides and factors are kept.
+static func scale_modifiers(spec: GameplayEffectSpec, echo_scale: int) -> void:
+	var uses := {}  # GodotGAS overrides by attribute: one that two modifiers change is left whole
+	for modifier in spec.effect_def.modifiers:
+		if modifier != null:
+			uses[modifier.attribute_name] = int(uses.get(modifier.attribute_name, 0)) + 1
+	for modifier in spec.effect_def.modifiers:
+		if modifier == null or uses[modifier.attribute_name] > 1 or not spec.mutated_magnitudes.has(modifier.attribute_name) \
+				or modifier.magnitude_calculation != GameplayEffectModifier.MagnitudeCalculationType.STATIC \
+				or not modifier.operation in [GameplayEffectModifier.Operation.ADD, GameplayEffectModifier.Operation.PERCENT_ADD]:
+			continue
+		if not modifier is CombatModifier or modifier.scaling_curve != null:
+			continue
+		var scaled := CombatModifier.new()  # whole hundredths scaled with integers, then read the way the modifier is
+		scaled.operation = modifier.operation
+		scaled.value_x100 = Fixed.pct(modifier.value_x100, echo_scale)
+		spec.mutated_magnitudes[modifier.attribute_name] = scaled.calculate_magnitude(spec.level)
+
+
+## Whether this row's effect is a debuff.
 func applies_debuff() -> bool:
-	return effect != null and effect.granted_tags.any(
+	return is_debuff(effect)
+
+
+## Whether an effect is a debuff: it grants a Status.Debuff.* tag (spec content-pass H8).
+static func is_debuff(applied: GameplayEffect) -> bool:
+	return applied != null and applied.granted_tags.any(
 		func(tag) -> bool: return String(tag).begins_with(Battle.DEBUFF_TAG + "."))
 
 

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_bell.tscn" id="1_n6tvu"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_pdeev"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_5wmqd"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_t4b7r"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_aifo2"]
+
+[sub_resource type="Resource" id="Resource_8qmj7"]
+script = ExtResource("3_5wmqd")
+abilities = Array[PackedScene]([ExtResource("1_n6tvu")])
+
+[resource]
+script = ExtResource("5_aifo2")
+id = &"fixture.item.ip_bell"
+display_name = "Ip Bell"
+price = 3
+grants = SubResource("Resource_8qmj7")

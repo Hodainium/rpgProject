@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_koh81"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_2lmmi"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_eih0h"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/ip_reflect.tres" id="4_4vk7d"]
+
+[sub_resource type="Resource" id="Resource_1y8ei"]
+script = ExtResource("2_2lmmi")
+id = &"hit"
+effect = ExtResource("3_eih0h")
+damage_mode = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+
+[node name="IpReflect" type="Node" unique_id=2008831878]
+script = ExtResource("1_koh81")
+executions = Array[ExtResource("2_2lmmi")]([SubResource("Resource_1y8ei")])
+animation = ExtResource("4_4vk7d")
+ability_tag = &"Fixture.Ability.IpReflect"
+trigger_event_tag = &"Event.Damage.Taken"

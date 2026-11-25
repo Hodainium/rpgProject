@@ -9,6 +9,7 @@ const PINNED_ENGINE: String = "4.7.2.stable.mono"
 const REPLAY_SCENE: String = "res://combat/headless/replay_main.tscn"
 const TRACE_SCENE: String = "res://combat/headless/trace_main.tscn"
 const SkillPoints := preload("res://tests/combat/test_skill_points.gd")
+const ItemPower := preload("res://tests/combat/test_item_power.gd")
 
 
 static func _scenarios() -> Dictionary:
@@ -31,6 +32,11 @@ static func _scenarios() -> Dictionary:
 		# Spec skill-points: SP gained on basics, scaled costs, rank II replacing rank I, an enemy's secret skill and the
 		# read-only level.
 		"sp-seed-13": SkillPoints.sp_snapshot("13"),
+		# Spec item-power: the kernel hooks K1-K4, K5, K6-K7 and K8.
+		"proc-seed-17": ItemPower.proc_golden(),
+		"dying-seed-21": ItemPower.dying_golden(),
+		"echo-seed-23": ItemPower.echo_golden(),
+		"copies-seed-29": ItemPower.copies_golden(),
 	}
 
 
@@ -64,7 +70,9 @@ func test_golden_replays() -> void:
 		if name.ends_with(".json") and not name.ends_with(".result.json") and not name.ends_with(".trace.json"):
 			requests.append(name.trim_suffix(".json"))
 	requests.sort()
-	eq(Array(requests), ["auto-seed-4", "auto-seed-4-tampered-drop", "boss-seed-5", "break-seed-11", "duel-seed-1", "mirror-seed-9", "run-v2-seed-7",
+	eq(Array(requests), ["auto-seed-4", "auto-seed-4-tampered-drop", "boss-seed-5", "break-seed-11", "copies-seed-29",
+		"copies-seed-29-tampered-target", "duel-seed-1", "dying-seed-21", "dying-seed-21-tampered-target", "echo-seed-23",
+		"echo-seed-23-tampered-target", "mirror-seed-9", "proc-seed-17", "proc-seed-17-tampered-target", "run-v2-seed-7",
 		"sp-seed-13", "sp-seed-13-tampered-cost", "sp-seed-13-tampered-unlearned", "squad-seed-42",
 		"squad-seed-42-tampered-final", "squad-seed-42-tampered-target", "status-seed-3", "status-seed-3-tampered-skip",
 		"ult-close-seed-2-tampered-outcome", "ult-seed-7", "ult-seed-7-tampered-turn"], "golden set")
@@ -149,7 +157,7 @@ func _replay_reordered(mode: String) -> void:
 		DirAccess.remove_absolute(request_path)
 		DirAccess.remove_absolute(out_path)
 		replayed_count += 1
-	check(replayed_count >= 18, "every golden was replayed (%d)" % replayed_count)
+	check(replayed_count >= 26, "every golden was replayed (%d)" % replayed_count)
 	check(changed >= replayed_count / 2, "the reordering really changed the requests (%d of %d)" % [changed, replayed_count])
 
 
@@ -243,12 +251,31 @@ func _write_goldens() -> void:
 	# Spec skill-points: a rank I cast the chanter couldn't pay for, and a rank I cast after rank II replaced it (2002).
 	requests["sp-seed-13-tampered-cost"] = SkillPoints.sp_tampered_cost(requests["sp-seed-13"])
 	requests["sp-seed-13-tampered-unlearned"] = SkillPoints.sp_tampered_unlearned(requests["sp-seed-13"])
+	# Spec item-power 4: procs are re-simulated, never logged, so a tampered battle is one where another enemy was hit: every
+	# later roll and proc differs (2002).
+	for name in ["proc-seed-17", "dying-seed-21", "echo-seed-23", "copies-seed-29"]:
+		requests[name + "-tampered-target"] = await _retargeted(requests[name])
 	for name in requests:
 		_write(GOLDEN + name + ".json", WireJson.stringify(requests[name]))
 		var replayed := _replay_fresh_process(GOLDEN + name + ".json")
 		_write(GOLDEN + name + ".result.json", replayed["text"])
 		_write(GOLDEN + name + ".trace.json", _trace_fresh_process(GOLDEN + name + ".json"))
 	print("    goldens rewritten under ", GOLDEN)
+
+
+## The first copy of a request with one party entry aimed at another enemy that the verifier rejects.
+func _retargeted(request: Dictionary) -> Dictionary:
+	for index in request["actionLog"]["actions"].size():
+		var target := str(request["actionLog"]["actions"][index].get("target", ""))
+		for other in ["E1", "E2", "E3"]:
+			if not target.begins_with("E") or other == target:
+				continue
+			var tampered := copy(request)
+			tampered["actionLog"]["actions"][index]["target"] = other
+			if (await replay(copy(tampered))).get("verdict") == "Rejected":
+				return tampered
+	check(false, "no tampered copy of %s is rejected" % request["snapshot"]["battleId"])
+	return copy(request)
 
 
 ## Spec auto-battle: the v2 party (the knight with the Flask and the Feather, a hurt medic, a dead rogue) against the

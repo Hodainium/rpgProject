@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_splash.tscn" id="1_00y2f"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_6ixtj"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_rojmr"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_nmmm7"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_wj2r4"]
+
+[sub_resource type="Resource" id="Resource_l74cr"]
+script = ExtResource("3_rojmr")
+abilities = Array[PackedScene]([ExtResource("1_00y2f")])
+
+[resource]
+script = ExtResource("5_wj2r4")
+id = &"fixture.item.ip_splash"
+display_name = "Ip Splash"
+price = 3
+grants = SubResource("Resource_l74cr")

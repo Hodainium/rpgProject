@@ -15,11 +15,21 @@ enum Targeting {
 	SELF,          ## The actor.
 	SINGLE_DEAD_ALLY,  ## One dead unit on the actor's side (revives). v2 battles and the field only.
 	ALL_DEAD_ALLIES,   ## Every dead unit on the actor's side.
+	RANDOM_ENEMY,        ## Spec item-power K4: one opposing unit that is up, drawn on the battle RNG at activation.
+	RANDOM_OTHER_ENEMY,  ## The same draw among the opposing units other than the one the triggering event is about.
+	OTHER_ENEMIES,       ## Every opposing unit other than the one the triggering event is about (no draw).
 }
 
 ## A triggered ability with this asset tag is a follow-up attack (spec item-pass 3.1): its hits carry Hit.FollowUp and
 ## the battle sends Event.Attack.FollowUp when it fires. It is still a passive: never an action, never logged.
 const FOLLOW_UP_TAG: StringName = &"Ability.Type.FollowUp"
+## Spec item-power K7: a triggered ability with this asset tag re-runs the triggering ability's rows at echo_scale.
+const ECHO_TAG: StringName = &"Ability.Type.Echo"
+## Spec item-power: a triggered attack that is not a follow-up (its hits feed follow-ups) but plays on screen like one.
+## Presentation only: the kernel never reads it.
+const STRIKE_TAG: StringName = &"Ability.Type.Strike"
+## A basic attack (spec skill-points): never a skill (Event.Ability.Used.Skill).
+const BASIC_TAG: StringName = &"Ability.Type.Basic"
 ## An ability with this asset tag is an ult (spec ult-interrupts): never a turn action, cast only as an interrupt at an
 ## ult window. Its cost effect (ult charge) decides when it can fire.
 const ULTIMATE_TAG: StringName = &"Ability.Type.Ultimate"
@@ -38,6 +48,22 @@ const USAGE_BOTH: int = 3
 ## signature look). Plain GAS cue tags (the kernel names no effect and a headless run suppresses cues), so a cue entry decides what
 ## plays; never read by the log, the trace or the hash. The cue's payload carries `target_ids`: every unit the ability reaches.
 @export_custom(PROPERTY_HINT_NONE, "gas::tag") var cast_cue_tags: Array[StringName] = []
+## Spec item-power K3: the chance (typed %, e.g. 30) that a queued trigger of this ability fires: one battle-RNG roll per
+## queued trigger, in queue order. 0 (unset) and 100 always fire and draw nothing. Triggered abilities only.
+@export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var trigger_chance: float:
+	get:
+		return Fixed.to_display(trigger_chance_x100)
+	set(typed):
+		trigger_chance_x100 = Fixed.from_typed(typed)
+## Spec item-power K7: the share (typed %, e.g. 60) an echo re-runs the triggering ability at (with Ability.Type.Echo).
+@export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var echo_scale: float:
+	get:
+		return Fixed.to_display(echo_scale_x100)
+	set(typed):
+		echo_scale_x100 = Fixed.from_typed(typed)
+## Saved forms (×100 whole numbers).
+@export_storage var trigger_chance_x100: int = 0
+@export_storage var echo_scale_x100: int = 0
 ## What each hit does. The animation decides which rows run, how often and when.
 @export var executions: Array[ExecutionRow] = []
 ## Required. Its `execute(&"<row id>")` method-track keys are the source of truth for the execution sequence.
@@ -59,7 +85,18 @@ func targets_dead() -> bool:
 
 ## True for enemy targeting (not usable in the field, where there are no enemies).
 func targets_enemies() -> bool:
-	return targeting in [Targeting.SINGLE_ENEMY, Targeting.BLAST_ENEMY, Targeting.ALL_ENEMIES]
+	return targeting in [Targeting.SINGLE_ENEMY, Targeting.BLAST_ENEMY, Targeting.ALL_ENEMIES, Targeting.RANDOM_ENEMY,
+		Targeting.RANDOM_OTHER_ENEMY, Targeting.OTHER_ENEMIES]
+
+
+## Spec item-power K4: the battle picks the targets itself (a draw, or every enemy but one).
+func picks_own_targets() -> bool:
+	return targeting in [Targeting.RANDOM_ENEMY, Targeting.RANDOM_OTHER_ENEMY, Targeting.OTHER_ENEMIES]
+
+
+## Spec item-power K4: never the unit the triggering event is about.
+func spares_event_target() -> bool:
+	return targeting in [Targeting.RANDOM_OTHER_ENEMY, Targeting.OTHER_ENEMIES]
 
 
 ## A passive that fires from a gameplay event (GodotGAS trigger_event_tag). Never chosen as an action.
@@ -70,6 +107,16 @@ func is_triggered() -> bool:
 ## A triggered passive tagged Ability.Type.FollowUp.
 func is_follow_up() -> bool:
 	return is_triggered() and asset_tags.has(FOLLOW_UP_TAG)
+
+
+## Spec item-power K7: a triggered ability tagged Ability.Type.Echo.
+func is_echo() -> bool:
+	return is_triggered() and asset_tags.has(ECHO_TAG)
+
+
+## Presentation: a triggered ability that plays its animation like an attack (a follow-up, or an Ability.Type.Strike proc).
+func plays_like_attack() -> bool:
+	return is_follow_up() or (is_triggered() and asset_tags.has(STRIKE_TAG))
 
 
 ## An action ability tagged Ability.Type.Ultimate.
@@ -114,17 +161,22 @@ func _activate_ability() -> bool:
 	var battle: Battle = action["battle"]
 	var unit: BattleUnit = action["unit"]
 	commit_ability()
-	if not cast_cue_tags.is_empty() and owner_asc != null:
+	# Spec item-power K7: an echo plays and resolves the ability it repeats.
+	var played: BattleAbility = action.get("echo", self)
+	if not played.cast_cue_tags.is_empty() and owner_asc != null:
 		# The cue's payload says which units the ability reaches (GameplayCue parameters, as in Unreal), so a cue can play an effect on each.
 		var reached: Array[StringName] = []
 		for reached_unit in action.get("targets", []):
 			reached.append(reached_unit.unit_id)
-		for cue_tag in cast_cue_tags:
+		for cue_tag in played.cast_cue_tags:
 			owner_asc.execute_cue(cue_tag, {"target_ids": reached})
-	var sequence := ExecutionReader.sequence_for(animation)
-	battle.gate.begin_ability(unit.unit_id, self, sequence)
+	var sequence := ExecutionReader.sequence_for(played.animation)
+	battle.gate.chained = is_triggered() and battle.triggers.attacks > 0
+	if is_triggered() and (plays_like_attack() or played != self):
+		battle.triggers.attacks += 1
+	battle.gate.begin_ability(unit.unit_id, played, sequence)
 	for row_id in sequence:
 		await battle.gate.next_execution()
-		battle.resolve_execution(unit, self, row_by_id(row_id), action)
+		battle.resolve_execution(unit, played, played.row_by_id(row_id), action)
 	await battle.gate.finished()
 	return true

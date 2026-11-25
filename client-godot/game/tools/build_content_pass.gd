@@ -86,7 +86,7 @@ func _statuses() -> void:
 	# Instants for triggered passives.
 	_save("effects/overcharge_refund", _instant({"energy": 20}))
 	_save("effects/siphon_charge", _instant({"energy": 10}))
-	_save("effects/mirror_heal", _instant({"hp": 60}))
+	_save("effects/mirror_heal", _flat_heal(60))
 	# Toxic Echo's follow-up only lands on a poisoned target (the effect's application query).
 	var echo := GameplayEffect.new()
 	echo.policy = GameplayEffect.DurationPolicy.INSTANT

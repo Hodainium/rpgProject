@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_q1u01"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_waqs6"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/ip_rise.tres" id="3_m8sxm"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/ip_saved.tres" id="4_ti0mq"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/ip_undying.tres" id="5_p1dya"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="6_1px68"]
+
+[sub_resource type="Resource" id="Resource_3moki"]
+script = ExtResource("2_waqs6")
+id = &"rise"
+effect = ExtResource("3_m8sxm")
+
+[sub_resource type="Resource" id="Resource_a4iik"]
+script = ExtResource("2_waqs6")
+id = &"saved"
+effect = ExtResource("4_ti0mq")
+
+[sub_resource type="Resource" id="Resource_wduov"]
+script = ExtResource("6_1px68")
+ignore_tags = Array[StringName]([&"State.DeathSaved"])
+
+[node name="IpUndying" type="Node" unique_id=1316672601]
+script = ExtResource("1_q1u01")
+targeting = 5
+executions = Array[ExtResource("2_waqs6")]([SubResource("Resource_3moki"), SubResource("Resource_a4iik")])
+animation = ExtResource("5_p1dya")
+ability_tag = &"Fixture.Ability.IpUndying"
+activation_query = SubResource("Resource_wduov")
+trigger_event_tag = &"Event.Unit.Dying"

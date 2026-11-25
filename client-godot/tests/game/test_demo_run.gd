@@ -517,7 +517,7 @@ func test_demo_endings() -> void:
 	check(not content.units[&"demo.enemy.nameless"].mirror_party_items, "the Nameless does not")
 	var corrupted := content.items.values().filter(func(item) -> bool: return item.tags.has(&"Item.Corrupted")).size() \
 		+ content.equipment.values().filter(func(piece) -> bool: return piece.tags.has(&"Item.Corrupted")).size()
-	eq(corrupted, 16, "sixteen corrupted items (spec skill-points D8 adds the Corrupted Sigil)")
+	eq(corrupted, 22, "twenty-two corrupted items (spec skill-points D8 adds the Corrupted Sigil, item-power the 6 Void trades)")
 
 
 ## Spec playable-demo 3.9 (D22): Immune.<Status> refuses that status, Immune.Debuff refuses every debuff, through each

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_vow.tscn" id="1_sbuyc"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_vow_heal.tscn" id="2_5vau5"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_rv0pk"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_jali2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_ykscp"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_ofgku"]
+
+[sub_resource type="Resource" id="Resource_47eok"]
+script = ExtResource("4_jali2")
+abilities = Array[PackedScene]([ExtResource("1_sbuyc"), ExtResource("2_5vau5")])
+
+[resource]
+script = ExtResource("6_ofgku")
+id = &"fixture.item.ip_vow"
+display_name = "Ip Vow"
+price = 3
+grants = SubResource("Resource_47eok")

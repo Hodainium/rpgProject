@@ -13,7 +13,7 @@ const SINGLE_DOOR_MASKS: Array[int] = [1, 2, 4, 8]
 ## Spec item-pass 3.5: a trigger in one of the battle's event families must be an event the battle sends (typos such as
 ## Event.Damage.Delt never fire). Other triggers (e.g. an effect's own event_tags) aren't checked.
 const BATTLE_EVENT_PREFIXES: Array[String] = ["Event.Damage.", "Event.Unit.", "Event.Battle.", "Event.Turn.",
-	"Event.Ability.", "Event.Attack.", "Event.Status."]
+	"Event.Ability.", "Event.Attack.", "Event.Status.", "Event.Ally."]
 ## Spec content-pass 2.4: affinity tag prefixes, one per damage type each (Drain > Weak > Resist in the ExecCalc).
 const AFFINITY_PREFIXES: Array[String] = ["Weakness.", "Resist.", "Drain."]
 
@@ -503,6 +503,7 @@ func _check_rows(scene: PackedScene, path: String) -> void:
 	var ability := scene.instantiate() as BattleAbility
 	if ability == null:
 		return
+	_check_procs(ability, path)
 	for row in ability.executions:
 		if row == null or row.effect == null:
 			continue
@@ -516,6 +517,35 @@ func _check_rows(scene: PackedScene, path: String) -> void:
 		_check_immunity(effect, path)
 		_check_level_writes(effect, path)
 	ability.free()
+
+
+## Spec item-power 6: a trigger chance on an ability that is no trigger (trigger_chance_on_action), a random enemy target on a
+## move that heals or buffs (random_target_on_ally), an echo that no Ability.Used event triggers or without its tag or scale
+## (echo_without_trigger), an event amount where no event carries one (event_amount_outside_trigger), and a row applying the
+## event's effect where the event has none (event_effect_outside_tick, a warning).
+func _check_procs(ability: BattleAbility, path: String) -> void:
+	var trigger := String(ability.trigger_event_tag)
+	if ability.trigger_chance_x100 > 0 and not ability.is_triggered():
+		_error("trigger_chance_on_action", path, "%s has a trigger chance but no trigger" % ability.ability_tag)
+	var echo_tag := ability.asset_tags.has(BattleAbility.ECHO_TAG)
+	if echo_tag or ability.echo_scale_x100 > 0:
+		var used := trigger.begins_with(String(Battle.EVENT_ABILITY_USED)) or trigger == String(Battle.EVENT_ALLY_ULTIMATE)
+		if not used or not echo_tag or ability.echo_scale_x100 <= 0:
+			_error("echo_without_trigger", path, "%s: an echo needs a trigger on %s*, the tag %s and an echo scale" % [
+				ability.ability_tag, Battle.EVENT_ABILITY_USED, BattleAbility.ECHO_TAG])
+	for row in ability.executions:
+		if row == null:
+			continue
+		if ability.picks_own_targets() and row.effect != null and (FitProposal._heals(row.effect)
+				or row.effect.granted_tags.any(func(tag) -> bool: return String(tag).begins_with("Status.Buff."))):
+			_error("random_target_on_ally", path, "%s's row %s helps its target, but it aims at enemies" % [ability.ability_tag, row.id])
+		if row.damage_mode == ExecutionRow.DamageMode.EVENT_AMOUNT and not (trigger.begins_with(String(Battle.EVENT_DAMAGE_DEALT))
+				or trigger.begins_with(String(Battle.EVENT_DAMAGE_TAKEN)) or trigger == String(Battle.EVENT_ALLY_DAMAGE_TAKEN)):
+			_error("event_amount_outside_trigger", path, "%s's row %s reads the event's amount, but %s carries none" % [
+				ability.ability_tag, row.id, "no event" if trigger == "" else trigger])
+		if row.event_effect and not trigger.ends_with(".Dot"):
+			_warning("event_effect_outside_tick", path, "%s's row %s applies the event's effect, which only a DoT tick has" % [
+				ability.ability_tag, row.id])
 
 
 ## Spec playable-demo 3.9 (D22): a debuff effect refuses units immune to it, as GAS data: its application_query ignores
@@ -560,9 +590,10 @@ func _battle_events() -> Dictionary:
 	for tag in [Battle.EVENT_BATTLE_START, Battle.EVENT_TURN_START, Battle.EVENT_TURN_END, Battle.EVENT_DAMAGE_DEALT,
 			Battle.EVENT_DAMAGE_TAKEN, Battle.EVENT_UNIT_DIED, Battle.EVENT_ABILITY_USED, Battle.EVENT_ATTACK_FOLLOW_UP,
 			Battle.EVENT_UNIT_KILLED, Battle.EVENT_ONE_MORE, Battle.EVENT_TURN_SKIPPED, Battle.EVENT_STATUS_RESISTED,
-			Battle.EVENT_BATTLE_INTERRUPT, Battle.EVENT_PHASE_CHANGED]:
+			Battle.EVENT_BATTLE_INTERRUPT, Battle.EVENT_PHASE_CHANGED, Battle.EVENT_ALLY_DAMAGE_TAKEN, Battle.EVENT_ALLY_ULTIMATE,
+			Battle.EVENT_DOT_DEALT, Battle.EVENT_DOT_TAKEN, Battle.EVENT_SKILL_USED, Battle.EVENT_UNIT_DYING]:
 		_known_events[tag] = true
-	var kinds: Array = [Battle.HIT_BREAK, Battle.HIT_FOLLOW_UP, Battle.HIT_DRAINED, BattleAbility.ULTIMATE_TAG,
+	var kinds: Array = [Battle.HIT_BREAK, Battle.HIT_FOLLOW_UP, Battle.HIT_DRAINED, Battle.HIT_ECHO, BattleAbility.ULTIMATE_TAG,
 		BattleAbility.FOLLOW_UP_TAG]
 	var registry: GameplayTagRegistry = load(SETTINGS.get_registry_tag_path())
 	if registry != null:
@@ -1344,6 +1375,8 @@ func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition, 
 		# spec boss-drops: reward_recipient_ignored).
 		_error("give_choose_outside_event", where,
 			"GiveItem recipient CHOOSE only works in an event choice (a chest's or an encounter reward's item lands on the floor)")
+	if outcome is GiveItem and outcome.recipient == GiveItem.Recipient.HOLDER and not item_hook:
+		_error("give_holder_outside_item", where, "GiveItem recipient HOLDER only works in an item's run hooks")
 	if outcome == null:
 		_error("dangling_ref", where, "an empty outcome entry")
 	elif outcome is GiveItem and outcome.item == null and outcome.item_query == null:
@@ -1389,6 +1422,9 @@ func _check_outcome(outcome: RunOutcome, where: String, event: EventDefinition, 
 		# User, 2026-11-22 (option a): FLOOR wins, so the character the gift names would be silently ignored.
 		_warning("floor_ignores_character", where,
 			"this gift lands on the floor (recipient FLOOR), so its character %s is ignored" % outcome.character.id)
+	if outcome is GiveItem and outcome.recipient == GiveItem.Recipient.HOLDER and outcome.character != null:
+		_warning("holder_ignores_character", where,
+			"this gift goes to the item's holder (recipient HOLDER), so its character %s is ignored" % outcome.character.id)
 	if item_hook and _puts_on_floor(outcome):
 		_warning("give_floor_outside_room", where,
 			"FLOOR / on_floor in an item hook lands on the floor only while an event is open; otherwise it is given directly")

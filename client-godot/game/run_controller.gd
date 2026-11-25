@@ -2150,6 +2150,7 @@ func apply_member_effect(effect: GameplayEffect, slots: Array, include_dead: boo
 ## becomes a pickup beside the chest instead, whatever `recipient` and `character` say.
 func give_item(item: ItemDefinition, query: GameplayTagQuery, character: CharacterDefinition,
 		recipient: int = GiveItem.Recipient.FIRST, slot_named: int = 1) -> void:
+	var picked := item == null
 	if item == null:
 		var gift_rng := _chest_rng
 		if gift_rng == null:  # spec keys-and-gear 2.3: a chest's gifts draw from the chest's own stream
@@ -2171,6 +2172,14 @@ func give_item(item: ItemDefinition, query: GameplayTagQuery, character: Charact
 			_found_pickup(item, _event_room())  # spec event-pass 2.1: on the event room's floor, taken with take()
 			return
 		_warn("%s: FLOOR outside a room; given to the first member who can hold it" % item.id)
+		recipient = GiveItem.Recipient.FIRST
+	if recipient == GiveItem.Recipient.HOLDER:
+		# Spec item-power: the member whose item's run hook this is, dead or alive for a named passive (Philosopher's Coin keeps
+		# paying its holder); a usable item, or one picked from a pool (it may be food), needs a holder who can take it.
+		if hook_slot > 0 and (not (picked or item.is_usable()) or can_hold(hook_slot, item) == ""):
+			_give_to(hook_slot, item)
+			return
+		_warn("%s: its holder cannot take it; given to the first member who can" % item.id)
 		recipient = GiveItem.Recipient.FIRST
 	if _choose_off and recipient == GiveItem.Recipient.CHOOSE:
 		recipient = GiveItem.Recipient.FIRST  # the battle that wins the run: no pick can follow

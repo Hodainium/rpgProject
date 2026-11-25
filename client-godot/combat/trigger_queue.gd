@@ -12,6 +12,8 @@ const MAX_DEPTH: int = 10
 var draining: bool = false
 ## Depth of the entry being activated while draining; new entries go one deeper.
 var current_depth: int = 0
+## Triggered attacks (follow-ups, strikes, echoes) played in this drain. Presentation pacing only (spec item-power).
+var attacks: int = 0
 var _entries: Array[Dictionary] = []
 
 

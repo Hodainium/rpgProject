@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_pofsc"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_wrsy1"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/noop.tres" id="3_hb776"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/ip_spread.tres" id="4_f5ivv"]
+
+[sub_resource type="Resource" id="Resource_go78f"]
+script = ExtResource("2_wrsy1")
+id = &"spread"
+effect = ExtResource("3_hb776")
+event_effect = true
+
+[node name="IpSpread" type="Node" unique_id=862522592]
+script = ExtResource("1_pofsc")
+targeting = 9
+executions = Array[ExtResource("2_wrsy1")]([SubResource("Resource_go78f")])
+animation = ExtResource("4_f5ivv")
+ability_tag = &"Fixture.Ability.IpSpread"
+trigger_event_tag = &"Event.Damage.Dealt.Dot"
