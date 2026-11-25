@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_copy_hit.tscn" id="1_pybk2"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_r5fwj"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/ip_copy_power.tres" id="3_f6igh"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_axx0i"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_83r0j"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_7sl6u"]
+
+[sub_resource type="Resource" id="Resource_4h2eh"]
+script = ExtResource("4_axx0i")
+abilities = Array[PackedScene]([ExtResource("1_pybk2")])
+effects = Array[ExtResource("2_r5fwj")]([ExtResource("3_f6igh")])
+
+[resource]
+script = ExtResource("6_7sl6u")
+id = &"fixture.item.ip_copy"
+display_name = "Ip Copy"
+price = 3
+grants = SubResource("Resource_4h2eh")

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_kesjo"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_percent_of_max.gd" id="2_bs43k"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_pgb1y"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="4_jgt0x"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="5_placf"]
+
+[sub_resource type="Resource" id="Resource_kesjo"]
+script = ExtResource("2_bs43k")
+percent_x100 = 800
+source_bonus = "heal_mult"
+target_bonus = "heal_taken"
+
+[sub_resource type="Resource" id="Resource_bs43k"]
+script = ExtResource("4_jgt0x")
+value_x100 = 1500
+attribute_name = "energy"
+
+[resource]
+script = ExtResource("5_placf")
+application_cue_tags = Array[StringName]([&"Cue.Fx.Heal", &"Cue.Sfx.Heal"])
+executions = Array[ExtResource("1_kesjo")]([SubResource("Resource_kesjo")])
+modifiers = Array[ExtResource("3_pgb1y")]([SubResource("Resource_bs43k")])

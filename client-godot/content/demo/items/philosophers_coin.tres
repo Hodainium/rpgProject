@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="1_4ai1q"]
+[ext_resource type="Resource" path="res://content/demo/items/philosophers_gold.tres" id="2_28g6u"]
+[ext_resource type="Script" path="res://game/defs/outcomes/give_item.gd" id="3_ady2c"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="4_dox6k"]
+
+[sub_resource type="Resource" id="Resource_4ai1q"]
+script = ExtResource("3_ady2c")
+item = ExtResource("2_28g6u")
+recipient = 6
+
+[resource]
+script = ExtResource("4_dox6k")
+id = &"demo.item.philosophers_coin"
+display_name = "Philosopher's Coin"
+description = "At each floor's start: Philosopher's Gold (+5% ATK, DEF and max HP for the rest of the run; it adds up)."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Legendary", &"Card.Set.Core", &"Item.Fit.Damage", &"Item.Fit.Survival", &"Item.Fit.Run"])
+price = 12
+on_floor_start = Array[ExtResource("1_4ai1q")]([SubResource("Resource_4ai1q")])

@@ -382,6 +382,34 @@ func test_taunt_targeting() -> void:
 	eq(ids(battle.target_candidates(imp, bolt)), ["P1"], "a dead taunter taunts no more")
 
 
+## Spec item-power D21: a counter answers its attacker, past the taunt; a trigger of the enemy's own hit still goes to the taunter.
+func test_counters_ignore_taunt() -> void:
+	for event_tag in [Battle.EVENT_DAMAGE_TAKEN, Battle.EVENT_ALLY_DAMAGE_TAKEN]:
+		var battle := new_battle(status_snapshot())
+		var hexer := battle.unit_by_id(&"P1")
+		var guard := battle.unit_by_id(&"P2")
+		var imp := battle.unit_by_id(&"E3")
+		var counter: BattleAbility = load("res://tests/fixtures/abilities/ip_vow.tscn").instantiate()
+		counter.trigger_event_tag = event_tag
+		imp.asc.add_child(counter)
+		await battle._activate(guard, ability(guard, "Provoke"), null)
+		var hp := [hexer.stat(BattleUnit.HP), guard.stat(BattleUnit.HP)]
+		var victim := battle.unit_by_id(&"E1") if event_tag == Battle.EVENT_ALLY_DAMAGE_TAKEN else imp
+		await battle._activate(hexer, ability(hexer, "Strike"), victim)
+		await battle._drain_triggers()
+		check(hexer.stat(BattleUnit.HP) < hp[0], "%s: the attacker is struck" % event_tag)
+		eq(guard.stat(BattleUnit.HP), hp[1], "%s: not the taunter" % event_tag)
+		eq(battle._trigger_target(imp, counter, {"source": hexer, "target": imp}, &"Event.Damage.Taken.Weakness"), hexer,
+			"a counter to one kind of hit (Resound) answers its attacker too")
+		var own_hit := {"source": imp, "target": hexer}
+		eq(battle._trigger_target(imp, counter, own_hit, Battle.EVENT_DAMAGE_DEALT), guard, "its own hits' triggers still go to the taunter")
+		guard.asc.initialize_attribute_overrides({"hp": 0.0} as Dictionary[String, float])
+		eq(battle._trigger_target(imp, counter, own_hit, Battle.EVENT_DAMAGE_DEALT), hexer, "a taunter at 0 HP taunts no more")
+		guard.asc.initialize_attribute_overrides({"hp": 160000.0} as Dictionary[String, float])
+		hexer.alive = false
+		eq(battle._trigger_target(imp, counter, {"source": hexer, "target": imp}, event_tag), guard, "a dead attacker is not answered")
+
+
 func test_cleanse_and_dispel() -> void:
 	var battle := new_battle(status_snapshot())
 	var hexer := battle.unit_by_id(&"P1")

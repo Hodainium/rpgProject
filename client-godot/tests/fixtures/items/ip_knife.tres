@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_knife.tscn" id="1_rw63t"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_p5c7y"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_mpv4j"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_lfj16"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_tnxm1"]
+
+[sub_resource type="Resource" id="Resource_0bu74"]
+script = ExtResource("3_mpv4j")
+abilities = Array[PackedScene]([ExtResource("1_rw63t")])
+
+[resource]
+script = ExtResource("5_tnxm1")
+id = &"fixture.item.ip_knife"
+display_name = "Ip Knife"
+price = 3
+grants = SubResource("Resource_0bu74")

@@ -45,9 +45,9 @@ func _mp_percent(typed: float) -> GameplayEffect:
 ## keeps a stacking bonus (an AbilitySet with the set tag Item.Food, which the Collector's mirror skips).
 func _food() -> void:
 	var food := &"Pool.Food"
-	_save("effects/food_heal_15", _percent_of_max(15))
-	_save("effects/food_heal_30", _percent_of_max(30))
-	_save("effects/food_heal_25", _percent_of_max(25))
+	_save("effects/food_heal_15", _percent_heal(15))
+	_save("effects/food_heal_30", _percent_heal(30))
+	_save("effects/food_heal_25", _percent_heal(25))
 	_save("effects/food_mp_40", _mp_percent(33))  # the tuned 33% (the file keeps its old name)
 	# [name, title, tags, price, pickup effect, party-wide, bonus attribute, bonus as typed, percent, description]
 	for spec in [["rations", "Rations", [food, COMMON], 2, "food_heal_15", false, "max_hp", 40, false,
@@ -75,7 +75,7 @@ func _food() -> void:
 
 func _heal_party(name: String, percent: float, include_dead: bool) -> ApplyPartyEffect:
 	var heal := ApplyPartyEffect.new()
-	heal.effect = _save("effects/" + name, _percent_of_max(percent))
+	heal.effect = _save("effects/" + name, _percent_of_max(percent) if include_dead else _percent_heal(percent))
 	heal.include_dead = include_dead
 	return heal
 

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/blood_charm.tscn" id="1_3anrn"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_5jrug"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_6nyvb"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_cbpts"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_nonkc"]
+
+[sub_resource type="Resource" id="Resource_3anrn"]
+script = ExtResource("3_6nyvb")
+abilities = Array[PackedScene]([ExtResource("1_3anrn")])
+
+[resource]
+script = ExtResource("5_nonkc")
+id = &"demo.item.blood_charm"
+display_name = "Blood Charm"
+description = "On a kill: heal 8% of max HP and gain 15 ult charge."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Rare", &"Card.Set.Core", &"Item.Fit.Survival", &"Item.Fit.Ult"])
+price = 7
+grants = SubResource("Resource_3anrn")

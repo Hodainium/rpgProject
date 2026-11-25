@@ -131,11 +131,12 @@ func test_rarity_weights() -> void:
 	var rare: Array = []
 	var items: Array = []
 	var ids: Array = fixtures().items.keys()
-	ids.sort()
-	for index in ids.size():
-		var item: ItemDefinition = fixtures().items[ids[index]].duplicate()
+	ids.sort_custom(func(a, b) -> bool: return String(a) < String(b))  # by name: the pointer order differs per process
+	for id in ids:
+		var item: ItemDefinition = fixtures().items[id].duplicate()
 		if not item.tags.has(&"Fixture.Pool.Treasure"):
 			continue
+		var index := items.size()  # every second treasure item is Rare
 		var tags: Array[StringName] = item.tags.duplicate()
 		tags.append(&"Item.Rarity.Rare" if index % 2 == 0 else &"Item.Rarity.Common")
 		item.tags = tags

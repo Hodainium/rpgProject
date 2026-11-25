@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/plague_crown.tscn" id="1_vcgen"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/plague_crown_spread.tscn" id="2_t4qsg"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_pyjn5"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_4c1o2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_y35ec"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_8jseu"]
+
+[sub_resource type="Resource" id="Resource_vcgen"]
+script = ExtResource("4_4c1o2")
+abilities = Array[PackedScene]([ExtResource("1_vcgen"), ExtResource("2_t4qsg")])
+
+[resource]
+script = ExtResource("6_8jseu")
+id = &"demo.item.plague_crown"
+display_name = "Plague Crown"
+description = "Each tick of your DoTs: a follow-up of 50% ATK on that enemy, and one stack spreads to another enemy."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Legendary", &"Card.Set.Descent", &"Item.Fit.FollowUp", &"Item.Fit.Dot", &"Item.Grants.FollowUp", &"Item.Grants.Dot"])
+price = 12
+grants = SubResource("Resource_vcgen")

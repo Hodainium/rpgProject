@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_cvbgi"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_y0eq0"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_6yjxa"]
+[ext_resource type="Animation" path="res://content/demo/animations/executioners_seal.tres" id="4_48t15"]
+
+[sub_resource type="Resource" id="Resource_cvbgi"]
+script = ExtResource("2_y0eq0")
+id = &"execute"
+effect = ExtResource("3_6yjxa")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 6000
+
+[node name="SunHeart" type="Node" unique_id=834031964]
+script = ExtResource("1_cvbgi")
+targeting = 10
+asset_tags = Array[StringName]([&"Ability.Type.Strike"])
+executions = Array[ExtResource("2_y0eq0")]([SubResource("Resource_cvbgi")])
+animation = ExtResource("4_48t15")
+description = "Basic attacks also hit every other enemy for 60% ATK Physical."
+ability_name = "Sun Heart"
+ability_tag = &"Ability.Passive.SunHeart"
+trigger_event_tag = &"Event.Ability.Used.Basic"

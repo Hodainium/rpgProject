@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/lifebloom_seed.tscn" id="1_oraq1"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_yrs14"]
+[ext_resource type="Resource" path="res://content/demo/effects/lifebloom_seed.tres" id="3_s306w"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_nig0i"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_fmiiw"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_03yn7"]
+
+[sub_resource type="Resource" id="Resource_oraq1"]
+script = ExtResource("4_nig0i")
+abilities = Array[PackedScene]([ExtResource("1_oraq1")])
+effects = Array[ExtResource("2_yrs14")]([ExtResource("3_s306w")])
+
+[resource]
+script = ExtResource("6_03yn7")
+id = &"demo.item.lifebloom_seed"
+display_name = "Lifebloom Seed"
+description = "The party: +10% max HP, and Regen at battle start (8% of max HP for 3 turns)."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.Survival", &"Item.Fit.Party"])
+price = 9
+grants = SubResource("Resource_oraq1")
+applies_to = 1

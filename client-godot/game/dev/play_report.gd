@@ -66,6 +66,10 @@ static func many_seeds(content: ContentIndex, host: Node, seeds: Array, options:
 	return report
 
 
+static var _proc_content: ContentIndex = null
+static var _proc_table: Dictionary = {}
+
+
 ## Spec playable-demo 2.3d: one report from shards of the same options (each shard's "records" and "options"),
 ## exactly as if the seeds had run in one process: the records are joined in seed order and summarized again.
 static func merge(shards: Array) -> Dictionary:
@@ -221,6 +225,7 @@ static func fight_pending(run: RunController, content: ContentIndex, host: Node,
 				var key := "%s:%s" % [String(actor.definition.id).trim_prefix("demo.enemy."), tag]
 				if secret.has(key):
 					secret[key]["uses"] += 1)
+		_watch_procs(battle, content, record)
 		if boss:
 			record["bossEntry"].append(seen["health"])
 		battle.battle_ended.connect(func(_outcome, _hash):
@@ -273,6 +278,95 @@ static func fight_pending(run: RunController, content: ContentIndex, host: Node,
 	await replay_trace.run_on(request, content, host)
 	record["failures"].append({"where": where, "request": request, "replayTrace": replay_trace.trace.to_json(),
 		"recordTrace": seen["checker"].to_json() if seen["checker"] != null and opts["trace"] else null})
+
+
+## Spec item-power 5: counts the triggers that use an item-power hook (K1-K8) and, for the party, the item or piece each came
+## from, and the chains the depth cap stopped. From the battle's read-only signals.
+static func _watch_procs(battle: Battle, content: ContentIndex, record: Dictionary) -> void:
+	var items := _proc_items(content)
+	battle.trigger_activated.connect(func(unit_id: StringName, tag: StringName, event: StringName) -> void:
+		var unit := battle.unit_by_id(unit_id)
+		var ability := unit.ability_by_tag(tag) if unit != null else null
+		if ability == null:
+			return
+		var hooks := hooks_of(unit, ability, event)
+		if hooks.is_empty():
+			return
+		var procs: Dictionary = record.get_or_add("procs", {"hooks": {}, "items": {}, "chainCapHits": 0})
+		for hook in hooks:
+			SeedReport._count(procs["hooks"], hook)
+		if unit.is_party() and items.has(tag):
+			SeedReport._count(procs["items"], items[tag]))
+	battle.battle_ended.connect(func(_outcome: String, _hash: String) -> void:
+		if battle.chain_cap_hits > 0:
+			var procs: Dictionary = record.get_or_add("procs", {"hooks": {}, "items": {}, "chainCapHits": 0})
+			procs["chainCapHits"] = int(procs["chainCapHits"]) + battle.chain_cap_hits)
+
+
+## The item-power hooks a fired trigger used: K1 ally event, K2 DoT tick, K3 chance, K4 random target, K5 dying, K6 event
+## amount, K7 echo, K8 copy.
+static func hooks_of(unit: BattleUnit, ability: BattleAbility, event: StringName) -> Array[String]:
+	var hooks: Array[String] = []
+	if String(event).begins_with(Battle.ALLY_EVENT_PREFIX):
+		hooks.append("K1 ally")
+	if event in [Battle.EVENT_DOT_DEALT, Battle.EVENT_DOT_TAKEN]:
+		hooks.append("K2 dot")
+	if ability.trigger_chance_x100 > 0:
+		hooks.append("K3 chance")
+	if ability.picks_own_targets():
+		hooks.append("K4 random")
+	if event == Battle.EVENT_UNIT_DYING:
+		hooks.append("K5 dying")
+	if ability.executions.any(func(row) -> bool: return row != null and row.damage_mode == ExecutionRow.DamageMode.EVENT_AMOUNT):
+		hooks.append("K6 amount")
+	if ability.is_echo():
+		hooks.append("K7 echo")
+	if unit.abilities().filter(func(other: BattleAbility) -> bool: return other.ability_tag == ability.ability_tag).size() > 1:
+		hooks.append("K8 copy")
+	return hooks
+
+
+## Passive ability tag -> the id of the item or piece that grants it. Read once per content index.
+static func _proc_items(content: ContentIndex) -> Dictionary:
+	if _proc_content == content:
+		return _proc_table
+	_proc_content = content
+	_proc_table = {}
+	for index in [content.items, content.equipment]:
+		for id in _sorted_keys(index):
+			var grants: AbilitySet = index[id].grants
+			if grants == null:
+				continue
+			for scene in grants.abilities:
+				_proc_table[SkillTags.tag_of(scene)] = String(id)
+	return _proc_table
+
+
+## The report's "procs" block: fires per hook and per item, in all and per battle (×100), and the chain cap's hits. {} when no
+## run had any.
+@warning_ignore("integer_division")
+static func proc_block(runs: Array[Dictionary]) -> Dictionary:
+	var block := {"battles": 0, "hooks": {}, "items": {}, "chainCapHits": 0}
+	var any := false
+	for record in runs:
+		block["battles"] += record["battles"].size()
+		var procs: Dictionary = record.get("procs", {})
+		if procs.is_empty():
+			continue
+		any = true
+		block["chainCapHits"] += int(procs["chainCapHits"])
+		for kind in ["hooks", "items"]:
+			for key in procs[kind]:
+				var row: Dictionary = block[kind].get_or_add(key, {"fires": 0, "perBattleX100": 0, "runs": 0})
+				row["fires"] += int(procs[kind][key])
+				row["runs"] += 1
+	if not any:
+		return {}
+	for kind in ["hooks", "items"]:
+		for key in block[kind]:
+			block[kind][key]["perBattleX100"] = block[kind][key]["fires"] * 100 / maxi(block["battles"], 1)
+		block[kind] = SeedReport._sorted(block[kind])
+	return block
 
 
 ## True when the verifier's result is not the recording's: another verdict, hash or outcome. A battle that hit the
@@ -659,6 +753,9 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 			total["uses"] += int(by_skill[key]["uses"])
 	report["levelSkills"] = SeedReport._sorted(learned)
 	report["secretSkills"] = SeedReport._sorted(secret)
+	var procs := proc_block(runs)
+	if not procs.is_empty():
+		report["procs"] = procs
 	report["analysis"] = analyze(runs, report["byCharacter"])
 	if runs.any(func(record: Dictionary) -> bool: return record.has("bot")):
 		report.merge(bot_blocks(runs, report["winPercentX100"]), true)
@@ -988,6 +1085,14 @@ static func text(report: Dictionary) -> String:
 	for violation in report["violations"].slice(0, 20):
 		lines.append("    seed %d, floor %d, battle %d (%s): %s %s" % [violation["seed"], violation["floor"],
 			violation["battle"], violation["encounter"], violation["invariant"], violation.get("detail", "")])
+	if report.has("procs"):
+		var procs: Dictionary = report["procs"]
+		lines.append("  procs over %d battles (chain cap hit %d times):" % [int(procs["battles"]), int(procs["chainCapHits"])])
+		for kind in ["hooks", "items"]:
+			for key in procs[kind]:
+				var row: Dictionary = procs[kind][key]
+				lines.append("    %-44s %d fires, %s per battle, in %d runs" % [key, int(row["fires"]),
+					str(int(row["perBattleX100"]) / 100.0), int(row["runs"])])
 	if report.has("hashTiming"):
 		var timing: Dictionary = report["hashTiming"]
 		lines.append("  run hash: %d hashes, mean %d us, max %d us (floor %d), budget %d us" % [timing["hashes"], timing["meanUsec"],

@@ -49,6 +49,7 @@ func _ready() -> void:
 	_build_full_descent()
 	_build_keys_and_gear()
 	_build_skill_points()
+	_build_item_power()
 	_build_views()
 	print("Fixtures under %s: %d file(s) written" % [ROOT, _written])
 	get_tree().quit(0)
@@ -160,7 +161,7 @@ func _row(id: String, effect_name: String, mode: ExecutionRow.DamageMode, typed:
 
 
 ## extras (run-world abilities): "cost": GameplayEffect, "query": GameplayTagQuery, "trigger": StringName,
-## "asset_tags": Array (e.g. Ability.Type.FollowUp).
+## "asset_tags": Array (e.g. Ability.Type.FollowUp), "chance": trigger chance (typed %), "echo": echo scale (typed %).
 func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, rows: Array, execute_keys: Array,
 		other_keys: Array = [], script: Script = null, extras: Dictionary = {}) -> void:
 	var path := ROOT + "abilities/%s.tscn" % name
@@ -192,6 +193,8 @@ func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, row
 	ability.activation_query = extras.get("query")
 	ability.trigger_event_tag = extras.get("trigger", &"")
 	ability.asset_tags.assign(extras.get("asset_tags", []))
+	ability.trigger_chance_x100 = Fixed.from_typed(extras.get("chance", 0))
+	ability.echo_scale_x100 = Fixed.from_typed(extras.get("echo", 0))
 	if not ability.is_triggered():
 		ability.asset_tags.append_array(ROLE_OVERRIDES.get(name, RolePass.roles_of(ability)))
 	var scene := PackedScene.new()
@@ -848,6 +851,88 @@ func _build_skill_points() -> void:
 		slot.level_bonus = bonus
 		trial.slots.append(slot)
 	_save_world("encounters", "sp_trial", trial)
+
+
+## Spec item-power 2.1: one item per kernel hook, held by the content-pass and skill-points fixture characters. Nothing carries a
+## pool or chapter tag, so floor generation and the run goldens never see them.
+func _build_item_power() -> void:
+	var D := ExecutionRow.DamageMode
+	var T := ExecutionRow.Targets
+	var B := BattleAbility.Targeting
+	var physical := [&"Damage.Type.Physical"]
+	var follow_up := {"asset_tags": [BattleAbility.FOLLOW_UP_TAG]}
+	var by_caller := GameplayEffect.new()
+	by_caller.policy = GameplayEffect.DurationPolicy.INSTANT
+	var amount := _modifier("hp", GameplayEffectModifier.Operation.ADD, 0)
+	amount.magnitude_calculation = GameplayEffectModifier.MagnitudeCalculationType.SET_BY_CALLER
+	amount.set_by_caller_tag = ExecutionRow.EVENT_AMOUNT_TAG
+	by_caller.modifiers.append(amount)
+	_save_effect("ip_event_heal", by_caller)
+	_save_effect("ip_rise", _instant("hp", 300))
+	_save_effect("ip_saved", _granting([&"State.DeathSaved"]))
+	_save_effect("ip_copy_power", _infinite("atk", GameplayEffectModifier.Operation.PERCENT_ADD, 10))
+
+	# K1: counters and a heal for the ally that was hit; a follow-up after an ally's ult.
+	_ability("ip_vow", "Fixture.Ability.IpVow", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 20, T.ALL, physical)],
+		[[0.1, "hit"]], [], null, follow_up.merged({"trigger": Battle.EVENT_ALLY_DAMAGE_TAKEN}))
+	_ability("ip_vow_heal", "Fixture.Ability.IpVowHeal", B.SINGLE_ALLY, [_row("heal", "heal", D.USE_EFFECT, 0, T.ALL)],
+		[[0.1, "heal"]], [], null, {"trigger": Battle.EVENT_ALLY_DAMAGE_TAKEN})
+	_ability("ip_ult_echo", "Fixture.Ability.IpUltEcho", B.RANDOM_ENEMY, [_row("hit", "damage", D.FLAT, 30, T.ALL, physical)],
+		[[0.1, "hit"]], [], null, follow_up.merged({"trigger": Battle.EVENT_ALLY_ULTIMATE}))
+	# K2: a follow-up per DoT tick, and the tick's own effect spread to another enemy.
+	_ability("ip_plague", "Fixture.Ability.IpPlague", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 15, T.ALL, physical)],
+		[[0.1, "hit"]], [], null, follow_up.merged({"trigger": Battle.EVENT_DOT_DEALT}))
+	var spread := _row("spread", "noop", D.USE_EFFECT, 0, T.ALL)
+	spread.event_effect = true
+	_ability("ip_spread", "Fixture.Ability.IpSpread", B.RANDOM_OTHER_ENEMY, [spread], [[0.1, "spread"]], [], null,
+		{"trigger": Battle.EVENT_DOT_DEALT})
+	# K3, K4: chances and random targets.
+	_ability("ip_bell", "Fixture.Ability.IpBell", B.ALL_ENEMIES, [_row("hit", "damage", D.SCALED, 20, T.ALL, physical)],
+		[[0.1, "hit"]], [], null, follow_up.merged({"trigger": Battle.EVENT_DAMAGE_DEALT, "chance": 30}))
+	_ability("ip_hook", "Fixture.Ability.IpHook", B.RANDOM_OTHER_ENEMY, [_row("hit", "damage", D.SCALED, 30, T.ALL, physical)],
+		[[0.1, "hit"]], [], null, follow_up.merged({"trigger": Battle.EVENT_DAMAGE_DEALT, "chance": 50}))
+	_ability("ip_knife", "Fixture.Ability.IpKnife", B.RANDOM_ENEMY, [_row("hit", "damage", D.FLAT, 80, T.ALL, physical)],
+		[[0.1, "hit"]], [], null, {"trigger": Battle.EVENT_UNIT_KILLED, "asset_tags": [BattleAbility.STRIKE_TAG]})
+	_ability("ip_splash", "Fixture.Ability.IpSplash", B.OTHER_ENEMIES, [_row("hit", "damage", D.FLAT, 25, T.ALL, physical)],
+		[[0.1, "hit"]], [], null, {"trigger": &"Event.Ability.Used.Basic", "asset_tags": [BattleAbility.STRIKE_TAG]})
+	_ability("ip_crown", "Fixture.Ability.IpCrown", B.RANDOM_ENEMY, [_row("hit", "damage", D.FLAT, 5, T.ALL, physical)],
+		[[0.1, "hit"]], [], null, follow_up.merged({"trigger": Battle.EVENT_ATTACK_FOLLOW_UP}))
+	# K5: one save per battle.
+	var not_saved := _query([])
+	not_saved.ignore_tags.assign([Battle.DEATH_SAVED_TAG])
+	_ability("ip_undying", "Fixture.Ability.IpUndying", B.SELF, [_row("rise", "ip_rise", D.USE_EFFECT, 0, T.ALL),
+		_row("saved", "ip_saved", D.USE_EFFECT, 0, T.ALL)], [[0.1, "rise"], [0.2, "saved"]], [], null,
+		{"trigger": Battle.EVENT_UNIT_DYING, "query": not_saved})
+	# K6: a reflect (damage) and a lifesteal (a heal) from the event's amount.
+	var reflect := _row("hit", "damage", D.EVENT_AMOUNT, 0, T.ALL, physical)
+	reflect.multiplier_x100 = Fixed.from_typed(50)
+	_ability("ip_reflect", "Fixture.Ability.IpReflect", B.SINGLE_ENEMY, [reflect], [[0.1, "hit"]], [], null,
+		{"trigger": Battle.EVENT_DAMAGE_TAKEN})
+	var drink := _row("heal", "ip_event_heal", D.EVENT_AMOUNT, 0, T.ALL)
+	drink.multiplier_x100 = Fixed.from_typed(25)
+	_ability("ip_drink", "Fixture.Ability.IpDrink", B.SELF, [drink], [[0.1, "heal"]], [], null,
+		{"trigger": Battle.EVENT_DAMAGE_DEALT})
+	# K7: skills cast again at 60%.
+	_ability("ip_twin", "Fixture.Ability.IpTwin", B.SELF, [], [[0.1, "none"]], [], null,
+		{"trigger": Battle.EVENT_SKILL_USED, "asset_tags": [BattleAbility.ECHO_TAG], "echo": 60})
+	# K8: a copy's trigger and effect.
+	_ability("ip_copy_hit", "Fixture.Ability.IpCopyHit", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 7, T.ALL, physical)],
+		[[0.1, "hit"]], [], null, follow_up.merged({"trigger": Battle.EVENT_DAMAGE_DEALT, "chance": 50}))
+
+	var party := {"applies_to": ItemDefinition.AppliesTo.PARTY}
+	_item("ip_vow", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_vow", "ip_vow_heal"], []))
+	_item("ip_ult_echo", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_ult_echo"], []), party)
+	_item("ip_plague", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_plague", "ip_spread"], []))
+	_item("ip_bell", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_bell"], []))
+	_item("ip_hook", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_hook"], []))
+	_item("ip_knife", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_knife"], []))
+	_item("ip_splash", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_splash"], []))
+	_item("ip_crown", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_crown"], []))
+	_item("ip_undying", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_undying"], []))
+	_item("ip_reflect", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_reflect"], []))
+	_item("ip_drink", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_drink"], []))
+	_item("ip_twin", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_twin"], []))
+	_item("ip_copy", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_copy_hit"], ["ip_copy_power"]))
 
 
 func _sp_cost(typed: float) -> GameplayEffect:

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/quick_draw.tscn" id="1_emysd"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_jh7pi"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_d3uws"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_c4rs0"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_j3qbd"]
+
+[sub_resource type="Resource" id="Resource_emysd"]
+script = ExtResource("3_d3uws")
+abilities = Array[PackedScene]([ExtResource("1_emysd")])
+
+[resource]
+script = ExtResource("5_j3qbd")
+id = &"demo.item.quick_draw"
+display_name = "Quick Draw"
+description = "A 40% action advance at battle start."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Rare", &"Card.Set.Core", &"Item.Fit.Speed"])
+price = 7
+grants = SubResource("Resource_emysd")

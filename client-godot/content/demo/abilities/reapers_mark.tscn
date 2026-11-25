@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_4tw4l"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_goeuk"]
+[ext_resource type="Resource" path="res://content/demo/effects/reapers_mark.tres" id="3_g0aoq"]
+[ext_resource type="Animation" path="res://content/demo/animations/momentum_charm.tres" id="4_woucw"]
+
+[sub_resource type="Resource" id="Resource_4tw4l"]
+script = ExtResource("2_goeuk")
+id = &"charge"
+effect = ExtResource("3_g0aoq")
+delay_x100 = -3000
+
+[node name="ReapersMark" type="Node" unique_id=1452403799]
+script = ExtResource("1_4tw4l")
+targeting = 5
+executions = Array[ExtResource("2_goeuk")]([SubResource("Resource_4tw4l")])
+animation = ExtResource("4_woucw")
+description = "On a kill: +25% ATK for 2 turns (up to 3 stacks) and a 30% action advance."
+ability_name = "Reaper's Mark"
+ability_tag = &"Ability.Passive.ReapersMark"
+trigger_event_tag = &"Event.Unit.Killed"

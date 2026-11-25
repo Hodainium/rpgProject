@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/starving_maw.tscn" id="1_pya53"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_ivggk"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/starving_maw_hunger.tscn" id="2_pya53"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_8idvo"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_fj3rf"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_s02vn"]
+
+[sub_resource type="Resource" id="Resource_ivggk"]
+script = ExtResource("4_8idvo")
+abilities = Array[PackedScene]([ExtResource("1_pya53"), ExtResource("2_pya53")])
+
+[resource]
+script = ExtResource("6_s02vn")
+id = &"demo.item.starving_maw"
+display_name = "Starving Maw"
+description = "On a kill: heal 30% of max HP and gain +10% ATK for the battle (it adds up). You lose 5% of max HP each turn."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.Damage", &"Item.Fit.Survival"])
+price = 0
+grants = SubResource("Resource_ivggk")

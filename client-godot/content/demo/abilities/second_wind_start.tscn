@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_6lvd5"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_bxcxv"]
+[ext_resource type="Resource" path="res://content/demo/effects/second_wind_heal.tres" id="3_hbh8a"]
+[ext_resource type="Animation" path="res://content/demo/animations/heartstring.tres" id="4_lhxwy"]
+
+[sub_resource type="Resource" id="Resource_6lvd5"]
+script = ExtResource("2_bxcxv")
+id = &"mend"
+effect = ExtResource("3_hbh8a")
+
+[node name="SecondWindStart" type="Node" unique_id=366381687]
+script = ExtResource("1_6lvd5")
+targeting = 5
+executions = Array[ExtResource("2_bxcxv")]([SubResource("Resource_6lvd5")])
+animation = ExtResource("4_lhxwy")
+description = "Heal 15% of max HP."
+ability_name = "Second Wind"
+ability_tag = &"Ability.Passive.SecondWindStart"
+trigger_event_tag = &"Event.Battle.Start"

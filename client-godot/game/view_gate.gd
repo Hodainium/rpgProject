@@ -27,9 +27,14 @@ const SETTING_MIN_ACTION: String = "battle_min_action"
 const SETTING_PAUSE: String = "battle_pause"
 const DEFAULT_MIN_ACTION: float = 1.0
 const DEFAULT_PAUSE: float = 0.4
+## Spec item-power: a triggered attack after another in the same chain (PresentationGate.chained) is paced faster, in the same
+## game time, so the battle speed scales it too; never longer than the player's own pacing.
+const CHAINED_MIN_ACTION: float = 0.45
+const CHAINED_PAUSE: float = 0.15
 var min_action_seconds: float = DEFAULT_MIN_ACTION
 var pause_seconds: float = DEFAULT_PAUSE
 var _paced: bool = false
+var _pause: float = 0.0  # the pause of the action on screen (shorter in a chain)
 var _pace_id: int = 0
 var _min_timer: SceneTreeTimer  # the action's minimum time, on the scaled clock (a speed change mid-action counts at once)
 
@@ -59,12 +64,18 @@ static func apply_settings(gate: ViewGate) -> void:
 func begin_ability(unit_id: StringName, ability: BattleAbility, sequence: Array[StringName]) -> void:
 	super(unit_id, ability, sequence)
 	_pace_id += 1
-	# An action, or a follow-up attack (it plays like one, B21); never another triggered passive.
-	_paced = not skip_all and (not ability.is_triggered() or ability.is_follow_up()) 		and (min_action_seconds > 0.0 or pause_seconds > 0.0)
+	# An action, or a triggered attack (it plays like one, B21); never another triggered passive.
+	_paced = not skip_all and (not ability.is_triggered() or ability.plays_like_attack()) \
+		and (min_action_seconds > 0.0 or pause_seconds > 0.0)
+	var min_action := min_action_seconds
+	_pause = pause_seconds
+	if chained:
+		min_action = minf(min_action, CHAINED_MIN_ACTION)
+		_pause = minf(_pause, CHAINED_PAUSE)
 	_min_timer = null
 	var tree := Engine.get_main_loop() as SceneTree
-	if _paced and tree != null and min_action_seconds > 0.0:
-		_min_timer = tree.create_timer(min_action_seconds)
+	if _paced and tree != null and min_action > 0.0:
+		_min_timer = tree.create_timer(min_action)
 	if skip_all:
 		release_finished()
 		return
@@ -86,7 +97,7 @@ func release_finished() -> void:
 		while _min_timer != null and _min_timer.time_left > 0.0 and id == _pace_id and not skip_all:
 			await tree.process_frame
 		var waited := 0.0
-		while waited < pause_seconds and id == _pace_id and not skip_all:
+		while waited < _pause and id == _pace_id and not skip_all:
 			await tree.process_frame
 			waited += tree.root.get_process_delta_time()
 	if id == _pace_id:

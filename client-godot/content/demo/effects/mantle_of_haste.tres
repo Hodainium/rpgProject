@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_k5moc"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_6owpa"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_cnw23"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_iea6b"]
+
+[sub_resource type="Resource" id="Resource_k5moc"]
+script = ExtResource("3_cnw23")
+value_x100 = 2500
+attribute_name = "spd"
+
+[resource]
+script = ExtResource("4_iea6b")
+policy = 2
+modifiers = Array[ExtResource("2_6owpa")]([SubResource("Resource_k5moc")])

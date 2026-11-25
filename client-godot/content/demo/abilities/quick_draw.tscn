@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_qt7m6"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_4guqd"]
+[ext_resource type="Resource" path="res://content/demo/effects/gravity_pull.tres" id="3_n5gk2"]
+[ext_resource type="Animation" path="res://content/demo/animations/momentum_charm.tres" id="4_tyboj"]
+
+[sub_resource type="Resource" id="Resource_qt7m6"]
+script = ExtResource("2_4guqd")
+id = &"charge"
+effect = ExtResource("3_n5gk2")
+delay_x100 = -4000
+
+[node name="QuickDraw" type="Node" unique_id=807432634]
+script = ExtResource("1_qt7m6")
+targeting = 5
+executions = Array[ExtResource("2_4guqd")]([SubResource("Resource_qt7m6")])
+animation = ExtResource("4_tyboj")
+description = "A 40% action advance at battle start."
+ability_name = "Quick Draw"
+ability_tag = &"Ability.Passive.QuickDraw"
+trigger_event_tag = &"Event.Battle.Start"

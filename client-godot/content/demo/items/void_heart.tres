@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_yx6ca"]
+[ext_resource type="Resource" path="res://content/demo/effects/void_heart.tres" id="2_27kvc"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_drho2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_gcr20"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_b0vd6"]
+
+[sub_resource type="Resource" id="Resource_yx6ca"]
+script = ExtResource("3_drho2")
+effects = Array[ExtResource("1_yx6ca")]([ExtResource("2_27kvc")])
+
+[resource]
+script = ExtResource("5_b0vd6")
+id = &"demo.item.void_heart"
+display_name = "Void Heart"
+description = "You deal double damage, but healing does nothing for you."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Legendary", &"Card.Set.Core", &"Item.Fit.Damage"])
+price = 0
+grants = SubResource("Resource_yx6ca")

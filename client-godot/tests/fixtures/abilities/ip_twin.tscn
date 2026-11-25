@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_0uqtf"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/ip_twin.tres" id="2_8osff"]
+
+[node name="IpTwin" type="Node" unique_id=1294766637]
+script = ExtResource("1_0uqtf")
+targeting = 5
+asset_tags = Array[StringName]([&"Ability.Type.Echo"])
+echo_scale_x100 = 6000
+animation = ExtResource("2_8osff")
+ability_tag = &"Fixture.Ability.IpTwin"
+trigger_event_tag = &"Event.Ability.Used.Skill"

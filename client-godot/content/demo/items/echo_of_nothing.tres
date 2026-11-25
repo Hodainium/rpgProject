@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/echo_of_nothing.tscn" id="1_ar2ny"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_oynvh"]
+[ext_resource type="Resource" path="res://content/demo/effects/echo_of_nothing.tres" id="3_tcu5p"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_pvq7w"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_hucfg"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_s0q78"]
+
+[sub_resource type="Resource" id="Resource_ar2ny"]
+script = ExtResource("4_pvq7w")
+abilities = Array[PackedScene]([ExtResource("1_ar2ny")])
+effects = Array[ExtResource("2_oynvh")]([ExtResource("3_tcu5p")])
+
+[resource]
+script = ExtResource("6_s0q78")
+id = &"demo.item.echo_of_nothing"
+display_name = "Echo of Nothing"
+description = "After each of your ults, +60 ult charge. −30% max HP."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.Ult"])
+price = 0
+grants = SubResource("Resource_ar2ny")

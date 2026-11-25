@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_harrc"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_p1jy5"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_05g81"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_w7skr"]
+
+[sub_resource type="Resource" id="Resource_harrc"]
+script = ExtResource("3_05g81")
+value_x100 = 2500
+attribute_name = "atk"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_p1jy5"]
+script = ExtResource("3_05g81")
+value_x100 = 1500
+attribute_name = "def"
+operation = 1
+
+[resource]
+script = ExtResource("4_w7skr")
+policy = 2
+modifiers = Array[ExtResource("2_p1jy5")]([SubResource("Resource_harrc"), SubResource("Resource_p1jy5")])

@@ -8,6 +8,7 @@
 [sub_resource type="Resource" id="Resource_2upct"]
 script = ExtResource("2_g3r4b")
 percent_x100 = 3000
+target_bonus = "heal_taken"
 
 [resource]
 script = ExtResource("4_23c3m")

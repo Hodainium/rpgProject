@@ -10,6 +10,11 @@ class_name PresentationGate
 extends RefCounted
 
 
+## Spec item-power: set before begin_ability when another triggered attack already played since the last action (a chain
+## of procs), so a screen can pace it faster. Presentation only.
+var chained: bool = false
+
+
 ## Called when an ability starts, with its execution sequence.
 func begin_ability(_unit_id: StringName, _ability: BattleAbility, _sequence: Array[StringName]) -> void:
 	pass

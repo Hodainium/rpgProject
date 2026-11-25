@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_xyve6"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_n4f7t"]
+[ext_resource type="Resource" path="res://content/demo/effects/poison.tres" id="3_pctty"]
+[ext_resource type="Animation" path="res://content/demo/animations/mimic_tooth.tres" id="4_da6mv"]
+
+[sub_resource type="Resource" id="Resource_xyve6"]
+script = ExtResource("2_n4f7t")
+id = &"bleed"
+effect = ExtResource("3_pctty")
+event_effect = true
+
+[node name="PlagueCrownSpread" type="Node" unique_id=1573518478]
+script = ExtResource("1_xyve6")
+targeting = 9
+executions = Array[ExtResource("2_n4f7t")]([SubResource("Resource_xyve6")])
+animation = ExtResource("4_da6mv")
+description = "Each tick of your DoTs spreads one stack to another enemy."
+ability_name = "Plague Crown"
+ability_tag = &"Ability.Passive.PlagueCrownSpread"
+trigger_event_tag = &"Event.Damage.Dealt.Dot"

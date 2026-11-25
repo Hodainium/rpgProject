@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/mantle_of_haste.tscn" id="1_ev7ex"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_t8si2"]
+[ext_resource type="Resource" path="res://content/demo/effects/mantle_of_haste.tres" id="3_kfp02"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_w53eg"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="5_ai8xx"]
+
+[sub_resource type="Resource" id="Resource_ev7ex"]
+script = ExtResource("4_w53eg")
+abilities = Array[PackedScene]([ExtResource("1_ev7ex")])
+effects = Array[ExtResource("2_t8si2")]([ExtResource("3_kfp02")])
+
+[resource]
+script = ExtResource("5_ai8xx")
+id = &"demo.equipment.mantle_of_haste"
+display_name = "Mantle of Haste"
+description = "+25 SPD. A 50% action advance at battle start."
+slot = &"Equipment.Slot.Body"
+grants = SubResource("Resource_ev7ex")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Epic", &"Card.Set.Descent", &"Item.Fit.Speed"])
+price = 9

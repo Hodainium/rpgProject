@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_undying.tscn" id="1_dmt0r"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_u8dc0"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_reang"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_a3o43"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_uaapp"]
+
+[sub_resource type="Resource" id="Resource_en4ar"]
+script = ExtResource("3_reang")
+abilities = Array[PackedScene]([ExtResource("1_dmt0r")])
+
+[resource]
+script = ExtResource("5_uaapp")
+id = &"fixture.item.ip_undying"
+display_name = "Ip Undying"
+price = 3
+grants = SubResource("Resource_en4ar")

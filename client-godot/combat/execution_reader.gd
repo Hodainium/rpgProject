@@ -30,6 +30,8 @@ static func sequence_for(animation: Animation) -> Array[StringName]:
 ## Problems that make an ability unusable in combat. Empty when valid.
 static func validate(ability: BattleAbility) -> PackedStringArray:
 	var problems := PackedStringArray()
+	if ability.is_echo():
+		return problems  # spec item-power K7: it runs the rows and animation of the ability it repeats
 	var label := String(ability.ability_tag)
 	if ability.animation == null:
 		problems.append("%s: no animation (every ability needs one)" % label)

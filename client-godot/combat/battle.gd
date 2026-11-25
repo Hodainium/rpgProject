@@ -116,6 +116,27 @@ const DOWNED_TAG: StringName = &"State.Downed"
 ## Spec content-pass H8: extra turns (whole turns, ×100) on the turn-based debuffs a unit's rows apply.
 const DEBUFF_TURNS: String = "debuff_turns"
 const HIT_WEAKNESS: StringName = &"Hit.Weakness"
+## Spec item-power K1: after Event.Damage.Taken of a hit from the other side, every other living unit on the hit unit's side
+## gets this one (same payload), in slot order; the same way after Event.Ability.Used.Ultimate.
+const EVENT_ALLY_DAMAGE_TAKEN: StringName = &"Event.Ally.Damage.Taken"
+const EVENT_ALLY_ULTIMATE: StringName = &"Event.Ally.Ability.Used.Ultimate"
+const ALLY_EVENT_PREFIX: String = "Event.Ally."
+## Spec item-power K2: one stack of a damage over time ticked. Payload: {"source": the unit that applied it, "target": the
+## ticked unit, "amount", "effect", "spec"}. Only these two, never the generic Event.Damage.*.
+const EVENT_DOT_DEALT: StringName = &"Event.Damage.Dealt.Dot"
+const EVENT_DOT_TAKEN: StringName = &"Event.Damage.Taken.Dot"
+## Spec item-power: an action that is a skill: it has a cost and is no basic attack, ult or item.
+const EVENT_SKILL_USED: StringName = &"Event.Ability.Used.Skill"
+## Spec item-power K5: sent to a unit at 0 HP that listens to it, before it dies. Payload: {"source", "target": the unit,
+## "instigator": who brought it down}. A unit whose HP is above 0 afterwards does not die.
+const EVENT_UNIT_DYING: StringName = &"Event.Unit.Dying"
+## Spec item-power K5: the tag a once-per-battle save grants (content: its activation query refuses a unit that has it).
+const DEATH_SAVED_TAG: StringName = &"State.DeathSaved"
+## Spec item-power K7: the hits of an echo (beside Hit.FollowUp).
+const HIT_ECHO: StringName = &"Hit.Echo"
+## Spec item-power (user, 2026-11-23): a unit casts at most this many ults until the next turn (anyone's) starts. Ults use no turn,
+## so charge refunds that add up to a full bar would otherwise cast for ever.
+const ULTS_PER_TURN: int = 3
 
 ## The battle's single seeded RNG. Combat draws from nothing else.
 var rng := RandomNumberGenerator.new()
@@ -161,6 +182,13 @@ var _tick_open: Dictionary = {}
 ## Instant effect that refills a recovering unit's toughness (amount by SetByCaller); built in code, never persisted.
 var _refill_effect: GameplayEffect
 var _started: bool = false
+## Spec item-power K5: the units whose Event.Unit.Dying triggers are resolving: at 0 HP, still able to react and be healed.
+var _dying: Array[BattleUnit] = []
+## Ults each unit has cast since the last turn (or One More) started: BattleUnit -> count (ULTS_PER_TURN). Not hashed: replay
+## recounts it.
+var _ults_cast: Dictionary = {}
+## Spec item-power 5: trigger chains the depth cap stopped (reported; never hashed).
+var chain_cap_hits: int = 0
 
 
 ## Builds the battle from a snapshot dictionary (BattleSnapshot JSON shape). Returns "" or a runner error.
@@ -233,7 +261,7 @@ func _add_party(party: Array, content: ContentIndex, party_grants: AbilitySet = 
 				if item == null:
 					return _fail("unknown item '%s'" % item_id)
 				if item.applies_to == ItemDefinition.AppliesTo.PARTY and item.grants != null:
-					party_sets.append({"set": item.grants})
+					party_sets.append({"set": item.grants, "source": item.id})
 	for member in party:
 		var definition: UnitDefinition = content.units.get(StringName(str(member.get("unitDefId", ""))))
 		if definition == null:
@@ -270,7 +298,7 @@ func _party_kit(member: Dictionary, definition: UnitDefinition, content: Content
 		gear.append(piece)
 	gear.sort_custom(func(a, b) -> bool: return String(a.slot) < String(b.slot))
 	for piece in gear:
-		grants.append({"set": piece.grants})
+		grants.append({"set": piece.grants, "source": piece.id})
 	grants.append_array(party_sets)
 	for item_id in _list(member, "items"):
 		var item: ItemDefinition = content.items.get(StringName(str(item_id)))
@@ -278,13 +306,13 @@ func _party_kit(member: Dictionary, definition: UnitDefinition, content: Content
 			_fail("unknown item '%s'" % item_id)
 			return {}
 		if item.applies_to == ItemDefinition.AppliesTo.HOLDER:
-			grants.append({"set": item.grants})
+			grants.append({"set": item.grants, "source": item.id})
 	for use_slot in _list(member, "useSlots"):
 		var usable: ItemDefinition = content.items.get(StringName(str(use_slot.get("itemId", ""))))
 		if usable == null or not usable.is_usable():
 			_fail("'%s' is not a usable item" % use_slot.get("itemId"))
 			return {}
-		grants.append({"set": usable.grants})
+		grants.append({"set": usable.grants, "source": usable.id})
 		if bool(use_slot.get("ready", false)):
 			grants.append({"ability": usable.use_ability, "item": usable.id})
 	# Spec playable-demo 3.11 (D28): the class's growth, once per level above 1, from the snapshot's level.
@@ -402,7 +430,8 @@ func _mirror_of_party(snapshot: Dictionary, content: ContentIndex, skip: Array[S
 				continue
 			result["count"] += 1
 			if item.grants != null and not _carries(item.grants, skip):
-				result["party" if item.applies_to == ItemDefinition.AppliesTo.PARTY else "holder"].append({"set": item.grants})
+				result["party" if item.applies_to == ItemDefinition.AppliesTo.PARTY else "holder"].append({"set": item.grants,
+						"source": item.id})
 		var gear: Array[EquipmentDefinition] = []
 		for equipment_id in _list(member, "equipmentIds"):
 			var piece: EquipmentDefinition = content.equipment.get(StringName(str(equipment_id)))
@@ -416,7 +445,7 @@ func _mirror_of_party(snapshot: Dictionary, content: ContentIndex, skip: Array[S
 				continue
 			result["count"] += 1
 			if piece.grants != null and not _carries(piece.grants, skip):
-				result["holder"].append({"set": piece.grants})
+				result["holder"].append({"set": piece.grants, "source": piece.id})
 		for use_slot in _list(member, "useSlots"):
 			var usable: ItemDefinition = content.items.get(StringName(str(use_slot.get("itemId", ""))))
 			if usable == null:
@@ -426,7 +455,7 @@ func _mirror_of_party(snapshot: Dictionary, content: ContentIndex, skip: Array[S
 				continue
 			result["count"] += 1
 			if usable.grants != null and not _carries(usable.grants, skip):
-				result["holder"].append({"set": usable.grants})
+				result["holder"].append({"set": usable.grants, "source": usable.id})
 	return result
 
 
@@ -455,11 +484,11 @@ static func _enemy_kit(loadout: Loadout, variant: EnemyVariant, scaling_effect: 
 		stats = loadout.stats_x100
 		for piece in loadout.equipment:
 			if piece != null:
-				grants.append({"set": piece.grants})
+				grants.append({"set": piece.grants, "source": piece.id})
 		for item in loadout.items:
 			if item == null:
 				continue
-			grants.append({"set": item.grants})
+			grants.append({"set": item.grants, "source": item.id})
 			if item.is_usable():
 				grants.append({"ability": item.use_ability, "item": item.id})
 	if variant != null:
@@ -479,6 +508,7 @@ func _finish_setup() -> String:
 		unit.asc.attribute_changed.connect(_on_attribute_changed.bind(unit))
 		(unit.asc as CombatASC).tick_started.connect(_on_tick_started.bind(unit))
 		(unit.asc as CombatASC).tick_finished.connect(_on_tick_finished.bind(unit))
+		(unit.asc as CombatASC).stack_damaged.connect(_on_stack_damaged.bind(unit))
 	if schema_version >= 2:
 		for unit in _units:
 			if unit.stat(BattleUnit.HP) <= 0:
@@ -523,7 +553,7 @@ func run(controller: Object) -> void:
 			if unit.alive:
 				unit.asc.send_gameplay_event(EVENT_BATTLE_START, {"source": unit, "target": unit})
 		await _drain_triggers()
-		_check_deaths()
+		await _settle_deaths()
 		_check_end()
 		_trace_point("start")
 	while is_running():
@@ -538,6 +568,7 @@ func run(controller: Object) -> void:
 		var actor := turn_manager.next_actor()
 		turn_manager.elapse(actor)
 		turn += 1
+		_ults_cast.clear()
 		turn_started.emit(actor.unit_id, turn)
 
 		if actor.asc.has_tag_exact(BROKEN_TAG):
@@ -557,7 +588,7 @@ func run(controller: Object) -> void:
 			BattleLog.line(self, "%s is in overtime" % actor.unit_id)
 		actor.asc.send_gameplay_event(EVENT_TURN_START, {"source": actor, "target": actor})
 		await _drain_triggers()
-		_check_deaths()
+		await _settle_deaths()
 		_check_end()
 
 		var action: Dictionary = {}
@@ -576,7 +607,7 @@ func run(controller: Object) -> void:
 				actor.asc.turn_end()
 				actor.asc.send_gameplay_event(EVENT_TURN_END, {"source": actor, "target": actor})
 				await _drain_triggers()
-		_check_deaths()
+		await _settle_deaths()
 		_check_end()
 		if actor.alive:
 			turn_manager.reset(actor)
@@ -584,6 +615,7 @@ func run(controller: Object) -> void:
 			if spd_problem != "":
 				_fail(spd_problem)
 				break
+		await _play_aftermath()
 		if outcome == ONGOING and turn >= TURN_LIMIT:
 			outcome = TURN_LIMIT_OUTCOME
 
@@ -613,13 +645,14 @@ func _notification(what: int) -> void:
 ## the log entry is unique), no turn_start/turn_end ticks and no action value change; it can take any action.
 func _extra_action(unit: BattleUnit, controller: Object) -> void:
 	turn += 1
+	_ults_cast.clear()
 	extra_action = true
 	turn_started.emit(unit.unit_id, turn)
 	one_more_started.emit(unit.unit_id)
 	unit.asc.begin_extra_action()
 	unit.asc.send_gameplay_event(EVENT_ONE_MORE, {"source": unit, "target": unit})
 	await _drain_triggers()
-	_check_deaths()
+	await _settle_deaths()
 	_check_end()
 	var action: Dictionary = {}
 	if unit.alive and outcome == ONGOING:
@@ -630,8 +663,9 @@ func _extra_action(unit: BattleUnit, controller: Object) -> void:
 	if not is_running() and outcome == ONGOING:
 		extra_action = false
 		return
-	_check_deaths()
+	await _settle_deaths()
 	_check_end()
+	await _play_aftermath()
 	if outcome == ONGOING and turn >= TURN_LIMIT:
 		outcome = TURN_LIMIT_OUTCOME
 	if unit.is_party() and not action.is_empty():
@@ -681,9 +715,10 @@ func _recover(unit: BattleUnit) -> void:
 func target_candidates(actor: BattleUnit, ability: BattleAbility) -> Array[BattleUnit]:
 	var result := _side_candidates(actor, ability)
 	# Spec content-pass 2.2 (Taunt): an enemy's single-target or blast ability may only aim at taunting party units
-	# while one is alive. (A blast still splashes onto the taunter's neighbours: _expand_targets reads every unit.)
+	# while one is up (one at 0 HP whose death is not settled yet taunts no more). (A blast still splashes onto the taunter's neighbours: _expand_targets reads every unit.)
 	if not actor.is_party() and ability.targets_enemies() and ability.needs_target():
-		var taunting := result.filter(func(unit: BattleUnit) -> bool: return unit.asc.has_tag_exact(TAUNTING_TAG))
+		var taunting := result.filter(func(unit: BattleUnit) -> bool:
+			return unit.is_up() and unit.asc.has_tag_exact(TAUNTING_TAG))
 		if not taunting.is_empty():
 			result.assign(taunting)
 	return result
@@ -714,6 +749,12 @@ func validate_action(actor: BattleUnit, choice: Dictionary) -> Array:
 	if not actor.asc.can_activate_ability(ability):
 		return ["IllegalAbility", "%s cannot activate %s now" % [actor.unit_id, tag]]
 	return _target_problem(actor, ability, StringName(str(choice.get("target", ""))))
+
+
+## Spec item-power: whether `unit` may cast another ult before the next turn starts (ULTS_PER_TURN). Read by
+## CombatASC.can_activate_ability, so brains, Auto, the party window and the verifier all see it.
+func ult_left(unit: BattleUnit) -> bool:
+	return int(_ults_cast.get(unit, 0)) < ULTS_PER_TURN
 
 
 ## Checks an ult cast out of turn (spec ult-interrupts). `party`: the caster must be a party unit (log entries and
@@ -838,11 +879,13 @@ func _interrupt(caster: BattleUnit, choice: Dictionary, controller: Object) -> v
 		else:
 			_fail("enemy ult %s failed to activate" % ability.ability_tag)
 		return
+	_ults_cast[caster] = int(_ults_cast.get(caster, 0)) + 1
 	caster.asc.send_gameplay_event(EVENT_BATTLE_INTERRUPT, {"source": caster, "target": caster,
 		"ability": ability.ability_tag})
 	await _drain_triggers()
-	_check_deaths()
+	await _settle_deaths()
 	_check_end()
+	await _play_aftermath()
 	in_interrupt = false
 	if caster.is_party() and runner_error == "" and mismatch.is_empty():
 		controller.after_interrupt(self, caster, {"ability": ability.ability_tag, "target": target_id})
@@ -864,8 +907,9 @@ func _apply_dev(actor: BattleUnit, choice: Dictionary, controller: Object) -> vo
 			ids.append(unit.unit_id)
 	if choice.get("effect") is GameplayEffect:
 		apply_to_units(choice["effect"], ids)
+		await _settle_deaths()
 	await _drain_triggers()
-	_check_deaths()
+	await _settle_deaths()
 	_check_end()
 	controller.after_party_turn(self, actor, {"ability": StringName(str(choice["dev"])), "target": StringName(targets)})
 	_trace_point("dev", actor.unit_id, {"ability": StringName(str(choice["dev"])), "target": StringName(targets)})
@@ -891,25 +935,41 @@ func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionR
 		_:
 			hit = all_targets.duplicate()
 	var hit_ids: Array[StringName] = []
+	var event: Variant = action.get("event")
+	var effect := row.effect_for(event)
+	var echo_scale := int(action.get("echo_scale", 0))  # spec item-power K7
 	for target in hit:
 		if ability.targets_dead():
 			if target.alive:
 				continue
-		elif not target.is_up():
+		elif not target.is_up() and not _dying.has(target):
 			continue
 		var hp_before := target.stat(BattleUnit.HP)
 		var toughness_before := target.stat(TOUGHNESS)
 		# One spec per target: turn-based effects keep their spec, so sharing one would share the countdown.
 		var context := GameplayEffectContext.new(unit, unit)
 		context.target_data.append_node(target)
-		var spec := GameplayEffectSpec.new(row.effect, context, ability.ability_level)
-		row.apply_override(spec)
-		if ability.is_follow_up():
+		var spec := GameplayEffectSpec.new(effect, context, ability.ability_level)
+		row.apply_override(spec, event, echo_scale)
+		var spread_turns := 0
+		if row.event_effect:
+			ExecutionRow.copy_event_values(spec, event)
+			# Spec item-power: a DoT without a stack limit spreads one turn shorter than it came, so it can't multiply without end.
+			spread_turns = ExecutionRow.spread_turns(spec, event)
+			if spread_turns < 0:
+				continue
+		if echo_scale > 0:
+			ExecutionRow.scale_modifiers(spec, echo_scale)
+		if ability.is_follow_up() or echo_scale > 0:
 			spec.inject_tag(HIT_FOLLOW_UP)
+		if echo_scale > 0:
+			spec.inject_tag(HIT_ECHO)
 		hit_ids.append(target.unit_id)
-		if not _status_lands(unit, target, row):
+		if not _status_lands(unit, target, row, effect):
 			continue
-		_extend_debuff(unit, row, spec)
+		_extend_debuff(unit, spec)
+		if spread_turns > 0:
+			spec.remaining_turns = spread_turns
 		_row_targets[target.unit_id] = int(_row_targets.get(target.unit_id, 0)) + 1
 		var landed := unit.asc.apply_effect_spec_to_target(spec, target.asc)
 		_row_targets[target.unit_id] -= 1
@@ -917,8 +977,9 @@ func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionR
 			_row_targets.erase(target.unit_id)
 		# Spec content-pass H6: a landed row with a delay moves the target's action value (negative = advance).
 		if landed != null and row.delay_x100 != 0 and not field_mode and target.is_up():
-			turn_manager.delay(target, row.delay_x100)
-			action_delayed.emit(target.unit_id, row.delay_x100)
+			var moved := Fixed.pct(row.delay_x100, echo_scale) if echo_scale > 0 else row.delay_x100
+			turn_manager.delay(target, moved)
+			action_delayed.emit(target.unit_id, moved)
 		# A break needs the target to survive the hit (a killing blow is just a kill). Party units never break (H7).
 		if toughness_before > 0 and target.stat(TOUGHNESS) <= 0 and target.stat(BattleUnit.HP) > 0 \
 				and not target.asc.has_tag_exact(BROKEN_TAG) and not field_mode and not target.is_party():
@@ -940,28 +1001,30 @@ func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionR
 ## Spec content-pass H2 / D13: whether a row's status lands on `target`. A row without a chance, or with 100% or more,
 ## always lands and draws nothing; below 100% it takes one battle-RNG roll. An effect whose application_query refuses
 ## the target (immunity) draws nothing either (GodotGAS then refuses it). A miss sends Event.Status.Resisted to both units.
-func _status_lands(source: BattleUnit, target: BattleUnit, row: ExecutionRow) -> bool:
+func _status_lands(source: BattleUnit, target: BattleUnit, row: ExecutionRow, applied: GameplayEffect = null) -> bool:
+	var effect := applied if applied != null else row.effect  # an event_effect row applies the event's effect
 	# Field mode never rolls: run-level randomness comes from RunSeeds streams only (client-godot/CLAUDE.md 3).
 	if row.chance_x100 <= 0 or row.chance_x100 >= Fixed.ONE_HUNDRED_PERCENT or field_mode:
 		return true
-	if row.effect.application_query != null and not row.effect.application_query.matches(target.asc):
+	if effect.application_query != null and not effect.application_query.matches(target.asc):
 		return true
 	if rng.randi_range(0, 9999) < row.chance_x100:
 		return true
 	var payload := {"source": source, "target": target, "row": row.id, "tags": row.tags,
-		"effect": row.effect.resource_path}
+		"effect": effect.resource_path}
 	source.asc.send_gameplay_event(EVENT_STATUS_RESISTED, payload)
 	if target != source:
 		target.asc.send_gameplay_event(EVENT_STATUS_RESISTED, payload)
-	status_resisted.emit(source.unit_id, target.unit_id, row.effect.resource_path)
+	status_resisted.emit(source.unit_id, target.unit_id, effect.resource_path)
 	return false
 
 
 ## Spec content-pass H8: a turn-based debuff applied by a row lasts the source's debuff_turns more turns (whole turns
 ## only). Set on the spec before it lands, so a GodotGAS refresh copies the longer count.
 @warning_ignore("integer_division")
-func _extend_debuff(source: BattleUnit, row: ExecutionRow, spec: GameplayEffectSpec) -> void:
-	if field_mode or row.effect.policy != GameplayEffect.DurationPolicy.TURN_BASED or not row.applies_debuff():
+func _extend_debuff(source: BattleUnit, spec: GameplayEffectSpec) -> void:
+	if field_mode or spec.effect_def.policy != GameplayEffect.DurationPolicy.TURN_BASED \
+			or not ExecutionRow.is_debuff(spec.effect_def):
 		return
 	var extra := source.stat(DEBUFF_TURNS) / 100
 	if extra > 0:
@@ -992,6 +1055,9 @@ func _send_damage_events(source: BattleUnit, target: BattleUnit, damage: int, ro
 		"hit_tags": hit_tags}
 	source.asc.send_gameplay_event(EVENT_DAMAGE_DEALT, payload)
 	target.asc.send_gameplay_event(EVENT_DAMAGE_TAKEN, payload)
+	if source.side != target.side:
+		# Spec item-power K1. Only a hit from the other side: an HP cost never sets off an ally's counter.
+		_send_to_allies(target, EVENT_ALLY_DAMAGE_TAKEN, payload)
 	for tag in row.tags:
 		if String(tag).begins_with(DAMAGE_TYPE_PREFIX):
 			var damage_type := String(tag).trim_prefix(DAMAGE_TYPE_PREFIX)
@@ -1011,6 +1077,34 @@ func _send_damage_events(source: BattleUnit, target: BattleUnit, damage: int, ro
 	for damage_type in row.damage_types():
 		signal_tags.append(StringName(DAMAGE_TYPE_PREFIX + damage_type))
 	damage_dealt.emit(source.unit_id, target.unit_id, damage, signal_tags)
+
+
+## Spec item-power K1: sends an event about `unit` to every other living unit on its side, in slot order.
+func _send_to_allies(unit: BattleUnit, event_tag: StringName, payload: Dictionary) -> void:
+	var allies: Array[BattleUnit] = []
+	for other in _units:
+		if other != unit and other.alive and other.side == unit.side:
+			allies.append(other)
+	allies.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)  # sort-ok: slot is an int
+	for ally in allies:
+		ally.asc.send_gameplay_event(event_tag, payload)
+
+
+## Spec item-power K2: one stack of a DoT took HP from `unit`. The unit that applied it (its spec's instigator, while alive)
+## gets Event.Damage.Dealt.Dot, the ticked unit Event.Damage.Taken.Dot; HP a unit's own side costs it sends neither.
+func _on_stack_damaged(spec: GameplayEffectSpec, amount: int, unit: BattleUnit) -> void:
+	var source: BattleUnit = spec.context.instigator as BattleUnit if spec.context != null else null
+	if field_mode or source == null or source.side == unit.side:
+		return
+	# The overtime clock (EnemyDefinition.overtime_party_effect) is no DoT anyone deals.
+	var enemy := source.definition as EnemyDefinition
+	if enemy != null and enemy.overtime_party_effect == spec.effect_def:
+		return
+	var payload := {"source": source, "target": unit, "amount": amount, "effect": spec.effect_def, "spec": spec,
+		"turns": spec.remaining_turns - 1}  # the turns left after this tick (the countdown follows it)
+	if source.alive:
+		source.asc.send_gameplay_event(EVENT_DOT_DEALT, payload)
+	unit.asc.send_gameplay_event(EVENT_DOT_TAKEN, payload)
 
 
 ## The spec's Hit.* tags in sorted order (the order their events are sent in).
@@ -1109,7 +1203,9 @@ func _activate(actor: BattleUnit, ability: BattleAbility, target: BattleUnit) ->
 	BattleLog.line(self, "%s %s -> %s%s" % [actor.unit_id, tag, target.unit_id if target != null else "-",
 		"" if activated else " (refused)"])
 	if activated and not field_mode:
-		var used := {"source": actor, "target": actor, "ability": tag}
+		# Spec item-power: "primary" and "targets" say what the ability was aimed at (K7's echo, "every other enemy" procs).
+		var used := {"source": actor, "target": actor, "ability": tag, "primary": payload["primary"],
+			"targets": payload["targets"]}
 		actor.asc.send_gameplay_event(EVENT_ABILITY_USED, used)
 		# Spec content-pass H4: Event.Ability.Used.<X> per Ability.Type.<X> asset tag (sorted), e.g. Used.Ultimate.
 		var types: Array[String] = []
@@ -1119,11 +1215,21 @@ func _activate(actor: BattleUnit, ability: BattleAbility, target: BattleUnit) ->
 		types.sort()
 		for type in types:
 			actor.asc.send_gameplay_event(StringName("%s.%s" % [EVENT_ABILITY_USED, type]), used)
+			if type == "Ultimate":
+				_send_to_allies(actor, EVENT_ALLY_ULTIMATE, used)
+		if _is_skill(actor, ability) and not types.has("Skill"):
+			actor.asc.send_gameplay_event(EVENT_SKILL_USED, used)
 	if activated and actor.item_abilities.has(tag):
 		used_items.append({"unit": actor.unit_id, "item": actor.item_abilities[tag]})
 		actor.item_abilities.erase(tag)
 		actor.revoke_ability(ability)
 	return activated
+
+
+## Spec item-power: a skill is an action with a cost that is neither a basic attack, an ult nor an item's use ability.
+static func _is_skill(actor: BattleUnit, ability: BattleAbility) -> bool:
+	return ability.cost_effect != null and not ability.is_triggered() and not ability.is_ultimate() \
+		and not ability.asset_tags.has(BattleAbility.BASIC_TAG) and not actor.item_abilities.has(ability.ability_tag)
 
 
 ## Field mode: applies one effect to each listed unit (event outcomes such as heals or revives), then settles deaths
@@ -1135,7 +1241,8 @@ func apply_to_units(effect: GameplayEffect, unit_ids: Array[StringName]) -> void
 		if unit != null:
 			unit.asc.apply_gameplay_effect(effect, unit.asc, unit.effect_level)
 	_check_revives()
-	_check_deaths()
+	if field_mode:
+		_check_deaths()  # in a battle the caller settles deaths, saves included (spec item-power K5)
 	_field_cues(false)
 
 
@@ -1173,7 +1280,9 @@ func perform(actor_id: StringName, ability_tag: StringName, target_id: StringNam
 
 
 ## Expands the primary target into the full target list, in canonical slot order (spec "Targeting").
-func _expand_targets(actor: BattleUnit, ability: BattleAbility, target: BattleUnit) -> Dictionary:
+## Spec item-power K4: a RANDOM_* target is drawn here, one draw per activation; `event` (a trigger's payload) says which
+## enemy the *_OTHER_* modes spare.
+func _expand_targets(actor: BattleUnit, ability: BattleAbility, target: BattleUnit, event: Variant = null) -> Dictionary:
 	var targets: Array[BattleUnit] = []
 	var primary: BattleUnit = null
 	match ability.targeting:
@@ -1192,7 +1301,37 @@ func _expand_targets(actor: BattleUnit, ability: BattleAbility, target: BattleUn
 		BattleAbility.Targeting.SELF:
 			primary = actor
 			targets.append(actor)
+		BattleAbility.Targeting.RANDOM_ENEMY, BattleAbility.Targeting.RANDOM_OTHER_ENEMY:
+			var pool := _own_target_pool(actor, ability, event)
+			if not pool.is_empty():
+				primary = pool[rng.randi_range(0, pool.size() - 1)]
+				targets.append(primary)
+		BattleAbility.Targeting.OTHER_ENEMIES:
+			targets = _own_target_pool(actor, ability, event)
 	return {"primary": primary, "targets": targets}
+
+
+## Spec item-power K4: the opposing units that are up, in slot order, without the one the event is about for the *_OTHER_*
+## modes.
+func _own_target_pool(actor: BattleUnit, ability: BattleAbility, event: Variant) -> Array[BattleUnit]:
+	var spared: BattleUnit = _event_subject(actor, event) if ability.spares_event_target() else null
+	var pool: Array[BattleUnit] = []
+	for candidate in _side_candidates(actor, ability):
+		if candidate.is_up() and candidate != spared:
+			pool.append(candidate)
+	return pool
+
+
+## The other unit an event is about, from `unit`'s side: what an ability was aimed at (Event.Ability.Used.*), else the hit or
+## hitting unit.
+static func _event_subject(unit: BattleUnit, event: Variant) -> BattleUnit:
+	if event is Dictionary:
+		if event.get("primary") != null:
+			return event["primary"]
+		return event.get("target") if event.get("source") == unit else event.get("source")
+	if event is GameplayEffectSpec and event.context != null:
+		return event.context.instigator as BattleUnit
+	return null
 
 
 ## `effect_level` -1: the same as `level` (spec skill-points D21; enemies pass 1).
@@ -1213,6 +1352,43 @@ func _unit_problem(unit: BattleUnit) -> String:
 		if not problems.is_empty():
 			return "; ".join(problems)
 	return ""
+
+
+## Spec item-power K5, at the start of the death check: each unit at 0 HP that listens to Event.Unit.Dying gets it, in unit
+## order, and only the triggers this queues run (what was already waiting keeps waiting). A unit they bring back above 0 HP
+## is not marked dead below. Repeats for units a save's own triggers bring down; each unit is asked once per check.
+func _settle_deaths() -> void:
+	if schema_version >= 2 and not field_mode:
+		var asked: Array[BattleUnit] = []
+		while is_running():
+			var dying: Array[BattleUnit] = []
+			for unit in _units:
+				if unit.alive and unit.stat(BattleUnit.HP) <= 0 and not asked.has(unit) and unit.listens_to(EVENT_UNIT_DYING):
+					dying.append(unit)
+			if dying.is_empty():
+				break
+			asked.append_array(dying)
+			var waiting := triggers
+			triggers = TriggerQueue.new()
+			_dying = dying
+			for unit in dying:
+				unit.asc.send_gameplay_event(EVENT_UNIT_DYING, {"source": unit, "target": unit, "instigator": _killer_of(unit)})
+			await _drain_triggers()
+			_dying = []
+			triggers = waiting
+	_check_deaths()
+
+
+## Spec item-power D22: what the deaths of an action set off (Event.Unit.Killed, Event.Unit.Died, a phase) plays at once, before
+## the next actor is chosen: an action advance on a kill (Reaper's Mark) counts for that choice, on the killer's fresh cycle.
+## What it kills settles too, at most TriggerQueue.MAX_DEPTH times; anything left waits for the next drain.
+func _play_aftermath() -> void:
+	for round_number in TriggerQueue.MAX_DEPTH:
+		if not is_running() or triggers.is_empty():
+			return
+		await _drain_triggers()
+		await _settle_deaths()
+		_check_end()
 
 
 ## Step 7: units at or below 0 HP die and leave the turn queue. v1: their ASC is cleaned up (slice 1). v2: they keep
@@ -1301,25 +1477,46 @@ func _check_revives() -> void:
 ## Runs queued triggered passives in FIFO order, awaiting each (spec game-skeleton 3.4, decision 10).
 func _drain_triggers() -> void:
 	triggers.draining = true
+	triggers.attacks = 0
 	while is_running() and not triggers.is_empty():
 		var entry := triggers.pop()
 		if int(entry["depth"]) > TriggerQueue.MAX_DEPTH:
-			content_warnings.append("trigger chain deeper than %d stopped at %s" % [TriggerQueue.MAX_DEPTH, entry["event_tag"]])
+			chain_cap_hits += 1
+			var warning := "trigger chain deeper than %d stopped at %s" % [TriggerQueue.MAX_DEPTH, entry["event_tag"]]
+			if not content_warnings.has(warning):  # once per battle: an item may chain to the cap by design (Hollow Crown)
+				content_warnings.append(warning)
 			triggers.clear()
 			break
 		triggers.current_depth = int(entry["depth"])
 		var unit: BattleUnit = entry["unit"]
 		var ability: BattleAbility = entry["ability"]
-		if not is_instance_valid(ability) or not unit.is_up() or not unit.asc.can_activate_ability(ability):
+		if not is_instance_valid(ability) or not (unit.is_up() or _dying.has(unit)) \
+				or not unit.asc.can_activate_ability(ability):
 			continue
 		# Spec item-pass 3.1 (HSR): a follow-up never fires from a follow-up's own hit, so follow-ups can't feed each other.
 		if ability.is_follow_up() and entry["payload"] is Dictionary \
 				and Array(entry["payload"].get("hit_tags", [])).has(HIT_FOLLOW_UP):
 			continue
-		var target := _trigger_target(unit, ability, entry["payload"])
+		var target := _trigger_target(unit, ability, entry["payload"], entry["event_tag"])
 		if ability.needs_target() and target == null:
 			continue
-		var payload := _expand_targets(unit, ability, target)
+		# Spec item-power: a trigger that costs something never pays for a target that is already down (Void Tether).
+		if ability.needs_target() and ability.cost_effect != null and not ability.targets_dead() and not target.is_up() \
+				and not _dying.has(target):
+			continue
+		var echoed := _echoed(ability, entry["payload"])
+		if ability.is_echo() and echoed == null:
+			continue
+		if ability.picks_own_targets() and _own_target_pool(unit, ability, entry["payload"]).is_empty():
+			continue
+		if ability.is_follow_up() and _aims_at_the_fallen(unit, ability, target):
+			continue
+		if not _trigger_fires(ability):
+			continue
+		var payload := _expand_targets(unit, ability, target, entry["payload"])
+		if echoed != null:
+			payload = {"primary": entry["payload"].get("primary"), "targets": entry["payload"].get("targets"), "echo": echoed,
+				"echo_scale": ability.echo_scale_x100}
 		payload["battle"] = self
 		payload["unit"] = unit
 		payload["event"] = entry["payload"]
@@ -1336,20 +1533,70 @@ func _drain_triggers() -> void:
 	triggers.current_depth = 0
 
 
+## Spec item-power D20: a follow-up never fires at enemies that are all at 0 HP: no attack, no roll, no Event.Attack.FollowUp.
+## (The random targetings only ever draw from units that are up.)
+func _aims_at_the_fallen(unit: BattleUnit, ability: BattleAbility, target: BattleUnit) -> bool:
+	if not ability.targets_enemies() or ability.picks_own_targets():
+		return false
+	var aimed: Array = _expand_targets(unit, ability, target)["targets"]
+	return not aimed.any(func(enemy: BattleUnit) -> bool: return enemy.is_up())
+
+
+## Spec item-power K3: whether a trigger that would activate fires. An ability without a chance, or at 100% or more, always
+## fires and draws nothing (field mode never rolls); otherwise one battle-RNG roll.
+func _trigger_fires(ability: BattleAbility) -> bool:
+	var chance := ability.trigger_chance_x100
+	if chance <= 0 or chance >= Fixed.ONE_HUNDRED_PERCENT or field_mode:
+		return true
+	return rng.randi_range(0, 9999) < chance
+
+
+## Spec item-power K7: the ability an echo repeats: the one the event's source used (Event.Ability.Used.* payload), or null
+## (not an echo, another event, the ability is gone, or none of its targets can be hit any more).
+static func _echoed(ability: BattleAbility, event_payload: Variant) -> BattleAbility:
+	if not ability.is_echo() or ability.echo_scale_x100 <= 0 or not event_payload is Dictionary \
+			or not event_payload.has("targets"):
+		return null
+	var caster: BattleUnit = event_payload.get("source")
+	var used := caster.ability_by_tag(StringName(str(event_payload.get("ability", "")))) if caster != null else null
+	if used == null:
+		return null
+	for target in event_payload["targets"]:
+		if (not target.alive) if used.targets_dead() else target.is_up():
+			return used
+	return null
+
+
 ## A triggered single-target ability aims at the event's other unit when that is a valid target, else the first valid
-## candidate by slot (no RNG).
-func _trigger_target(unit: BattleUnit, ability: BattleAbility, event_payload: Variant) -> BattleUnit:
+## candidate by slot (no RNG). Spec item-power: aiming at an ally on an Event.Ally.* event, it aims at the ally the event is
+## about. Spec item-power D21: a counter (an Event.Damage.Taken* or Event.Ally.Damage.Taken trigger) answers its attacker, past
+## any taunt; taunt draws the attacks an enemy chooses and the aimed triggers of its own hits (a random draw ignores it).
+func _trigger_target(unit: BattleUnit, ability: BattleAbility, event_payload: Variant, event_tag: StringName) -> BattleUnit:
 	if not ability.needs_target():
 		return null
 	var other: BattleUnit = null
 	if event_payload is Dictionary:
 		other = event_payload.get("target") if event_payload.get("source") == unit else event_payload.get("source")
+		if not ability.targets_enemies() and String(event_tag).begins_with(ALLY_EVENT_PREFIX):
+			other = event_payload.get("target")
 	elif event_payload is GameplayEffectSpec and event_payload.context != null:
 		other = event_payload.context.instigator as BattleUnit
+	if other != null and _is_counter(event_tag) and _side_candidates(unit, ability).has(other):
+		return other
 	var candidates := target_candidates(unit, ability)
 	if other != null and candidates.has(other):
 		return other
+	for candidate in candidates:
+		if candidate.is_up():  # never one that is at 0 HP and not settled yet while another stands
+			return candidate
 	return candidates[0] if not candidates.is_empty() else null
+
+
+static func _is_counter(event_tag: StringName) -> bool:
+	for counted in [EVENT_DAMAGE_TAKEN, EVENT_ALLY_DAMAGE_TAKEN]:
+		if event_tag == counted or String(event_tag).begins_with(String(counted) + "."):
+			return true
+	return false
 
 
 ## Step 8: all enemies dead → Victory (checked first); all party dead → Defeat.

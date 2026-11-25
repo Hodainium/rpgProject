@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sentinel_plate.tscn" id="1_35fnv"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_vleuy"]
+[ext_resource type="Resource" path="res://content/demo/effects/sentinel_plate.tres" id="3_my8fn"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_vkmih"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="5_ivrdh"]
+
+[sub_resource type="Resource" id="Resource_35fnv"]
+script = ExtResource("4_vkmih")
+abilities = Array[PackedScene]([ExtResource("1_35fnv")])
+effects = Array[ExtResource("2_vleuy")]([ExtResource("3_my8fn")])
+
+[resource]
+script = ExtResource("5_ivrdh")
+id = &"demo.equipment.sentinel_plate"
+display_name = "Sentinel Plate"
+description = "−30% damage taken. Taunt for 2 turns at battle start."
+slot = &"Equipment.Slot.Body"
+grants = SubResource("Resource_35fnv")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.Survival", &"Item.Grants.Tank"])
+price = 9

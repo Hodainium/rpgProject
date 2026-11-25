@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_cu413"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_cqmau"]
+[ext_resource type="Resource" path="res://content/demo/effects/poison.tres" id="3_b1evj"]
+[ext_resource type="Animation" path="res://content/demo/animations/mimic_tooth.tres" id="4_7gts6"]
+
+[sub_resource type="Resource" id="Resource_cu413"]
+script = ExtResource("2_cqmau")
+id = &"bleed"
+effect = ExtResource("3_b1evj")
+
+[node name="VenomSpur" type="Node" unique_id=1661755719]
+script = ExtResource("1_cu413")
+executions = Array[ExtResource("2_cqmau")]([SubResource("Resource_cu413")])
+animation = ExtResource("4_7gts6")
+description = "Every hit adds 1 Poison stack."
+ability_name = "Venom Spur"
+ability_tag = &"Ability.Passive.VenomSpur"
+trigger_event_tag = &"Event.Damage.Dealt"

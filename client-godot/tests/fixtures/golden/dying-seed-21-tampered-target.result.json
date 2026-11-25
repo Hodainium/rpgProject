@@ -1,0 +1,1 @@
+{"schemaVersion":1,"battleId":"dying-seed-21","verdict":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"TurnMismatch","turn":26,"detail":"log entry says turn 29, P1 acts on turn 26"},"outcome":"Ongoing","turns":26,"finalStateHash":"54c11107b157c4c33dca8a35ae52db92e34dbeb893666d5c295c3395d0b15690","engineVersion":"4.7.2.stable.mono.official.ed1daf0bf"}

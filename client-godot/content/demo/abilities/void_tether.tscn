@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_guot1"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_hcynr"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_1ekfv"]
+[ext_resource type="Animation" path="res://content/demo/animations/duelists_band.tres" id="4_d2b0o"]
+[ext_resource type="Resource" path="res://content/demo/effects/void_tether_cost.tres" id="5_scbsg"]
+
+[sub_resource type="Resource" id="Resource_guot1"]
+script = ExtResource("2_hcynr")
+id = &"riposte"
+effect = ExtResource("3_1ekfv")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 15000
+
+[node name="VoidTether" type="Node" unique_id=759319021]
+script = ExtResource("1_guot1")
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+executions = Array[ExtResource("2_hcynr")]([SubResource("Resource_guot1")])
+animation = ExtResource("4_d2b0o")
+description = "When an ally is hit: 5% of your max HP for a follow-up of 150% ATK Physical on the attacker."
+ability_name = "Void Tether"
+ability_tag = &"Ability.Passive.VoidTether"
+cost_effect = ExtResource("5_scbsg")
+trigger_event_tag = &"Event.Ally.Damage.Taken"

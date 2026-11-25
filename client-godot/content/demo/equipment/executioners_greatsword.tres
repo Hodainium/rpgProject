@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/executioners_greatsword.tscn" id="1_r7fpl"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_n45fn"]
+[ext_resource type="Resource" path="res://content/demo/effects/executioners_greatsword.tres" id="3_fsycl"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_bgtax"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="5_nn63p"]
+
+[sub_resource type="Resource" id="Resource_r7fpl"]
+script = ExtResource("4_bgtax")
+abilities = Array[PackedScene]([ExtResource("1_r7fpl")])
+effects = Array[ExtResource("2_n45fn")]([ExtResource("3_fsycl")])
+
+[resource]
+script = ExtResource("5_nn63p")
+id = &"demo.equipment.executioners_greatsword"
+display_name = "Executioner's Greatsword"
+description = "+50% ATK. A hit that leaves an enemy (not a boss) below 25% HP finishes it."
+slot = &"Equipment.Slot.Weapon"
+grants = SubResource("Resource_r7fpl")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Legendary", &"Card.Set.Core", &"Item.Fit.Damage", &"Item.Fit.FollowUp"])
+price = 12

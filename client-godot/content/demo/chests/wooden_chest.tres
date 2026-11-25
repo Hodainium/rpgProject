@@ -40,6 +40,7 @@ weight_x100 = 3500
 [sub_resource type="Resource" id="Resource_heal_calc"]
 script = ExtResource("7_percent")
 percent_x100 = 2000
+target_bonus = "heal_taken"
 
 [sub_resource type="Resource" id="Resource_heal_effect"]
 script = ExtResource("8_effect")

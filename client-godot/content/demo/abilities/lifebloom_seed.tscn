@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_7duol"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_08uuk"]
+[ext_resource type="Resource" path="res://content/demo/effects/lifebloom_regen.tres" id="3_xmpix"]
+[ext_resource type="Animation" path="res://content/demo/animations/censer.tres" id="4_2omt6"]
+
+[sub_resource type="Resource" id="Resource_7duol"]
+script = ExtResource("2_08uuk")
+id = &"regen"
+effect = ExtResource("3_xmpix")
+
+[node name="LifebloomSeed" type="Node" unique_id=1664551120]
+script = ExtResource("1_7duol")
+targeting = 5
+executions = Array[ExtResource("2_08uuk")]([SubResource("Resource_7duol")])
+animation = ExtResource("4_2omt6")
+description = "Regen at battle start: 8% of max HP for 3 turns."
+ability_name = "Lifebloom Seed"
+ability_tag = &"Ability.Passive.LifebloomSeed"
+trigger_event_tag = &"Event.Battle.Start"

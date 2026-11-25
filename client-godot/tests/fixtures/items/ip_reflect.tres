@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_reflect.tscn" id="1_t8uts"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_6xwbb"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_5f6tl"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_b5w6h"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_1jnu7"]
+
+[sub_resource type="Resource" id="Resource_1wye0"]
+script = ExtResource("3_5f6tl")
+abilities = Array[PackedScene]([ExtResource("1_t8uts")])
+
+[resource]
+script = ExtResource("5_1jnu7")
+id = &"fixture.item.ip_reflect"
+display_name = "Ip Reflect"
+price = 3
+grants = SubResource("Resource_1wye0")

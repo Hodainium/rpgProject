@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_oig6t"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ldonl"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_66roo"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/ip_knife.tres" id="4_6jckw"]
+
+[sub_resource type="Resource" id="Resource_neolj"]
+script = ExtResource("2_ldonl")
+id = &"hit"
+effect = ExtResource("3_66roo")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Physical"])
+flat_damage_x100 = 8000
+
+[node name="IpKnife" type="Node" unique_id=1303534055]
+script = ExtResource("1_oig6t")
+targeting = 8
+asset_tags = Array[StringName]([&"Ability.Type.Strike"])
+executions = Array[ExtResource("2_ldonl")]([SubResource("Resource_neolj")])
+animation = ExtResource("4_6jckw")
+ability_tag = &"Fixture.Ability.IpKnife"
+trigger_event_tag = &"Event.Unit.Killed"

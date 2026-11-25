@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/thornheart_plate.tscn" id="1_4g0lx"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_fovxy"]
+[ext_resource type="Resource" path="res://content/demo/effects/thornheart_plate.tres" id="3_uuhfo"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_q6qu2"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="5_nen36"]
+
+[sub_resource type="Resource" id="Resource_4g0lx"]
+script = ExtResource("4_q6qu2")
+abilities = Array[PackedScene]([ExtResource("1_4g0lx")])
+effects = Array[ExtResource("2_fovxy")]([ExtResource("3_uuhfo")])
+
+[resource]
+script = ExtResource("5_nen36")
+id = &"demo.equipment.thornheart_plate"
+display_name = "Thornheart Plate"
+description = "+30% max HP. Reflect 50% of the damage you take to the attacker."
+slot = &"Equipment.Slot.Body"
+grants = SubResource("Resource_4g0lx")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Legendary", &"Card.Set.Core", &"Item.Fit.Survival", &"Item.Grants.Tank"])
+price = 12

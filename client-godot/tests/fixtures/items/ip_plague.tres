@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_plague.tscn" id="1_ael2s"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_spread.tscn" id="2_1pv3e"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_fawwo"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_etfi3"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_t20i8"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_ch4rh"]
+
+[sub_resource type="Resource" id="Resource_3gs2w"]
+script = ExtResource("4_etfi3")
+abilities = Array[PackedScene]([ExtResource("1_ael2s"), ExtResource("2_1pv3e")])
+
+[resource]
+script = ExtResource("6_ch4rh")
+id = &"fixture.item.ip_plague"
+display_name = "Ip Plague"
+price = 3
+grants = SubResource("Resource_3gs2w")

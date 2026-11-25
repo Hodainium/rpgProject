@@ -55,6 +55,19 @@ const NAME_ICONS: Dictionary = {
 	"kindled edge": "burning-embers", "serrated edge": "serrated-slash", "tempered edge": "anvil-impact", "bounty mark": "wanted-reward",
 	"fire bomb": "fire-bomb", "frost bomb": "ice-bomb", "seer's circlet": "jewel-crown", "predator's fang": "saber-tooth",
 	"siphon sigil": "heart-drop", "thrift sigil": "piggy-bank", "corrupted sigil": "cursed-star", "thornbark mail": "scale-mail",
+	# Spec item-power (the user's OK, 2026-11-23).
+	"chain bell": "crossed-chains", "feast knife": "meat-cleaver", "vengeful aegis": "shield-reflect", "sun heart": "sun-priest",
+	"undying ember": "fire-silhouette", "shatter covenant": "cracked-shield", "philosopher's coin": "gold-bar",
+	"twin soul": "double-face-mask", "plague crown": "virus", "echo crown": "echo-ripples", "void heart": "broken-heart",
+	"hollow crown": "queen-crown", "void tether": "linked-rings", "null lens": "sight-disabled",
+	"starving maw": "carnivore-mouth", "echo of nothing": "vortex", "chain hook": "hook", "reaper's mark": "grim-reaper",
+	"guardian's vow": "heart-shield", "venom spur": "scorpion-tail", "second wind": "lungs", "lifebloom seed": "sprout",
+	"battle hymn": "lyre", "bulwark sigil": "castle", "static ring": "power-ring", "hunter's snare": "wolf-trap",
+	"blood charm": "bleeding-wound", "thick hide": "rhinoceros-horn", "kindling": "campfire", "quick draw": "quick-slash",
+	"focus stone": "meditation", "mender's bell": "healing", "executioner's greatsword": "guillotine",
+	"storm spear": "thunder-blade", "bloodthirst blade": "bloody-sword", "runebound staff": "crystal-wand",
+	"thornheart plate": "spiked-armor", "sentinel plate": "abdominal-armor", "mantle of haste": "cape",
+	"warlord's crown": "crowned-skull",
 }
 ## The id segment a Void card adds to the id of the item it corrupts (demo.item.corrupted_frost_lantern → demo.item.frost_lantern).
 const CORRUPTED_PREFIX: String = "corrupted_"

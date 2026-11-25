@@ -30,6 +30,9 @@ var asc: CombatASC
 var alive: bool = true
 ## v2: ability tag → item id, for usable items granted to this unit.
 var item_abilities: Dictionary = {}
+## Spec item-power K8: ability tag → [the item or piece it was granted from, the grant it came with], to tell another copy
+## of an item (granted again) from a duplicate tag of a different source (skipped).
+var _granted_by: Dictionary = {}
 ## Content warnings raised while building the unit (e.g. a duplicate ability tag skipped).
 var warnings := PackedStringArray()
 ## The unit whose effect last lowered this unit's HP (a hit or a DoT tick), for Event.Unit.Killed (spec item-pass 3.1).
@@ -97,11 +100,12 @@ static func create(parent: Node, id: StringName, unit_side: int, unit_slot: int,
 		unit._grant_ability(scene, &"", replaced)
 	for scene in learned["grant"]:
 		unit._grant_ability(scene, &"", replaced)
-	for grant in grants:
+	for index in grants.size():
+		var grant: Dictionary = grants[index]
 		var ability_set: AbilitySet = grant.get("set")
 		if ability_set != null:
 			for scene in ability_set.abilities:
-				unit._grant_ability(scene, &"")
+				unit._grant_ability(scene, &"", [], StringName(grant.get("source", &"")), index)
 		if grant.get("ability") != null:
 			unit._grant_ability(grant["ability"], StringName(grant.get("item", &"")))
 	unit._apply_stats(kit.get("stats", {}))
@@ -164,7 +168,10 @@ func _apply_carry(carry: Dictionary) -> void:
 	asc.initialize_attribute_overrides(values)
 
 
-func _grant_ability(scene: PackedScene, item_id: StringName, skip: Array[StringName] = []) -> void:
+## Spec item-power K8: `source` is the item or piece of a grant and `grant` its place in the grant list. A tag the unit
+## already has is granted again when it comes from another copy of the same source; anything else is a duplicate.
+func _grant_ability(scene: PackedScene, item_id: StringName, skip: Array[StringName] = [], source: StringName = &"",
+		grant: int = -1) -> void:
 	if scene == null:
 		return
 	var ability := scene.instantiate() as BattleAbility
@@ -174,14 +181,21 @@ func _grant_ability(scene: PackedScene, item_id: StringName, skip: Array[StringN
 	if skip.has(ability.ability_tag):
 		ability.free()
 		return
-	if ability_by_tag(ability.ability_tag) != null:
+	if ability_by_tag(ability.ability_tag) != null and not _is_copy(ability.ability_tag, source, grant):
 		warnings.append("%s already has %s; the duplicate grant is skipped" % [unit_id, ability.ability_tag])
 		ability.free()
 		return
+	_granted_by[ability.ability_tag] = [source, grant]
 	ability.ability_level = effect_level
 	asc.add_child(ability)
 	if item_id != &"":
 		item_abilities[ability.ability_tag] = item_id
+
+
+func _is_copy(tag: StringName, source: StringName, grant: int) -> bool:
+	if source == &"" or not _granted_by.has(tag):
+		return false
+	return _granted_by[tag][0] == source and _granted_by[tag][1] != grant
 
 
 ## Spec content-pass H5: grants an AbilitySet mid-battle (a boss phase): its abilities, then its effects, then its tags,
@@ -257,6 +271,14 @@ func ultimate_abilities() -> Array[BattleAbility]:
 		if ability.is_ultimate():
 			result.append(ability)
 	return result
+
+
+## True when the unit holds an ability listening to `event_tag`.
+func listens_to(event_tag: StringName) -> bool:
+	for ability in abilities():
+		if ability.trigger_event_tag == event_tag:
+			return true
+	return false
 
 
 func ability_by_tag(tag: StringName) -> BattleAbility:

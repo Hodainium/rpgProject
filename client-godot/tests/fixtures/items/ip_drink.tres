@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/ip_drink.tscn" id="1_jl6h4"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_pcoqi"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_owrkw"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_u1jk6"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_54l74"]
+
+[sub_resource type="Resource" id="Resource_vesdm"]
+script = ExtResource("3_owrkw")
+abilities = Array[PackedScene]([ExtResource("1_jl6h4")])
+
+[resource]
+script = ExtResource("5_54l74")
+id = &"fixture.item.ip_drink"
+display_name = "Ip Drink"
+price = 3
+grants = SubResource("Resource_vesdm")

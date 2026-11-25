@@ -705,7 +705,7 @@ static var _blinkless: Dictionary = {}  # animation id -> the copy without `visi
 ## battle-start spin, no ult-charge flash); its `execute` keys resolve at once, as headless. A follow-up attack
 ## (Ability.Type.FollowUp) is an attack and still plays.
 static func plays_nothing(ability: BattleAbility) -> bool:
-	return ability.is_triggered() and not ability.is_follow_up()
+	return ability.is_triggered() and not ability.plays_like_attack()
 
 
 ## Playtest-fixes B21 (user, 2026-11-14: a cube never blinks when it acts, only when it is hit): the animation, or a copy

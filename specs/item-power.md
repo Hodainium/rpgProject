@@ -1,6 +1,7 @@
 # Spec: item-power (before 5c `card-balance`, after `bot-play`)
 
-Status: **spec written 2026-11-22; decisions confirmed by the user the same day (K5 approved).** The second of four slices the user asked for on 2026-11-22:
+Status: **built 2026-11-23 on `feat/item-power`, measured (section 8), awaiting the user's review and playtest** (spec written
+2026-11-22; decisions confirmed by the user the same day, K5 approved; the build's additions are D11-D17). The second of four slices the user asked for on 2026-11-22:
 `bot-play`, `item-power` (this), `level-99`, `second-pack`. Builds on `specs/item-pass.md` (hit tags, follow-ups,
 toughness and break, `per_item_effect`), `specs/content-pass.md` (statuses, DoT stacks, the trigger queue),
 `specs/playable-demo.md` 3.7-3.8 (rarity weights, the Void altars), `specs/food-items.md` (stacking bonuses),
@@ -53,6 +54,28 @@ recorded hash; the tests say so).
 | K7 | **Echo cast** | A triggered ability with asset tag `Ability.Type.Echo` and `echo_scale` (percent ×100) re-runs the triggering ability's execution rows (from `Event.Ability.Used.*`'s payload) on the same target at that scale: no cost, no ult charge, no `Event.Ability.Used` of its own (so an echo never echoes), its hits tagged `Hit.Echo` and `Hit.FollowUp`. |
 | K8 | **Copies** | A unit built with two copies of an item (snapshot: the item id twice in held items) grants the item's AbilitySet twice: effects applied twice (they stack per their own stacking policy; a non-stacking effect is two active effects), abilities granted once per copy (`_grant_ability` keys by ability tag + copy index, so the "duplicate ability tag skipped" warning no longer drops an item copy; it still drops a true duplicate from two different sources, as today). Each copy's trigger rolls and fires separately. |
 
+**Added by the build (user's OK, 2026-11-23, D11-D16):**
+- `Targeting.RANDOM_OTHER_ENEMY` and `OTHER_ENEMIES` beside `RANDOM_ENEMY`: the same draw, or every opposing unit that is up, without
+  the unit the triggering event is about (what an ability was aimed at, else the hit or hitting unit). With nobody to aim at the
+  trigger is skipped before its roll and its draw.
+- The `Event.Ability.Used*` payload carries `primary` and `targets`, and `Event.Ability.Used.Skill` follows it for a **skill**: an
+  action with a cost that is neither a basic attack, an ult nor an item's use ability (no demo move has a Skill tag).
+- `GiveItem.Recipient.HOLDER`: in an item's run hook, the member whose item it is, dead or alive (Philosopher's Coin).
+- `ExecutionRow.event_effect`: the row applies the triggering event's own effect with its damage values and types (Plague Crown's
+  spread; the K2 payload carries the tick's `spec`).
+- K1 and K2 only speak of the other side: HP a unit's own side or own effect costs it sends neither an ally event nor a tick event.
+- **Proc chains:** every "hit → extra attack" item and every counter is a follow-up (`Ability.Type.FollowUp`), so the HSR rule (a
+  follow-up never fires from a follow-up's hit) bounds them. Feast Knife's strikes and the Sun Heart's splash are not
+  (`Ability.Type.Strike`: they only *play* like one), so they do feed the follow-ups; Hollow Crown alone chains follow-ups, through
+  `Event.Attack.FollowUp`.
+- **Ult cap:** a unit casts at most `Battle.ULTS_PER_TURN` (3) ults until the next turn (anyone's, or a One More) starts, refused by
+  `CombatASC.can_activate_ability` (brains, Auto, the party window and the verifier alike; a log claiming a fourth is 2002). Ults use
+  no turn, so charge refunds adding up to a full bar cast for ever: 3 of 600 runs hung on Echo of Nothing + Corrupted Coil.
+- A trigger that costs something never pays for a target already at 0 HP (Void Tether). An echo also scales buffs, debuffs and
+  ticks (their added amounts; effects that only grant tags land whole) and restores (`Data.Echo.Scale`).
+- **Pacing (presentation):** the first triggered attack of a drain keeps the normal pacing, the rest of the chain at most 0.45 s on
+  screen and a 0.15 s pause, in game time, so the play speed scales both (the normal pacing already did).
+
 Every hook runs inside the existing trigger queue (FIFO, chain cap `TriggerQueue.MAX_DEPTH` 10), so proc chains (a
 follow-up kill firing Feast Knife, whose strikes fire Chain Bell, ...) are deterministic and bounded. The play report's
 `hashTiming`-style budget gains a battle-time line: the 600-seed smart report must not take more than 1.5× today's wall
@@ -91,12 +114,12 @@ three damage types exist (Physical, Fire, Ice).
 
 | Item | Rarity | Upside | Cost | Hook |
 |---|---|---|---|---|
-| Void Heart | Legendary | Double damage dealt. | You can't be healed. | data |
+| Void Heart | Legendary | Double damage dealt. | You can't be healed (heal_taken −1000%; every party heal reads it, D19). Revives still work, and so do the two heals that also revive (the waystation's rest, the Wandering Medic). | data |
 | Hollow Crown | Legendary | Each of your follow-ups triggers another (60% ATK), up to the chain cap. | −20% max HP. | data |
 | Void Tether | Epic | Whenever an ally is hit, strike the attacker for 150% ATK. | Lose 5% max HP each time. | K1 |
 | Null Lens | Epic | +200% crit damage. | −50% crit rate. | data |
-| Starving Maw | Epic | On a kill: heal 30% max HP, +10% ATK for the battle (stacks). | Lose 5% max HP each turn. | data |
-| Echo of Nothing | Epic | After your ult, +100 ult charge. | −30% max HP. | data |
+| Starving Maw | Epic | On a kill: heal 30% max HP, +10% ATK for the battle (stacks). | Lose 5% max HP each turn (stops below 5%, never kills). | data |
+| Echo of Nothing | Epic | After your ult, +60 ult charge (D12). | −30% max HP. | data |
 
 **Epic (8)** (all Core)
 
@@ -148,13 +171,14 @@ them edits existing files; a question for 5c). The build prints each pool's rari
 after. Legendary weapons and armor sit in the normal
 equipment pools (armories, pedestals, shelves) like the other pieces. Pools get no rarity weights of their own (D10).
 
-Totals: 40 (10 Legendary, 6 Void, 8 Epic, 8 Rare, 8 gear); Core 30, Descent 10. A named copy stacks in full (K8): two
+Totals: 40 (10 Legendary, 6 Void, 8 Epic, 8 Rare, 8 gear); Core 33, Descent 7 (what the tables say; the first draft's 30 / 10 was a
+miscount). Slots: Thornheart Plate, Sentinel Plate and Mantle of Haste are Body, the Warlord's Crown is Head. A named copy stacks in full (K8): two
 Bulwark Sigils are +60% max HP.
 
 ### 2.4 Building the set
 
 - A builder `game/tools/build_item_power.tscn` writes the new item, equipment, ability, effect and ExecCalc files into
-  `content/demo/` (new files only, never overwrites; `--force` rewrites only this pass's own files), and lists every
+  `content/demo/` (new files only, never overwrites), and lists every
   path and value it wrote. Run with the user's go-ahead (the `build_demo` exception pattern).
 - Each new move gets an animation with `execute` keys from the default set (the existing passive and follow-up
   animations are reused), and a sound from the bank through the audio pass's rules (follow-ups by damage type). Visual
@@ -167,8 +191,8 @@ Bulwark Sigils are +60% max HP.
 
 No C# record changes. The catalog file `infra/economy/card_catalog.json` gains 40 rows (same schema). Battle snapshot
 v2 already lists held items as an array, so two copies are the id twice (no version change). New Godot fields:
-`BattleAbility.trigger_chance` (`chance_x100` storage), `Targeting.RANDOM_ENEMY`, `ExecutionRow.DamageMode.EVENT_AMOUNT`,
-`BattleAbility.echo_scale`.
+`BattleAbility.trigger_chance` (`trigger_chance_x100` storage), `Targeting.RANDOM_ENEMY` / `RANDOM_OTHER_ENEMY` / `OTHER_ENEMIES`,
+`ExecutionRow.DamageMode.EVENT_AMOUNT`, `ExecutionRow.event_effect`, `BattleAbility.echo_scale`, `GiveItem.Recipient.HOLDER`.
 
 ## 4. Failure modes
 
@@ -230,6 +254,34 @@ On fixtures only (new fixtures in `tests/fixtures/`, built by `tests/tools/build
   overlap (no new item is in both).
 - D10. No per-pool rarity weights: the run-wide `rarity_weights` keeps weighing every pool alike.
 
+**Decisions (user, 2026-11-23, during the build):**
+- D11. The additions under 2.1 (targetings, the Used payload and Skill event, HOLDER, `event_effect`, other-side events, the echo scale in the
+  restore ExecCalc, one edit to an existing content file: `exec_calc_restore.gd`).
+- D12. Echo of Nothing gives +60, not +100.
+- D13. The follow-up rule for proc chains (2.1).
+- D14. Lower on-screen time for chained attacks, with a small delay that scales with the play speed.
+- D15. At most 3 ults per unit between two turns.
+- D16. Every new card has its own game-icons glyph (40 SVGs, 40 rows appended to `card_icons.tres`).
+- D17. Content bugs found in review, fixed: the Maw's cost outlives a revive; the Greatsword never finishes party members (the Collector
+  mirrors gear); Kindling's 40% is a trigger chance, not a status roll.
+
+**Decisions (user, 2026-11-24, after the build):**
+- D18. The Collector and the Reflection skip Philosopher's Gold like food: its set carries `Item.Gold` (new tag, in their `mirror_skip_tags`),
+  so its +5% is not copied; each piece still counts for the Collector's per-piece bonus.
+- D19. Void Heart blocks every heal: 18 older heals that ignored `heal_taken` now read it (7 in battle: Corrupted Vampire Fang, Corrupted
+  Bounty Mark, Mirror Ward, Mimic Tooth, Heartstring, Holy Water, Shield Wall; 11 outside: food, event heals, the healing spring, the
+  chests' heal). Amounts unchanged; Blessed Amulet now raises them and the Bounty Mark's −15% lowers its own heal. Revives do not read it.
+- D20. A follow-up never fires when every enemy it aims at is at 0 HP: no attack, no chance roll, no `Event.Attack.FollowUp`. The one exception
+  to "no committed golden changes": `break-seed-11` was regenerated (10 ult charge from such a follow-up), and this spec's `copies-seed-29`.
+- D21. A counter (a trigger on `Event.Damage.Taken*` or `Event.Ally.Damage.Taken`) answers its attacker past any taunt. Taunt still draws the
+  attacks an enemy chooses and the aimed triggers of its own hits; a random draw (K4) ignores it, like taunt's own rule (single-target and
+  blast only). A taunter at 0 HP taunts no more. Before, every enemy trigger was redirected (since `content-pass`).
+- D22. Findings of the last review, fixed: what a kill or death sets off plays at once, before the next actor is chosen (`Battle._play_aftermath`;
+  it waited for the next turn's start, so Reaper's Mark's advance could be lost; no golden moved); an echo of a damage row without an override
+  deals the echo's share of 100% ATK; `GiveItem` HOLDER gives a drawn item only to a holder who can take it, warns on its fallback, and the
+  validator warns on a named character (`holder_ignores_character`); the older builders make heals that read `heal_taken`;
+  `build_item_power` has no `--force` any more; the ult cap is recorded as a safety limit in `client-godot/CLAUDE.md`.
+
 **Open questions:** none.
 
 **Stays out:** reworking or retiring the weak items (later, 5c), level changes (`level-99`), new characters
@@ -237,4 +289,31 @@ On fixtures only (new fixtures in `tests/fixtures/`, built by `tests/tools/build
 
 ## 8. Measurements
 
-To be filled by the build: proc counts, replay time, and the smart gate before and after.
+2026-11-23/24: The Descent, the 600 balance seeds (`game/dev/balance_seeds.json`), smart policy, 4 members, `--check` (every battle
+replayed), 12 shards. Wins compared seed by seed, p from the two-sided sign test.
+
+| Run | Won | Win rate | Battles | Reached floor 10 | Wall time |
+|---|---|---|---|---|---|
+| before (`main`, bot-play's `smart`, reproduced the same evening) | 101 | 16.83% | 54,054 | 365 | 672 s |
+| **after** | **128** | **21.33%** | 58,393 | 430 | 690 s (1.03×, the budget is 1.5×) |
+
+- +91 −64 seeds, p 0.036: a small, probably real gain. No run stopped, no script error, no replay mismatch; the violations are 2 turn-limit
+  battles of the Reflection events (1 before).
+- Without the ult cap 3 of the 600 runs never ended (Echo of Nothing + Corrupted Coil).
+- Procs over 58,393 battles: K6 amount 10,009, K4 random 8,800, K1 ally 8,143, K3 chance 5,603, K8 copy 1,910 (54 runs: named drops
+  like Halo do give copies), K2 DoT 492, K7 echo 330, K5 dying 94; the chain cap was hit 580 times (Hollow Crown).
+- Win rate of the runs that held it, against 21.33% (a lift also measures how late an item comes: Void trades are only found on floor 10):
+  Void trades 47-77% (Hollow Crown 77%, Void Heart 68%, Echo of Nothing 67%); Shatter Covenant 47%, Plague Crown 36%, Bloodthirst Blade
+  36%, Mantle of Haste 34%, Undying Ember 33%, Echo Crown 33%, Venom Spur 31%, Lifebloom Seed and Sentinel Plate 29%; **below average:**
+  Reaper's Mark 6.8% (59 runs), Twin Soul 15.1%, Chain Hook 16.0%, Philosopher's Coin 18.8%, Focus Stone 18.8%. Treasure Legendaries
+  are rare (11-16 runs each: 3% rarity weight), so their rows are noise.
+
+- **After D18 and D19 (2026-11-24, the same 600 seeds): 128 (21.33%) again**, +3 −3 seeds against the row above (526 runs unchanged), +90 −63
+  against `main`, p 0.035, 58,313 battles, 762 s (1.13×), 2 turn-limit battles of the Reflection events. Void Heart 68% → 61% (21 → 19 of 31).
+- The other figures above are from the run before D18 and D19. Besides floor 10's altars, two Coven events (floor 9) can give Void items.
+
+- **After D20 and D21 (2026-11-24, a quick check on the first 100 seeds): 22 won** (21 of the same 100 before them, +7 −6; 14 on `main`), 149 s,
+  no violation. Too few seeds to move the 600-seed figure, which stays 128 (21.33%), measured before D20 and D21.
+
+- **After D22 (the first 100 seeds): 19 won** (22 before it, +1 −4: well within noise), no stopped run, error or violation. The 600-seed gate has
+  not been rerun since D20.

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hunters_snare.tscn" id="1_k2t52"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_aygin"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_vo6ci"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_hu08i"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_grocm"]
+
+[sub_resource type="Resource" id="Resource_k2t52"]
+script = ExtResource("3_vo6ci")
+abilities = Array[PackedScene]([ExtResource("1_k2t52")])
+
+[resource]
+script = ExtResource("5_grocm")
+id = &"demo.item.hunters_snare"
+display_name = "Hunter's Snare"
+description = "Hitting a weakness triggers a follow-up: 50% ATK Physical."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Core", &"Item.Fit.FollowUp", &"Item.Grants.FollowUp"])
+price = 7
+grants = SubResource("Resource_k2t52")

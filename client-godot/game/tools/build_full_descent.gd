@@ -415,7 +415,7 @@ func _themed_items() -> void:
 	_save("effects/blood_pact", _infinite({"dmg_mult": 25}, false))
 	_passive("blood_pact", "Ability.Passive.Bloodpact", B.SELF, [["price", "bleed", D.USE_EFFECT, 0]], &"Event.Battle.Start")
 	_described("blood_pact", "Blood Pact", [b, EPIC], 9, _ability_set(["blood_pact"], ["blood_pact"]), "+25% damage dealt; you start every battle Bleeding.")
-	_save("effects/heartstring_heal", _percent_of_max(10))
+	_save("effects/heartstring_heal", _percent_heal(10))
 	_passive("heartstring", "Ability.Passive.Heartstring", B.SELF, [["mend", "heartstring_heal", D.USE_EFFECT, 0]], &"Event.Unit.Killed")
 	_described("heartstring", "Heartstring", [b, t, RARE], 7, _ability_set(["heartstring"], []), "Heal 10% of max HP on a kill.")
 	_ability("clotting_salve", "Ability.Item.Salve", B.SINGLE_ALLY, [_row("clean", "cleanse", D.USE_EFFECT, 0, ExecutionRow.Targets.ALL),
@@ -439,7 +439,7 @@ func _themed_items() -> void:
 	_described("censer", "Censer", [b, RARE], 7, _ability_set(["censer"], []), "The party starts every battle with Regen.")
 	_save("effects/relic_shard", _infinite({"crit_rate": 12}, false))
 	_described("relic_shard", "Relic Shard", [b, RARE], 7, _ability_set([], ["relic_shard"]), "+12% crit rate.")
-	_save("effects/holy_heal", _percent_of_max(20))
+	_save("effects/holy_heal", _percent_heal(20))
 	_ability("holy_water", "Ability.Item.Holywater", B.ALL_ALLIES, [_row("clean", "cleanse", D.USE_EFFECT, 0, ExecutionRow.Targets.ALL),
 		_row("heal", "holy_heal", D.USE_EFFECT, 0, ExecutionRow.Targets.ALL)], _flash(0.6), [[0.3, "clean"], [0.35, "heal"]])
 	_usable("holy_water", "Holy Water", [s, COMMON], 5, "holy_water", cooldown, 3, "The party: cleanse and heal 20% of max HP. Ready again after 3 won battles.")
@@ -458,7 +458,7 @@ func _themed_items() -> void:
 	_described("appraisers_loupe", "Appraiser's Loupe", [t, RARE], 7, _ability_set([], ["appraisers_loupe"]), "+20% weakness damage.")
 	_save("effects/crown", _infinite({"atk": 10, "def": 10, "spd": 10}, true))
 	_piece("crown", "Crown", "Head", [b, LEGENDARY], 12, _ability_set([], ["crown"]), "+10% ATK, DEF and SPD.")
-	_save("effects/mimic_mend", _instant({"hp": 30}))
+	_save("effects/mimic_mend", _flat_heal(30))
 	_passive("mimic_tooth", "Ability.Passive.Mimictooth", B.SINGLE_ENEMY, [["bleed", "bleed", D.USE_EFFECT, 0]], &"Event.Damage.Dealt.Critical")
 	_passive("mimic_mend", "Ability.Passive.Mimicmend", B.SELF, [["mend", "mimic_mend", D.USE_EFFECT, 0]], &"Event.Damage.Dealt.Critical")
 	_described("mimic_tooth", "Mimic Tooth", [t, EPIC], 9, _ability_set(["mimic_tooth", "mimic_mend"], []), "Critical hits make the target Bleed and heal you 30 HP.")
@@ -500,7 +500,9 @@ func _corrupted_items() -> void:
 	# Epics.
 	_save("effects/corrupted_brand", _infinite({"dmg_mult": 40, "dmg_taken": 20}, false))
 	_corrupted("berserker_brand", "Corrupted Brand", EPIC, _ability_set([], ["corrupted_brand"]), "+40% damage dealt; +20% damage taken.")
-	_save("effects/corrupted_bounty", _instant({"energy": 40, "hp": 120}))
+	var bounty := _flat_heal(120)
+	bounty.modifiers.assign(_instant({"energy": 40}).modifiers)
+	_save("effects/corrupted_bounty", bounty)
 	_save("effects/corrupted_bounty_cost", _infinite({"heal_taken": -15}, false))
 	_passive("corrupted_bounty", "Ability.Passive.Corruptedbounty", B.SELF, [["bounty", "corrupted_bounty", D.USE_EFFECT, 0]], &"Event.Unit.Killed")
 	_corrupted("bounty_mark", "Corrupted Bounty", EPIC, _ability_set(["corrupted_bounty"], ["corrupted_bounty_cost"]),
@@ -525,7 +527,7 @@ func _corrupted_items() -> void:
 		"After each of your ults, +40 ult charge. −30 max MP.")
 	_save("effects/corrupted_fang", _infinite({"broken_dmg": 50, "dmg_mult": -15}, false))
 	_corrupted("predators_fang", "Corrupted Fang", EPIC, _ability_set([], ["corrupted_fang"]), "+50% damage to Broken enemies; −15% damage to the rest.")
-	_save("effects/corrupted_vampire_heal", _instant({"hp": 35}))
+	_save("effects/corrupted_vampire_heal", _flat_heal(35))
 	_save("effects/corrupted_vampire_cost", _infinite({"max_hp": -20}, true))
 	_passive("corrupted_vampire", "Ability.Passive.Corruptedvampire", B.SELF, [["drain", "corrupted_vampire_heal", D.USE_EFFECT, 0]],
 		&"Event.Damage.Dealt")
