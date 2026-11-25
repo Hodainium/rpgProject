@@ -154,7 +154,8 @@ The default `EnemyBrain` stays. Two subclasses in `combat/`, configured per enem
 
 **Taunt:** a single-target enemy action chosen by any brain must target a `State.Taunting` party unit when one is
 alive (`Battle.target_candidates` filters to taunters for enemy single-target abilities). Party targeting is
-unchanged. It is a rule tag, granted by content (`Status.Buff.Taunt` + `State.Taunting`).
+unchanged. It is a rule tag, granted by content (`Status.Buff.Taunt` + `State.Taunting`). An enemy's counter (a trigger on
+being hit) answers its attacker, past any taunt (spec `item-power` D21).
 
 Both brains close the ult-interrupts gap: the first custom brain gets the test that a brain returning an ult as a
 turn action is a runner error, never a verdict.

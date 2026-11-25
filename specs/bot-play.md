@@ -1,6 +1,6 @@
 # Spec: bot-play (before 5c `card-balance`)
 
-Status: **built 2026-11-22 on `feat/bot-play`, measured 2026-11-23 (section 8), awaiting the user's review.** The first of four slices the user asked for on 2026-11-22
+Status: **built 2026-11-22 on `feat/bot-play`, measured 2026-11-23 (section 8), merged 2026-11-23 (PR #89).** The first of four slices the user asked for on 2026-11-22
 before 5c: `bot-play` (this), `item-power` (run-winning items, weapons and armor; copies stack), `level-99` (the level
 cap, growth and high-level moves) and `second-pack` (a second card pack with three new characters). Bots come first:
 balancing items while the bots play badly would measure the bots, not the items. Builds on `specs/game-skeleton.md`
