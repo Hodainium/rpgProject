@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/venom_spur.tscn" id="1_0hqo5"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_y5bta"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_5wyl8"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_mxog2"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_sgvcx"]
+
+[sub_resource type="Resource" id="Resource_0hqo5"]
+script = ExtResource("3_5wyl8")
+abilities = Array[PackedScene]([ExtResource("1_0hqo5")])
+
+[resource]
+script = ExtResource("5_sgvcx")
+id = &"demo.item.venom_spur"
+display_name = "Venom Spur"
+description = "Every hit adds 1 Poison stack."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.Dot", &"Item.Grants.Dot"])
+price = 9
+grants = SubResource("Resource_0hqo5")

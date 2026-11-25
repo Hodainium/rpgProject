@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/twin_soul.tscn" id="1_uq00u"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_rlri3"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_j7rtu"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_fcdjs"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_ev4d5"]
+
+[sub_resource type="Resource" id="Resource_uq00u"]
+script = ExtResource("3_j7rtu")
+abilities = Array[PackedScene]([ExtResource("1_uq00u")])
+
+[resource]
+script = ExtResource("5_ev4d5")
+id = &"demo.item.twin_soul"
+display_name = "Twin Soul"
+description = "Your skills cast again at 60%."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Descent", &"Item.Fit.Damage", &"Item.Fit.Healing"])
+price = 12
+grants = SubResource("Resource_uq00u")

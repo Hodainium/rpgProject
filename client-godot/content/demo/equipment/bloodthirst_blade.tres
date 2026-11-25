@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bloodthirst_blade.tscn" id="1_5wrha"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_3y3fd"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_eqsav"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_8uwgh"]
+
+[sub_resource type="Resource" id="Resource_5wrha"]
+script = ExtResource("3_eqsav")
+abilities = Array[PackedScene]([ExtResource("1_5wrha")])
+
+[resource]
+script = ExtResource("4_8uwgh")
+id = &"demo.equipment.bloodthirst_blade"
+display_name = "Bloodthirst Blade"
+description = "Heal 25% of the damage you deal."
+slot = &"Equipment.Slot.Weapon"
+grants = SubResource("Resource_5wrha")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Epic", &"Card.Set.Descent", &"Item.Fit.Damage", &"Item.Fit.Survival"])
+price = 9

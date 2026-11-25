@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/echo_crown_ally.tscn" id="1_gmx7c"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/echo_crown_self.tscn" id="2_iwmwv"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_cfwq1"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_llihk"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_jojp3"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_djqqi"]
+
+[sub_resource type="Resource" id="Resource_gmx7c"]
+script = ExtResource("4_llihk")
+abilities = Array[PackedScene]([ExtResource("1_gmx7c"), ExtResource("2_iwmwv")])
+
+[resource]
+script = ExtResource("6_djqqi")
+id = &"demo.item.echo_crown"
+display_name = "Echo Crown"
+description = "The party: after any ally's ult, every ally makes a follow-up of 100% ATK Physical."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Descent", &"Item.Fit.FollowUp", &"Item.Fit.Party", &"Item.Grants.FollowUp"])
+price = 12
+grants = SubResource("Resource_gmx7c")
+applies_to = 1

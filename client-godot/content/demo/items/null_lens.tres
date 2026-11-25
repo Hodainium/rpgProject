@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_m2ual"]
+[ext_resource type="Resource" path="res://content/demo/effects/null_lens.tres" id="2_irqtu"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_c6rxf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_n0gxx"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_17qdd"]
+
+[sub_resource type="Resource" id="Resource_m2ual"]
+script = ExtResource("3_c6rxf")
+effects = Array[ExtResource("1_m2ual")]([ExtResource("2_irqtu")])
+
+[resource]
+script = ExtResource("5_17qdd")
+id = &"demo.item.null_lens"
+display_name = "Null Lens"
+description = "+200% crit damage, −50% crit rate."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.Damage"])
+price = 0
+grants = SubResource("Resource_m2ual")

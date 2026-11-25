@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_fjbfo"]
+[ext_resource type="Resource" path="res://content/demo/effects/menders_bell.tres" id="2_dvqnk"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_36rxs"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_3eoty"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_vl8lw"]
+
+[sub_resource type="Resource" id="Resource_fjbfo"]
+script = ExtResource("3_36rxs")
+effects = Array[ExtResource("1_fjbfo")]([ExtResource("2_dvqnk")])
+
+[resource]
+script = ExtResource("5_vl8lw")
+id = &"demo.item.menders_bell"
+display_name = "Mender's Bell"
+description = "+40% healing given and +15% SP gain."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Rare", &"Card.Set.Core", &"Item.Fit.Healing", &"Item.Fit.Sp"])
+price = 7
+grants = SubResource("Resource_fjbfo")

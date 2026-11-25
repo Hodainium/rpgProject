@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_a6txe"]
+[ext_resource type="Resource" path="res://content/demo/effects/philosophers_gold.tres" id="2_6375m"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_gb1th"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_u8tk2"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_whsr2"]
+
+[sub_resource type="Resource" id="Resource_a6txe"]
+script = ExtResource("3_gb1th")
+effects = Array[ExtResource("1_a6txe")]([ExtResource("2_6375m")])
+tags = Array[StringName]([&"Item.Gold"])
+
+[resource]
+script = ExtResource("5_whsr2")
+id = &"demo.item.philosophers_gold"
+display_name = "Philosopher's Gold"
+description = "+5% ATK, DEF and max HP."
+tags = Array[StringName]([&"Item.Rarity.Rare", &"Item.Fit.Damage", &"Item.Fit.Survival"])
+price = 0
+grants = SubResource("Resource_a6txe")

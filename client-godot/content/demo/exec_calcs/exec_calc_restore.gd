@@ -40,8 +40,11 @@ func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Di
 
 
 ## amount x source.<source_bonus> x target.<target_bonus>; each multiplier never below 0%.
+## Spec item-power K7: an echo's restore is scaled too (Data.Echo.Scale, only set on an echo's specs).
 static func scaled(value: int, spec: GameplayEffectSpec, target_asc: AbilitySystemComponent, source_name: String,
 		target_name: String) -> int:
+	if spec.set_by_caller_magnitudes.has(ExecutionRow.ECHO_SCALE_TAG):
+		value = Fixed.pct(value, int(spec.get_set_by_caller_magnitude(ExecutionRow.ECHO_SCALE_TAG)))
 	if source_name != "":
 		value = Fixed.pct(value, _multiplier(BattleContext.source_asc(spec), source_name))
 	if target_name != "":

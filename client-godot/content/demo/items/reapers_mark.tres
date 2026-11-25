@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/reapers_mark.tscn" id="1_y61ob"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_mh1x0"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_5b8f7"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_8nk0l"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_sxjq4"]
+
+[sub_resource type="Resource" id="Resource_y61ob"]
+script = ExtResource("3_5b8f7")
+abilities = Array[PackedScene]([ExtResource("1_y61ob")])
+
+[resource]
+script = ExtResource("5_sxjq4")
+id = &"demo.item.reapers_mark"
+display_name = "Reaper's Mark"
+description = "On a kill: +25% ATK for 2 turns (up to 3 stacks) and a 30% action advance."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.Damage", &"Item.Fit.Speed"])
+price = 9
+grants = SubResource("Resource_y61ob")

@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_5ti0n"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_v2joc"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_w8g6j"]
+[ext_resource type="Animation" path="res://content/demo/animations/duelists_band.tres" id="4_7hwgg"]
+
+[sub_resource type="Resource" id="Resource_5ti0n"]
+script = ExtResource("2_v2joc")
+id = &"riposte"
+effect = ExtResource("3_w8g6j")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+
+[node name="VengefulAegis" type="Node" unique_id=1110884452]
+script = ExtResource("1_5ti0n")
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+executions = Array[ExtResource("2_v2joc")]([SubResource("Resource_5ti0n")])
+animation = ExtResource("4_7hwgg")
+description = "When an ally is hit: a follow-up of 100% ATK Physical on the attacker."
+ability_name = "Vengeful Aegis"
+ability_tag = &"Ability.Passive.VengefulAegis"
+trigger_event_tag = &"Event.Ally.Damage.Taken"

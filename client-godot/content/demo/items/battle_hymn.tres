@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_ehnut"]
+[ext_resource type="Resource" path="res://content/demo/effects/battle_hymn.tres" id="2_ce4un"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_v75k1"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_hmbdt"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_e8a87"]
+
+[sub_resource type="Resource" id="Resource_ehnut"]
+script = ExtResource("3_v75k1")
+effects = Array[ExtResource("1_ehnut")]([ExtResource("2_ce4un")])
+
+[resource]
+script = ExtResource("5_e8a87")
+id = &"demo.item.battle_hymn"
+display_name = "Battle Hymn"
+description = "The party: +15% ATK and +10 SPD."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.Damage", &"Item.Fit.Speed", &"Item.Fit.Party"])
+price = 9
+grants = SubResource("Resource_ehnut")
+applies_to = 1

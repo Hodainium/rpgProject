@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/void_tether.tscn" id="1_wlut8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_uyn6e"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_jwrjr"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_a8gb7"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_w2c4w"]
+
+[sub_resource type="Resource" id="Resource_wlut8"]
+script = ExtResource("3_jwrjr")
+abilities = Array[PackedScene]([ExtResource("1_wlut8")])
+
+[resource]
+script = ExtResource("5_w2c4w")
+id = &"demo.item.void_tether"
+display_name = "Void Tether"
+description = "Whenever an ally is hit, strike the attacker for 150% ATK Physical (a follow-up); each strike costs 5% of your max HP."
+tags = Array[StringName]([&"Pool.Void", &"Item.Corrupted", &"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.FollowUp", &"Item.Grants.FollowUp"])
+price = 0
+grants = SubResource("Resource_wlut8")

@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_uu872"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_pp5em"]
+[ext_resource type="Resource" path="res://content/demo/effects/second_wind_heal.tres" id="3_e0hyh"]
+[ext_resource type="Animation" path="res://content/demo/animations/heartstring.tres" id="4_a3l08"]
+
+[sub_resource type="Resource" id="Resource_uu872"]
+script = ExtResource("2_pp5em")
+id = &"mend"
+effect = ExtResource("3_e0hyh")
+
+[node name="SecondWindKill" type="Node" unique_id=785830329]
+script = ExtResource("1_uu872")
+targeting = 5
+executions = Array[ExtResource("2_pp5em")]([SubResource("Resource_uu872")])
+animation = ExtResource("4_a3l08")
+description = "Heal 15% of max HP."
+ability_name = "Second Wind"
+ability_tag = &"Ability.Passive.SecondWindKill"
+trigger_event_tag = &"Event.Unit.Killed"

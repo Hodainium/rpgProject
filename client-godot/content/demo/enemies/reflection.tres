@@ -19,7 +19,7 @@ pattern = Array[StringName]([&"Ability.Echostrike", &"Ability.Strike", &"Ability
 [resource]
 script = ExtResource("10_n6d8f")
 mirror_party_items = true
-mirror_skip_tags = Array[StringName]([&"Item.Food", &"Item.Curse"])
+mirror_skip_tags = Array[StringName]([&"Item.Food", &"Item.Curse", &"Item.Gold"])
 drop_item = ExtResource("7_cxnst")
 drop_chance_x100 = 400
 id = &"demo.enemy.reflection"

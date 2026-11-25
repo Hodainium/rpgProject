@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/second_wind_start.tscn" id="1_j88f6"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/second_wind_kill.tscn" id="2_o7vsb"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_3xus8"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_5fdtn"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_1sn0t"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_kqmu2"]
+
+[sub_resource type="Resource" id="Resource_j88f6"]
+script = ExtResource("4_5fdtn")
+abilities = Array[PackedScene]([ExtResource("1_j88f6"), ExtResource("2_o7vsb")])
+
+[resource]
+script = ExtResource("6_kqmu2")
+id = &"demo.item.second_wind"
+display_name = "Second Wind"
+description = "Heal 15% of max HP at battle start and on every kill."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.Survival"])
+price = 9
+grants = SubResource("Resource_j88f6")

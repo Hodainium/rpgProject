@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_1mdmh"]
+[ext_resource type="Resource" path="res://content/demo/effects/bulwark_sigil.tres" id="2_joaqj"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_rn5fr"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_0aclm"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_6y4tn"]
+
+[sub_resource type="Resource" id="Resource_1mdmh"]
+script = ExtResource("3_rn5fr")
+effects = Array[ExtResource("1_1mdmh")]([ExtResource("2_joaqj")])
+
+[resource]
+script = ExtResource("5_6y4tn")
+id = &"demo.item.bulwark_sigil"
+display_name = "Bulwark Sigil"
+description = "+30% max HP and +30% DEF."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Epic", &"Card.Set.Core", &"Item.Fit.Survival"])
+price = 9
+grants = SubResource("Resource_1mdmh")

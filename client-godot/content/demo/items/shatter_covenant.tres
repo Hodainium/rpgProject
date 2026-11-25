@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_4lj6f"]
+[ext_resource type="Resource" path="res://content/demo/effects/shatter_covenant.tres" id="2_y0b6t"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_4nklu"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_tpq0q"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_lvnrx"]
+
+[sub_resource type="Resource" id="Resource_4lj6f"]
+script = ExtResource("3_4nklu")
+effects = Array[ExtResource("1_4lj6f")]([ExtResource("2_y0b6t")])
+
+[resource]
+script = ExtResource("5_lvnrx")
+id = &"demo.item.shatter_covenant"
+display_name = "Shatter Covenant"
+description = "Triple toughness damage; Broken enemies take +60% damage from you."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Legendary", &"Card.Set.Core", &"Item.Fit.Break", &"Item.Grants.Break"])
+price = 12
+grants = SubResource("Resource_4lj6f")

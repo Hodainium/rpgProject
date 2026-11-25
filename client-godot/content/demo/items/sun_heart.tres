@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sun_heart.tscn" id="1_i6ht7"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_btupr"]
+[ext_resource type="Resource" path="res://content/demo/effects/sun_heart.tres" id="3_alws2"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_3t1w2"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_a8uqy"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_nesds"]
+
+[sub_resource type="Resource" id="Resource_i6ht7"]
+script = ExtResource("4_3t1w2")
+abilities = Array[PackedScene]([ExtResource("1_i6ht7")])
+effects = Array[ExtResource("2_btupr")]([ExtResource("3_alws2")])
+
+[resource]
+script = ExtResource("6_nesds")
+id = &"demo.item.sun_heart"
+display_name = "Sun Heart"
+description = "Your basic attacks also hit every other enemy for 60% ATK Physical and give +100% SP."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Legendary", &"Card.Set.Core", &"Item.Fit.Damage", &"Item.Fit.FollowUp", &"Item.Fit.Sp"])
+price = 12
+grants = SubResource("Resource_i6ht7")

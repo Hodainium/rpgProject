@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_t8ilk"]
+[ext_resource type="Resource" path="res://content/demo/effects/focus_stone.tres" id="2_cto27"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_6jf0a"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_b0pds"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_p7seh"]
+
+[sub_resource type="Resource" id="Resource_t8ilk"]
+script = ExtResource("3_6jf0a")
+effects = Array[ExtResource("1_t8ilk")]([ExtResource("2_cto27")])
+
+[resource]
+script = ExtResource("5_p7seh")
+id = &"demo.item.focus_stone"
+display_name = "Focus Stone"
+description = "+25% ATK and +10% crit rate."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Core", &"Item.Fit.Damage"])
+price = 7
+grants = SubResource("Resource_t8ilk")

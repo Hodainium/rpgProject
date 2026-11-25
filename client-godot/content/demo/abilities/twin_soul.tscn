@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_pa155"]
+
+[node name="TwinSoul" type="Node" unique_id=676026550]
+script = ExtResource("1_pa155")
+targeting = 5
+asset_tags = Array[StringName]([&"Ability.Type.Echo"])
+echo_scale_x100 = 6000
+description = "Your skills cast again at 60%."
+ability_name = "Twin Soul"
+ability_tag = &"Ability.Passive.TwinSoul"
+trigger_event_tag = &"Event.Ability.Used.Skill"

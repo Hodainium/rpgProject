@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/vengeful_aegis.tscn" id="1_eg3c0"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_520db"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_2ld7j"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_hfxlb"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_loese"]
+
+[sub_resource type="Resource" id="Resource_eg3c0"]
+script = ExtResource("3_2ld7j")
+abilities = Array[PackedScene]([ExtResource("1_eg3c0")])
+
+[resource]
+script = ExtResource("5_loese")
+id = &"demo.item.vengeful_aegis"
+display_name = "Vengeful Aegis"
+description = "Whenever an ally is hit, strike the attacker for 100% ATK Physical (a follow-up)."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Core", &"Item.Fit.FollowUp", &"Item.Grants.FollowUp"])
+price = 12
+grants = SubResource("Resource_eg3c0")

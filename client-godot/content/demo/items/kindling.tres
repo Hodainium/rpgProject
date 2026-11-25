@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/kindling_burn.tscn" id="1_5keq0"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_7yey2"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_rysig"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_iosk6"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_70viv"]
+
+[sub_resource type="Resource" id="Resource_5keq0"]
+script = ExtResource("3_rysig")
+abilities = Array[PackedScene]([ExtResource("1_5keq0")])
+
+[resource]
+script = ExtResource("5_70viv")
+id = &"demo.item.kindling"
+display_name = "Kindling"
+description = "Fire hits have a 40% chance to add a Burn (30 Fire damage for 2 turns)."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Core", &"Item.Fit.Dot", &"Item.Grants.Dot"])
+price = 7
+grants = SubResource("Resource_5keq0")

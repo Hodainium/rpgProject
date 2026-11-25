@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_c81tk"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_6e688"]
+[ext_resource type="Resource" path="res://content/demo/effects/bloodthirst_heal.tres" id="3_fuwga"]
+[ext_resource type="Animation" path="res://content/demo/animations/corrupted_vampire.tres" id="4_k7y1r"]
+
+[sub_resource type="Resource" id="Resource_c81tk"]
+script = ExtResource("2_6e688")
+id = &"drain"
+effect = ExtResource("3_fuwga")
+damage_mode = 3
+multiplier_x100 = 2500
+
+[node name="BloodthirstBlade" type="Node" unique_id=1261852668]
+script = ExtResource("1_c81tk")
+targeting = 5
+executions = Array[ExtResource("2_6e688")]([SubResource("Resource_c81tk")])
+animation = ExtResource("4_k7y1r")
+description = "Heal 25% of the damage you deal."
+ability_name = "Bloodthirst Blade"
+ability_tag = &"Ability.Passive.BloodthirstBlade"
+trigger_event_tag = &"Event.Damage.Dealt"

@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_d5yl4"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_sk3r3"]
+[ext_resource type="Resource" path="res://content/demo/effects/starving_maw_heal.tres" id="3_30kgm"]
+[ext_resource type="Resource" path="res://content/demo/effects/starving_maw_feast.tres" id="4_f5vde"]
+[ext_resource type="Animation" path="res://content/demo/animations/corrupted_oath.tres" id="5_ft26m"]
+
+[sub_resource type="Resource" id="Resource_d5yl4"]
+script = ExtResource("2_sk3r3")
+id = &"charge"
+effect = ExtResource("3_30kgm")
+
+[sub_resource type="Resource" id="Resource_sk3r3"]
+script = ExtResource("2_sk3r3")
+id = &"fury"
+effect = ExtResource("4_f5vde")
+
+[node name="StarvingMaw" type="Node" unique_id=11961323]
+script = ExtResource("1_d5yl4")
+targeting = 5
+executions = Array[ExtResource("2_sk3r3")]([SubResource("Resource_d5yl4"), SubResource("Resource_sk3r3")])
+animation = ExtResource("5_ft26m")
+description = "On a kill: heal 30% of max HP and gain +10% ATK for the battle."
+ability_name = "Starving Maw"
+ability_tag = &"Ability.Passive.StarvingMaw"
+trigger_event_tag = &"Event.Unit.Killed"

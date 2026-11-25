@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_uic6f"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_d335e"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_a06yx"]
+[ext_resource type="Animation" path="res://content/demo/animations/toxic_echo.tres" id="4_yqj04"]
+
+[sub_resource type="Resource" id="Resource_uic6f"]
+script = ExtResource("2_d335e")
+id = &"echo"
+effect = ExtResource("3_a06yx")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 6000
+
+[node name="ChainBell" type="Node" unique_id=1758167540]
+script = ExtResource("1_uic6f")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+trigger_chance_x100 = 3000
+executions = Array[ExtResource("2_d335e")]([SubResource("Resource_uic6f")])
+animation = ExtResource("4_yqj04")
+description = "30% on each hit: a follow-up of 60% ATK Physical on every enemy."
+ability_name = "Chain Bell"
+ability_tag = &"Ability.Passive.ChainBell"
+trigger_event_tag = &"Event.Damage.Dealt"

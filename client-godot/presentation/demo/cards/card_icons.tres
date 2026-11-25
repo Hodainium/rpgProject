@@ -135,6 +135,46 @@
 [ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/skoll/rank-3.svg" id="133_icon"]
 [ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/willdabeast/chain-mail.svg" id="134_icon"]
 [ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/zeromancer/heart-plus.svg" id="135_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/bloody-sword.svg" id="136_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/guillotine.svg" id="137_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/cape.svg" id="138_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/crystal-wand.svg" id="139_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/abdominal-armor.svg" id="140_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/thunder-blade.svg" id="141_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/spiked-armor.svg" id="142_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/crowned-skull.svg" id="143_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/lyre.svg" id="144_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/bleeding-wound.svg" id="145_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/castle.svg" id="146_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/crossed-chains.svg" id="147_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/hook.svg" id="148_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/echo-ripples.svg" id="149_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/vortex.svg" id="150_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/meat-cleaver.svg" id="151_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/meditation.svg" id="152_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/heart-shield.svg" id="153_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/queen-crown.svg" id="154_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/wolf-trap.svg" id="155_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/campfire.svg" id="156_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/sprout.svg" id="157_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/healing.svg" id="158_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/skoll/sight-disabled.svg" id="159_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/willdabeast/gold-bar.svg" id="160_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/virus.svg" id="161_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/quick-slash.svg" id="162_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/grim-reaper.svg" id="163_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/lungs.svg" id="164_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/cracked-shield.svg" id="165_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/carnivore-mouth.svg" id="166_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/power-ring.svg" id="167_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/sun-priest.svg" id="168_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/rhinoceros-horn.svg" id="169_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/double-face-mask.svg" id="170_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/fire-silhouette.svg" id="171_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/shield-reflect.svg" id="172_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/scorpion-tail.svg" id="173_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/broken-heart.svg" id="174_icon"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/linked-rings.svg" id="175_icon"]
 
 [resource]
 script = ExtResource("1_set")
@@ -287,5 +327,45 @@ textures = Dictionary[StringName, Texture2D]({
 &"demo.item.war_drum": ExtResource("12_icon"),
 &"demo.item.wardens_key": ExtResource("77_icon"),
 &"demo.item.whetstone": ExtResource("113_icon"),
-&"demo.item.witchs_eye": ExtResource("129_icon")
+&"demo.item.witchs_eye": ExtResource("129_icon"),
+&"demo.equipment.bloodthirst_blade": ExtResource("136_icon"),
+&"demo.equipment.executioners_greatsword": ExtResource("137_icon"),
+&"demo.equipment.mantle_of_haste": ExtResource("138_icon"),
+&"demo.equipment.runebound_staff": ExtResource("139_icon"),
+&"demo.equipment.sentinel_plate": ExtResource("140_icon"),
+&"demo.equipment.storm_spear": ExtResource("141_icon"),
+&"demo.equipment.thornheart_plate": ExtResource("142_icon"),
+&"demo.equipment.warlords_crown": ExtResource("143_icon"),
+&"demo.item.battle_hymn": ExtResource("144_icon"),
+&"demo.item.blood_charm": ExtResource("145_icon"),
+&"demo.item.bulwark_sigil": ExtResource("146_icon"),
+&"demo.item.chain_bell": ExtResource("147_icon"),
+&"demo.item.chain_hook": ExtResource("148_icon"),
+&"demo.item.echo_crown": ExtResource("149_icon"),
+&"demo.item.echo_of_nothing": ExtResource("150_icon"),
+&"demo.item.feast_knife": ExtResource("151_icon"),
+&"demo.item.focus_stone": ExtResource("152_icon"),
+&"demo.item.guardians_vow": ExtResource("153_icon"),
+&"demo.item.hollow_crown": ExtResource("154_icon"),
+&"demo.item.hunters_snare": ExtResource("155_icon"),
+&"demo.item.kindling": ExtResource("156_icon"),
+&"demo.item.lifebloom_seed": ExtResource("157_icon"),
+&"demo.item.menders_bell": ExtResource("158_icon"),
+&"demo.item.null_lens": ExtResource("159_icon"),
+&"demo.item.philosophers_coin": ExtResource("160_icon"),
+&"demo.item.plague_crown": ExtResource("161_icon"),
+&"demo.item.quick_draw": ExtResource("162_icon"),
+&"demo.item.reapers_mark": ExtResource("163_icon"),
+&"demo.item.second_wind": ExtResource("164_icon"),
+&"demo.item.shatter_covenant": ExtResource("165_icon"),
+&"demo.item.starving_maw": ExtResource("166_icon"),
+&"demo.item.static_ring": ExtResource("167_icon"),
+&"demo.item.sun_heart": ExtResource("168_icon"),
+&"demo.item.thick_hide": ExtResource("169_icon"),
+&"demo.item.twin_soul": ExtResource("170_icon"),
+&"demo.item.undying_ember": ExtResource("171_icon"),
+&"demo.item.vengeful_aegis": ExtResource("172_icon"),
+&"demo.item.venom_spur": ExtResource("173_icon"),
+&"demo.item.void_heart": ExtResource("174_icon"),
+&"demo.item.void_tether": ExtResource("175_icon")
 })

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/warlords_crown.tscn" id="1_7gocx"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_yxlc4"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_r3g2h"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_x8kmi"]
+
+[sub_resource type="Resource" id="Resource_7gocx"]
+script = ExtResource("3_r3g2h")
+abilities = Array[PackedScene]([ExtResource("1_7gocx")])
+
+[resource]
+script = ExtResource("4_x8kmi")
+id = &"demo.equipment.warlords_crown"
+display_name = "Warlord's Crown"
+description = "The party: +25% ATK and +15% DEF in battle."
+slot = &"Equipment.Slot.Head"
+grants = SubResource("Resource_7gocx")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Legendary", &"Card.Set.Descent", &"Item.Fit.Damage", &"Item.Fit.Survival", &"Item.Fit.Party"])
+price = 12

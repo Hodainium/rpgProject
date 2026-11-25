@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_6lqih"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_f1tf4"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_bxyjy"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_u882o"]
+
+[sub_resource type="Resource" id="Resource_6lqih"]
+script = ExtResource("3_bxyjy")
+value_x100 = 10000
+attribute_name = "dmg_mult"
+
+[sub_resource type="Resource" id="Resource_f1tf4"]
+script = ExtResource("3_bxyjy")
+value_x100 = -100000
+attribute_name = "heal_taken"
+
+[resource]
+script = ExtResource("4_u882o")
+policy = 2
+modifiers = Array[ExtResource("2_f1tf4")]([SubResource("Resource_6lqih"), SubResource("Resource_f1tf4")])

@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_p8388"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_pq3n8"]
+[ext_resource type="Resource" path="res://content/demo/effects/gravity_pull.tres" id="3_djbxg"]
+[ext_resource type="Animation" path="res://content/demo/animations/momentum_charm.tres" id="4_u2l8f"]
+[ext_resource type="Resource" path="res://content/demo/effects/starving_maw_hunger.tres" id="5_aslul"]
+
+[sub_resource type="Resource" id="Resource_0eatk"]
+script = ExtResource("2_pq3n8")
+id = &"charge"
+effect = ExtResource("3_djbxg")
+
+[node name="StarvingMawHunger" type="Node" unique_id=992074398]
+script = ExtResource("1_p8388")
+targeting = 5
+executions = Array[ExtResource("2_pq3n8")]([SubResource("Resource_0eatk")])
+animation = ExtResource("4_u2l8f")
+description = "Lose 5% of max HP each turn."
+ability_name = "Starving Maw"
+ability_tag = &"Ability.Passive.StarvingMawHunger"
+cost_effect = ExtResource("5_aslul")
+trigger_event_tag = &"Event.Turn.Start"

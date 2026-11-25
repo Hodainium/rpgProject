@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/undying_ember.tscn" id="1_bnmrn"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_q74l5"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_fsxan"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_4188e"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_yfjp1"]
+
+[sub_resource type="Resource" id="Resource_bnmrn"]
+script = ExtResource("3_fsxan")
+abilities = Array[PackedScene]([ExtResource("1_bnmrn")])
+
+[resource]
+script = ExtResource("5_yfjp1")
+id = &"demo.item.undying_ember"
+display_name = "Undying Ember"
+description = "Once per battle, a killing blow leaves you at 50% HP with +50% ATK for 3 turns."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Core", &"Item.Fit.Survival", &"Item.Fit.Damage"])
+price = 12
+grants = SubResource("Resource_bnmrn")

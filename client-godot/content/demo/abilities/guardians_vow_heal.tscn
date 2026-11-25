@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_sixek"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_4nrit"]
+[ext_resource type="Resource" path="res://content/demo/effects/guardians_vow_heal.tres" id="3_h86hb"]
+[ext_resource type="Animation" path="res://content/demo/animations/heartstring.tres" id="4_ra32p"]
+
+[sub_resource type="Resource" id="Resource_sixek"]
+script = ExtResource("2_4nrit")
+id = &"mend"
+effect = ExtResource("3_h86hb")
+
+[node name="GuardiansVowHeal" type="Node" unique_id=1949277458]
+script = ExtResource("1_sixek")
+targeting = 3
+executions = Array[ExtResource("2_4nrit")]([SubResource("Resource_sixek")])
+animation = ExtResource("4_ra32p")
+description = "When an ally is hit: heal them 10% of their max HP."
+ability_name = "Guardian's Vow"
+ability_tag = &"Ability.Passive.GuardiansVowHeal"
+trigger_event_tag = &"Event.Ally.Damage.Taken"

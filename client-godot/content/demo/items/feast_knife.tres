@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/feast_knife_1.tscn" id="1_1641x"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/feast_knife_2.tscn" id="2_6ra8c"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/feast_knife_3.tscn" id="3_qkwa7"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_ewwoi"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="5_j55qb"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="6_tjta8"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="7_0y0x1"]
+
+[sub_resource type="Resource" id="Resource_1641x"]
+script = ExtResource("5_j55qb")
+abilities = Array[PackedScene]([ExtResource("1_1641x"), ExtResource("2_6ra8c"), ExtResource("3_qkwa7")])
+
+[resource]
+script = ExtResource("7_0y0x1")
+id = &"demo.item.feast_knife"
+display_name = "Feast Knife"
+description = "On a kill: 3 strikes of 120% ATK Physical, each on a random enemy. The strikes count as your own hits."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Core", &"Item.Fit.FollowUp"])
+price = 12
+grants = SubResource("Resource_1641x")
