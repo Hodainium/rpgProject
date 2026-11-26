@@ -26,3 +26,15 @@ func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Di
 		return {}
 	var restored := Fixed.pct(int(maximum.current_value), percent_x100)
 	return {attribute: float(ExecCalcRestore.scaled(restored, spec, target_asc, source_bonus, target_bonus))}
+
+
+## Spec auto-support: what execute would restore on `target_asc` if `source_asc` applied it now (no echo), for
+## RestoreReader. The same formula as execute; never changes anything.
+func restore_of(source_asc: AbilitySystemComponent, target_asc: AbilitySystemComponent) -> Dictionary:
+	if target_asc == null:
+		return {}
+	var maximum := target_asc.get_attribute(max_attribute)
+	if maximum == null or not target_asc.has_attribute(attribute):
+		return {}
+	var restored := Fixed.pct(int(maximum.current_value), percent_x100)
+	return {attribute: ExecCalcRestore.bonused(restored, source_asc, target_asc, source_bonus, target_bonus)}
