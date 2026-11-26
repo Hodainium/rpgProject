@@ -44,6 +44,7 @@ const EXPECTED_WARNINGS: Array = [
 	["sp_gain_missing", "characters/sp_gain_missing.tres"], ["cost_unscaled", "characters/sp_gain_missing.tres"],
 	["secret_skill_unreachable", "enemies/secret_unreachable.tres"],
 	["level_skill_gap", "characters/level_skill_gap.tres"], ["level_effect_ignored", "characters/both_growth.tres"],
+	["heal_unreadable", "characters/heal_unreadable.tres"],  # spec auto-support
 ]
 
 

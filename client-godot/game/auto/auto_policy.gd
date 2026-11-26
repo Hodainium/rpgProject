@@ -16,9 +16,19 @@
 ## costed move is picked over the best basic only when it scores SPEND_RATIO% of it (a free one: more than it), or when
 ## one more basic would overflow max SP (then a buff an ally lacks also goes before the basic); and while the party is in danger (an ally dead or under HEAL_BELOW, or under
 ## DANGER_BELOW in a boss fight) a unit with a costed heal or revive never spends below that move's cost.
+## Spec auto-support: the heal step also runs when SPREAD_HURT or more allies are under SPREAD_BELOW, and picks the heal
+## with the most effective healing (RestoreReader, overhealing counts for nothing) unless a cheaper one comes within
+## HEAL_STEP% (a heal that also cleanses an afflicted ally it reaches only needs to match it); a unit with a basic casts
+## a party buff (ALL_ALLIES) that BUFF_LACKING or more allies lack before the spend-or-build comparison, when it can pay
+## above the danger reserve, the party is not in danger and some enemy is still at BUFF_SKIP_BELOW% HP or more.
 class_name AutoPolicy
 extends RefCounted
 
+const HEAL_STEP: int = 125      # % of a cheaper heal's effective healing a costlier one must reach (spec auto-support 3.2)
+const SPREAD_BELOW: int = 70    # % of max HP: an ally under it counts as hurt for the spread rule
+const SPREAD_HURT: int = 2      # allies under SPREAD_BELOW that make the party spread hurt
+const BUFF_LACKING: int = 2     # living allies that must lack a party buff's status (spec auto-support 3.3)
+const BUFF_SKIP_BELOW: int = 25 # % of max HP: no party buff when every enemy is under it
 const HEAL_BELOW: int = 45      # % of max HP
 const MP_RESERVE: int = 30      # % of max MP
 const CLEANSE_AT: int = 2       # debuffs on one ally
@@ -58,9 +68,20 @@ var options: Options
 ## Items by id, to tell CONSUMABLE items apart (null: every item counts as reusable).
 var content: ContentIndex
 ## Why the last choose() picked its move ("ult", "revive", "heal", "cleanse", "ability", "cap", "basic", "best", "buff",
-## "last resort", "fallback"), for BattleLog. Never read by a rule.
+## "last resort", "fallback", "party buff", "cap buff"), for BattleLog. Never read by a rule.
 var last_reason: String = ""
+## Spec auto-support 5: more about the last pick for BattleLog ("E=<n>" for a heal: its effective healing, whole HP).
+var last_detail: String = ""
+## The last heal pick's effective healing (×100; 0 for any other pick). Never read by a rule.
+var last_healing: int = 0
+## Spec auto-support 3.4 (dev reports only): when set, every pick is counted here per class, {class id: {"reasons":
+## {reason: n}, "abilities": {reason: {ability tag: n}}, "healingX100": Σ effective healing of the heal picks}} (abilities
+## only for the support reasons). Never read by a rule.
+var tally: Variant = null
 var _fallback: bool = false
+
+## The reasons whose picked abilities the tally lists (spec auto-support 3.4).
+const TALLIED_ABILITIES: Array[String] = ["heal", "party buff", "cap buff", "buff"]
 
 
 func _init(policy_options: Options = null, content_index: ContentIndex = null) -> void:
@@ -69,6 +90,24 @@ func _init(policy_options: Options = null, content_index: ContentIndex = null) -
 
 
 func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
+	last_detail = ""
+	last_healing = 0
+	var pick := _choose(battle, unit)
+	# An ult interrupt is cast by its own unit, not the one deciding: counted under that unit's class.
+	var picker: BattleUnit = battle.unit_by_id(pick["unit"]) if pick.has("unit") else unit
+	if tally is Dictionary and not pick.is_empty() and picker != null and picker.definition != null:
+		var by_class: Dictionary = tally.get_or_add(String(picker.definition.id), {"reasons": {}, "abilities": {}})
+		by_class["reasons"][last_reason] = int(by_class["reasons"].get(last_reason, 0)) + 1
+		if last_reason in TALLIED_ABILITIES:
+			var abilities: Dictionary = by_class["abilities"].get_or_add(last_reason, {})
+			var key := String(pick.get("ability", ""))
+			abilities[key] = int(abilities.get(key, 0)) + 1
+		if last_reason == "heal":
+			by_class["healingX100"] = int(by_class.get("healingX100", 0)) + last_healing
+	return pick
+
+
+func _choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 	var ult := interrupt(battle)
 	if not ult.is_empty():
 		last_reason = "ult"
@@ -82,8 +121,8 @@ func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 	if not revive.is_empty():
 		last_reason = "revive"
 		return revive
-	if _party_hurt(battle):
-		var heal := _support(battle, unit, actions, ROLE_HEAL)
+	if _party_hurt(battle) or _spread_hurt(battle):
+		var heal := _heal(battle, unit, actions)
 		if not heal.is_empty():
 			last_reason = "heal"
 			return heal
@@ -93,6 +132,11 @@ func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 		return cleanse
 	var rhythm := has_basic(unit)
 	var reserve := danger_reserve(battle, unit) if rhythm else 0
+	if rhythm:
+		var party_buff := _party_buff(battle, unit, actions, reserve)
+		if not party_buff.is_empty():
+			last_reason = "party buff"
+			return party_buff
 	var best := {}
 	var best_score := -1
 	var best_cost := 0
@@ -260,7 +304,7 @@ static func damage_type(row: ExecutionRow) -> String:
 
 # --- Support and ults ------------------------------------------------------------------------------------------------------
 
-## A revive (ROLE_REVIVE) or a heal (ROLE_HEAL) on the most hurt ally; {} when none applies.
+## A revive (ROLE_REVIVE) on the most hurt candidate; {} when none applies (heals: _heal, spec auto-support).
 func _support(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility], role: StringName) -> Dictionary:
 	for ability in actions:
 		if not has_role(ability, role) or ability.targets_enemies():
@@ -288,8 +332,12 @@ func _cleanse(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -
 	return {}
 
 
-## A buff whose Status.Buff.* tag an ally it reaches lacks (the first such ally by slot); {} when none.
+## A buff whose Status.Buff.* tag an ally it reaches lacks, aimed at the first such ally by slot; {} when none. Spec
+## auto-support 3.3 step 4: the buff most allies lack first, then the higher SP cost, then grant order.
 func _buff(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -> Dictionary:
+	var best := {}
+	var best_lacking := 0
+	var best_cost := 0
 	for ability in actions:
 		if not has_role(ability, ROLE_BUFF) or ability.targets_enemies() or _saving_mp(unit, ability):
 			continue
@@ -298,16 +346,174 @@ func _buff(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -> D
 			continue
 		var candidates := battle.target_candidates(unit, ability) if ability.needs_target() else _reached(battle, unit, ability)
 		candidates.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)  # sort-ok: slot is an int
+		var lacking := 0
+		var first: BattleUnit = null
 		for ally in candidates:
-			if tags.any(func(tag: StringName) -> bool: return not ally.asc.has_tag_exact(tag)):
-				return {"ability": ability.ability_tag, "target": ally.unit_id if ability.needs_target() else &""}
-	return {}
+			if _lacks_any(ally, tags):
+				lacking += 1
+				if first == null:
+					first = ally
+		if first == null:
+			continue
+		if ability.needs_target():
+			lacking = 1  # a targeted buff reaches one ally
+		var cost := CostReader.sp_cost(ability, unit.asc)
+		if best.is_empty() or lacking > best_lacking or (lacking == best_lacking and cost > best_cost):
+			best = {"ability": ability.ability_tag, "target": first.unit_id if ability.needs_target() else &""}
+			best_lacking = lacking
+			best_cost = cost
+	return best
 
 
-static func _buff_tags(ability: BattleAbility) -> Array[StringName]:
+## Spec auto-support 3.3: a party buff (Ability.Role.Buff on ALL_ALLIES) that BUFF_LACKING or more living allies lack,
+## payable above `reserve`; none while the party is in danger or when every enemy is under BUFF_SKIP_BELOW% HP. A move
+## that also heals (Benediction) is a heal, not a party buff: the heal step decides it. Most allies lacking first, then
+## the higher SP cost, then grant order; {} when none.
+func _party_buff(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility], reserve: int) -> Dictionary:
+	if party_in_danger(battle) or _nearly_won(battle, unit):
+		return {}
+	var party := _party(battle)
+	var best := {}
+	var best_lacking := 0
+	var best_cost := 0
+	for ability in actions:
+		if not has_role(ability, ROLE_BUFF) or has_role(ability, ROLE_HEAL) \
+				or ability.targeting != BattleAbility.Targeting.ALL_ALLIES or ability.is_ultimate():
+			continue
+		if not affordable_above(unit, ability, reserve):
+			continue
+		var tags := _buff_tags(ability, true)
+		if tags.is_empty():
+			continue
+		var lacking := 0
+		for ally in party:
+			if _lacks_any(ally, tags):
+				lacking += 1
+		if lacking < BUFF_LACKING:
+			continue
+		var cost := CostReader.sp_cost(ability, unit.asc)
+		if best.is_empty() or lacking > best_lacking or (lacking == best_lacking and cost > best_cost):
+			best = {"ability": ability.ability_tag, "target": &""}
+			best_lacking = lacking
+			best_cost = cost
+	return best
+
+
+static func _lacks_any(ally: BattleUnit, tags: Array[StringName]) -> bool:
+	return tags.any(func(tag: StringName) -> bool: return not ally.asc.has_tag_exact(tag))
+
+
+## Every living enemy under BUFF_SKIP_BELOW% of its max HP (the fight is nearly won).
+static func _nearly_won(battle: Battle, unit: BattleUnit) -> bool:
+	var enemies := _enemies_of(battle, unit)
+	return not enemies.is_empty() and enemies.all(func(enemy: BattleUnit) -> bool:
+		return _hp_percent(enemy) < BUFF_SKIP_BELOW)
+
+
+## Spec auto-support 3.2: the heal with the most effective healing (Σ min(restored HP, HP missing) over the living allies
+## it reaches); a costlier heal must reach HEAL_STEP% of every cheaper one's (the most of them), or (D6) only match it when it also
+## cleanses an afflicted ally it reaches. Ties: the lower SP cost, the most hurt target, grant order, slot. Sets
+## last_detail to "E=<whole HP>"; {} when no heal restores anything.
+@warning_ignore("integer_division")
+func _heal(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -> Dictionary:
+	var candidates: Array[Dictionary] = []
+	for order in actions.size():
+		var ability := actions[order]
+		if not has_role(ability, ROLE_HEAL) or ability.targets_enemies() or ability.targets_dead():
+			continue
+		var cost := CostReader.sp_cost(ability, unit.asc)
+		var cleanses := has_role(ability, ROLE_CLEANSE)
+		if ability.needs_target():
+			for target in battle.target_candidates(unit, ability):
+				if target.alive:
+					var single: Array[BattleUnit] = [target]
+					_add_heal(candidates, unit, ability, order, cost, cleanses, single, target, true)
+		else:
+			var reached: Array[BattleUnit] = []
+			for ally in _reached(battle, unit, ability):
+				if ally.is_up():  # as Battle applies rows: a unit at 0 HP whose death isn't settled gets nothing
+					reached.append(ally)
+			if not reached.is_empty():
+				_add_heal(candidates, unit, ability, order, cost, cleanses, reached, null,
+					ability.targeting == BattleAbility.Targeting.SELF)
+	if candidates.is_empty():
+		return {}
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:  # ints only: SP cost, grant order, slot
+		if a["cost"] != b["cost"]:
+			return a["cost"] < b["cost"]
+		if a["order"] != b["order"]:
+			return a["order"] < b["order"]
+		return a["slot"] < b["slot"])
+	var best: Dictionary = candidates[0]
+	var cheaper := 0  # the most healing among the candidates cheaper than the one being compared
+	var level_cost: int = candidates[0]["cost"]
+	var level_most: int = candidates[0]["healing"]
+	for index in range(1, candidates.size()):
+		var other: Dictionary = candidates[index]
+		if other["cost"] != level_cost:
+			cheaper = maxi(cheaper, level_most)
+			level_cost = other["cost"]
+			level_most = 0
+		level_most = maxi(level_most, other["healing"])
+		# Spec auto-support 3.2: a heal costlier than others must reach HEAL_STEP% of every cheaper heal (their best), or
+		# (D6) only match it when it also cleanses; one that doesn't may not win, even against a pick at its own cost.
+		var qualifies: bool = other["healing"] * 100 >= cheaper * HEAL_STEP \
+			or (other["cleanses"] and other["afflicted"] and other["healing"] >= cheaper)
+		var wins := false
+		if not qualifies:
+			wins = false
+		elif other["cost"] > best["cost"]:
+			wins = true
+		elif other["healing"] != best["healing"]:
+			wins = other["healing"] > best["healing"]
+		else:
+			wins = other["hurt"] < best["hurt"]  # same cost and healing: the most hurt target (then grant order, slot)
+		if wins:
+			best = other
+	last_healing = int(best["healing"])
+	last_detail = "E=%d" % (last_healing / 100)
+	return {"ability": best["ability"], "target": best["target"]}
+
+
+## One heal candidate: `reached` the living allies it heals (the first is its primary, or its first target), `target` its
+## target (null when untargeted), `has_primary` as RestoreReader.restore_of. Dropped when it heals nothing.
+static func _add_heal(candidates: Array[Dictionary], unit: BattleUnit, ability: BattleAbility, order: int, cost: int,
+		cleanses: bool, reached: Array[BattleUnit], target: BattleUnit, has_primary: bool) -> void:
+	var healing := 0
+	var hurt := 100
+	var afflicted := false
+	for index in reached.size():
+		var ally := reached[index]
+		var missing := maxi(ally.stat(BattleUnit.MAX_HP) - ally.stat(BattleUnit.HP), 0)
+		healing += mini(RestoreReader.hp_restore(ability, unit, ally, index == 0, has_primary), missing)
+		hurt = mini(hurt, _hp_percent(ally))
+		afflicted = afflicted or _afflicted(ally)
+	if healing <= 0:
+		return
+	candidates.append({"ability": ability.ability_tag, "target": target.unit_id if target != null else &"",
+		"healing": healing, "cost": cost, "order": order, "slot": target.slot if target != null else 0, "hurt": hurt,
+		"cleanses": cleanses, "afflicted": afflicted})
+
+
+## Spec auto-support D2: SPREAD_HURT or more living allies under SPREAD_BELOW% of their max HP.
+static func _spread_hurt(battle: Battle) -> bool:
+	var hurt := 0
+	for ally in _party(battle):
+		if _hp_percent(ally) < SPREAD_BELOW:
+			hurt += 1
+	return hurt >= SPREAD_HURT
+
+
+## `party_wide`: only rows that reach every target (not a PRIMARY-only row, no chance, no application query), so a party
+## buff never counts a status that cannot land on the whole party (spec auto-support 3.3, review fix).
+static func _buff_tags(ability: BattleAbility, party_wide: bool = false) -> Array[StringName]:
 	var tags: Array[StringName] = []
 	for row in ability.executions:
 		if row == null or row.effect == null:
+			continue
+		if party_wide and (row.targets == ExecutionRow.Targets.PRIMARY
+				or (row.chance_x100 > 0 and row.chance_x100 < Fixed.ONE_HUNDRED_PERCENT)
+				or row.effect.application_query != null):
 			continue
 		for tag in row.effect.granted_tags:
 			if String(tag).begins_with(BUFF_TAG + ".") and not tags.has(tag):

@@ -249,12 +249,14 @@ static func fight_pending(run: RunController, content: ContentIndex, host: Node,
 		# Spec playable-demo 3.9: chaos on top of the smart policy, at a rate and from a floor.
 		if int(opts["chaos"]) < 100 or int(opts["chaos_from"]) > 1:
 			controller.base = AutoPolicy.new(AutoPolicy.Options.new(), content)
+			controller.base.tally = record.get_or_add("autoPicks", {})
 			controller.chaos_x100 = int(opts["chaos"]) * 100
 			controller.active = run.state.floor_index + 1 >= int(opts["chaos_from"])
 	elif opts["policy"] == "smart":
 		# Spec auto-battle: the player's Auto, through the same recorder path as the battle panel.
 		controller = ActionRecorder.new()
 		controller.autopilot = AutoPolicy.new(AutoPolicy.Options.new(), content)
+		controller.autopilot.tally = record.get_or_add("autoPicks", {})  # spec auto-support 3.4
 	else:
 		controller = ScriptedController.new()
 	var seen := {"battle": null, "checker": null, "turns": 0, "mismatch": {}, "health": {}}
@@ -422,6 +424,33 @@ static func proc_block(runs: Array[Dictionary]) -> Dictionary:
 			block[kind][key]["perBattleX100"] = block[kind][key]["fires"] * 100 / maxi(block["battles"], 1)
 		block[kind] = SeedReport._sorted(block[kind])
 	return block
+
+
+## Spec auto-support 3.4: Auto's picks per class over the runs Auto played: {class id: {"reasons": {reason: n},
+## "abilities": {reason: {ability tag: n}}, "healPerPick": the mean effective healing of a heal pick, whole HP}} (abilities
+## only under heal, party buff, cap buff and buff); {} when none.
+static func auto_picks_block(runs: Array[Dictionary]) -> Dictionary:
+	var block := {}
+	for record in runs:
+		var picks: Dictionary = record.get("autoPicks", {})
+		for id in picks:
+			var total: Dictionary = block.get_or_add(String(id), {"reasons": {}, "abilities": {}, "healingX100": 0})
+			total["healingX100"] += int(picks[id].get("healingX100", 0))
+			for reason in picks[id]["reasons"]:
+				total["reasons"][String(reason)] = int(total["reasons"].get(String(reason), 0)) + int(picks[id]["reasons"][reason])
+			for reason in picks[id]["abilities"]:
+				var abilities: Dictionary = total["abilities"].get_or_add(String(reason), {})
+				for tag in picks[id]["abilities"][reason]:
+					abilities[String(tag)] = int(abilities.get(String(tag), 0)) + int(picks[id]["abilities"][reason][tag])
+	for id in block:
+		@warning_ignore("integer_division")
+		block[id]["healPerPick"] = int(block[id]["healingX100"]) / maxi(int(block[id]["reasons"].get("heal", 0)), 1) / 100
+		block[id].erase("healingX100")
+		block[id]["reasons"] = SeedReport._sorted(block[id]["reasons"])
+		for reason in block[id]["abilities"]:
+			block[id]["abilities"][reason] = SeedReport._sorted(block[id]["abilities"][reason])
+		block[id]["abilities"] = SeedReport._sorted(block[id]["abilities"])
+	return SeedReport._sorted(block)
 
 
 ## True when the verifier's result is not the recording's: another verdict, hash or outcome. A battle that hit the
@@ -814,6 +843,9 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 	var procs := proc_block(runs)
 	if not procs.is_empty():
 		report["procs"] = procs
+	var picks := auto_picks_block(runs)
+	if not picks.is_empty():
+		report["autoPicks"] = picks
 	report["analysis"] = analyze(runs, report["byCharacter"])
 	if runs.any(func(record: Dictionary) -> bool: return record.has("bot")):
 		report.merge(bot_blocks(runs, report["winPercentX100"]), true)
@@ -1153,6 +1185,20 @@ static func text(report: Dictionary) -> String:
 				var row: Dictionary = procs[kind][key]
 				lines.append("    %-44s %d fires, %s per battle, in %d runs" % [key, int(row["fires"]),
 					str(int(row["perBattleX100"]) / 100.0), int(row["runs"])])
+	if report.has("autoPicks"):
+		lines.append("  auto picks:")
+		for id in report["autoPicks"]:
+			var row: Dictionary = report["autoPicks"][id]
+			var reasons := PackedStringArray()
+			for reason in row["reasons"]:
+				reasons.append("%s %d" % [reason, int(row["reasons"][reason])])
+			lines.append("    %s: %s; %d HP per heal" % [String(id).trim_prefix("demo.character."), ", ".join(reasons),
+				int(row.get("healPerPick", 0))])
+			for reason in row["abilities"]:
+				var abilities := PackedStringArray()
+				for tag in row["abilities"][reason]:
+					abilities.append("%s %d" % [String(tag).trim_prefix("Ability."), int(row["abilities"][reason][tag])])
+				lines.append("      %s: %s" % [reason, ", ".join(abilities)])
 	if report.has("hashTiming"):
 		var timing: Dictionary = report["hashTiming"]
 		lines.append("  run hash: %d hashes, mean %d us, max %d us (floor %d), budget %d us" % [timing["hashes"], timing["meanUsec"],

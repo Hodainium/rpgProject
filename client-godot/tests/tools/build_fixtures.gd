@@ -15,6 +15,7 @@ const STATUS_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_s
 const SP_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_sp_attribute_set.gd")
 const SP_RESTORE_SCRIPT := preload("res://tests/fixtures/exec_calcs/fixture_sp_restore.gd")
 const SP_COST_SCRIPT := preload("res://tests/fixtures/exec_calcs/fixture_sp_cost.gd")
+const RESTORE_SCRIPT := preload("res://tests/fixtures/exec_calcs/fixture_restore.gd")
 ## Run-world folders (spec game-skeleton 6, "Fixtures").
 const WORLD_DIRECTORIES: Array[String] = ["characters", "enemies", "loadouts", "variants", "equipment", "items", "events",
 	"rooms", "chapters", "scaling", "floor_rules", "runs", "layouts", "chests"]
@@ -24,6 +25,10 @@ const ROLE_OVERRIDES: Dictionary = {
 	"expose": [&"Ability.Role.Debuff"], "guard": [&"Ability.Role.Buff"], "haste": [&"Ability.Role.Buff"],
 	"rally": [&"Ability.Role.Buff"], "ult_sacrifice": [&"Ability.Role.Buff"], "ult_shield": [&"Ability.Role.Buff"],
 	"ult_ward": [&"Ability.Role.Buff"],
+	# Spec auto-support: the fixture healer's and buffer's kits.
+	"as_mend": [&"Ability.Role.Heal"], "as_great_mend": [&"Ability.Role.Heal"], "as_mass_mend": [&"Ability.Role.Heal"],
+	"as_renew": [&"Ability.Role.Heal", &"Ability.Role.Buff"], "as_purge_mend": [&"Ability.Role.Heal", &"Ability.Role.Cleanse"],
+	"as_anthem": [&"Ability.Role.Buff"], "as_grand_anthem": [&"Ability.Role.Buff"],
 }
 
 var _effects := {}
@@ -51,6 +56,7 @@ func _ready() -> void:
 	_build_skill_points()
 	_build_item_power()
 	_build_level_cap()
+	_build_auto_support()
 	_build_views()
 	print("Fixtures under %s: %d file(s) written" % [ROOT, _written])
 	get_tree().quit(0)
@@ -852,6 +858,74 @@ func _build_skill_points() -> void:
 		slot.level_bonus = bonus
 		trial.slots.append(slot)
 	_save_world("encounters", "sp_trial", trial)
+
+
+## Spec auto-support 6: a healer (the psalmist: a small, a big (its SP gain as a source bonus), a party, a HoT and a
+## cleansing heal, and the two anthems) and a buffer without a basic (the hymnist), on the skill-points attribute set. No
+## encounter, pool or run names them, so no golden sees them.
+func _build_auto_support() -> void:
+	var D := ExecutionRow.DamageMode
+	var T := ExecutionRow.Targets
+	var B := BattleAbility.Targeting
+	_save_effect("as_heal_300", _restore(300, 0, "", 0))
+	_save_effect("as_heal_300_bonus", _restore(300, 0, "sp_gain", 0))  # x the caster's SP gain (the psalmist: 150%)
+	_save_effect("as_heal_450", _restore(450, 0, "", 0))
+	_save_effect("as_renew", _restore(0, 6, "", 2))  # 6% of max HP a tick, 2 ticks
+	var anthem := _turn_buff("atk", 10, 2)
+	anthem.granted_tags.assign([&"Status.Buff.AttackUp"])
+	_save_effect("as_anthem", anthem)
+	var grand := _turn_buff("atk", 20, 2)
+	grand.granted_tags.assign([&"Status.Buff.AttackUp"])
+	_save_effect("as_grand_anthem", grand)
+	_save_effect("sp_cost_50", _sp_cost(50))
+	_save_effect("sp_cost_60", _sp_cost(60))
+	var heal_rows := func(effect: String) -> Array: return [_row("heal", effect, D.USE_EFFECT, 0, T.ALL)]
+	_ability("as_mend", "Fixture.Ability.AsMend", B.SINGLE_ALLY, heal_rows.call("as_heal_300"), [[0.3, "heal"]], [], null,
+		{"cost": _effects["sp_cost_25"]})
+	_ability("as_great_mend", "Fixture.Ability.AsGreatMend", B.SINGLE_ALLY, heal_rows.call("as_heal_300_bonus"),
+		[[0.3, "heal"]], [], null, {"cost": _effects["sp_cost_37"]})
+	_ability("as_mass_mend", "Fixture.Ability.AsMassMend", B.ALL_ALLIES, heal_rows.call("as_heal_300"), [[0.3, "heal"]], [],
+		null, {"cost": _effects["sp_cost_50"]})
+	_ability("as_renew", "Fixture.Ability.AsRenew", B.SINGLE_ALLY, heal_rows.call("as_renew"), [[0.3, "heal"]], [], null,
+		{"cost": _effects["sp_cost_25"]})
+	_ability("as_purge_mend", "Fixture.Ability.AsPurgeMend", B.SINGLE_ALLY, heal_rows.call("as_heal_450"), [[0.3, "heal"]],
+		[], null, {"cost": _effects["sp_cost_60"]})
+	_ability("as_anthem", "Fixture.Ability.AsAnthem", B.ALL_ALLIES, [_row("buff", "as_anthem", D.USE_EFFECT, 0, T.ALL)],
+		[[0.3, "buff"]], [], null, {"cost": _effects["sp_cost_25"]})
+	_ability("as_grand_anthem", "Fixture.Ability.AsGrandAnthem", B.ALL_ALLIES,
+		[_row("buff", "as_grand_anthem", D.USE_EFFECT, 0, T.ALL)], [[0.3, "buff"]], [], null, {"cost": _effects["sp_cost_37"]})
+	var no_toughness := {"max_toughness": 0, "toughness": 0, "weakness_dmg": 150, "toughness_dmg": 0, "broken_dmg": 0}
+	var psalmist := CharacterDefinition.new()
+	_fill_unit(psalmist, "fixture.character.psalmist", {"max_hp": 1000, "hp": 1000, "atk": 300, "def": 250, "spd": 115},
+		{"crit_rate": 0, "crit_dmg": 50, "max_mp": 100, "mp": 100, "energy": 0, "sp_basic": 13, "sp_gain": 150}.merged(
+		no_toughness), ["chant_jab", "as_mend", "as_great_mend", "as_mass_mend", "as_renew", "as_purge_mend", "as_anthem",
+		"as_grand_anthem", "sp_passive"], Color.LIGHT_SEA_GREEN, SP_ATTRIBUTE_SET)
+	psalmist.tags.assign([&"Fixture.Character.Psalmist"])
+	_save_world("characters", "psalmist", psalmist)
+	var hymnist := CharacterDefinition.new()
+	_fill_unit(hymnist, "fixture.character.hymnist", {"max_hp": 1000, "hp": 1000, "atk": 300, "def": 250, "spd": 95},
+		{"crit_rate": 0, "crit_dmg": 50, "max_mp": 100, "mp": 100, "energy": 0, "sp_basic": 13}.merged(no_toughness),
+		["chant_burst", "as_anthem", "as_grand_anthem"], Color.LIGHT_GOLDENROD, SP_ATTRIBUTE_SET)
+	hymnist.tags.assign([&"Fixture.Character.Hymnist"])
+	_save_world("characters", "hymnist", hymnist)
+
+
+## A heal on the fixture restore ExecCalc: `amount` flat, or `percent` of max HP; `ticks` > 0 makes it a HoT (one tick a
+## turn for that many turns).
+func _restore(amount: float, percent: float, source_bonus: String, ticks: int) -> GameplayEffect:
+	var effect := GameplayEffect.new()
+	effect.policy = GameplayEffect.DurationPolicy.INSTANT
+	if ticks > 0:
+		effect.policy = GameplayEffect.DurationPolicy.TURN_BASED
+		effect.period = 1.0
+		effect.duration_turns = ticks
+		effect.granted_tags.assign([&"Status.Buff.Regen"])
+	var restore := RESTORE_SCRIPT.new()
+	restore.amount_x100 = Fixed.from_typed(amount)
+	restore.percent_x100 = Fixed.from_typed(percent)
+	restore.source_bonus = source_bonus
+	effect.executions.append(restore)
+	return effect
 
 
 ## Spec item-power 2.1: one item per kernel hook, held by the content-pass and skill-points fixture characters. Nothing carries a

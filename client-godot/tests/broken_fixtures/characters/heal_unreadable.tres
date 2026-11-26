@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/heal_unreadable.tscn" id="1_6nbid"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_l68dp"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="3_24uqj"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="4_vnuty"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="5_g4qjm"]
+
+[resource]
+script = ExtResource("5_g4qjm")
+id = &"broken.character.heal_unreadable"
+attribute_set = ExtResource("2_l68dp")
+abilities = Array[PackedScene]([ExtResource("1_6nbid")])

@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_dyes5"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_0li4p"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/haste.tres" id="3_xwcko"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/haste.tres" id="4_s3wgn"]
+
+[sub_resource type="Resource" id="Resource_e1yqy"]
+script = ExtResource("2_0li4p")
+id = &"buff"
+effect = ExtResource("3_xwcko")
+
+[node name="Haste" type="Node" unique_id=1110530034]
+script = ExtResource("1_dyes5")
+targeting = 3
+asset_tags = Array[StringName]([&"Ability.Role.Heal"])
+executions = Array[ExtResource("2_0li4p")]([SubResource("Resource_e1yqy")])
+animation = ExtResource("4_s3wgn")
+ability_tag = &"Broken.Ability.HealUnreadable"

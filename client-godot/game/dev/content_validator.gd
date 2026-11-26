@@ -515,6 +515,12 @@ func _check_roles(scene: PackedScene, path: String, party: bool) -> void:
 	if party and roles.is_empty() and not ability.is_triggered():
 		_error("role_missing", path, "%s has no %s* tag: Auto can't tell what it does (game/tools/build_role_pass.tscn proposes one)"
 			% [ability.ability_tag, AutoPolicy.ROLE_PREFIX])
+	# Spec auto-support 4: Auto picks a heal by what RestoreReader says it restores; one it can't read is never picked.
+	# Once per scene used by the party (Auto never plays enemies).
+	if party and not party_checked and roles.has(AutoPolicy.ROLE_HEAL) and not ability.targets_dead() \
+			and not ability.targets_enemies() and not RestoreReader.reads_hp(ability):
+		_warning("heal_unreadable", path, "%s has %s but no effect whose HP restore RestoreReader can read (an ExecCalc with "
+			% [ability.ability_tag, AutoPolicy.ROLE_HEAL] + "restore_of, or a positive hp modifier): Auto never picks it to heal")
 	if checked or roles.is_empty():
 		ability.free()
 		return

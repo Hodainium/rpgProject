@@ -110,8 +110,11 @@ func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 			var pick: Dictionary = autopilot.choose(battle, unit)
 			if not pick.is_empty():
 				_from_auto = true
-				BattleLog.line(battle, "auto %s picks %s -> %s (%s)" % [unit.unit_id, pick.get("ability", ""),
-					pick.get("target", "-"), autopilot.get("last_reason") if autopilot.get("last_reason") != null else "?"])
+				# Spec auto-support 5: a heal also shows its effective healing ("heal E=<n>").
+				var detail: Variant = autopilot.get("last_detail")
+				BattleLog.line(battle, "auto %s picks %s -> %s (%s%s)" % [unit.unit_id, pick.get("ability", ""),
+					pick.get("target", "-"), autopilot.get("last_reason") if autopilot.get("last_reason") != null else "?",
+					" " + str(detail) if detail != null and str(detail) != "" else ""])
 				return pick
 			_auto_refusals = AUTO_REFUSALS  # nothing legal: the player decides this one
 			BattleLog.line(battle, "auto %s has no move: waiting for the player" % unit.unit_id)
