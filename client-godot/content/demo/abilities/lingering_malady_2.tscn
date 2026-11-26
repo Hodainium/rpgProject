@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_cosul"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_2guqu"]
+[ext_resource type="Resource" path="res://content/demo/effects/malady_2.tres" id="3_c0wer"]
+[ext_resource type="Animation" path="res://content/demo/animations/lingering_malady.tres" id="4_ykf43"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_99.tres" id="5_nk413"]
+
+[sub_resource type="Resource" id="Resource_7ekpf"]
+script = ExtResource("2_2guqu")
+id = &"malady"
+effect = ExtResource("3_c0wer")
+
+[node name="LingeringMalady2" type="Node" unique_id=960132052]
+script = ExtResource("1_cosul")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Buff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_2guqu")]([SubResource("Resource_7ekpf")])
+animation = ExtResource("4_ykf43")
+description = "The party: debuffs last 1 turn longer and +20% ATK for 3 turns."
+ability_name = "Lingering Malady II"
+ability_tag = &"Ability.Lingeringmalady2"
+cost_effect = ExtResource("5_nk413")

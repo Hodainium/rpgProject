@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_4gyue"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_falye"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_crystalline.tres" id="3_6fj0g"]
+[ext_resource type="Animation" path="res://content/demo/animations/oath_warrior.tres" id="4_iu7b5"]
+
+[sub_resource type="Resource" id="Resource_mvd7r"]
+script = ExtResource("2_falye")
+id = &"oath"
+effect = ExtResource("3_6fj0g")
+
+[node name="Crystalline" type="Node" unique_id=547953897]
+script = ExtResource("1_4gyue")
+targeting = 4
+executions = Array[ExtResource("2_falye")]([SubResource("Resource_mvd7r")])
+animation = ExtResource("4_iu7b5")
+description = "The party: +15% toughness damage, +15% damage to Broken enemies."
+ability_name = "Crystalline"
+ability_tag = &"Ability.Passive.Crystalline"
+trigger_event_tag = &"Event.Battle.Start"

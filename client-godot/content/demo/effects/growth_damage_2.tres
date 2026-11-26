@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_6c8vv"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_x3btn"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_dqbc8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_fomiu"]
+
+[sub_resource type="Resource" id="Resource_c2rcv"]
+script = ExtResource("3_dqbc8")
+value_x100 = 300
+attribute_name = "max_hp"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_o54nf"]
+script = ExtResource("3_dqbc8")
+value_x100 = 400
+attribute_name = "atk"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_vj7aj"]
+script = ExtResource("3_dqbc8")
+value_x100 = 200
+attribute_name = "def"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_mvvbl"]
+script = ExtResource("3_dqbc8")
+value_x100 = 350
+attribute_name = "sp_gain"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_2ybbm"]
+script = ExtResource("3_dqbc8")
+value_x100 = 350
+attribute_name = "max_mp"
+operation = 1
+
+[resource]
+script = ExtResource("4_fomiu")
+stacking_policy = 1
+policy = 2
+modifiers = Array[ExtResource("2_x3btn")]([SubResource("Resource_c2rcv"), SubResource("Resource_o54nf"), SubResource("Resource_vj7aj"), SubResource("Resource_mvvbl"), SubResource("Resource_2ybbm")])

@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_rh6ib"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_qyplc"]
+[ext_resource type="Resource" path="res://content/demo/effects/gravity_pull.tres" id="3_60ylh"]
+[ext_resource type="Animation" path="res://content/demo/animations/encore.tres" id="4_n23xn"]
+
+[sub_resource type="Resource" id="Resource_a38t4"]
+script = ExtResource("2_qyplc")
+id = &"charge"
+effect = ExtResource("3_60ylh")
+delay_x100 = -3500
+
+[node name="StandingOvation" type="Node" unique_id=989717563]
+script = ExtResource("1_rh6ib")
+targeting = 5
+executions = Array[ExtResource("2_qyplc")]([SubResource("Resource_a38t4")])
+animation = ExtResource("4_n23xn")
+description = "When an ally uses an ult: your next turn comes 35% sooner."
+ability_name = "Standing Ovation"
+ability_tag = &"Ability.Passive.Standingovation"
+trigger_event_tag = &"Event.Ally.Ability.Used.Ultimate"

@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_dday8"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_qq15c"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_sx8oq"]
+[ext_resource type="Animation" path="res://content/demo/animations/hunters_instinct.tres" id="4_o6k56"]
+
+[sub_resource type="Resource" id="Resource_r8io3"]
+script = ExtResource("2_qq15c")
+id = &"volley"
+effect = ExtResource("3_sx8oq")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 8000
+
+[node name="HuntersInstinct2" type="Node" unique_id=1523327416]
+script = ExtResource("1_dday8")
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+executions = Array[ExtResource("2_qq15c")]([SubResource("Resource_r8io3")])
+animation = ExtResource("4_o6k56")
+description = "Hitting a weakness: a follow-up of 80% ATK Physical."
+ability_name = "Hunter's Instinct II"
+ability_tag = &"Ability.Passive.Huntersinstinct2"
+trigger_event_tag = &"Event.Damage.Dealt.Weakness"

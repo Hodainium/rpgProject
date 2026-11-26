@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_88kna"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_6evhy"]
+[ext_resource type="Resource" path="res://content/demo/effects/resurrection_revive_2.tres" id="3_jyw4o"]
+[ext_resource type="Animation" path="res://content/demo/animations/resurrection.tres" id="4_egnif"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_xf2ey"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_146qx"]
+
+[sub_resource type="Resource" id="Resource_78v75"]
+script = ExtResource("2_6evhy")
+id = &"raise"
+effect = ExtResource("3_jyw4o")
+
+[node name="Resurrection2" type="Node" unique_id=590787782]
+script = ExtResource("1_88kna")
+targeting = 6
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Revive", &"Ability.Usage.Battle"])
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Resurrection"])
+executions = Array[ExtResource("2_6evhy")]([SubResource("Resource_78v75")])
+animation = ExtResource("4_egnif")
+description = "Brings one fallen ally back with 70% of max HP."
+ability_name = "Resurrection II"
+ability_tag = &"Ability.Ult.Resurrection2"
+activation_query = ExtResource("5_xf2ey")
+cost_effect = ExtResource("6_146qx")

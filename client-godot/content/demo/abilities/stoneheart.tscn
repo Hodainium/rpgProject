@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_6to8n"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_3rk5l"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_stoneheart.tres" id="3_vhilp"]
+[ext_resource type="Animation" path="res://content/demo/animations/oath_warrior.tres" id="4_brtlm"]
+
+[sub_resource type="Resource" id="Resource_x4nfs"]
+script = ExtResource("2_3rk5l")
+id = &"oath"
+effect = ExtResource("3_vhilp")
+
+[node name="Stoneheart" type="Node" unique_id=1601737620]
+script = ExtResource("1_6to8n")
+targeting = 5
+executions = Array[ExtResource("2_3rk5l")]([SubResource("Resource_x4nfs")])
+animation = ExtResource("4_brtlm")
+description = "Heal 5% of your max HP at the start of each turn."
+ability_name = "Stoneheart"
+ability_tag = &"Ability.Passive.Stoneheart"
+trigger_event_tag = &"Event.Turn.Start"

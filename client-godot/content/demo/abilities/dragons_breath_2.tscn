@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_jlw0o"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_gfogp"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_yvhix"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="4_qxxxy"]
+[ext_resource type="Animation" path="res://content/demo/animations/fury_breath.tres" id="5_8qoct"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_183.tres" id="6_lukkc"]
+
+[sub_resource type="Resource" id="Resource_4vdhm"]
+script = ExtResource("2_gfogp")
+id = &"breath"
+effect = ExtResource("3_yvhix")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 31000
+
+[sub_resource type="Resource" id="Resource_58erh"]
+script = ExtResource("2_gfogp")
+id = &"burn"
+effect = ExtResource("4_qxxxy")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 17000
+chance_x100 = 10000
+
+[node name="DragonsBreath2" type="Node" unique_id=1906773736]
+script = ExtResource("1_jlw0o")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_gfogp")]([SubResource("Resource_4vdhm"), SubResource("Resource_58erh")])
+animation = ExtResource("5_8qoct")
+description = "310% ATK Fire to every enemy, and a fierce Burn."
+ability_name = "Dragon's Breath II"
+ability_tag = &"Ability.Dragonsbreath2"
+cost_effect = ExtResource("6_lukkc")

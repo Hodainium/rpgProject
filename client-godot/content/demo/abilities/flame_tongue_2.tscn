@@ -1,0 +1,45 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_qyj71"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_gcvi4"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_rorwj"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="4_4dsf3"]
+[ext_resource type="Animation" path="res://content/demo/animations/bleed_blast.tres" id="5_o54re"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_113.tres" id="6_ben6r"]
+
+[sub_resource type="Resource" id="Resource_5my3q"]
+script = ExtResource("2_gcvi4")
+id = &"blast"
+effect = ExtResource("3_rorwj")
+damage_mode = 2
+targets = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 22000
+
+[sub_resource type="Resource" id="Resource_t0nnh"]
+script = ExtResource("2_gcvi4")
+id = &"splash"
+effect = ExtResource("3_rorwj")
+damage_mode = 2
+targets = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+
+[sub_resource type="Resource" id="Resource_omge4"]
+script = ExtResource("2_gcvi4")
+id = &"bleed"
+effect = ExtResource("4_4dsf3")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 10000
+chance_x100 = 10000
+
+[node name="FlameTongue2" type="Node" unique_id=321162920]
+script = ExtResource("1_qyj71")
+targeting = 2
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_gcvi4")]([SubResource("Resource_5my3q"), SubResource("Resource_t0nnh"), SubResource("Resource_omge4")])
+animation = ExtResource("5_o54re")
+description = "220% ATK Fire to one enemy, 100% to its neighbours, and a strong Burn."
+ability_name = "Flame Tongue II"
+ability_tag = &"Ability.Flametongue2"
+cost_effect = ExtResource("6_ben6r")

@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_aj88d"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_7f22i"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_lu88l"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="4_mcwyd"]
+[ext_resource type="Animation" path="res://content/demo/animations/supernova.tres" id="5_enilg"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="6_semaj"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="7_3j5x1"]
+
+[sub_resource type="Resource" id="Resource_sri0q"]
+script = ExtResource("2_7f22i")
+id = &"nova"
+effect = ExtResource("3_lu88l")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 31000
+
+[sub_resource type="Resource" id="Resource_5kbyu"]
+script = ExtResource("2_7f22i")
+id = &"burn"
+effect = ExtResource("4_mcwyd")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 14000
+chance_x100 = 10000
+
+[node name="Supernova2" type="Node" unique_id=496178485]
+script = ExtResource("1_aj88d")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Supernova"])
+executions = Array[ExtResource("2_7f22i")]([SubResource("Resource_sri0q"), SubResource("Resource_5kbyu")])
+animation = ExtResource("5_enilg")
+description = "310% ATK Fire to every enemy, and a strong Burn."
+ability_name = "Supernova II"
+ability_tag = &"Ability.Ult.Supernova2"
+activation_query = ExtResource("6_semaj")
+cost_effect = ExtResource("7_3j5x1")

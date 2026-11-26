@@ -1,6 +1,5 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
-[ext_resource type="Resource" path="res://content/demo/effects/growth_damage.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/rain_of_arrows.tscn" id="1_dr1t7"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/quick_shot.tscn" id="2_0eq47"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/mark_prey.tscn" id="3_p23b7"]
@@ -20,6 +19,20 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/mark_quarry.tscn" id="96_lv1"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/deadeye.tscn" id="96_lv2"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/death_mark.tscn" id="96_lv3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/twin_shot.tscn" id="lc_twin_shot"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/rain_of_arrows_2.tscn" id="lc_rain_of_arrows_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/opportunist.tscn" id="lc_opportunist"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/hunters_instinct_2.tscn" id="lc_hunters_instinct_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/twin_shot_2.tscn" id="lc_twin_shot_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/judgement_arrow.tscn" id="lc_judgement_arrow"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/opportunist_2.tscn" id="lc_opportunist_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/eagle_eye.tscn" id="lc_eagle_eye"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/judgement_arrow_2.tscn" id="lc_judgement_arrow_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/rain_of_arrows_3.tscn" id="lc_rain_of_arrows_3"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="lc_band"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_1.tres" id="lc_growth_1"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_2.tres" id="lc_growth_2"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_3.tres" id="lc_growth_3"]
 
 [sub_resource type="Resource" id="LevelSkill_0"]
 script = ExtResource("97_lvl")
@@ -43,6 +56,77 @@ level = 9
 ability = ExtResource("96_lv3")
 replaces = &"Ability.Markquarry"
 
+[sub_resource type="Resource" id="LevelSkill_lc_twin_shot"]
+script = ExtResource("97_lvl")
+level = 12
+ability = ExtResource("lc_twin_shot")
+
+[sub_resource type="Resource" id="LevelSkill_lc_rain_of_arrows_2"]
+script = ExtResource("97_lvl")
+level = 15
+ability = ExtResource("lc_rain_of_arrows_2")
+replaces = &"Ability.Ult.Rainofarrows"
+
+[sub_resource type="Resource" id="LevelSkill_lc_opportunist"]
+script = ExtResource("97_lvl")
+level = 18
+ability = ExtResource("lc_opportunist")
+
+[sub_resource type="Resource" id="LevelSkill_lc_hunters_instinct_2"]
+script = ExtResource("97_lvl")
+level = 22
+ability = ExtResource("lc_hunters_instinct_2")
+replaces = &"Ability.Passive.Huntersinstinct"
+
+[sub_resource type="Resource" id="LevelSkill_lc_twin_shot_2"]
+script = ExtResource("97_lvl")
+level = 26
+ability = ExtResource("lc_twin_shot_2")
+replaces = &"Ability.Twinshot"
+
+[sub_resource type="Resource" id="LevelSkill_lc_judgement_arrow"]
+script = ExtResource("97_lvl")
+level = 28
+ability = ExtResource("lc_judgement_arrow")
+
+[sub_resource type="Resource" id="LevelSkill_lc_opportunist_2"]
+script = ExtResource("97_lvl")
+level = 35
+ability = ExtResource("lc_opportunist_2")
+replaces = &"Ability.Passive.Opportunist"
+
+[sub_resource type="Resource" id="LevelSkill_lc_eagle_eye"]
+script = ExtResource("97_lvl")
+level = 40
+ability = ExtResource("lc_eagle_eye")
+
+[sub_resource type="Resource" id="LevelSkill_lc_judgement_arrow_2"]
+script = ExtResource("97_lvl")
+level = 45
+ability = ExtResource("lc_judgement_arrow_2")
+replaces = &"Ability.Judgementarrow"
+
+[sub_resource type="Resource" id="LevelSkill_lc_rain_of_arrows_3"]
+script = ExtResource("97_lvl")
+level = 50
+ability = ExtResource("lc_rain_of_arrows_3")
+replaces = &"Ability.Ult.Rainofarrows2"
+
+[sub_resource type="Resource" id="GrowthBand_1"]
+script = ExtResource("lc_band")
+from_level = 2
+effect = ExtResource("lc_growth_1")
+
+[sub_resource type="Resource" id="GrowthBand_2"]
+script = ExtResource("lc_band")
+from_level = 16
+effect = ExtResource("lc_growth_2")
+
+[sub_resource type="Resource" id="GrowthBand_3"]
+script = ExtResource("lc_band")
+from_level = 31
+effect = ExtResource("lc_growth_3")
+
 [resource]
 script = ExtResource("12_0rhvb")
 id = &"demo.character.ranger"
@@ -51,8 +135,8 @@ abilities = Array[PackedScene]([ExtResource("1_dr1t7"), ExtResource("2_0eq47"), 
 display_name = "Ranger"
 display_color = Color(0.13333334, 0.54509807, 0.13333334, 1)
 tags = Array[StringName]([&"Character.Ranger", &"Card.Set.Core", &"Unit.Role.FollowUp", &"Unit.Role.Damage"])
-level_effect = ExtResource("90_growth")
-level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
+growth_bands = Array[ExtResource("lc_band")]([SubResource("GrowthBand_1"), SubResource("GrowthBand_2"), SubResource("GrowthBand_3")])
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3"), SubResource("LevelSkill_lc_twin_shot"), SubResource("LevelSkill_lc_rain_of_arrows_2"), SubResource("LevelSkill_lc_opportunist"), SubResource("LevelSkill_lc_hunters_instinct_2"), SubResource("LevelSkill_lc_twin_shot_2"), SubResource("LevelSkill_lc_judgement_arrow"), SubResource("LevelSkill_lc_opportunist_2"), SubResource("LevelSkill_lc_eagle_eye"), SubResource("LevelSkill_lc_judgement_arrow_2"), SubResource("LevelSkill_lc_rain_of_arrows_3")])
 role = "Specialist: follow-ups"
 description = "Marks a target to make it weak to Physical; every weakness hit triggers a follow-up shot, and follow-ups charge Rain of Arrows."
 stats_x100 = Dictionary[String, int]({

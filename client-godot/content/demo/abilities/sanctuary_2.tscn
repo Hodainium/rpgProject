@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_cuefp"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ypaf3"]
+[ext_resource type="Resource" path="res://content/demo/effects/sanctuary_heal_2.tres" id="3_ca8b7"]
+[ext_resource type="Animation" path="res://content/demo/animations/sanctuary.tres" id="4_5ripk"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_3rx7a"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_adngj"]
+
+[sub_resource type="Resource" id="Resource_1vbb7"]
+script = ExtResource("2_ypaf3")
+id = &"bless"
+effect = ExtResource("3_ca8b7")
+
+[node name="Sanctuary2" type="Node" unique_id=757525260]
+script = ExtResource("1_cuefp")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Heal", &"Ability.Usage.Battle"])
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Sanctuary"])
+executions = Array[ExtResource("2_ypaf3")]([SubResource("Resource_1vbb7")])
+animation = ExtResource("4_5ripk")
+description = "Restores 35% of max HP to the party."
+ability_name = "Sanctuary II"
+ability_tag = &"Ability.Ult.Sanctuary2"
+activation_query = ExtResource("5_3rx7a")
+cost_effect = ExtResource("6_adngj")

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_vpsw6"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_qyq0y"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_jeqm5"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_kstv8"]
+
+[sub_resource type="Resource" id="Resource_q2u26"]
+script = ExtResource("3_jeqm5")
+value_x100 = 100
+attribute_name = "debuff_turns"
+
+[sub_resource type="Resource" id="Resource_1h6ap"]
+script = ExtResource("3_jeqm5")
+value_x100 = 2000
+attribute_name = "atk"
+operation = 1
+
+[resource]
+script = ExtResource("4_kstv8")
+policy = 3
+duration_turns = 3
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff", &"Cue.Sfx.Apply.Buff"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.Malady"])
+modifiers = Array[ExtResource("2_qyq0y")]([SubResource("Resource_q2u26"), SubResource("Resource_1h6ap")])
+granted_tags = Array[StringName]([&"Status.Buff.Malady"])

@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_fncwx"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ojp2q"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_heart_of_fire.tres" id="3_slyli"]
+[ext_resource type="Animation" path="res://content/demo/animations/oath_warrior.tres" id="4_c2gru"]
+
+[sub_resource type="Resource" id="Resource_faehj"]
+script = ExtResource("2_ojp2q")
+id = &"oath"
+effect = ExtResource("3_slyli")
+
+[node name="HeartOfFire" type="Node" unique_id=1820908734]
+script = ExtResource("1_fncwx")
+targeting = 5
+executions = Array[ExtResource("2_ojp2q")]([SubResource("Resource_faehj")])
+animation = ExtResource("4_c2gru")
+description = "+15% damage."
+ability_name = "Heart of Fire"
+ability_tag = &"Ability.Passive.Heartoffire"
+trigger_event_tag = &"Event.Battle.Start"

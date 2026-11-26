@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ddrg5"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_qijex"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_mbn66"]
+[ext_resource type="Animation" path="res://content/demo/animations/crush.tres" id="4_wnk8n"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_103.tres" id="5_e1rso"]
+
+[sub_resource type="Resource" id="Resource_gau5c"]
+script = ExtResource("2_qijex")
+id = &"crush"
+effect = ExtResource("3_mbn66")
+damage_mode = 2
+targets = 1
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 48000
+toughness_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_0a1yt"]
+script = ExtResource("2_qijex")
+id = &"quake"
+effect = ExtResource("3_mbn66")
+damage_mode = 2
+targets = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 17000
+toughness_x100 = 4000
+
+[node name="TitansFall" type="Node" unique_id=1277883655]
+script = ExtResource("1_ddrg5")
+targeting = 2
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_qijex")]([SubResource("Resource_gau5c"), SubResource("Resource_0a1yt")])
+animation = ExtResource("4_wnk8n")
+description = "480% ATK Physical to one enemy, 170% to its neighbours."
+ability_name = "Titan's Fall"
+ability_tag = &"Ability.Titansfall"
+cost_effect = ExtResource("5_e1rso")

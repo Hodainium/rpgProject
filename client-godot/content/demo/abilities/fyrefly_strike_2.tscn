@@ -1,0 +1,49 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_bi1fm"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_u1ifu"]
+[ext_resource type="Resource" path="res://content/demo/effects/seared.tres" id="3_4h853"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="4_l2ipy"]
+[ext_resource type="Animation" path="res://content/demo/animations/fyrefly_strike.tres" id="5_nc7sy"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="6_cyh2f"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_99.tres" id="7_1m0ne"]
+
+[sub_resource type="Resource" id="Resource_6lwmy"]
+script = ExtResource("2_u1ifu")
+id = &"sear"
+effect = ExtResource("3_4h853")
+
+[sub_resource type="Resource" id="Resource_041kl"]
+script = ExtResource("2_u1ifu")
+id = &"strike"
+effect = ExtResource("4_l2ipy")
+damage_mode = 2
+targets = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 29000
+toughness_x100 = 7500
+
+[sub_resource type="Resource" id="Resource_r17du"]
+script = ExtResource("2_u1ifu")
+id = &"splash"
+effect = ExtResource("4_l2ipy")
+damage_mode = 2
+targets = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 12000
+
+[sub_resource type="Resource" id="Resource_f6xbf"]
+script = ExtResource("6_cyh2f")
+require_all_tags = Array[StringName]([&"State.Combustion"])
+
+[node name="FyreflyStrike2" type="Node" unique_id=1185570191]
+script = ExtResource("1_bi1fm")
+targeting = 2
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_u1ifu")]([SubResource("Resource_6lwmy"), SubResource("Resource_041kl"), SubResource("Resource_r17du")])
+animation = ExtResource("5_nc7sy")
+description = "290% ATK Fire to one enemy, 120% to its neighbours. Makes them weak to Fire."
+ability_name = "Fyrefly Strike II"
+ability_tag = &"Ability.Fyreflystrike2"
+activation_query = SubResource("Resource_f6xbf")
+cost_effect = ExtResource("7_1m0ne")

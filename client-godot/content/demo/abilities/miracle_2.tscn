@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_0b527"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_nprf7"]
+[ext_resource type="Resource" path="res://content/demo/effects/cleanse.tres" id="3_r6j28"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_miracle_2.tres" id="4_xvjfq"]
+[ext_resource type="Animation" path="res://content/demo/animations/holy_water.tres" id="5_40nvr"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_173.tres" id="6_ci35l"]
+
+[sub_resource type="Resource" id="Resource_q2xnd"]
+script = ExtResource("2_nprf7")
+id = &"clean"
+effect = ExtResource("3_r6j28")
+
+[sub_resource type="Resource" id="Resource_nausk"]
+script = ExtResource("2_nprf7")
+id = &"heal"
+effect = ExtResource("4_xvjfq")
+
+[node name="Miracle2" type="Node" unique_id=1188103736]
+script = ExtResource("1_0b527")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Cleanse", &"Ability.Usage.Battle", &"Ability.Usage.Field"])
+executions = Array[ExtResource("2_nprf7")]([SubResource("Resource_q2xnd"), SubResource("Resource_nausk")])
+animation = ExtResource("5_40nvr")
+description = "Removes the party's debuffs and restores 65% of max HP."
+ability_name = "Miracle II"
+ability_tag = &"Ability.Miracle2"
+cost_effect = ExtResource("6_ci35l")

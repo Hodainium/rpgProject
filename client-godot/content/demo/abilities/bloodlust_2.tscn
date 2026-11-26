@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_nfoui"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_skn2i"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_bloodlust_2.tres" id="3_e02eq"]
+[ext_resource type="Animation" path="res://content/demo/animations/bellows.tres" id="4_6oxgq"]
+
+[sub_resource type="Resource" id="Resource_x10n8"]
+script = ExtResource("2_skn2i")
+id = &"charge"
+effect = ExtResource("3_e02eq")
+
+[node name="Bloodlust2" type="Node" unique_id=1868260493]
+script = ExtResource("1_nfoui")
+targeting = 5
+executions = Array[ExtResource("2_skn2i")]([SubResource("Resource_x10n8")])
+animation = ExtResource("4_6oxgq")
+description = "On a kill: +25% ATK for 3 turns (3 stacks)."
+ability_name = "Bloodlust II"
+ability_tag = &"Ability.Passive.Bloodlust2"
+trigger_event_tag = &"Event.Unit.Killed"

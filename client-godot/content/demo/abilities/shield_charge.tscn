@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_b1km6"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_j7j5y"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_jgyfq"]
+[ext_resource type="Resource" path="res://content/demo/effects/stun.tres" id="4_x8twh"]
+[ext_resource type="Animation" path="res://content/demo/animations/shield_bash.tres" id="5_6d6t2"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_63.tres" id="6_osrn3"]
+
+[sub_resource type="Resource" id="Resource_ipras"]
+script = ExtResource("2_j7j5y")
+id = &"bash"
+effect = ExtResource("3_jgyfq")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 14000
+toughness_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_krs1y"]
+script = ExtResource("2_j7j5y")
+id = &"stun"
+effect = ExtResource("4_x8twh")
+chance_x100 = 5000
+
+[node name="ShieldCharge" type="Node" unique_id=896540525]
+script = ExtResource("1_b1km6")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_j7j5y")]([SubResource("Resource_ipras"), SubResource("Resource_krs1y")])
+animation = ExtResource("5_6d6t2")
+description = "140% ATK Physical to one enemy. 50% chance to Stun it."
+ability_name = "Shield Charge"
+ability_tag = &"Ability.Shieldcharge"
+cost_effect = ExtResource("6_osrn3")

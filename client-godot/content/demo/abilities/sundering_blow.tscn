@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_cagyr"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_of1pd"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_7gwab"]
+[ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="4_dg050"]
+[ext_resource type="Animation" path="res://content/demo/animations/splinter.tres" id="5_icxjv"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_59.tres" id="6_feii1"]
+
+[sub_resource type="Resource" id="Resource_jfqv1"]
+script = ExtResource("2_of1pd")
+id = &"splinter"
+effect = ExtResource("3_7gwab")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 17000
+toughness_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_fx8hb"]
+script = ExtResource("2_of1pd")
+id = &"crack"
+effect = ExtResource("4_dg050")
+chance_x100 = 10000
+
+[node name="SunderingBlow" type="Node" unique_id=885804223]
+script = ExtResource("1_cagyr")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_of1pd")]([SubResource("Resource_jfqv1"), SubResource("Resource_fx8hb")])
+animation = ExtResource("5_icxjv")
+description = "Heavy Physical damage to one enemy. Makes it Vulnerable."
+ability_name = "Sundering Blow"
+ability_tag = &"Ability.Sunderingblow"
+cost_effect = ExtResource("6_feii1")

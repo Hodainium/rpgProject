@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_pltxy"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_0t8ai"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_ballad.tres" id="3_cs1w2"]
+[ext_resource type="Animation" path="res://content/demo/animations/hymn.tres" id="4_jc2fi"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_83.tres" id="5_71ew5"]
+
+[sub_resource type="Resource" id="Resource_uhnos"]
+script = ExtResource("2_0t8ai")
+id = &"regen"
+effect = ExtResource("3_cs1w2")
+
+[node name="Ballad" type="Node" unique_id=1631027765]
+script = ExtResource("1_pltxy")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Buff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_0t8ai")]([SubResource("Resource_uhnos")])
+animation = ExtResource("4_jc2fi")
+description = "The party regenerates 8% of max HP each turn for 3 turns."
+ability_name = "Ballad of Mending"
+ability_tag = &"Ability.Ballad"
+cost_effect = ExtResource("5_71ew5")

@@ -1,0 +1,37 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_8mluo"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_wkdg4"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_jfcpe"]
+[ext_resource type="Animation" path="res://content/demo/animations/ice_blast.tres" id="4_wbb70"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_149.tres" id="5_ox2mo"]
+
+[sub_resource type="Resource" id="Resource_fi1av"]
+script = ExtResource("2_wkdg4")
+id = &"blast"
+effect = ExtResource("3_jfcpe")
+damage_mode = 2
+targets = 1
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 44000
+toughness_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_ag4jv"]
+script = ExtResource("2_wkdg4")
+id = &"chill"
+effect = ExtResource("3_jfcpe")
+damage_mode = 2
+targets = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 18000
+
+[node name="Glacier" type="Node" unique_id=334767554]
+script = ExtResource("1_8mluo")
+targeting = 2
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_wkdg4")]([SubResource("Resource_fi1av"), SubResource("Resource_ag4jv")])
+animation = ExtResource("4_wbb70")
+description = "440% ATK Ice to one enemy, 180% to its neighbours."
+ability_name = "Glacier"
+ability_tag = &"Ability.Glacier"
+cost_effect = ExtResource("5_ox2mo")

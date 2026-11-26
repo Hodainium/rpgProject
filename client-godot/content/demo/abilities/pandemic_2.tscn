@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_8yrmb"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_wga2x"]
+[ext_resource type="Resource" path="res://content/demo/effects/poison_2.tres" id="3_po6qw"]
+[ext_resource type="Resource" path="res://content/demo/effects/bleed.tres" id="4_qvcru"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="5_y3hqk"]
+[ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="6_e6mtt"]
+[ext_resource type="Animation" path="res://content/demo/animations/pandemic.tres" id="7_takv6"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="8_1cryw"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="9_5h5dd"]
+
+[sub_resource type="Resource" id="Resource_doal6"]
+script = ExtResource("2_wga2x")
+id = &"poison"
+effect = ExtResource("3_po6qw")
+chance_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_herle"]
+script = ExtResource("2_wga2x")
+id = &"bleed"
+effect = ExtResource("4_qvcru")
+chance_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_28dmk"]
+script = ExtResource("2_wga2x")
+id = &"burn"
+effect = ExtResource("5_y3hqk")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 10000
+chance_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_mc25f"]
+script = ExtResource("2_wga2x")
+id = &"expose"
+effect = ExtResource("6_e6mtt")
+chance_x100 = 10000
+
+[node name="Pandemic2" type="Node" unique_id=665210248]
+script = ExtResource("1_8yrmb")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Pandemic"])
+executions = Array[ExtResource("2_wga2x")]([SubResource("Resource_doal6"), SubResource("Resource_herle"), SubResource("Resource_28dmk"), SubResource("Resource_mc25f")])
+animation = ExtResource("7_takv6")
+description = "A stronger Poison, Bleed, Burn and Vulnerable on every enemy."
+ability_name = "Pandemic II"
+ability_tag = &"Ability.Ult.Pandemic2"
+activation_query = ExtResource("8_1cryw")
+cost_effect = ExtResource("9_5h5dd")

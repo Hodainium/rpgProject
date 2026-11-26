@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_jwysk"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_h28b1"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_fault_echo.tres" id="3_2qugi"]
+[ext_resource type="Animation" path="res://content/demo/animations/resonance.tres" id="4_65a22"]
+
+[sub_resource type="Resource" id="Resource_0na7a"]
+script = ExtResource("2_h28b1")
+id = &"charge"
+effect = ExtResource("3_2qugi")
+
+[node name="FaultEcho" type="Node" unique_id=731970715]
+script = ExtResource("1_jwysk")
+targeting = 4
+executions = Array[ExtResource("2_h28b1")]([SubResource("Resource_0na7a")])
+animation = ExtResource("4_65a22")
+description = "Breaking an enemy: 8 ult charge for the party."
+ability_name = "Fault Echo"
+ability_tag = &"Ability.Passive.Faultecho"
+trigger_event_tag = &"Event.Damage.Dealt.Break"

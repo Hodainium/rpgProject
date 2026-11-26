@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_3h556"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ujcui"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_x2yo1"]
+[ext_resource type="Animation" path="res://content/demo/animations/cleave.tres" id="4_amhhv"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_6u7x2"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_ffa3t"]
+
+[sub_resource type="Resource" id="Resource_433gi"]
+script = ExtResource("2_ujcui")
+id = &"cleave"
+effect = ExtResource("3_x2yo1")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 28000
+toughness_x100 = 11000
+
+[node name="Cleave2" type="Node" unique_id=127165111]
+script = ExtResource("1_3h556")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Usage.Battle"])
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Cleave"])
+executions = Array[ExtResource("2_ujcui")]([SubResource("Resource_433gi")])
+animation = ExtResource("4_amhhv")
+description = "280% ATK Physical to every enemy."
+ability_name = "Cleave II"
+ability_tag = &"Ability.Ult.Cleave2"
+activation_query = ExtResource("5_6u7x2")
+cost_effect = ExtResource("6_ffa3t")
