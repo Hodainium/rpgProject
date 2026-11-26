@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_r3kr3"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_d5xlg"]
+[ext_resource type="Resource" path="res://content/demo/effects/slow.tres" id="3_1x0fu"]
+[ext_resource type="Animation" path="res://content/demo/animations/molten_core.tres" id="4_dmgo3"]
+
+[sub_resource type="Resource" id="Resource_rfaax"]
+script = ExtResource("2_d5xlg")
+id = &"melt"
+effect = ExtResource("3_1x0fu")
+chance_x100 = 4000
+
+[node name="Permafrost" type="Node" unique_id=1649855686]
+script = ExtResource("1_r3kr3")
+executions = Array[ExtResource("2_d5xlg")]([SubResource("Resource_rfaax")])
+animation = ExtResource("4_dmgo3")
+description = "Your Ice hits have a 40% chance to Slow the target."
+ability_name = "Permafrost"
+ability_tag = &"Ability.Passive.Permafrost"
+trigger_event_tag = &"Event.Damage.Dealt.Ice"

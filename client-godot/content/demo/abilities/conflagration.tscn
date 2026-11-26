@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_dgrk0"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_6vfml"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_qic4u"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="4_hvxnq"]
+[ext_resource type="Animation" path="res://content/demo/animations/inferno.tres" id="5_ma1vj"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_123.tres" id="6_chbfv"]
+
+[sub_resource type="Resource" id="Resource_ts2na"]
+script = ExtResource("2_6vfml")
+id = &"fire"
+effect = ExtResource("3_qic4u")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 11000
+
+[sub_resource type="Resource" id="Resource_6cfqu"]
+script = ExtResource("2_6vfml")
+id = &"burn"
+effect = ExtResource("4_hvxnq")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 7500
+chance_x100 = 10000
+
+[node name="Conflagration" type="Node" unique_id=1571573114]
+script = ExtResource("1_dgrk0")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_6vfml")]([SubResource("Resource_ts2na"), SubResource("Resource_6cfqu")])
+animation = ExtResource("5_ma1vj")
+description = "110% ATK Fire to every enemy, and a Burn."
+ability_name = "Conflagration"
+ability_tag = &"Ability.Conflagration"
+cost_effect = ExtResource("6_chbfv")

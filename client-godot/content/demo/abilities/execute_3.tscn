@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_w2tli"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_nivbt"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_0pbp6"]
+[ext_resource type="Animation" path="res://content/demo/animations/execute.tres" id="4_i015l"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_7slab"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_nl416"]
+
+[sub_resource type="Resource" id="Resource_kxakc"]
+script = ExtResource("2_nivbt")
+id = &"execute"
+effect = ExtResource("3_0pbp6")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 58000
+toughness_x100 = 18000
+
+[node name="Execute3" type="Node" unique_id=378167428]
+script = ExtResource("1_w2tli")
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Usage.Battle"])
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Execute"])
+executions = Array[ExtResource("2_nivbt")]([SubResource("Resource_kxakc")])
+animation = ExtResource("4_i015l")
+description = "580% ATK Physical to one enemy."
+ability_name = "Execute III"
+ability_tag = &"Ability.Ult.Execute3"
+activation_query = ExtResource("5_7slab")
+cost_effect = ExtResource("6_nl416")

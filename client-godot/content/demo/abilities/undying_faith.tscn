@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_pun3g"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_fw183"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_undying_faith.tres" id="3_vauvq"]
+[ext_resource type="Resource" path="res://content/demo/effects/regen.tres" id="4_hqyk5"]
+[ext_resource type="Resource" path="res://content/demo/effects/undying_ember_saved.tres" id="5_3lh81"]
+[ext_resource type="Animation" path="res://content/demo/animations/undying_ember.tres" id="6_01gqs"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="7_e1dy2"]
+
+[sub_resource type="Resource" id="Resource_jh4qh"]
+script = ExtResource("2_fw183")
+id = &"rise"
+effect = ExtResource("3_vauvq")
+
+[sub_resource type="Resource" id="Resource_7xrj2"]
+script = ExtResource("2_fw183")
+id = &"fury"
+effect = ExtResource("4_hqyk5")
+
+[sub_resource type="Resource" id="Resource_tktvb"]
+script = ExtResource("2_fw183")
+id = &"saved"
+effect = ExtResource("5_3lh81")
+
+[sub_resource type="Resource" id="Resource_0c88h"]
+script = ExtResource("7_e1dy2")
+ignore_tags = Array[StringName]([&"State.DeathSaved"])
+
+[node name="UndyingFaith" type="Node" unique_id=1278673301]
+script = ExtResource("1_pun3g")
+targeting = 5
+executions = Array[ExtResource("2_fw183")]([SubResource("Resource_jh4qh"), SubResource("Resource_7xrj2"), SubResource("Resource_tktvb")])
+animation = ExtResource("6_01gqs")
+description = "Once per battle, a killing blow leaves you at 50% HP with Regen."
+ability_name = "Undying Faith"
+ability_tag = &"Ability.Passive.Undyingfaith"
+activation_query = SubResource("Resource_0c88h")
+trigger_event_tag = &"Event.Unit.Dying"

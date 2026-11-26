@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_xyabb"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_61pt6"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_g4gib"]
+[ext_resource type="Resource" path="res://content/demo/effects/freeze.tres" id="4_13kh0"]
+[ext_resource type="Animation" path="res://content/demo/animations/absolute_zero.tres" id="5_jrwtf"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="6_srk2i"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="7_20tbn"]
+
+[sub_resource type="Resource" id="Resource_nbvur"]
+script = ExtResource("2_61pt6")
+id = &"zero"
+effect = ExtResource("3_g4gib")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 31000
+
+[sub_resource type="Resource" id="Resource_ac2dq"]
+script = ExtResource("2_61pt6")
+id = &"freeze"
+effect = ExtResource("4_13kh0")
+chance_x100 = 7500
+
+[node name="AbsoluteZero3" type="Node" unique_id=1521864052]
+script = ExtResource("1_xyabb")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Absolutezero"])
+executions = Array[ExtResource("2_61pt6")]([SubResource("Resource_nbvur"), SubResource("Resource_ac2dq")])
+animation = ExtResource("5_jrwtf")
+description = "310% ATK Ice to every enemy. 75% chance to Freeze it."
+ability_name = "Absolute Zero III"
+ability_tag = &"Ability.Ult.Absolutezero3"
+activation_query = ExtResource("6_srk2i")
+cost_effect = ExtResource("7_20tbn")

@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_tx1cl"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ipojm"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_perfect_pitch_2.tres" id="3_7dsi5"]
+[ext_resource type="Animation" path="res://content/demo/animations/encore.tres" id="4_tqlk3"]
+
+[sub_resource type="Resource" id="Resource_jx2yn"]
+script = ExtResource("2_ipojm")
+id = &"charge"
+effect = ExtResource("3_7dsi5")
+
+[node name="PerfectPitch2" type="Node" unique_id=1502539706]
+script = ExtResource("1_tx1cl")
+targeting = 5
+executions = Array[ExtResource("2_ipojm")]([SubResource("Resource_jx2yn")])
+animation = ExtResource("4_tqlk3")
+description = "When an ally uses an ult: 25 ult charge."
+ability_name = "Perfect Pitch II"
+ability_tag = &"Ability.Passive.Perfectpitch2"
+trigger_event_tag = &"Event.Ally.Ability.Used.Ultimate"

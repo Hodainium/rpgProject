@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_gkqn5"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_38a5d"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_arc6t"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_8wfr5"]
+
+[sub_resource type="Resource" id="Resource_lun83"]
+script = ExtResource("3_arc6t")
+value_x100 = 6000
+attribute_name = "atk"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_sr6vi"]
+script = ExtResource("3_arc6t")
+value_x100 = 3000
+attribute_name = "crit_rate"
+
+[resource]
+script = ExtResource("4_8wfr5")
+stacking_policy = 1
+policy = 3
+max_stacks = 1
+duration_turns = 3
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff", &"Cue.Sfx.Apply.Buff"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.AttackUp"])
+modifiers = Array[ExtResource("2_38a5d")]([SubResource("Resource_lun83"), SubResource("Resource_sr6vi")])
+granted_tags = Array[StringName]([&"Status.Buff.AttackUp"])

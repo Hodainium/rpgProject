@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_mgac2"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_m5616"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_o24dj"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_lcfg8"]
+
+[sub_resource type="Resource" id="Resource_o52aw"]
+script = ExtResource("3_o24dj")
+value_x100 = 4000
+attribute_name = "spd"
+
+[sub_resource type="Resource" id="Resource_tmfry"]
+script = ExtResource("3_o24dj")
+value_x100 = 7000
+attribute_name = "toughness_dmg"
+
+[sub_resource type="Resource" id="Resource_axpue"]
+script = ExtResource("3_o24dj")
+value_x100 = 6000
+attribute_name = "broken_dmg"
+
+[resource]
+script = ExtResource("4_lcfg8")
+policy = 3
+duration_turns = 3
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff", &"Cue.Sfx.Apply.Buff"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.Combustion"])
+modifiers = Array[ExtResource("2_m5616")]([SubResource("Resource_o52aw"), SubResource("Resource_tmfry"), SubResource("Resource_axpue")])
+granted_tags = Array[StringName]([&"Status.Buff.Combustion", &"State.Combustion"])

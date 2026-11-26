@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_48hy4"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_jnbnf"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_4377k"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="4_vajgq"]
+[ext_resource type="Animation" path="res://content/demo/animations/meltdown.tres" id="5_jc5mf"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_139.tres" id="6_12edu"]
+
+[sub_resource type="Resource" id="Resource_pkwyq"]
+script = ExtResource("2_jnbnf")
+id = &"melt"
+effect = ExtResource("3_4377k")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 61000
+toughness_x100 = 11000
+
+[sub_resource type="Resource" id="Resource_o3u5r"]
+script = ExtResource("2_jnbnf")
+id = &"burn"
+effect = ExtResource("4_vajgq")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 15000
+chance_x100 = 10000
+
+[node name="PhoenixDive2" type="Node" unique_id=1107119058]
+script = ExtResource("1_48hy4")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_jnbnf")]([SubResource("Resource_pkwyq"), SubResource("Resource_o3u5r")])
+animation = ExtResource("5_jc5mf")
+description = "610% ATK Fire to one enemy, and a fierce Burn."
+ability_name = "Phoenix Dive II"
+ability_tag = &"Ability.Phoenixdive2"
+cost_effect = ExtResource("6_12edu")

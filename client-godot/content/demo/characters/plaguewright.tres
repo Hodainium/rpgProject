@@ -1,6 +1,5 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
-[ext_resource type="Resource" path="res://content/demo/effects/growth_support.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/pandemic.tscn" id="1_wr4yf"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/infect.tscn" id="2_54xvd"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/contagion.tscn" id="3_d3fmv"]
@@ -20,6 +19,20 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/outbreak.tscn" id="96_lv1"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/corrode.tscn" id="96_lv2"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/pandemic_bloom.tscn" id="96_lv3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/festering_wound.tscn" id="lc_festering_wound"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/pandemic_2.tscn" id="lc_pandemic_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/toxic_spores.tscn" id="lc_toxic_spores"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/lingering_malady_2.tscn" id="lc_lingering_malady_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/festering_wound_2.tscn" id="lc_festering_wound_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/miasma.tscn" id="lc_miasma"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/toxic_spores_2.tscn" id="lc_toxic_spores_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/pathogen.tscn" id="lc_pathogen"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/miasma_2.tscn" id="lc_miasma_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/pandemic_3.tscn" id="lc_pandemic_3"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="lc_band"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_1.tres" id="lc_growth_1"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_2.tres" id="lc_growth_2"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_3.tres" id="lc_growth_3"]
 
 [sub_resource type="Resource" id="LevelSkill_0"]
 script = ExtResource("97_lvl")
@@ -43,6 +56,77 @@ level = 9
 ability = ExtResource("96_lv3")
 replaces = &"Ability.Outbreak"
 
+[sub_resource type="Resource" id="LevelSkill_lc_festering_wound"]
+script = ExtResource("97_lvl")
+level = 12
+ability = ExtResource("lc_festering_wound")
+
+[sub_resource type="Resource" id="LevelSkill_lc_pandemic_2"]
+script = ExtResource("97_lvl")
+level = 15
+ability = ExtResource("lc_pandemic_2")
+replaces = &"Ability.Ult.Pandemic"
+
+[sub_resource type="Resource" id="LevelSkill_lc_toxic_spores"]
+script = ExtResource("97_lvl")
+level = 19
+ability = ExtResource("lc_toxic_spores")
+
+[sub_resource type="Resource" id="LevelSkill_lc_lingering_malady_2"]
+script = ExtResource("97_lvl")
+level = 24
+ability = ExtResource("lc_lingering_malady_2")
+replaces = &"Ability.Lingeringmalady"
+
+[sub_resource type="Resource" id="LevelSkill_lc_festering_wound_2"]
+script = ExtResource("97_lvl")
+level = 26
+ability = ExtResource("lc_festering_wound_2")
+replaces = &"Ability.Festeringwound"
+
+[sub_resource type="Resource" id="LevelSkill_lc_miasma"]
+script = ExtResource("97_lvl")
+level = 28
+ability = ExtResource("lc_miasma")
+
+[sub_resource type="Resource" id="LevelSkill_lc_toxic_spores_2"]
+script = ExtResource("97_lvl")
+level = 35
+ability = ExtResource("lc_toxic_spores_2")
+replaces = &"Ability.Passive.Toxicspores"
+
+[sub_resource type="Resource" id="LevelSkill_lc_pathogen"]
+script = ExtResource("97_lvl")
+level = 40
+ability = ExtResource("lc_pathogen")
+
+[sub_resource type="Resource" id="LevelSkill_lc_miasma_2"]
+script = ExtResource("97_lvl")
+level = 45
+ability = ExtResource("lc_miasma_2")
+replaces = &"Ability.Miasma"
+
+[sub_resource type="Resource" id="LevelSkill_lc_pandemic_3"]
+script = ExtResource("97_lvl")
+level = 50
+ability = ExtResource("lc_pandemic_3")
+replaces = &"Ability.Ult.Pandemic2"
+
+[sub_resource type="Resource" id="GrowthBand_1"]
+script = ExtResource("lc_band")
+from_level = 2
+effect = ExtResource("lc_growth_1")
+
+[sub_resource type="Resource" id="GrowthBand_2"]
+script = ExtResource("lc_band")
+from_level = 16
+effect = ExtResource("lc_growth_2")
+
+[sub_resource type="Resource" id="GrowthBand_3"]
+script = ExtResource("lc_band")
+from_level = 31
+effect = ExtResource("lc_growth_3")
+
 [resource]
 script = ExtResource("12_jn2kp")
 id = &"demo.character.plaguewright"
@@ -51,8 +135,8 @@ abilities = Array[PackedScene]([ExtResource("1_wr4yf"), ExtResource("2_54xvd"), 
 display_name = "Plaguewright"
 display_color = Color(0.6039216, 0.8039216, 0.19607843, 1)
 tags = Array[StringName]([&"Character.Plaguewright", &"Card.Set.Descent", &"Unit.Role.Dot", &"Unit.Role.Support"])
-level_effect = ExtResource("90_growth")
-level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
+growth_bands = Array[ExtResource("lc_band")]([SubResource("GrowthBand_1"), SubResource("GrowthBand_2"), SubResource("GrowthBand_3")])
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3"), SubResource("LevelSkill_lc_festering_wound"), SubResource("LevelSkill_lc_pandemic_2"), SubResource("LevelSkill_lc_toxic_spores"), SubResource("LevelSkill_lc_lingering_malady_2"), SubResource("LevelSkill_lc_festering_wound_2"), SubResource("LevelSkill_lc_miasma"), SubResource("LevelSkill_lc_toxic_spores_2"), SubResource("LevelSkill_lc_pathogen"), SubResource("LevelSkill_lc_miasma_2"), SubResource("LevelSkill_lc_pandemic_3")])
 role = "Support: statuses"
 description = "Spreads Poison and Bleed and makes every debuff last longer. Pandemic hits all enemies with Poison, Bleed, Burn and Vulnerable."
 stats_x100 = Dictionary[String, int]({

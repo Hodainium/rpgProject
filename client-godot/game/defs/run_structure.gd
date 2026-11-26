@@ -37,6 +37,9 @@ extends Resource
 ## Spec playable-demo 3.11 (D28): XP every living member gains per enemy beaten in a won battle (per boss: xp_per_boss).
 @export var xp_per_enemy: int = 0
 @export var xp_per_boss: int = 0
+## Spec level-cap 2.1: added to each beaten enemy's XP (a boss's too) per level of that enemy (floor depth, variant and slot),
+## so deeper floors give more XP. 0: XP as above only.
+@export var xp_per_enemy_level: int = 0
 ## Total XP for level 2, 3, 4...; rising. Empty: no XP and no levels in this run.
 @export var xp_to_level: Array[int] = []
 @export_group("Keys and chests")

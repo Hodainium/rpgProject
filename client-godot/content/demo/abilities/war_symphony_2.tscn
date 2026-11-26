@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_d1ys8"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_42x80"]
+[ext_resource type="Resource" path="res://content/demo/effects/class_charge_20.tres" id="3_qs455"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_war_symphony_2.tres" id="4_0wy63"]
+[ext_resource type="Animation" path="res://content/demo/animations/breakers_oath.tres" id="5_ce20k"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_153.tres" id="6_hbgl1"]
+
+[sub_resource type="Resource" id="Resource_bs6a8"]
+script = ExtResource("2_42x80")
+id = &"charge"
+effect = ExtResource("3_qs455")
+
+[sub_resource type="Resource" id="Resource_3v4l5"]
+script = ExtResource("2_42x80")
+id = &"fury"
+effect = ExtResource("4_0wy63")
+
+[node name="WarSymphony2" type="Node" unique_id=1824822342]
+script = ExtResource("1_d1ys8")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Buff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_42x80")]([SubResource("Resource_bs6a8"), SubResource("Resource_3v4l5")])
+animation = ExtResource("5_ce20k")
+description = "The party: 20 ult charge, +60% ATK and +30% crit rate for 3 turns."
+ability_name = "Symphony of War II"
+ability_tag = &"Ability.Warsymphony2"
+cost_effect = ExtResource("6_hbgl1")

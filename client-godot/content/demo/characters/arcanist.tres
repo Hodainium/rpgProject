@@ -1,6 +1,5 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
-[ext_resource type="Resource" path="res://content/demo/effects/growth_damage.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/meteor.tscn" id="1_143hu"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/arcane_bolt.tscn" id="2_4yc2v"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/fireburst.tscn" id="3_mpnna"]
@@ -20,6 +19,20 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/fireblast.tscn" id="96_lv1"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/wildfire.tscn" id="96_lv2"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/firestorm.tscn" id="96_lv3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/prismatic_ray.tscn" id="lc_prismatic_ray"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/meteor_2.tscn" id="lc_meteor_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/arcane_echo.tscn" id="lc_arcane_echo"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/winter_nova.tscn" id="lc_winter_nova"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/prismatic_ray_2.tscn" id="lc_prismatic_ray_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/cataclysm.tscn" id="lc_cataclysm"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/arcane_echo_2.tscn" id="lc_arcane_echo_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/mana_font.tscn" id="lc_mana_font"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/cataclysm_2.tscn" id="lc_cataclysm_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/meteor_3.tscn" id="lc_meteor_3"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="lc_band"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_1.tres" id="lc_growth_1"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_2.tres" id="lc_growth_2"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_3.tres" id="lc_growth_3"]
 
 [sub_resource type="Resource" id="LevelSkill_0"]
 script = ExtResource("97_lvl")
@@ -43,6 +56,77 @@ level = 9
 ability = ExtResource("96_lv3")
 replaces = &"Ability.Fireblast"
 
+[sub_resource type="Resource" id="LevelSkill_lc_prismatic_ray"]
+script = ExtResource("97_lvl")
+level = 12
+ability = ExtResource("lc_prismatic_ray")
+
+[sub_resource type="Resource" id="LevelSkill_lc_meteor_2"]
+script = ExtResource("97_lvl")
+level = 15
+ability = ExtResource("lc_meteor_2")
+replaces = &"Ability.Ult.Meteor"
+
+[sub_resource type="Resource" id="LevelSkill_lc_arcane_echo"]
+script = ExtResource("97_lvl")
+level = 19
+ability = ExtResource("lc_arcane_echo")
+
+[sub_resource type="Resource" id="LevelSkill_lc_winter_nova"]
+script = ExtResource("97_lvl")
+level = 23
+ability = ExtResource("lc_winter_nova")
+replaces = &"Ability.Frostnova"
+
+[sub_resource type="Resource" id="LevelSkill_lc_prismatic_ray_2"]
+script = ExtResource("97_lvl")
+level = 26
+ability = ExtResource("lc_prismatic_ray_2")
+replaces = &"Ability.Prismaticray"
+
+[sub_resource type="Resource" id="LevelSkill_lc_cataclysm"]
+script = ExtResource("97_lvl")
+level = 28
+ability = ExtResource("lc_cataclysm")
+
+[sub_resource type="Resource" id="LevelSkill_lc_arcane_echo_2"]
+script = ExtResource("97_lvl")
+level = 36
+ability = ExtResource("lc_arcane_echo_2")
+replaces = &"Ability.Passive.Arcaneecho"
+
+[sub_resource type="Resource" id="LevelSkill_lc_mana_font"]
+script = ExtResource("97_lvl")
+level = 41
+ability = ExtResource("lc_mana_font")
+
+[sub_resource type="Resource" id="LevelSkill_lc_cataclysm_2"]
+script = ExtResource("97_lvl")
+level = 46
+ability = ExtResource("lc_cataclysm_2")
+replaces = &"Ability.Cataclysm"
+
+[sub_resource type="Resource" id="LevelSkill_lc_meteor_3"]
+script = ExtResource("97_lvl")
+level = 50
+ability = ExtResource("lc_meteor_3")
+replaces = &"Ability.Ult.Meteor2"
+
+[sub_resource type="Resource" id="GrowthBand_1"]
+script = ExtResource("lc_band")
+from_level = 2
+effect = ExtResource("lc_growth_1")
+
+[sub_resource type="Resource" id="GrowthBand_2"]
+script = ExtResource("lc_band")
+from_level = 16
+effect = ExtResource("lc_growth_2")
+
+[sub_resource type="Resource" id="GrowthBand_3"]
+script = ExtResource("lc_band")
+from_level = 31
+effect = ExtResource("lc_growth_3")
+
 [resource]
 script = ExtResource("12_u55js")
 id = &"demo.character.arcanist"
@@ -51,8 +135,8 @@ abilities = Array[PackedScene]([ExtResource("1_143hu"), ExtResource("2_4yc2v"), 
 display_name = "Arcanist"
 display_color = Color(0.5764706, 0.4392157, 0.85882354, 1)
 tags = Array[StringName]([&"Character.Arcanist", &"Card.Set.Core", &"Unit.Role.Damage"])
-level_effect = ExtResource("90_growth")
-level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
+growth_bands = Array[ExtResource("lc_band")]([SubResource("GrowthBand_1"), SubResource("GrowthBand_2"), SubResource("GrowthBand_3")])
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3"), SubResource("LevelSkill_lc_prismatic_ray"), SubResource("LevelSkill_lc_meteor_2"), SubResource("LevelSkill_lc_arcane_echo"), SubResource("LevelSkill_lc_winter_nova"), SubResource("LevelSkill_lc_prismatic_ray_2"), SubResource("LevelSkill_lc_cataclysm"), SubResource("LevelSkill_lc_arcane_echo_2"), SubResource("LevelSkill_lc_mana_font"), SubResource("LevelSkill_lc_cataclysm_2"), SubResource("LevelSkill_lc_meteor_3")])
 role = "Damage dealer: magic"
 description = "Fire and Ice spells that hit many enemies, at a steep SP cost. Kills refill SP; Meteor burns the whole field."
 stats_x100 = Dictionary[String, int]({

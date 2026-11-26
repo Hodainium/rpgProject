@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_s6e8q"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ak4ni"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_8cvl1"]
+[ext_resource type="Resource" path="res://content/demo/effects/poison_3.tres" id="4_rgpfi"]
+[ext_resource type="Animation" path="res://content/demo/animations/spit.tres" id="5_4eg5y"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_169.tres" id="6_ru5kr"]
+
+[sub_resource type="Resource" id="Resource_481q4"]
+script = ExtResource("2_ak4ni")
+id = &"spit"
+effect = ExtResource("3_8cvl1")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 19000
+
+[sub_resource type="Resource" id="Resource_1j4li"]
+script = ExtResource("2_ak4ni")
+id = &"poison"
+effect = ExtResource("4_rgpfi")
+chance_x100 = 10000
+
+[node name="Miasma2" type="Node" unique_id=745861400]
+script = ExtResource("1_s6e8q")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_ak4ni")]([SubResource("Resource_481q4"), SubResource("Resource_1j4li")])
+animation = ExtResource("5_4eg5y")
+description = "190% ATK Physical to every enemy, and a virulent Poison."
+ability_name = "Miasma II"
+ability_tag = &"Ability.Miasma2"
+cost_effect = ExtResource("6_ru5kr")

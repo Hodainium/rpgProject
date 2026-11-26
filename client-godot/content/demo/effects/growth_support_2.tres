@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_27u5l"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_k18et"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_tbayr"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_rqrl5"]
+
+[sub_resource type="Resource" id="Resource_vhinr"]
+script = ExtResource("3_tbayr")
+value_x100 = 350
+attribute_name = "max_hp"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_xyh4u"]
+script = ExtResource("3_tbayr")
+value_x100 = 300
+attribute_name = "atk"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_rgmsk"]
+script = ExtResource("3_tbayr")
+value_x100 = 250
+attribute_name = "def"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_2prje"]
+script = ExtResource("3_tbayr")
+value_x100 = 350
+attribute_name = "sp_gain"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_ylc6p"]
+script = ExtResource("3_tbayr")
+value_x100 = 350
+attribute_name = "max_mp"
+operation = 1
+
+[resource]
+script = ExtResource("4_rqrl5")
+stacking_policy = 1
+policy = 2
+modifiers = Array[ExtResource("2_k18et")]([SubResource("Resource_vhinr"), SubResource("Resource_xyh4u"), SubResource("Resource_rgmsk"), SubResource("Resource_2prje"), SubResource("Resource_ylc6p")])

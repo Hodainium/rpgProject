@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_t874r"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="2_pr4e8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_5ells"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="4_btr0r"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="5_u3rmi"]
+
+[sub_resource type="Resource" id="Resource_cfpw4"]
+script = ExtResource("1_t874r")
+ignore_tags = Array[StringName]([&"Immune.Poison", &"Immune.Debuff"])
+
+[sub_resource type="Resource" id="Resource_p86ks"]
+script = ExtResource("4_btr0r")
+value_x100 = -6000
+attribute_name = "hp"
+
+[resource]
+script = ExtResource("5_u3rmi")
+stacking_policy = 1
+policy = 3
+period = 1.0
+max_stacks = 5
+duration_turns = 3
+application_query = SubResource("Resource_cfpw4")
+application_cue_tags = Array[StringName]([&"Cue.Sfx.Apply.Debuff"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Status.Poison"])
+periodic_cue_tags = Array[StringName]([&"Cue.Fx.Tick.Poison", &"Cue.Sfx.Tick.Poison"])
+modifiers = Array[ExtResource("3_5ells")]([SubResource("Resource_p86ks")])
+granted_tags = Array[StringName]([&"Status.Debuff.Poison"])

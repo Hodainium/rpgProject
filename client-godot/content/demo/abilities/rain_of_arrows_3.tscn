@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_catd2"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_p1hf0"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_oc4bh"]
+[ext_resource type="Animation" path="res://content/demo/animations/rain_of_arrows.tres" id="4_r74ie"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_or4na"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_hapo5"]
+
+[sub_resource type="Resource" id="Resource_3ngf1"]
+script = ExtResource("2_p1hf0")
+id = &"rain"
+effect = ExtResource("3_oc4bh")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 27000
+
+[node name="RainOfArrows3" type="Node" unique_id=57916899]
+script = ExtResource("1_catd2")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Usage.Battle"])
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Rainofarrows"])
+executions = Array[ExtResource("2_p1hf0")]([SubResource("Resource_3ngf1")])
+animation = ExtResource("4_r74ie")
+description = "270% ATK Physical to every enemy."
+ability_name = "Rain of Arrows III"
+ability_tag = &"Ability.Ult.Rainofarrows3"
+activation_query = ExtResource("5_or4na")
+cost_effect = ExtResource("6_hapo5")

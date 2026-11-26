@@ -1,0 +1,68 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/chant_jab.tscn" id="1_5qwna"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/sp_passive.tscn" id="2_d85nj"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_sp_attribute_set.gd" id="3_hqpyu"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="4_qq2fx"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/lc_growth_1.tres" id="5_pqeft"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/lc_growth_2.tres" id="6_kypcv"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="7_47h66"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/lc_gale_1.tscn" id="8_4okk8"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/lc_gale_2.tscn" id="9_hhg4c"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/lc_gale_3.tscn" id="10_da0rn"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="11_b1wlr"]
+
+[sub_resource type="Resource" id="Resource_nd7lb"]
+script = ExtResource("4_qq2fx")
+effect = ExtResource("5_pqeft")
+
+[sub_resource type="Resource" id="Resource_3lnrt"]
+script = ExtResource("4_qq2fx")
+from_level = 16
+effect = ExtResource("6_kypcv")
+
+[sub_resource type="Resource" id="Resource_ujqva"]
+script = ExtResource("7_47h66")
+level = 12
+ability = ExtResource("8_4okk8")
+
+[sub_resource type="Resource" id="Resource_2t041"]
+script = ExtResource("7_47h66")
+level = 20
+ability = ExtResource("9_hhg4c")
+replaces = &"Fixture.Ability.LcGaleOne"
+
+[sub_resource type="Resource" id="Resource_ueuew"]
+script = ExtResource("7_47h66")
+level = 50
+ability = ExtResource("10_da0rn")
+replaces = &"Fixture.Ability.LcGaleTwo"
+
+[resource]
+script = ExtResource("11_b1wlr")
+growth_bands = Array[ExtResource("4_qq2fx")]([SubResource("Resource_nd7lb"), SubResource("Resource_3lnrt")])
+id = &"fixture.character.climber"
+attribute_set = ExtResource("3_hqpyu")
+abilities = Array[PackedScene]([ExtResource("1_5qwna"), ExtResource("2_d85nj")])
+display_name = "Climber"
+display_color = Color(0, 0.54509807, 0.54509807, 1)
+tags = Array[StringName]([&"Fixture.Character.Climber"])
+level_skills = Array[ExtResource("7_47h66")]([SubResource("Resource_ujqva"), SubResource("Resource_2t041"), SubResource("Resource_ueuew")])
+stats_x100 = Dictionary[String, int]({
+"atk": 40000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 25000,
+"energy": 0,
+"hp": 120000,
+"max_hp": 120000,
+"max_mp": 6000,
+"max_toughness": 0,
+"mp": 6000,
+"sp_basic": 1700,
+"spd": 10500,
+"toughness": 0,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

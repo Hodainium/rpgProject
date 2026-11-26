@@ -1,0 +1,32 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_vjhdy"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_6ae5u"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_oe54x"]
+[ext_resource type="Resource" path="res://content/demo/effects/bleed.tres" id="4_yrotd"]
+[ext_resource type="Animation" path="res://content/demo/animations/hemorrhage.tres" id="5_6mc45"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_63.tres" id="6_wm3kb"]
+
+[sub_resource type="Resource" id="Resource_yq34e"]
+script = ExtResource("2_6ae5u")
+id = &"cut"
+effect = ExtResource("3_oe54x")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 12000
+
+[sub_resource type="Resource" id="Resource_p5oud"]
+script = ExtResource("2_6ae5u")
+id = &"bleed"
+effect = ExtResource("4_yrotd")
+chance_x100 = 8000
+
+[node name="FesteringWound" type="Node" unique_id=196380112]
+script = ExtResource("1_vjhdy")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_6ae5u")]([SubResource("Resource_yq34e"), SubResource("Resource_p5oud")])
+animation = ExtResource("5_6mc45")
+description = "120% ATK Physical to one enemy. 80% chance to Bleed."
+ability_name = "Festering Wound"
+ability_tag = &"Ability.Festeringwound"
+cost_effect = ExtResource("6_wm3kb")

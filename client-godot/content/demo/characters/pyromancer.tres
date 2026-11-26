@@ -1,6 +1,5 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
-[ext_resource type="Resource" path="res://content/demo/effects/growth_damage.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/supernova.tscn" id="1_srm27"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/ember.tscn" id="2_jpiyj"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/ignite.tscn" id="3_py410"]
@@ -20,6 +19,20 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/scorch.tscn" id="96_lv1"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/spellweave.tscn" id="96_lv2"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/immolate.tscn" id="96_lv3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/flame_tongue.tscn" id="lc_flame_tongue"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/supernova_2.tscn" id="lc_supernova_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/combust.tscn" id="lc_combust"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/conflagration.tscn" id="lc_conflagration"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/flame_tongue_2.tscn" id="lc_flame_tongue_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/dragons_breath.tscn" id="lc_dragons_breath"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/combust_2.tscn" id="lc_combust_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/heart_of_fire.tscn" id="lc_heart_of_fire"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/dragons_breath_2.tscn" id="lc_dragons_breath_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/supernova_3.tscn" id="lc_supernova_3"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="lc_band"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_1.tres" id="lc_growth_1"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_2.tres" id="lc_growth_2"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_3.tres" id="lc_growth_3"]
 
 [sub_resource type="Resource" id="LevelSkill_0"]
 script = ExtResource("97_lvl")
@@ -43,6 +56,77 @@ level = 9
 ability = ExtResource("96_lv3")
 replaces = &"Ability.Scorch"
 
+[sub_resource type="Resource" id="LevelSkill_lc_flame_tongue"]
+script = ExtResource("97_lvl")
+level = 12
+ability = ExtResource("lc_flame_tongue")
+
+[sub_resource type="Resource" id="LevelSkill_lc_supernova_2"]
+script = ExtResource("97_lvl")
+level = 15
+ability = ExtResource("lc_supernova_2")
+replaces = &"Ability.Ult.Supernova"
+
+[sub_resource type="Resource" id="LevelSkill_lc_combust"]
+script = ExtResource("97_lvl")
+level = 20
+ability = ExtResource("lc_combust")
+
+[sub_resource type="Resource" id="LevelSkill_lc_conflagration"]
+script = ExtResource("97_lvl")
+level = 24
+ability = ExtResource("lc_conflagration")
+replaces = &"Ability.Inferno"
+
+[sub_resource type="Resource" id="LevelSkill_lc_flame_tongue_2"]
+script = ExtResource("97_lvl")
+level = 26
+ability = ExtResource("lc_flame_tongue_2")
+replaces = &"Ability.Flametongue"
+
+[sub_resource type="Resource" id="LevelSkill_lc_dragons_breath"]
+script = ExtResource("97_lvl")
+level = 29
+ability = ExtResource("lc_dragons_breath")
+
+[sub_resource type="Resource" id="LevelSkill_lc_combust_2"]
+script = ExtResource("97_lvl")
+level = 36
+ability = ExtResource("lc_combust_2")
+replaces = &"Ability.Passive.Combust"
+
+[sub_resource type="Resource" id="LevelSkill_lc_heart_of_fire"]
+script = ExtResource("97_lvl")
+level = 41
+ability = ExtResource("lc_heart_of_fire")
+
+[sub_resource type="Resource" id="LevelSkill_lc_dragons_breath_2"]
+script = ExtResource("97_lvl")
+level = 46
+ability = ExtResource("lc_dragons_breath_2")
+replaces = &"Ability.Dragonsbreath"
+
+[sub_resource type="Resource" id="LevelSkill_lc_supernova_3"]
+script = ExtResource("97_lvl")
+level = 50
+ability = ExtResource("lc_supernova_3")
+replaces = &"Ability.Ult.Supernova2"
+
+[sub_resource type="Resource" id="GrowthBand_1"]
+script = ExtResource("lc_band")
+from_level = 2
+effect = ExtResource("lc_growth_1")
+
+[sub_resource type="Resource" id="GrowthBand_2"]
+script = ExtResource("lc_band")
+from_level = 16
+effect = ExtResource("lc_growth_2")
+
+[sub_resource type="Resource" id="GrowthBand_3"]
+script = ExtResource("lc_band")
+from_level = 31
+effect = ExtResource("lc_growth_3")
+
 [resource]
 script = ExtResource("12_apcyj")
 id = &"demo.character.pyromancer"
@@ -51,8 +135,8 @@ abilities = Array[PackedScene]([ExtResource("1_srm27"), ExtResource("2_jpiyj"), 
 display_name = "Pyromancer"
 display_color = Color(1, 0.27058825, 0, 1)
 tags = Array[StringName]([&"Character.Pyromancer", &"Card.Set.Descent", &"Unit.Role.Dot", &"Unit.Role.Damage"])
-level_effect = ExtResource("90_growth")
-level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
+growth_bands = Array[ExtResource("lc_band")]([SubResource("GrowthBand_1"), SubResource("GrowthBand_2"), SubResource("GrowthBand_3")])
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3"), SubResource("LevelSkill_lc_flame_tongue"), SubResource("LevelSkill_lc_supernova_2"), SubResource("LevelSkill_lc_combust"), SubResource("LevelSkill_lc_conflagration"), SubResource("LevelSkill_lc_flame_tongue_2"), SubResource("LevelSkill_lc_dragons_breath"), SubResource("LevelSkill_lc_combust_2"), SubResource("LevelSkill_lc_heart_of_fire"), SubResource("LevelSkill_lc_dragons_breath_2"), SubResource("LevelSkill_lc_supernova_3")])
 role = "Damage dealer: damage over time"
 description = "Sets everything on fire. Ignite and Inferno stack Burn, Fire hits charge the ult fast, Supernova ends fights."
 stats_x100 = Dictionary[String, int]({

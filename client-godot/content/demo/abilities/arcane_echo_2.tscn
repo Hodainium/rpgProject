@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_xlddg"]
+
+[node name="ArcaneEcho2" type="Node" unique_id=1290060150]
+script = ExtResource("1_xlddg")
+targeting = 5
+asset_tags = Array[StringName]([&"Ability.Type.Echo"])
+trigger_chance_x100 = 4000
+echo_scale_x100 = 6000
+description = "40% chance: your skills cast again at 60%."
+ability_name = "Arcane Echo II"
+ability_tag = &"Ability.Passive.Arcaneecho2"
+trigger_event_tag = &"Event.Ability.Used.Skill"

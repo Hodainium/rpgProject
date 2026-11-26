@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_27tv8"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_u4mpd"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_uo38d"]
+[ext_resource type="Resource" path="res://content/demo/effects/slow.tres" id="4_oog62"]
+[ext_resource type="Animation" path="res://content/demo/animations/blizzard.tres" id="5_dmito"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_123.tres" id="6_ffghf"]
+
+[sub_resource type="Resource" id="Resource_8e3p4"]
+script = ExtResource("2_u4mpd")
+id = &"storm"
+effect = ExtResource("3_uo38d")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 12000
+
+[sub_resource type="Resource" id="Resource_wo2pe"]
+script = ExtResource("2_u4mpd")
+id = &"slow"
+effect = ExtResource("4_oog62")
+chance_x100 = 10000
+
+[node name="Whiteout" type="Node" unique_id=1583331625]
+script = ExtResource("1_27tv8")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_u4mpd")]([SubResource("Resource_8e3p4"), SubResource("Resource_wo2pe")])
+animation = ExtResource("5_dmito")
+description = "120% ATK Ice to every enemy. Slows it."
+ability_name = "Whiteout"
+ability_tag = &"Ability.Whiteout"
+cost_effect = ExtResource("6_ffghf")

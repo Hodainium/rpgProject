@@ -114,9 +114,17 @@ static func create(parent: Node, id: StringName, unit_side: int, unit_slot: int,
 		if ability_set != null:
 			for effect in ability_set.effects:
 				unit.asc.apply_gameplay_effect(effect, unit.asc, unit.effect_level)
-	for effect in kit.get("extra_effects", []):
+	# Spec level-cap 2.2: the levels of one growth band follow each other and stack into one active effect, in one step.
+	var extra: Array = kit.get("extra_effects", [])
+	var index := 0
+	while index < extra.size():
+		var effect: GameplayEffect = extra[index]
+		var count := 1
+		while CombatASC.stacks_into_one(effect) and index + count < extra.size() and extra[index + count] == effect:
+			count += 1
 		if effect != null:
-			unit.asc.apply_gameplay_effect(effect, unit.asc, unit.effect_level)
+			unit.asc.apply_stacks(effect, count, unit.effect_level)
+		index += count
 	for tag in unit_def.tags:
 		unit.asc.add_tag(tag)
 	for grant in grants:
@@ -264,13 +272,33 @@ func action_abilities() -> Array[BattleAbility]:
 	return result
 
 
-## Ults (spec ult-interrupts): cast only as interrupts, never as turn actions. Grant order.
+## Ults (spec ult-interrupts): cast only as interrupts, never as turn actions. Grant order; a rank (spec level-cap) keeps the place
+## of the ult it replaced, so the chooser and Auto see the same order at every level.
 func ultimate_abilities() -> Array[BattleAbility]:
 	var result: Array[BattleAbility] = []
 	for ability in abilities():
 		if ability.is_ultimate():
 			result.append(ability)
+	if result.size() > 1 and definition != null and not definition.level_skills.is_empty():
+		var granted := result.duplicate()
+		result.sort_custom(func(a: BattleAbility, b: BattleAbility) -> bool:  # sort-ok: by place (ints), then by grant order
+			var place_a := _base_place(a.ability_tag)
+			var place_b := _base_place(b.ability_tag)
+			return place_a < place_b or (place_a == place_b and granted.find(a) < granted.find(b)))
 	return result
+
+
+## Where the definition lists the ability `tag` is a rank of (following the level rows' `replaces`); past the end when it lists none.
+func _base_place(tag: StringName) -> int:
+	var base := tag
+	for index in range(definition.level_skills.size() - 1, -1, -1):  # a rank replaces an earlier row
+		var row := definition.level_skills[index]
+		if row != null and row.replaces != &"" and SkillTags.tag_of(row.ability) == base:
+			base = row.replaces
+	for place in definition.abilities.size():
+		if SkillTags.tag_of(definition.abilities[place]) == base:
+			return place
+	return definition.abilities.size()
 
 
 ## True when the unit holds an ability listening to `event_tag`.

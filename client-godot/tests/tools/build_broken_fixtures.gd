@@ -348,6 +348,54 @@ func _ready() -> void:
 	crown.grants = AbilitySet.new()
 	crown.grants.effects.append(bump)
 	_save("items", "level_attribute_modified", crown)
+	# Spec level-cap: a band whose effect does not stack into one, one that does not rise, one without an effect
+	# (growth_band_not_stacking, growth_band_order, growth_band_without_effect) and a class that learns nothing for 17 levels
+	# (level_skill_gap).
+	var loose := GameplayEffect.new()
+	loose.policy = GameplayEffect.DurationPolicy.INFINITE
+	var more := CombatModifier.new()
+	more.attribute_name = "atk"
+	more.operation = GameplayEffectModifier.Operation.PERCENT_ADD
+	more.value_x100 = 800
+	loose.modifiers.append(more)
+	loose = _save("effects", "loose_growth", loose)
+	var grower := CharacterDefinition.new()
+	_unit(grower, "broken.character.growth_bands", [_role_scene(strike, "grower_basic", basic)])
+	var inline := GameplayEffect.new()  # built into the character file (inline_effect)
+	inline.policy = GameplayEffect.DurationPolicy.INFINITE
+	inline.stacking_policy = GameplayEffect.StackingPolicy.REFRESH_DURATION
+	for pair in [[5, loose], [5, loose], [9, null], [12, inline]]:
+		var band := GrowthBand.new()
+		band.from_level = pair[0]
+		band.effect = pair[1]
+		grower.growth_bands.append(band)
+	_save("characters", "growth_bands", grower)
+	var sleeper := CharacterDefinition.new()
+	_unit(sleeper, "broken.character.level_skill_gap", [_role_scene(strike, "sleeper_basic", basic)])
+	sleeper.level_skills.assign([_level_row(3, learned), _level_row(20, _role_scene(sweep, "late_sweep", [AutoPolicy.ROLE_DAMAGE]))])
+	_save("characters", "level_skill_gap", sleeper)
+	# A class with both growth fields: the bands win, so level_effect does nothing (level_effect_ignored).
+	var band_effect := GameplayEffect.new()
+	band_effect.policy = GameplayEffect.DurationPolicy.INFINITE
+	band_effect.stacking_policy = GameplayEffect.StackingPolicy.REFRESH_DURATION
+	var grow := CombatModifier.new()
+	grow.attribute_name = "atk"
+	grow.operation = GameplayEffectModifier.Operation.PERCENT_ADD
+	grow.value_x100 = 300
+	band_effect.modifiers.append(grow)
+	band_effect = _save("effects", "both_growth_band", band_effect)
+	var old_growth := GameplayEffect.new()
+	old_growth.policy = GameplayEffect.DurationPolicy.INFINITE
+	old_growth.modifiers.append(grow.duplicate())
+	old_growth = _save("effects", "both_growth_level", old_growth)
+	var two_growths := CharacterDefinition.new()
+	_unit(two_growths, "broken.character.both_growth", [_role_scene(strike, "both_basic", basic)])
+	two_growths.level_effect = old_growth
+	var only_band := GrowthBand.new()
+	only_band.from_level = 2
+	only_band.effect = band_effect
+	two_growths.growth_bands.append(only_band)
+	_save("characters", "both_growth", two_growths)
 	print("Broken fixtures built under ", ROOT)
 	get_tree().quit(0)
 

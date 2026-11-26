@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ow4i7"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_07svn"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_oe4ui"]
+[ext_resource type="Animation" path="res://content/demo/animations/duelists_band.tres" id="4_1xtfh"]
+
+[sub_resource type="Resource" id="Resource_lofpy"]
+script = ExtResource("2_07svn")
+id = &"riposte"
+effect = ExtResource("3_oe4ui")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 8000
+
+[node name="Protector2" type="Node" unique_id=1955706506]
+script = ExtResource("1_ow4i7")
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+trigger_chance_x100 = 7500
+executions = Array[ExtResource("2_07svn")]([SubResource("Resource_lofpy")])
+animation = ExtResource("4_1xtfh")
+description = "When an ally is hit: 75% chance of a follow-up of 80% ATK Physical on the attacker."
+ability_name = "Protector II"
+ability_tag = &"Ability.Passive.Protector2"
+trigger_event_tag = &"Event.Ally.Damage.Taken"

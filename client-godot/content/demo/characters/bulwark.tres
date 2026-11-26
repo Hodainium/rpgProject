@@ -1,6 +1,5 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
-[ext_resource type="Resource" path="res://content/demo/effects/growth_tank.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/bastion.tscn" id="1_lkssy"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/shield_slam.tscn" id="2_kpqss"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/fortify.tscn" id="3_10f0t"]
@@ -20,6 +19,20 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/iron_hide.tscn" id="96_lv1"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/shield_wall.tscn" id="96_lv2"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/bastion_wall.tscn" id="96_lv3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/shield_charge.tscn" id="lc_shield_charge"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bastion_2.tscn" id="lc_bastion_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/protector.tscn" id="lc_protector"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/shield_charge_2.tscn" id="lc_shield_charge_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/fortress.tscn" id="lc_fortress"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/earthshaker.tscn" id="lc_earthshaker"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/protector_2.tscn" id="lc_protector_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/stoneheart.tscn" id="lc_stoneheart"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/earthshaker_2.tscn" id="lc_earthshaker_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bastion_3.tscn" id="lc_bastion_3"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="lc_band"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_tank_1.tres" id="lc_growth_1"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_tank_2.tres" id="lc_growth_2"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_tank_3.tres" id="lc_growth_3"]
 
 [sub_resource type="Resource" id="LevelSkill_0"]
 script = ExtResource("97_lvl")
@@ -43,6 +56,76 @@ level = 9
 ability = ExtResource("96_lv3")
 replaces = &"Ability.Ironhide"
 
+[sub_resource type="Resource" id="LevelSkill_lc_shield_charge"]
+script = ExtResource("97_lvl")
+level = 12
+ability = ExtResource("lc_shield_charge")
+
+[sub_resource type="Resource" id="LevelSkill_lc_bastion_2"]
+script = ExtResource("97_lvl")
+level = 15
+ability = ExtResource("lc_bastion_2")
+replaces = &"Ability.Ult.Bastion"
+
+[sub_resource type="Resource" id="LevelSkill_lc_protector"]
+script = ExtResource("97_lvl")
+level = 20
+ability = ExtResource("lc_protector")
+
+[sub_resource type="Resource" id="LevelSkill_lc_shield_charge_2"]
+script = ExtResource("97_lvl")
+level = 24
+ability = ExtResource("lc_shield_charge_2")
+replaces = &"Ability.Shieldcharge"
+
+[sub_resource type="Resource" id="LevelSkill_lc_fortress"]
+script = ExtResource("97_lvl")
+level = 26
+ability = ExtResource("lc_fortress")
+
+[sub_resource type="Resource" id="LevelSkill_lc_earthshaker"]
+script = ExtResource("97_lvl")
+level = 28
+ability = ExtResource("lc_earthshaker")
+
+[sub_resource type="Resource" id="LevelSkill_lc_protector_2"]
+script = ExtResource("97_lvl")
+level = 35
+ability = ExtResource("lc_protector_2")
+replaces = &"Ability.Passive.Protector"
+
+[sub_resource type="Resource" id="LevelSkill_lc_stoneheart"]
+script = ExtResource("97_lvl")
+level = 40
+ability = ExtResource("lc_stoneheart")
+
+[sub_resource type="Resource" id="LevelSkill_lc_earthshaker_2"]
+script = ExtResource("97_lvl")
+level = 45
+ability = ExtResource("lc_earthshaker_2")
+replaces = &"Ability.Earthshaker"
+
+[sub_resource type="Resource" id="LevelSkill_lc_bastion_3"]
+script = ExtResource("97_lvl")
+level = 50
+ability = ExtResource("lc_bastion_3")
+replaces = &"Ability.Ult.Bastion2"
+
+[sub_resource type="Resource" id="GrowthBand_1"]
+script = ExtResource("lc_band")
+from_level = 2
+effect = ExtResource("lc_growth_1")
+
+[sub_resource type="Resource" id="GrowthBand_2"]
+script = ExtResource("lc_band")
+from_level = 16
+effect = ExtResource("lc_growth_2")
+
+[sub_resource type="Resource" id="GrowthBand_3"]
+script = ExtResource("lc_band")
+from_level = 31
+effect = ExtResource("lc_growth_3")
+
 [resource]
 script = ExtResource("12_8xh45")
 id = &"demo.character.bulwark"
@@ -51,8 +134,8 @@ abilities = Array[PackedScene]([ExtResource("1_lkssy"), ExtResource("2_kpqss"), 
 display_name = "Bulwark"
 display_color = Color(0.7411765, 0.7176471, 0.41960785, 1)
 tags = Array[StringName]([&"Character.Bulwark", &"Card.Set.Core", &"Unit.Role.Tank"])
-level_effect = ExtResource("90_growth")
-level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
+growth_bands = Array[ExtResource("lc_band")]([SubResource("GrowthBand_1"), SubResource("GrowthBand_2"), SubResource("GrowthBand_3")])
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3"), SubResource("LevelSkill_lc_shield_charge"), SubResource("LevelSkill_lc_bastion_2"), SubResource("LevelSkill_lc_protector"), SubResource("LevelSkill_lc_shield_charge_2"), SubResource("LevelSkill_lc_fortress"), SubResource("LevelSkill_lc_earthshaker"), SubResource("LevelSkill_lc_protector_2"), SubResource("LevelSkill_lc_stoneheart"), SubResource("LevelSkill_lc_earthshaker_2"), SubResource("LevelSkill_lc_bastion_3")])
 role = "Tank"
 description = "Taunts, then grows stronger from every hit taken: counters, Fury stacks and ult charge. Bastion shields the party."
 stats_x100 = Dictionary[String, int]({

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_bf6k1"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_dnhas"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_bshpy"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_v42s3"]
+
+[sub_resource type="Resource" id="Resource_f6sa3"]
+script = ExtResource("3_bshpy")
+value_x100 = 2000
+attribute_name = "def"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_p62op"]
+script = ExtResource("3_bshpy")
+value_x100 = -800
+attribute_name = "dmg_taken"
+operation = 1
+
+[resource]
+script = ExtResource("4_v42s3")
+policy = 2
+modifiers = Array[ExtResource("2_dnhas")]([SubResource("Resource_f6sa3"), SubResource("Resource_p62op")])

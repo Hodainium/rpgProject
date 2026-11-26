@@ -10,6 +10,8 @@ const TAG_HINT: String = "gas::tag"
 ## Tag prefix reserved for dev decisions in battle logs (spec dev-tools 3.6).
 const RESERVED_TAG_PREFIX: String = "Dev."
 const SINGLE_DOOR_MASKS: Array[int] = [1, 2, 4, 8]
+## Spec level-cap 2.3: a class whose next level skill is further away than this learns nothing for too long.
+const LEVEL_GAP: int = 10
 ## Spec item-pass 3.5: a trigger in one of the battle's event families must be an event the battle sends (typos such as
 ## Event.Damage.Delt never fire). Other triggers (e.g. an effect's own event_tags) aren't checked.
 const BATTLE_EVENT_PREFIXES: Array[String] = ["Event.Damage.", "Event.Unit.", "Event.Battle.", "Event.Turn.",
@@ -108,6 +110,8 @@ func _check_unit(unit: UnitDefinition) -> void:
 		_warning("incomplete", path + "::abilities", "%s has no abilities yet" % unit.id)
 	for index in unit.abilities.size():
 		_check_skill_scene(unit.abilities[index], "%s::abilities[%d]" % [path, index], unit.id, unit is CharacterDefinition)
+	if unit is CharacterDefinition:
+		_check_growth_bands(unit)
 	if unit is CharacterDefinition and unit.level_effect != null and not _stacks(unit.level_effect):
 		_error("level_not_stacking", path + "::level_effect", "%s's level effect refreshes instead of stacking; it would count once" % unit.id)
 	if unit is CharacterDefinition:
@@ -144,6 +148,34 @@ func _check_unit(unit: UnitDefinition) -> void:
 	_check_view(unit)
 
 
+## Spec level-cap 2.2: growth bands rise by level, and each has an effect that stacks into one active effect for the whole
+## battle (infinite, REFRESH_DURATION, no stack limit), so its stack count is the band's levels.
+func _check_growth_bands(character: CharacterDefinition) -> void:
+	var path := character.resource_path + "::growth_bands"
+	if not character.growth_bands.is_empty() and character.level_effect != null:
+		_warning("level_effect_ignored", character.resource_path + "::level_effect",
+			"%s has growth bands, so its level_effect does nothing: remove one of them" % character.id)
+	var last := 1
+	for index in character.growth_bands.size():
+		var band: GrowthBand = character.growth_bands[index]
+		var where := "%s[%d]" % [path, index]
+		if band == null or band.effect == null:
+			_error("growth_band_without_effect", where, "%s has a growth band without an effect" % character.id)
+		else:
+			if _is_inline(band.effect):
+				_error("inline_effect", where, "%s's growth band effect is built into the file: save it as a .tres, the state hash needs its path"
+					% character.id)
+			if not CombatASC.stacks_into_one(band.effect):
+				_error("growth_band_not_stacking", where,
+					"%s's growth band effect must be INFINITE with REFRESH_DURATION stacking and no stack limit, with typed modifiers only"
+					% character.id)
+			_check_level_writes(band.effect, where)
+		if band != null:
+			if band.from_level <= last:
+				_error("growth_band_order", where, "%s's band from level %d does not rise above %d" % [character.id, band.from_level, last])
+			last = band.from_level
+
+
 ## Spec skill-points D17, D24: a level row from level 2 up (a level-1 skill belongs in abilities), reachable for a
 ## character (at most the max level of a run that uses it), an ability once in the unit's kit, and the usual checks on
 ## its scene. An enemy's row is reachable when some depth, variant or slot level can reach it.
@@ -172,6 +204,21 @@ func _check_level_skills(unit: UnitDefinition) -> void:
 			_error("level_skill_duplicate", where, "%s already has %s in its abilities" % [unit.id, tag])
 		kit[tag] = true
 		_check_skill_scene(row.ability, where + ".ability", unit.id, unit is CharacterDefinition)
+	if unit is CharacterDefinition:
+		_check_level_gaps(unit, path)
+
+
+## Spec level-cap 2.3: a class with no row between two rows more than LEVEL_GAP levels apart learns nothing for too long.
+func _check_level_gaps(unit: CharacterDefinition, path: String) -> void:
+	var levels: Array[int] = []
+	for row in unit.level_skills:
+		if row != null and row.ability != null:
+			levels.append(row.level)
+	levels.sort()
+	for index in range(1, levels.size()):
+		if levels[index] - levels[index - 1] > LEVEL_GAP:
+			_warning("level_skill_gap", path, "%s learns nothing between level %d and level %d" % [unit.id, levels[index - 1],
+				levels[index]])
 
 
 ## The highest level any run's XP curve reaches (0: no run has levels).
@@ -1538,6 +1585,9 @@ func _check_run(structure: RunStructure, generate_seeds: int) -> void:
 			_error("xp_curve_order", path + "::xp_to_level", "level %d needs %d XP, not more than level %d's %d" % [
 				index + 2, structure.xp_to_level[index], index + 1, structure.xp_to_level[index - 1]])
 			break
+	if structure.xp_to_level.size() + 1 > CharacterDefinition.MAX_LEVEL:  # spec level-cap: growth and level skills stop there
+		_error("xp_curve_too_long", path + "::xp_to_level", "%s reaches level %d; classes grow up to level %d" % [structure.id,
+			structure.xp_to_level.size() + 1, CharacterDefinition.MAX_LEVEL])
 	if structure.rest_event != null:
 		for page in structure.rest_event.pages:
 			# Event endings: a page's on_enter runs at the rest stop too, so it is checked like a choice's outcomes.

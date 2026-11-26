@@ -308,6 +308,34 @@ func test_a_start_that_differs_in_what_the_hash_used_to_miss_is_a_hash_mismatch(
 	await _expect(base["content"], battle, "SnapshotHashMismatch", int(battle["fromSeq"]), "a pending battle with its enemies removed")
 
 
+## Spec level-cap 4: a run with levels verifies, and a checkpoint claiming a level its XP does not give is rejected with 2002.
+func test_a_claimed_level_is_rejected() -> void:
+	var leveled: RunStructure = fixtures().runs[TWO_FLOORS].duplicate()
+	leveled.xp_per_enemy = 20
+	leveled.xp_per_enemy_level = 5
+	var curve: Array[int] = [20, 60, 120, 400, 900]
+	leveled.xp_to_level = curve
+	var content := fixtures().overlay([leveled])
+	var played := await _play(content, TWO_FLOORS)
+	var steps := _steps(content, TWO_FLOORS, played)
+	await _all_verify(content, steps, "a run with levels")
+	var step: Dictionary = {}
+	for candidate in steps:
+		if candidate["kind"] != "Genesis" and int(candidate["startSnapshot"]["run"]["party"][0]["level"]) > 1:
+			step = candidate.duplicate(true)
+			break
+	check(not step.is_empty(), "a step starts above level 1")
+	if step.is_empty():
+		return
+	var member: Dictionary = step["startSnapshot"]["run"]["party"][0]
+	member["level"] = int(member["level"]) + 10
+	await _expect(content, step, "SnapshotHashMismatch", int(step["fromSeq"]), "a level the XP does not give")
+	var honest: Dictionary = step.duplicate(true)
+	honest["startSnapshot"]["run"]["party"][0]["level"] = int(member["level"]) - 10
+	honest["startSnapshot"]["run"]["party"][0]["xp"] = int(member["xp"]) + 5000
+	await _expect(content, honest, "SnapshotHashMismatch", int(step["fromSeq"]), "XP never earned")
+
+
 func test_a_foreign_floor_seed_is_named() -> void:
 	var base := await _tamper_base()
 	var step: Dictionary = base["steps"][-1].duplicate(true)   # the last step: the run is on floor 1, so its snapshot holds floor 1's seed

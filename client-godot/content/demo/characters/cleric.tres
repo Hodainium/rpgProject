@@ -1,6 +1,5 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
-[ext_resource type="Resource" path="res://content/demo/effects/growth_support.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/strike.tscn" id="1_qi6ye"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/heal.tscn" id="2_ixx4u"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="3_ouh10"]
@@ -24,6 +23,20 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/greater_heal.tscn" id="96_lv1"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/grace.tscn" id="96_lv2"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/mass_heal.tscn" id="96_lv3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/blessed_aegis.tscn" id="lc_blessed_aegis"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sanctuary_2.tscn" id="lc_sanctuary_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/guardian_spirit.tscn" id="lc_guardian_spirit"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/resurrection_2.tscn" id="lc_resurrection_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/benediction.tscn" id="lc_benediction"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/miracle.tscn" id="lc_miracle"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/guardian_spirit_2.tscn" id="lc_guardian_spirit_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/undying_faith.tscn" id="lc_undying_faith"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/miracle_2.tscn" id="lc_miracle_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sanctuary_3.tscn" id="lc_sanctuary_3"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="lc_band"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_1.tres" id="lc_growth_1"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_2.tres" id="lc_growth_2"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_3.tres" id="lc_growth_3"]
 
 [sub_resource type="Resource" id="Resource_ud7a5"]
 script = ExtResource("7_m2hih")
@@ -51,6 +64,77 @@ level = 9
 ability = ExtResource("96_lv3")
 replaces = &"Ability.Greaterheal"
 
+[sub_resource type="Resource" id="LevelSkill_lc_blessed_aegis"]
+script = ExtResource("97_lvl")
+level = 12
+ability = ExtResource("lc_blessed_aegis")
+
+[sub_resource type="Resource" id="LevelSkill_lc_sanctuary_2"]
+script = ExtResource("97_lvl")
+level = 15
+ability = ExtResource("lc_sanctuary_2")
+replaces = &"Ability.Ult.Sanctuary"
+
+[sub_resource type="Resource" id="LevelSkill_lc_guardian_spirit"]
+script = ExtResource("97_lvl")
+level = 19
+ability = ExtResource("lc_guardian_spirit")
+
+[sub_resource type="Resource" id="LevelSkill_lc_resurrection_2"]
+script = ExtResource("97_lvl")
+level = 22
+ability = ExtResource("lc_resurrection_2")
+replaces = &"Ability.Ult.Resurrection"
+
+[sub_resource type="Resource" id="LevelSkill_lc_benediction"]
+script = ExtResource("97_lvl")
+level = 26
+ability = ExtResource("lc_benediction")
+replaces = &"Ability.Massheal"
+
+[sub_resource type="Resource" id="LevelSkill_lc_miracle"]
+script = ExtResource("97_lvl")
+level = 28
+ability = ExtResource("lc_miracle")
+
+[sub_resource type="Resource" id="LevelSkill_lc_guardian_spirit_2"]
+script = ExtResource("97_lvl")
+level = 35
+ability = ExtResource("lc_guardian_spirit_2")
+replaces = &"Ability.Passive.Guardianspirit"
+
+[sub_resource type="Resource" id="LevelSkill_lc_undying_faith"]
+script = ExtResource("97_lvl")
+level = 40
+ability = ExtResource("lc_undying_faith")
+
+[sub_resource type="Resource" id="LevelSkill_lc_miracle_2"]
+script = ExtResource("97_lvl")
+level = 45
+ability = ExtResource("lc_miracle_2")
+replaces = &"Ability.Miracle"
+
+[sub_resource type="Resource" id="LevelSkill_lc_sanctuary_3"]
+script = ExtResource("97_lvl")
+level = 50
+ability = ExtResource("lc_sanctuary_3")
+replaces = &"Ability.Ult.Sanctuary2"
+
+[sub_resource type="Resource" id="GrowthBand_1"]
+script = ExtResource("lc_band")
+from_level = 2
+effect = ExtResource("lc_growth_1")
+
+[sub_resource type="Resource" id="GrowthBand_2"]
+script = ExtResource("lc_band")
+from_level = 16
+effect = ExtResource("lc_growth_2")
+
+[sub_resource type="Resource" id="GrowthBand_3"]
+script = ExtResource("lc_band")
+from_level = 31
+effect = ExtResource("lc_growth_3")
+
 [resource]
 script = ExtResource("8_o24qk")
 id = &"demo.character.cleric"
@@ -59,8 +143,8 @@ abilities = Array[PackedScene]([ExtResource("9_ult"), ExtResource("1_qi6ye"), Ex
 display_name = "Cleric"
 display_color = Color(0.18039216, 0.54509807, 0.34117648, 1)
 tags = Array[StringName]([&"Character.Cleric", &"Card.Set.Core", &"Unit.Role.Healer", &"Unit.Role.Support"])
-level_effect = ExtResource("90_growth")
-level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
+growth_bands = Array[ExtResource("lc_band")]([SubResource("GrowthBand_1"), SubResource("GrowthBand_2"), SubResource("GrowthBand_3")])
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3"), SubResource("LevelSkill_lc_blessed_aegis"), SubResource("LevelSkill_lc_sanctuary_2"), SubResource("LevelSkill_lc_guardian_spirit"), SubResource("LevelSkill_lc_resurrection_2"), SubResource("LevelSkill_lc_benediction"), SubResource("LevelSkill_lc_miracle"), SubResource("LevelSkill_lc_guardian_spirit_2"), SubResource("LevelSkill_lc_undying_faith"), SubResource("LevelSkill_lc_miracle_2"), SubResource("LevelSkill_lc_sanctuary_3")])
 role = "Support: healer"
 description = "Keeps the party standing. Heals and Purify in battle; Sanctuary shields everyone, Resurrection brings the fallen back."
 default_loadout = SubResource("Resource_ud7a5")

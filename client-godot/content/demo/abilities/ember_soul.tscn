@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_166bm"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_scies"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_ember_soul.tres" id="3_miqcg"]
+[ext_resource type="Animation" path="res://content/demo/animations/oath_warrior.tres" id="4_htmpr"]
+
+[sub_resource type="Resource" id="Resource_ejhjf"]
+script = ExtResource("2_scies")
+id = &"oath"
+effect = ExtResource("3_miqcg")
+
+[node name="EmberSoul" type="Node" unique_id=1943206558]
+script = ExtResource("1_166bm")
+targeting = 5
+executions = Array[ExtResource("2_scies")]([SubResource("Resource_ejhjf")])
+animation = ExtResource("4_htmpr")
+description = "+12 SPD, +20% damage to Broken enemies."
+ability_name = "Ember Soul"
+ability_tag = &"Ability.Passive.Embersoul"
+trigger_event_tag = &"Event.Battle.Start"

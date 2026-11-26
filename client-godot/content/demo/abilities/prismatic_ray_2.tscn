@@ -1,0 +1,32 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_0jnyx"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_x4tcu"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_u17i6"]
+[ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="4_vi7co"]
+[ext_resource type="Animation" path="res://content/demo/animations/prism_ray.tres" id="5_stdye"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_153.tres" id="6_krmk1"]
+
+[sub_resource type="Resource" id="Resource_gaw0h"]
+script = ExtResource("2_x4tcu")
+id = &"ray"
+effect = ExtResource("3_u17i6")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Ice"])
+multiplier_x100 = 36000
+
+[sub_resource type="Resource" id="Resource_ep1s2"]
+script = ExtResource("2_x4tcu")
+id = &"expose"
+effect = ExtResource("4_vi7co")
+chance_x100 = 10000
+
+[node name="PrismaticRay2" type="Node" unique_id=1633214009]
+script = ExtResource("1_0jnyx")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_x4tcu")]([SubResource("Resource_gaw0h"), SubResource("Resource_ep1s2")])
+animation = ExtResource("5_stdye")
+description = "360% ATK Ice to one enemy. Makes it Vulnerable."
+ability_name = "Prismatic Ray II"
+ability_tag = &"Ability.Prismaticray2"
+cost_effect = ExtResource("6_krmk1")

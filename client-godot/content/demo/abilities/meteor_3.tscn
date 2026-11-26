@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_xqpk7"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_0ar5c"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_uvbeb"]
+[ext_resource type="Animation" path="res://content/demo/animations/meteor.tres" id="4_vovde"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_ca1eo"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_8iql4"]
+
+[sub_resource type="Resource" id="Resource_sck6b"]
+script = ExtResource("2_0ar5c")
+id = &"meteor"
+effect = ExtResource("3_uvbeb")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 38000
+toughness_x100 = 10000
+
+[node name="Meteor3" type="Node" unique_id=1279380322]
+script = ExtResource("1_xqpk7")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Type.Ultimate", &"Ability.Role.Damage", &"Ability.Usage.Battle"])
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Meteor"])
+executions = Array[ExtResource("2_0ar5c")]([SubResource("Resource_sck6b")])
+animation = ExtResource("4_vovde")
+description = "380% ATK Fire to every enemy."
+ability_name = "Meteor III"
+ability_tag = &"Ability.Ult.Meteor3"
+activation_query = ExtResource("5_ca1eo")
+cost_effect = ExtResource("6_8iql4")

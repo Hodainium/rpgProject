@@ -1,6 +1,5 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
-[ext_resource type="Resource" path="res://content/demo/effects/growth_damage.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/strike.tscn" id="1_abaht"]
 [ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="2_4hcp5"]
 [ext_resource type="Script" path="res://combat/equipment_definition.gd" id="3_y2yup"]
@@ -24,6 +23,20 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/challenge.tscn" id="96_lv1"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/retaliate.tscn" id="96_lv2"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/war_cry.tscn" id="96_lv3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sundering_blow.tscn" id="lc_sundering_blow"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/execute_2.tscn" id="lc_execute_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bloodlust.tscn" id="lc_bloodlust"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/cleave_2.tscn" id="lc_cleave_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sundering_blow_2.tscn" id="lc_sundering_blow_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/titans_fall.tscn" id="lc_titans_fall"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bloodlust_2.tscn" id="lc_bloodlust_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/unbowed.tscn" id="lc_unbowed"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/titans_fall_2.tscn" id="lc_titans_fall_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/execute_3.tscn" id="lc_execute_3"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="lc_band"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_1.tres" id="lc_growth_1"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_2.tres" id="lc_growth_2"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_3.tres" id="lc_growth_3"]
 
 [sub_resource type="Resource" id="Resource_xidmk"]
 script = ExtResource("7_pl6q8")
@@ -53,6 +66,77 @@ level = 9
 ability = ExtResource("96_lv3")
 replaces = &"Ability.Challenge"
 
+[sub_resource type="Resource" id="LevelSkill_lc_sundering_blow"]
+script = ExtResource("97_lvl")
+level = 12
+ability = ExtResource("lc_sundering_blow")
+
+[sub_resource type="Resource" id="LevelSkill_lc_execute_2"]
+script = ExtResource("97_lvl")
+level = 16
+ability = ExtResource("lc_execute_2")
+replaces = &"Ability.Ult.Execute"
+
+[sub_resource type="Resource" id="LevelSkill_lc_bloodlust"]
+script = ExtResource("97_lvl")
+level = 20
+ability = ExtResource("lc_bloodlust")
+
+[sub_resource type="Resource" id="LevelSkill_lc_cleave_2"]
+script = ExtResource("97_lvl")
+level = 24
+ability = ExtResource("lc_cleave_2")
+replaces = &"Ability.Ult.Cleave"
+
+[sub_resource type="Resource" id="LevelSkill_lc_sundering_blow_2"]
+script = ExtResource("97_lvl")
+level = 26
+ability = ExtResource("lc_sundering_blow_2")
+replaces = &"Ability.Sunderingblow"
+
+[sub_resource type="Resource" id="LevelSkill_lc_titans_fall"]
+script = ExtResource("97_lvl")
+level = 28
+ability = ExtResource("lc_titans_fall")
+
+[sub_resource type="Resource" id="LevelSkill_lc_bloodlust_2"]
+script = ExtResource("97_lvl")
+level = 35
+ability = ExtResource("lc_bloodlust_2")
+replaces = &"Ability.Passive.Bloodlust"
+
+[sub_resource type="Resource" id="LevelSkill_lc_unbowed"]
+script = ExtResource("97_lvl")
+level = 40
+ability = ExtResource("lc_unbowed")
+
+[sub_resource type="Resource" id="LevelSkill_lc_titans_fall_2"]
+script = ExtResource("97_lvl")
+level = 45
+ability = ExtResource("lc_titans_fall_2")
+replaces = &"Ability.Titansfall"
+
+[sub_resource type="Resource" id="LevelSkill_lc_execute_3"]
+script = ExtResource("97_lvl")
+level = 50
+ability = ExtResource("lc_execute_3")
+replaces = &"Ability.Ult.Execute2"
+
+[sub_resource type="Resource" id="GrowthBand_1"]
+script = ExtResource("lc_band")
+from_level = 2
+effect = ExtResource("lc_growth_1")
+
+[sub_resource type="Resource" id="GrowthBand_2"]
+script = ExtResource("lc_band")
+from_level = 16
+effect = ExtResource("lc_growth_2")
+
+[sub_resource type="Resource" id="GrowthBand_3"]
+script = ExtResource("lc_band")
+from_level = 31
+effect = ExtResource("lc_growth_3")
+
 [resource]
 script = ExtResource("9_t641j")
 learnable_skills = Array[PackedScene]([ExtResource("8_r4oa6")])
@@ -62,8 +146,8 @@ abilities = Array[PackedScene]([ExtResource("10_ult"), ExtResource("1_abaht"), E
 display_name = "Warrior"
 display_color = Color(0.27450982, 0.50980395, 0.7058824, 1)
 tags = Array[StringName]([&"Character.Warrior", &"Card.Set.Core", &"Unit.Role.Damage", &"Unit.Role.Tank"])
-level_effect = ExtResource("90_growth")
-level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
+growth_bands = Array[ExtResource("lc_band")]([SubResource("GrowthBand_1"), SubResource("GrowthBand_2"), SubResource("GrowthBand_3")])
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3"), SubResource("LevelSkill_lc_sundering_blow"), SubResource("LevelSkill_lc_execute_2"), SubResource("LevelSkill_lc_bloodlust"), SubResource("LevelSkill_lc_cleave_2"), SubResource("LevelSkill_lc_sundering_blow_2"), SubResource("LevelSkill_lc_titans_fall"), SubResource("LevelSkill_lc_bloodlust_2"), SubResource("LevelSkill_lc_unbowed"), SubResource("LevelSkill_lc_titans_fall_2"), SubResource("LevelSkill_lc_execute_3")])
 role = "Damage dealer / off-tank"
 description = "Physical fighter. Cleave hits a crowd, Execute finishes a wounded foe, Provoke pulls enemies onto him."
 default_loadout = SubResource("Resource_xidmk")

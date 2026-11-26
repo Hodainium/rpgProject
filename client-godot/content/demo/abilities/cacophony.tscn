@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_1t3pw"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_8jnmo"]
+[ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="3_tu8or"]
+[ext_resource type="Resource" path="res://content/demo/effects/weaken.tres" id="4_e57re"]
+[ext_resource type="Resource" path="res://content/demo/effects/slow.tres" id="5_jvysq"]
+[ext_resource type="Animation" path="res://content/demo/animations/entropy.tres" id="6_ibb1i"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_103.tres" id="7_ujana"]
+
+[sub_resource type="Resource" id="Resource_t4u4a"]
+script = ExtResource("2_8jnmo")
+id = &"decay"
+effect = ExtResource("3_tu8or")
+chance_x100 = 10000
+
+[sub_resource type="Resource" id="Resource_8g44e"]
+script = ExtResource("2_8jnmo")
+id = &"bleed"
+effect = ExtResource("4_e57re")
+chance_x100 = 7500
+
+[sub_resource type="Resource" id="Resource_g13xf"]
+script = ExtResource("2_8jnmo")
+id = &"slow"
+effect = ExtResource("5_jvysq")
+chance_x100 = 7500
+
+[node name="Cacophony" type="Node" unique_id=932922335]
+script = ExtResource("1_1t3pw")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_8jnmo")]([SubResource("Resource_t4u4a"), SubResource("Resource_8g44e"), SubResource("Resource_g13xf")])
+animation = ExtResource("6_ibb1i")
+description = "Makes every enemy Vulnerable; 75% chance each to Weaken and Slow it."
+ability_name = "Cacophony"
+ability_tag = &"Ability.Cacophony"
+cost_effect = ExtResource("7_ujana")

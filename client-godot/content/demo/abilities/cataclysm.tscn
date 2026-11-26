@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_0k18p"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_rxkb4"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_fyujk"]
+[ext_resource type="Resource" path="res://content/demo/effects/burn.tres" id="4_gfc67"]
+[ext_resource type="Animation" path="res://content/demo/animations/hellfire.tres" id="5_fgvui"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_173.tres" id="6_rqll7"]
+
+[sub_resource type="Resource" id="Resource_5oxbh"]
+script = ExtResource("2_rxkb4")
+id = &"fire"
+effect = ExtResource("3_fyujk")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 24000
+
+[sub_resource type="Resource" id="Resource_8ngrj"]
+script = ExtResource("2_rxkb4")
+id = &"burn"
+effect = ExtResource("4_gfc67")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+flat_damage_x100 = 9000
+chance_x100 = 10000
+
+[node name="Cataclysm" type="Node" unique_id=730722077]
+script = ExtResource("1_0k18p")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_rxkb4")]([SubResource("Resource_5oxbh"), SubResource("Resource_8ngrj")])
+animation = ExtResource("5_fgvui")
+description = "240% ATK Fire to every enemy, and a strong Burn."
+ability_name = "Cataclysm"
+ability_tag = &"Ability.Cataclysm"
+cost_effect = ExtResource("6_rqll7")

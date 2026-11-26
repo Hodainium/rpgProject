@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_vtjne"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_eo5tv"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_tv16c"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_idje2"]
+
+[sub_resource type="Resource" id="Resource_n1ixa"]
+script = ExtResource("3_tv16c")
+value_x100 = 4500
+attribute_name = "toughness_dmg"
+
+[sub_resource type="Resource" id="Resource_si8qg"]
+script = ExtResource("3_tv16c")
+value_x100 = 4000
+attribute_name = "broken_dmg"
+
+[resource]
+script = ExtResource("4_idje2")
+policy = 3
+duration_turns = 3
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff", &"Cue.Sfx.Apply.Buff"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.Fracture"])
+modifiers = Array[ExtResource("2_eo5tv")]([SubResource("Resource_n1ixa"), SubResource("Resource_si8qg")])
+granted_tags = Array[StringName]([&"Status.Buff.Fracture"])

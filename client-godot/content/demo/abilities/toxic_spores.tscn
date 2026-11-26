@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_kqsav"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_3pmfm"]
+[ext_resource type="Resource" path="res://content/demo/effects/poison.tres" id="3_2ci0q"]
+[ext_resource type="Animation" path="res://content/demo/animations/mimic_tooth.tres" id="4_ph136"]
+
+[sub_resource type="Resource" id="Resource_ks1ao"]
+script = ExtResource("2_3pmfm")
+id = &"bleed"
+effect = ExtResource("3_2ci0q")
+event_effect = true
+
+[node name="ToxicSpores" type="Node" unique_id=2069686238]
+script = ExtResource("1_kqsav")
+targeting = 9
+trigger_chance_x100 = 2000
+executions = Array[ExtResource("2_3pmfm")]([SubResource("Resource_ks1ao")])
+animation = ExtResource("4_ph136")
+description = "Each tick of your DoTs: 20% chance to spread one stack to another enemy."
+ability_name = "Toxic Spores"
+ability_tag = &"Ability.Passive.Toxicspores"
+trigger_event_tag = &"Event.Damage.Dealt.Dot"

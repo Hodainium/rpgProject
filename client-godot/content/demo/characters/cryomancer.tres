@@ -1,6 +1,5 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
-[ext_resource type="Resource" path="res://content/demo/effects/growth_damage.tres" id="90_growth"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/absolute_zero.tscn" id="1_xyo8l"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/frost_jab.tscn" id="2_x6h0j"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/glacial_spike.tscn" id="3_j4p6b"]
@@ -20,6 +19,20 @@
 [ext_resource type="PackedScene" path="res://content/demo/abilities/glacial_lance.tscn" id="96_lv1"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/brittle.tscn" id="96_lv2"]
 [ext_resource type="PackedScene" path="res://content/demo/abilities/glacial_tomb.tscn" id="96_lv3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/frost_lock.tscn" id="lc_frost_lock"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/absolute_zero_2.tscn" id="lc_absolute_zero_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ice_shards.tscn" id="lc_ice_shards"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/whiteout.tscn" id="lc_whiteout"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/frost_lock_2.tscn" id="lc_frost_lock_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/glacier.tscn" id="lc_glacier"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ice_shards_2.tscn" id="lc_ice_shards_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/permafrost.tscn" id="lc_permafrost"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/glacier_2.tscn" id="lc_glacier_2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/absolute_zero_3.tscn" id="lc_absolute_zero_3"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="lc_band"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_1.tres" id="lc_growth_1"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_2.tres" id="lc_growth_2"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_3.tres" id="lc_growth_3"]
 
 [sub_resource type="Resource" id="LevelSkill_0"]
 script = ExtResource("97_lvl")
@@ -43,6 +56,77 @@ level = 9
 ability = ExtResource("96_lv3")
 replaces = &"Ability.Glaciallance"
 
+[sub_resource type="Resource" id="LevelSkill_lc_frost_lock"]
+script = ExtResource("97_lvl")
+level = 12
+ability = ExtResource("lc_frost_lock")
+
+[sub_resource type="Resource" id="LevelSkill_lc_absolute_zero_2"]
+script = ExtResource("97_lvl")
+level = 16
+ability = ExtResource("lc_absolute_zero_2")
+replaces = &"Ability.Ult.Absolutezero"
+
+[sub_resource type="Resource" id="LevelSkill_lc_ice_shards"]
+script = ExtResource("97_lvl")
+level = 20
+ability = ExtResource("lc_ice_shards")
+
+[sub_resource type="Resource" id="LevelSkill_lc_whiteout"]
+script = ExtResource("97_lvl")
+level = 24
+ability = ExtResource("lc_whiteout")
+replaces = &"Ability.Blizzard"
+
+[sub_resource type="Resource" id="LevelSkill_lc_frost_lock_2"]
+script = ExtResource("97_lvl")
+level = 26
+ability = ExtResource("lc_frost_lock_2")
+replaces = &"Ability.Frostlock"
+
+[sub_resource type="Resource" id="LevelSkill_lc_glacier"]
+script = ExtResource("97_lvl")
+level = 29
+ability = ExtResource("lc_glacier")
+
+[sub_resource type="Resource" id="LevelSkill_lc_ice_shards_2"]
+script = ExtResource("97_lvl")
+level = 36
+ability = ExtResource("lc_ice_shards_2")
+replaces = &"Ability.Passive.Iceshards"
+
+[sub_resource type="Resource" id="LevelSkill_lc_permafrost"]
+script = ExtResource("97_lvl")
+level = 41
+ability = ExtResource("lc_permafrost")
+
+[sub_resource type="Resource" id="LevelSkill_lc_glacier_2"]
+script = ExtResource("97_lvl")
+level = 45
+ability = ExtResource("lc_glacier_2")
+replaces = &"Ability.Glacier"
+
+[sub_resource type="Resource" id="LevelSkill_lc_absolute_zero_3"]
+script = ExtResource("97_lvl")
+level = 50
+ability = ExtResource("lc_absolute_zero_3")
+replaces = &"Ability.Ult.Absolutezero2"
+
+[sub_resource type="Resource" id="GrowthBand_1"]
+script = ExtResource("lc_band")
+from_level = 2
+effect = ExtResource("lc_growth_1")
+
+[sub_resource type="Resource" id="GrowthBand_2"]
+script = ExtResource("lc_band")
+from_level = 16
+effect = ExtResource("lc_growth_2")
+
+[sub_resource type="Resource" id="GrowthBand_3"]
+script = ExtResource("lc_band")
+from_level = 31
+effect = ExtResource("lc_growth_3")
+
 [resource]
 script = ExtResource("12_jtjwe")
 id = &"demo.character.cryomancer"
@@ -51,8 +135,8 @@ abilities = Array[PackedScene]([ExtResource("1_xyo8l"), ExtResource("2_x6h0j"), 
 display_name = "Cryomancer"
 display_color = Color(0, 0.7490196, 1, 1)
 tags = Array[StringName]([&"Character.Cryomancer", &"Card.Set.Descent", &"Unit.Role.Control", &"Unit.Role.Damage"])
-level_effect = ExtResource("90_growth")
-level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3")])
+growth_bands = Array[ExtResource("lc_band")]([SubResource("GrowthBand_1"), SubResource("GrowthBand_2"), SubResource("GrowthBand_3")])
+level_skills = Array[ExtResource("97_lvl")]([SubResource("LevelSkill_0"), SubResource("LevelSkill_1"), SubResource("LevelSkill_2"), SubResource("LevelSkill_3"), SubResource("LevelSkill_lc_frost_lock"), SubResource("LevelSkill_lc_absolute_zero_2"), SubResource("LevelSkill_lc_ice_shards"), SubResource("LevelSkill_lc_whiteout"), SubResource("LevelSkill_lc_frost_lock_2"), SubResource("LevelSkill_lc_glacier"), SubResource("LevelSkill_lc_ice_shards_2"), SubResource("LevelSkill_lc_permafrost"), SubResource("LevelSkill_lc_glacier_2"), SubResource("LevelSkill_lc_absolute_zero_3")])
 role = "Damage dealer: control"
 description = "Ice that freezes and breaks. Glacial Spike and Blizzard lock enemies down; Absolute Zero freezes the whole field."
 stats_x100 = Dictionary[String, int]({

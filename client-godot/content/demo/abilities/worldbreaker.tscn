@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_k0uw1"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_qpwca"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_rfsa5"]
+[ext_resource type="Resource" path="res://content/demo/effects/vulnerable.tres" id="4_nrgds"]
+[ext_resource type="Animation" path="res://content/demo/animations/rend.tres" id="5_c76fl"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_119.tres" id="6_qvmn1"]
+
+[sub_resource type="Resource" id="Resource_atxh4"]
+script = ExtResource("2_qpwca")
+id = &"rend"
+effect = ExtResource("3_rfsa5")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 30000
+toughness_x100 = 13000
+
+[sub_resource type="Resource" id="Resource_35a20"]
+script = ExtResource("2_qpwca")
+id = &"bleed"
+effect = ExtResource("4_nrgds")
+chance_x100 = 10000
+
+[node name="Worldbreaker" type="Node" unique_id=2028451398]
+script = ExtResource("1_k0uw1")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_qpwca")]([SubResource("Resource_atxh4"), SubResource("Resource_35a20")])
+animation = ExtResource("5_c76fl")
+description = "300% ATK Physical and massive toughness damage to one enemy. Makes it Vulnerable."
+ability_name = "Worldbreaker"
+ability_tag = &"Ability.Worldbreaker"
+cost_effect = ExtResource("6_qvmn1")

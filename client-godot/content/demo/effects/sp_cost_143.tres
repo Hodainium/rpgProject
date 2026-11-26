@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_o8nl4"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_cost.gd" id="2_ypr7y"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_gcrei"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_fu72x"]
+
+[sub_resource type="Resource" id="Resource_q7n18"]
+script = ExtResource("2_ypr7y")
+amount_x100 = 14300
+
+[resource]
+script = ExtResource("4_fu72x")
+executions = Array[ExtResource("1_o8nl4")]([SubResource("Resource_q7n18")])

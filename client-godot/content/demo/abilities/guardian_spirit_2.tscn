@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_g2jg0"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_x1mp0"]
+[ext_resource type="Resource" path="res://content/demo/effects/lv_guardian_spirit_2.tres" id="3_mgfqv"]
+[ext_resource type="Animation" path="res://content/demo/animations/heartstring.tres" id="4_bqmbp"]
+
+[sub_resource type="Resource" id="Resource_ki8gx"]
+script = ExtResource("2_x1mp0")
+id = &"mend"
+effect = ExtResource("3_mgfqv")
+
+[node name="GuardianSpirit2" type="Node" unique_id=630787194]
+script = ExtResource("1_g2jg0")
+targeting = 3
+trigger_chance_x100 = 6500
+executions = Array[ExtResource("2_x1mp0")]([SubResource("Resource_ki8gx")])
+animation = ExtResource("4_bqmbp")
+description = "When an ally is hit: 65% chance to heal them 8% of max HP."
+ability_name = "Guardian Spirit II"
+ability_tag = &"Ability.Passive.Guardianspirit2"
+trigger_event_tag = &"Event.Ally.Damage.Taken"
