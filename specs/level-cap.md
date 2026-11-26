@@ -1,6 +1,7 @@
 # Spec: level-cap (the "level 99" slice; before 5c `card-balance`, after `item-power`)
 
-Status: **spec written 2026-11-22, awaiting the user's review.** The third of four slices the user asked for on
+Status: **built and measured 2026-11-24 on `feat/level-cap`, awaiting the user's review and playtest** (spec written 2026-11-22; what the
+build decided: section 7, D5-D11). The third of four slices the user asked for on
 2026-11-22: `bot-play`, `item-power`, `level-cap` (this; first discussed as "level 99"), `second-pack`. **The cap is 50 and
 a typical run ends around level 30** (user, 2026-11-22): players are not meant to reach the cap, but their level must
 not stop early. Builds on `specs/playable-demo.md` 3.11 (XP, levels, class growth, `level_effect`),
@@ -94,7 +95,9 @@ actives). The template below is the starting point each class departs from:
 - The build prints each class's list (level, active or passive, what it does) for the user's review before the rows
   are added.
 - Validator: the existing `level_skill_*` checks; new `level_skill_gap` (a warning: a class with no row between two
-  rows more than 10 levels apart).
+  rows more than 10 levels apart) and `level_effect_ignored` (a warning: a class with growth bands keeps a `level_effect`, which
+  then does nothing). `test_demo_level_cap::test_the_new_passives_fire` fires each passive from level 12 on with the battle's
+  own payload and checks that it changes the battle (35 passives).
 
 ### 2.4 Enemy levels
 
@@ -143,15 +146,64 @@ On fixtures (`tests/fixtures/`, a fixture class with two growth bands and level 
 - D1. Cap 50; a typical run ends around 30; the cap is not meant to be reached in one Descent.
 - D2. More moves at higher levels for every class.
 
-**Open questions:**
 - D3. The rhythm is similar, not identical, per class; passives are part of it (at least three per class from 12 to 50).
 
 - D4. New moves continue all the way to 50 (rows at 35-50 kept), though 31-50 are rare in a run.
 
-**Open questions:** none.
+**Decisions of the build (the user's OK 2026-11-24 for the content):**
+- D5. The curve is `15 × k × (k + 3)` for all 49 thresholds, so the first 14 are unchanged. Free levels (the waystation's training)
+  raise XP to the next threshold, so a steeper curve hardly changes the end level; the income (22 XP per enemy + 1 per enemy level) does.
+- D6. `xp_per_enemy_level` counts for bosses too (added to `xp_per_boss`).
+- D7. Each band is one INFINITE, REFRESH_DURATION effect without a stack limit, so the first band is a new file with today's numbers
+  (`growth_<kind>_1`); `growth_damage`, `growth_support` and `growth_tank` are no longer used by anything and are kept, not deleted.
+  A band's stacks are applied in one step (`CombatASC.apply_stacks`).
+- D8. Ten rows per class (110), not about nine. Signature moves come at 28-29 instead of 30 (the median party starts floor 10 at level
+  28), and cost about 15% less SP than first proposed.
+- D9. An ult's ranks keep its signature effect and cue; `test_vfx_content` checks a rank against its base.
+- D10. Enemy levels [1, 5, 8, 11, 14, 17, 20, 23, 25, 28] (2.4): the measured median party level at each floor's start.
+- D11. A level above 99 in a forged snapshot grows nothing more (`CharacterDefinition.MAX_LEVEL`): the step fails its hash instead of looping.
+
+- D12. An ult rank keeps the place of the ult it replaced (`BattleUnit.ultimate_abilities`), so the chooser and Auto see one order at every
+  level. Other ranks stay appended in grant order: changing that would change Auto's heals (Q1).
+- D13. Undying Faith shares the once-per-battle save with the Undying Ember (`State.DeathSaved`) and fires first; it gives the same 50% HP
+  (Regen instead of the Ember's +50% ATK).
+
+**Open questions:**
+- Q1 (the user, 2026-11-24: later). Auto takes the first heal in grant order and casts buffs only at full SP, so in 24 logged runs it never used Mass Heal,
+  Grand Anthem or Benediction. It was so before this slice; the gate understates the Cleric and the Bard.
+- Q2 (for 5c). The Coven route is now easy (206 of 251 runs won), the Collector still decides the other (93 of 235).
+- Q3 (for 5c). Enemies rarely use their secret skills (Swarm, Tremor and Hex All never in 600 runs): battles end before their turn comes.
 
 **Stays out:** enemy stat scaling (5c), new characters (`second-pack`: they get the same rhythm), new items.
 
 ## 8. Measurements
 
-To be filled by the build: XP per floor today, the chosen curve and income, `levelByFloor`, the end-level spread.
+2026-11-24, The Descent, smart policy, 4 members, `--check` (every battle replayed), 12 shards, `game/dev/balance_seeds.json`. The baseline
+is item-power's 128 of 600 and 19 of the first 100 (spec `item-power` section 8). Level-cap's system code alone, with the content unchanged,
+reproduced all 100 of those run hashes.
+
+| Run | Won | Winners' end level (p10 / median / p90) |
+|---|---|---|
+| before, first 100 seeds | 19 | 15 / 15 / 15 (the cap) |
+| before, 600 seeds | 128 (21.33%) | 15 |
+| first proposal (2 XP per enemy level), first 100 | 50 | 31 / 33 / 36 |
+| `17k(k+1)` curve, first 100 | 55 | 29 / 33 / 34 |
+| 1 XP per enemy level, 20 per enemy, signatures at 30, first 100 | 41 | 26 / 29 / 31 |
+| 22 per enemy, signatures at 28, first 100 | 46 | 27 / 29 / 31 |
+| 20 per enemy, signatures at 28, first 100 | 34 | 27 / 29 / 31 |
+| **22 per enemy, signatures 15% cheaper, first 100** | 48 | 28 / 30 / 32 |
+| **the same, 600 seeds (final)** | **299 (49.83%)** | **28 / 30 / 31, max 34** |
+
+- Final against the 128, seed by seed: +183 −12 (the two-sided sign test is far below 0.001). No stopped run, script error or violation, every
+  battle replayed to its hash. 61,710 battles (58,313 before), 634 s. The target (playable-demo D25: 35-55%) and the level target (30 ± 2,
+  p90 ≤ 38) are met. The rows on 100 seeds differ by noise too; only the 600 counts.
+- After the 600, the second review round gave ult ranks the place of the ult they replace (D12) and Undying Faith 50% HP (D13): **46 of the
+  first 100 seeds** (48 before, +0 −2: within noise), no violation. The 600 was not rerun (a small tweak).
+- Party level at each floor's start, p10 / median / p90: 1, 5/5/6, 7/8/9, 10/11/12, 13/14/15, 16/17/18, 19/20/21, 21/23/24, 23/25/27, 25/28/29.
+- XP won in battles per floor, median: 374, 530, 790, 993, 1230, 1514, 1196, 1411, 1416, 2004 (before: about 420, 630, 720, 690, 810, 860,
+  660, 660, 640, 940, counted with free levels).
+- Losses by floor (of the runs that entered it): 2: 18/600, 3: 9/582, 4: 2, 5: 40/571, 6: 36/531, 7: 3, 8: 6, 9: 2, 10: 185/484. The Collector
+  139 of 232 battles lost, the Nameless 26 of 232.
+- Wins by class (before → after): Cleric 77 → 150 of 209, Bard 50 → 124 of 227, Ranger 51 → 121 of 222, Warrior 42 → 111 of 213, Pyromancer
+  48 → 113 of 242, Shatterweaver 41 → 111 of 231, Cryomancer 37 → 97 of 230, Bulwark 46 → 94 of 212, Arcanist 45 → 93 of 211, Plaguewright
+  30 → 91 of 203, Ember Knight 45 → 91 of 200.

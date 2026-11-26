@@ -317,3 +317,8 @@ replayed), 12 shards. Wins compared seed by seed, p from the two-sided sign test
 
 - **After D22 (the first 100 seeds): 19 won** (22 before it, +1 −4: well within noise), no stopped run, error or violation. The 600-seed gate has
   not been rerun since D20.
+
+- **The baseline level-cap (5i) is compared with (user, 2026-11-24):** 128 of 600 (21.33%, the last full run, before D20-D22) and 19 of the first 100
+  seeds (the merged code). `main` was measured again on those 100 on 2026-11-24 with level-cap's system code and the content unchanged: 19 won, and
+  all 100 run hashes equal the ones above. The 600 was not rerun on `main` (the user's choice): level-cap is tuned on the first 100 and runs the
+  600 once, at its end.
