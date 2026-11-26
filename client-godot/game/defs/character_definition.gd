@@ -16,8 +16,30 @@ extends UnitDefinition
 ## skills found here or in the base abilities.
 @export var learnable_skills: Array[PackedScene] = []
 ## Spec playable-demo 3.11 (D28): growth, applied once per level above 1 at battle start and in field mode (it must
-## stack: FREE stacking). Empty: levels change nothing in battle.
+## stack: FREE stacking). Empty: levels change nothing in battle. Not used when the class has growth_bands.
 @export var level_effect: GameplayEffect
+## Spec level-cap 2.2: growth that tapers, sorted by from_level. With bands, they replace level_effect; none: level_effect
+## as before.
+@export var growth_bands: Array[GrowthBand] = []
+
+
+## No class grows past this level (LevelSkill and GrowthBand go as far), so a forged snapshot's level never loops for long.
+const MAX_LEVEL: int = 99
+
+
+## The growth effects a unit of this class carries at `unit_level`, one entry per level above 1 in level order.
+func growth_at(unit_level: int) -> Array[GameplayEffect]:
+	var growth: Array[GameplayEffect] = []
+	for level in range(2, mini(unit_level, MAX_LEVEL) + 1):
+		var effect := level_effect
+		if not growth_bands.is_empty():
+			effect = null
+			for band in growth_bands:
+				if band != null and band.from_level <= level:
+					effect = band.effect
+		if effect != null:
+			growth.append(effect)
+	return growth
 
 
 ## The scene for a learnable, level or base skill with this ability tag, or null.

@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/grower_basic.tscn" id="1_xtkdo"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_halwq"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="3_ysd2i"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/effects/loose_growth.tres" id="4_52pw7"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="5_c3ra6"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="6_xlcru"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="7_gyiac"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="8_bkde3"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="9_j61db"]
+
+[sub_resource type="Resource" id="Resource_qtyy7"]
+script = ExtResource("3_ysd2i")
+from_level = 5
+effect = ExtResource("4_52pw7")
+
+[sub_resource type="Resource" id="Resource_081rn"]
+script = ExtResource("3_ysd2i")
+from_level = 5
+effect = ExtResource("4_52pw7")
+
+[sub_resource type="Resource" id="Resource_ewdwo"]
+script = ExtResource("3_ysd2i")
+from_level = 9
+
+[sub_resource type="Resource" id="Resource_m4npu"]
+script = ExtResource("7_gyiac")
+stacking_policy = 1
+policy = 2
+
+[sub_resource type="Resource" id="Resource_i2pv1"]
+script = ExtResource("3_ysd2i")
+from_level = 12
+effect = SubResource("Resource_m4npu")
+
+[resource]
+script = ExtResource("9_j61db")
+growth_bands = Array[ExtResource("3_ysd2i")]([SubResource("Resource_qtyy7"), SubResource("Resource_081rn"), SubResource("Resource_ewdwo"), SubResource("Resource_i2pv1")])
+id = &"broken.character.growth_bands"
+attribute_set = ExtResource("2_halwq")
+abilities = Array[PackedScene]([ExtResource("1_xtkdo")])

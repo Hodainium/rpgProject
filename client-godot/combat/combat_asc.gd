@@ -203,6 +203,32 @@ func remove_effects_with_tag(tag: StringName) -> void:
 				break
 
 
+## Spec level-cap 2.2: an effect whose applications become one active effect for the whole battle and do not depend on each other
+## (growth bands): plain typed modifiers, nothing that ticks, reads the unit, or is announced per application.
+static func stacks_into_one(effect: GameplayEffect) -> bool:
+	return effect != null and effect.policy == GameplayEffect.DurationPolicy.INFINITE and effect.max_stacks == 0 \
+		and effect.stacking_policy == GameplayEffect.StackingPolicy.REFRESH_DURATION and effect.period <= 0.0 \
+		and effect.executions.is_empty() and effect.application_query == null and effect.remove_effects_with_tags.is_empty() \
+		and effect.event_tags.is_empty() and effect.application_cue_tags.is_empty() \
+		and effect.modifiers.all(func(modifier: GameplayEffectModifier) -> bool: return modifier != null \
+			and modifier.magnitude_calculation == GameplayEffectModifier.MagnitudeCalculationType.STATIC)
+
+
+## Spec level-cap 2.2: the same result as applying `effect` `count` times to this unit itself, with one recalculation instead of
+## one per stack (a level-50 unit has 49 levels of growth). Construction only: the added stacks send no events and no cues.
+## test_level_cap pins it against one application per level.
+func apply_stacks(effect: GameplayEffect, count: int, effect_level: float) -> void:
+	var active := apply_gameplay_effect(effect, self, effect_level)
+	if count <= 1 or active == null or not stacks_into_one(effect):
+		return
+	for added in count - 1:
+		var spec := GameplayEffectSpec.new(effect, GameplayEffectContext.new(get_parent()), effect_level)
+		_evaluate_spec(spec)
+		active.stack_specs.append(spec)
+	active.stack_count += count - 1
+	active.applied_deltas = _recalculate_effect(active, active.spec)
+
+
 func _on_active_effect_added(active_effect: ActiveGameplayEffect) -> void:
 	if _in_own_turn:
 		_skip_countdown[active_effect] = true

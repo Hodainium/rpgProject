@@ -732,7 +732,7 @@ func _do_fight(controller: Object, gate: PresentationGate = null) -> String:
 		_grant_rewards(content.encounters.get(StringName(_tally["lastEncounter"])), cell)
 		if not _active():
 			return runner_error
-		_award_xp(snapshot["enemies"])
+		_award_xp(xp_for(snapshot["enemies"], StringName(snapshot["encounterId"])))
 		_roll_drops(snapshot["enemies"], cell)
 		# Spec boss-drops 3.2: the placements this battle put on the floor, for the battle action's offers (only when any).
 		var dropped := drop_pickups(cell).slice(dropped_before).map(
@@ -772,7 +772,10 @@ func _wave_won(cell: int) -> void:
 			{"of": waves.size(), "cell": cell})
 		_start_wave(cell)
 		return
-	_award_xp(room_enemies(data))
+	var xp := 0
+	for wave in waves:
+		xp += xp_for(wave["enemies"], StringName(str(wave["encounter"])))
+	_award_xp(xp)
 	_tally["challengesCleared"] = int(_tally.get("challengesCleared", 0)) + 1
 	_clear_room(cell, true, room_enemies(data))
 
@@ -797,16 +800,42 @@ static func room_enemies(data: Dictionary) -> Array:
 
 # --- Experience, levels and drops (spec playable-demo 3.11) -----------------------------------------------------------
 
-## XP for a won battle: xp_per_enemy per enemy beaten (xp_per_boss for an Enemy.Boss), to every living member.
-func _award_xp(enemies: Array) -> void:
+## Spec level-cap 5: XP won in battles so far in this process, for the play report (free levels raise a member's XP too). Never
+## hashed, saved or sent.
+var battle_xp: int = 0
+
+
+## XP for a won battle (or a challenge room's waves, in one gain), to every living member.
+func _award_xp(total: int) -> void:
 	if structure == null or structure.xp_to_level.is_empty():
 		return
+	battle_xp += total
+	gain_xp(total, null)
+
+
+## What beating `enemies` of `encounter_id` gives: xp_per_enemy per enemy (xp_per_boss for an Enemy.Boss), plus
+## xp_per_enemy_level per level of each (spec level-cap 2.1; the level the battle gives it).
+func xp_for(enemies: Array, encounter_id: StringName) -> int:
+	if structure == null:
+		return 0
+	var encounter: EncounterDefinition = content.encounters.get(encounter_id)
+	var rules: ScalingRules = chapter().scaling
+	var depth_level := rules.level_for_depth(state.floor_index) if rules != null else 1
 	var total := 0
 	for enemy in enemies:
 		var definition: UnitDefinition = content.units.get(StringName(str(enemy.get("unitDefId", ""))))
 		var boss := definition != null and definition.tags.has(&"Enemy.Boss")
 		total += structure.xp_per_boss if boss else structure.xp_per_enemy
-	gain_xp(total, null)
+		if structure.xp_per_enemy_level > 0:
+			var variant: EnemyVariant = null
+			if enemy.get("variantId") != null:
+				variant = content.variants.get(StringName(str(enemy["variantId"])))
+			var number := int(enemy.get("slot", 0))
+			var slot: EncounterSlot = null
+			if encounter != null and number >= 1 and number <= encounter.slots.size():
+				slot = encounter.slots[number - 1]
+			total += structure.xp_per_enemy_level * Battle.enemy_level(depth_level, variant, slot)
+	return total
 
 
 ## Outcome API (GainXp): XP for every living member, or only `character`; level-ups follow at once.

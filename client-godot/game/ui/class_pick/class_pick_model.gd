@@ -69,15 +69,19 @@ static func moves(character: CharacterDefinition) -> Array:
 	return sorted
 
 
-## The level skills: [[level, name]] in the order the class lists them.
-static func learns(character: CharacterDefinition) -> Array:
-	var rows: Array = []
-	for row in character.level_skills:
-		if row == null or row.ability == null:
-			continue
-		var info := _ability(row.ability)
-		rows.append([row.level, info.get("name", "?")])
-	return rows
+## How many level skills the class card's Learns line shows (spec level-cap 2.3: a class learns up to level 50).
+const LEARNS_SHOWN: int = 3
+
+
+## The next level skills a class learns above `level`: [[level, name]] by level (rows of one level as listed), LEARNS_SHOWN at most.
+static func learns(character: CharacterDefinition, level: int = 1) -> Array:
+	var next: Array = []
+	for index in character.level_skills.size():
+		var row := character.level_skills[index]
+		if row != null and row.ability != null and row.level > level:
+			next.append([row.level, index, row.ability])
+	next.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
+	return next.slice(0, LEARNS_SHOWN).map(func(entry: Array) -> Array: return [entry[0], _ability(entry[2]).get("name", "?")])
 
 
 ## [[label, number]] for STATS, from stats_x100 (stored ×100, shown as the designer typed them; whole numbers stay whole).

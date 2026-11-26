@@ -24,6 +24,9 @@ const EXPECTED_ERRORS: Array = [
 	["level_skill_bad_level", "characters/level_skill_bad_level.tres"],
 	["level_skill_duplicate", "characters/level_skill_duplicate.tres"], ["basic_costed", "characters/basic_costed.tres"],
 	["level_attribute_modified", "items/level_attribute_modified.tres"],
+	# Spec level-cap.
+	["growth_band_not_stacking", "characters/growth_bands.tres"], ["growth_band_order", "characters/growth_bands.tres"],
+	["growth_band_without_effect", "characters/growth_bands.tres"], ["inline_effect", "characters/growth_bands.tres"],
 ]
 const EXPECTED_WARNINGS: Array = [
 	["incomplete", "encounters/incomplete.tres"], ["empty_item_pool", "rooms/empty_item_pool.tres"],
@@ -40,6 +43,7 @@ const EXPECTED_WARNINGS: Array = [
 	["basic_ability_missing", "characters/roles.tres"], ["ability_description_missing", "characters/roles.tres"],
 	["sp_gain_missing", "characters/sp_gain_missing.tres"], ["cost_unscaled", "characters/sp_gain_missing.tres"],
 	["secret_skill_unreachable", "enemies/secret_unreachable.tres"],
+	["level_skill_gap", "characters/level_skill_gap.tres"], ["level_effect_ignored", "characters/both_growth.tres"],
 ]
 
 

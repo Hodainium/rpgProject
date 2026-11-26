@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/broken_fixtures/abilities/both_basic.tscn" id="1_bm8g1"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_run_attribute_set.gd" id="2_h4kq4"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="3_bl4wk"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/effects/both_growth_band.tres" id="4_m3oan"]
+[ext_resource type="Resource" path="res://tests/broken_fixtures/effects/both_growth_level.tres" id="5_jowde"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="6_tkgfb"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="7_08elh"]
+
+[sub_resource type="Resource" id="Resource_vjlmj"]
+script = ExtResource("3_bl4wk")
+effect = ExtResource("4_m3oan")
+
+[resource]
+script = ExtResource("7_08elh")
+level_effect = ExtResource("5_jowde")
+growth_bands = Array[ExtResource("3_bl4wk")]([SubResource("Resource_vjlmj")])
+id = &"broken.character.both_growth"
+attribute_set = ExtResource("2_h4kq4")
+abilities = Array[PackedScene]([ExtResource("1_bm8g1")])

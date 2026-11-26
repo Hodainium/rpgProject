@@ -58,6 +58,10 @@ verifier (see "Battle workflow decisions" in the root `CLAUDE.md`), so all comba
   `../build/audio_pass_report.md`. The WAVs come from `../tools/audio_import.py` (Python + ffmpeg, outside Godot), which writes only
   `presentation/audio/sfx/<pack>/`, the manifest's `measured` fields and `CREDITS.md`'s sound section. The cue registry still changes
   only through `Edit`.
+- **Level pass (spec `level-cap`, the user's one-off OK 2026-11-24):** `game/tools/build_level_pass.tscn` creates the level-cap moves,
+  effects and SP costs (new files only, `--force` rewrites its own); `-- --apply` adds the level rows and growth bands to the eleven
+  character files as a text edit (nothing is written unless every file can be patched) and prints each change `old → new`. Each later `--apply` run needs the user's OK
+  again.
 - **Approved generators (2026-10-20):** `game/tools/generate_attributes.tscn` (the dashboard's attribute Generate,
   headless) and `game/tools/sync_tags.tscn` write GodotGAS's generated files in `godot_gas/` the way the dashboard
   does. Claude runs them after editing `attributes_draft.cfg` or the tag registry (each edit itself still prompts).

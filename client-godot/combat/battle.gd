@@ -315,12 +315,12 @@ func _party_kit(member: Dictionary, definition: UnitDefinition, content: Content
 		grants.append({"set": usable.grants, "source": usable.id})
 		if bool(use_slot.get("ready", false)):
 			grants.append({"ability": usable.use_ability, "item": usable.id})
-	# Spec playable-demo 3.11 (D28): the class's growth, once per level above 1, from the snapshot's level.
+	# Spec playable-demo 3.11 (D28): the class's growth, once per level above 1, from the snapshot's level (spec level-cap 2.2:
+	# by band, so it can taper).
 	var growth: Array = []
 	var character := definition as CharacterDefinition
-	if character != null and character.level_effect != null:
-		for count in maxi(int(member.get("level", 1)) - 1, 0):
-			growth.append(character.level_effect)
+	if character != null:
+		growth.append_array(character.growth_at(int(member.get("level", 1))))
 	return {
 		"skills": skills,
 		"grants": grants,
@@ -402,15 +402,21 @@ func _add_enemies_v2(snapshot: Dictionary, encounter: EncounterDefinition, conte
 				kit["grants"].append({"set": ability_set})
 		var id := StringName("E%d" % number)
 		# Spec skill-points D19, D21: the enemy's level (secret skills) from depth, variant and slot; its GAS level stays 1.
-		var enemy_level := depth_level
-		if entry["variant"] != null:
-			enemy_level += (entry["variant"] as EnemyVariant).level_bonus
-		if encounter_slot != null:
-			enemy_level += encounter_slot.level_bonus
-		_add_unit(id, BattleUnit.Side.ENEMY, number, entry["definition"], maxi(enemy_level, 1), kit, 1)
+		_add_unit(id, BattleUnit.Side.ENEMY, number, entry["definition"], enemy_level(depth_level, entry["variant"], encounter_slot),
+			kit, 1)
 		if encounter_slot != null and encounter_slot.brain != null:
 			unit_by_id(id).brain_override = encounter_slot.brain
 	return ""
+
+
+## Spec skill-points D19: an enemy's level from its floor depth's level, its variant and its encounter slot.
+static func enemy_level(depth_level: int, variant: EnemyVariant, slot: EncounterSlot) -> int:
+	var level := depth_level
+	if variant != null:
+		level += variant.level_bonus
+	if slot != null:
+		level += slot.level_bonus
+	return maxi(level, 1)
 
 
 ## Spec playable-demo 3.8 (H9, H10): the party's held items and armor from the snapshot, in party slot order, then

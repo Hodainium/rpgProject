@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_bj41x"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_r5lbl"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_p2da8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_4lf3q"]
+
+[sub_resource type="Resource" id="Resource_1b3km"]
+script = ExtResource("3_p2da8")
+value_x100 = 800
+attribute_name = "atk"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_qiltj"]
+script = ExtResource("3_p2da8")
+value_x100 = 800
+attribute_name = "max_hp"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_81jo8"]
+script = ExtResource("3_p2da8")
+value_x100 = 800
+attribute_name = "sp_gain"
+operation = 1
+
+[resource]
+script = ExtResource("4_4lf3q")
+stacking_policy = 1
+policy = 2
+modifiers = Array[ExtResource("2_r5lbl")]([SubResource("Resource_1b3km"), SubResource("Resource_qiltj"), SubResource("Resource_81jo8")])

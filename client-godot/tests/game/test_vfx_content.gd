@@ -646,8 +646,16 @@ func test_every_ultimate_has_its_own_cast_cue() -> void:
 		if ability == null:
 			continue
 		if ability.is_ultimate():
-			ultimates += 1
 			check(ability.cast_cue_tags.size() == 1 and String(ability.cast_cue_tags[0]).begins_with("Cue.Fx.Ult."), "%s names its own ultimate cue" % file)
+			# Spec level-cap: a rank (cleave_2) is a copy of its ultimate and keeps its cue, so it is checked against its base only.
+			var base := file.get_basename().trim_suffix("_2").trim_suffix("_3") + ".tscn"
+			if base != file and ResourceLoader.exists("res://content/demo/abilities/" + base):
+				var first := (load("res://content/demo/abilities/" + base) as PackedScene).instantiate() as BattleAbility
+				eq(ability.cast_cue_tags, first.cast_cue_tags, "%s keeps its first rank's cue" % file)
+				first.free()
+				ability.free()
+				continue
+			ultimates += 1
 			for tag in ability.cast_cue_tags:
 				check(registered.has(tag), "%s is in the cue registry" % tag)
 				check(not seen.has(tag), "%s is used by one ultimate only" % tag)

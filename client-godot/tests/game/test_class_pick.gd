@@ -125,8 +125,8 @@ func test_moves_learns_and_stats_follow_the_definition() -> void:
 		var sorted := order.duplicate()
 		sorted.sort()
 		eq(order, sorted, "%s: moves listed by type" % character.id)
-		eq(ClassPickModel.learns(character).size(), character.level_skills.filter(func(row) -> bool:
-			return row != null and row.ability != null).size(), "%s: one line per level skill" % character.id)
+		var learned: int = character.level_skills.filter(func(row) -> bool: return row != null and row.ability != null).size()
+		eq(ClassPickModel.learns(character).size(), mini(learned, ClassPickModel.LEARNS_SHOWN), "%s: its first level skills" % character.id)
 		for row in ClassPickModel.stats(character):
 			var key: String = ClassPickModel.STATS.filter(func(pair: Array) -> bool: return pair[1] == row[0])[0][0]
 			var x100 := int(character.stats_x100[key])

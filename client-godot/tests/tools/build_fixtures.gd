@@ -50,6 +50,7 @@ func _ready() -> void:
 	_build_keys_and_gear()
 	_build_skill_points()
 	_build_item_power()
+	_build_level_cap()
 	_build_views()
 	print("Fixtures under %s: %d file(s) written" % [ROOT, _written])
 	get_tree().quit(0)
@@ -933,6 +934,38 @@ func _build_item_power() -> void:
 	_item("ip_drink", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_drink"], []))
 	_item("ip_twin", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_twin"], []))
 	_item("ip_copy", [], ItemDefinition.Kind.PASSIVE, _ability_set(["ip_copy_hit"], ["ip_copy_power"]))
+
+
+## Spec level-cap 2.2, 2.3: a character with two growth bands (from levels 2 and 16) and level skills at 12, 20 and 50, each
+## rank replacing the one before. In no pool, so floor generation and the run goldens never see it.
+func _build_level_cap() -> void:
+	var D := ExecutionRow.DamageMode
+	var T := ExecutionRow.Targets
+	var B := BattleAbility.Targeting
+	var physical := [&"Damage.Type.Physical"]
+	for band in [["lc_growth_1", 8], ["lc_growth_2", 4]]:
+		var growth := _infinite("atk", GameplayEffectModifier.Operation.PERCENT_ADD, band[1])
+		growth.modifiers.append(_modifier("max_hp", GameplayEffectModifier.Operation.PERCENT_ADD, band[1]))
+		growth.modifiers.append(_modifier("sp_gain", GameplayEffectModifier.Operation.PERCENT_ADD, band[1]))
+		growth.stacking_policy = GameplayEffect.StackingPolicy.REFRESH_DURATION
+		growth.max_stacks = 0
+		_save_effect(band[0], growth)
+	for rank in [["lc_gale_1", "LcGaleOne", 150], ["lc_gale_2", "LcGaleTwo", 220], ["lc_gale_3", "LcGaleThree", 300]]:
+		_ability(rank[0], "Fixture.Ability." + rank[1], B.SINGLE_ENEMY, [_row("hit", "damage", D.SCALED, rank[2], T.ALL, physical)],
+			[[0.3, "hit"]], [], null, {"cost": _effects["sp_cost_25"]})
+	var climber := CharacterDefinition.new()
+	_fill_unit(climber, "fixture.character.climber", {"max_hp": 1200, "hp": 1200, "atk": 400, "def": 250, "spd": 105},
+		{"crit_rate": 0, "crit_dmg": 50, "max_mp": 60, "mp": 60, "energy": 0, "sp_basic": 17, "max_toughness": 0, "toughness": 0,
+		"weakness_dmg": 150, "toughness_dmg": 0, "broken_dmg": 0}, ["chant_jab", "sp_passive"], Color.DARK_CYAN, SP_ATTRIBUTE_SET)
+	climber.tags.assign([&"Fixture.Character.Climber"])
+	for pair in [[2, "lc_growth_1"], [16, "lc_growth_2"]]:
+		var band := GrowthBand.new()
+		band.from_level = pair[0]
+		band.effect = _effects[pair[1]]
+		climber.growth_bands.append(band)
+	climber.level_skills.assign([_level_skill(12, "lc_gale_1", &""), _level_skill(20, "lc_gale_2", &"Fixture.Ability.LcGaleOne"),
+		_level_skill(50, "lc_gale_3", &"Fixture.Ability.LcGaleTwo")])
+	_save_world("characters", "climber", climber)
 
 
 func _sp_cost(typed: float) -> GameplayEffect:

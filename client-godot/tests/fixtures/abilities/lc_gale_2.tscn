@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_lv44w"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_cdvmt"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_aq3ep"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/lc_gale_2.tres" id="4_kd2vn"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/sp_cost_25.tres" id="5_4sk0h"]
+
+[sub_resource type="Resource" id="Resource_quj2e"]
+script = ExtResource("2_cdvmt")
+id = &"hit"
+effect = ExtResource("3_aq3ep")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 22000
+
+[node name="LcGale2" type="Node" unique_id=1402524979]
+script = ExtResource("1_lv44w")
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
+executions = Array[ExtResource("2_cdvmt")]([SubResource("Resource_quj2e")])
+animation = ExtResource("4_kd2vn")
+ability_tag = &"Fixture.Ability.LcGaleTwo"
+cost_effect = ExtResource("5_4sk0h")

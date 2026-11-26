@@ -118,6 +118,9 @@ static func play_one(content: ContentIndex, host: Node, seed_value: int, options
 	var party := party_for(content, seed_value, opts)
 	record["party"] = party
 	record["features"] = party_features(content, party)
+	# Spec level-cap 2.1: the party's level and XP when each floor starts (and, below, when the run ends).
+	var levels: Array = record.get_or_add("levels", [])
+	run.floor_entered.connect(func(floor_index: int) -> void: levels.append(party_level(run, floor_index + 1)))
 	var error := run.start_run(content, party, str(seed_value), StringName(opts["run"]))
 	if error != "":
 		record["runnerError"] = error
@@ -175,8 +178,60 @@ static func play_one(content: ContentIndex, host: Node, seed_value: int, options
 				tags.append(String(SkillTags.tag_of(row.ability)))
 		learned[String(member["character"]).trim_prefix("demo.character.")] = tags
 	record["learned"] = learned
+	levels.append(party_level(run, 0))
 	run.free()
 	return record
+
+
+## Spec level-cap 2.1: {"floor", "level" (the living members' average; everyone's once all are dead, as the dead gain nothing), "xp"
+## (won in battles so far, without free levels)}. Floor 0 is the run's end.
+static func party_level(run: RunController, floor_number: int) -> Dictionary:
+	var living := run.state.party.filter(func(member: Dictionary) -> bool: return bool(member["alive"]))
+	return {"floor": floor_number, "level": _average_level({"party": living if not living.is_empty() else run.state.party}),
+		"xp": run.battle_xp}
+
+
+## Spec level-cap 2.1, 5: "levelByFloor" (the party level when each floor starts), "xpByFloor" (the XP earned on each floor that
+## was left: floors reached minus the last) and "endLevel" of every run ("all") and of the won ones ("won").
+static func level_blocks(runs: Array[Dictionary]) -> Dictionary:
+	var by_floor := {}
+	var xp_by_floor := {}
+	var ends := {"all": [], "won": []}
+	for record in runs:
+		var entries: Array = record.get("levels", [])
+		if record["runnerError"] != "" or record["stop"] != "" or entries.size() < 2:
+			continue
+		for index in entries.size() - 1:
+			var key := "%02d" % int(entries[index]["floor"])
+			by_floor.get_or_add(key, []).append(int(entries[index]["level"]))
+			# The last entry is the run's end: its floor counts only when it was finished (the run is won).
+			if index < entries.size() - 2 or record["status"] == RunState.WON:
+				xp_by_floor.get_or_add(key, []).append(int(entries[index + 1]["xp"]) - int(entries[index]["xp"]))
+		ends["all"].append(int(entries.back()["level"]))
+		if record["status"] == RunState.WON:
+			ends["won"].append(int(entries.back()["level"]))
+	var blocks := {"levelByFloor": {}, "xpByFloor": {}, "endLevel": {}}
+	for key in by_floor:
+		blocks["levelByFloor"][key] = percentiles(by_floor[key])
+	for key in xp_by_floor:
+		blocks["xpByFloor"][key] = percentiles(xp_by_floor[key])
+	for key in ends:
+		blocks["endLevel"][key] = percentiles(ends[key])
+	for key in ["levelByFloor", "xpByFloor"]:
+		blocks[key] = SeedReport._sorted(blocks[key])
+	return blocks
+
+
+## {"runs", "p10", "median", "p90", "max"} of whole numbers, by nearest rank (empty: {"runs": 0}).
+@warning_ignore("integer_division")
+static func percentiles(values: Array) -> Dictionary:
+	if values.is_empty():
+		return {"runs": 0}
+	var sorted := values.duplicate()
+	sorted.sort()
+	var count := sorted.size()
+	return {"runs": count, "p10": sorted[(count * 10 + 99) / 100 - 1], "median": sorted[(count + 1) / 2 - 1],
+		"p90": sorted[(count * 90 + 99) / 100 - 1], "max": sorted[count - 1]}
 
 
 ## Fights the pending battle with the policy's controller, then records it and (check) verifies it.
@@ -753,6 +808,9 @@ static func summarize(runs: Array[Dictionary], opts: Dictionary, from: int, coun
 			total["uses"] += int(by_skill[key]["uses"])
 	report["levelSkills"] = SeedReport._sorted(learned)
 	report["secretSkills"] = SeedReport._sorted(secret)
+	if runs.any(func(record: Dictionary) -> bool:  # a run without an XP curve has no level blocks
+			return record.get("levels", []).any(func(entry: Dictionary) -> bool: return int(entry["xp"]) > 0)):
+		report.merge(level_blocks(runs), true)
 	var procs := proc_block(runs)
 	if not procs.is_empty():
 		report["procs"] = procs
@@ -1079,6 +1137,8 @@ static func text(report: Dictionary) -> String:
 		secrets.append("%s %d battles, %d uses" % [key, report["secretSkills"][key]["battles"], report["secretSkills"][key]["uses"]])
 	if not secrets.is_empty():
 		lines.append("  secret skills: %s" % ", ".join(secrets))
+	if report.has("levelByFloor"):
+		lines.append_array(level_text(report))
 	if report.has("analysis"):
 		lines.append_array(analysis_text(report["analysis"]))
 	lines.append("  violations: %d" % report["violations"].size())
@@ -1104,6 +1164,26 @@ static func text(report: Dictionary) -> String:
 		if record["stop"] != "" or record["runnerError"] != "":
 			lines.append("  STOPPED seed %d: %s" % [record["seed"], record["runnerError"] if record["runnerError"] != "" else record["stop"]])
 	return "\n".join(lines)
+
+
+## Spec level-cap: the level and XP blocks as text.
+static func level_text(report: Dictionary) -> PackedStringArray:
+	var lines := PackedStringArray()
+	var levels := PackedStringArray()
+	for key in report["levelByFloor"]:
+		var row: Dictionary = report["levelByFloor"][key]
+		levels.append("%d: %d (%d-%d)" % [int(key), row["median"], row["p10"], row["p90"]])
+	lines.append("  party level at each floor's start, median (p10-p90): %s" % ", ".join(levels))
+	var earned := PackedStringArray()
+	for key in report["xpByFloor"]:
+		earned.append("%d: %d" % [int(key), report["xpByFloor"][key]["median"]])
+	lines.append("  XP earned per floor, median: %s" % ", ".join(earned))
+	for key in report["endLevel"]:
+		var row: Dictionary = report["endLevel"][key]
+		if int(row["runs"]) > 0:
+			lines.append("  end level, %s runs (%d): median %d, p10-p90 %d-%d, max %d" % [key, row["runs"], row["median"], row["p10"],
+				row["p90"], row["max"]])
+	return lines
 
 
 ## Spec bot-play 2.7: the run bot's blocks as text.

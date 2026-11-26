@@ -63,12 +63,15 @@ func test_demo_secret_skills() -> void:
 	plain.free()
 	var elite := _battle(content, "demo.character.warrior", 1,
 		[{"slot": 1, "unitDefId": "demo.enemy.golem", "loadoutRef": null, "variantId": "demo.variant.elite"}])
-	eq(elite.unit_by_id(&"E1").level, 3, "an Elite is 2 levels up")
+	eq(elite.unit_by_id(&"E1").level, (content.scaling[&"demo.scaling.descent"] as ScalingRules).level_for_depth(0)
+		+ (content.variants[&"demo.variant.elite"] as EnemyVariant).level_bonus, "an Elite is its bonus above the depth's level")
 	check(elite.unit_by_id(&"E1").ability_by_tag(&"Ability.Tremor") != null, "and knows Tremor")
 	elite.free()
 	var deep := _battle(content, "demo.character.warrior", 1,
 		[{"slot": 1, "unitDefId": "demo.enemy.golem", "loadoutRef": null, "variantId": null}], 4)
-	eq(deep.unit_by_id(&"E1").level, 5, "floor 5: level 5")
+	eq(deep.unit_by_id(&"E1").level, (content.scaling[&"demo.scaling.descent"] as ScalingRules).level_for_depth(4),
+		"floor 5: the depth's level")
+	check(deep.unit_by_id(&"E1").level > 1, "deeper enemies have higher levels")
 	deep.free()
 
 
