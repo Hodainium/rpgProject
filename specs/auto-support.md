@@ -205,5 +205,30 @@ Auto for consumables (A4), any content tuning of heal or buff numbers (5c).
 
 ## 8. Measurements
 
-To be filled by the build: the 100- and 600-seed gate before → after, per-class wins, `autoPicks` for the Cleric and the Bard,
-the average effective healing per heal pick, turns per battle and losses on the overtime clock (D7).
+2026-11-25/26, The Descent, smart policy, 4 members, `--check`, `game/dev/balance_seeds.json`. "Before" is `main`'s code (the spec
+commit) run in a temporary worktree beside the build, so both sides are the same content and seeds. All five constants as proposed;
+no constant was changed (D7: nothing measured called for one, see below).
+
+| Run | Won | Cleric | Bard | Mean turns (boss) | Boss fights 50+ turns (lost) |
+|---|---|---|---|---|---|
+| before, first 100 | 46 | 26/36 | 16/34 | 3.06 | 1 |
+| after, first 100 | 48 | 24/36 | 17/34 | 3.13 | 0 |
+| before, 600 | 291 (48.50%) | 154/209 | 119/227 | 3.14 (5.48) | 4 (3) |
+| **after, 600 (final)** | **296 (49.33%)** | **147/209** | **121/227** | **3.19 (5.45)** | **3 (2)** |
+
+- Seed by seed, after against before: +63 −58, within noise; every other class within a few wins. No stopped run, no script error;
+  every battle replayed to its hash. Two code-review rounds changed the code after the first 600 (a refreshed HoT counts only its new
+  ticks, the 125% step against every cheaper heal, untargeted rows as Battle applies them, a single-target buff reaches one ally, only
+  rows that reach the whole party count for a party buff): 591 of 600 run hashes unchanged, the same 296; the third round's nits left
+  all of the first 100 hashes unchanged.
+- **One violation in the after runs, none before:** seed 137548, floor 10, the Reflection (`demo.encounter.event_reflection`) hits the
+  500-turn cap. Not a heal or buff: the party (Bulwark, Ranger; two dead) has nothing that doesn't feed the mirror's drains, so the
+  Ranger Blocks 240 times (the last resort of spec skill-points) and the Bulwark casts Bastion. The run reaches that fight only because
+  earlier picks changed. A pre-existing gap in the last resort, outside this spec.
+- `autoPicks`, 600 seeds: the **Cleric** heals 602 times (Mass Heal 101, Purify 138, Greater Heal 46, Benediction 34, Heal 18, Miracle 5,
+  Potion 248, Holy Water 12; 932 HP of effective healing per heal) and casts Blessed Aegis as a party buff 4,623 times (a 2-turn party
+  ward, recast as it lapses), basics 12,113, damage moves 33. The **Bard** heals 2,136 times (Ballad 1,657, Ballad II 443; 1,160 HP per
+  heal) and casts party buffs 2,386 times (Grand Anthem 1,783, War Symphony 156, Rousing Anthem 131, Anthem 233). Before, neither Mass
+  Heal, Benediction nor Grand Anthem was ever cast (section 1).
+- The kits are used as intended; the win rate did not move. The Cleric's free Potion is its most picked heal (it is the cheapest, and a
+  costlier heal must reach 125% of it).
