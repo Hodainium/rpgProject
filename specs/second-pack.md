@@ -205,6 +205,16 @@ Presentation (the user's folders; new files only, on the user's go-ahead):
   existing file, shown `old → new`.
 - Cube looks for the three characters: a design round with a live preview and the user's gate (spec `cube-style`
   round 4 process: faces, one combined detail each, a floor effect), then 4K portraits by `build_card_portraits.tscn`.
+  **Approved 2026-11-26 (the design round ran first, before the build).** The shapes are committed as
+  `presentation/demo/style/attachments/bm_*.tres` (15 files); the build adds each look to the main registry once its character
+  exists (a look for a unit not in content fails the validator, `style_look_unknown_unit`), wired as below. Sockets: T = Top,
+  F = Front, C = Center, L / R = Left / Right.
+
+  | Character | Body colour (`display_color`) | Attachments | Floor effect |
+  |---|---|---|---|
+  | Vampire | pale (0.93, 0.9, 0.9) | `bm_vampire_cloak` C, `bm_vampire_collar` T, `bm_vampire_hair` T, `bm_vampire_peak` F, `bm_face_vampire_a` F, `bm_vampire_cravat` F | its own, like red orbs (previewed: `wisp_motes` in crimson) |
+  | Lifebinder | sage (0.45, 0.78, 0.58) | `bm_lifebinder_crown` T, `bm_face_lifebinder_a` F, `bm_lifebinder_staff` R offset (-0.14, -0.1, 0) | its own **combined** effect: a green floor glow and green orbs (previewed: `golden_glow` + `wisp_motes` in green; a look holds one effect) |
+  | Vampire Hunter | slate (0.24, 0.27, 0.36) | `bm_hunter_coat` C, `bm_hunter_tricorne` T, `bm_face_hunter_d` F, `bm_hunter_bandolier` F, `bm_hunter_hip_flask` L, `bm_hunter_crossbow` R offset (-0.14, -0.04, 0) | its own, a pale holy glow (previewed: `holy_ground` in silver) |
 - Animations from the default set; sounds from the bank by the audio pass's rules (new ult sounds picked by the user).
 - Class pick: the three join the turntable when owned; one new preset per character in `party_presets.tres` (an edit).
 

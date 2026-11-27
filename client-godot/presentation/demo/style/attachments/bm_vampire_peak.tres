@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AttachmentShape" format=3]
+
+[ext_resource type="Script" path="res://game/view/attachment_part.gd" id="1_part"]
+[ext_resource type="Script" path="res://game/view/attachment_shape.gd" id="2_shape"]
+
+[sub_resource type="Resource" id="Resource_p0"]
+script = ExtResource("1_part")
+kind = 7
+size = Vector3(1, 1, 0.025)
+profile = PackedVector2Array(-0.42, 0.425, 0.42, 0.425, 0.42, 0.33, 0, 0.2, -0.42, 0.33)
+position = Vector3(0, 0, 0)
+color = Color(0.05, 0.04, 0.06, 1)
+metallic = 0.2
+roughness = 0.25
+tintable = false
+
+[resource]
+script = ExtResource("2_shape")
+display_name = "Vampire widow's peak"
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0")])
