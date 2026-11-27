@@ -1,6 +1,7 @@
 # Spec: second-pack (before 5c `card-balance`, after `level-cap`)
 
-Status: **spec written 2026-11-22, awaiting the user's review.** The last of four slices the user asked for on
+Status: **spec written 2026-11-22; design finished 2026-11-26 (the third character, the Vampire Hunter, and the 9
+further items, user's answers in D8-D14); ready for `/implement`.** The last of four slices the user asked for on
 2026-11-22: `bot-play`, `item-power`, `level-cap`, `second-pack` (this). A second card pack, **Blood Moon**, with three
 new characters that bring a new playstyle and still fit existing teams, and a small set of items built around them.
 Builds on `specs/card-collection.md`, `specs/pack-shop.md` and `specs/card-ui.md` (sets, packs, odds, pity, the
@@ -17,8 +18,10 @@ catalog, the Shop and pack reveal), `specs/class-pick.md` (the class pick, prese
 2. **The Lifebinder**, a new support (user, 2026-11-22): heals the party, and **every time a set amount of healing has
    been done, it makes a follow-up attack** (Honkai: Star Rail style). Its meter fills with **all healing the party
    receives**, so the Vampire's lifesteal and the Cleric's heals feed it.
-3. **A third character**, still open (2.4, D3): the first draft, a counter-attacking Duelist, was turned down.
-4. **21 Blood Moon items** for lifesteal, HP costs and healing meters, plus the third character's theme (2.5).
+3. **The Vampire Hunter** (user, 2026-11-26; 2.4): the first crit-focused class. Hits that don't crit build **Focus**
+   (crit rate and crit damage), a crit spends it, and its crits **Silver** enemies (half healing received), which counters
+   the lifesteal, regen and drained hits the pack's own theme brings. Physical bolts and a Fire flask.
+4. **21 Blood Moon items** for lifesteal, HP costs, healing meters, follow-ups and crits (2.5).
 
 Each character has the full level rhythm of `level-cap` (2.3 there: similar, not identical, with passives).
 
@@ -54,6 +57,13 @@ tampered goldens).
 
 Lifesteal needs no new hook: a passive on `Event.Damage.Dealt` heals the dealer by `Data.Event.Amount` × a percent
 (item-power K6).
+
+Focus and Silvered (2.4) need no new hook either: `Battle._send_damage_events` sends `Event.Damage.Dealt` before
+`Event.Damage.Dealt.Critical` for the same hit, and the triggers run in that order, so "add a stack on every hit" then
+"clear the stacks on a crit" nets to "a hit that doesn't crit adds one, a crit spends them". The crit's damage is computed
+in `exec_calc_standard_damage.gd` before either event, so the crit itself gets the full bonus. DoT ticks send only
+`Event.Damage.Dealt.Dot` (K2, checked 2026-11-26), never `Event.Damage.Dealt`, so they never build Focus. Silvered is a
+`heal_taken` modifier, which every heal ExecCalc and the drained hit already read.
 
 ### 2.2 The Vampire (`demo.character.vampire`)
 
@@ -93,33 +103,58 @@ Level rows: 12 Seedburst (skill: heal and Regen on two allies), 15 Bloom II, 20 
 falls to 40%), 25 Wellspring II, 30 World Tree (signature: a big party heal and a free Verdant Lash), 35 Deep Roots II
 (35%), 40 Evergreen (passive: Verdant Lash hits every enemy at 60%), 45 World Tree II, 50 Bloom III.
 
-### 2.4 The third character: open (the Duelist draft below was turned down, D3)
+### 2.4 The Vampire Hunter (`demo.character.vampire_hunter`)
 
-**Not approved (user, 2026-11-22).** Kept only as a record of the first brainstorm; the third character is designed in
-this slice's own chat.
+The first crit-focused class (user, 2026-11-26; D8). Today every class starts at 5% crit rate / 50% crit damage and the
+Ranger at 20% (its Steady Aim, Eagle Eye and Deadeye rows add more), but the Ranger is about weakness marks and
+follow-ups; no class is built on crits. The Hunter's crits come on a rhythm (Focus), not on luck alone, and its theme is
+the pack's counterweight: it Silvers what heals. (The Duelist draft of 2026-11-22 was turned down, D3; its counter
+playstyle stays an idea for a later pack, with the Gambler, Hexblade and Chronomancer.)
 
-The third character (the user asked for a brainstorm). Picked from four ideas: a **Duelist** (counters), a Gambler
-(crit and chance procs), a Hexblade (damage per debuff on the target), a Chronomancer (action advance and extra turns).
-The Duelist is proposed because it is the playstyle the game lacks entirely (acting on the enemy's turn), it uses the
-item-power ally-hit hook (K1) and pairs with existing tanks and with Vengeful Aegis and Guardian's Vow. The other three
-stay as ideas for a later pack.
-
-Roles `Unit.Role.FollowUp`, `Unit.Role.Damage`. Growth: `growth_damage` bands. Uses SP.
+Roles `Unit.Role.Damage`. Growth: `growth_damage` bands. Uses SP. Starting crit: 10% rate, 60% damage (placeholders).
+Damage: Physical crossbow bolts and one Fire skill (the holy water flask), so it can hit either weakness (D10); no class
+mixes damage types this way yet.
 
 | Move | Kind | Effect (first proposals) |
 |---|---|---|
-| Thrust | basic | 100% ATK Physical. |
-| En Garde | skill | For 2 turns, Riposte: whenever an ally is hit, a 90% ATK follow-up on the attacker (K1). |
-| Flurry | skill | 3 strikes of 60% ATK Physical at random enemies (K4). |
-| Grand Riposte | ult | 250% ATK on one enemy; for 2 turns every counter hits twice. |
-| Parry | passive | When the Duelist is hit, a 70% ATK follow-up on the attacker. |
+| Silver Bolt | basic | 100% ATK Physical on one enemy. |
+| Holy Water | skill | A flask: 90% ATK Fire on the target and 45% on its neighbours. |
+| Stake | skill | 220% ATK Physical on one enemy; this hit has +25% crit rate. |
+| Dawnbreak | ult | 320% ATK Physical on one enemy, always a crit; Focus counts double on this hit. |
+| Focus | passive | Every hit that does not crit gives 1 Focus (max 5; each stack +8% crit rate, +12% crit damage); a crit spends them all (2.1: one listener on `Event.Damage.Dealt` adds, one on `Event.Damage.Dealt.Critical` clears). Focus is a stacking status that is **not** dispellable (no `Status.Buff` tag) and shows in the status list (D11). |
+| Silver | passive | Its crits apply **Silvered** to the target: −50% `heal_taken` for 2 turns (D12). That also halves a drained hit's heal, so it weakens the drain mirror, regen enemies, the Leech and the Hearts. Enemies only. |
 
-Level rows: 12 Feint (skill: Vulnerable on the target, a One More on a crit), 15 Grand Riposte II, 20 Blade Dance
-(passive: each counter gives +10 ult charge), 25 En Garde II (3 turns), 30 Thousand Cuts (signature: 6 strikes at
-random enemies), 35 Blade Dance II, 40 Perfect Guard (passive: a counter heals the protected ally 5%), 45 Thousand Cuts
-II, 50 Grand Riposte III.
+At 5 stacks it crits about 50% of the time for about +120% crit damage; "always a crit" on Dawnbreak is a crit-rate
+modifier of +100% for that hit (crit rate above 100% is wasted today, `exec_calc_standard_damage.gd`).
 
-### 2.5 The Blood Moon items (21 planned, set `Card.Set.Bloodmoon`; 14 drafted below, 7 to come with the third character)
+Level rows (`level-cap` 2.3 rhythm, passives at 3 and 7, the innate skill's ranks at 5 and 9):
+
+| Level | Row | Kind | Effect |
+|---|---|---|---|
+| 3 | Keen Senses | passive | Crits on a Silvered target +20% crit damage. |
+| 5 | Holy Water II | rank | |
+| 7 | Patient Hunter | passive | Start every battle with 2 Focus. |
+| 9 | Holy Water III | rank | |
+| 12 | Chain Shot | skill | 3 hits of 60% ATK Physical on one enemy; each hit builds or spends Focus. |
+| 15 | Dawnbreak II | rank | |
+| 20 | Relentless | passive | A crit keeps 1 Focus. |
+| 25 | Stake II | rank | |
+| 30 | Purge the Night | signature | 150% ATK Fire on every enemy; Silvers them all. |
+| 35 | Keen Senses II | rank | |
+| 40 | Final Verdict | passive | A kill by a crit advances its next action by 25% (`ExecutionRow.delay`). |
+| 45 | Purge the Night II | rank | |
+| 50 | Dawnbreak III | rank | |
+
+Synergy with today's classes: the Ranger's weakness marks and the Hunter's Fire flask cover both weakness kinds; the
+Bard's ATK buffs and the crit items of item-power (Lucky Coin, Focus Stone, Glass Lens, Keen Rapier, Opportunist,
+Executioner's Seal) find a real owner; against drain mirrors and healing bosses Silvered is the party's answer. With the
+Vampire: the pack's two sides of the same night (theme), no mechanical tie (D9: Silvered never touches party units).
+
+Look (presentation, the user's gate, spec `cube-style` round 4 process): a crossbow on the Right socket, silver, a holy
+water flask and **a cross: religious symbols are allowed for this character only** (user, 2026-11-26, D13; the rule of
+cube-style Set 4b stays for every other unit).
+
+### 2.5 The Blood Moon items (21, set `Card.Set.Bloodmoon`)
 
 Pools follow item-power's rule (an item is in `Pool.Treasure` or `Pool.Boss`, never both; Shop and Chest may share with
 Treasure). They appear in a run only when the player owns them (the card pool, as for Descent cards).
@@ -132,22 +167,38 @@ Treasure). They appear in a run only when the player owns them (the card pool, a
 | Leech Tooth | Common | Heal 8% of the damage you deal. | Treasure, Chest |
 | Blood Chalice | Rare | Heal 15% of the damage you deal; +10% ATK. | Treasure, Shop |
 | Thorned Rose | Rare | When you are healed, a 40% ATK follow-up on a random enemy. | Treasure |
-| Riposte Ring | Rare | When an ally is hit, 25% chance of a 70% ATK follow-up on the attacker. | Treasure, Shop |
 | Sanguine Pact | Epic | Your HP costs are 30% lower. | Treasure |
 | Verdant Heart | Epic | Your meter fills 30% faster. | Treasure |
-| Duelist's Cloak (armor) | Epic | When an ally is hit, 30% chance to counter for 100% ATK. | Treasure |
 | Heartseeker Fang (weapon) | Epic | Heal 20% of the damage you deal; +15% crit rate. | Boss |
 | Crimson Thirst | Legendary | +2% damage for every 5% of max HP missing (no cap). | Boss |
 | Lifebloom Crown | Legendary | The party: every 100% of your max HP healed, heal the party 15% and strike every enemy for 100% ATK (a meter, B3). | Boss |
 | Twin Blades | Legendary | Your follow-ups hit twice. | Treasure |
+| Silver Tip | Common | +8% crit rate. | Treasure, Shop, Chest |
+| Whetstone | Common | +15% crit damage. | Treasure, Shop, Chest |
+| Hunter's Focus | Rare | Gives its holder the Focus passive (2.4) with at most 3 stacks. | Treasure, Shop |
+| Holy Water Vial | Rare | Your crits have a 25% chance to Silver the target; +15% damage against Silvered enemies. | Treasure, Shop |
+| Garlic Wreath | Rare | An enemy that hits you gets −25% healing received for 2 turns (a weaker Silvered). | Treasure, Chest |
+| Hunter's Crossbow (weapon) | Epic | +30 ATK, +10% crit rate; your crits Silver the target. | Treasure |
+| Hunter's Longcoat (armor, body) | Epic | +60 max HP, +8% crit rate; a crit cleanses one debuff from you. | Treasure |
+| Rosary of Vigil | Epic | Your crits have a 35% chance to Silver the target; the party: +5% crit rate for each Silvered enemy (up to +15%). | Treasure |
+| Stake of Dawn | Legendary | Your crits have a 50% chance to Silver the target (K3 `trigger_chance`); +60% crit damage against Silvered targets; a crit that kills gives a One More (at most once per turn). | Boss |
+
+The counter items of the Duelist draft (Riposte Ring, Duelist's Cloak) are dropped with it; Fencer's Glove and Twin
+Blades stay for the follow-ups the Lifebinder (Verdant Lash), the Ranger and item-power's procs already make (D14). The
+last nine are the Hunter's: crit stats, Focus for any holder, Silvered sources and payoffs. Silvered sources besides
+the Hunter: Hunter's Crossbow (every crit), and each payoff item carries its own chance on its holder's crits (K3
+`trigger_chance`), higher with rarity: Holy Water Vial 25%, Rosary of Vigil 35%, Stake of Dawn 50% (user, 2026-11-26:
+a Silvered payoff must work without the character). Garlic Wreath applies its own weaker status, which does not count as Silvered. Rarities of the 21: Common 6,
+Rare 5, Epic 6, Legendary 4. Stake of Dawn's One More is guarded "once per turn" (a flag status cleared at turn end) on
+top of the chain cap, so a crit kill chain cannot make endless turns; confirm in the build that One More from a trigger
+works like Persona's (logged `"extra": true`), else it is an action advance of 100% instead (the user's call then).
 
 ### 2.6 The pack
 
 `infra/economy/card_economy.json` gains `bloodmoon-pack` ("Blood Moon Pack"), `setIds` ["bloodmoon"], the Descent
 Pack's price, card count (5), odds, pity and first-pack guarantees as placeholders (5c tunes both packs). The set holds
-every rarity the pack can give (Common 4, Rare 3, Epic 4, Legendary 3, Mythic 3: the three characters are Mythic like
-every character card), so the openability rule passes. With 24 cards (D5) the rarity counts are set when the
-item list is final; dust values are the shared rates.
+every rarity the pack can give (Common 6, Rare 5, Epic 6, Legendary 4, Mythic 3: the three characters are Mythic like
+every character card), so the openability rule passes. 24 cards (D5); dust values are the shared rates.
 
 Presentation (the user's folders; new files only, on the user's go-ahead):
 - `CardPackLook` for the pack in `card_style.tres`'s pack list (a crimson foil, a game-icons glyph) — an edit to an
@@ -160,7 +211,11 @@ Presentation (the user's folders; new files only, on the user's go-ahead):
 ### 2.7 Bots
 
 - Role tags as in 2.2-2.4; fit and grant tags on the 21 items (`bot-play` 2.3; HP-cost items as `Item.Fit.Survival` +
-  a new `Item.Fit.HpCost`, meter items as `Item.Fit.Healing` + `Item.Fit.FollowUp`).
+  a new `Item.Fit.HpCost`, meter items as `Item.Fit.Healing` + `Item.Fit.FollowUp`, crit items as `Item.Fit.Damage` + a
+  new `Item.Fit.Crit`, which `LootScorer` weighs up for a unit whose base crit rate is above the default 5% (the Hunter,
+  the Ranger) or that holds Focus; Silvered sources and payoffs as `Item.Fit.Damage`). Hunter's Focus grants
+  `Item.Grants.Damage`.
+- Silvered and Focus need nothing from `AutoPolicy` beyond today's damage scoring; Stake is scored as a damage skill.
 - `AutoPolicy` and the smart controller learn HP costs: an HP-cost move is scored like an SP move, refused while it
   would leave the caster under `danger_hp_x100` (25% max HP by default, a policy option) unless the move's lifesteal on
   the expected damage would bring it back above; the Vampire then falls back to Bite. Meters need nothing from the
@@ -181,6 +236,8 @@ gains `hpCostX100`.
 - **HP cost loops:** a move that would kill its user is refused (B1), so an Auto or script cannot suicide; a refused
   HP move is an ordinary invalid choice (`on_invalid`).
 - **Meter loops:** meter heals never fill meters, a check fires at most 3 times, the chain cap holds.
+- **Crit loops:** Stake of Dawn's One More fires at most once per turn per holder; Focus is capped at 5 stacks (3 from
+  Hunter's Focus), and a crit rate above 100% is wasted, never an error.
 - **Pack rules:** the seeder refuses a pack type that fails openability; the e2e card scenario buys and opens a Blood
   Moon pack on the real stack; a duplicate open by request key opens once (scenario 1).
 - **Run lock and pools:** Blood Moon items enter a run's pool only when owned, like every card (spec `card-collection`).
@@ -189,7 +246,9 @@ gains `hpCostX100`.
 
 Existing metrics, no new names: `rpg_packs_bought_total{pack}`, `rpg_packs_opened_total{pack}`,
 `rpg_pack_cards_total{pack,rarity}`, `rpg_pack_pity_triggers_total`, `rpg_packs_owned`; the Grafana card panels gain the
-second pack's series automatically. The play report adds per-class rows for the three, `hpCostSpent` and `meterFires`.
+second pack's series automatically. The play report adds per-class rows for the three, `hpCostSpent`, `meterFires`,
+and for crits `critRate` per class (crits ÷ damaging hits), `focusAtCrit` (the mean stacks a crit spent) and
+`silveredHealCut` (healing Silvered took away).
 
 ## 6. Test plan
 
@@ -203,6 +262,10 @@ Godot (fixtures for the hooks; content tests for the characters):
 - Content: the three characters and 21 items validate; card faces render ("Unknown card" never shows); the catalog is in
   sync (`tools/check_card_catalog.sh`).
 - Auto: the Vampire never casts a move it cannot survive; it uses Bite when low.
+- Hunter (content tests): a hit that does not crit adds 1 Focus, a crit spends all and gets their bonus on that hit,
+  DoT ticks add none, the cap holds, Focus survives a dispel; a crit Silvers the target and halves a heal and a drained
+  hit's heal on it; Silvered never lands on a party unit; Dawnbreak always crits; Holy Water Vial, Rosary of Vigil and Stake of
+  Dawn Silver on a crit at their chances; Stake of Dawn gives at most one One More a turn. A golden `crit-seed-*` with Focus and Silvered (trace + tampered copy).
 
 .NET (Testcontainers, real stack):
 - The seeder adds the new catalog rows and pack type; a second seeding changes nothing.
@@ -217,18 +280,26 @@ worker.
 **Decisions (user, 2026-11-22):**
 - D1. The Vampire heals from the damage it deals and pays HP for its moves.
 - D2. The new support makes follow-up attacks each time a set amount of healing has been done (Honkai style).
-- D3. A third character; **the Duelist is not approved** (user, 2026-11-22). The third character is decided when this
-  slice is discussed in its own chat (2.4 keeps the draft only as a record).
+- D3. A third character; **the Duelist is not approved** (user, 2026-11-22). Decided 2026-11-26: the Vampire Hunter (D8).
 - D4. Three characters in the new pack; each fits a new playstyle and today's teams.
-- D5. The set holds **24 cards**: 3 characters and 21 items (7 more than the draft list in 2.5, designed with the third
-  character).
+- D5. The set holds **24 cards**: 3 characters and 21 items (the final list in 2.5, D14).
 - D6. The Lifebinder's meter fills from **all healing the party receives**.
 - D7. Names kept: Vampire, Lifebinder, Blood Moon.
 
-**Open questions (for this slice's own chat):**
-- Q1. The third character (ideas so far: Gambler, Hexblade, Chronomancer; the Duelist was turned down).
-- Q2. The 7 further items, and whether the counter-themed draft items (Riposte Ring, Duelist's Cloak, Fencer's Glove,
-  Twin Blades) stay once the third character is chosen.
+**Decisions (user, 2026-11-26; closes Q1 and Q2):**
+- D8. The third character is a crit-focused **Vampire Hunter** (no class is built on crits yet).
+- D9. Its loop is **Focus build-up**: hits that don't crit build Focus, a crit spends it. Its tie to the pack is
+  **Silvered** anti-heal on its crits (enemies only); no mechanical tie to the Vampire.
+- D10. Damage: Physical bolts plus a Fire flask (Holy Water).
+- D11. Focus is a stacking status (pure GAS stacking effects, no new hook), not dispellable; not the B4 meter.
+- D12. Silvered: −50% healing received (`heal_taken`) for 2 turns.
+- D13. Holy water and a cross are fine on the Vampire Hunter's look (an exception to cube-style's no-religious-symbols
+  rule, for this character only).
+- D14. Riposte Ring and Duelist's Cloak are dropped; Fencer's Glove and Twin Blades stay; 9 new crit and Silvered items
+  (2.5). Every Silvered payoff item also Silvers on its holder's crits (Holy Water Vial 25%, Rosary of Vigil 35%,
+  Stake of Dawn 50%), so it works without the Hunter (user, 2026-11-26).
+
+**Open questions:** none for the design. Numbers are first proposals, tuned in the build's playtest and 5c.
 
 **Stays out:** pack odds and prices (5c), more packs, analytics, new events for the new characters (class choices in
 events can come with 5c or a later event pass).
