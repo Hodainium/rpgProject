@@ -1,6 +1,7 @@
 # Spec: auto-support (before 5j `second-pack`, after `level-cap`)
 
-Status: **spec written and reviewed 2026-11-25 (the user took the recommendations for Q1 and Q2: D6, D7), ready for `/implement`.** Closes `level-cap` Q1 (the user deferred it 2026-11-24 and
+Status: **built 2026-11-25/26 on `feat/auto-support` (PR #92), spec synced to the build 2026-11-26; awaiting the user's review.**
+(Spec written and reviewed 2026-11-25; the user took the recommendations for Q1 and Q2: D6, D7.) Closes `level-cap` Q1 (the user deferred it 2026-11-24 and
 asked for this spec 2026-11-25). Builds on `specs/auto-battle.md` (the smart policy, `AutoPolicy`), `specs/skill-points.md` 3.4
 (the SP rhythm and the danger reserve), `specs/bot-play.md` (`Unit.Role.*`) and `specs/level-cap.md` (the moves learned to 50).
 
@@ -64,10 +65,21 @@ the RNG):
 ## What `ability` would restore on `target` if `source` cast it now: {attribute: amount ×100}, before the target's cap.
 ## Reads every execution row's effect: each ExecCalc offering restore_of(source_asc, target_asc) adds its part; an
 ## instant effect counts once, a periodic one (a HoT) once per tick over its duration_turns. Rows with chance count fully.
-static func restore_of(ability: BattleAbility, source: BattleUnit, target: BattleUnit) -> Dictionary
+## `first` / `has_primary` apply the rows as Battle does: PRIMARY rows only on the first target, ADJACENT rows skipped
+## there when the ability has a primary target.
+static func restore_of(ability: BattleAbility, source: BattleUnit, target: BattleUnit,
+		first := true, has_primary := true) -> Dictionary
 ## HP only (×100; 0 when the ability restores no HP).
-static func hp_restore(ability: BattleAbility, source: BattleUnit, target: BattleUnit) -> int
+static func hp_restore(ability: BattleAbility, source: BattleUnit, target: BattleUnit,
+		first := true, has_primary := true) -> int
+## One effect's restore (helpers): `effect_restore(effect, source_asc, target_asc, level)`, `new_ticks(effect, target_asc)`;
+## `reads_hp(ability)` for the validator.
 ```
+
+As built: modifiers count only when plain (`STATIC`, ADD on the attribute), read at the source's `effect_level` through the
+effect's scaling curve. A HoT is refresh-aware (`new_ticks`): with a copy already running on the target, a `REFRESH_DURATION`
+effect counts only the ticks a refresh adds (`max(duration − remaining, 0) × stacks`), and 0 when a recast at the stack cap would
+clear the stacks (`clear_stack_on_overflow`). A periodic effect that never ticks (period 0, or no tick on turn start) counts 0.
 
 **ExecCalcs** (your folder, `content/demo/exec_calcs/`; additive edits, each method beside `execute`, shown `old → new` before the
 build):
@@ -75,21 +87,25 @@ build):
   (`amount × source.<source_bonus> × target.<target_bonus>`, or `amount_attribute`), no change to `execute`.
 - `exec_calc_percent_of_max.gd` gains the same (`percent × target.<max_attribute> × bonuses`).
 - `execute` is refactored to call the shared formula only if that changes no result; otherwise the formula is copied and a test
-  pins both against each other (3.5).
+  pins both against each other (3.5). As built: one shared formula, the static `ExecCalcRestore.bonused(value, source_asc,
+  target_asc, source_name, target_name)`, used by both ExecCalcs' `execute` and `restore_of`; no result changed.
 - Fixture copy: `tests/fixtures/exec_calcs/fixture_restore.gd` (new) with `restore_of`.
 
 **Effective healing** of a heal move aimed at `target`: over every living ally it reaches (SINGLE_ALLY: the target; ALL_ALLIES: the
-party; SELF: the caster), `Σ min(hp_restore, max_hp − hp)`. Overhealing counts for nothing.
+party; SELF: the caster; only allies that are up, `is_up()`, as Battle applies rows), `Σ min(hp_restore, max_hp − hp)`. Overhealing
+counts for nothing.
 
 **Choice** (`AutoPolicy._heal`, replaces the heal use of `_support`; revives keep `_support`):
 1. Candidates: every activatable `Ability.Role.Heal` move that does not target enemies, each single-target one on every living ally,
    each with its effective healing `E` and SP cost `C`. A candidate with `E == 0` is dropped.
-2. The best is the highest `E`, except that a move costing more SP than a cheaper candidate must reach `HEAL_STEP`% of the cheaper
-   one's `E`, else the cheaper one wins (compared pairwise from the cheapest up, so the result does not depend on grant order).
+2. The best is the highest `E`, except that a move costing more SP must reach `HEAL_STEP`% of the best `E` among all strictly
+   cheaper candidates (not just one of them), else it cannot win, even against a candidate at its own cost. So the result does not
+   depend on grant order.
 3. **Cleanse exception (D6):** while an ally the move reaches is afflicted (`_afflicted`: controlled, or `CLEANSE_AT` or more debuffs),
-   a heal that also cleanses (`Ability.Role.Cleanse`: Miracle, Purify, Holy Water) skips the `HEAL_STEP` step: it wins when its `E`
-   is at least that of the best cheaper heal. No other extra (a buff, a HoT beyond its counted ticks) earns anything.
-4. Ties: the lower SP cost, then the most hurt target (lowest HP %), then grant order, then slot. Ints only; no StringName order.
+   a heal that also cleanses (`Ability.Role.Cleanse`: Miracle, Purify, Holy Water) skips the `HEAL_STEP` step: it qualifies when its `E`
+   is at least that same best cheaper `E`. No other extra (a buff, a HoT beyond its counted ticks) earns anything.
+4. Ties among qualifying candidates: the higher `E` at the same cost, then the lower SP cost, then the most hurt target (lowest HP %),
+   then grant order, then slot. Ints only; no StringName order.
 
 New constants (`AutoPolicy`, system numbers like `HEAL_BELOW`; changed only by measurement, recorded in section 8):
 
@@ -104,8 +120,10 @@ With today's numbers: two allies down 300 HP each → Mass Heal (`E` 600 for 113
 
 ### 3.3 Party buffs
 
-A **party buff** is an activatable `Ability.Role.Buff` move targeting ALL_ALLIES (not an ult) whose `Status.Buff.*` tags
-(`_buff_tags`, today's reading) at least `BUFF_LACKING` living allies lack.
+A **party buff** is an activatable `Ability.Role.Buff` move targeting ALL_ALLIES (not an ult, and not also `Ability.Role.Heal`:
+Benediction and Ballad are decided by the heal step) whose `Status.Buff.*` tags at least `BUFF_LACKING` living allies lack. Only
+rows that reach the whole party count (`_buff_tags(ability, true)`): no PRIMARY-only row, no row with a chance under 100%, no row
+with an application query.
 
 `AutoPolicy._party_buff(battle, unit, actions, reserve)`, called in step 5 for a unit with a basic (the rhythm), before the
 spend-or-build comparison:
@@ -115,7 +133,8 @@ spend-or-build comparison:
 4. Order: the most allies lacking one of its tags, then the higher SP cost (a rank or a bigger anthem), then grant order.
 
 A unit without a basic keeps today's buff rule (after damage, `_saving_mp`). Single-target and SELF buffs (War Cry, Iron Hide,
-Provoke) keep today's rules: the cap buff and the fallback buff (their order becomes 3.3's step 4 too).
+Provoke) keep today's rules: the cap buff and the fallback buff (their order becomes 3.3's step 4 too; a single-target buff counts as
+reaching one ally). Both skip moves that also heal, so a heal-and-buff move is never cast on a full-HP ally for its buff.
 
 | Constant | Proposed | Meaning |
 |---|---|---|
@@ -125,7 +144,9 @@ Provoke) keep today's rules: the cap buff and the fallback buff (their order bec
 ### 3.4 Report (dev)
 
 The play report gains an `autoPicks` block (only for runs that Auto played): per class, Auto's picks by `last_reason` and the
-abilities picked under `heal`, `party buff`, `cap buff` and `buff` (counts, merged across shards like `procs`). It is how the
+abilities picked under `heal`, `party buff`, `cap buff` and `buff` (counts, merged across shards like `procs`), and `healPerPick`
+(the average effective healing per heal). Ults are counted in `AutoPolicy.interrupt()`, so one pressed between turns counts too,
+under its caster's class; a pick the battle refuses is taken back out (`on_invalid`). It is how the
 build shows Mass Heal, Benediction, Grand Anthem and the other moves are now used. Ability ids appear only in this dev report, never
 in a metric label.
 
@@ -135,21 +156,23 @@ N/A: client only.
 ## 4. Failure modes
 
 - **Determinism.** Auto stays RNG-free and orders only by ints (SP, HP %, counts, slots) and grant order; no `StringName` sort
-  (`test_determinism_guard`). The same battle state gives the same pick on a window client and headless.
+  (`test_determinism_guard`). The same battle state gives the same pick on a window client and headless (tested headless only:
+  the guard, the same pick twice, no RNG draw).
 - **Replays and verification.** Unchanged: the verifier replays logged inputs and never runs Auto. Every golden replays as
   committed; `auto-seed-4` is only re-recorded with `--update-goldens` (not part of this slice; its fixture party has no second heal).
 - **A heal or buff that can't be cast.** The candidate lists use `_activatable` (`can_activate_ability`) as today; a refused pick
   hands the decision back (auto-battle 2.4), then the fallback.
 - **An ExecCalc without `restore_of`.** `RestoreReader` counts it as 0, so a heal built on an unknown ExecCalc is never picked
   by the heal rule. The validator warns `heal_unreadable` on an `Ability.Role.Heal` move whose effects restore no HP that the
-  reader can see (in `content/` only when it uses the role tags).
+  reader can see (in `content/` only when it uses the role tags). As built: party moves only, checked once per scene, before the
+  role checks return early.
 - **Overflow of numbers.** `restore_of` uses `Fixed` helpers on ×100 ints, like the damage estimate.
 - **Root acceptance scenarios:** none (no server path). Covered instead: the balance gate (not a test, 6).
 
 ## 5. Observability
 
-N/A for Prometheus: no server code. Dev: BattleLog lines (`heal <ability> -> <target> E=<n>`, `party buff <ability>`) and the
-play report's `autoPicks` block (3.4).
+N/A for Prometheus: no server code. Dev: the recorder's one BattleLog line per Auto pick, with `AutoPolicy.last_detail` appended
+(`auto P1 picks <ability> -> <target> (heal E=<n>)`, `(party buff)`), and the play report's `autoPicks` block (3.4).
 
 ## 6. Test plan
 
@@ -169,6 +192,10 @@ heal, a big single heal, a party heal, a HoT, a party buff and a costlier ranked
 
 **Content test** (`tests/game/test_demo_auto_support.gd`, real `content/`): a level-30 Cleric with three hurt allies casts Mass Heal
 or Benediction (whichever the rule picks), not Heal; a level-30 Bard at the start of a boss fight with SP casts its party anthem.
+As built: at level 30 Benediction has replaced Mass Heal, so the test asserts a party heal other than Heal, and the reader test uses
+a level-20 Cleric for Mass Heal. The fixture Purge Mend heals and cleanses (an `st_cleanse` row); its test checks the debuffs are
+gone. Also tested: a refreshed HoT counts only its new ticks, the fallback buff skips a heal-and-buff move, ults pressed between
+turns are counted and refused picks are taken back out.
 
 **Validator** (`test_content_validator`): `heal_unreadable` on a broken fixture.
 
@@ -201,7 +228,9 @@ show their big moves in `autoPicks`.
 **Open questions:** none.
 
 **Stays out:** support ults (Sanctuary, Finale: today's ult rules), debuff choice, enemy brains, the bots' out-of-battle decisions,
-Auto for consumables (A4), any content tuning of heal or buff numbers (5c).
+Auto for consumables (A4), any content tuning of heal or buff numbers (5c). The last resort against a drain mirror (section 8: on
+seed 137548 the Reflection reaches the 500-turn cap because every Ranger move feeds a drain, so it Blocks; an older skill-points gap)
+is left for its own fix.
 
 ## 8. Measurements
 
@@ -215,6 +244,11 @@ no constant was changed (D7: nothing measured called for one, see below).
 | after, first 100 | 48 | 24/36 | 17/34 | 3.13 | 0 |
 | before, 600 | 291 (48.50%) | 154/209 | 119/227 | 3.14 (5.48) | 4 (3) |
 | **after, 600 (final)** | **296 (49.33%)** | **147/209** | **121/227** | **3.19 (5.45)** | **3 (2)** |
+| after the PR fixes, first 100 | 49 | | | | |
+
+The last row (2026-11-26) is after three fixes found before the PR's approval: heal-and-buff moves out of the cap and fallback
+buff, ults counted between turns, and the fixture Purge Mend cleansing (fixtures only). 49 against 48 won; 66 of the 100 run
+hashes unchanged.
 
 - Seed by seed, after against before: +63 −58, within noise; every other class within a few wins. No stopped run, no script error;
   every battle replayed to its hash. Two code-review rounds changed the code after the first 600 (a refreshed HoT counts only its new
