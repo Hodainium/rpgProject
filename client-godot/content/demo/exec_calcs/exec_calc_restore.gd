@@ -29,14 +29,16 @@ extends GameplayExecutionCalculation
 func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Dictionary:
 	if not target_asc.has_attribute(attribute):
 		return {}
-	var amount := amount_x100
-	if amount_attribute != "":
-		var data := target_asc.get_attribute(amount_attribute)
-		amount = int(data.current_value) if data != null else 0
-	var value := scaled(amount, spec, target_asc, source_bonus, target_bonus)
-	if whole:
-		value = value / 100 * 100
-	return {attribute: float(value)}
+	var value := scaled(_amount(target_asc), spec, target_asc, source_bonus, target_bonus)
+	return {attribute: float(_whole(value))}
+
+
+## Spec auto-support: what execute would restore on `target_asc` if `source_asc` applied it now (no echo), for
+## RestoreReader. The same formula as execute; never changes anything.
+func restore_of(source_asc: AbilitySystemComponent, target_asc: AbilitySystemComponent) -> Dictionary:
+	if target_asc == null or not target_asc.has_attribute(attribute):
+		return {}
+	return {attribute: _whole(bonused(_amount(target_asc), source_asc, target_asc, source_bonus, target_bonus))}
 
 
 ## amount x source.<source_bonus> x target.<target_bonus>; each multiplier never below 0%.
@@ -45,11 +47,29 @@ static func scaled(value: int, spec: GameplayEffectSpec, target_asc: AbilitySyst
 		target_name: String) -> int:
 	if spec.set_by_caller_magnitudes.has(ExecutionRow.ECHO_SCALE_TAG):
 		value = Fixed.pct(value, int(spec.get_set_by_caller_magnitude(ExecutionRow.ECHO_SCALE_TAG)))
+	return bonused(value, BattleContext.source_asc(spec), target_asc, source_name, target_name)
+
+
+## The two bonus multipliers of scaled, without a spec (spec auto-support): value x source.<source_name> x
+## target.<target_name>.
+static func bonused(value: int, source_asc: AbilitySystemComponent, target_asc: AbilitySystemComponent,
+		source_name: String, target_name: String) -> int:
 	if source_name != "":
-		value = Fixed.pct(value, _multiplier(BattleContext.source_asc(spec), source_name))
+		value = Fixed.pct(value, _multiplier(source_asc, source_name))
 	if target_name != "":
 		value = Fixed.pct(value, _multiplier(target_asc, target_name))
 	return value
+
+
+func _amount(target_asc: AbilitySystemComponent) -> int:
+	if amount_attribute == "":
+		return amount_x100
+	var data := target_asc.get_attribute(amount_attribute)
+	return int(data.current_value) if data != null else 0
+
+
+func _whole(value: int) -> int:
+	return value / 100 * 100 if whole else value
 
 
 static func _multiplier(asc: AbilitySystemComponent, attribute_name: String) -> int:

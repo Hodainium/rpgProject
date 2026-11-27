@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_tyxs5"]
+[ext_resource type="Script" path="res://tests/fixtures/exec_calcs/fixture_restore.gd" id="2_ktc4k"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_bykar"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_yyqbx"]
+
+[sub_resource type="Resource" id="Resource_yx8yi"]
+script = ExtResource("2_ktc4k")
+amount_x100 = 30000
+source_bonus = "sp_gain"
+
+[resource]
+script = ExtResource("4_yyqbx")
+executions = Array[ExtResource("1_tyxs5")]([SubResource("Resource_yx8yi")])

@@ -299,6 +299,12 @@ func _ready() -> void:
 		_role_scene(strike, "role_mismatch", [AutoPolicy.ROLE_DAMAGE, AutoPolicy.ROLE_HEAL])])
 	_save("characters", "roles", roles)
 
+	# Spec auto-support 4: a heal whose effect restores no HP RestoreReader can see (heal_unreadable: Haste tagged Heal).
+	var unreadable := CharacterDefinition.new()
+	_unit(unreadable, "broken.character.heal_unreadable", [_role_scene(load(FIXTURES + "abilities/haste.tscn"),
+		"heal_unreadable", [AutoPolicy.ROLE_HEAL])])
+	_save("characters", "heal_unreadable", unreadable)
+
 	# Spec ff7-ui F4: two abilities tagged Ability.Type.Basic make Attack ambiguous (basic_ability_multiple).
 	var two_basics := CharacterDefinition.new()
 	var basic := [AutoPolicy.ROLE_DAMAGE, &"Ability.Type.Basic"]

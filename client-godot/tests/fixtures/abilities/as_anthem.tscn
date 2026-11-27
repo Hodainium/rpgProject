@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_e58js"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_rvksy"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/as_anthem.tres" id="3_rt21f"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/as_anthem.tres" id="4_t70lg"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/sp_cost_25.tres" id="5_4iswp"]
+
+[sub_resource type="Resource" id="Resource_xtul5"]
+script = ExtResource("2_rvksy")
+id = &"buff"
+effect = ExtResource("3_rt21f")
+
+[node name="AsAnthem" type="Node" unique_id=30803954]
+script = ExtResource("1_e58js")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Buff"])
+executions = Array[ExtResource("2_rvksy")]([SubResource("Resource_xtul5")])
+animation = ExtResource("4_t70lg")
+ability_tag = &"Fixture.Ability.AsAnthem"
+cost_effect = ExtResource("5_4iswp")

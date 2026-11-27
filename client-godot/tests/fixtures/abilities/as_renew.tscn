@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_1um6p"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ho2b5"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/as_renew.tres" id="3_chgd7"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/as_renew.tres" id="4_7ojcp"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/sp_cost_25.tres" id="5_stlqu"]
+
+[sub_resource type="Resource" id="Resource_1r361"]
+script = ExtResource("2_ho2b5")
+id = &"heal"
+effect = ExtResource("3_chgd7")
+
+[node name="AsRenew" type="Node" unique_id=179445929]
+script = ExtResource("1_1um6p")
+targeting = 3
+asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Buff"])
+executions = Array[ExtResource("2_ho2b5")]([SubResource("Resource_1r361")])
+animation = ExtResource("4_7ojcp")
+ability_tag = &"Fixture.Ability.AsRenew"
+cost_effect = ExtResource("5_stlqu")

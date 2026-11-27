@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_gvhqf"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_dpbxe"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/as_heal_300.tres" id="3_3srwk"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/as_mend.tres" id="4_euqfq"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/sp_cost_25.tres" id="5_lnruo"]
+
+[sub_resource type="Resource" id="Resource_y4ead"]
+script = ExtResource("2_dpbxe")
+id = &"heal"
+effect = ExtResource("3_3srwk")
+
+[node name="AsMend" type="Node" unique_id=107130972]
+script = ExtResource("1_gvhqf")
+targeting = 3
+asset_tags = Array[StringName]([&"Ability.Role.Heal"])
+executions = Array[ExtResource("2_dpbxe")]([SubResource("Resource_y4ead")])
+animation = ExtResource("4_euqfq")
+ability_tag = &"Fixture.Ability.AsMend"
+cost_effect = ExtResource("5_lnruo")

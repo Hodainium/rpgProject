@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_v2gdi"]
+[ext_resource type="Script" path="res://tests/fixtures/exec_calcs/fixture_restore.gd" id="2_mk7te"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_cp6hf"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_7i4bl"]
+
+[sub_resource type="Resource" id="Resource_otqkm"]
+script = ExtResource("2_mk7te")
+percent_x100 = 600
+
+[resource]
+script = ExtResource("4_7i4bl")
+policy = 3
+period = 1.0
+duration_turns = 2
+executions = Array[ExtResource("1_v2gdi")]([SubResource("Resource_otqkm")])
+granted_tags = Array[StringName]([&"Status.Buff.Regen"])
