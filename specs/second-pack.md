@@ -57,11 +57,13 @@ tampered goldens).
 | B1 | **HP costs** | An ability's cost effect may lower `hp` (a cost modifier or cost ExecCalc on `hp`, read by `CostReader.cost_of` as `{hp: n}` beside SP). `CombatASC.can_activate_ability` refuses an HP-cost ability when the cost is **at or above the caster's current HP** (a move never kills its user). `AbilityHint` shows "HP" and the cost; the battle HUD's command window previews it on the HP bar like the SP bar's preview. Paying an HP cost sends `Event.Cost.Hp` to the caster and `Event.Ally.Cost.Hp` to its living allies, payload `{source, amount}` (the HP paid), so the Bloodbinder's Blood Pool and Bloodstone see it (an HP cost sends no `Damage.Taken`, K1). |
 | B2 | **Heal events** | Whenever a unit's HP rises from an effect (instant heals, HoT ticks, lifesteal, revives' HP), the battle sends `Event.Heal.Given` to the source and `Event.Heal.Received` to the target, payload `{source, target, amount}` where `amount` is the HP actually restored (overheal excluded), and, through item-power's K1, `Event.Ally.Heal.Received` to the target's living allies. HoT stacks send one event per stack tick. New tags; Thorned Rose listens (2.5). |
 | B3 | **Meters** | A triggered ability may name a meter: `BattleAbility.meter_attribute` (an attribute name) and `meter_threshold` (×100; or `meter_threshold_of`, an attribute of the owner and a percent, e.g. 50% of its max HP). After each trigger drain the battle checks every living unit's meter abilities in unit order: while the attribute is at or above the threshold, it subtracts the threshold and queues the ability once (at most 3 fires per check, so a huge heal cannot fire forever). Meters fill through ordinary effects (the Bloodbinder's Blood Pool: passives on `Event.Damage.Taken`, `Event.Ally.Damage.Taken`, `Event.Cost.Hp` and `Event.Ally.Cost.Hp` adding `Data.Event.Amount` to the meter through K6). Heals made by a meter-fired ability carry `Hit.Meter` and **never fill meters**, so a meter heal cannot feed itself. |
-| B5 | **HP threshold states** | A unit whose definition sets `UnitDefinition.health_states` (off by default, so no existing unit, hash or golden changes) carries `State.Health.Low` while its HP is under 50% of max and `State.Health.Critical` while under 25%, set after every HP change (settled with the death check); crossing into one sends `Event.Health.Low` / `Event.Health.Critical` to it once per crossing. Passives gate on the tags with their activation query (the Werewolf's Wolf Form, the Vampire's Undying Hunger); the tags are hashed like any tag. |
+| B5 | **HP threshold states** | A unit whose definition sets `UnitDefinition.health_states` (off by default, so no existing unit, hash or golden changes) carries `State.Health.Low` while its HP is under 50% of max and `State.Health.Critical` while under 25%, set after every HP change (settled with the death check); crossing into one sends `Event.Health.Low` / `Event.Health.Critical` to it once per crossing, and `Event.Ally.Health.Low` to its living allies (K1; Pool Chalice). A unit is also tracked while it carries `State.Health.Tracked`, which every item that reads these states grants at battle start (D26: "under 50% HP" items work on any holder); the low line is 50% of max HP, or 60% for a holder of Moonstone Pendant (`health_low_at`). Passives gate on the tags with their activation query (the Werewolf's Wolf Form, the Vampire's Undying Hunger); the tags are hashed like any tag. |
+| B6 | **Bleed on hit** | One new attribute in the generated `Unit` AttributeSet, `bleed_chance` (×100, 0 by default; a `godot_gas/attributes_draft.cfg` edit, then `generate_attributes.tscn`). After each damaging hit (never a DoT tick, never an HP cost) a unit whose `bleed_chance` is above 0 rolls once on the battle RNG (`randi_range(0, 9999) < bleed_chance`) and on success applies one stack of the content's Bleed effect (a content setting names it) to the target. Items add to it with ordinary stat modifiers, so every Bleed item's chance simply adds up (three +5% items: one 15% roll). Off unless content uses it; whether a 0 attribute changes old hashes is checked with B4's. |
+| B7 | **Lifesteal stat** | One new attribute in the generated `Unit` AttributeSet, `lifesteal` (×100, 0 by default). After each damaging hit (never a DoT tick, never an HP cost) a unit with `lifesteal` above 0 heals `lifesteal`% of the damage dealt, one heal through K6 that sends B2's heal events (so it fills meters and counts for Thorned Rose). Items, statuses and passives add to it with ordinary stat modifiers, so all lifesteal adds up (D27). Vlad's own per-move healing (Bite 30%, Blood Lance 40%, ...) stays on its moves, on top. Off unless content uses it. |
 | B4 | **Meter attribute** | One new attribute in the generated `Unit` AttributeSet: `meter` (snake_case, starts at 0 each battle, never negative, never carried between battles). It is a `godot_gas/attributes_draft.cfg` edit (prompts), then `generate_attributes.tscn`. Shown on the battle HUD's party window as a thin bar under SP for units with a meter ability. |
 
-Lifesteal needs no new hook: a passive on `Event.Damage.Dealt` heals the dealer by `Data.Event.Amount` × a percent
-(item-power K6).
+Lifesteal is the B7 stat (D27); Vlad's per-move heals are passives on `Event.Damage.Dealt` healing `Data.Event.Amount` × a
+percent (item-power K6).
 
 Focus and Silvered (2.4) need no new hook either: `Battle._send_damage_events` sends `Event.Damage.Dealt` before
 `Event.Damage.Dealt.Critical` for the same hit, and the triggers run in that order, so "add a stack on every hit" then
@@ -106,7 +108,7 @@ gives no SP (`sp_basic` 0).
 |---|---|---|
 | Blood Bolt | basic | 80% ATK Physical; heals itself 20% of the damage. |
 | Transfusion | skill | Costs 10% max HP. One ally heals 30% of the Bloodbinder's max HP. |
-| Blood Rite | skill | Costs 15% max HP. The party gets **Lifesteal** for 2 turns: every hit heals its dealer 20% of the damage. |
+| Blood Rite | skill | Costs 15% max HP. The party gets **+20% lifesteal** (B7) for 2 turns. |
 | Crimson Communion | ult | Every ally heals 25% of their max HP and is cleansed of one debuff; the Blood Pool fills by half its threshold. |
 | Martyr's Grace | passive | Its heals +1% for every 2% of its max HP missing (up to +40%). |
 | Blood Pool | passive (meter, B3) | Fills with every HP the party loses: hits taken (`Event.Damage.Taken`, `Event.Ally.Damage.Taken`) and HP costs paid (`Event.Cost.Hp`, `Event.Ally.Cost.Hp`, B1). At 60% of the Bloodbinder's max HP, **Sanguine Surge**: every ally heals 10% of their max HP (a meter heal, `Hit.Meter`). |
@@ -219,7 +221,7 @@ has two HP and three SP characters). Physical, heavy toughness damage. Sets `hea
 | Pounce | skill | 180% ATK Physical on one enemy; if it breaks the target, its next action comes 15% sooner. |
 | Howl | skill | Wolf Form for 2 turns; the party +15% ATK for 2 turns. |
 | Moonfall Frenzy | ult | 5 claws of 50% ATK Physical at random enemies (K4); then Wolf Form for 2 turns. |
-| Wolf Form | passive | While under 50% HP (`State.Health.Low`, B5) or in the Wolf Form status (Howl, the ult): after each of its actions (`Event.Ability.Used.Basic` / `Skill` / `Ultimate`, never on a hit, so a claw cannot chain), **Claw**: a 40% ATK Physical follow-up on the action's primary target; its hits heal it 10% of the damage. |
+| Wolf Form | passive | While under 50% HP (`State.Health.Low`, B5) or in the Wolf Form status (Howl, the ult): after each of its actions (`Event.Ability.Used.Basic` / `Skill` / `Ultimate`, never on a hit, so a claw cannot chain), **Claw**: a 40% ATK Physical follow-up on the action's primary target; +10% lifesteal (B7) while it lasts. |
 
 Level rows:
 
@@ -274,14 +276,14 @@ Treasure). They appear in a run only when the player owns them (the card pool, a
 | Blood Vial | Common | On a kill: heal 15% max HP. | Treasure, Shop, Chest |
 | Fencer's Glove | Common | Follow-ups deal +15% damage. | Treasure, Shop |
 | Blood Bandage | Common | +15% healing received while under 50% HP. | Treasure, Shop, Chest |
-| Leech Tooth | Common | Heal 8% of the damage you deal. | Treasure, Chest |
-| Blood Chalice | Rare | Heal 15% of the damage you deal; +10% ATK. | Treasure, Shop |
+| Leech Tooth | Common | +8% lifesteal (B7). | Treasure, Chest |
+| Blood Chalice | Rare | +15% lifesteal; +10% ATK. | Treasure, Shop |
 | Thorned Rose | Rare | When you are healed, a 40% ATK follow-up on a random enemy. | Treasure |
 | Sanguine Pact | Epic | Your HP costs are 30% lower. | Treasure |
 | Bloodstone | Epic | Each time you pay HP: +10% ATK for 2 turns (stacks 3 times). | Treasure |
-| Heartseeker Fang (weapon) | Epic | Heal 20% of the damage you deal; +15% crit rate. | Boss |
+| Heartseeker Fang (weapon) | Epic | +20% lifesteal; +15% crit rate. | Boss |
 | Crimson Thirst | Legendary | +2% damage for every 5% of max HP missing (no cap). | Boss |
-| Heart of the Red Moon | Legendary | The party: heal 10% of all damage dealt; your HP costs are 20% lower. | Boss |
+| Heart of the Red Moon | Legendary | The party: +10% lifesteal; your HP costs are 20% lower. | Boss |
 | Twin Blades | Legendary | Your follow-ups hit twice. | Treasure |
 | Silver Tip | Common | +8% crit rate. | Treasure, Shop, Chest |
 | Whetstone | Common | +15% crit damage. | Treasure, Shop, Chest |
@@ -291,8 +293,38 @@ Treasure). They appear in a run only when the player owns them (the card pool, a
 | Hunter's Crossbow (weapon) | Epic | +30 ATK, +10% crit rate; your crits Silver the target. | Treasure |
 | Hunter's Longcoat (armor, body) | Epic | +60 max HP, +8% crit rate; a crit cleanses one debuff from you. | Treasure |
 | Rosary of Vigil | Epic | Your crits have a 35% chance to Silver the target; the party: +5% crit rate for each Silvered enemy (up to +15%). | Treasure |
-| Moonstone Pendant | Rare | Wolf Form starts 10% higher (under 60% HP; 70% with Blood Moon Hunger). | Treasure, Shop |
-| Full Moon Charm | Epic | +15% crit rate while in Wolf Form. | Treasure |
+| Moonstone Pendant | Rare | Your low-HP effects start at 60% HP instead of 50% (every "under 50% HP" item, Wolf Form, Undying Hunger; B5 `health_low_at`). | Treasure, Shop |
+| Full Moon Charm | Epic | +15% crit rate while under 50% HP (B5). | Treasure |
+| Scalpel Kit | Common | +15% Bleed chance (B6). | Treasure, Shop, Chest |
+| Blood Jar | Rare | +5% Bleed chance; when a Bleed you applied ticks, heal 10% of the tick. | Treasure, Shop |
+| Barbed Lancet (weapon) | Rare | +25 ATK, +5% Bleed chance; your Bleeds last 1 turn longer. | Treasure |
+| Tourniquet | Rare | +5% Bleed chance; when a Bleeding enemy hits you, heal 5% of your max HP. | Treasure, Chest |
+| Clotted Phial | Rare | +5% Bleed chance; your Bleeds can stack 2 more times. | Treasure, Shop |
+| Surgeon's Apron (armor, body) | Epic | +60 max HP, +5% Bleed chance; each Bleed tick you cause heals the lowest-HP ally 10% of the tick. | Treasure |
+| Crimson Thread | Epic | +5% Bleed chance; Bleed damage you deal +30%. | Treasure |
+| Bloodletting Bowl | Epic | +5% Bleed chance; when a Bleeding enemy dies, its Bleed stacks spread to a random other enemy (K4). | Treasure |
+| Burst Vein | Legendary | +5% Bleed chance; your crits on a Bleeding enemy detonate its Bleed (every remaining tick at once, like the Pyromancer's Detonate); the party heals 30% of that damage. | Boss |
+| Hemophilia | Legendary | +5% Bleed chance; enemies you Bleed take +15% damage from every source. | Boss |
+| Crimson Poultice | Common | Give +10% healing. | Treasure, Shop, Chest |
+| Pool Chalice | Rare | The first time each ally drops under 50% HP in a battle (`Event.Ally.Health.Low`, B5), heal them 10% of your max HP. | Treasure, Shop |
+| Vein Tap | Rare | Each time you pay HP: +15% healing you give for 2 turns (stacks twice). | Treasure, Shop |
+| Martyr's Vial | Rare | Your heals +1% for every 3% of your own max HP missing (up to +30%; stacks with Martyr's Grace). | Treasure, Chest |
+| Transfusion Kit | Epic | Your single-target heals also heal the lowest-HP other ally 40% as much. | Treasure |
+| Sanguine Ward (armor, head) | Epic | +40 max HP; at battle start, every ally gets a Ward of 8% of their max HP. | Treasure |
+| Crimson Accord | Legendary | Your heals are 20% stronger on allies under 50% HP; once per turn, a heal that brings an ally back above 50% gives the party +15% ATK for 2 turns. | Boss |
+| Silver Bolt Case | Rare | +5% crit rate; your first hit in each battle is a crit. | Treasure, Shop |
+| Blood Moon Amulet | Epic | While under 50% HP (B5): +10% damage dealt and +10% healing received. | Treasure |
+| Crimson Eclipse | Epic | At battle start, pay 10% of your max HP (an HP cost, B1: it fills a Blood Pool and Bloodstone) and gain +20% ATK for 3 turns. | Treasure |
+| Moonfang Charm | Common | +15% toughness damage. | Treasure, Shop, Chest |
+| Rending Claws (weapon) | Rare | +25 ATK; your follow-ups deal +20% toughness damage. | Treasure |
+| Pack Sigil | Rare | When you break an enemy, your next follow-up hits twice. | Treasure, Shop |
+| Silverbane Pelt (armor, body) | Rare | +60 max HP; take 10% less damage while under 50% HP (B5). | Treasure, Chest |
+| Lunar Fury | Epic | Your follow-ups deal +30% damage while under 50% HP (B5). | Treasure |
+| Alpha's Mark | Legendary | Your follow-ups +25% damage; each follow-up has a 30% chance to also strike a second random enemy (K4). | Boss |
+| Crimson Signet | Rare | +6% lifesteal; your lifesteal is doubled on a crit. | Treasure, Shop |
+| Nightcloak (armor, body) | Epic | +60 max HP, +5% lifesteal; +15% more lifesteal while under 50% HP (B5). | Treasure |
+| Velvet Fangs | Epic | +8% lifesteal; lifesteal past full HP becomes a Ward, up to 15% of your max HP. | Treasure |
+| Night's Embrace | Legendary | +10% lifesteal; once per battle, when you would die (`Event.Unit.Dying`, K5), survive at 1 HP, heal 30% of your max HP over 2 turns and double your lifesteal for those 2 turns. | Boss |
 | Stake of Dawn | Legendary | Your crits have a 50% chance to Silver the target (K3 `trigger_chance`); +60% crit damage against Silvered targets; a crit that kills gives a One More (at most once per turn). | Boss |
 
 The counter items of the Duelist draft (Riposte Ring, Duelist's Cloak) are dropped with it; Fencer's Glove and Twin
@@ -302,8 +334,23 @@ the Hunter: Hunter's Crossbow (every crit), and each payoff item carries its own
 `trigger_chance`), higher with rarity: Holy Water Vial 25%, Rosary of Vigil 35%, Stake of Dawn 50% (user, 2026-11-26:
 a Silvered payoff must work without the character). Garlic Wreath applies its own weaker status, which does not count as Silvered. The Lifebinder's three items move with it
 (D15) and three blood items replace them at the same rarities and pools (Blood Bandage, Bloodstone, Heart of the Red Moon;
-the user's OK 2026-11-26); Moonstone Pendant and Full Moon Charm are the Werewolf's (D20). Rarities of the 23: Common 6,
-Rare 6, Epic 7, Legendary 4. Stake of Dawn's One More is guarded "once per turn" (a flag status cleared at turn end) on
+the user's OK 2026-11-26); Moonstone Pendant and Full Moon Charm were drafted for the Werewolf (D20) and made generic (D26). Rarities of the 23: Common 6,
+Rare 6, Epic 7, Legendary 4.
+
+**More items (user, 2026-11-26, D24):** Blood Moon gets **30 more items**, designed and approved 10 at a time, to even out who
+they serve (before: Vlad 6, Hunter 9, Bloodbinder 3, Werewolf 4, Bloodletter 0) and lean Rare/Epic like the Descent Pack:
+batch 1 the Bloodletter's 10 (approved 2026-11-26, in the table above), batch 2 the Bloodbinder 7, the Hunter 1 and 2
+pack-wide (approved 2026-11-26), batch 3 the Werewolf 6 and Vlad 4 (approved 2026-11-26); the 30 are Common 3, Rare 12, Epic 10, Legendary 5. After all three batches:
+53 items (Common 9, Rare 18, Epic 17, Legendary 9), each character about 10.
+
+**No single-character items (user, 2026-11-26, D26):** every item must pay off in any party; it may favour a character.
+Wolf Form and Blood Pool items were rewritten around low HP (B5, which any holder's item switches on) and healing; every
+lifesteal payoff also gives lifesteal (B7, D27). Lifesteal givers by rarity: Common Leech Tooth; Rare Blood Chalice, Crimson
+Signet; Epic Heartseeker Fang, Nightcloak, Velvet Fangs; Legendary Heart of the Red Moon (party), Night's Embrace.
+
+**Bleed rule (user, 2026-11-26, D25), for every Bleed item in any pack:** an item whose effect needs a Bleeding enemy also
+adds a small Bleed chance (+5%, B6), so any mix of Bleed items builds toward a working Bleed; pure sources add more (Scalpel
+Kit +15%). Every Bleed item carries `Item.Fit.Bleed` (beside `Item.Fit.Dot`) so the bots build around it. Stake of Dawn's One More is guarded "once per turn" (a flag status cleared at turn end) on
 top of the chain cap, so a crit kill chain cannot make endless turns; confirm in the build that One More from a trigger
 works like Persona's (logged `"extra": true`), else it is an action advance of 100% instead (the user's call then).
 
@@ -311,8 +358,8 @@ works like Persona's (logged `"extra": true`), else it is an action advance of 1
 
 `infra/economy/card_economy.json` gains `bloodmoon-pack` ("Blood Moon Pack"), `setIds` ["bloodmoon"], the Descent
 Pack's price, card count (5), odds, pity and first-pack guarantees as placeholders (5c tunes both packs). The set holds
-every rarity the pack can give (Common 6, Rare 6, Epic 7, Legendary 4, Mythic 5: the five characters are Mythic like
-every character card), so the openability rule passes. 28 cards (D20); dust values are the shared rates.
+every rarity the pack can give (after the three item batches: Common 9, Rare 18, Epic 17, Legendary 9, Mythic 5: the five
+characters are Mythic like every character card), so the openability rule passes. 58 cards (D24); dust values are the shared rates.
 
 Presentation (the user's folders; new files only, on the user's go-ahead):
 - `CardPackLook` for the pack in `card_style.tres`'s pack list (a crimson foil, a game-icons glyph) — an edit to an
@@ -354,7 +401,9 @@ Presentation (the user's folders; new files only, on the user's go-ahead):
 ### 2.7 Bots
 
 - Role tags as in 2.2-2.4c; fit and grant tags on the 23 items (`bot-play` 2.3; HP-cost items as `Item.Fit.Survival` +
-  a new `Item.Fit.HpCost`, Wolf Form items as `Item.Fit.FollowUp`, crit items as `Item.Fit.Damage` + a
+  a new `Item.Fit.HpCost`, Wolf Form items as `Item.Fit.FollowUp`, lifesteal items as `Item.Fit.Lifesteal` (new, D27, gathered on one holder like Bleed), Bleed items as `Item.Fit.Bleed` (new, D25) + `Item.Fit.Dot`
+  (the chance stacks per holder, so `LootScorer` gathers Bleed items on one carrier: the Bloodletter, the Vampire once it has
+  Hemorrhage, or whoever holds the most Bleed already; bot-play's CARRY mode for that tag), crit items as `Item.Fit.Damage` + a
   new `Item.Fit.Crit`, which `LootScorer` weighs up for a unit whose base crit rate is above the default 5% (the Hunter,
   the Ranger) or that holds Focus; Silvered sources and payoffs as `Item.Fit.Damage`). Hunter's Focus grants
   `Item.Grants.Damage`.
@@ -404,6 +453,9 @@ Godot (fixtures for the hooks; content tests for the characters):
   amount; overheal is excluded.
 - B3: a meter fills, fires at the threshold, subtracts it, fires at most 3 times per check; meter heals never fill it.
 - B4: the attribute starts at 0 each battle and is never carried.
+- B6: a unit's Bleed chance from several items is one roll per hit at their sum; DoT ticks never roll.
+- B7: lifesteal from several sources adds up; one heal per hit with B2 events; DoT ticks and HP costs never heal.
+- B5 for items: a holder of a low-HP item is tracked though its class does not set `health_states`.
 - B1 events: paying an HP cost sends `Cost.Hp` / `Ally.Cost.Hp` with the amount paid.
 - B5: a unit with `health_states` gains and loses `State.Health.Low` / `Critical` as its HP crosses the lines and sends
   each event once per crossing; a unit without it never carries them; every existing golden replays unchanged.
@@ -466,9 +518,18 @@ worker.
 - D21. The Werewolf shows an **alternate form** while in Wolf Form (presentation hook P1, 2.6); visual demos for the
   Bloodbinder, the Werewolf and the Bloodletter run before the build, like the first three.
 - D22. Leveling unlocks a passive that keeps the Werewolf in Wolf Form all the time (Eternal Moon, level 40; Alpha moves
-  to 35 in place of Pack Instinct II). From then on Moonstone Pendant does nothing for it (Full Moon Charm still does).
+  to 35 in place of Pack Instinct II). (Moonstone Pendant and Full Moon Charm were made generic later, D26.)
 - D23. Names: the Hemomancer is the **Bloodbinder** (`demo.character.bloodbinder`); the Vampire is shown as **Vlad** (its id
   stays `demo.character.vampire`). All five looks and the Werewolf's transform are approved (2.6).
+- D24. 30 more Blood Moon items in three batches of 10 (2.5); the pack ends at 58 cards. Batch 1 (the Bloodletter's 10,
+  Exsanguinator renamed Burst Vein), batch 2 (the Bloodbinder 7, the Hunter 1, 2 pack-wide) and batch 3 (the Werewolf 6, Vlad 4) approved 2026-11-26: 53 items, 58 cards.
+- D25. The Bleed rule: every Bleed payoff also adds +5% Bleed chance (hook B6, one stacking attribute and one roll per hit)
+  and every Bleed item carries `Item.Fit.Bleed`.
+- D26. No item works for only one character: Silverbane Pelt, Lunar Fury, Alpha's Mark, Moonstone Pendant, Full Moon Charm,
+  Pool Chalice and Crimson Accord read low HP (B5, which an item switches on for its holder) or follow-ups and heals instead
+  of Wolf Form or the Blood Pool. Batch 3 approved with them. The Lifebinder's Verdant Heart gets the same fix in its slice.
+- D27. Lifesteal is one stacking stat (B7); every lifesteal item gives some (Rare, Epic and Legendary givers included), and
+  lifesteal items carry `Item.Fit.Lifesteal`.
 
 **Open questions:** none for the design. Numbers are first proposals, tuned in the build's
 playtest and 5c.

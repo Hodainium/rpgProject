@@ -100,6 +100,8 @@ Balance: the gate on 100 seeds with the Lifebinder in the pool (spec `gate-size-
 look); it is a small slice of its own after 5j.
 
 **Open questions:**
+- Q0. Verdant Heart ("your meter fills 30% faster") works only for the Lifebinder, against `second-pack` D26
+  (no single-character items): it gets a generic effect in this slice, proposed with the build.
 - Q1. Rename the three shape files to `lifebinder_*` (proposed) or keep the `bm_` names?
 
 **Stays out:** retuning the Descent Pack's odds and prices (5c), new Descent items beyond the Lifebinder's three, events
