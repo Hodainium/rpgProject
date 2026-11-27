@@ -270,10 +270,17 @@ func test_a_cleansing_heal_wins_at_equal_healing_while_an_ally_is_afflicted() ->
 	var battle := new_battle(_support_snapshot())
 	_hurt(battle, 500, 0)
 	eq(_heal_pick(battle)[0], &"Fixture.Ability.AsGreatMend", "nobody afflicted: Purge Mend (450 for 60) misses the 125% step")
-	battle.unit_by_id(&"P2").asc.add_tag(Battle.CONTROLLED_TAG)
+	var chanter := battle.unit_by_id(&"P2")
+	var psalmist := battle.unit_by_id(&"P1")
+	for name in ["st_vulnerable", "st_entangle"]:  # CLEANSE_AT (2) debuffs: afflicted
+		chanter.asc.apply_gameplay_effect(load("res://tests/fixtures/effects/%s.tres" % name), psalmist.asc, 1)
+	check(AutoPolicy._afflicted(chanter), "two debuffs: afflicted")
 	eq(_heal_pick(battle), [&"Fixture.Ability.AsPurgeMend", &"P2"], "afflicted: the cleansing heal at equal healing")
 	_hurt(battle, 400, 400)
 	eq(_heal_pick(battle)[0], &"Fixture.Ability.AsMassMend", "afflicted but the cleansing heal heals less (400 vs 800)")
+	# The fixture's cleansing heal really cleanses (review: it used to only heal).
+	check(await battle._activate(psalmist, psalmist.ability_by_tag(&"Fixture.Ability.AsPurgeMend"), chanter), "Purge Mend casts")
+	check(not AutoPolicy._afflicted(chanter), "Purge Mend removed the debuffs: %s" % [chanter.statuses()])
 
 
 func test_spread_hurt_heals_before_anyone_is_critical() -> void:
@@ -333,6 +340,32 @@ func test_support_picks_are_deterministic_and_draw_no_rng() -> void:
 	var second := _policy().choose(battle, battle.unit_by_id(&"P1"))
 	eq(first, second, "the same state gives the same pick")
 	eq(battle.rng.state, before, "no draw from the battle's RNG")
+
+
+## Review fix: the cap and fallback buff never cast a heal that also buffs (Renew: Heal + Buff) on a full-HP party.
+func test_the_fallback_buff_skips_a_heal_that_buffs() -> void:
+	var battle := new_battle(_support_snapshot())
+	var psalmist := battle.unit_by_id(&"P1")
+	var renew: Array[BattleAbility] = [psalmist.ability_by_tag(&"Fixture.Ability.AsRenew")]
+	eq(_policy()._buff(battle, psalmist, renew), {}, "nobody lacks a buff worth a heal's SP: no Renew")
+
+
+## Review fix: an ult Auto casts between turns (the recorder asks interrupt()) is counted under its caster's class, and a
+## pick the battle refuses is taken back out of the tally.
+func test_auto_picks_count_ults_between_turns_and_drop_refused_picks() -> void:
+	const Ults := preload("res://tests/combat/test_ult_interrupts.gd")
+	var battle := new_battle(Ults.ult_snapshot())
+	battle.unit_by_id(&"P1").asc.initialize_attribute_overrides({BattleUnit.ENERGY: 10000.0})
+	var policy := _policy()
+	var tally := {}
+	policy.tally = tally
+	var recorder := ActionRecorder.new()
+	recorder.autopilot = policy
+	var ult := recorder.interrupt(battle)
+	check(not ult.is_empty(), "a charged ultist's ult is worth casting: %s" % ult)
+	eq(tally.get("fixture.character.ultist", {}).get("reasons", {}).get("ult"), 1, "the between-turns ult is counted")
+	policy.on_invalid(battle, battle.unit_by_id(&"P1"), "test", "refused")
+	eq(tally["fixture.character.ultist"]["reasons"], {}, "a refused pick is taken back out")
 
 
 func test_auto_picks_are_tallied_per_class() -> void:

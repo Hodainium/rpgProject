@@ -888,8 +888,9 @@ func _build_auto_support() -> void:
 		null, {"cost": _effects["sp_cost_50"]})
 	_ability("as_renew", "Fixture.Ability.AsRenew", B.SINGLE_ALLY, heal_rows.call("as_renew"), [[0.3, "heal"]], [], null,
 		{"cost": _effects["sp_cost_25"]})
-	_ability("as_purge_mend", "Fixture.Ability.AsPurgeMend", B.SINGLE_ALLY, heal_rows.call("as_heal_450"), [[0.3, "heal"]],
-		[], null, {"cost": _effects["sp_cost_60"]})
+	_ability("as_purge_mend", "Fixture.Ability.AsPurgeMend", B.SINGLE_ALLY, heal_rows.call("as_heal_450")
+		+ [_row("cleanse", "st_cleanse", D.USE_EFFECT, 0, T.ALL)], [[0.3, "heal"], [0.4, "cleanse"]], [], null,
+		{"cost": _effects["sp_cost_60"]})
 	_ability("as_anthem", "Fixture.Ability.AsAnthem", B.ALL_ALLIES, [_row("buff", "as_anthem", D.USE_EFFECT, 0, T.ALL)],
 		[[0.3, "buff"]], [], null, {"cost": _effects["sp_cost_25"]})
 	_ability("as_grand_anthem", "Fixture.Ability.AsGrandAnthem", B.ALL_ALLIES,

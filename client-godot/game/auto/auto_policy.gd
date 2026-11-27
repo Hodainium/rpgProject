@@ -78,6 +78,8 @@ var last_healing: int = 0
 ## {reason: n}, "abilities": {reason: {ability tag: n}}, "healingX100": Σ effective healing of the heal picks}} (abilities
 ## only for the support reasons). Never read by a rule.
 var tally: Variant = null
+## The last pick counted in the tally: [class row, reason, ability key, healing ×100] ([] = none), for _uncount.
+var _counted: Array = []
 var _fallback: bool = false
 
 ## The reasons whose picked abilities the tally lists (spec auto-support 3.4).
@@ -93,18 +95,49 @@ func choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 	last_detail = ""
 	last_healing = 0
 	var pick := _choose(battle, unit)
-	# An ult interrupt is cast by its own unit, not the one deciding: counted under that unit's class.
-	var picker: BattleUnit = battle.unit_by_id(pick["unit"]) if pick.has("unit") else unit
-	if tally is Dictionary and not pick.is_empty() and picker != null and picker.definition != null:
-		var by_class: Dictionary = tally.get_or_add(String(picker.definition.id), {"reasons": {}, "abilities": {}})
-		by_class["reasons"][last_reason] = int(by_class["reasons"].get(last_reason, 0)) + 1
-		if last_reason in TALLIED_ABILITIES:
-			var abilities: Dictionary = by_class["abilities"].get_or_add(last_reason, {})
-			var key := String(pick.get("ability", ""))
-			abilities[key] = int(abilities.get(key, 0)) + 1
-		if last_reason == "heal":
-			by_class["healingX100"] = int(by_class.get("healingX100", 0)) + last_healing
+	if last_reason != "ult":  # an ult was counted by interrupt()
+		_count(battle, unit, pick, last_reason)
 	return pick
+
+
+## Spec auto-support 3.4: counts one pick in the tally (when set) under the class of the unit that casts it (an ult
+## interrupt's own unit), and remembers it so a refused pick (on_invalid) is taken back out.
+func _count(battle: Battle, unit: BattleUnit, pick: Dictionary, reason: String) -> void:
+	_counted = []
+	var picker: BattleUnit = battle.unit_by_id(pick["unit"]) if pick.has("unit") else unit
+	if not tally is Dictionary or pick.is_empty() or picker == null or picker.definition == null:
+		return
+	var by_class: Dictionary = tally.get_or_add(String(picker.definition.id), {"reasons": {}, "abilities": {}})
+	by_class["reasons"][reason] = int(by_class["reasons"].get(reason, 0)) + 1
+	var key := String(pick.get("ability", ""))
+	if reason in TALLIED_ABILITIES:
+		var abilities: Dictionary = by_class["abilities"].get_or_add(reason, {})
+		abilities[key] = int(abilities.get(key, 0)) + 1
+	var healing := last_healing if reason == "heal" else 0
+	if healing > 0:
+		by_class["healingX100"] = int(by_class.get("healingX100", 0)) + healing
+	_counted = [by_class, reason, key, healing]
+
+
+## Takes the last counted pick back out of the tally (the battle refused it; its fallback is counted instead).
+func _uncount() -> void:
+	if _counted.is_empty():
+		return
+	var by_class: Dictionary = _counted[0]
+	var reason: String = _counted[1]
+	by_class["reasons"][reason] = int(by_class["reasons"][reason]) - 1
+	if int(by_class["reasons"][reason]) <= 0:
+		by_class["reasons"].erase(reason)
+	if reason in TALLIED_ABILITIES:
+		var abilities: Dictionary = by_class["abilities"][reason]
+		abilities[_counted[2]] = int(abilities[_counted[2]]) - 1
+		if int(abilities[_counted[2]]) <= 0:
+			abilities.erase(_counted[2])
+		if abilities.is_empty():
+			by_class["abilities"].erase(reason)
+	if int(_counted[3]) > 0:
+		by_class["healingX100"] = int(by_class["healingX100"]) - int(_counted[3])
+	_counted = []
 
 
 func _choose(battle: Battle, unit: BattleUnit) -> Dictionary:
@@ -223,13 +256,17 @@ static func feeds_drain(ability: BattleAbility, target: BattleUnit) -> bool:
 
 ## An ult worth casting now, as an interrupt choice (the BETWEEN window, and first at a decision); {} to hold.
 func interrupt(battle: Battle) -> Dictionary:
-	return _ult_worth_casting(battle) if options.ults else {}
+	var ult := _ult_worth_casting(battle) if options.ults else {}
+	if not ult.is_empty():
+		_count(battle, null, ult, "ult")  # both windows: BETWEEN (the recorder asks here) and DECISION (choose)
+	return ult
 
 
 ## The battle refused a pick (it shouldn't: picks come from can_activate_ability and target_candidates): the next one
 ## is the first legal move.
 func on_invalid(_battle: Battle, unit: BattleUnit, reason: String, detail: String) -> bool:
 	push_warning("AutoPolicy: %s refused (%s %s); taking the first legal move" % [unit.unit_id, reason, detail])
+	_uncount()
 	_fallback = true
 	return true
 
@@ -341,6 +378,8 @@ func _buff(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -> D
 	for ability in actions:
 		if not has_role(ability, ROLE_BUFF) or ability.targets_enemies() or _saving_mp(unit, ability):
 			continue
+		if has_role(ability, ROLE_HEAL):
+			continue  # a heal that also buffs (Benediction, Ballad, a HoT) is the heal step's: never cast on a full-HP party
 		var tags := _buff_tags(ability)
 		if tags.is_empty():
 			continue

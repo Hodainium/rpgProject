@@ -1,21 +1,27 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_bxm7u"]
-[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_xaeu5"]
-[ext_resource type="Resource" path="res://tests/fixtures/effects/as_heal_450.tres" id="3_02yq0"]
-[ext_resource type="Animation" path="res://tests/fixtures/animations/as_purge_mend.tres" id="4_urdgw"]
-[ext_resource type="Resource" path="res://tests/fixtures/effects/sp_cost_60.tres" id="5_h8ify"]
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_xaeu5"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_02yq0"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/as_heal_450.tres" id="3_urdgw"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/st_cleanse.tres" id="4_h8ify"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/as_purge_mend.tres" id="5_j7mrh"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/sp_cost_60.tres" id="6_cykqv"]
 
-[sub_resource type="Resource" id="Resource_j7mrh"]
-script = ExtResource("2_xaeu5")
+[sub_resource type="Resource" id="Resource_xuelh"]
+script = ExtResource("2_02yq0")
 id = &"heal"
-effect = ExtResource("3_02yq0")
+effect = ExtResource("3_urdgw")
 
-[node name="AsPurgeMend" type="Node" unique_id=1577782846]
-script = ExtResource("1_bxm7u")
+[sub_resource type="Resource" id="Resource_wcfku"]
+script = ExtResource("2_02yq0")
+id = &"cleanse"
+effect = ExtResource("4_h8ify")
+
+[node name="AsPurgeMend" type="Node" unique_id=1549714743]
+script = ExtResource("1_xaeu5")
 targeting = 3
 asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Cleanse"])
-executions = Array[ExtResource("2_xaeu5")]([SubResource("Resource_j7mrh")])
-animation = ExtResource("4_urdgw")
+executions = Array[ExtResource("2_02yq0")]([SubResource("Resource_xuelh"), SubResource("Resource_wcfku")])
+animation = ExtResource("5_j7mrh")
 ability_tag = &"Fixture.Ability.AsPurgeMend"
-cost_effect = ExtResource("5_h8ify")
+cost_effect = ExtResource("6_cykqv")
