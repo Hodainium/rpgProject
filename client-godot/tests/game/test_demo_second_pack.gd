@@ -326,6 +326,40 @@ func test_the_hud_shows_the_bloodbinders_ult_as_auto() -> void:
 	panel.free()
 
 
+## User, 2026-11-27: one status chip per status: the same status from several effects merges, showing the most turns left (no end
+## wins) and the highest stacks.
+func test_one_status_chip_per_status() -> void:
+	var Panel: Script = load("res://presentation/demo/ui/battle_party_panel.gd")
+	var merged: Array = Panel.merged_statuses([
+		{"tag": "Status.Buff.Lifesteal", "turns": 1, "stacks": 1, "effect": "res://rite.tres"},
+		{"tag": "Status.Buff.Lifesteal", "turns": 2, "stacks": 1, "effect": "res://communion.tres"},
+		{"tag": "Status.Buff.Lifesteal", "turns": 1, "stacks": 1, "effect": "res://feast.tres"},
+		{"tag": "Status.WolfForm", "turns": 1, "stacks": 1, "effect": "res://wolf.tres"},
+		{"tag": "Status.WolfForm", "turns": -1, "stacks": 1, "effect": "res://wolf.tres"},
+		{"tag": "Status.Debuff.Bleed", "turns": 2, "stacks": 3, "effect": "res://bleed.tres"},
+		{"tag": "Status.Debuff.Bleed", "turns": 1, "stacks": 2, "effect": "res://bleed.tres"}])
+	eq(merged.size(), 3, "three statuses, one entry each")
+	eq(merged[0], {"tag": "Status.Buff.Lifesteal", "turns": 2, "stacks": 1},
+		"three different lifesteal effects (1, 2 and 1 turns): one chip, 2 turns, no ×3")
+	eq(merged[1]["turns"], -1, "a status with no end wins over one that ends")
+	eq(merged[2], {"tag": "Status.Debuff.Bleed", "turns": 2, "stacks": 5},
+		"the same Bleed from two sources (3 and 2 stacks): ×5, as all five tick")
+	if not _ready_to_test():
+		return
+	var battle := _battle()
+	await _start(battle)
+	await _act(battle, &"P2", &"Ability.Bloodrite")
+	_set_stat(battle.unit_by_id(&"P2"), "energy", battle.unit_by_id(&"P2").stat("max_energy"))
+	await battle._drain_triggers()  # Crimson Communion casts itself: a second lifesteal status on Vlad
+	var vlad := battle.unit_by_id(&"P1")
+	check(vlad.statuses().filter(func(status) -> bool: return status["tag"] == "Status.Buff.Lifesteal").size() >= 2,
+		"two effects give Vlad lifesteal")
+	var panel: Node = load("res://presentation/demo/ui/battle_party_panel.tscn").instantiate()
+	var chips: Array = panel._chips(vlad)
+	eq(chips.filter(func(chip) -> bool: return String(chip).begins_with("LIFESTEAL")).size(), 1, "one LIFESTEAL chip: %s" % [chips])
+	panel.free()
+
+
 func test_the_werewolf_claws_only_in_wolf_form() -> void:
 	if not _ready_to_test():
 		return
