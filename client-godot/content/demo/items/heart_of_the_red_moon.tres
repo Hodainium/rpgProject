@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_heart_of_the_red_moon.tscn" id="1_0ijun"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_flb4a"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_redmoon_cost.tres" id="3_dhetw"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_yrldl"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_w4rx8"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_4ornc"]
+
+[sub_resource type="Resource" id="Resource_2t553"]
+script = ExtResource("4_yrldl")
+abilities = Array[PackedScene]([ExtResource("1_0ijun")])
+effects = Array[ExtResource("2_flb4a")]([ExtResource("3_dhetw")])
+
+[resource]
+script = ExtResource("6_4ornc")
+id = &"demo.item.heart_of_the_red_moon"
+display_name = "Heart of the Red Moon"
+description = "The party: +10% lifesteal; your HP costs are 20% lower."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Bloodmoon", &"Item.Fit.Lifesteal", &"Item.Fit.Party", &"Item.Fit.Survival", &"Item.Fit.HpCost"])
+price = 12
+grants = SubResource("Resource_2t553")

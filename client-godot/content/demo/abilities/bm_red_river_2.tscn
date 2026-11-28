@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_da4vp"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_a0e6f"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_bleed_detonate_2.tres" id="3_tipw4"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_bleed_purge.tres" id="4_boety"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_siphon.tres" id="5_eutsj"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_63.tres" id="6_rwpna"]
+
+[sub_resource type="Resource" id="Resource_ex47c"]
+script = ExtResource("2_a0e6f")
+id = &"blast"
+effect = ExtResource("3_tipw4")
+
+[sub_resource type="Resource" id="Resource_ls8cd"]
+script = ExtResource("2_a0e6f")
+id = &"clear"
+effect = ExtResource("4_boety")
+
+[node name="BmRedRiver2" type="Node" unique_id=2035174564]
+script = ExtResource("1_da4vp")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_a0e6f")]([SubResource("Resource_ex47c"), SubResource("Resource_ls8cd")])
+animation = ExtResource("5_eutsj")
+description = "Detonates the Bleed on every enemy at 140%; the party heals from every detonation."
+ability_name = "Red River II"
+ability_tag = &"Ability.Redriver2"
+cost_effect = ExtResource("6_rwpna")

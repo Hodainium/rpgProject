@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_sanguine_ward.tscn" id="1_7xr2v"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_n2spm"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_ward_hp.tres" id="3_pvm61"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_s7u8f"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="5_y5c0j"]
+
+[sub_resource type="Resource" id="Resource_c4oi2"]
+script = ExtResource("4_s7u8f")
+abilities = Array[PackedScene]([ExtResource("1_7xr2v")])
+effects = Array[ExtResource("2_n2spm")]([ExtResource("3_pvm61")])
+
+[resource]
+script = ExtResource("5_y5c0j")
+id = &"demo.equipment.sanguine_ward"
+display_name = "Sanguine Ward"
+description = "+40 max HP; at battle start, every ally gets a shield of 8% of their max HP."
+slot = &"Equipment.Slot.Head"
+grants = SubResource("Resource_c4oi2")
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Survival", &"Item.Fit.Party"])
+price = 9

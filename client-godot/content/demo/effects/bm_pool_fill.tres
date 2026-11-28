@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_xfikq"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_event_amount.gd" id="2_7uxwn"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_dhkoq"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_qy80t"]
+
+[sub_resource type="Resource" id="Resource_rwnw3"]
+script = ExtResource("2_7uxwn")
+attribute = "energy"
+
+[resource]
+script = ExtResource("4_qy80t")
+executions = Array[ExtResource("1_xfikq")]([SubResource("Resource_rwnw3")])

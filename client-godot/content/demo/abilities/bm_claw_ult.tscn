@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_mxbd0"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_dluf5"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_uhbux"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_claw.tres" id="4_ctjug"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_gohf7"]
+
+[sub_resource type="Resource" id="Resource_1vn2p"]
+script = ExtResource("2_dluf5")
+id = &"claw"
+effect = ExtResource("3_uhbux")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 4000
+toughness_x100 = 1500
+
+[sub_resource type="Resource" id="Resource_tf71w"]
+script = ExtResource("5_gohf7")
+require_any_tags = Array[StringName]([&"State.WolfForm", &"Status.WolfForm"])
+
+[node name="BmClawUlt" type="Node" unique_id=2006710723]
+script = ExtResource("1_mxbd0")
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+executions = Array[ExtResource("2_dluf5")]([SubResource("Resource_1vn2p")])
+animation = ExtResource("4_ctjug")
+description = "In Wolf Form, after each of its actions: a 40% ATK Physical follow-up on its target."
+ability_name = "Claw"
+ability_tag = &"Ability.Passive.Clawult"
+activation_query = SubResource("Resource_tf71w")
+trigger_event_tag = &"Event.Ability.Used.Ultimate"

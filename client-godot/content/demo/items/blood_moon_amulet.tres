@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_5faak"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_blood_moon_amulet.tres" id="2_hs4tf"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_tracked.tres" id="3_q2st4"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_7xrl0"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_k3fbo"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_qplci"]
+
+[sub_resource type="Resource" id="Resource_2eyjs"]
+script = ExtResource("4_7xrl0")
+effects = Array[ExtResource("1_5faak")]([ExtResource("2_hs4tf"), ExtResource("3_q2st4")])
+
+[resource]
+script = ExtResource("6_qplci")
+id = &"demo.item.blood_moon_amulet"
+display_name = "Blood Moon Amulet"
+description = "While under 50% HP: +10% damage dealt and +10% healing received."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Damage", &"Item.Fit.Survival"])
+price = 9
+grants = SubResource("Resource_2eyjs")

@@ -1,0 +1,71 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_priak"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ou0ia"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_d2sma"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_moonfall_frenzy.tres" id="4_o8l0t"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_cetab"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_n7ym1"]
+
+[sub_resource type="Resource" id="Resource_r00b7"]
+script = ExtResource("2_ou0ia")
+id = &"c1"
+effect = ExtResource("3_d2sma")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 7000
+toughness_x100 = 3000
+
+[sub_resource type="Resource" id="Resource_n71eo"]
+script = ExtResource("2_ou0ia")
+id = &"c2"
+effect = ExtResource("3_d2sma")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 7000
+toughness_x100 = 3000
+
+[sub_resource type="Resource" id="Resource_firbr"]
+script = ExtResource("2_ou0ia")
+id = &"c3"
+effect = ExtResource("3_d2sma")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 7000
+toughness_x100 = 3000
+
+[sub_resource type="Resource" id="Resource_ax33u"]
+script = ExtResource("2_ou0ia")
+id = &"c4"
+effect = ExtResource("3_d2sma")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 7000
+toughness_x100 = 3000
+
+[sub_resource type="Resource" id="Resource_b51qc"]
+script = ExtResource("2_ou0ia")
+id = &"c5"
+effect = ExtResource("3_d2sma")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 7000
+toughness_x100 = 3000
+
+[node name="BmMoonfallFrenzy3" type="Node" unique_id=2071709683]
+script = ExtResource("1_priak")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Ultimate", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_ou0ia")]([SubResource("Resource_r00b7"), SubResource("Resource_n71eo"), SubResource("Resource_firbr"), SubResource("Resource_ax33u"), SubResource("Resource_b51qc")])
+animation = ExtResource("4_o8l0t")
+description = "5 claws of 70% ATK Physical at random enemies; then Wolf Form for 2 turns."
+ability_name = "Moonfall Frenzy III"
+ability_tag = &"Ability.Ult.Moonfallfrenzy3"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Moonfallfrenzy"])
+activation_query = ExtResource("5_cetab")
+cost_effect = ExtResource("6_n7ym1")

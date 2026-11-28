@@ -1,0 +1,9 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/ult.dawnbreak.wav" id="1_lbslx"]
+
+[resource]
+resource_name = "ult.dawnbreak"
+playback_mode = 2
+streams_count = 1
+stream_0/stream = ExtResource("1_lbslx")

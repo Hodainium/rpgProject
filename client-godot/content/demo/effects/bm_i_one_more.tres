@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_03sxb"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="2_ne38y"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_libjs"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_v4afm"]
+
+[sub_resource type="Resource" id="Resource_hxqpo"]
+script = ExtResource("1_03sxb")
+ignore_tags = Array[StringName]([&"State.OneMore"])
+
+[resource]
+script = ExtResource("4_v4afm")
+stacking_policy = 1
+policy = 3
+max_stacks = 1
+application_query = SubResource("Resource_hxqpo")
+granted_tags = Array[StringName]([&"State.OneMore"])

@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_g6mnr"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_toknj"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_tide_heal.tres" id="3_sld30"]
+[ext_resource type="Animation" path="res://content/demo/animations/mend.tres" id="4_qkqkt"]
+
+[sub_resource type="Resource" id="Resource_6ri4i"]
+script = ExtResource("2_toknj")
+id = &"regen"
+effect = ExtResource("3_sld30")
+
+[node name="BmTideAfter" type="Node" unique_id=1052930012]
+script = ExtResource("1_g6mnr")
+targeting = 4
+executions = Array[ExtResource("2_toknj")]([SubResource("Resource_6ri4i")])
+animation = ExtResource("4_qkqkt")
+description = "After Sanguine Tide: the party heals 10% of max HP."
+ability_name = "Sanguine Tide"
+ability_tag = &"Ability.Passive.Tideafter"
+trigger_event_tag = &"Event.Ability.Used.Tide"

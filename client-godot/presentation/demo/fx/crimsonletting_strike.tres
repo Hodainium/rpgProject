@@ -1,0 +1,192 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3 uid="uid://cdvri43bkim4u"]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_osheq"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_dqu7y"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_uy717"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="4_fwrgq"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_ytsiq"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="6_ojx0v"]
+[ext_resource type="Shader" path="res://game/fx/shaders/burst_3d.gdshader" id="7_c7keq"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_fresnel_layer.gd" id="8_vsc22"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shake_layer.gd" id="9_d4mdo"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="10_5ct8d"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="11_abud8"]
+
+[sub_resource type="Resource" id="Resource_1elep"]
+script = ExtResource("2_dqu7y")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_mh68e"]
+script = ExtResource("2_dqu7y")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 2.0
+
+[sub_resource type="Resource" id="Resource_xavbb"]
+script = ExtResource("3_uy717")
+shader = ExtResource("4_fwrgq")
+shader_params = {
+"fade_out": 0.6,
+"falloff": 4.0
+}
+size = Vector2(2, 2)
+id = &"pulse"
+space = 2
+duration = 0.3
+bindings = Array[ExtResource("2_dqu7y")]([SubResource("Resource_1elep"), SubResource("Resource_mh68e")])
+
+[sub_resource type="Resource" id="Resource_kxyhf"]
+script = ExtResource("2_dqu7y")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_be715"]
+colors = PackedColorArray(1, 1, 1, 1, 0.6, 0.6, 0.6, 0)
+
+[sub_resource type="Resource" id="Resource_r4q5i"]
+script = ExtResource("6_ojx0v")
+size_min = 0.07
+size_max = 0.14
+spread = 28.0
+speed_min = 4.0
+speed_max = 7.0
+gravity = Vector3(0, -14, 0)
+emission_radius = 0.3
+amount = 40
+lifetime = 0.9
+explosiveness = 0.7
+color_ramp = SubResource("Gradient_be715")
+additive = false
+id = &"spurt"
+bindings = Array[ExtResource("2_dqu7y")]([SubResource("Resource_kxyhf")])
+
+[sub_resource type="Resource" id="Resource_nmiqm"]
+script = ExtResource("2_dqu7y")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_ywie3"]
+script = ExtResource("2_dqu7y")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.2
+
+[sub_resource type="Curve" id="Curve_7tokw"]
+_limits = [-360.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_lpsft"]
+script = ExtResource("5_ytsiq")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_7tokw")
+mode = 1
+
+[sub_resource type="Curve" id="Curve_1htiw"]
+_limits = [0.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0.3), 0.0, 0.0, 0, 0, Vector2(0.4, 1), 0.0, 0.0, 0, 0, Vector2(1, 1.1), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Resource" id="Resource_vf6by"]
+script = ExtResource("5_ytsiq")
+property = "scale"
+curve = SubResource("Curve_1htiw")
+mode = 2
+
+[sub_resource type="Resource" id="Resource_huatr"]
+script = ExtResource("3_uy717")
+shader = ExtResource("4_fwrgq")
+shader_params = {
+"fade_out": 0.5,
+"falloff": 2.5
+}
+size = Vector2(3, 3)
+face_camera = false
+id = &"pool"
+space = 2
+socket = &"Base"
+start_delay = 0.05
+duration = 1.0
+bindings = Array[ExtResource("2_dqu7y")]([SubResource("Resource_nmiqm"), SubResource("Resource_ywie3")])
+tracks = Array[ExtResource("5_ytsiq")]([SubResource("Resource_lpsft"), SubResource("Resource_vf6by")])
+
+[sub_resource type="Resource" id="Resource_5o17e"]
+script = ExtResource("2_dqu7y")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Curve" id="Curve_4425n"]
+_limits = [-360.0, 360.0, 0.0, 1.0]
+_data = [Vector2(0, -90), 0.0, 0.0, 0, 0, Vector2(1, -90), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_aaap6"]
+script = ExtResource("5_ytsiq")
+property = "rotation_degrees:x"
+curve = SubResource("Curve_4425n")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_p05ll"]
+script = ExtResource("3_uy717")
+shader = ExtResource("7_c7keq")
+shader_params = {
+"end_radius": 0.95,
+"intensity": 1.6,
+"ring_width": 0.07,
+"start_radius": 0.2
+}
+size = Vector2(3.4, 3.4)
+face_camera = false
+id = &"ripple"
+space = 2
+socket = &"Base"
+start_delay = 0.1
+duration = 0.6
+bindings = Array[ExtResource("2_dqu7y")]([SubResource("Resource_5o17e")])
+tracks = Array[ExtResource("5_ytsiq")]([SubResource("Resource_aaap6")])
+
+[sub_resource type="Resource" id="Resource_28hg8"]
+script = ExtResource("2_dqu7y")
+property = "color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_ryjvf"]
+script = ExtResource("8_vsc22")
+power = 2.0
+fill = 0.4
+noise_scale = 5.0
+intensity = 1.3
+seconds = 0.35
+id = &"flash"
+bindings = Array[ExtResource("2_dqu7y")]([SubResource("Resource_28hg8")])
+
+[sub_resource type="Resource" id="Resource_gsi8a"]
+script = ExtResource("9_d4mdo")
+strength_world = 0.06
+seconds = 0.2
+id = &"shake0"
+min_quality = 2
+
+[sub_resource type="Resource" id="Resource_q8dwd"]
+script = ExtResource("10_5ct8d")
+name = &"color"
+kind = 3
+default_value = Color(0.85, 0.03, 0.08, 1)
+description = "Blood colour."
+
+[sub_resource type="Resource" id="Resource_k6o05"]
+script = ExtResource("10_5ct8d")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("11_abud8")
+id = &"fx.crimsonletting_strike"
+display_name = "Crimson Letting strike"
+params = Array[ExtResource("10_5ct8d")]([SubResource("Resource_q8dwd"), SubResource("Resource_k6o05")])
+layers = Array[ExtResource("1_osheq")]([SubResource("Resource_xavbb"), SubResource("Resource_r4q5i"), SubResource("Resource_huatr"), SubResource("Resource_p05ll"), SubResource("Resource_ryjvf"), SubResource("Resource_gsi8a")])
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "Blood spurts up out of the target and rains down over a dark red pool spreading on the floor."

@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_lv08e"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_tt6k0"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_sure_shot_spent.tres" id="3_hcgcy"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_w0f5b"]
+
+[sub_resource type="Resource" id="Resource_682gm"]
+script = ExtResource("2_tt6k0")
+id = &"charge"
+effect = ExtResource("3_hcgcy")
+
+[node name="BmISureShotSpent" type="Node" unique_id=755147128]
+script = ExtResource("1_lv08e")
+targeting = 5
+executions = Array[ExtResource("2_tt6k0")]([SubResource("Resource_682gm")])
+animation = ExtResource("4_w0f5b")
+description = "After the first hit."
+ability_name = "Silver Bolt Case"
+ability_tag = &"Ability.Passive.Isureshotspent"
+trigger_event_tag = &"Event.Damage.Dealt"

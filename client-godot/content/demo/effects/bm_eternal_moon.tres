@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_wuacg"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_wkpj1"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_pi83q"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="4_dw3ik"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="5_uibdp"]
+
+[sub_resource type="Resource" id="Resource_mdjel"]
+script = ExtResource("3_pi83q")
+value_x100 = 1000
+attribute_name = "lifesteal"
+
+[sub_resource type="Resource" id="Resource_ejplf"]
+script = ExtResource("4_dw3ik")
+require_any_tags = Array[StringName]([&"State.Health.Low"])
+
+[resource]
+script = ExtResource("5_uibdp")
+policy = 2
+modifiers = Array[ExtResource("2_wkpj1")]([SubResource("Resource_mdjel")])
+granted_tags = Array[StringName]([&"State.WolfForm"])
+ongoing_suppression_query = SubResource("Resource_ejplf")

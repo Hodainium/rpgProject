@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_5g6mc"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_moonstone_pendant.tres" id="2_5o5k8"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_tracked.tres" id="3_wrc67"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_dn64u"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_4o0d5"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_gcxt1"]
+
+[sub_resource type="Resource" id="Resource_jsr3c"]
+script = ExtResource("4_dn64u")
+effects = Array[ExtResource("1_5g6mc")]([ExtResource("2_5o5k8"), ExtResource("3_wrc67")])
+
+[resource]
+script = ExtResource("6_gcxt1")
+id = &"demo.item.moonstone_pendant"
+display_name = "Moonstone Pendant"
+description = "Your low-HP effects start at 60% HP instead of 50%."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Survival"])
+price = 7
+grants = SubResource("Resource_jsr3c")

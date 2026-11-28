@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_yv15x"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_p1enu"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_r31mq"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="4_5eu21"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="5_e2xrh"]
+
+[sub_resource type="Resource" id="Resource_7k4p2"]
+script = ExtResource("3_r31mq")
+value_x100 = 1500
+attribute_name = "atk"
+operation = 1
+
+[sub_resource type="Resource" id="Resource_41aku"]
+script = ExtResource("4_5eu21")
+ignore_tags = Array[StringName]([&"State.Health.Low"])
+
+[resource]
+script = ExtResource("5_e2xrh")
+policy = 2
+modifiers = Array[ExtResource("2_p1enu")]([SubResource("Resource_7k4p2")])
+ongoing_suppression_query = SubResource("Resource_41aku")

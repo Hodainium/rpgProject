@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_i4tbj"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_tci3f"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_wolf_form.tres" id="3_c7jid"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_uvn7g"]
+
+[sub_resource type="Resource" id="Resource_7iaf6"]
+script = ExtResource("2_tci3f")
+id = &"charge"
+effect = ExtResource("3_c7jid")
+
+[node name="BmFrenzyAfter" type="Node" unique_id=1886751353]
+script = ExtResource("1_i4tbj")
+targeting = 5
+executions = Array[ExtResource("2_tci3f")]([SubResource("Resource_7iaf6")])
+animation = ExtResource("4_uvn7g")
+description = "After Moonfall Frenzy: Wolf Form for 2 turns."
+ability_name = "Moonfall Frenzy"
+ability_tag = &"Ability.Passive.Frenzyafter"
+trigger_event_tag = &"Event.Ability.Used.Ultimate"

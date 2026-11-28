@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_holy_water_vial.tscn" id="1_blj1x"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_n2fd8"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_holy_water_vial.tres" id="3_j5qde"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_knyj0"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_qdi7i"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_aw6lq"]
+
+[sub_resource type="Resource" id="Resource_8gbku"]
+script = ExtResource("4_knyj0")
+abilities = Array[PackedScene]([ExtResource("1_blj1x")])
+effects = Array[ExtResource("2_n2fd8")]([ExtResource("3_j5qde")])
+
+[resource]
+script = ExtResource("6_aw6lq")
+id = &"demo.item.holy_water_vial"
+display_name = "Holy Water Vial"
+description = "Your crits have a 25% chance to Silver the target; +15% damage against Silvered enemies."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Damage", &"Item.Fit.Crit"])
+price = 7
+grants = SubResource("Resource_8gbku")

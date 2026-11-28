@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_4fejw"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_7b0ev"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_damage_sure.tres" id="3_nh028"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_dawnbreak.tres" id="4_jtyv4"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_1758e"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_31qnv"]
+
+[sub_resource type="Resource" id="Resource_4885e"]
+script = ExtResource("2_7b0ev")
+id = &"crush"
+effect = ExtResource("3_nh028")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 38000
+toughness_x100 = 9000
+
+[node name="BmDawnbreak2" type="Node" unique_id=1189761867]
+script = ExtResource("1_4fejw")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Ultimate", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_7b0ev")]([SubResource("Resource_4885e")])
+animation = ExtResource("4_jtyv4")
+description = "380% ATK Physical to one enemy, always a crit."
+ability_name = "Dawnbreak II"
+ability_tag = &"Ability.Ult.Dawnbreak2"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Dawnbreak"])
+activation_query = ExtResource("5_1758e")
+cost_effect = ExtResource("6_31qnv")

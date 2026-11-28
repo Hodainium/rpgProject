@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_sure_shot.tscn" id="1_lxop5"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_sure_shot_spent.tscn" id="2_so5ax"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_66t2h"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_silver_bolt_case.tres" id="4_ylqio"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="5_5wj4t"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="6_1dw26"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="7_x5q0i"]
+
+[sub_resource type="Resource" id="Resource_4m2an"]
+script = ExtResource("5_5wj4t")
+abilities = Array[PackedScene]([ExtResource("1_lxop5"), ExtResource("2_so5ax")])
+effects = Array[ExtResource("3_66t2h")]([ExtResource("4_ylqio")])
+
+[resource]
+script = ExtResource("7_x5q0i")
+id = &"demo.item.silver_bolt_case"
+display_name = "Silver Bolt Case"
+description = "+5% crit rate; your first hit in each battle is a crit."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Damage", &"Item.Fit.Crit"])
+price = 7
+grants = SubResource("Resource_4m2an")

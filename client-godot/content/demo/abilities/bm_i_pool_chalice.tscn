@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ip11o"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_g78tk"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_pool_chalice_heal.tres" id="3_jelnd"]
+[ext_resource type="Animation" path="res://content/demo/animations/mend.tres" id="4_kgprm"]
+
+[sub_resource type="Resource" id="Resource_oscd6"]
+script = ExtResource("2_g78tk")
+id = &"regen"
+effect = ExtResource("3_jelnd")
+
+[node name="BmIPoolChalice" type="Node" unique_id=1833201376]
+script = ExtResource("1_ip11o")
+targeting = 3
+executions = Array[ExtResource("2_g78tk")]([SubResource("Resource_oscd6")])
+animation = ExtResource("4_kgprm")
+description = "When an ally drops under 50% HP, heal them 10% of their max HP."
+ability_name = "Pool Chalice"
+ability_tag = &"Ability.Passive.Ipoolchalice"
+trigger_event_tag = &"Event.Ally.Health.Low"

@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_n38sb"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_1iwqu"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_howl_2.tres" id="3_7bekc"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_wolf_form.tres" id="4_okhgd"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_howl.tres" id="5_blp2t"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_53.tres" id="6_lo687"]
+
+[sub_resource type="Resource" id="Resource_y2dv1"]
+script = ExtResource("2_1iwqu")
+id = &"rally"
+effect = ExtResource("3_7bekc")
+
+[sub_resource type="Resource" id="Resource_p6ghr"]
+script = ExtResource("2_1iwqu")
+id = &"form"
+effect = ExtResource("4_okhgd")
+
+[node name="BmHowl2" type="Node" unique_id=450592605]
+script = ExtResource("1_n38sb")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Buff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_1iwqu")]([SubResource("Resource_y2dv1"), SubResource("Resource_p6ghr")])
+animation = ExtResource("5_blp2t")
+description = "Wolf Form for 2 turns; the party +20% ATK for 2 turns."
+ability_name = "Howl II"
+ability_tag = &"Ability.Howl2"
+cost_effect = ExtResource("6_lo687")

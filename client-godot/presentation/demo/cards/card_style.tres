@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://presentation/demo/ui/cards/card_face_grimoire.tscn" id="10_grimoire"]
 [ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/cube.svg" id="13_cube"]
 [ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/lorc/swap-bag.svg" id="15_bag"]
+[ext_resource type="Texture2D" path="res://presentation/demo/cards/icons/delapouite/moon-bats.svg" id="16_moon_bats"]
 
 [sub_resource type="Resource" id="common"]
 script = ExtResource("2_rarity")
@@ -57,6 +58,15 @@ accent = Color(1, 0.886, 0.541, 1)
 glyph = ExtResource("5_stairs")
 label = "The Descent"
 burst_color = Color(1, 0.886, 0.541, 1)
+
+[sub_resource type="Resource" id="bloodmoon_pack"]
+script = ExtResource("3_pack")
+color_light = Color(0.62, 0.06, 0.1, 1)
+color_dark = Color(0.2, 0.01, 0.04, 1)
+accent = Color(0.92, 0.88, 0.86, 1)
+glyph = ExtResource("16_moon_bats")
+label = "Blood Moon"
+burst_color = Color(1, 0.3, 0.3, 1)
 
 [sub_resource type="Resource" id="corrupted"]
 script = ExtResource("2_rarity")
@@ -153,6 +163,7 @@ rarities = Dictionary[StringName, ExtResource("2_rarity")]({
 &"mythic": SubResource("mythic")
 })
 pack_looks = Dictionary[StringName, ExtResource("3_pack")]({
+&"bloodmoon-pack": SubResource("bloodmoon_pack"),
 &"descent-pack": SubResource("descent_pack")
 })
 default_pack = SubResource("descent_pack")
@@ -173,8 +184,9 @@ elements = Dictionary[StringName, ExtResource("6_element")]({
 element_rules = Array[ExtResource("7_rule")]([SubResource("rule_corrupted"), SubResource("rule_food"), SubResource("rule_fire"), SubResource("rule_ice"), SubResource("rule_physical")])
 default_element = &"neutral"
 default_icon = ExtResource("15_bag")
-art_set_paths = Array[String](["res://presentation/demo/cards/card_icons.tres", "res://presentation/demo/cards/card_portraits.tres"])
+art_set_paths = Array[String](["res://presentation/demo/cards/card_icons.tres", "res://presentation/demo/cards/card_icons_bloodmoon.tres", "res://presentation/demo/cards/card_portraits.tres"])
 set_marks = Dictionary[StringName, Texture2D]({
+&"bloodmoon": ExtResource("16_moon_bats"),
 &"core": ExtResource("13_cube"),
 &"descent": ExtResource("5_stairs")
 })

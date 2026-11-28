@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_sh455"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="2_kxx0r"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_percent_of_max.gd" id="3_n4ohf"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="4_p1oxt"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="5_ix558"]
+
+[sub_resource type="Resource" id="Resource_4qwla"]
+script = ExtResource("1_sh455")
+ignore_tags = Array[StringName]([&"Immune.Bleed", &"Immune.Debuff"])
+
+[sub_resource type="Resource" id="Resource_b1unw"]
+script = ExtResource("3_n4ohf")
+percent_x100 = -200
+source_bonus = "bleed_dmg"
+
+[resource]
+script = ExtResource("5_ix558")
+stacking_policy = 1
+policy = 3
+period = 1.0
+max_stacks = 9
+duration_turns = 4
+application_query = SubResource("Resource_4qwla")
+application_cue_tags = Array[StringName]([&"Cue.Sfx.Apply.Debuff"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Status.Bleed"])
+periodic_cue_tags = Array[StringName]([&"Cue.Fx.Tick.Bleed", &"Cue.Sfx.Tick.Bleed"])
+executions = Array[ExtResource("2_kxx0r")]([SubResource("Resource_b1unw")])
+granted_tags = Array[StringName]([&"Status.Debuff.Bleed"])

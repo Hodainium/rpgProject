@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_rosary.tscn" id="1_ksqtq"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_vigil.tscn" id="2_xh42b"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_x15li"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_3o6b5"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_p8wsl"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_tvend"]
+
+[sub_resource type="Resource" id="Resource_4h3fb"]
+script = ExtResource("4_3o6b5")
+abilities = Array[PackedScene]([ExtResource("1_ksqtq"), ExtResource("2_xh42b")])
+
+[resource]
+script = ExtResource("6_tvend")
+id = &"demo.item.rosary_of_vigil"
+display_name = "Rosary of Vigil"
+description = "Your crits have a 35% chance to Silver the target; your crits on a Silvered enemy give the party +5% crit rate for 2 turns (up to +15%)."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Damage", &"Item.Fit.Party", &"Item.Fit.Crit"])
+price = 9
+grants = SubResource("Resource_4h3fb")

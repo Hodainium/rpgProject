@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_pq1k4"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_ek5v3"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_7ceea"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_obosn"]
+
+[sub_resource type="Resource" id="Resource_8pth3"]
+script = ExtResource("3_7ceea")
+value_x100 = 800
+attribute_name = "lifesteal"
+
+[sub_resource type="Resource" id="Resource_nqdjd"]
+script = ExtResource("3_7ceea")
+value_x100 = 1500
+attribute_name = "overheal_shield"
+
+[resource]
+script = ExtResource("4_obosn")
+policy = 2
+modifiers = Array[ExtResource("2_ek5v3")]([SubResource("Resource_8pth3"), SubResource("Resource_nqdjd")])

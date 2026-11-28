@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_wmgtw"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_5aybe"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_4fu1d"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="4_c7622"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="5_7x55h"]
+
+[sub_resource type="Resource" id="Resource_me808"]
+script = ExtResource("3_4fu1d")
+value_x100 = 3000
+attribute_name = "follow_up_dmg"
+
+[sub_resource type="Resource" id="Resource_mqive"]
+script = ExtResource("4_c7622")
+ignore_tags = Array[StringName]([&"State.Health.Low"])
+
+[resource]
+script = ExtResource("5_7x55h")
+policy = 2
+modifiers = Array[ExtResource("2_5aybe")]([SubResource("Resource_me808")])
+ongoing_suppression_query = SubResource("Resource_mqive")

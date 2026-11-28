@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_ne3p7"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_ijawq"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_3oaev"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_5pc3l"]
+
+[sub_resource type="Resource" id="Resource_n08id"]
+script = ExtResource("3_3oaev")
+value_x100 = 40
+attribute_name = "missing_hp_dmg"
+
+[resource]
+script = ExtResource("4_5pc3l")
+policy = 2
+modifiers = Array[ExtResource("2_ijawq")]([SubResource("Resource_n08id")])

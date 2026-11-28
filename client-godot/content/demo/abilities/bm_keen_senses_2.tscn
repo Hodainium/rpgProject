@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_5ycgd"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_3alq2"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_keen_senses_2.tres" id="3_1xnb6"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_rjpls"]
+
+[sub_resource type="Resource" id="Resource_v27cg"]
+script = ExtResource("2_3alq2")
+id = &"charge"
+effect = ExtResource("3_1xnb6")
+
+[node name="BmKeenSenses2" type="Node" unique_id=1210525757]
+script = ExtResource("1_5ycgd")
+targeting = 5
+executions = Array[ExtResource("2_3alq2")]([SubResource("Resource_v27cg")])
+animation = ExtResource("4_rjpls")
+description = "Crits on a Silvered target +40% crit damage."
+ability_name = "Keen Senses II"
+ability_tag = &"Ability.Passive.Keensenses2"
+trigger_event_tag = &"Event.Battle.Start"

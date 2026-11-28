@@ -2,12 +2,14 @@
 ## party strip. Item keys: "name", "level" (0 hides it), "chips" (status texts), "hp", "hp_max", "mp", "mp_max"
 ## (mp_max 0 hides SP), "mp_preview" (SP a hovered ability would spend: the bar shows what's left and highlights the
 ## spent part; 0 = none), "ult" (0-100), "active" (the pointer; the gold name), "show_ult", "ult_state" ("off",
-## "ready", "queued"), "on_ult", "pickable", "on_pick", "on_hover", "on_unhover" (Callables), "selected" (a gold
+## "ready", "queued", "auto": the ult casts itself), "on_ult", "pickable", "on_pick", "on_hover", "on_unhover" (Callables), "selected" (a gold
 ## frame: the Status screen's chosen member).
 extends Button
 
 @export var ult_text: String = "ULT"
 @export var queued_text: String = "QUEUED"
+## Spec second-pack D29: an ult that casts itself at a full bar (a meter ult on the ult charge); the button stays, greyed.
+@export var auto_text: String = "AUTO"
 @export var level_format: String = "LV %d"
 @export var number_format: String = "%d / %d"
 ## Spec skill-points: the SP numbers while an ability's cost is previewed (current, max, cost).
@@ -64,7 +66,7 @@ func set_item(item: Dictionary, _ctx: UIContext) -> void:
 	_set_pulse(ult >= 100)
 	var state: String = item.get("ult_state", "off")
 	%Ult.visible = item.get("show_ult", false)
-	%Ult.text = queued_text if state == "queued" else ult_text
+	%Ult.text = queued_text if state == "queued" else (auto_text if state == "auto" else ult_text)
 	%Ult.theme_type_variation = &"UltButtonQueued" if state == "queued" else &"UltButton"
 	%Ult.disabled = state != "ready"
 	_on_ult = item.get("on_ult", Callable())

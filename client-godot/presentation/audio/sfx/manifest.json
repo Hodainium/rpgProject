@@ -1898,6 +1898,81 @@
    ]
   },
   {
+   "id": "ult.night_feast",
+   "pack": "pixel",
+   "takes": [
+    "DSGNMisc_MOVEMENT-Bats Flying_HY_PC-003.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.4,
+     "peak_db": -0.8,
+     "ms": 1560
+    }
+   ]
+  },
+  {
+   "id": "ult.dawnbreak",
+   "pack": "pixel",
+   "takes": [
+    "DSGNImpt_EXPLOSION-Flare Nova_HY_PC-001.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -3.4,
+     "ms": 1565
+    }
+   ]
+  },
+  {
+   "id": "ult.moonfall_frenzy",
+   "pack": "pixel",
+   "takes": [
+    "DSGNMisc_SKILL RELEASE-Flying Blades_HY_PC-001.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -3.3,
+     "ms": 846
+    }
+   ]
+  },
+  {
+   "id": "ult.crimson_letting",
+   "pack": "pixel",
+   "takes": [
+    "DSGNMisc_SKILL RELEASE-Thousand Needles_HY_PC-001.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.1,
+     "peak_db": -1.4,
+     "ms": 1888
+    }
+   ]
+  },
+  {
+   "id": "ult.crimson_communion",
+   "pack": "pixel",
+   "takes": [
+    "MAGAngl_BUFF-Shimmering Winds_HY_PC-001.wav"
+   ],
+   "category": "signature",
+   "measured": [
+    {
+     "loudness": -15.0,
+     "peak_db": -5.9,
+     "ms": 2247
+    }
+   ]
+  },
+  {
    "id": "pack.flip.common",
    "pack": "pixel",
    "takes": [

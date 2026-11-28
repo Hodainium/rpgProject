@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_1fswo"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_tubux"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_garlic.tres" id="3_g3yoe"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_4gsrn"]
+
+[sub_resource type="Resource" id="Resource_2ja1c"]
+script = ExtResource("2_tubux")
+id = &"charge"
+effect = ExtResource("3_g3yoe")
+
+[node name="BmIGarlicWreath" type="Node" unique_id=589331939]
+script = ExtResource("1_1fswo")
+executions = Array[ExtResource("2_tubux")]([SubResource("Resource_2ja1c")])
+animation = ExtResource("4_4gsrn")
+description = "An enemy that hits you: -25% healing received for 2 turns."
+ability_name = "Garlic Wreath"
+ability_tag = &"Ability.Passive.Igarlicwreath"
+trigger_event_tag = &"Event.Damage.Taken"

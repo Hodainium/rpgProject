@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_transfusion_kit.tscn" id="1_m8r6y"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_yg6qv"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_vinkd"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_hcfq3"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_jixtx"]
+
+[sub_resource type="Resource" id="Resource_ayn4o"]
+script = ExtResource("3_vinkd")
+abilities = Array[PackedScene]([ExtResource("1_m8r6y")])
+
+[resource]
+script = ExtResource("5_jixtx")
+id = &"demo.item.transfusion_kit"
+display_name = "Transfusion Kit"
+description = "Your heals also heal the most hurt ally 40% as much."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Healing", &"Item.Fit.Party"])
+price = 9
+grants = SubResource("Resource_ayn4o")

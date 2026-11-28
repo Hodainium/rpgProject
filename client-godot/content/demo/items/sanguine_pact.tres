@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_i6pmp"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_sanguine_pact.tres" id="2_7qoxg"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_p2akf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_lonat"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_0a71h"]
+
+[sub_resource type="Resource" id="Resource_qh2pg"]
+script = ExtResource("3_p2akf")
+effects = Array[ExtResource("1_i6pmp")]([ExtResource("2_7qoxg")])
+
+[resource]
+script = ExtResource("5_0a71h")
+id = &"demo.item.sanguine_pact"
+display_name = "Sanguine Pact"
+description = "Your HP costs are 30% lower."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Survival", &"Item.Fit.HpCost"])
+price = 9
+grants = SubResource("Resource_qh2pg")

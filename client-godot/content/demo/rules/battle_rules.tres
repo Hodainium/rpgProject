@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BattleRules" format=3]
+
+[ext_resource type="Resource" path="res://content/demo/effects/bm_bleed.tres" id="1_s684h"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_lifesteal_heal.tres" id="2_tvawa"]
+[ext_resource type="Script" path="res://combat/battle_rules.gd" id="3_qtn7x"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_overheal_shield.tres" id="4_ovrsh"]
+
+[resource]
+script = ExtResource("3_qtn7x")
+id = &"demo.battle_rules"
+bleed_effect = ExtResource("1_s684h")
+lifesteal_effect = ExtResource("2_tvawa")
+bleed_stacks = 5
+overheal_effect = ExtResource("4_ovrsh")
+health_low_x100 = 5000
+health_critical_x100 = 2500

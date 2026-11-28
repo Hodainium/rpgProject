@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_cggs2"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_e4sfl"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_oapab"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_bleed.tres" id="4_f7vmi"]
+[ext_resource type="Animation" path="res://content/demo/animations/pinprick.tres" id="5_0l7sh"]
+
+[sub_resource type="Resource" id="Resource_qcv2w"]
+script = ExtResource("2_e4sfl")
+id = &"prick"
+effect = ExtResource("3_oapab")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 9000
+toughness_x100 = 3000
+
+[sub_resource type="Resource" id="Resource_i1plt"]
+script = ExtResource("2_e4sfl")
+id = &"bleed"
+effect = ExtResource("4_f7vmi")
+chance_x100 = 6000
+
+[node name="BmLancet" type="Node" unique_id=787293038]
+script = ExtResource("1_cggs2")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle", &"Ability.Type.Basic"])
+executions = Array[ExtResource("2_e4sfl")]([SubResource("Resource_qcv2w"), SubResource("Resource_i1plt")])
+animation = ExtResource("5_0l7sh")
+description = "90% ATK Physical to one enemy; 60% chance of 1 Bleed stack (2 turns)."
+ability_name = "Lancet"
+ability_tag = &"Ability.Lancet"

@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_2xxvo"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_0aees"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_iy7el"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_holy_water.tres" id="4_7tbtn"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_43.tres" id="5_8ch14"]
+
+[sub_resource type="Resource" id="Resource_nv5oo"]
+script = ExtResource("2_0aees")
+id = &"flask"
+effect = ExtResource("3_iy7el")
+damage_mode = 2
+targets = 1
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 11000
+toughness_x100 = 6000
+
+[sub_resource type="Resource" id="Resource_ffegs"]
+script = ExtResource("2_0aees")
+id = &"splash"
+effect = ExtResource("3_iy7el")
+damage_mode = 2
+targets = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 5500
+toughness_x100 = 3000
+
+[node name="BmHolyWater2" type="Node" unique_id=1713893379]
+script = ExtResource("1_2xxvo")
+targeting = 2
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_0aees")]([SubResource("Resource_nv5oo"), SubResource("Resource_ffegs")])
+animation = ExtResource("4_7tbtn")
+description = "110% ATK Fire to one enemy and 55% to its neighbours."
+ability_name = "Holy Water II"
+ability_tag = &"Ability.Holywater2"
+cost_effect = ExtResource("5_8ch14")

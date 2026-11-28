@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_wikjx"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_80vx8"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_signet_heal.tres" id="3_4xbsb"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_w5bxl"]
+
+[sub_resource type="Resource" id="Resource_uvej0"]
+script = ExtResource("2_80vx8")
+id = &"charge"
+effect = ExtResource("3_4xbsb")
+damage_mode = 3
+
+[node name="BmICrimsonSignet" type="Node" unique_id=890088636]
+script = ExtResource("1_wikjx")
+targeting = 5
+executions = Array[ExtResource("2_80vx8")]([SubResource("Resource_uvej0")])
+animation = ExtResource("4_w5bxl")
+description = "Your lifesteal is doubled on a crit."
+ability_name = "Crimson Signet"
+ability_tag = &"Ability.Passive.Icrimsonsignet"
+trigger_event_tag = &"Event.Damage.Dealt.Critical"

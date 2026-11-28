@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_bloodletting_bowl.tscn" id="1_uq31g"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_p60yn"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_bleed_5.tres" id="3_v1kx3"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_2ucun"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_sxgxg"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_3pi1f"]
+
+[sub_resource type="Resource" id="Resource_8eyio"]
+script = ExtResource("4_2ucun")
+abilities = Array[PackedScene]([ExtResource("1_uq31g")])
+effects = Array[ExtResource("2_p60yn")]([ExtResource("3_v1kx3")])
+
+[resource]
+script = ExtResource("6_3pi1f")
+id = &"demo.item.bloodletting_bowl"
+display_name = "Bloodletting Bowl"
+description = "+5% Bleed chance; on a kill, 2 Bleed stacks spread to a random other enemy."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Bleed", &"Item.Fit.Dot", &"Item.Grants.Dot"])
+price = 9
+grants = SubResource("Resource_8eyio")

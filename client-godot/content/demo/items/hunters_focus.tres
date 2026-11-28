@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_focus_gain.tscn" id="1_spvig"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_focus_spent.tscn" id="2_2xgjg"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_i0u8m"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_4s8bi"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_rpkpb"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_bbtty"]
+
+[sub_resource type="Resource" id="Resource_kiunk"]
+script = ExtResource("4_4s8bi")
+abilities = Array[PackedScene]([ExtResource("1_spvig"), ExtResource("2_2xgjg")])
+
+[resource]
+script = ExtResource("6_bbtty")
+id = &"demo.item.hunters_focus"
+display_name = "Hunter's Focus"
+description = "Gives its holder Focus: every hit that does not crit gives 1 Focus (max 3; each +8% crit rate, +12% crit damage); a crit spends them all."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Damage", &"Item.Fit.Crit"])
+price = 7
+grants = SubResource("Resource_kiunk")

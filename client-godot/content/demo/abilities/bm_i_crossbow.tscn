@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_tlbnk"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_uv3pj"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_silvered.tres" id="3_yo216"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_xrtb7"]
+
+[sub_resource type="Resource" id="Resource_u1nxq"]
+script = ExtResource("2_uv3pj")
+id = &"charge"
+effect = ExtResource("3_yo216")
+
+[node name="BmICrossbow" type="Node" unique_id=39073908]
+script = ExtResource("1_tlbnk")
+executions = Array[ExtResource("2_uv3pj")]([SubResource("Resource_u1nxq")])
+animation = ExtResource("4_xrtb7")
+description = "Your crits Silver the target."
+ability_name = "Hunter's Crossbow"
+ability_tag = &"Ability.Passive.Icrossbow"
+trigger_event_tag = &"Event.Damage.Dealt.Critical"

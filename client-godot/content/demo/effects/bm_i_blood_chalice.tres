@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_e2je8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_xmy15"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_tyaqq"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_2udk2"]
+
+[sub_resource type="Resource" id="Resource_g2lse"]
+script = ExtResource("3_tyaqq")
+value_x100 = 1500
+attribute_name = "lifesteal"
+
+[sub_resource type="Resource" id="Resource_bowsn"]
+script = ExtResource("3_tyaqq")
+value_x100 = 1000
+attribute_name = "atk"
+operation = 1
+
+[resource]
+script = ExtResource("4_2udk2")
+policy = 2
+modifiers = Array[ExtResource("2_xmy15")]([SubResource("Resource_g2lse"), SubResource("Resource_bowsn")])

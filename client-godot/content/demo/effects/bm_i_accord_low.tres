@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_p30au"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_766pk"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_mpjai"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="4_r6dux"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="5_82rne"]
+
+[sub_resource type="Resource" id="Resource_mssio"]
+script = ExtResource("3_mpjai")
+value_x100 = 2000
+attribute_name = "heal_taken"
+
+[sub_resource type="Resource" id="Resource_tddwn"]
+script = ExtResource("4_r6dux")
+ignore_tags = Array[StringName]([&"State.Health.Low"])
+
+[resource]
+script = ExtResource("5_82rne")
+policy = 2
+modifiers = Array[ExtResource("2_766pk")]([SubResource("Resource_mssio")])
+ongoing_suppression_query = SubResource("Resource_tddwn")

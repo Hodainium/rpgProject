@@ -200,6 +200,42 @@
 [ext_resource type="Resource" path="res://presentation/demo/style/items/item_card_look.tres" id="item_card_look"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/shaman_face_paint.tres" id="shaman_face_paint"]
 [ext_resource type="Resource" path="res://presentation/demo/style/attachments/rat_eyes_tiny_brows.tres" id="rat_eyes_tiny_brows"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_bb_crystal.tres" id="bm_bm_bb_crystal"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_bb_hood.tres" id="bm_bm_bb_hood"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_bb_robe.tres" id="bm_bm_bb_robe"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_bl_cage.tres" id="bm_bm_bl_cage"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_bl_coat.tres" id="bm_bm_bl_coat"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_bl_goggles.tres" id="bm_bm_bl_goggles"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_bl_mouth_stitched.tres" id="bm_bm_bl_mouth_stitched"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_bl_scalp.tres" id="bm_bm_bl_scalp"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_bl_vials.tres" id="bm_bm_bl_vials"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_face_bb_a.tres" id="bm_bm_face_bb_a"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_face_hunter_d.tres" id="bm_bm_face_hunter_d"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_face_vampire_a.tres" id="bm_bm_face_vampire_a"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_hunter_bandolier.tres" id="bm_bm_hunter_bandolier"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_hunter_coat.tres" id="bm_bm_hunter_coat"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_hunter_crossbow.tres" id="bm_bm_hunter_crossbow"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_hunter_hip_flask.tres" id="bm_bm_hunter_hip_flask"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_hunter_tricorne.tres" id="bm_bm_hunter_tricorne"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_vampire_cloak.tres" id="bm_bm_vampire_cloak"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_vampire_collar.tres" id="bm_bm_vampire_collar"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_vampire_cravat.tres" id="bm_bm_vampire_cravat"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_vampire_hair.tres" id="bm_bm_vampire_hair"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_vampire_peak.tres" id="bm_bm_vampire_peak"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_ww_ears_grey.tres" id="bm_bm_ww_ears_grey"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_ww_eyes_gold.tres" id="bm_bm_ww_eyes_gold"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_ww_mane_grey.tres" id="bm_bm_ww_mane_grey"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_ww_snout_grey.tres" id="bm_bm_ww_snout_grey"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_ww_tail_grey.tres" id="bm_bm_ww_tail_grey"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_ww_ears_black.tres" id="bm_bm_ww_ears_black"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_ww_mane_black.tres" id="bm_bm_ww_mane_black"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_ww_snout_black.tres" id="bm_bm_ww_snout_black"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_ww_eyes_red.tres" id="bm_bm_ww_eyes_red"]
+[ext_resource type="Resource" path="res://presentation/demo/style/attachments/bm_ww_tail_black.tres" id="bm_bm_ww_tail_black"]
+[ext_resource type="Script" path="res://game/view/state_look.gd" id="bm_state_look"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/explosion.tres" id="bm_fx_explosion"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/screen_shake.tres" id="bm_fx_screen_shake"]
+[ext_resource type="Resource" path="res://presentation/demo/fx/blood_glow.tres" id="bm_fx_blood_glow"]
 
 [sub_resource type="Resource" id="Resource_f1a1"]
 script = ExtResource("2_b37kx")
@@ -1987,10 +2023,248 @@ chests = Dictionary[StringName, ExtResource("setk_15")]({
 &"demo.chest.gilded": SubResource("Resource_setk_9")
 })
 
+[sub_resource type="Resource" id="Resource_bm_vampire_0"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_vampire_cloak")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_bm_vampire_1"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_vampire_collar")
+socket = &"Top"
+
+[sub_resource type="Resource" id="Resource_bm_vampire_2"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_vampire_hair")
+socket = &"Top"
+
+[sub_resource type="Resource" id="Resource_bm_vampire_3"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_vampire_peak")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_vampire_4"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_face_vampire_a")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_vampire_5"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_vampire_cravat")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_vampire"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_bm_vampire_0"), SubResource("Resource_bm_vampire_1"), SubResource("Resource_bm_vampire_2"), SubResource("Resource_bm_vampire_3"), SubResource("Resource_bm_vampire_4"), SubResource("Resource_bm_vampire_5")])
+effect = ExtResource("s5_26")
+effect_params = {
+"color": Color(0.04, 0.02, 0.03, 1),
+"ember_color": Color(0, 0, 0, 1)
+}
+
+[sub_resource type="Resource" id="Resource_bm_vampire_hunter_0"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_hunter_coat")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_bm_vampire_hunter_1"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_hunter_tricorne")
+socket = &"Top"
+
+[sub_resource type="Resource" id="Resource_bm_vampire_hunter_2"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_face_hunter_d")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_vampire_hunter_3"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_hunter_bandolier")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_vampire_hunter_4"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_hunter_hip_flask")
+socket = &"Left"
+
+[sub_resource type="Resource" id="Resource_bm_vampire_hunter_5"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_hunter_crossbow")
+socket = &"Right"
+offset = Vector3(-0.14, -0.04, 0)
+
+[sub_resource type="Resource" id="Resource_bm_vampire_hunter"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_bm_vampire_hunter_0"), SubResource("Resource_bm_vampire_hunter_1"), SubResource("Resource_bm_vampire_hunter_2"), SubResource("Resource_bm_vampire_hunter_3"), SubResource("Resource_bm_vampire_hunter_4"), SubResource("Resource_bm_vampire_hunter_5")])
+
+[sub_resource type="Resource" id="Resource_bm_bloodbinder_0"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_bb_hood")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_bm_bloodbinder_1"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_bb_robe")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_bm_bloodbinder_2"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_face_bb_a")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_bloodbinder_3"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_bb_crystal")
+socket = &"Left"
+offset = Vector3(0.24, 0.05, 0)
+motion = 1
+motion_speed = 0.45
+motion_amount = 0.06
+
+[sub_resource type="Resource" id="Resource_bm_bloodbinder_4"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_bb_crystal")
+socket = &"Right"
+offset = Vector3(-0.24, 0.05, 0)
+motion = 1
+motion_speed = 0.45
+motion_amount = 0.06
+
+[sub_resource type="Resource" id="Resource_bm_bloodbinder"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_bm_bloodbinder_0"), SubResource("Resource_bm_bloodbinder_1"), SubResource("Resource_bm_bloodbinder_2"), SubResource("Resource_bm_bloodbinder_3"), SubResource("Resource_bm_bloodbinder_4")])
+effect = ExtResource("s5_26")
+effect_params = {
+"color": Color(0.45, 0, 0.05, 1),
+"ember_color": Color(0, 0, 0, 1)
+}
+
+[sub_resource type="Resource" id="Resource_bm_werewolf_0"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_ww_ears_grey")
+socket = &"Top"
+
+[sub_resource type="Resource" id="Resource_bm_werewolf_1"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_ww_mane_grey")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_bm_werewolf_2"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_ww_snout_grey")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_werewolf_3"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_ww_eyes_gold")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_werewolf_4"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_ww_tail_grey")
+socket = &"Back"
+
+[sub_resource type="Resource" id="Resource_bm_werewolf"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_bm_werewolf_0"), SubResource("Resource_bm_werewolf_1"), SubResource("Resource_bm_werewolf_2"), SubResource("Resource_bm_werewolf_3"), SubResource("Resource_bm_werewolf_4")])
+
+[sub_resource type="Resource" id="Resource_bm_wolf_rage_0"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_ww_ears_black")
+socket = &"Top"
+
+[sub_resource type="Resource" id="Resource_bm_wolf_rage_1"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_ww_mane_black")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_bm_wolf_rage_2"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_ww_snout_black")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_wolf_rage_3"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_ww_eyes_red")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_wolf_rage_4"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_ww_tail_black")
+socket = &"Back"
+
+[sub_resource type="Resource" id="Resource_bm_wolf_rage_look"]
+script = ExtResource("1_avbba")
+use_color_override = true
+color_override = Color(0.12, 0.1, 0.1, 1)
+roughness = 1.0
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_bm_wolf_rage_0"), SubResource("Resource_bm_wolf_rage_1"), SubResource("Resource_bm_wolf_rage_2"), SubResource("Resource_bm_wolf_rage_3"), SubResource("Resource_bm_wolf_rage_4")])
+
+[sub_resource type="Resource" id="Resource_bm_wolf_rage"]
+script = ExtResource("bm_state_look")
+unit_id = &"demo.character.werewolf"
+tags = Array[StringName]([&"Status.WolfForm", &"State.WolfForm"])
+look = SubResource("Resource_bm_wolf_rage_look")
+enter_color = Color(0.95, 0.08, 0.1, 1)
+leave_color = Color(0.85, 0.8, 0.7, 1)
+burst = ExtResource("bm_fx_explosion")
+burst_params = {
+"intensity": 0.6,
+"size": 0.7
+}
+shake = ExtResource("bm_fx_screen_shake")
+shake_params = {
+"strength": 0.5
+}
+
+[sub_resource type="Resource" id="Resource_bm_bloodletter_0"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_bl_scalp")
+socket = &"Top"
+
+[sub_resource type="Resource" id="Resource_bm_bloodletter_1"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_bl_cage")
+socket = &"Top"
+
+[sub_resource type="Resource" id="Resource_bm_bloodletter_2"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_bl_coat")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_bm_bloodletter_3"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_bl_goggles")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_bloodletter_4"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_bl_vials")
+socket = &"Center"
+
+[sub_resource type="Resource" id="Resource_bm_bloodletter_5"]
+script = ExtResource("2_b37kx")
+shape = ExtResource("bm_bm_bl_mouth_stitched")
+socket = &"Front"
+
+[sub_resource type="Resource" id="Resource_bm_bloodletter"]
+script = ExtResource("1_avbba")
+attachments = Array[ExtResource("2_b37kx")]([SubResource("Resource_bm_bloodletter_0"), SubResource("Resource_bm_bloodletter_1"), SubResource("Resource_bm_bloodletter_2"), SubResource("Resource_bm_bloodletter_3"), SubResource("Resource_bm_bloodletter_4"), SubResource("Resource_bm_bloodletter_5")])
+effect = ExtResource("bm_fx_blood_glow")
+effect_params = {
+"color": Color(0.85, 0.02, 0.06, 1),
+"mote_color": Color(0.9, 0.05, 0.1, 1)
+}
+
 [resource]
 script = ExtResource("4_amh85")
 default_look = SubResource("Resource_h2uv3")
 looks = Dictionary[StringName, ExtResource("1_avbba")]({
+&"demo.character.bloodbinder": SubResource("Resource_bm_bloodbinder"),
+&"demo.character.bloodletter": SubResource("Resource_bm_bloodletter"),
+&"demo.character.vampire": SubResource("Resource_bm_vampire"),
+&"demo.character.vampire_hunter": SubResource("Resource_bm_vampire_hunter"),
+&"demo.character.werewolf": SubResource("Resource_bm_werewolf"),
 &"demo.character.arcanist": SubResource("Resource_wasn7"),
 &"demo.character.bard": SubResource("Resource_6q8ru"),
 &"demo.character.bulwark": SubResource("Resource_bulwark"),
@@ -2064,3 +2338,4 @@ moods = Dictionary[StringName, ExtResource("3_wpew0")]({
 party_formation = SubResource("Resource_partyform")
 enemy_formation = SubResource("Resource_enemyform")
 props = SubResource("Resource_setk_10")
+state_looks = Array[ExtResource("bm_state_look")]([SubResource("Resource_bm_wolf_rage")])

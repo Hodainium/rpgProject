@@ -1,0 +1,163 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_dawnbreak.tscn" id="1_1hq5a"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_silver_bolt.tscn" id="2_0ojf7"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_holy_water.tscn" id="3_66ej0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_stake.tscn" id="4_dagpk"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_focus.tscn" id="5_5ajxh"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_focus_spent.tscn" id="6_lbn32"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_silver.tscn" id="7_h38t8"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="8_js561"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="9_w8fqg"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="10_xeodd"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="11_ot28y"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="12_bmxcx"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="13_ks6yd"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sp_gain.tscn" id="14_834fg"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="15_32wxw"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="16_03rvy"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="17_em2cq"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="18_77vg4"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="19_6474d"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_1.tres" id="20_cxjms"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_2.tres" id="21_g6q3m"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_3.tres" id="22_06wp3"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="23_exs7u"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_keen_senses.tscn" id="24_lubnh"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_holy_water_2.tscn" id="25_0khra"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_patient_hunter.tscn" id="26_kv5uu"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_holy_water_3.tscn" id="27_twgwc"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_chain_shot.tscn" id="28_ykqeq"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_dawnbreak_2.tscn" id="29_o22hr"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_relentless.tscn" id="30_6dib2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_stake_2.tscn" id="31_x8tmo"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_purge_the_night.tscn" id="32_qaxva"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_keen_senses_2.tscn" id="33_gurcn"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_verdict_mark.tscn" id="34_857ng"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_final_verdict.tscn" id="35_im8qx"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_purge_the_night_2.tscn" id="36_ta4ap"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_dawnbreak_3.tscn" id="37_4c52q"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="38_8w427"]
+
+[sub_resource type="Resource" id="Resource_wkxmf"]
+script = ExtResource("18_77vg4")
+
+[sub_resource type="Resource" id="Resource_2vigs"]
+script = ExtResource("19_6474d")
+effect = ExtResource("20_cxjms")
+
+[sub_resource type="Resource" id="Resource_1jue4"]
+script = ExtResource("19_6474d")
+from_level = 16
+effect = ExtResource("21_g6q3m")
+
+[sub_resource type="Resource" id="Resource_44or5"]
+script = ExtResource("19_6474d")
+from_level = 31
+effect = ExtResource("22_06wp3")
+
+[sub_resource type="Resource" id="Resource_wcsjb"]
+script = ExtResource("23_exs7u")
+level = 3
+ability = ExtResource("24_lubnh")
+
+[sub_resource type="Resource" id="Resource_axlm2"]
+script = ExtResource("23_exs7u")
+level = 5
+ability = ExtResource("25_0khra")
+replaces = &"Ability.Holywater"
+
+[sub_resource type="Resource" id="Resource_yqrhh"]
+script = ExtResource("23_exs7u")
+level = 7
+ability = ExtResource("26_kv5uu")
+
+[sub_resource type="Resource" id="Resource_jlrwf"]
+script = ExtResource("23_exs7u")
+level = 9
+ability = ExtResource("27_twgwc")
+replaces = &"Ability.Holywater2"
+
+[sub_resource type="Resource" id="Resource_k7scd"]
+script = ExtResource("23_exs7u")
+level = 12
+ability = ExtResource("28_ykqeq")
+
+[sub_resource type="Resource" id="Resource_ps51e"]
+script = ExtResource("23_exs7u")
+level = 15
+ability = ExtResource("29_o22hr")
+replaces = &"Ability.Ult.Dawnbreak"
+
+[sub_resource type="Resource" id="Resource_ykf5s"]
+script = ExtResource("23_exs7u")
+level = 20
+ability = ExtResource("30_6dib2")
+
+[sub_resource type="Resource" id="Resource_la6bk"]
+script = ExtResource("23_exs7u")
+level = 25
+ability = ExtResource("31_x8tmo")
+replaces = &"Ability.Stake"
+
+[sub_resource type="Resource" id="Resource_3qb8e"]
+script = ExtResource("23_exs7u")
+level = 30
+ability = ExtResource("32_qaxva")
+
+[sub_resource type="Resource" id="Resource_wy5sl"]
+script = ExtResource("23_exs7u")
+level = 35
+ability = ExtResource("33_gurcn")
+replaces = &"Ability.Passive.Keensenses"
+
+[sub_resource type="Resource" id="Resource_nvdhq"]
+script = ExtResource("23_exs7u")
+level = 40
+ability = ExtResource("34_857ng")
+
+[sub_resource type="Resource" id="Resource_d4ljf"]
+script = ExtResource("23_exs7u")
+level = 40
+ability = ExtResource("35_im8qx")
+
+[sub_resource type="Resource" id="Resource_wgmb3"]
+script = ExtResource("23_exs7u")
+level = 45
+ability = ExtResource("36_ta4ap")
+replaces = &"Ability.Purgethenight"
+
+[sub_resource type="Resource" id="Resource_mllsa"]
+script = ExtResource("23_exs7u")
+level = 50
+ability = ExtResource("37_4c52q")
+replaces = &"Ability.Ult.Dawnbreak2"
+
+[resource]
+script = ExtResource("38_8w427")
+role = "Damage dealer: crits"
+description = "Builds Focus with every hit that misses a crit, spends it on the crit, and Silvers what it crits: they heal half as much."
+growth_bands = Array[ExtResource("19_6474d")]([SubResource("Resource_2vigs"), SubResource("Resource_1jue4"), SubResource("Resource_44or5")])
+id = &"demo.character.vampire_hunter"
+attribute_set = ExtResource("15_32wxw")
+abilities = Array[PackedScene]([ExtResource("1_1hq5a"), ExtResource("2_0ojf7"), ExtResource("3_66ej0"), ExtResource("4_dagpk"), ExtResource("5_5ajxh"), ExtResource("6_lbn32"), ExtResource("7_h38t8"), ExtResource("8_js561"), ExtResource("9_w8fqg"), ExtResource("10_xeodd"), ExtResource("11_ot28y"), ExtResource("12_bmxcx"), ExtResource("13_ks6yd"), ExtResource("14_834fg")])
+display_name = "Vampire Hunter"
+display_color = Color(0.24, 0.27, 0.36, 1)
+tags = Array[StringName]([&"Character.Vampirehunter", &"Unit.Role.Damage", &"Card.Set.Bloodmoon"])
+default_loadout = SubResource("Resource_wkxmf")
+level_skills = Array[ExtResource("23_exs7u")]([SubResource("Resource_wcsjb"), SubResource("Resource_axlm2"), SubResource("Resource_yqrhh"), SubResource("Resource_jlrwf"), SubResource("Resource_k7scd"), SubResource("Resource_ps51e"), SubResource("Resource_ykf5s"), SubResource("Resource_la6bk"), SubResource("Resource_3qb8e"), SubResource("Resource_wy5sl"), SubResource("Resource_nvdhq"), SubResource("Resource_d4ljf"), SubResource("Resource_wgmb3"), SubResource("Resource_mllsa")])
+stats_x100 = Dictionary[String, int]({
+"atk": 50000,
+"crit_dmg": 6000,
+"crit_rate": 1000,
+"def": 22000,
+"energy": 0,
+"hp": 85000,
+"max_hp": 85000,
+"max_mp": 7000,
+"max_toughness": 0,
+"mp": 7000,
+"sp_basic": 1500,
+"spd": 11200,
+"toughness": 0
+})

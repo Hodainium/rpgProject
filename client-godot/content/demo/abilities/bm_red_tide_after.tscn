@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_nd8px"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_a8jft"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_red_tide_heal.tres" id="3_kur8f"]
+[ext_resource type="Animation" path="res://content/demo/animations/mend.tres" id="4_02xgd"]
+
+[sub_resource type="Resource" id="Resource_uipvx"]
+script = ExtResource("2_a8jft")
+id = &"regen"
+effect = ExtResource("3_kur8f")
+
+[node name="BmRedTideAfter" type="Node" unique_id=445525084]
+script = ExtResource("1_nd8px")
+targeting = 4
+executions = Array[ExtResource("2_a8jft")]([SubResource("Resource_uipvx")])
+animation = ExtResource("4_02xgd")
+description = "After Red Tide: the party heals 12% of max HP."
+ability_name = "Red Tide"
+ability_tag = &"Ability.Passive.Redtideafter"
+trigger_event_tag = &"Event.Ability.Used.RedTide"

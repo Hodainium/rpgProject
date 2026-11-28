@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_crimson_signet.tscn" id="1_xf4pa"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_rnyo7"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_crimson_signet.tres" id="3_5bxq6"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_78heg"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_0rv6f"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_7emou"]
+
+[sub_resource type="Resource" id="Resource_qec5n"]
+script = ExtResource("4_78heg")
+abilities = Array[PackedScene]([ExtResource("1_xf4pa")])
+effects = Array[ExtResource("2_rnyo7")]([ExtResource("3_5bxq6")])
+
+[resource]
+script = ExtResource("6_7emou")
+id = &"demo.item.crimson_signet"
+display_name = "Crimson Signet"
+description = "+6% lifesteal; your lifesteal is doubled on a crit."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Lifesteal", &"Item.Fit.Survival", &"Item.Fit.Crit"])
+price = 7
+grants = SubResource("Resource_qec5n")

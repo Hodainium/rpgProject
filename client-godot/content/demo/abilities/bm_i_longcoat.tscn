@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_3ryk2"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_m8tg0"]
+[ext_resource type="Resource" path="res://content/demo/effects/cleanse.tres" id="3_v2ryb"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_i_longcoat.tres" id="4_y2v2f"]
+
+[sub_resource type="Resource" id="Resource_y1hfd"]
+script = ExtResource("2_m8tg0")
+id = &"cleanse"
+effect = ExtResource("3_v2ryb")
+
+[node name="BmILongcoat" type="Node" unique_id=1765260040]
+script = ExtResource("1_3ryk2")
+targeting = 5
+executions = Array[ExtResource("2_m8tg0")]([SubResource("Resource_y1hfd")])
+animation = ExtResource("4_y2v2f")
+description = "A crit cleanses you."
+ability_name = "Hunter's Longcoat"
+ability_tag = &"Ability.Passive.Ilongcoat"
+trigger_event_tag = &"Event.Damage.Dealt.Critical"

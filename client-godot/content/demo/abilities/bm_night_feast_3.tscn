@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_8gp86"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_k575g"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_5j6rm"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_night_feast.tres" id="4_pp60d"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_jwjkr"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_emkf3"]
+
+[sub_resource type="Resource" id="Resource_hsp1b"]
+script = ExtResource("2_k575g")
+id = &"crush"
+effect = ExtResource("3_5j6rm")
+damage_mode = 2
+targets = 1
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 42000
+toughness_x100 = 9000
+
+[sub_resource type="Resource" id="Resource_cjs0h"]
+script = ExtResource("2_k575g")
+id = &"quake"
+effect = ExtResource("3_5j6rm")
+damage_mode = 2
+targets = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 14000
+toughness_x100 = 3000
+
+[node name="BmNightFeast3" type="Node" unique_id=1086152463]
+script = ExtResource("1_8gp86")
+targeting = 2
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Type.Ultimate", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_k575g")]([SubResource("Resource_hsp1b"), SubResource("Resource_cjs0h")])
+animation = ExtResource("4_pp60d")
+description = "420% ATK Physical to one enemy and 140% to its neighbours."
+ability_name = "Night Feast III"
+ability_tag = &"Ability.Ult.Nightfeast3"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Nightfeast"])
+activation_query = ExtResource("5_jwjkr")
+cost_effect = ExtResource("6_emkf3")

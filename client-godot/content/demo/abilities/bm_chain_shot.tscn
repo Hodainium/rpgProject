@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_btep5"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_o6qm8"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_nk0cg"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_chain_shot.tres" id="4_konjy"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_53.tres" id="5_3prnr"]
+
+[sub_resource type="Resource" id="Resource_5f4k2"]
+script = ExtResource("2_o6qm8")
+id = &"s1"
+effect = ExtResource("3_nk0cg")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 6000
+toughness_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_qtlrd"]
+script = ExtResource("2_o6qm8")
+id = &"s2"
+effect = ExtResource("3_nk0cg")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 6000
+toughness_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_7vigt"]
+script = ExtResource("2_o6qm8")
+id = &"s3"
+effect = ExtResource("3_nk0cg")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 6000
+toughness_x100 = 2000
+
+[node name="BmChainShot" type="Node" unique_id=609524526]
+script = ExtResource("1_btep5")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_o6qm8")]([SubResource("Resource_5f4k2"), SubResource("Resource_qtlrd"), SubResource("Resource_7vigt")])
+animation = ExtResource("4_konjy")
+description = "3 hits of 60% ATK Physical on one enemy; each builds or spends Focus."
+ability_name = "Chain Shot"
+ability_tag = &"Ability.Chainshot"
+cost_effect = ExtResource("5_3prnr")

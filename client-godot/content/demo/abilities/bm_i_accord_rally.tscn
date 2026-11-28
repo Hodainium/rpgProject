@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_5nysf"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_olv7x"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_accord_rally.tres" id="3_y46ij"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_accord_used.tres" id="4_byrmb"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_i_accord_rally.tres" id="5_6symh"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="6_rncwh"]
+
+[sub_resource type="Resource" id="Resource_5ju7j"]
+script = ExtResource("2_olv7x")
+id = &"rally"
+effect = ExtResource("3_y46ij")
+
+[sub_resource type="Resource" id="Resource_gbbgv"]
+script = ExtResource("2_olv7x")
+id = &"used"
+effect = ExtResource("4_byrmb")
+
+[sub_resource type="Resource" id="Resource_nd5ow"]
+script = ExtResource("6_rncwh")
+require_any_tags = Array[StringName]([&"State.Health.Tracked"])
+ignore_tags = Array[StringName]([&"State.Health.Low"])
+
+[sub_resource type="Resource" id="Resource_d1d4t"]
+script = ExtResource("6_rncwh")
+ignore_tags = Array[StringName]([&"State.AccordUsed"])
+
+[node name="BmIAccordRally" type="Node" unique_id=1822790311]
+script = ExtResource("1_5nysf")
+targeting = 4
+executions = Array[ExtResource("2_olv7x")]([SubResource("Resource_5ju7j"), SubResource("Resource_gbbgv")])
+animation = ExtResource("5_6symh")
+description = "Once per turn, a heal that leaves an ally above 50% HP gives the party +15% ATK for 2 turns."
+subject_query = SubResource("Resource_nd5ow")
+ability_name = "Crimson Accord"
+ability_tag = &"Ability.Passive.Iaccordrally"
+activation_query = SubResource("Resource_d1d4t")
+trigger_event_tag = &"Event.Heal.Given"

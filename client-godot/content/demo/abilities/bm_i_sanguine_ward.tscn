@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_vpbkh"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_65oki"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_sanguine_ward.tres" id="3_nkhyv"]
+[ext_resource type="Animation" path="res://content/demo/animations/rally_horn.tres" id="4_s77ae"]
+
+[sub_resource type="Resource" id="Resource_nscbx"]
+script = ExtResource("2_65oki")
+id = &"rally"
+effect = ExtResource("3_nkhyv")
+
+[node name="BmISanguineWard" type="Node" unique_id=942863856]
+script = ExtResource("1_vpbkh")
+targeting = 4
+executions = Array[ExtResource("2_65oki")]([SubResource("Resource_nscbx")])
+animation = ExtResource("4_s77ae")
+description = "At battle start, every ally gets a shield of 8% of their max HP."
+ability_name = "Sanguine Ward"
+ability_tag = &"Ability.Passive.Isanguineward"
+trigger_event_tag = &"Event.Battle.Start"

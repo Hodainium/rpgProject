@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_eauai"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_pgwy1"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_blood_rite_2.tres" id="3_dx233"]
+[ext_resource type="Animation" path="res://content/demo/animations/rally_horn.tres" id="4_l8fb7"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_hp_cost_15_0.tres" id="5_ebkje"]
+
+[sub_resource type="Resource" id="Resource_4ihox"]
+script = ExtResource("2_pgwy1")
+id = &"rally"
+effect = ExtResource("3_dx233")
+
+[node name="BmBloodRite2" type="Node" unique_id=1302975717]
+script = ExtResource("1_eauai")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Buff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_pgwy1")]([SubResource("Resource_4ihox")])
+animation = ExtResource("4_l8fb7")
+description = "Costs 15% max HP. The party: +12% lifesteal for 3 turns."
+ability_name = "Blood Rite II"
+ability_tag = &"Ability.Bloodrite2"
+cost_effect = ExtResource("5_ebkje")

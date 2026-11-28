@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_v7rba"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_cetkg"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_ch21n"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_6cmkf"]
+
+[sub_resource type="Resource" id="Resource_6dhhn"]
+script = ExtResource("3_ch21n")
+value_x100 = 500
+attribute_name = "crit_rate"
+
+[resource]
+script = ExtResource("4_6cmkf")
+stacking_policy = 1
+policy = 3
+max_stacks = 3
+duration_turns = 2
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff", &"Cue.Sfx.Apply.Buff"])
+modifiers = Array[ExtResource("2_cetkg")]([SubResource("Resource_6dhhn")])
+granted_tags = Array[StringName]([&"Status.Buff.Vigil"])

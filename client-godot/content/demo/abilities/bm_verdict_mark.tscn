@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_rh76c"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_7fp1e"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_crit_mark.tres" id="3_h8ud1"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_ymmrv"]
+
+[sub_resource type="Resource" id="Resource_mo8sw"]
+script = ExtResource("2_7fp1e")
+id = &"charge"
+effect = ExtResource("3_h8ud1")
+
+[node name="BmVerdictMark" type="Node" unique_id=1931202709]
+script = ExtResource("1_rh76c")
+targeting = 5
+executions = Array[ExtResource("2_7fp1e")]([SubResource("Resource_mo8sw")])
+animation = ExtResource("4_ymmrv")
+description = "A crit this turn."
+ability_name = "Final Verdict"
+ability_tag = &"Ability.Passive.Verdictmark"
+trigger_event_tag = &"Event.Damage.Dealt.Critical"

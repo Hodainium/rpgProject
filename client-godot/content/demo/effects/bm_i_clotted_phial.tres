@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_5cvhi"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_tbpjj"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_lm30d"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_5ig47"]
+
+[sub_resource type="Resource" id="Resource_dpoyp"]
+script = ExtResource("3_lm30d")
+value_x100 = 500
+attribute_name = "bleed_chance"
+
+[sub_resource type="Resource" id="Resource_7x2tr"]
+script = ExtResource("3_lm30d")
+value_x100 = 200
+attribute_name = "bleed_stacks"
+
+[resource]
+script = ExtResource("4_5ig47")
+policy = 2
+modifiers = Array[ExtResource("2_tbpjj")]([SubResource("Resource_dpoyp"), SubResource("Resource_7x2tr")])

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_8so08"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_rending_claws.tres" id="2_xnq52"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_h1s76"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_pfbsf"]
+
+[sub_resource type="Resource" id="Resource_vqtjc"]
+script = ExtResource("3_h1s76")
+effects = Array[ExtResource("1_8so08")]([ExtResource("2_xnq52")])
+
+[resource]
+script = ExtResource("4_pfbsf")
+id = &"demo.equipment.rending_claws"
+display_name = "Rending Claws"
+description = "+25 ATK; your follow-ups deal +20% toughness damage."
+slot = &"Equipment.Slot.Weapon"
+grants = SubResource("Resource_vqtjc")
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.FollowUp", &"Item.Fit.Break", &"Item.Fit.Damage"])
+price = 7

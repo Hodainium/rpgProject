@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_cx4gl"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_event_amount.gd" id="2_m5awh"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_bapmi"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_n7rja"]
+
+[sub_resource type="Resource" id="Resource_ocl6j"]
+script = ExtResource("2_m5awh")
+attribute = "shield"
+
+[resource]
+script = ExtResource("4_n7rja")
+executions = Array[ExtResource("1_cx4gl")]([SubResource("Resource_ocl6j")])

@@ -1,0 +1,32 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_jtxq6"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ebnnr"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_bleed_detonate.tres" id="3_3w7hq"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_bleed_purge.tres" id="4_6d4np"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_i_burst.tres" id="5_5u0yk"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="6_3dlfm"]
+
+[sub_resource type="Resource" id="Resource_n0y64"]
+script = ExtResource("2_ebnnr")
+id = &"blast"
+effect = ExtResource("3_3w7hq")
+
+[sub_resource type="Resource" id="Resource_i0yxb"]
+script = ExtResource("2_ebnnr")
+id = &"clear"
+effect = ExtResource("4_6d4np")
+
+[sub_resource type="Resource" id="Resource_exbbj"]
+script = ExtResource("6_3dlfm")
+require_any_tags = Array[StringName]([&"Status.Debuff.Bleed"])
+
+[node name="BmIBurstVein" type="Node" unique_id=1609094026]
+script = ExtResource("1_jtxq6")
+executions = Array[ExtResource("2_ebnnr")]([SubResource("Resource_n0y64"), SubResource("Resource_i0yxb")])
+animation = ExtResource("5_5u0yk")
+description = "Your crits on a Bleeding enemy detonate its Bleed."
+subject_query = SubResource("Resource_exbbj")
+ability_name = "Burst Vein"
+ability_tag = &"Ability.Passive.Iburstvein"
+trigger_event_tag = &"Event.Damage.Dealt.Critical"

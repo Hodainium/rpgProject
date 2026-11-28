@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_blood_jar.tscn" id="1_byfwf"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_7hmqj"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_bleed_5.tres" id="3_xkyuk"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_7e873"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_13cl0"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_2jui6"]
+
+[sub_resource type="Resource" id="Resource_bfdm1"]
+script = ExtResource("4_7e873")
+abilities = Array[PackedScene]([ExtResource("1_byfwf")])
+effects = Array[ExtResource("2_7hmqj")]([ExtResource("3_xkyuk")])
+
+[resource]
+script = ExtResource("6_2jui6")
+id = &"demo.item.blood_jar"
+display_name = "Blood Jar"
+description = "+5% Bleed chance; when a Bleed you applied ticks, heal 10% of the tick."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Bleed", &"Item.Fit.Dot", &"Item.Fit.Survival"])
+price = 7
+grants = SubResource("Resource_bfdm1")

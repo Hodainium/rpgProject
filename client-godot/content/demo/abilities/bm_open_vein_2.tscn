@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ppcu6"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_6cbqg"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_affs0"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_bleed_3.tres" id="4_2010l"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_open_vein.tres" id="5_0wh2s"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_43.tres" id="6_isqb4"]
+
+[sub_resource type="Resource" id="Resource_cyqig"]
+script = ExtResource("2_6cbqg")
+id = &"cut"
+effect = ExtResource("3_affs0")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 8000
+toughness_x100 = 3000
+
+[sub_resource type="Resource" id="Resource_dotyt"]
+script = ExtResource("2_6cbqg")
+id = &"b1"
+effect = ExtResource("4_2010l")
+
+[sub_resource type="Resource" id="Resource_f5mu7"]
+script = ExtResource("2_6cbqg")
+id = &"b2"
+effect = ExtResource("4_2010l")
+
+[sub_resource type="Resource" id="Resource_fk57i"]
+script = ExtResource("2_6cbqg")
+id = &"b3"
+effect = ExtResource("4_2010l")
+
+[node name="BmOpenVein2" type="Node" unique_id=1923141204]
+script = ExtResource("1_ppcu6")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_6cbqg")]([SubResource("Resource_cyqig"), SubResource("Resource_dotyt"), SubResource("Resource_f5mu7"), SubResource("Resource_fk57i")])
+animation = ExtResource("5_0wh2s")
+description = "80% ATK Physical and 3 Bleed stacks (3 turns) on one enemy."
+ability_name = "Open Vein II"
+ability_tag = &"Ability.Openvein2"
+cost_effect = ExtResource("6_isqb4")

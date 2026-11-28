@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_nights_embrace.tscn" id="1_dsi24"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_hbx7c"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_nights_embrace.tres" id="3_qiepe"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_7km3g"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_cm2i3"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_v7wcx"]
+
+[sub_resource type="Resource" id="Resource_bwole"]
+script = ExtResource("4_7km3g")
+abilities = Array[PackedScene]([ExtResource("1_dsi24")])
+effects = Array[ExtResource("2_hbx7c")]([ExtResource("3_qiepe")])
+
+[resource]
+script = ExtResource("6_v7wcx")
+id = &"demo.item.nights_embrace"
+display_name = "Night's Embrace"
+description = "+10% lifesteal; once per battle, when you would die, survive at 1 HP, heal 30% of max HP over 2 turns and double your lifesteal for those 2 turns."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Bloodmoon", &"Item.Fit.Lifesteal", &"Item.Fit.Survival"])
+price = 12
+grants = SubResource("Resource_bwole")

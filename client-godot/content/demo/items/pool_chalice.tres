@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_pool_chalice.tscn" id="1_k3goy"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_party_tracked.tscn" id="2_kxn60"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_g5lcs"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_jnc2q"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_3rmfc"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_7jcag"]
+
+[sub_resource type="Resource" id="Resource_rcerk"]
+script = ExtResource("4_jnc2q")
+abilities = Array[PackedScene]([ExtResource("1_k3goy"), ExtResource("2_kxn60")])
+
+[resource]
+script = ExtResource("6_7jcag")
+id = &"demo.item.pool_chalice"
+display_name = "Pool Chalice"
+description = "When an ally drops under 50% HP, heal them 10% of their max HP."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Healing", &"Item.Fit.Party"])
+price = 7
+grants = SubResource("Resource_rcerk")

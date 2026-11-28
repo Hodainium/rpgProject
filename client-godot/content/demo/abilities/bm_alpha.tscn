@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_hp5no"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_3ek6k"]
+
+[sub_resource type="Resource" id="Resource_hmole"]
+script = ExtResource("2_3ek6k")
+require_any_tags = Array[StringName]([&"State.WolfForm", &"Status.WolfForm"])
+
+[node name="BmAlpha" type="Node" unique_id=1343506661]
+script = ExtResource("1_hp5no")
+targeting = 5
+asset_tags = Array[StringName]([&"Ability.Type.Echo"])
+echo_scale_x100 = 10000
+description = "In Wolf Form, its follow-ups hit twice."
+ability_name = "Alpha"
+ability_tag = &"Ability.Passive.Alpha"
+activation_query = SubResource("Resource_hmole")
+trigger_event_tag = &"Event.Attack.FollowUp"

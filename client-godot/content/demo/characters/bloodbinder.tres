@@ -1,0 +1,165 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_crimson_communion.tscn" id="1_eeqex"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_blood_bolt.tscn" id="2_5eyaq"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_transfusion.tscn" id="3_3mn72"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_blood_rite.tscn" id="4_07ljx"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_binder_lifesteal.tscn" id="5_8dj3t"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_martyrs_grace.tscn" id="6_24jab"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_pool_taken.tscn" id="7_p0y63"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_pool_ally.tscn" id="8_cee7g"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_pool_cost.tscn" id="9_3huhf"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_pool_ally_cost.tscn" id="10_akjuc"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="11_mcxou"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="12_dtk8l"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="13_mqv3u"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="14_i5cbp"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="15_0la5t"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="16_d7wgj"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="17_xvc2b"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="18_oro8x"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="19_p2tmy"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="20_rgk76"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="21_ssuwi"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_1.tres" id="22_lx3w7"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_2.tres" id="23_3ebnc"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_3.tres" id="24_kujpv"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="25_kkk1h"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_thick_blood.tscn" id="26_dpim5"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_transfusion_2.tscn" id="27_q8x5q"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_shared_vein.tscn" id="28_7qi8e"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_transfusion_3.tscn" id="29_uksb7"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_coagulate.tscn" id="30_ot4rh"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_crimson_communion_2.tscn" id="31_eknay"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_deep_pool.tscn" id="32_6t1aw"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_blood_rite_2.tscn" id="33_2w167"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_red_tide.tscn" id="34_kpfxm"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_red_tide_after.tscn" id="35_jr5b2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_deep_pool_2.tscn" id="36_3h3vv"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_last_drop.tscn" id="37_i35ry"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_red_tide_2.tscn" id="38_ksgqy"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_crimson_communion_3.tscn" id="39_jid56"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="40_fjvgm"]
+
+[sub_resource type="Resource" id="Resource_8iwte"]
+script = ExtResource("20_rgk76")
+
+[sub_resource type="Resource" id="Resource_qvify"]
+script = ExtResource("21_ssuwi")
+effect = ExtResource("22_lx3w7")
+
+[sub_resource type="Resource" id="Resource_3q32i"]
+script = ExtResource("21_ssuwi")
+from_level = 16
+effect = ExtResource("23_3ebnc")
+
+[sub_resource type="Resource" id="Resource_umhxq"]
+script = ExtResource("21_ssuwi")
+from_level = 31
+effect = ExtResource("24_kujpv")
+
+[sub_resource type="Resource" id="Resource_0bxmn"]
+script = ExtResource("25_kkk1h")
+level = 3
+ability = ExtResource("26_dpim5")
+
+[sub_resource type="Resource" id="Resource_en260"]
+script = ExtResource("25_kkk1h")
+level = 5
+ability = ExtResource("27_q8x5q")
+replaces = &"Ability.Transfusion"
+
+[sub_resource type="Resource" id="Resource_p3pht"]
+script = ExtResource("25_kkk1h")
+level = 7
+ability = ExtResource("28_7qi8e")
+
+[sub_resource type="Resource" id="Resource_88i0a"]
+script = ExtResource("25_kkk1h")
+level = 9
+ability = ExtResource("29_uksb7")
+replaces = &"Ability.Transfusion2"
+
+[sub_resource type="Resource" id="Resource_g6jj1"]
+script = ExtResource("25_kkk1h")
+level = 12
+ability = ExtResource("30_ot4rh")
+
+[sub_resource type="Resource" id="Resource_gubry"]
+script = ExtResource("25_kkk1h")
+level = 15
+ability = ExtResource("31_eknay")
+replaces = &"Ability.Ult.Crimsoncommunion"
+
+[sub_resource type="Resource" id="Resource_bpsxg"]
+script = ExtResource("25_kkk1h")
+level = 20
+ability = ExtResource("32_6t1aw")
+
+[sub_resource type="Resource" id="Resource_u02is"]
+script = ExtResource("25_kkk1h")
+level = 25
+ability = ExtResource("33_2w167")
+replaces = &"Ability.Bloodrite"
+
+[sub_resource type="Resource" id="Resource_06e4s"]
+script = ExtResource("25_kkk1h")
+level = 30
+ability = ExtResource("34_kpfxm")
+
+[sub_resource type="Resource" id="Resource_f0dig"]
+script = ExtResource("25_kkk1h")
+level = 30
+ability = ExtResource("35_jr5b2")
+
+[sub_resource type="Resource" id="Resource_e4kmg"]
+script = ExtResource("25_kkk1h")
+level = 35
+ability = ExtResource("36_3h3vv")
+replaces = &"Ability.Passive.Deeppool"
+
+[sub_resource type="Resource" id="Resource_lqhlt"]
+script = ExtResource("25_kkk1h")
+level = 40
+ability = ExtResource("37_i35ry")
+
+[sub_resource type="Resource" id="Resource_ghiy8"]
+script = ExtResource("25_kkk1h")
+level = 45
+ability = ExtResource("38_ksgqy")
+replaces = &"Ability.Redtide"
+
+[sub_resource type="Resource" id="Resource_hh3fe"]
+script = ExtResource("25_kkk1h")
+level = 50
+ability = ExtResource("39_jid56")
+replaces = &"Ability.Ult.Crimsoncommunion2"
+
+[resource]
+script = ExtResource("40_fjvgm")
+role = "Support: healer, HP costs"
+description = "Pays HP to heal and to give the party lifesteal; heals harder the lower it is. Its ult bar fills with the HP the party loses and the ult casts itself."
+growth_bands = Array[ExtResource("21_ssuwi")]([SubResource("Resource_qvify"), SubResource("Resource_3q32i"), SubResource("Resource_umhxq")])
+id = &"demo.character.bloodbinder"
+attribute_set = ExtResource("17_xvc2b")
+abilities = Array[PackedScene]([ExtResource("1_eeqex"), ExtResource("2_5eyaq"), ExtResource("3_3mn72"), ExtResource("4_07ljx"), ExtResource("5_8dj3t"), ExtResource("6_24jab"), ExtResource("7_p0y63"), ExtResource("8_cee7g"), ExtResource("9_3huhf"), ExtResource("10_akjuc"), ExtResource("11_mcxou"), ExtResource("12_dtk8l"), ExtResource("13_mqv3u"), ExtResource("14_i5cbp"), ExtResource("15_0la5t"), ExtResource("16_d7wgj")])
+display_name = "Bloodbinder"
+display_color = Color(0.8, 0.79, 0.82, 1)
+tags = Array[StringName]([&"Character.Bloodbinder", &"Unit.Role.Healer", &"Unit.Role.Support", &"Card.Set.Bloodmoon"])
+default_loadout = SubResource("Resource_8iwte")
+level_skills = Array[ExtResource("25_kkk1h")]([SubResource("Resource_0bxmn"), SubResource("Resource_en260"), SubResource("Resource_p3pht"), SubResource("Resource_88i0a"), SubResource("Resource_g6jj1"), SubResource("Resource_gubry"), SubResource("Resource_bpsxg"), SubResource("Resource_u02is"), SubResource("Resource_06e4s"), SubResource("Resource_f0dig"), SubResource("Resource_e4kmg"), SubResource("Resource_lqhlt"), SubResource("Resource_ghiy8"), SubResource("Resource_hh3fe")])
+stats_x100 = Dictionary[String, int]({
+"atk": 33000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 27000,
+"energy": 0,
+"hp": 95000,
+"max_hp": 95000,
+"max_mp": 0,
+"max_toughness": 0,
+"mp": 0,
+"sp_basic": 0,
+"spd": 10000,
+"toughness": 0
+})

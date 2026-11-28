@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_vcbcn"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_lqjwe"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_bleed_detonate.tres" id="3_wt248"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_bleed_purge.tres" id="4_jgl6n"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_siphon.tres" id="5_2plo3"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_53.tres" id="6_o7l4c"]
+
+[sub_resource type="Resource" id="Resource_80i2b"]
+script = ExtResource("2_lqjwe")
+id = &"blast"
+effect = ExtResource("3_wt248")
+
+[sub_resource type="Resource" id="Resource_y0ww1"]
+script = ExtResource("2_lqjwe")
+id = &"clear"
+effect = ExtResource("4_jgl6n")
+
+[node name="BmSiphon" type="Node" unique_id=2026814950]
+script = ExtResource("1_vcbcn")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_lqjwe")]([SubResource("Resource_80i2b"), SubResource("Resource_y0ww1")])
+animation = ExtResource("5_2plo3")
+description = "Detonates every Bleed stack on one enemy (all its remaining ticks at once); the party heals 50% of that damage, shared."
+ability_name = "Siphon"
+ability_tag = &"Ability.Siphon"
+cost_effect = ExtResource("6_o7l4c")

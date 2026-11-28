@@ -104,6 +104,9 @@ func _on_party_changed() -> void:
 
 func _on_battle_finished(outcome: String) -> void:
 	_battle = null
+	for view in _views.values():
+		if is_instance_valid(view) and view is UnitAnimator:
+			(view as UnitAnimator).unwatch_state_looks()  # spec second-pack P1: each unit back to its own look
 	if _between_waves(outcome):
 		return  # spec floor-rooms: the next wave starts at once; the room stays in battle (camera, no props, no rebuild)
 	_props_root.visible = true  # hidden for the fight (spec cube-style Set K); the rebuild below refills them
@@ -427,6 +430,8 @@ func _on_battle_started(battle: Battle) -> void:
 			view.set_dead(not unit.alive)
 		view.position = spots[unit.unit_id] if placed else _world(at)
 		_views[unit.unit_id] = view
+		if view is UnitAnimator:
+			(view as UnitAnimator).watch_state_looks(unit.asc)  # spec second-pack P1: the Werewolf's wolf form
 	FxManager.prepare_stencil(get_viewport().get_camera_3d())  # spec vfx-stencil: compile this battle's effect shader copies now
 	battle.execution_resolved.connect(_on_execution)
 	battle.unit_died.connect(_set_dead.bind(true))

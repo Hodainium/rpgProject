@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_longcoat.tscn" id="1_7kbys"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_67q7r"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_hunters_longcoat.tres" id="3_6ulov"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_rw151"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="5_nq5y2"]
+
+[sub_resource type="Resource" id="Resource_dhini"]
+script = ExtResource("4_rw151")
+abilities = Array[PackedScene]([ExtResource("1_7kbys")])
+effects = Array[ExtResource("2_67q7r")]([ExtResource("3_6ulov")])
+
+[resource]
+script = ExtResource("5_nq5y2")
+id = &"demo.equipment.hunters_longcoat"
+display_name = "Hunter's Longcoat"
+description = "+60 max HP, +8% crit rate; a crit cleanses you."
+slot = &"Equipment.Slot.Body"
+grants = SubResource("Resource_dhini")
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Survival", &"Item.Fit.Damage", &"Item.Fit.Crit"])
+price = 9

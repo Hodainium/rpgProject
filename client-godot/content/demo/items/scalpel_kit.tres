@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_ygihb"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_scalpel_kit.tres" id="2_dqbk8"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ko87k"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_bovfh"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_32dci"]
+
+[sub_resource type="Resource" id="Resource_mpvtf"]
+script = ExtResource("3_ko87k")
+effects = Array[ExtResource("1_ygihb")]([ExtResource("2_dqbk8")])
+
+[resource]
+script = ExtResource("5_32dci")
+id = &"demo.item.scalpel_kit"
+display_name = "Scalpel Kit"
+description = "+15% Bleed chance."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Common", &"Card.Set.Bloodmoon", &"Item.Fit.Bleed", &"Item.Fit.Dot", &"Item.Grants.Dot"])
+price = 5
+grants = SubResource("Resource_mpvtf")

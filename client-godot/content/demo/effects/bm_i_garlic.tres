@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_tflng"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="2_68p7b"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_v1bxa"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="4_nkn77"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="5_lbt35"]
+
+[sub_resource type="Resource" id="Resource_r0u2u"]
+script = ExtResource("1_tflng")
+ignore_tags = Array[StringName]([&"Immune.Garlic", &"Immune.Debuff"])
+
+[sub_resource type="Resource" id="Resource_ngm1b"]
+script = ExtResource("4_nkn77")
+value_x100 = -2500
+attribute_name = "heal_taken"
+
+[resource]
+script = ExtResource("5_lbt35")
+stacking_policy = 1
+policy = 3
+max_stacks = 1
+duration_turns = 2
+application_query = SubResource("Resource_r0u2u")
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Debuff", &"Cue.Sfx.Apply.Debuff"])
+modifiers = Array[ExtResource("3_v1bxa")]([SubResource("Resource_ngm1b")])
+granted_tags = Array[StringName]([&"Status.Debuff.Garlic"])

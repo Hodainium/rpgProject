@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_hemophilia.tscn" id="1_t5jwp"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_nq0wo"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_bleed_5.tres" id="3_1ong0"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_7hmwr"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_aeo56"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_kykdi"]
+
+[sub_resource type="Resource" id="Resource_kmgl5"]
+script = ExtResource("4_7hmwr")
+abilities = Array[PackedScene]([ExtResource("1_t5jwp")])
+effects = Array[ExtResource("2_nq0wo")]([ExtResource("3_1ong0")])
+
+[resource]
+script = ExtResource("6_kykdi")
+id = &"demo.item.hemophilia"
+display_name = "Hemophilia"
+description = "+5% Bleed chance; enemies you Bleed take +15% damage from every source."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Bloodmoon", &"Item.Fit.Bleed", &"Item.Fit.Dot", &"Item.Fit.Damage"])
+price = 12
+grants = SubResource("Resource_kmgl5")

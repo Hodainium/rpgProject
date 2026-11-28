@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_4iewo"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ya32i"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_s5ohx"]
+[ext_resource type="Animation" path="res://content/demo/animations/cleave.tres" id="4_qe2w0"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_hp_cost_18_0.tres" id="5_qicui"]
+
+[sub_resource type="Resource" id="Resource_qdh3c"]
+script = ExtResource("2_ya32i")
+id = &"cleave"
+effect = ExtResource("3_s5ohx")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 15000
+toughness_x100 = 3000
+
+[node name="BmCrimsonSweep2" type="Node" unique_id=1731907586]
+script = ExtResource("1_4iewo")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_ya32i")]([SubResource("Resource_qdh3c")])
+animation = ExtResource("4_qe2w0")
+description = "Costs 18% max HP. 150% ATK Physical to every enemy."
+ability_name = "Crimson Sweep II"
+ability_tag = &"Ability.Crimsonsweep2"
+cost_effect = ExtResource("5_qicui")

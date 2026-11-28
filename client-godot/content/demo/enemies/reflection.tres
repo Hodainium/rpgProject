@@ -11,6 +11,8 @@
 [ext_resource type="Script" path="res://combat/boss_phase.gd" id="9_0uf42"]
 [ext_resource type="Script" path="res://game/defs/enemy_definition.gd" id="10_n6d8f"]
 [ext_resource type="Script" path="res://combat/enemy_variant.gd" id="11_68itq"]
+[ext_resource type="Resource" path="res://content/demo/effects/enrage.tres" id="12_enrage"]
+[ext_resource type="Resource" path="res://content/demo/effects/exhaustion.tres" id="13_exhaust"]
 
 [sub_resource type="Resource" id="Resource_e7ppf"]
 script = ExtResource("5_2hcwn")
@@ -22,6 +24,9 @@ mirror_party_items = true
 mirror_skip_tags = Array[StringName]([&"Item.Food", &"Item.Curse", &"Item.Gold"])
 drop_item = ExtResource("7_cxnst")
 drop_chance_x100 = 400
+overtime_turn = 50
+overtime_effect = ExtResource("12_enrage")
+overtime_party_effect = ExtResource("13_exhaust")
 id = &"demo.enemy.reflection"
 attribute_set = ExtResource("4_npdng")
 abilities = Array[PackedScene]([ExtResource("1_wpk00"), ExtResource("2_6ele5"), ExtResource("3_25x15")])

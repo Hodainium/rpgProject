@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_6oab4"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_leech_tooth.tres" id="2_ltmii"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_pivaf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_05cs5"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_s0cbl"]
+
+[sub_resource type="Resource" id="Resource_r4sdc"]
+script = ExtResource("3_pivaf")
+effects = Array[ExtResource("1_6oab4")]([ExtResource("2_ltmii")])
+
+[resource]
+script = ExtResource("5_s0cbl")
+id = &"demo.item.leech_tooth"
+display_name = "Leech Tooth"
+description = "+8% lifesteal."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Chest", &"Item.Rarity.Common", &"Card.Set.Bloodmoon", &"Item.Fit.Lifesteal", &"Item.Fit.Survival"])
+price = 5
+grants = SubResource("Resource_r4sdc")

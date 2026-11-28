@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_j8agp"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_hf3u2"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_focus_spent.tres" id="3_x0uyh"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_wawm2"]
+
+[sub_resource type="Resource" id="Resource_dm3tv"]
+script = ExtResource("2_hf3u2")
+id = &"charge"
+effect = ExtResource("3_x0uyh")
+
+[node name="BmIFocusSpent" type="Node" unique_id=1513020892]
+script = ExtResource("1_j8agp")
+targeting = 5
+executions = Array[ExtResource("2_hf3u2")]([SubResource("Resource_dm3tv")])
+animation = ExtResource("4_wawm2")
+description = "A crit spends every Focus."
+ability_name = "Hunter's Focus"
+ability_tag = &"Ability.Passive.Ifocusspent"
+trigger_event_tag = &"Event.Damage.Dealt.Critical"

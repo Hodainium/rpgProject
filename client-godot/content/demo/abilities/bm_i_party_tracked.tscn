@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_reoql"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_7cxdo"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_tracked.tres" id="3_jvwe4"]
+[ext_resource type="Animation" path="res://content/demo/animations/rally_horn.tres" id="4_j3jv2"]
+
+[sub_resource type="Resource" id="Resource_j1ayl"]
+script = ExtResource("2_7cxdo")
+id = &"rally"
+effect = ExtResource("3_jvwe4")
+
+[node name="BmIPartyTracked" type="Node" unique_id=1997501145]
+script = ExtResource("1_reoql")
+targeting = 4
+executions = Array[ExtResource("2_7cxdo")]([SubResource("Resource_j1ayl")])
+animation = ExtResource("4_j3jv2")
+description = "The party's low-HP states are tracked."
+ability_name = "Pool Chalice"
+ability_tag = &"Ability.Passive.Ipartytracked"
+trigger_event_tag = &"Event.Battle.Start"

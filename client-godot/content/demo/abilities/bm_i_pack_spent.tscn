@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_8cb41"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_phy2b"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_pack_spent.tres" id="3_tbfwp"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_jtox5"]
+
+[sub_resource type="Resource" id="Resource_v062p"]
+script = ExtResource("2_phy2b")
+id = &"charge"
+effect = ExtResource("3_tbfwp")
+
+[node name="BmIPackSpent" type="Node" unique_id=2127242612]
+script = ExtResource("1_8cb41")
+targeting = 5
+executions = Array[ExtResource("2_phy2b")]([SubResource("Resource_v062p")])
+animation = ExtResource("4_jtox5")
+description = "After the follow-up."
+ability_name = "Pack Sigil"
+ability_tag = &"Ability.Passive.Ipackspent"
+trigger_event_tag = &"Event.Attack.FollowUp"

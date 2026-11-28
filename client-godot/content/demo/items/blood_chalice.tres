@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_hgrk7"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_blood_chalice.tres" id="2_yfvbe"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_2xhob"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_d4rt1"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_tmr6l"]
+
+[sub_resource type="Resource" id="Resource_7qa23"]
+script = ExtResource("3_2xhob")
+effects = Array[ExtResource("1_hgrk7")]([ExtResource("2_yfvbe")])
+
+[resource]
+script = ExtResource("5_tmr6l")
+id = &"demo.item.blood_chalice"
+display_name = "Blood Chalice"
+description = "+15% lifesteal; +10% ATK."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Lifesteal", &"Item.Fit.Damage", &"Item.Fit.Survival"])
+price = 7
+grants = SubResource("Resource_7qa23")

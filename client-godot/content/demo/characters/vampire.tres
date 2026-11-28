@@ -1,0 +1,163 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_night_feast.tscn" id="1_42oaw"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_fang.tscn" id="2_kbsk7"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_blood_lance.tscn" id="3_j126q"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_crimson_sweep.tscn" id="4_c5f7h"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_feast_after.tscn" id="5_4408n"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_vampirism.tscn" id="6_bnhef"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_thirst.tscn" id="7_s7flx"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="8_jp4fd"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="9_6cptd"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="10_wwhqj"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="11_7dj6b"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="12_2vb8h"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="13_tsy5n"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="14_213l6"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="15_jnaes"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="16_rdldq"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="17_jw35j"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="18_25n1c"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_1.tres" id="19_b5hqe"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_2.tres" id="20_phfxi"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_3.tres" id="21_n0gyp"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="22_xk5bp"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_dark_hunger.tscn" id="23_oecki"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_blood_lance_2.tscn" id="24_8lncu"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_nocturne.tscn" id="25_cgfvv"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_blood_lance_3.tscn" id="26_p8c10"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_hemorrhage.tscn" id="27_qrgku"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_night_feast_2.tscn" id="28_qfdis"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_blood_frenzy.tscn" id="29_i8qt8"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_crimson_sweep_2.tscn" id="30_ptdqx"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_sanguine_tide.tscn" id="31_bwd06"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_tide_after.tscn" id="32_cupcy"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_thirst_2.tscn" id="33_t06h6"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_undying_hunger.tscn" id="34_88reh"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_sanguine_tide_2.tscn" id="35_x0xtr"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_night_feast_3.tscn" id="36_3pf87"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="37_h53pf"]
+
+[sub_resource type="Resource" id="Resource_guuab"]
+script = ExtResource("17_jw35j")
+
+[sub_resource type="Resource" id="Resource_688jj"]
+script = ExtResource("18_25n1c")
+effect = ExtResource("19_b5hqe")
+
+[sub_resource type="Resource" id="Resource_12pmg"]
+script = ExtResource("18_25n1c")
+from_level = 16
+effect = ExtResource("20_phfxi")
+
+[sub_resource type="Resource" id="Resource_pnnl6"]
+script = ExtResource("18_25n1c")
+from_level = 31
+effect = ExtResource("21_n0gyp")
+
+[sub_resource type="Resource" id="Resource_jndb5"]
+script = ExtResource("22_xk5bp")
+level = 3
+ability = ExtResource("23_oecki")
+
+[sub_resource type="Resource" id="Resource_rcnl5"]
+script = ExtResource("22_xk5bp")
+level = 5
+ability = ExtResource("24_8lncu")
+replaces = &"Ability.Bloodlance"
+
+[sub_resource type="Resource" id="Resource_5nyam"]
+script = ExtResource("22_xk5bp")
+level = 7
+ability = ExtResource("25_cgfvv")
+
+[sub_resource type="Resource" id="Resource_h7dhi"]
+script = ExtResource("22_xk5bp")
+level = 9
+ability = ExtResource("26_p8c10")
+replaces = &"Ability.Bloodlance2"
+
+[sub_resource type="Resource" id="Resource_1cr7t"]
+script = ExtResource("22_xk5bp")
+level = 12
+ability = ExtResource("27_qrgku")
+
+[sub_resource type="Resource" id="Resource_jx6lk"]
+script = ExtResource("22_xk5bp")
+level = 15
+ability = ExtResource("28_qfdis")
+replaces = &"Ability.Ult.Nightfeast"
+
+[sub_resource type="Resource" id="Resource_jkxfj"]
+script = ExtResource("22_xk5bp")
+level = 20
+ability = ExtResource("29_i8qt8")
+
+[sub_resource type="Resource" id="Resource_pse6t"]
+script = ExtResource("22_xk5bp")
+level = 25
+ability = ExtResource("30_ptdqx")
+replaces = &"Ability.Crimsonsweep"
+
+[sub_resource type="Resource" id="Resource_rcc2g"]
+script = ExtResource("22_xk5bp")
+level = 30
+ability = ExtResource("31_bwd06")
+
+[sub_resource type="Resource" id="Resource_b4d1e"]
+script = ExtResource("22_xk5bp")
+level = 30
+ability = ExtResource("32_cupcy")
+
+[sub_resource type="Resource" id="Resource_xt24x"]
+script = ExtResource("22_xk5bp")
+level = 35
+ability = ExtResource("33_t06h6")
+replaces = &"Ability.Passive.Thirst"
+
+[sub_resource type="Resource" id="Resource_m3qlj"]
+script = ExtResource("22_xk5bp")
+level = 40
+ability = ExtResource("34_88reh")
+
+[sub_resource type="Resource" id="Resource_orgi4"]
+script = ExtResource("22_xk5bp")
+level = 45
+ability = ExtResource("35_x0xtr")
+replaces = &"Ability.Sanguinetide"
+
+[sub_resource type="Resource" id="Resource_tt2nd"]
+script = ExtResource("22_xk5bp")
+level = 50
+ability = ExtResource("36_3pf87")
+replaces = &"Ability.Ult.Nightfeast2"
+
+[resource]
+script = ExtResource("37_h53pf")
+role = "Damage dealer / off-tank: HP costs, lifesteal"
+description = "Pays HP instead of SP and heals by hitting: strong while it keeps hitting, in danger when it can't."
+growth_bands = Array[ExtResource("18_25n1c")]([SubResource("Resource_688jj"), SubResource("Resource_12pmg"), SubResource("Resource_pnnl6")])
+id = &"demo.character.vampire"
+attribute_set = ExtResource("14_213l6")
+abilities = Array[PackedScene]([ExtResource("1_42oaw"), ExtResource("2_kbsk7"), ExtResource("3_j126q"), ExtResource("4_c5f7h"), ExtResource("5_4408n"), ExtResource("6_bnhef"), ExtResource("7_s7flx"), ExtResource("8_jp4fd"), ExtResource("9_6cptd"), ExtResource("10_wwhqj"), ExtResource("11_7dj6b"), ExtResource("12_2vb8h"), ExtResource("13_tsy5n")])
+display_name = "Vlad"
+display_color = Color(0.93, 0.9, 0.9, 1)
+tags = Array[StringName]([&"Character.Vampire", &"Unit.Role.Damage", &"Unit.Role.Tank", &"Card.Set.Bloodmoon"])
+default_loadout = SubResource("Resource_guuab")
+level_skills = Array[ExtResource("22_xk5bp")]([SubResource("Resource_jndb5"), SubResource("Resource_rcnl5"), SubResource("Resource_5nyam"), SubResource("Resource_h7dhi"), SubResource("Resource_1cr7t"), SubResource("Resource_jx6lk"), SubResource("Resource_jkxfj"), SubResource("Resource_pse6t"), SubResource("Resource_rcc2g"), SubResource("Resource_b4d1e"), SubResource("Resource_xt24x"), SubResource("Resource_m3qlj"), SubResource("Resource_orgi4"), SubResource("Resource_tt2nd")])
+health_states = true
+stats_x100 = Dictionary[String, int]({
+"atk": 52000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 26000,
+"energy": 0,
+"hp": 100000,
+"max_hp": 100000,
+"max_mp": 0,
+"max_toughness": 0,
+"mp": 0,
+"sp_basic": 0,
+"spd": 10200,
+"toughness": 0
+})

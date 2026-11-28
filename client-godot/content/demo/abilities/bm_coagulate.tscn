@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_bgn4d"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_qjvlb"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_coagulate.tres" id="3_tkuc2"]
+[ext_resource type="Animation" path="res://content/demo/animations/bless.tres" id="4_sqsgb"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_hp_cost_12_0.tres" id="5_2t727"]
+
+[sub_resource type="Resource" id="Resource_isqtd"]
+script = ExtResource("2_qjvlb")
+id = &"ward"
+effect = ExtResource("3_tkuc2")
+
+[node name="BmCoagulate" type="Node" unique_id=48858116]
+script = ExtResource("1_bgn4d")
+targeting = 3
+asset_tags = Array[StringName]([&"Ability.Usage.Battle", &"Ability.Role.Buff"])
+executions = Array[ExtResource("2_qjvlb")]([SubResource("Resource_isqtd")])
+animation = ExtResource("4_sqsgb")
+description = "Costs 12% max HP. One ally gets a shield of 20% of their max HP."
+ability_name = "Coagulate"
+ability_tag = &"Ability.Coagulate"
+cost_effect = ExtResource("5_2t727")

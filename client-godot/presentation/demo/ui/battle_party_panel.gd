@@ -84,11 +84,18 @@ func _row(unit: BattleUnit, queued: bool) -> Dictionary:
 		"mp_preview": int(_preview.get("sp", 0)) if _preview.get("unit") == unit.unit_id else 0,
 		"ult": clampi(energy * 100 / max_energy, 0, 100) if max_energy > 0 else 0,
 		"active": recorder != null and recorder.waiting_for == unit.unit_id,
-		"show_ult": not unit.ultimate_abilities().is_empty(),
-		"ult_state": "queued" if queued else ("ready" if ready else "off"),
+		"show_ult": not unit.ultimate_abilities().is_empty() or _auto_ult(unit),
+		"ult_state": "auto" if _auto_ult(unit) and unit.ultimate_abilities().is_empty() else (
+			"queued" if queued else ("ready" if ready else "off")),
 		"on_ult": func(): GameplayMessages.broadcast(GameplayMessageRouter.UI_ULT_PRESSED,
 			VerbMessage.make(&"Verb.Press", unit.unit_id, &"")),
 	}
+
+
+## Spec second-pack D29: the unit's ult casts itself when its ult bar is full (a meter ability on the ult charge).
+func _auto_ult(unit: BattleUnit) -> bool:
+	return unit.abilities().any(func(ability: BattleAbility) -> bool:
+		return ability.is_meter() and ability.meter_attribute == BattleUnit.ENERGY)
 
 
 func _chips(unit: BattleUnit) -> Array:

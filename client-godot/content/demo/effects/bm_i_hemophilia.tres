@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_4fhaj"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="2_2xtnk"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_v425g"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="4_sqhs6"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="5_vusla"]
+
+[sub_resource type="Resource" id="Resource_1yo6f"]
+script = ExtResource("1_4fhaj")
+ignore_tags = Array[StringName]([&"Immune.Hemophilia", &"Immune.Debuff"])
+
+[sub_resource type="Resource" id="Resource_2bb6l"]
+script = ExtResource("4_sqhs6")
+value_x100 = 1500
+attribute_name = "dmg_taken"
+
+[resource]
+script = ExtResource("5_vusla")
+stacking_policy = 1
+policy = 3
+max_stacks = 1
+duration_turns = 2
+application_query = SubResource("Resource_1yo6f")
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Debuff", &"Cue.Sfx.Apply.Debuff"])
+modifiers = Array[ExtResource("3_v425g")]([SubResource("Resource_2bb6l")])
+granted_tags = Array[StringName]([&"Status.Debuff.Hemophilia"])
