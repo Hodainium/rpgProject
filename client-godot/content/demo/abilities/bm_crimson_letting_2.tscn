@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_vohwb"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_exm23"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_bleed_3.tres" id="3_llm5t"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_crimson_letting.tres" id="4_10jqd"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="5_llfjg"]
+[ext_resource type="Resource" path="res://content/demo/effects/ult_cost.tres" id="6_2igqk"]
+
+[sub_resource type="Resource" id="Resource_w5sih"]
+script = ExtResource("2_exm23")
+id = &"l1"
+effect = ExtResource("3_llm5t")
+
+[sub_resource type="Resource" id="Resource_notyi"]
+script = ExtResource("2_exm23")
+id = &"l2"
+effect = ExtResource("3_llm5t")
+
+[node name="BmCrimsonLetting2" type="Node" unique_id=1400025879]
+script = ExtResource("1_vohwb")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Debuff", &"Ability.Type.Ultimate", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_exm23")]([SubResource("Resource_w5sih"), SubResource("Resource_notyi")])
+animation = ExtResource("4_10jqd")
+description = "2 Bleed stacks (3 turns) on every enemy; for 2 turns, the party's hits on a Bleeding enemy heal them 15% of the damage."
+ability_name = "Crimson Letting II"
+ability_tag = &"Ability.Ult.Crimsonletting2"
+cast_cue_tags = Array[StringName]([&"Cue.Fx.Ult.Crimsonletting"])
+activation_query = ExtResource("5_llfjg")
+cost_effect = ExtResource("6_2igqk")

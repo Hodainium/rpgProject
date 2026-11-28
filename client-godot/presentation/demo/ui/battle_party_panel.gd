@@ -84,11 +84,18 @@ func _row(unit: BattleUnit, queued: bool) -> Dictionary:
 		"mp_preview": int(_preview.get("sp", 0)) if _preview.get("unit") == unit.unit_id else 0,
 		"ult": clampi(energy * 100 / max_energy, 0, 100) if max_energy > 0 else 0,
 		"active": recorder != null and recorder.waiting_for == unit.unit_id,
-		"show_ult": not unit.ultimate_abilities().is_empty(),
-		"ult_state": "queued" if queued else ("ready" if ready else "off"),
+		"show_ult": not unit.ultimate_abilities().is_empty() or _auto_ult(unit),
+		"ult_state": "auto" if _auto_ult(unit) and unit.ultimate_abilities().is_empty() else (
+			"queued" if queued else ("ready" if ready else "off")),
 		"on_ult": func(): GameplayMessages.broadcast(GameplayMessageRouter.UI_ULT_PRESSED,
 			VerbMessage.make(&"Verb.Press", unit.unit_id, &"")),
 	}
+
+
+## Spec second-pack D29: the unit's ult casts itself when its ult bar is full (a meter ability on the ult charge).
+func _auto_ult(unit: BattleUnit) -> bool:
+	return unit.abilities().any(func(ability: BattleAbility) -> bool:
+		return ability.is_meter() and ability.meter_attribute == BattleUnit.ENERGY)
 
 
 func _chips(unit: BattleUnit) -> Array:
@@ -99,7 +106,7 @@ func _chips(unit: BattleUnit) -> Array:
 		chips.append(broken_chip)
 	if unit.asc.has_tag_exact(Battle.DOWNED_TAG):
 		chips.append(downed_chip)
-	for status in unit.statuses():
+	for status in merged_statuses(unit.statuses()):
 		var tag := String(status["tag"])
 		var text := tag.get_slice(".", tag.get_slice_count(".") - 1).to_upper()
 		if int(status["stacks"]) > 1:
@@ -108,6 +115,33 @@ func _chips(unit: BattleUnit) -> Array:
 			text += " %d" % status["turns"]
 		chips.append(text)
 	return chips
+
+
+## One entry per status tag (user, 2026-11-27): several effects granting the same status (Blood Rite, Crimson Communion and Night
+## Feast all give Status.Buff.Lifesteal; Howl and Moonfall Frenzy both give Wolf Form) show as one chip, with the most turns left
+## (-1, no end, wins). Stacks: the same effect from several sources adds up (the Bloodletter's 3 Bleed and Vlad's 2 show ×5, as all
+## five tick), and of different effects granting the tag the highest counts (three lifesteal buffs show no ×3). The number after a
+## chip's name is the turns left, not a rank. Keeps the input's tag order.
+static func merged_statuses(statuses: Array) -> Array[Dictionary]:
+	var merged: Array[Dictionary] = []
+	var at := {}
+	var per_effect := {}  # tag -> {effect path -> stacks summed over its sources}
+	for status in statuses:
+		var tag := String(status["tag"])
+		var effect := String(status.get("effect", ""))
+		var turns := int(status["turns"])
+		if not at.has(tag):
+			at[tag] = merged.size()
+			merged.append({"tag": tag, "turns": turns, "stacks": 0})
+			per_effect[tag] = {}
+		var entry: Dictionary = merged[at[tag]]
+		if entry["turns"] >= 0 and (turns < 0 or turns > entry["turns"]):
+			entry["turns"] = turns
+		var sums: Dictionary = per_effect[tag]
+		var key := effect if effect != "" else "#%d" % sums.size()  # an effect with no file counts on its own
+		sums[key] = int(sums.get(key, 0)) + int(status["stacks"])
+		entry["stacks"] = maxi(entry["stacks"], sums[key])
+	return merged
 
 
 static func _name(unit: BattleUnit) -> String:

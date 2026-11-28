@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_h1ei6"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_crimson_thirst.tres" id="2_ip287"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_6124v"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_i5lb6"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_eobjo"]
+
+[sub_resource type="Resource" id="Resource_y4nsw"]
+script = ExtResource("3_6124v")
+effects = Array[ExtResource("1_h1ei6")]([ExtResource("2_ip287")])
+
+[resource]
+script = ExtResource("5_eobjo")
+id = &"demo.item.crimson_thirst"
+display_name = "Crimson Thirst"
+description = "+2% damage for every 5% of max HP missing."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Bloodmoon", &"Item.Fit.Damage"])
+price = 12
+grants = SubResource("Resource_y4nsw")

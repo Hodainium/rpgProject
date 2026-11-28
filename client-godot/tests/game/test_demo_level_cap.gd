@@ -125,20 +125,30 @@ func test_the_new_passives_fire() -> void:
 			battle.trigger_activated.connect(func(unit_id: StringName, tag: StringName, _event: StringName) -> void:
 				if unit_id == &"P1":
 					fired.append(tag))
-			var query := ability.activation_query
-			if query != null and not query.require_all_tags.is_empty():
-				var grant := GameplayEffect.new()
-				grant.policy = GameplayEffect.DurationPolicy.INFINITE
-				grant.granted_tags.assign(query.require_all_tags)
-				unit.asc.apply_gameplay_effect(grant, unit.asc, 1)
 			ability.trigger_chance_x100 = 0  # this battle's copy only: a chance passive fires every time (0 = always)
 			var half: Dictionary[String, float] = {"hp": float(unit.stat("max_hp") / 2), "mp": 0.0}  # room for a heal or SP to show
 			unit.asc.initialize_attribute_overrides(half)
 			battle.unit_by_id(&"P2").asc.initialize_attribute_overrides({"hp": float(battle.unit_by_id(&"P2").stat("max_hp") / 2)}
 				as Dictionary[String, float])  # and the ally, for a heal on the one that was hit
+			var query := ability.activation_query  # after the overrides (spec second-pack: they reset the tags)
+			if query != null and not (query.require_all_tags.is_empty() and query.require_any_tags.is_empty()):
+				# Loose tags: an effect built here would be an anonymous active effect, which the battle refuses.
+				var needed: Array = Array(query.require_all_tags)
+				if not query.require_any_tags.is_empty():  # spec second-pack: one of "any" (Alpha: in Wolf Form)
+					needed.append(query.require_any_tags[0])
+				for tag in needed:
+					unit.asc.add_tag(tag)
+			# Spec second-pack: a cleansing passive needs something to remove.
+			if ability.executions.any(func(row: ExecutionRow) -> bool:
+					return row.effect != null and not row.effect.remove_effects_with_tags.is_empty()):
+				for member in [unit, battle.unit_by_id(&"P2")]:
+					member.asc.apply_gameplay_effect(burn, battle.unit_by_id(&"E1").asc, 1)
 			var before := battle.state_hash()
 			var event := ability.trigger_event_tag
-			if event == Battle.EVENT_UNIT_DYING:
+			if ability.is_meter():  # spec second-pack B3: a meter ability fires from its full meter, not from an event
+				unit.asc.initialize_attribute_overrides({ability.meter_attribute: float(ability.meter_threshold_for(unit))}
+					as Dictionary[String, float])
+			elif event == Battle.EVENT_UNIT_DYING:
 				unit.asc.initialize_attribute_overrides({"hp": 0.0} as Dictionary[String, float])
 				await battle._settle_deaths()
 				check(unit.alive, "%s: saved" % ability.ability_tag)
@@ -188,6 +198,11 @@ static func _trigger_payload(battle: Battle, unit: BattleUnit, event: StringName
 		return {"source": unit, "target": enemy, "amount": 1000, "row": &"hit", "tags": tags, "hit_tags": hit_tags}
 	if event in [Battle.EVENT_BATTLE_START, Battle.EVENT_TURN_START]:
 		return {"source": unit, "target": unit}
+	if event == Battle.EVENT_ATTACK_FOLLOW_UP:  # spec second-pack: the follow-up that fired and what it hit (an echo repeats it)
+		for candidate in unit.abilities():
+			if candidate.is_follow_up():
+				return {"source": unit, "target": enemy, "ability": candidate.ability_tag, "primary": enemy,
+					"targets": [enemy] as Array[BattleUnit]}
 	return {"source": unit, "target": enemy}  # Unit.Killed, Status.Resisted, Attack.FollowUp
 
 

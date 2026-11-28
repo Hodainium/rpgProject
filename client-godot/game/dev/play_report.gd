@@ -370,7 +370,9 @@ static func hooks_of(unit: BattleUnit, ability: BattleAbility, event: StringName
 		hooks.append("K2 dot")
 	if ability.trigger_chance_x100 > 0:
 		hooks.append("K3 chance")
-	if ability.picks_own_targets():
+	if ability.targeting == BattleAbility.Targeting.LOWEST_ALLY:
+		hooks.append("lowest ally")  # spec second-pack: picks its own target with no draw (review fix: not K4)
+	elif ability.picks_own_targets():
 		hooks.append("K4 random")
 	if event == Battle.EVENT_UNIT_DYING:
 		hooks.append("K5 dying")

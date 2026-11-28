@@ -40,6 +40,26 @@ public static class CardFixtures
         Item("item.l2", CardRarities.Legendary, Descent, false, "Pool.Treasure"),
     ]);
 
+    /// <summary>Spec second-pack: a second expansion set beside Descent, every rarity its pack can give.</summary>
+    public const string BloodMoon = "bloodmoon";
+    public const string BloodMoonPack = "bloodmoon-pack";
+
+    /// <summary>The fixture catalog plus a Blood Moon set: one Mythic character and an item of each other rarity, two Commons.</summary>
+    public static CardCatalogFile CatalogWithBloodMoon() => new("fixture-bm",
+    [
+        .. Catalog().Cards,
+        Character("hero.bm1", BloodMoon, false),
+        Item("item.bm.c1", CardRarities.Common, BloodMoon, false, "Pool.Treasure"),
+        Item("item.bm.c2", CardRarities.Common, BloodMoon, false, "Pool.Shop"),
+        Item("item.bm.r1", CardRarities.Rare, BloodMoon, false, "Pool.Treasure"),
+        Item("item.bm.e1", CardRarities.Epic, BloodMoon, false, "Pool.Treasure"),
+        Item("item.bm.l1", CardRarities.Legendary, BloodMoon, false, "Pool.Boss"),
+    ]);
+
+    /// <summary>The Blood Moon pack type: the starter pack's numbers over the Blood Moon set (spec second-pack 2.6).</summary>
+    public static PackTypeRequest BloodMoonPackType() =>
+        Economy().Packs.Single(p => p.PackId == StarterPack) with { PackId = BloodMoonPack, Name = "Blood Moon Pack", SetIds = [BloodMoon] };
+
     public static readonly string[] CoreItems = ["item.core1", "item.core2", "item.food"];
 
     public static readonly string[] CoreCharacters = ["hero.a", "hero.b", "hero.c"];

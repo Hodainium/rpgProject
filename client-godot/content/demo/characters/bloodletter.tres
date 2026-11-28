@@ -1,0 +1,164 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_crimson_letting.tscn" id="1_6lcnl"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_lancet.tscn" id="2_idaxy"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_open_vein.tscn" id="3_ohylp"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_siphon.tscn" id="4_023k6"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_siphon_share.tscn" id="5_6solr"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_letting_after.tscn" id="6_udm1a"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_leeching_wounds.tscn" id="7_rffox"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="8_ohp65"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="9_55ux2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="10_qk7u6"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="11_wap6n"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="12_1adq0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="13_jltu6"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sp_gain.tscn" id="14_d05ym"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="15_qe6t4"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="16_mr1f8"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="17_b8au1"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="18_0snjk"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="19_8v322"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_1.tres" id="20_fs4a5"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_2.tres" id="21_ymmay"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_support_3.tres" id="22_5dptk"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="23_71btx"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_deep_cuts.tscn" id="24_mq3oc"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_open_vein_2.tscn" id="25_6vn3l"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_clotting.tscn" id="26_tc3x8"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_open_vein_3.tscn" id="27_7y1pu"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_bloodmist.tscn" id="28_bfqot"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_bloodmist_after.tscn" id="29_25eip"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_crimson_letting_2.tscn" id="30_kebva"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_exsanguinate.tscn" id="31_fvoku"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_siphon_2.tscn" id="32_e5sj7"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_red_river.tscn" id="33_bk8pc"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_clotting_2.tscn" id="34_lsjab"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_lifeblood.tscn" id="35_02qhk"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_red_river_2.tscn" id="36_8rtdc"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_crimson_letting_3.tscn" id="37_otkaj"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="38_d33gq"]
+
+[sub_resource type="Resource" id="Resource_3dqor"]
+script = ExtResource("18_0snjk")
+
+[sub_resource type="Resource" id="Resource_loiip"]
+script = ExtResource("19_8v322")
+effect = ExtResource("20_fs4a5")
+
+[sub_resource type="Resource" id="Resource_fm00q"]
+script = ExtResource("19_8v322")
+from_level = 16
+effect = ExtResource("21_ymmay")
+
+[sub_resource type="Resource" id="Resource_bphs6"]
+script = ExtResource("19_8v322")
+from_level = 31
+effect = ExtResource("22_5dptk")
+
+[sub_resource type="Resource" id="Resource_1bcf6"]
+script = ExtResource("23_71btx")
+level = 3
+ability = ExtResource("24_mq3oc")
+
+[sub_resource type="Resource" id="Resource_7xg66"]
+script = ExtResource("23_71btx")
+level = 5
+ability = ExtResource("25_6vn3l")
+replaces = &"Ability.Openvein"
+
+[sub_resource type="Resource" id="Resource_yfgxk"]
+script = ExtResource("23_71btx")
+level = 7
+ability = ExtResource("26_tc3x8")
+
+[sub_resource type="Resource" id="Resource_105ev"]
+script = ExtResource("23_71btx")
+level = 9
+ability = ExtResource("27_7y1pu")
+replaces = &"Ability.Openvein2"
+
+[sub_resource type="Resource" id="Resource_bbebc"]
+script = ExtResource("23_71btx")
+level = 12
+ability = ExtResource("28_bfqot")
+
+[sub_resource type="Resource" id="Resource_hc5qe"]
+script = ExtResource("23_71btx")
+level = 12
+ability = ExtResource("29_25eip")
+
+[sub_resource type="Resource" id="Resource_b0snt"]
+script = ExtResource("23_71btx")
+level = 15
+ability = ExtResource("30_kebva")
+replaces = &"Ability.Ult.Crimsonletting"
+
+[sub_resource type="Resource" id="Resource_4s20c"]
+script = ExtResource("23_71btx")
+level = 20
+ability = ExtResource("31_fvoku")
+
+[sub_resource type="Resource" id="Resource_kntq3"]
+script = ExtResource("23_71btx")
+level = 25
+ability = ExtResource("32_e5sj7")
+replaces = &"Ability.Siphon"
+
+[sub_resource type="Resource" id="Resource_tjwqs"]
+script = ExtResource("23_71btx")
+level = 30
+ability = ExtResource("33_bk8pc")
+
+[sub_resource type="Resource" id="Resource_jqwqt"]
+script = ExtResource("23_71btx")
+level = 35
+ability = ExtResource("34_lsjab")
+replaces = &"Ability.Passive.Clotting"
+
+[sub_resource type="Resource" id="Resource_u5so5"]
+script = ExtResource("23_71btx")
+level = 40
+ability = ExtResource("35_02qhk")
+replaces = &"Ability.Passive.Leechingwounds"
+
+[sub_resource type="Resource" id="Resource_5yh00"]
+script = ExtResource("23_71btx")
+level = 45
+ability = ExtResource("36_8rtdc")
+replaces = &"Ability.Redriver"
+
+[sub_resource type="Resource" id="Resource_tybx5"]
+script = ExtResource("23_71btx")
+level = 50
+ability = ExtResource("37_otkaj")
+replaces = &"Ability.Ult.Crimsonletting2"
+
+[resource]
+script = ExtResource("38_d33gq")
+role = "DoT / support: Bleed that heals"
+description = "Bleeds enemies, detonates the Bleed for a party heal, and every tick of its Bleed heals the most hurt ally."
+growth_bands = Array[ExtResource("19_8v322")]([SubResource("Resource_loiip"), SubResource("Resource_fm00q"), SubResource("Resource_bphs6")])
+id = &"demo.character.bloodletter"
+attribute_set = ExtResource("15_qe6t4")
+abilities = Array[PackedScene]([ExtResource("1_6lcnl"), ExtResource("2_idaxy"), ExtResource("3_ohylp"), ExtResource("4_023k6"), ExtResource("5_6solr"), ExtResource("6_udm1a"), ExtResource("7_rffox"), ExtResource("8_ohp65"), ExtResource("9_55ux2"), ExtResource("10_qk7u6"), ExtResource("11_wap6n"), ExtResource("12_1adq0"), ExtResource("13_jltu6"), ExtResource("14_d05ym")])
+display_name = "Bloodletter"
+display_color = Color(0.68, 0.66, 0.66, 1)
+tags = Array[StringName]([&"Character.Bloodletter", &"Unit.Role.Dot", &"Unit.Role.Support", &"Card.Set.Bloodmoon"])
+default_loadout = SubResource("Resource_3dqor")
+level_skills = Array[ExtResource("23_71btx")]([SubResource("Resource_1bcf6"), SubResource("Resource_7xg66"), SubResource("Resource_yfgxk"), SubResource("Resource_105ev"), SubResource("Resource_bbebc"), SubResource("Resource_hc5qe"), SubResource("Resource_b0snt"), SubResource("Resource_4s20c"), SubResource("Resource_kntq3"), SubResource("Resource_tjwqs"), SubResource("Resource_jqwqt"), SubResource("Resource_u5so5"), SubResource("Resource_5yh00"), SubResource("Resource_tybx5")])
+stats_x100 = Dictionary[String, int]({
+"atk": 43000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 24000,
+"energy": 0,
+"hp": 90000,
+"max_hp": 90000,
+"max_mp": 7000,
+"max_toughness": 0,
+"mp": 7000,
+"sp_basic": 1600,
+"spd": 10600,
+"toughness": 0
+})

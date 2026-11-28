@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_og81g"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_47ecm"]
+
+[sub_resource type="Resource" id="Resource_vvbud"]
+script = ExtResource("2_47ecm")
+require_any_tags = Array[StringName]([&"Enemy"])
+
+[sub_resource type="Resource" id="Resource_metw4"]
+script = ExtResource("2_47ecm")
+require_any_tags = Array[StringName]([&"State.PackReady"])
+
+[node name="BmIPackEcho" type="Node" unique_id=832618502]
+script = ExtResource("1_og81g")
+targeting = 5
+asset_tags = Array[StringName]([&"Ability.Type.Echo"])
+echo_scale_x100 = 10000
+description = "Your next follow-up hits twice."
+subject_query = SubResource("Resource_vvbud")
+ability_name = "Pack Sigil"
+ability_tag = &"Ability.Passive.Ipackecho"
+activation_query = SubResource("Resource_metw4")
+trigger_event_tag = &"Event.Attack.FollowUp"

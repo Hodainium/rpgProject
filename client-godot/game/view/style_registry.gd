@@ -37,6 +37,8 @@ extends Resource
 
 ## Spec cube-style 6a Set K: the pickups' looks (key, armor icons, chests); null = the base's, else today's cubes.
 @export var props: PropStyle
+## Spec second-pack P1: looks a unit takes while it carries a tag (the Werewolf's Wolf Form), swapped with a transform.
+@export var state_looks: Array[StateLook] = []
 
 
 ## The shop key's look through the base chain, or null (today's cube).
@@ -123,6 +125,16 @@ func chain() -> Array[StyleRegistry]:
 	while registry != null and not found.has(registry):
 		found.append(registry)
 		registry = registry.base
+	return found
+
+
+## The state looks of the unit `unit_id`, nearest registry first (a nearer one is checked first; the first that applies wins).
+func state_looks_for(unit_id: StringName) -> Array[StateLook]:
+	var found: Array[StateLook] = []
+	for registry in chain():
+		for state in registry.state_looks:
+			if state != null and state.unit_id == unit_id and state.look != null:
+				found.append(state)
 	return found
 
 

@@ -238,6 +238,41 @@ func test_carry_sends_a_second_damage_item_to_the_same_member() -> void:
 	eq(LootScorer.value(spread, DAMAGE, BotWorld.ROGUE), 100, "the spread profile keeps damage FLAT")
 
 
+## Spec second-pack 2.7: the smart bot gathers Bleed and lifesteal on one carrier (both add up per holder).
+func test_smart_carries_bleed_and_lifesteal() -> void:
+	var bot := BotWorld.profile("res://game/auto/profiles/smart.tres")
+	for fit in [LootScorer.FIT_BLEED, LootScorer.FIT_LIFESTEAL]:
+		eq(bot.stack_mode(fit), BotProfile.CARRY, "%s stacks as CARRY" % fit)
+		var held: Array = [[fit]]
+		check(LootScorer.stack_factor(bot, fit, held) > LootScorer.stack_factor(bot, fit, []),
+			"a member already holding %s values another one more" % fit)
+		check(LootScorer.ALL_TAGS.has(fit), "%s is a tag the bots read" % fit)
+
+
+## Spec second-pack 2.7: a crit item is worth more on a crit holder (base crit rate above 5%); an HP-cost item little on a class
+## that pays no HP.
+func test_crit_items_favour_a_crit_holder_and_hp_cost_items_a_payer() -> void:
+	var bot := BotWorld.profile("res://game/auto/profiles/smart.tres")
+	var run := _run()
+	BotWorld.strip(run)
+	var ctx := BotWorld.context(run, bot)
+	var crit: Array = [LootScorer.FIT_DAMAGE, LootScorer.FIT_CRIT]
+	var rogue: UnitDefinition = run.content.units[_member(run, BotWorld.ROGUE)["character"]]
+	var kept: int = rogue.stats_x100.get("crit_rate", 0)
+	rogue.stats_x100["crit_rate"] = 500
+	var plain := LootScorer.value(ctx, crit, BotWorld.ROGUE)
+	check(not LootScorer.crit_holder(run, BotWorld.ROGUE, bot), "5% is the default: no crit holder")
+	rogue.stats_x100["crit_rate"] = 2000
+	check(LootScorer.crit_holder(run, BotWorld.ROGUE, bot), "20% base crit: a crit holder")
+	check(LootScorer.value(ctx, crit, BotWorld.ROGUE) > plain, "so a crit item is worth more there")
+	rogue.stats_x100["crit_rate"] = kept
+	check(not LootScorer.pays_hp(run, BotWorld.ROGUE), "the fixture classes pay no HP")
+	var hp_cost: Array = [LootScorer.FIT_HP_COST]
+	eq(LootScorer.value(ctx, hp_cost, BotWorld.ROGUE), bot.weight(LootScorer.FIT_HP_COST, []) * bot.hp_cost_other_percent / 100,
+		"an HP-cost item is worth its small share to a class that pays no HP")
+	eq(bot.stack_mode(LootScorer.FIT_CRIT), BotProfile.CARRY, "crit items gather on one holder")
+
+
 func test_a_copy_stacks_like_any_item_of_its_kinds() -> void:
 	var bot := BotWorld.profile("res://game/auto/profiles/carry.tres")
 	var run := _run()

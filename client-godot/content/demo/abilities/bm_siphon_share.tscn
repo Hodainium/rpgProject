@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_pdlqv"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_2tcgi"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_lifesteal_heal.tres" id="3_1kcqn"]
+[ext_resource type="Animation" path="res://content/demo/animations/mend.tres" id="4_fv78s"]
+
+[sub_resource type="Resource" id="Resource_hmctl"]
+script = ExtResource("2_2tcgi")
+id = &"regen"
+effect = ExtResource("3_1kcqn")
+damage_mode = 3
+multiplier_x100 = 1250
+
+[node name="BmSiphonShare" type="Node" unique_id=265609299]
+script = ExtResource("1_pdlqv")
+targeting = 4
+executions = Array[ExtResource("2_2tcgi")]([SubResource("Resource_hmctl")])
+animation = ExtResource("4_fv78s")
+description = "A detonation heals every ally 12.5% of its damage (50% shared by a party of four)."
+ability_name = "Siphon"
+ability_tag = &"Ability.Passive.Siphonshare"
+trigger_event_tag = &"Event.Damage.Dealt.Detonate"

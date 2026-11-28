@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_m45rp"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_hmx8j"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_accord_low.tres" id="3_ebwvg"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_tracked.tres" id="4_sktux"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_i_accord_start.tres" id="5_8up0o"]
+
+[sub_resource type="Resource" id="Resource_5b8er"]
+script = ExtResource("2_hmx8j")
+id = &"low"
+effect = ExtResource("3_ebwvg")
+
+[sub_resource type="Resource" id="Resource_vsyo0"]
+script = ExtResource("2_hmx8j")
+id = &"track"
+effect = ExtResource("4_sktux")
+
+[node name="BmIAccordStart" type="Node" unique_id=1266927484]
+script = ExtResource("1_m45rp")
+targeting = 4
+executions = Array[ExtResource("2_hmx8j")]([SubResource("Resource_5b8er"), SubResource("Resource_vsyo0")])
+animation = ExtResource("5_8up0o")
+description = "Heals on allies under 50% HP are 20% stronger."
+ability_name = "Crimson Accord"
+ability_tag = &"Ability.Passive.Iaccordstart"
+trigger_event_tag = &"Event.Battle.Start"

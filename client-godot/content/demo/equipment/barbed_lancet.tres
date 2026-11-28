@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_6c8vk"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_barbed_lancet.tres" id="2_eameg"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_hw2ro"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_532d3"]
+
+[sub_resource type="Resource" id="Resource_ksgfh"]
+script = ExtResource("3_hw2ro")
+effects = Array[ExtResource("1_6c8vk")]([ExtResource("2_eameg")])
+
+[resource]
+script = ExtResource("4_532d3")
+id = &"demo.equipment.barbed_lancet"
+display_name = "Barbed Lancet"
+description = "+25 ATK, +5% Bleed chance; your Bleeds last 1 turn longer."
+slot = &"Equipment.Slot.Weapon"
+grants = SubResource("Resource_ksgfh")
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Bleed", &"Item.Fit.Dot", &"Item.Fit.Damage"])
+price = 7

@@ -26,6 +26,11 @@ extends Resource
 ## skills at higher levels). Run battles (v2 snapshots) only. Empty: levels grant nothing.
 @export var level_skills: Array[LevelSkill] = []
 
+## Spec second-pack B5: the battle keeps State.Health.Low / State.Health.Critical on this unit and announces crossing into them
+## (Event.Health.Low / Critical, Event.Ally.Health.Low). Off by default so no existing unit, hash or golden changes; a unit that
+## carries State.Health.Tracked (an item that reads low HP grants it) is tracked too.
+@export var health_states: bool = false
+
 ## Stats as typed, with up to 2 decimals (e.g. {"atk": 500, "crit_rate": 5.25}). Editor-only view of stats_x100.
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR) var stats: Dictionary[String, float]:
 	get:

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_65yib"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_percent_of_max.gd" id="2_bya3e"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_iyrwb"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_xvwq8"]
+
+[sub_resource type="Resource" id="Resource_4gykp"]
+script = ExtResource("2_bya3e")
+percent_x100 = 1000
+source_bonus = "heal_mult"
+target_bonus = "heal_taken"
+
+[resource]
+script = ExtResource("4_xvwq8")
+application_cue_tags = Array[StringName]([&"Cue.Fx.Heal", &"Cue.Sfx.Heal"])
+executions = Array[ExtResource("1_65yib")]([SubResource("Resource_4gykp")])

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_burst_vein.tscn" id="1_1us5g"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_burst_share.tscn" id="2_ad36q"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_evxpf"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_bleed_5.tres" id="4_hfdtd"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="5_d25ve"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="6_26n82"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="7_hdn7k"]
+
+[sub_resource type="Resource" id="Resource_r4dhs"]
+script = ExtResource("5_d25ve")
+abilities = Array[PackedScene]([ExtResource("1_1us5g"), ExtResource("2_ad36q")])
+effects = Array[ExtResource("3_evxpf")]([ExtResource("4_hfdtd")])
+
+[resource]
+script = ExtResource("7_hdn7k")
+id = &"demo.item.burst_vein"
+display_name = "Burst Vein"
+description = "+5% Bleed chance; your crits on a Bleeding enemy detonate its Bleed (every remaining tick at once); the party heals 30% of that damage."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Bloodmoon", &"Item.Fit.Bleed", &"Item.Fit.Dot", &"Item.Fit.Healing", &"Item.Fit.FollowUp", &"Item.Fit.Party", &"Item.Fit.Crit"])
+price = 12
+grants = SubResource("Resource_r4dhs")

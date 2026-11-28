@@ -1,7 +1,7 @@
 ## The 3D pack demo (playtest 2026-11-18): the Descent pack as the 3D foil pouch, plain metallic (the user's pick, used in the
 ## game) beside holographic. The packs turn slowly to show both sides; dragging with the left button spins them; the light
 ## follows the pointer. (The flat foil looks first compared here were removed once the user picked the 3D pack.)
-##   godot --path client-godot res://game/dev/pack_foil_demo.tscn [--screen 2] [-- --shot <png> [--spin <radians>]]
+##   godot --path client-godot res://game/dev/pack_foil_demo.tscn [--screen 2] [-- --pack <pack id>] [--shot <png> [--spin <radians>]]
 extends Control
 
 const THEME := "res://presentation/demo/ui/ui_theme.tres"
@@ -19,7 +19,9 @@ func _ready() -> void:
 	theme = load(THEME)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var style := CardStyle.current()
-	var look := style.pack(PACK_ID)
+	var args := OS.get_cmdline_user_args()
+	var pack_id: String = args[args.find("--pack") + 1] if args.has("--pack") and args.find("--pack") + 1 < args.size() else PACK_ID
+	var look := style.pack(pack_id)
 	var background := ColorRect.new()
 	background.color = Color(0.06, 0.05, 0.1)
 	background.set_anchors_preset(Control.PRESET_FULL_RECT)

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_stake_silver.tscn" id="1_10wkw"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_stake_mark.tscn" id="2_brl1a"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_stake_one_more.tscn" id="3_atjyo"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_7uly2"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_stake_of_dawn.tres" id="5_er2nv"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="6_vncg7"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="7_ifyu6"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="8_c02bc"]
+
+[sub_resource type="Resource" id="Resource_4mptl"]
+script = ExtResource("6_vncg7")
+abilities = Array[PackedScene]([ExtResource("1_10wkw"), ExtResource("2_brl1a"), ExtResource("3_atjyo")])
+effects = Array[ExtResource("4_7uly2")]([ExtResource("5_er2nv")])
+
+[resource]
+script = ExtResource("8_c02bc")
+id = &"demo.item.stake_of_dawn"
+display_name = "Stake of Dawn"
+description = "Your crits have a 50% chance to Silver the target; +60% crit damage against Silvered targets; a crit that kills gives a One More (once per turn)."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Bloodmoon", &"Item.Fit.Damage", &"Item.Fit.Crit"])
+price = 12
+grants = SubResource("Resource_4mptl")

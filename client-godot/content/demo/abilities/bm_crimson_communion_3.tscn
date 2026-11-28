@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_cpx8l"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_vtm7k"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_communion_heal_3.tres" id="3_b5d71"]
+[ext_resource type="Resource" path="res://content/demo/effects/cleanse.tres" id="4_6cxrq"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_communion_lifesteal.tres" id="5_pwlyu"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_crimson_communion.tres" id="6_l5i5d"]
+[ext_resource type="Resource" path="res://content/demo/queries/not_controlled.tres" id="7_jsagp"]
+
+[sub_resource type="Resource" id="Resource_ebasf"]
+script = ExtResource("2_vtm7k")
+id = &"bless"
+effect = ExtResource("3_b5d71")
+
+[sub_resource type="Resource" id="Resource_8ec15"]
+script = ExtResource("2_vtm7k")
+id = &"cleanse"
+effect = ExtResource("4_6cxrq")
+
+[sub_resource type="Resource" id="Resource_ui2pg"]
+script = ExtResource("2_vtm7k")
+id = &"rite"
+effect = ExtResource("5_pwlyu")
+
+[node name="BmCrimsonCommunion3" type="Node" unique_id=973217109]
+script = ExtResource("1_cpx8l")
+targeting = 4
+asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Role.Buff", &"Ability.Role.Cleanse"])
+meter_attribute = "energy"
+meter_threshold_of = "max_energy"
+meter_threshold_percent_x100 = 10000
+executions = Array[ExtResource("2_vtm7k")]([SubResource("Resource_ebasf"), SubResource("Resource_8ec15"), SubResource("Resource_ui2pg")])
+animation = ExtResource("6_l5i5d")
+description = "Casts itself when the ult bar is full: every ally heals 32% of their max HP, is cleansed and gets +10% lifesteal for 2 turns."
+ability_name = "Crimson Communion III"
+ability_tag = &"Ability.Ult.Crimsoncommunion3"
+activation_query = ExtResource("7_jsagp")

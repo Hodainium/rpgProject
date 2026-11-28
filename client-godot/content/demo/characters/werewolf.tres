@@ -1,0 +1,160 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_moonfall_frenzy.tscn" id="1_4wq81"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_wolf_rend.tscn" id="2_j0md3"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_pounce.tscn" id="3_1vg5u"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_howl.tscn" id="4_br508"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_frenzy_after.tscn" id="5_ey6wx"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_wolf_nature.tscn" id="6_f5n14"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_claw_basic.tscn" id="7_2gnq5"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_claw_skill.tscn" id="8_2pnm2"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_claw_ult.tscn" id="9_xv7yp"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_pounce_break.tscn" id="10_r7817"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge.tscn" id="11_mawva"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/ult_charge_hit.tscn" id="12_cgilu"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_physical.tscn" id="13_x6hyj"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_fire.tscn" id="14_xk1qv"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/break_ice.tscn" id="15_1u3vi"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/block.tscn" id="16_3bm37"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/sp_gain.tscn" id="17_v0q1j"]
+[ext_resource type="Script" path="res://content/demo/attributes/demo_unit_attributes.gd" id="18_k0rfs"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="19_13hh0"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="20_tkdav"]
+[ext_resource type="Script" path="res://combat/loadout.gd" id="21_i30ti"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="22_4n33w"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_1.tres" id="23_a1p4u"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_2.tres" id="24_42ldu"]
+[ext_resource type="Resource" path="res://content/demo/effects/growth_damage_3.tres" id="25_bmnd4"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="26_f0m71"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_thick_hide.tscn" id="27_5b17j"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_pounce_2.tscn" id="28_104qr"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_pack_instinct.tscn" id="29_vnvm8"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_pounce_3.tscn" id="30_kbsti"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_savage_maul.tscn" id="31_xnq1h"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_moonfall_frenzy_2.tscn" id="32_lwrcw"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_blood_moon_hunger.tscn" id="33_scylf"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_howl_2.tscn" id="34_jixyg"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_lunar_rampage.tscn" id="35_70rix"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_alpha.tscn" id="36_e1j8a"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_eternal_moon.tscn" id="37_5numg"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_lunar_rampage_2.tscn" id="38_82ylw"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_moonfall_frenzy_3.tscn" id="39_ilnpi"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="40_11j70"]
+
+[sub_resource type="Resource" id="Resource_b5kuv"]
+script = ExtResource("21_i30ti")
+
+[sub_resource type="Resource" id="Resource_1kxhq"]
+script = ExtResource("22_4n33w")
+effect = ExtResource("23_a1p4u")
+
+[sub_resource type="Resource" id="Resource_r0mnp"]
+script = ExtResource("22_4n33w")
+from_level = 16
+effect = ExtResource("24_42ldu")
+
+[sub_resource type="Resource" id="Resource_f1n5f"]
+script = ExtResource("22_4n33w")
+from_level = 31
+effect = ExtResource("25_bmnd4")
+
+[sub_resource type="Resource" id="Resource_olo5v"]
+script = ExtResource("26_f0m71")
+level = 3
+ability = ExtResource("27_5b17j")
+
+[sub_resource type="Resource" id="Resource_8d3gy"]
+script = ExtResource("26_f0m71")
+level = 5
+ability = ExtResource("28_104qr")
+replaces = &"Ability.Pounce"
+
+[sub_resource type="Resource" id="Resource_e1k8m"]
+script = ExtResource("26_f0m71")
+level = 7
+ability = ExtResource("29_vnvm8")
+
+[sub_resource type="Resource" id="Resource_a5mu0"]
+script = ExtResource("26_f0m71")
+level = 9
+ability = ExtResource("30_kbsti")
+replaces = &"Ability.Pounce2"
+
+[sub_resource type="Resource" id="Resource_uomht"]
+script = ExtResource("26_f0m71")
+level = 12
+ability = ExtResource("31_xnq1h")
+
+[sub_resource type="Resource" id="Resource_ydnk1"]
+script = ExtResource("26_f0m71")
+level = 15
+ability = ExtResource("32_lwrcw")
+replaces = &"Ability.Ult.Moonfallfrenzy"
+
+[sub_resource type="Resource" id="Resource_2cxys"]
+script = ExtResource("26_f0m71")
+level = 20
+ability = ExtResource("33_scylf")
+
+[sub_resource type="Resource" id="Resource_ysjp6"]
+script = ExtResource("26_f0m71")
+level = 25
+ability = ExtResource("34_jixyg")
+replaces = &"Ability.Howl"
+
+[sub_resource type="Resource" id="Resource_lulqy"]
+script = ExtResource("26_f0m71")
+level = 30
+ability = ExtResource("35_70rix")
+
+[sub_resource type="Resource" id="Resource_7td2n"]
+script = ExtResource("26_f0m71")
+level = 35
+ability = ExtResource("36_e1j8a")
+
+[sub_resource type="Resource" id="Resource_jqya8"]
+script = ExtResource("26_f0m71")
+level = 40
+ability = ExtResource("37_5numg")
+
+[sub_resource type="Resource" id="Resource_yxkw5"]
+script = ExtResource("26_f0m71")
+level = 45
+ability = ExtResource("38_82ylw")
+replaces = &"Ability.Lunarrampage"
+
+[sub_resource type="Resource" id="Resource_mktkq"]
+script = ExtResource("26_f0m71")
+level = 50
+ability = ExtResource("39_ilnpi")
+replaces = &"Ability.Ult.Moonfallfrenzy2"
+
+[resource]
+script = ExtResource("40_11j70")
+role = "Breaker: follow-ups, Wolf Form"
+description = "Breaks shields and claws after each action in Wolf Form: under half HP, or for 2 turns after Howl or its ult."
+growth_bands = Array[ExtResource("22_4n33w")]([SubResource("Resource_1kxhq"), SubResource("Resource_r0mnp"), SubResource("Resource_f1n5f")])
+id = &"demo.character.werewolf"
+attribute_set = ExtResource("18_k0rfs")
+abilities = Array[PackedScene]([ExtResource("1_4wq81"), ExtResource("2_j0md3"), ExtResource("3_1vg5u"), ExtResource("4_br508"), ExtResource("5_ey6wx"), ExtResource("6_f5n14"), ExtResource("7_2gnq5"), ExtResource("8_2pnm2"), ExtResource("9_xv7yp"), ExtResource("10_r7817"), ExtResource("11_mawva"), ExtResource("12_cgilu"), ExtResource("13_x6hyj"), ExtResource("14_xk1qv"), ExtResource("15_1u3vi"), ExtResource("16_3bm37"), ExtResource("17_v0q1j")])
+display_name = "Werewolf"
+display_color = Color(0.45, 0.43, 0.42, 1)
+tags = Array[StringName]([&"Character.Werewolf", &"Unit.Role.Break", &"Unit.Role.FollowUp", &"Unit.Role.Damage", &"Card.Set.Bloodmoon"])
+default_loadout = SubResource("Resource_b5kuv")
+level_skills = Array[ExtResource("26_f0m71")]([SubResource("Resource_olo5v"), SubResource("Resource_8d3gy"), SubResource("Resource_e1k8m"), SubResource("Resource_a5mu0"), SubResource("Resource_uomht"), SubResource("Resource_ydnk1"), SubResource("Resource_2cxys"), SubResource("Resource_ysjp6"), SubResource("Resource_lulqy"), SubResource("Resource_7td2n"), SubResource("Resource_jqya8"), SubResource("Resource_yxkw5"), SubResource("Resource_mktkq")])
+health_states = true
+stats_x100 = Dictionary[String, int]({
+"atk": 50000,
+"crit_dmg": 5000,
+"crit_rate": 500,
+"def": 28000,
+"energy": 0,
+"hp": 105000,
+"max_hp": 105000,
+"max_mp": 6000,
+"max_toughness": 0,
+"mp": 6000,
+"sp_basic": 1700,
+"spd": 10400,
+"toughness": 0
+})

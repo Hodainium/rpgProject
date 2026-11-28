@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_garlic_wreath.tscn" id="1_tsq0s"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_2ekd1"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_tx6ym"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_varbu"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_kihjx"]
+
+[sub_resource type="Resource" id="Resource_85263"]
+script = ExtResource("3_tx6ym")
+abilities = Array[PackedScene]([ExtResource("1_tsq0s")])
+
+[resource]
+script = ExtResource("5_kihjx")
+id = &"demo.item.garlic_wreath"
+display_name = "Garlic Wreath"
+description = "An enemy that hits you gets -25% healing received for 2 turns."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Chest", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Survival", &"Item.Grants.Tank"])
+price = 7
+grants = SubResource("Resource_85263")

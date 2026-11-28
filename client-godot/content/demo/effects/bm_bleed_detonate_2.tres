@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_qcfnp"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_detonate.gd" id="2_fp4b3"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_3g41p"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_ye8x5"]
+
+[sub_resource type="Resource" id="Resource_1mq0g"]
+script = ExtResource("2_fp4b3")
+share_x100 = 14000
+
+[resource]
+script = ExtResource("4_ye8x5")
+executions = Array[ExtResource("1_qcfnp")]([SubResource("Resource_1mq0g")])

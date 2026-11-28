@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_psx8j"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_nightcloak.tres" id="2_45w1i"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_nightcloak_low.tres" id="3_isbnf"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_tracked.tres" id="4_ppx67"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="5_guvxp"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="6_pn7xk"]
+
+[sub_resource type="Resource" id="Resource_w426t"]
+script = ExtResource("5_guvxp")
+effects = Array[ExtResource("1_psx8j")]([ExtResource("2_45w1i"), ExtResource("3_isbnf"), ExtResource("4_ppx67")])
+
+[resource]
+script = ExtResource("6_pn7xk")
+id = &"demo.equipment.nightcloak"
+display_name = "Nightcloak"
+description = "+60 max HP, +5% lifesteal; +15% more lifesteal while under 50% HP."
+slot = &"Equipment.Slot.Body"
+grants = SubResource("Resource_w426t")
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Lifesteal", &"Item.Fit.Survival"])
+price = 9

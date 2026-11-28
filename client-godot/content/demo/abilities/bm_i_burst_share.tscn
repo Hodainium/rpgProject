@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_egaby"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_2lkch"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_lifesteal_heal.tres" id="3_1knuo"]
+[ext_resource type="Animation" path="res://content/demo/animations/mend.tres" id="4_e7n00"]
+
+[sub_resource type="Resource" id="Resource_iniuf"]
+script = ExtResource("2_2lkch")
+id = &"regen"
+effect = ExtResource("3_1knuo")
+damage_mode = 3
+multiplier_x100 = 750
+
+[node name="BmIBurstShare" type="Node" unique_id=1376551170]
+script = ExtResource("1_egaby")
+targeting = 4
+executions = Array[ExtResource("2_2lkch")]([SubResource("Resource_iniuf")])
+animation = ExtResource("4_e7n00")
+description = "A detonation heals every ally 7.5% of its damage (30% shared by a party of four)."
+ability_name = "Burst Vein"
+ability_tag = &"Ability.Passive.Iburstshare"
+trigger_event_tag = &"Event.Damage.Dealt.Detonate"

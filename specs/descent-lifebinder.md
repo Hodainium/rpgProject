@@ -40,8 +40,7 @@ golden).
    and `growth_support` bands exactly as recorded in `second-pack` 2.3b; the three items with `Card.Set.Descent`, their
    rarity tags and pools (Seedling Charm: Treasure, Shop, Chest; Verdant Heart: Treasure; Lifebloom Crown: Boss), fit tags
    (`Item.Fit.Healing` + `Item.Fit.FollowUp` for the meter items). The meter uses 5j's hooks: B2 heal events
-   (`Event.Ally.Heal.Received`, `Event.Heal.Received`), B3 meter abilities (`meter_attribute`, `meter_threshold_of` 50% of
-   max HP), B4 the `meter` attribute; Verdant Lash's heal carries `Hit.Meter` so it never refills the meter.
+   (`Event.Ally.Heal.Received`, `Event.Heal.Received`), B3 meter abilities (on its ult charge, D29); Verdant Lash's heal carries `Hit.Meter` so it never refills the meter.
 2. **Look** (`presentation/`, the user's folder): the approved look of 2026-11-26 joins the main style registry
    (`bm_lifebinder_crown` Top, `bm_face_lifebinder_a` Front, `bm_lifebinder_staff` Right offset (-0.14, -0.1, 0), body
    colour (0.45, 0.78, 0.58)) plus its own combined floor effect, a green glow and green orbs (previewed as `golden_glow`
@@ -98,6 +97,10 @@ Balance: the gate on 100 seeds with the Lifebinder in the pool (spec `gate-size-
 
 **Decisions (user, 2026-11-26):** the Lifebinder moves to the Descent Pack unchanged (design, playstyle, three items,
 look); it is a small slice of its own after 5j.
+
+**Decided (user, 2026-11-26, in second-pack D29):** like the Bloodbinder, the Lifebinder's meter becomes its ult bar: healing
+the party receives fills its ult charge on top of the normal charge, and its ult casts itself at 100% (Verdant Lash rides on
+it); no `meter` attribute. The kit in second-pack 2.3b is adjusted for that when this slice is built.
 
 **Open questions:**
 - Q0. Verdant Heart ("your meter fills 30% faster") works only for the Lifebinder, against `second-pack` D26

@@ -1,0 +1,9 @@
+[gd_resource type="AudioStreamRandomizer" format=3]
+
+[ext_resource type="AudioStream" path="res://presentation/audio/sfx/pixel/ult.moonfall_frenzy.wav" id="1_2w4xn"]
+
+[resource]
+resource_name = "ult.moonfall_frenzy"
+playback_mode = 2
+streams_count = 1
+stream_0/stream = ExtResource("1_2w4xn")

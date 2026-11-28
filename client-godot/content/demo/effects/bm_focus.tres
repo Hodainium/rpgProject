@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_j7nrm"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_hc01c"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_mjfb8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_fpu2g"]
+
+[sub_resource type="Resource" id="Resource_g8fnn"]
+script = ExtResource("3_mjfb8")
+value_x100 = 800
+attribute_name = "crit_rate"
+
+[sub_resource type="Resource" id="Resource_yoa17"]
+script = ExtResource("3_mjfb8")
+value_x100 = 1200
+attribute_name = "crit_dmg"
+
+[resource]
+script = ExtResource("4_fpu2g")
+stacking_policy = 1
+policy = 3
+max_stacks = 5
+duration_turns = 99
+modifiers = Array[ExtResource("2_hc01c")]([SubResource("Resource_g8fnn"), SubResource("Resource_yoa17")])
+granted_tags = Array[StringName]([&"Status.Focus"])

@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_op7ik"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_fcsin"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_vial_heal.tres" id="3_4betp"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_cdgv2"]
+
+[sub_resource type="Resource" id="Resource_i0lhq"]
+script = ExtResource("2_fcsin")
+id = &"charge"
+effect = ExtResource("3_4betp")
+
+[node name="BmIBloodVial" type="Node" unique_id=1203848086]
+script = ExtResource("1_op7ik")
+targeting = 5
+executions = Array[ExtResource("2_fcsin")]([SubResource("Resource_i0lhq")])
+animation = ExtResource("4_cdgv2")
+description = "On a kill: heal 15% of max HP."
+ability_name = "Blood Vial"
+ability_tag = &"Ability.Passive.Ibloodvial"
+trigger_event_tag = &"Event.Unit.Killed"

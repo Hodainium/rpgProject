@@ -48,11 +48,23 @@ const PARTS: Array[String] = ["explore", "placement", "gear", "shop", "field"]
 	&"Item.Fit.Control": {&"Unit.Role.Control": 120, &"Unit.Role.Support": 60, "*": 40},
 	&"Item.Fit.Party": {"*": 60},
 	&"Item.Fit.Run": {"*": 40},
+	&"Item.Fit.Bleed": {&"Unit.Role.Dot": 120, &"Unit.Role.Damage": 60, "*": 25},
+	&"Item.Fit.Lifesteal": {&"Unit.Role.Damage": 100, &"Unit.Role.Tank": 80, "*": 40},
+	&"Item.Fit.Crit": {&"Unit.Role.Damage": 100, &"Unit.Role.FollowUp": 80, "*": 30},
+	&"Item.Fit.HpCost": {"*": 80},
 }
 ## Fit tag -> {"mode": SPREAD | FLAT | CARRY, "step": percent per held thing of that fit}. Unlisted fits are FLAT.
 @export var stack: Dictionary = {
 	&"Item.Fit.Survival": {"mode": SPREAD, "step": 25},
+	&"Item.Fit.Bleed": {"mode": CARRY, "step": 25},
+	&"Item.Fit.Lifesteal": {"mode": CARRY, "step": 25},
+	&"Item.Fit.Crit": {"mode": CARRY, "step": 25},
 }
+## Spec second-pack 2.7: Item.Fit.Crit on a crit holder (a base crit rate above 5%, or one of these class abilities) is worth this
+## percent of its weight; Item.Fit.HpCost on a class with no HP-cost move is worth this percent.
+@export var crit_holder_percent: int = 150
+@export var crit_holder_abilities: Array[StringName] = [&"Ability.Passive.Focus"]
+@export var hp_cost_other_percent: int = 25
 ## What an Item.Grants.* adds when the member does not have that role yet.
 @export var new_role_value: int = 50
 ## With CARRY fits, one member piles up every CARRY kind (the first goes to the best damage dealer by the weights).

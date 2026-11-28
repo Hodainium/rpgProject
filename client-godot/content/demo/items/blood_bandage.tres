@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_acxux"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_blood_bandage.tres" id="2_dr00v"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_tracked.tres" id="3_62vjy"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_thqy3"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_o28wi"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_aeg6c"]
+
+[sub_resource type="Resource" id="Resource_bl2na"]
+script = ExtResource("4_thqy3")
+effects = Array[ExtResource("1_acxux")]([ExtResource("2_dr00v"), ExtResource("3_62vjy")])
+
+[resource]
+script = ExtResource("6_aeg6c")
+id = &"demo.item.blood_bandage"
+display_name = "Blood Bandage"
+description = "+15% healing received while under 50% HP."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Common", &"Card.Set.Bloodmoon", &"Item.Fit.Survival", &"Item.Fit.Healing"])
+price = 5
+grants = SubResource("Resource_bl2na")

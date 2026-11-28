@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_lhgkw"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="2_2qj4e"]
+
+[sub_resource type="Resource" id="Resource_vvbud"]
+script = ExtResource("2_2qj4e")
+require_any_tags = Array[StringName]([&"Enemy"])
+
+[node name="BmITwinBlades" type="Node" unique_id=217735065]
+script = ExtResource("1_lhgkw")
+targeting = 5
+asset_tags = Array[StringName]([&"Ability.Type.Echo"])
+echo_scale_x100 = 10000
+description = "Your follow-ups hit twice."
+subject_query = SubResource("Resource_vvbud")
+ability_name = "Twin Blades"
+ability_tag = &"Ability.Passive.Itwinblades"
+trigger_event_tag = &"Event.Attack.FollowUp"

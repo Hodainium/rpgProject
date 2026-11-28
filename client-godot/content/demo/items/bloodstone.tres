@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_bloodstone.tscn" id="1_j8fa4"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_c10n8"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_545o8"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_h6lro"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_4tpss"]
+
+[sub_resource type="Resource" id="Resource_hnugf"]
+script = ExtResource("3_545o8")
+abilities = Array[PackedScene]([ExtResource("1_j8fa4")])
+
+[resource]
+script = ExtResource("5_4tpss")
+id = &"demo.item.bloodstone"
+display_name = "Bloodstone"
+description = "Each time you pay HP: +10% ATK for 2 turns (stacks 3 times)."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Damage", &"Item.Fit.HpCost"])
+price = 9
+grants = SubResource("Resource_hnugf")

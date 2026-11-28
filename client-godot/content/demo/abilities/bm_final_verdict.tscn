@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_cp68q"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_k4qqa"]
+[ext_resource type="Resource" path="res://content/demo/effects/gravity_pull.tres" id="3_dgmy3"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_18ui2"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_5genw"]
+
+[sub_resource type="Resource" id="Resource_ys1fb"]
+script = ExtResource("2_k4qqa")
+id = &"charge"
+effect = ExtResource("3_dgmy3")
+delay_x100 = -2500
+
+[sub_resource type="Resource" id="Resource_qhkim"]
+script = ExtResource("5_5genw")
+require_all_tags = Array[StringName]([&"State.CritLanded"])
+
+[node name="BmFinalVerdict" type="Node" unique_id=639868620]
+script = ExtResource("1_cp68q")
+targeting = 5
+executions = Array[ExtResource("2_k4qqa")]([SubResource("Resource_ys1fb")])
+animation = ExtResource("4_18ui2")
+description = "A kill by a crit advances its next action by 25%."
+ability_name = "Final Verdict"
+ability_tag = &"Ability.Passive.Finalverdict"
+activation_query = SubResource("Resource_qhkim")
+trigger_event_tag = &"Event.Unit.Killed"

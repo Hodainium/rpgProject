@@ -34,10 +34,10 @@ public class CardCollectionTests(StackFixture stack)
     private static string Name([System.Runtime.CompilerServices.CallerMemberName] string test = "") =>
         "c" + Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(test)))[..16];
 
-    private async Task<ApiFactory> FactoryAsync(string? redis = null)
+    private async Task<ApiFactory> FactoryAsync(string? redis = null, CardCatalogFile? catalog = null)
     {
         var factory = await ApiFactory.RunsAsync(stack, redis, settings: Cards);
-        await SeedAsync(factory);
+        await SeedAsync(factory, catalog);
         if (redis is null)
         {
             // The catalog caches are keyed by name, and the tests share one Redis: start each test from empty caches.
@@ -1407,16 +1407,100 @@ public class CardCollectionTests(StackFixture stack)
         await using var factory = await ApiFactory.RunsAsync(stack, settings: Cards);
         await factory.Services.GetRequiredService<Rpg.GameServerApi.Migrations.MigrationRunner>().EnsureMigratedAsync(Ct);
         var store = factory.Services.GetRequiredService<CardStore>();
-        await store.SeedCatalogAsync(Catalog(), DateTimeOffset.UtcNow, Ct);
+        await store.SeedCatalogAsync(CatalogWithBloodMoon(), DateTimeOffset.UtcNow, Ct);
 
         var (rates, packs, skipped) = await store.SeedEconomyAsync(seed, 100_000, 100_000, DateTimeOffset.UtcNow, Ct);
 
-        Assert.Equal((5, 1, 0), (rates, packs, skipped));
+        // Spec second-pack 2.6: the Descent and the Blood Moon pack, both drawable over a catalog with both sets.
+        Assert.Equal((5, 2, 0), (rates, packs, skipped));
         Assert.Equal(CardRarities.Order.Length, seed.Rates.Count);
-        var pack = Assert.Single(seed.Packs);
-        Assert.Equal((10, 20, 30), (pack.PityPacks[CardRarities.Epic], pack.PityPacks[CardRarities.Legendary], pack.PityPacks[CardRarities.Mythic]));
-        Assert.Equal((5, 10, 15), (pack.FirstGuarantees[CardRarities.Epic], pack.FirstGuarantees[CardRarities.Legendary], pack.FirstGuarantees[CardRarities.Mythic]));
-        Assert.Equal(CardRarities.Rare, pack.MinRarityPerPack);
+        Assert.Equal(["descent-pack", BloodMoonPack], seed.Packs.Select(p => p.PackId).ToArray());
+        foreach (var pack in seed.Packs)
+        {
+            Assert.Equal((10, 20, 30), (pack.PityPacks[CardRarities.Epic], pack.PityPacks[CardRarities.Legendary], pack.PityPacks[CardRarities.Mythic]));
+            Assert.Equal((5, 10, 15), (pack.FirstGuarantees[CardRarities.Epic], pack.FirstGuarantees[CardRarities.Legendary], pack.FirstGuarantees[CardRarities.Mythic]));
+            Assert.Equal(CardRarities.Rare, pack.MinRarityPerPack);
+        }
+        Assert.Equal([BloodMoon], seed.Packs[1].SetIds);
+    }
+
+    [Fact]
+    public async Task SeedEconomy_ASecondPackType_WaitsForItsSet_ThenSeedsOnce()
+    {
+        // Spec second-pack 4 and 6: a seed with the Blood Moon pack over a catalog that has no Blood Moon cards yet seeds the
+        // Descent pack and skips Blood Moon (its set check refuses a set with no cards; nothing half-written); once the set is
+        // in the catalog it seeds, and a further seeding changes nothing.
+        await using var factory = await ApiFactory.RunsAsync(stack, settings: Cards);
+        await factory.Services.GetRequiredService<Rpg.GameServerApi.Migrations.MigrationRunner>().EnsureMigratedAsync(Ct);
+        var store = factory.Services.GetRequiredService<CardStore>();
+        var seed = CardFixtures.Economy() with { Packs = [.. CardFixtures.Economy().Packs, BloodMoonPackType()] };
+        await store.SeedCatalogAsync(Catalog(), DateTimeOffset.UtcNow, Ct);
+
+        Assert.Equal((5, 1, 1), await store.SeedEconomyAsync(seed, 100_000, 100_000, DateTimeOffset.UtcNow, Ct));
+        Assert.Equal(0L, await CountAsync(factory, $"SELECT count(*) FROM pack_types WHERE pack_id = '{BloodMoonPack}'"));
+        Assert.Equal(0L, await CountAsync(factory, $"SELECT count(*) FROM outbox WHERE key = 'rule:pack:{BloodMoonPack}'"));
+
+        await store.SeedCatalogAsync(CatalogWithBloodMoon(), DateTimeOffset.UtcNow, Ct);   // the next deploy brings the whole set
+
+        Assert.Equal(6L, await CountAsync(factory, $"SELECT count(*) FROM cards WHERE set_id = '{BloodMoon}' AND NOT retired"));
+        Assert.Equal((0, 1, 0), await store.SeedEconomyAsync(seed, 100_000, 100_000, DateTimeOffset.UtcNow, Ct));
+        Assert.Equal((0, 0, 0), await store.SeedEconomyAsync(seed, 100_000, 100_000, DateTimeOffset.UtcNow, Ct));
+        Assert.Equal(1L, await CountAsync(factory, $"SELECT count(*) FROM pack_types WHERE pack_id = '{BloodMoonPack}'"));
+        Assert.Equal(1L, await CountAsync(factory, $"SELECT count(*) FROM pack_types WHERE pack_id = '{StarterPack}'"));
+        Assert.Equal(1L, await CountAsync(factory, $"SELECT count(*) FROM outbox WHERE key = 'rule:pack:{BloodMoonPack}'"));
+    }
+
+    private static string PityOf(CollectionResponse collection, string pack) =>
+        string.Join(",", collection.Pity.Where(p => p.PackId == pack)
+            .SelectMany(p => p.MissedPacks.OrderBy(m => m.Key, StringComparer.Ordinal).Select(m => $"{m.Key}={m.Value}")));
+
+    /// <summary>A new player's collection: the counters of pack types nobody of theirs has opened.</summary>
+    private static async Task<CollectionResponse> FreshPlayerCollectionAsync(ApiFactory factory)
+    {
+        var (fresh, _) = await PlayerAsync(factory, "fresh" + Guid.NewGuid().ToString("N")[..12]);
+        return await fresh.GetCollectionAsync(Ct);
+    }
+
+    [Fact]
+    public async Task BloodMoonPack_DrawsOnlyItsSet_KeepsItsOwnPity_AndAReplayedOpenSpendsOnce()
+    {
+        // Spec second-pack 6 and acceptance scenario 1 for the second pack type.
+        await using var factory = await FactoryAsync(catalog: CatalogWithBloodMoon());
+        await AddPackAsync(factory, BloodMoonPackType());
+        var (client, player) = await PlayerAsync(factory, Name());
+        await GrantAsync(factory, player, gems: 100 * 14);
+        await BuyAsync(client, BloodMoonPack, count: 10);
+        await BuyAsync(client, StarterPack, count: 4);
+        await OpenAsync(client, StarterPack);   // the Descent counters leave their first-open defaults
+        await OpenAsync(client, StarterPack);
+        var before = await client.GetCollectionAsync(Ct);
+        var descentPityBefore = PityOf(before, StarterPack);
+        // Blood Moon's own first-open countdowns are untouched by the Descent opens (pity and first guarantees per pack type).
+        Assert.Equal(PityOf(await FreshPlayerCollectionAsync(factory), BloodMoonPack), PityOf(before, BloodMoonPack));
+        var key = Guid.NewGuid();
+
+        var first = await OpenAsync(client, BloodMoonPack, key);
+        var again = await OpenAsync(client, BloodMoonPack, key);
+        var opened = new List<PackOpenResponse> { first };
+        for (var i = 0; i < 8; i++)
+        {
+            opened.Add(await OpenAsync(client, BloodMoonPack));
+        }
+
+        Assert.Equal(first.Cards, again.Cards);
+        Assert.Equal(first, again with { Cards = first.Cards });
+        var bloodMoonCards = CatalogWithBloodMoon().Cards.Where(c => c.SetId == BloodMoon).Select(c => c.Id).ToHashSet();
+        Assert.All(opened.SelectMany(o => o.Cards), card => Assert.Contains(card.CardId, bloodMoonCards));
+        // Its own first-pack guarantee: an Epic or better within the first 5 Blood Moon packs (Descent's opens never count).
+        var better = new[] { CardRarities.Epic, CardRarities.Legendary, CardRarities.Mythic };
+        Assert.Contains(opened.Take(5).SelectMany(o => o.Cards), card => better.Contains(card.Rarity));
+        var collection = await client.GetCollectionAsync(Ct);
+        Assert.Equal([new OwnedPackDto(BloodMoonPack, 1), new OwnedPackDto(StarterPack, 2)],
+            collection.OwnedPacks.OrderBy(p => p.PackId, StringComparer.Ordinal));
+        Assert.Equal(descentPityBefore, PityOf(collection, StarterPack));   // the Descent counters never moved
+        Assert.Equal(9L, await CountAsync(factory, $"SELECT count(*) FROM pack_openings WHERE pack_id = '{BloodMoonPack}'"));
+        await AssertPackLedgerAsync(factory);
+        await AssertCardLedgerAsync(factory);
     }
 
     // ---- craft -------------------------------------------------------------------------------------------------------

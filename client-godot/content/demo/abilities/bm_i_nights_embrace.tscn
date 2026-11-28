@@ -1,0 +1,45 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_2otaw"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_cdlhj"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_embrace_rise.tres" id="3_5gml2"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_embrace_mend.tres" id="4_fuyfb"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_embrace_thirst.tres" id="5_k5og4"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_embrace_saved.tres" id="6_uw377"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_i_nights_embrace.tres" id="7_58sfg"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="8_u6vjg"]
+
+[sub_resource type="Resource" id="Resource_p5sp8"]
+script = ExtResource("2_cdlhj")
+id = &"rise"
+effect = ExtResource("3_5gml2")
+
+[sub_resource type="Resource" id="Resource_fdgi8"]
+script = ExtResource("2_cdlhj")
+id = &"mend"
+effect = ExtResource("4_fuyfb")
+
+[sub_resource type="Resource" id="Resource_8qorv"]
+script = ExtResource("2_cdlhj")
+id = &"thirst"
+effect = ExtResource("5_k5og4")
+
+[sub_resource type="Resource" id="Resource_pfv8b"]
+script = ExtResource("2_cdlhj")
+id = &"saved"
+effect = ExtResource("6_uw377")
+
+[sub_resource type="Resource" id="Resource_fujgv"]
+script = ExtResource("8_u6vjg")
+ignore_tags = Array[StringName]([&"State.EmbraceSaved"])
+
+[node name="BmINightsEmbrace" type="Node" unique_id=1531177022]
+script = ExtResource("1_2otaw")
+targeting = 5
+executions = Array[ExtResource("2_cdlhj")]([SubResource("Resource_p5sp8"), SubResource("Resource_fdgi8"), SubResource("Resource_8qorv"), SubResource("Resource_pfv8b")])
+animation = ExtResource("7_58sfg")
+description = "Once per battle, when you would die: survive at 1 HP, heal 30% of max HP over 2 turns and double your lifesteal for 2 turns."
+ability_name = "Night's Embrace"
+ability_tag = &"Ability.Passive.Inightsembrace"
+activation_query = SubResource("Resource_fujgv")
+trigger_event_tag = &"Event.Unit.Dying"

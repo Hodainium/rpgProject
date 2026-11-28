@@ -39,6 +39,36 @@ id = &"plague_house"
 display_name = "Plague House"
 members = Array[StringName]([&"demo.character.plaguewright", &"demo.character.bulwark", &"demo.character.bard", &"demo.character.cleric"])
 
+[sub_resource type="Resource" id="night_court"]
+script = ExtResource("1_preset")
+id = &"night_court"
+display_name = "Night Court"
+members = Array[StringName]([&"demo.character.vampire", &"demo.character.warrior", &"demo.character.bloodbinder", &"demo.character.bard"])
+
+[sub_resource type="Resource" id="silver_hunt"]
+script = ExtResource("1_preset")
+id = &"silver_hunt"
+display_name = "Silver Hunt"
+members = Array[StringName]([&"demo.character.vampire_hunter", &"demo.character.ranger", &"demo.character.bard", &"demo.character.cleric"])
+
+[sub_resource type="Resource" id="blood_rite"]
+script = ExtResource("1_preset")
+id = &"blood_rite"
+display_name = "Blood Rite"
+members = Array[StringName]([&"demo.character.bloodbinder", &"demo.character.vampire", &"demo.character.bulwark", &"demo.character.ranger"])
+
+[sub_resource type="Resource" id="full_moon"]
+script = ExtResource("1_preset")
+id = &"full_moon"
+display_name = "Full Moon"
+members = Array[StringName]([&"demo.character.werewolf", &"demo.character.shatterweaver", &"demo.character.bard", &"demo.character.cleric"])
+
+[sub_resource type="Resource" id="open_veins"]
+script = ExtResource("1_preset")
+id = &"open_veins"
+display_name = "Open Veins"
+members = Array[StringName]([&"demo.character.bloodletter", &"demo.character.plaguewright", &"demo.character.bulwark", &"demo.character.cleric"])
+
 [resource]
 script = ExtResource("2_list")
-presets = Array[ExtResource("1_preset")]([SubResource("classic_four"), SubResource("iron_wall"), SubResource("break_squad"), SubResource("firestorm"), SubResource("deep_freeze"), SubResource("plague_house")])
+presets = Array[ExtResource("1_preset")]([SubResource("classic_four"), SubResource("iron_wall"), SubResource("break_squad"), SubResource("firestorm"), SubResource("deep_freeze"), SubResource("plague_house"), SubResource("night_court"), SubResource("silver_hunt"), SubResource("blood_rite"), SubResource("full_moon"), SubResource("open_veins")])

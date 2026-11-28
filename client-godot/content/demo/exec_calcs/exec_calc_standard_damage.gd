@@ -23,12 +23,22 @@ const DEF_CONSTANT: int = 100000  # 1000.00
 const WEAKNESS_PREFIX: String = "Weakness."
 const DRAIN_PREFIX: String = "Drain."
 const RESIST_PREFIX: String = "Resist."
+const SILVERED_TAG: StringName = &"Status.Debuff.Silvered"
+const FOLLOW_UP_HIT: StringName = &"Hit.FollowUp"
 
 ## The tags this calc puts on a hit (spec.inject_tag); as fields, so sync_tags registers them.
 @export_custom(PROPERTY_HINT_NONE, "gas::tag") var weakness_hit_tag: StringName = &"Hit.Weakness"
 @export_custom(PROPERTY_HINT_NONE, "gas::tag") var critical_hit_tag: StringName = &"Hit.Critical"
 @export_custom(PROPERTY_HINT_NONE, "gas::tag") var drained_hit_tag: StringName = &"Hit.Drained"
 @export_custom(PROPERTY_HINT_NONE, "gas::tag") var resisted_hit_tag: StringName = &"Hit.Resisted"
+## Spec second-pack (the Vampire Hunter's Stake and Dawnbreak): extra crit rate on this effect's hits (typed %; 100 = always a
+## crit). 0 = none, every other damage effect.
+@export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var crit_rate_bonus: float:
+	get:
+		return Fixed.to_display(crit_rate_bonus_x100)
+	set(typed):
+		crit_rate_bonus_x100 = Fixed.from_typed(typed)
+@export_storage var crit_rate_bonus_x100: int = 0
 
 
 @warning_ignore("integer_division")
@@ -37,7 +47,7 @@ func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Di
 	var atk := int(source.get_attribute("atk").current_value)
 	var def := int(target_asc.get_attribute("def").current_value)
 	def = Fixed.pct(def, Fixed.ONE_HUNDRED_PERCENT - mini(_stat(source, "def_pen", 0), Fixed.ONE_HUNDRED_PERCENT))
-	var crit_rate := int(source.get_attribute("crit_rate").current_value)
+	var crit_rate := int(source.get_attribute("crit_rate").current_value) + crit_rate_bonus_x100
 	var crit_dmg := int(source.get_attribute("crit_dmg").current_value)
 
 	var base: int
@@ -59,18 +69,35 @@ func execute(spec: GameplayEffectSpec, target_asc: AbilitySystemComponent) -> Di
 		spec.inject_tag(weakness_hit_tag)
 		var toughness := int(spec.get_set_by_caller_magnitude(ExecutionRow.TOUGHNESS_TAG))
 		if toughness > 0 and not broken and _stat(target_asc, "max_toughness", 0) > 0:
-			toughness = Fixed.pct(toughness, Fixed.ONE_HUNDRED_PERCENT + _stat(source, "toughness_dmg", 0))
+			var tough_bonus := _stat(source, "toughness_dmg", 0)
+			if spec.has_tag(FOLLOW_UP_HIT):  # spec second-pack (Rending Claws)
+				tough_bonus += _stat(source, "follow_up_tough", 0)
+			toughness = Fixed.pct(toughness, Fixed.ONE_HUNDRED_PERCENT + tough_bonus)
 			result["toughness"] = float(-toughness)
 	elif _hits_affinity(spec, target_asc, RESIST_PREFIX):
 		damage = Fixed.pct(damage, _stat(target_asc, "resist_dmg", Fixed.ONE_HUNDRED_PERCENT / 2))
 		spec.inject_tag(resisted_hit_tag)
 	if broken:
 		damage = Fixed.pct(damage, Fixed.ONE_HUNDRED_PERCENT + _stat(source, "broken_dmg", 0))
+	# Spec second-pack: Silvered targets (the Vampire Hunter's items), follow-ups (Fencer's Glove).
+	var silvered := target_asc.has_tag(SILVERED_TAG)
+	if silvered:
+		damage = Fixed.pct(damage, Fixed.ONE_HUNDRED_PERCENT + _stat(source, "silvered_dmg", 0))
+		crit_dmg += _stat(source, "silvered_crit_dmg", 0)
+	if spec.has_tag(FOLLOW_UP_HIT):
+		damage = Fixed.pct(damage, Fixed.ONE_HUNDRED_PERCENT + _stat(source, "follow_up_dmg", 0))
 	if BattleContext.rng_for(target_asc).randi_range(0, 9999) < crit_rate:
 		damage = Fixed.pct(damage, Fixed.ONE_HUNDRED_PERCENT + crit_dmg)
 		spec.inject_tag(critical_hit_tag)
 	damage = Fixed.pct(damage, maxi(_stat(source, "dmg_mult", Fixed.ONE_HUNDRED_PERCENT), 0))
+	# Spec second-pack: +rate% damage per 1% of the source's max HP missing (Thirst, Crimson Thirst).
+	damage = Fixed.pct(damage, Fixed.ONE_HUNDRED_PERCENT + ExecCalcRestore.missing_bonus(source, "missing_hp_dmg"))
 	damage = Fixed.pct(damage, maxi(_stat(target_asc, "dmg_taken", Fixed.ONE_HUNDRED_PERCENT), 0))
+	# Spec second-pack (Velvet Fangs): a shield takes the hit first.
+	var shield := mini(_stat(target_asc, "shield", 0), damage)
+	if shield > 0:
+		result["shield"] = float(-shield)
+		damage -= shield
 	result["hp"] = float(-damage)
 	return result
 

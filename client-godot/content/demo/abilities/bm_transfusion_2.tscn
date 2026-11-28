@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_7ac02"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_cof8k"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_transfusion_heal_2.tres" id="3_q07en"]
+[ext_resource type="Animation" path="res://content/demo/animations/heal.tres" id="4_ebohs"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_hp_cost_10_0.tres" id="5_km27g"]
+
+[sub_resource type="Resource" id="Resource_palxj"]
+script = ExtResource("2_cof8k")
+id = &"heal"
+effect = ExtResource("3_q07en")
+
+[node name="BmTransfusion2" type="Node" unique_id=235804302]
+script = ExtResource("1_7ac02")
+targeting = 3
+asset_tags = Array[StringName]([&"Ability.Role.Heal", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_cof8k")]([SubResource("Resource_palxj")])
+animation = ExtResource("4_ebohs")
+description = "Costs 10% max HP. One ally heals 31% of their max HP."
+ability_name = "Transfusion II"
+ability_tag = &"Ability.Transfusion2"
+cost_effect = ExtResource("5_km27g")

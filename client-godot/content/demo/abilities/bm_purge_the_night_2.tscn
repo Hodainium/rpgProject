@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_lnc1p"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_l53jl"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_3mdms"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_silvered.tres" id="4_w2631"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_purge_the_night.tres" id="5_id1jo"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_63.tres" id="6_svml5"]
+
+[sub_resource type="Resource" id="Resource_wyubc"]
+script = ExtResource("2_l53jl")
+id = &"burn"
+effect = ExtResource("3_3mdms")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Fire"])
+multiplier_x100 = 19000
+toughness_x100 = 4500
+
+[sub_resource type="Resource" id="Resource_cwyiw"]
+script = ExtResource("2_l53jl")
+id = &"silver"
+effect = ExtResource("4_w2631")
+
+[node name="BmPurgeTheNight2" type="Node" unique_id=1030541996]
+script = ExtResource("1_lnc1p")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Role.Debuff", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_l53jl")]([SubResource("Resource_wyubc"), SubResource("Resource_cwyiw")])
+animation = ExtResource("5_id1jo")
+description = "190% ATK Fire to every enemy; Silvers them all."
+ability_name = "Purge the Night II"
+ability_tag = &"Ability.Purgethenight2"
+cost_effect = ExtResource("6_svml5")

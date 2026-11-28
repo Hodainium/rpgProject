@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_tourniquet.tscn" id="1_eyoh6"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_g753p"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_bleed_5.tres" id="3_mva20"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_5mi6s"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_dg6d3"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_b5m2e"]
+
+[sub_resource type="Resource" id="Resource_1ro0c"]
+script = ExtResource("4_5mi6s")
+abilities = Array[PackedScene]([ExtResource("1_eyoh6")])
+effects = Array[ExtResource("2_g753p")]([ExtResource("3_mva20")])
+
+[resource]
+script = ExtResource("6_b5m2e")
+id = &"demo.item.tourniquet"
+display_name = "Tourniquet"
+description = "+5% Bleed chance; when a Bleeding enemy hits you, heal 5% of your max HP."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Chest", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Bleed", &"Item.Fit.Dot", &"Item.Fit.Survival"])
+price = 7
+grants = SubResource("Resource_1ro0c")

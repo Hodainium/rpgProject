@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_bcf6g"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_1pg2e"]
+[ext_resource type="Resource" path="res://content/demo/effects/gravity_pull.tres" id="3_ps03k"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_x037b"]
+
+[sub_resource type="Resource" id="Resource_662q1"]
+script = ExtResource("2_1pg2e")
+id = &"charge"
+effect = ExtResource("3_ps03k")
+delay_x100 = -1500
+
+[node name="BmPounceBreak" type="Node" unique_id=295375759]
+script = ExtResource("1_bcf6g")
+targeting = 5
+executions = Array[ExtResource("2_1pg2e")]([SubResource("Resource_662q1")])
+animation = ExtResource("4_x037b")
+description = "Breaking an enemy brings its next action 15% sooner."
+ability_name = "Pounce"
+ability_tag = &"Ability.Passive.Pouncebreak"
+trigger_event_tag = &"Event.Damage.Dealt.Break"

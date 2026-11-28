@@ -1,0 +1,199 @@
+[gd_resource type="Resource" script_class="FxDefinition" format=3]
+
+[ext_resource type="Script" path="res://game/fx/fx_layer.gd" id="1_avop7"]
+[ext_resource type="Script" path="res://game/fx/fx_binding.gd" id="2_tbjxi"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shader_quad_layer.gd" id="3_54wll"]
+[ext_resource type="Shader" path="res://game/fx/shaders/glow_3d.gdshader" id="4_67ukk"]
+[ext_resource type="Script" path="res://game/fx/fx_curve_track.gd" id="5_ni0bi"]
+[ext_resource type="Shader" path="res://game/fx/shaders/slash_3d.gdshader" id="6_1kg3w"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_particles_3d_layer.gd" id="7_cb80k"]
+[ext_resource type="Script" path="res://game/fx/layers/fx_shake_layer.gd" id="8_08av5"]
+[ext_resource type="Script" path="res://game/fx/fx_param.gd" id="9_nx6di"]
+[ext_resource type="Script" path="res://game/fx/fx_definition.gd" id="10_iyex2"]
+
+[sub_resource type="Resource" id="Resource_koisg"]
+script = ExtResource("2_tbjxi")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 1.6
+
+[sub_resource type="Resource" id="Resource_surip"]
+script = ExtResource("3_54wll")
+shader = ExtResource("4_67ukk")
+shader_params = {
+"color": Color(0.85, 0.87, 1, 1),
+"fade_out": 0.5,
+"falloff": 3.0
+}
+size = Vector2(1.6, 1.6)
+id = &"moon"
+space = 2
+socket = &"Top"
+duration = 0.7
+bindings = Array[ExtResource("2_tbjxi")]([SubResource("Resource_koisg")])
+
+[sub_resource type="Resource" id="Resource_2cgsj"]
+script = ExtResource("2_tbjxi")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_lgn0t"]
+script = ExtResource("2_tbjxi")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 2.4
+
+[sub_resource type="Curve" id="Curve_f556h"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, -0.45), 0.0, 0.0, 0, 0, Vector2(1, -0.45), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_8hhjn"]
+script = ExtResource("5_ni0bi")
+property = "position:x"
+curve = SubResource("Curve_f556h")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_u4b4i"]
+script = ExtResource("3_54wll")
+shader = ExtResource("6_1kg3w")
+shader_params = {
+"angle": -70.0,
+"thickness": 0.11
+}
+size = Vector2(2.6, 2.6)
+id = &"rake0"
+space = 2
+start_delay = 0.1
+duration = 0.3
+bindings = Array[ExtResource("2_tbjxi")]([SubResource("Resource_2cgsj"), SubResource("Resource_lgn0t")])
+tracks = Array[ExtResource("5_ni0bi")]([SubResource("Resource_8hhjn")])
+
+[sub_resource type="Resource" id="Resource_dl30g"]
+script = ExtResource("2_tbjxi")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_rr3m3"]
+script = ExtResource("2_tbjxi")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 2.4
+
+[sub_resource type="Curve" id="Curve_futdu"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_j2tdi"]
+script = ExtResource("5_ni0bi")
+property = "position:x"
+curve = SubResource("Curve_futdu")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_f46q0"]
+script = ExtResource("3_54wll")
+shader = ExtResource("6_1kg3w")
+shader_params = {
+"angle": -70.0,
+"thickness": 0.11
+}
+size = Vector2(2.6, 2.6)
+id = &"rake1"
+space = 2
+start_delay = 0.14
+duration = 0.3
+bindings = Array[ExtResource("2_tbjxi")]([SubResource("Resource_dl30g"), SubResource("Resource_rr3m3")])
+tracks = Array[ExtResource("5_ni0bi")]([SubResource("Resource_j2tdi")])
+
+[sub_resource type="Resource" id="Resource_mcw0q"]
+script = ExtResource("2_tbjxi")
+property = "material:shader_parameter/color"
+param = &"color"
+
+[sub_resource type="Resource" id="Resource_vw0tt"]
+script = ExtResource("2_tbjxi")
+property = "material:shader_parameter/intensity"
+param = &"intensity"
+scale = 2.4
+
+[sub_resource type="Curve" id="Curve_qauxd"]
+_limits = [-8.0, 8.0, 0.0, 1.0]
+_data = [Vector2(0, 0.45), 0.0, 0.0, 0, 0, Vector2(1, 0.45), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_h4j8t"]
+script = ExtResource("5_ni0bi")
+property = "position:x"
+curve = SubResource("Curve_qauxd")
+mode = 1
+
+[sub_resource type="Resource" id="Resource_8uv3a"]
+script = ExtResource("3_54wll")
+shader = ExtResource("6_1kg3w")
+shader_params = {
+"angle": -70.0,
+"thickness": 0.11
+}
+size = Vector2(2.6, 2.6)
+id = &"rake2"
+space = 2
+start_delay = 0.18
+duration = 0.3
+bindings = Array[ExtResource("2_tbjxi")]([SubResource("Resource_mcw0q"), SubResource("Resource_vw0tt")])
+tracks = Array[ExtResource("5_ni0bi")]([SubResource("Resource_h4j8t")])
+
+[sub_resource type="Resource" id="Resource_02jik"]
+script = ExtResource("2_tbjxi")
+property = "process_material:color"
+param = &"color"
+
+[sub_resource type="Gradient" id="Gradient_pbedr"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Resource" id="Resource_j084d"]
+script = ExtResource("7_cb80k")
+size_min = 0.06
+size_max = 0.12
+speed_min = 2.0
+speed_max = 5.0
+gravity = Vector3(0, -7, 0)
+emission_radius = 0.45
+amount = 22
+lifetime = 0.55
+color_ramp = SubResource("Gradient_pbedr")
+id = &"tufts"
+start_delay = 0.15
+bindings = Array[ExtResource("2_tbjxi")]([SubResource("Resource_02jik")])
+
+[sub_resource type="Resource" id="Resource_7r0kp"]
+script = ExtResource("8_08av5")
+strength_world = 0.09
+seconds = 0.3
+id = &"shake12"
+start_delay = 0.12
+min_quality = 2
+
+[sub_resource type="Resource" id="Resource_4y7uc"]
+script = ExtResource("9_nx6di")
+name = &"color"
+kind = 3
+default_value = Color(0.78, 0.8, 1, 1)
+description = "Claw colour."
+
+[sub_resource type="Resource" id="Resource_k3vfw"]
+script = ExtResource("9_nx6di")
+name = &"intensity"
+default_value = 1.0
+max_value = 4.0
+description = "Brightness."
+
+[resource]
+script = ExtResource("10_iyex2")
+id = &"fx.moonfall_strike"
+display_name = "Moonfall Frenzy strike"
+params = Array[ExtResource("9_nx6di")]([SubResource("Resource_4y7uc"), SubResource("Resource_k3vfw")])
+layers = Array[ExtResource("1_avop7")]([SubResource("Resource_surip"), SubResource("Resource_u4b4i"), SubResource("Resource_f46q0"), SubResource("Resource_8uv3a"), SubResource("Resource_j084d"), SubResource("Resource_7r0kp")])
+socket = &"Hit"
+tags = Array[StringName]([&"Fx.Kind.Burst"])
+description = "A pale moon flares above the target and three claw rakes tear down across it."

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_blood_vial.tscn" id="1_hrwqk"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_ieyol"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_fapxv"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_dyqw1"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_n5v4g"]
+
+[sub_resource type="Resource" id="Resource_owxi8"]
+script = ExtResource("3_fapxv")
+abilities = Array[PackedScene]([ExtResource("1_hrwqk")])
+
+[resource]
+script = ExtResource("5_n5v4g")
+id = &"demo.item.blood_vial"
+display_name = "Blood Vial"
+description = "On a kill: heal 15% of max HP."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Common", &"Card.Set.Bloodmoon", &"Item.Fit.Survival"])
+price = 5
+grants = SubResource("Resource_owxi8")

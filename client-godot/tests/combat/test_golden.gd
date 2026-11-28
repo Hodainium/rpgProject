@@ -10,6 +10,7 @@ const REPLAY_SCENE: String = "res://combat/headless/replay_main.tscn"
 const TRACE_SCENE: String = "res://combat/headless/trace_main.tscn"
 const SkillPoints := preload("res://tests/combat/test_skill_points.gd")
 const ItemPower := preload("res://tests/combat/test_item_power.gd")
+const SecondPack := preload("res://tests/combat/test_second_pack.gd")
 
 
 static func _scenarios() -> Dictionary:
@@ -37,6 +38,14 @@ static func _scenarios() -> Dictionary:
 		"dying-seed-21": ItemPower.dying_golden(),
 		"echo-seed-23": ItemPower.echo_golden(),
 		"copies-seed-29": ItemPower.copies_golden(),
+		# Spec second-pack: HP costs, heal events and a meter (B1-B3); low-HP states, Bleed on hit and lifesteal (B5-B7).
+		"meter-seed-31": SecondPack.meter_golden(),
+		"bleed-seed-37": SecondPack.bleed_golden(),
+		# Spec second-pack 6: an HP-cost party with the binder (RANDOM rows, the most hurt ally, a One More), the low-HP states
+		# crossing both lines, and Focus with Silvered (a hit's Dealt before its Dealt.Critical).
+		"hpcost-seed-41": SecondPack.hpcost_golden(),
+		"health-seed-43": SecondPack.health_golden(),
+		"crit-seed-47": SecondPack.crit_golden(),
 	}
 
 
@@ -70,9 +79,12 @@ func test_golden_replays() -> void:
 		if name.ends_with(".json") and not name.ends_with(".result.json") and not name.ends_with(".trace.json"):
 			requests.append(name.trim_suffix(".json"))
 	requests.sort()
-	eq(Array(requests), ["auto-seed-4", "auto-seed-4-tampered-drop", "boss-seed-5", "break-seed-11", "copies-seed-29",
-		"copies-seed-29-tampered-target", "duel-seed-1", "dying-seed-21", "dying-seed-21-tampered-target", "echo-seed-23",
-		"echo-seed-23-tampered-target", "mirror-seed-9", "proc-seed-17", "proc-seed-17-tampered-target", "run-v2-seed-7",
+	eq(Array(requests), ["auto-seed-4", "auto-seed-4-tampered-drop", "bleed-seed-37", "bleed-seed-37-tampered-target",
+		"boss-seed-5", "break-seed-11", "copies-seed-29",
+		"copies-seed-29-tampered-target", "crit-seed-47", "crit-seed-47-tampered-target", "duel-seed-1", "dying-seed-21",
+		"dying-seed-21-tampered-target", "echo-seed-23", "echo-seed-23-tampered-target", "health-seed-43",
+		"health-seed-43-tampered-target", "hpcost-seed-41", "hpcost-seed-41-tampered-target", "meter-seed-31", "meter-seed-31-tampered-target", "mirror-seed-9", "proc-seed-17",
+		"proc-seed-17-tampered-target", "run-v2-seed-7",
 		"sp-seed-13", "sp-seed-13-tampered-cost", "sp-seed-13-tampered-unlearned", "squad-seed-42",
 		"squad-seed-42-tampered-final", "squad-seed-42-tampered-target", "status-seed-3", "status-seed-3-tampered-skip",
 		"ult-close-seed-2-tampered-outcome", "ult-seed-7", "ult-seed-7-tampered-turn"], "golden set")
@@ -253,7 +265,8 @@ func _write_goldens() -> void:
 	requests["sp-seed-13-tampered-unlearned"] = SkillPoints.sp_tampered_unlearned(requests["sp-seed-13"])
 	# Spec item-power 4: procs are re-simulated, never logged, so a tampered battle is one where another enemy was hit: every
 	# later roll and proc differs (2002).
-	for name in ["proc-seed-17", "dying-seed-21", "echo-seed-23", "copies-seed-29"]:
+	for name in ["proc-seed-17", "dying-seed-21", "echo-seed-23", "copies-seed-29", "meter-seed-31", "bleed-seed-37",
+			"hpcost-seed-41", "health-seed-43", "crit-seed-47"]:
 		requests[name + "-tampered-target"] = await _retargeted(requests[name])
 	for name in requests:
 		_write(GOLDEN + name + ".json", WireJson.stringify(requests[name]))

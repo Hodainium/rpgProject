@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_pack_ready.tscn" id="1_t02h0"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_pack_echo.tscn" id="2_el1sd"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_pack_spent.tscn" id="3_hqelv"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_jas5b"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="5_fs45y"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="6_y34ie"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="7_q8pii"]
+
+[sub_resource type="Resource" id="Resource_kyqaw"]
+script = ExtResource("5_fs45y")
+abilities = Array[PackedScene]([ExtResource("1_t02h0"), ExtResource("2_el1sd"), ExtResource("3_hqelv")])
+
+[resource]
+script = ExtResource("7_q8pii")
+id = &"demo.item.pack_sigil"
+display_name = "Pack Sigil"
+description = "When you break an enemy, your next follow-up hits twice."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.FollowUp", &"Item.Fit.Break"])
+price = 7
+grants = SubResource("Resource_kyqaw")

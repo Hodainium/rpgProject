@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_q31kf"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_velvet_fangs.tres" id="2_r7trt"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_sg3js"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_h2kg5"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_3ukhd"]
+
+[sub_resource type="Resource" id="Resource_xwgh4"]
+script = ExtResource("3_sg3js")
+effects = Array[ExtResource("1_q31kf")]([ExtResource("2_r7trt")])
+
+[resource]
+script = ExtResource("5_3ukhd")
+id = &"demo.item.velvet_fangs"
+display_name = "Velvet Fangs"
+description = "+8% lifesteal; lifesteal past full HP becomes a shield, up to 15% of your max HP."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Lifesteal", &"Item.Fit.Survival"])
+price = 9
+grants = SubResource("Resource_xwgh4")

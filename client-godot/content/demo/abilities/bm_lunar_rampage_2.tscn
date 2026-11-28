@@ -1,0 +1,98 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_se0l0"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_hf1is"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_ytwj2"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_lunar_rampage.tres" id="4_hexyc"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_63.tres" id="5_d3s3g"]
+
+[sub_resource type="Resource" id="Resource_x8ppk"]
+script = ExtResource("2_hf1is")
+id = &"c1"
+effect = ExtResource("3_ytwj2")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+toughness_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_d38fk"]
+script = ExtResource("2_hf1is")
+id = &"c2"
+effect = ExtResource("3_ytwj2")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+toughness_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_ci784"]
+script = ExtResource("2_hf1is")
+id = &"c3"
+effect = ExtResource("3_ytwj2")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+toughness_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_q4us1"]
+script = ExtResource("2_hf1is")
+id = &"c4"
+effect = ExtResource("3_ytwj2")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+toughness_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_4sakg"]
+script = ExtResource("2_hf1is")
+id = &"c5"
+effect = ExtResource("3_ytwj2")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+toughness_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_aax48"]
+script = ExtResource("2_hf1is")
+id = &"c6"
+effect = ExtResource("3_ytwj2")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+toughness_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_w0hv0"]
+script = ExtResource("2_hf1is")
+id = &"c7"
+effect = ExtResource("3_ytwj2")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+toughness_x100 = 2000
+
+[sub_resource type="Resource" id="Resource_k0de3"]
+script = ExtResource("2_hf1is")
+id = &"c8"
+effect = ExtResource("3_ytwj2")
+damage_mode = 2
+targets = 3
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+toughness_x100 = 2000
+
+[node name="BmLunarRampage2" type="Node" unique_id=348942876]
+script = ExtResource("1_se0l0")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_hf1is")]([SubResource("Resource_x8ppk"), SubResource("Resource_d38fk"), SubResource("Resource_ci784"), SubResource("Resource_q4us1"), SubResource("Resource_4sakg"), SubResource("Resource_aax48"), SubResource("Resource_w0hv0"), SubResource("Resource_k0de3")])
+animation = ExtResource("4_hexyc")
+description = "8 claws of 50% ATK Physical at random enemies."
+ability_name = "Lunar Rampage II"
+ability_tag = &"Ability.Lunarrampage2"
+cost_effect = ExtResource("5_d3s3g")

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_eq6uj"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_jbtrm"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_j3qyw"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_l5wty"]
+
+[sub_resource type="Resource" id="Resource_qeuw7"]
+script = ExtResource("3_j3qyw")
+value_x100 = 1000
+attribute_name = "atk"
+operation = 1
+
+[resource]
+script = ExtResource("4_l5wty")
+stacking_policy = 1
+policy = 3
+max_stacks = 3
+duration_turns = 2
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff", &"Cue.Sfx.Apply.Buff"])
+persistent_cue_tags = Array[StringName]([&"Cue.Fx.Buff.AttackUp"])
+modifiers = Array[ExtResource("2_jbtrm")]([SubResource("Resource_qeuw7")])
+granted_tags = Array[StringName]([&"Status.Buff.AttackUp"])

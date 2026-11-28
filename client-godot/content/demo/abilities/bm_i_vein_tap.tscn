@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_05oti"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_otqsk"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_vein_tap.tres" id="3_fax7s"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_lf0w6"]
+
+[sub_resource type="Resource" id="Resource_mohp5"]
+script = ExtResource("2_otqsk")
+id = &"charge"
+effect = ExtResource("3_fax7s")
+
+[node name="BmIVeinTap" type="Node" unique_id=1786838072]
+script = ExtResource("1_05oti")
+targeting = 5
+executions = Array[ExtResource("2_otqsk")]([SubResource("Resource_mohp5")])
+animation = ExtResource("4_lf0w6")
+description = "Each time you pay HP: +15% healing you give for 2 turns (stacks twice)."
+ability_name = "Vein Tap"
+ability_tag = &"Ability.Passive.Iveintap"
+trigger_event_tag = &"Event.Cost.Hp"

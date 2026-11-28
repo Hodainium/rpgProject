@@ -56,6 +56,8 @@ static func bonused(value: int, source_asc: AbilitySystemComponent, target_asc: 
 		source_name: String, target_name: String) -> int:
 	if source_name != "":
 		value = Fixed.pct(value, _multiplier(source_asc, source_name))
+		if source_name == "heal_mult":  # Spec second-pack: Martyr's Grace, Martyr's Vial
+			value = Fixed.pct(value, Fixed.ONE_HUNDRED_PERCENT + missing_bonus(source_asc, "missing_hp_heal"))
 	if target_name != "":
 		value = Fixed.pct(value, _multiplier(target_asc, target_name))
 	return value
@@ -70,6 +72,21 @@ func _amount(target_asc: AbilitySystemComponent) -> int:
 
 func _whole(value: int) -> int:
 	return value / 100 * 100 if whole else value
+
+
+## Spec second-pack: the bonus (×100 %) `rate_name` gives for the share of `asc`'s max HP missing: rate% per 1% missing
+## (rate 0.5 and 40% missing = +20%). 0 without the attribute or at full HP. Whole numbers only.
+@warning_ignore("integer_division")
+static func missing_bonus(asc: AbilitySystemComponent, rate_name: String) -> int:
+	if asc == null:
+		return 0
+	var rate := asc.get_attribute(rate_name)
+	var max_hp := asc.get_attribute("max_hp")
+	var hp := asc.get_attribute("hp")
+	if rate == null or max_hp == null or hp == null or int(rate.current_value) <= 0 or int(max_hp.current_value) <= 0:
+		return 0
+	var missing := maxi(int(max_hp.current_value) - int(hp.current_value), 0) * Fixed.ONE_HUNDRED_PERCENT / int(max_hp.current_value)
+	return missing * int(rate.current_value) / 100
 
 
 static func _multiplier(asc: AbilitySystemComponent, attribute_name: String) -> int:

@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_qku8o"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_gsoy1"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_thick_blood.tres" id="3_saerx"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_0wyji"]
+
+[sub_resource type="Resource" id="Resource_3qxl4"]
+script = ExtResource("2_gsoy1")
+id = &"charge"
+effect = ExtResource("3_saerx")
+
+[node name="BmThickBlood" type="Node" unique_id=1364921560]
+script = ExtResource("1_qku8o")
+targeting = 5
+executions = Array[ExtResource("2_gsoy1")]([SubResource("Resource_3qxl4")])
+animation = ExtResource("4_0wyji")
+description = "+10% max HP."
+ability_name = "Thick Blood"
+ability_tag = &"Ability.Passive.Thickblood"
+trigger_event_tag = &"Event.Battle.Start"

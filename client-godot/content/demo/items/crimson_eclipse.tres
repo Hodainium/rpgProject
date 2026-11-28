@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_crimson_eclipse.tscn" id="1_nfv5k"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_kgnjc"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_6xycd"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_5kcyt"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_q8apb"]
+
+[sub_resource type="Resource" id="Resource_2wkl3"]
+script = ExtResource("3_6xycd")
+abilities = Array[PackedScene]([ExtResource("1_nfv5k")])
+
+[resource]
+script = ExtResource("5_q8apb")
+id = &"demo.item.crimson_eclipse"
+display_name = "Crimson Eclipse"
+description = "At battle start, pay 10% of your max HP and gain +20% ATK for 3 turns."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Damage", &"Item.Fit.HpCost"])
+price = 9
+grants = SubResource("Resource_2wkl3")

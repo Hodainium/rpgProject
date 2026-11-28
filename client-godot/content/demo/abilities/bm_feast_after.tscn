@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_xcfhj"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ua8r5"]
+[ext_resource type="Resource" path="res://content/demo/effects/cleanse.tres" id="3_inml7"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_feast_lifesteal.tres" id="4_klnhs"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_feast_after.tres" id="5_e07nl"]
+
+[sub_resource type="Resource" id="Resource_1qk0u"]
+script = ExtResource("2_ua8r5")
+id = &"cleanse"
+effect = ExtResource("3_inml7")
+
+[sub_resource type="Resource" id="Resource_gu3tt"]
+script = ExtResource("2_ua8r5")
+id = &"feast"
+effect = ExtResource("4_klnhs")
+
+[node name="BmFeastAfter" type="Node" unique_id=567322854]
+script = ExtResource("1_xcfhj")
+targeting = 5
+executions = Array[ExtResource("2_ua8r5")]([SubResource("Resource_1qk0u"), SubResource("Resource_gu3tt")])
+animation = ExtResource("5_e07nl")
+description = "After Night Feast: +30% lifesteal for 2 turns, cleansed."
+ability_name = "Night Feast"
+ability_tag = &"Ability.Passive.Feastafter"
+trigger_event_tag = &"Event.Ability.Used.Ultimate"

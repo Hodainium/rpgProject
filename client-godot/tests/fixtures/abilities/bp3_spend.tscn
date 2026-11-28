@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_05foo"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_qw8i7"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/bp3_spend.tres" id="3_f3pht"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/bp3_spend.tres" id="4_cgsoc"]
+
+[sub_resource type="Resource" id="Resource_wx8ly"]
+script = ExtResource("2_qw8i7")
+id = &"spend"
+effect = ExtResource("3_f3pht")
+
+[node name="Bp3Spend" type="Node" unique_id=1309832597]
+script = ExtResource("1_05foo")
+targeting = 5
+executions = Array[ExtResource("2_qw8i7")]([SubResource("Resource_wx8ly")])
+animation = ExtResource("4_cgsoc")
+ability_tag = &"Fixture.Ability.Bp3Spend"
+trigger_event_tag = &"Event.Damage.Dealt.Critical"

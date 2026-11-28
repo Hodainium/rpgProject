@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ylbpb"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_agn32"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_vigil.tres" id="3_u0tb5"]
+[ext_resource type="Animation" path="res://content/demo/animations/rally_horn.tres" id="4_crgha"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="5_oc4yk"]
+
+[sub_resource type="Resource" id="Resource_wxjam"]
+script = ExtResource("2_agn32")
+id = &"rally"
+effect = ExtResource("3_u0tb5")
+
+[sub_resource type="Resource" id="Resource_xiasp"]
+script = ExtResource("5_oc4yk")
+require_any_tags = Array[StringName]([&"Status.Debuff.Silvered"])
+
+[node name="BmIVigil" type="Node" unique_id=428594034]
+script = ExtResource("1_ylbpb")
+targeting = 4
+executions = Array[ExtResource("2_agn32")]([SubResource("Resource_wxjam")])
+animation = ExtResource("4_crgha")
+description = "Your crits on a Silvered enemy: the party +5% crit rate for 2 turns (up to +15%)."
+subject_query = SubResource("Resource_xiasp")
+ability_name = "Rosary of Vigil"
+ability_tag = &"Ability.Passive.Ivigil"
+trigger_event_tag = &"Event.Damage.Dealt.Critical"

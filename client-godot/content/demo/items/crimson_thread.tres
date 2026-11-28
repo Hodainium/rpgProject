@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_wwivs"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_crimson_thread.tres" id="2_qy1fm"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_k3dlk"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_5cato"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_wld4l"]
+
+[sub_resource type="Resource" id="Resource_kk07e"]
+script = ExtResource("3_k3dlk")
+effects = Array[ExtResource("1_wwivs")]([ExtResource("2_qy1fm")])
+
+[resource]
+script = ExtResource("5_wld4l")
+id = &"demo.item.crimson_thread"
+display_name = "Crimson Thread"
+description = "+5% Bleed chance; your Bleed deals +30% damage."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Bleed", &"Item.Fit.Dot", &"Item.Fit.Damage"])
+price = 9
+grants = SubResource("Resource_kk07e")

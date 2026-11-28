@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_u82sm"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_7mf2c"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_clotting_2.tres" id="3_4oawt"]
+[ext_resource type="Animation" path="res://content/demo/animations/rally_horn.tres" id="4_1dw6u"]
+
+[sub_resource type="Resource" id="Resource_an2e0"]
+script = ExtResource("2_7mf2c")
+id = &"rally"
+effect = ExtResource("3_4oawt")
+
+[node name="BmClotting2" type="Node" unique_id=1875395528]
+script = ExtResource("1_u82sm")
+targeting = 4
+executions = Array[ExtResource("2_7mf2c")]([SubResource("Resource_an2e0")])
+animation = ExtResource("4_1dw6u")
+description = "The party: +20% healing received."
+ability_name = "Clotting II"
+ability_tag = &"Ability.Passive.Clotting2"
+trigger_event_tag = &"Event.Battle.Start"

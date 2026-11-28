@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="1_1tc6k"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="2_jqdl1"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_2a1b5"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="4_vx8v3"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="5_8giiv"]
+
+[sub_resource type="Resource" id="Resource_svni0"]
+script = ExtResource("1_1tc6k")
+require_any_tags = Array[StringName]([&"Character.Werewolf"])
+
+[sub_resource type="Resource" id="Resource_y3s8o"]
+script = ExtResource("4_vx8v3")
+value_x100 = 1000
+attribute_name = "lifesteal"
+
+[sub_resource type="Resource" id="Resource_vlds1"]
+script = ExtResource("1_1tc6k")
+require_any_tags = Array[StringName]([&"State.Health.Low"])
+
+[resource]
+script = ExtResource("5_8giiv")
+stacking_policy = 1
+policy = 3
+max_stacks = 1
+duration_turns = 2
+application_query = SubResource("Resource_svni0")
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff", &"Cue.Sfx.Apply.Buff"])
+modifiers = Array[ExtResource("3_2a1b5")]([SubResource("Resource_y3s8o")])
+granted_tags = Array[StringName]([&"Status.WolfForm"])
+ongoing_suppression_query = SubResource("Resource_vlds1")

@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_xk54j"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_uvdty"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_5p5aa"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_i_strike.tres" id="4_ks4g7"]
+
+[sub_resource type="Resource" id="Resource_6a2b2"]
+script = ExtResource("2_uvdty")
+id = &"strike"
+effect = ExtResource("3_5p5aa")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 5000
+toughness_x100 = 1500
+
+[node name="BmIAlphasMark" type="Node" unique_id=993258400]
+script = ExtResource("1_xk54j")
+targeting = 9
+asset_tags = Array[StringName]([&"Ability.Type.Strike"])
+trigger_chance_x100 = 3000
+executions = Array[ExtResource("2_uvdty")]([SubResource("Resource_6a2b2")])
+animation = ExtResource("4_ks4g7")
+description = "Each follow-up has a 30% chance to also strike a second random enemy."
+ability_name = "Alpha's Mark"
+ability_tag = &"Ability.Passive.Ialphasmark"
+trigger_event_tag = &"Event.Attack.FollowUp"

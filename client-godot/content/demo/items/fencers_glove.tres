@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_y4j6d"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_fencers_glove.tres" id="2_iai2n"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_7b7a3"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_81qbj"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_gdyob"]
+
+[sub_resource type="Resource" id="Resource_y1wsp"]
+script = ExtResource("3_7b7a3")
+effects = Array[ExtResource("1_y4j6d")]([ExtResource("2_iai2n")])
+
+[resource]
+script = ExtResource("5_gdyob")
+id = &"demo.item.fencers_glove"
+display_name = "Fencer's Glove"
+description = "Follow-ups deal +15% damage."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Item.Rarity.Common", &"Card.Set.Bloodmoon", &"Item.Fit.FollowUp"])
+price = 5
+grants = SubResource("Resource_y1wsp")

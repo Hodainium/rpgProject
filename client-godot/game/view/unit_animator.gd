@@ -100,6 +100,14 @@ var _fade: DeathFadeDriver
 ## The montage was seen playing since the last cast started (its end is when it stops).
 var _montage_live: bool = false
 
+## Spec second-pack P1: the state looks this view watches for (StyleRegistry.state_looks_for), the battle unit's ASC it reads their
+## tags from, the one on now (null = the unit's own look), the transform playing and the scale the view rests at.
+var _state_looks: Array[StateLook] = []
+var _watched: AbilitySystemComponent
+var _state_look: StateLook
+var _transform: Tween
+var _rest_scale: Vector3 = Vector3.ONE
+
 static var _shared_tree: AnimationNodeBlendTree
 static var _merged: Dictionary = {}  # "ability id:cast id" -> merged Animation
 static var _unwound: Dictionary = {}  # animation id -> the copy whose spins stay within half a turn (or the animation)
@@ -174,6 +182,8 @@ func body_material(color: Color) -> StandardMaterial3D:
 ## Spec cube-style 3.8: resolves the look again from the registry in use (the console's `style` changes it) and repaints.
 func restyle() -> void:
 	look = UnitStyle.look_for(unit_definition) if unit_definition != null else null
+	if look != null and _state_look != null:
+		look = _state_look.look.merged_over(look)  # spec second-pack P1: the state look over the unit's own
 	if is_node_ready():
 		_paint()
 		_build_attachments()
@@ -373,6 +383,97 @@ func _exit_tree() -> void:
 		_look_fx.stop(0.0)
 		_look_fx = null
 		_look_fx_source = null
+
+
+## Spec second-pack P1: watch `asc`'s tags for this unit's state looks (none in the registry, or no registry headless: nothing to
+## watch). The look that applies now is put on at once, without a transform; later changes play one.
+func watch_state_looks(asc: AbilitySystemComponent) -> void:
+	unwatch_state_looks()
+	var registry := UnitStyle.registry()
+	if registry == null or unit_definition == null or asc == null:
+		return
+	_state_looks = registry.state_looks_for(unit_definition.id)
+	if _state_looks.is_empty():
+		return
+	_watched = asc
+	asc.tag_added.connect(_on_watched_tag)
+	asc.tag_removed.connect(_on_watched_tag)
+	_sync_state_look(false)
+
+
+## Stops watching and puts the unit's own look back at once (the battle ended).
+func unwatch_state_looks() -> void:
+	if _watched != null and is_instance_valid(_watched):
+		if _watched.tag_added.is_connected(_on_watched_tag):
+			_watched.tag_added.disconnect(_on_watched_tag)
+		if _watched.tag_removed.is_connected(_on_watched_tag):
+			_watched.tag_removed.disconnect(_on_watched_tag)
+	_watched = null
+	_state_looks = []
+	if _state_look != null:
+		_set_state_look(null, false)
+
+
+## The state look on now (null = the unit's own look).
+func state_look() -> StateLook:
+	return _state_look
+
+
+func _on_watched_tag(_tag: StringName) -> void:
+	_sync_state_look(true)
+
+
+func _sync_state_look(animate: bool) -> void:
+	var wanted: StateLook = null
+	for state in _state_looks:
+		if state.applies(_watched):
+			wanted = state
+			break
+	if wanted != _state_look:
+		_set_state_look(wanted, animate and not is_dead and is_inside_tree())
+
+
+func _set_state_look(to: StateLook, animate: bool) -> void:
+	var from := _state_look
+	_state_look = to
+	if not animate:
+		_stop_transform()
+		restyle()
+		return
+	_play_transform(to if to != null else from, to != null)
+
+
+func _stop_transform() -> void:
+	if _transform != null and _transform.is_valid():
+		_transform.kill()
+		scale = _rest_scale
+	_transform = null
+
+
+## The approved transform (spec second-pack 2.6): squash, burst and shake, the look swapped while squashed, spring and settle.
+func _play_transform(state: StateLook, entering: bool) -> void:
+	if _transform == null or not _transform.is_valid():
+		_rest_scale = scale
+	_stop_transform()
+	var colour := state.enter_color if entering else state.leave_color
+	if state.burst != null and get_parent() != null:
+		var anchor := get_parent().get_node_or_null(NodePath(String(name) + "_StateBurst")) as Node3D
+		if anchor == null:
+			anchor = Node3D.new()
+			anchor.name = String(name) + "_StateBurst"
+			get_parent().add_child(anchor)
+		anchor.scale = Vector3.ONE * state.burst_scale
+		anchor.global_position = global_position
+		var params := state.burst_params.duplicate()
+		params["color"] = colour
+		FxManager.play(state.burst, FxAnchor.node3d(anchor), params)
+	if state.shake != null:
+		FxManager.play(state.shake, FxAnchor.screen(), state.shake_params)
+	_transform = create_tween()
+	_transform.tween_property(self, "scale", _rest_scale * state.squash, state.squash_seconds).set_trans(Tween.TRANS_SINE)
+	_transform.tween_callback(restyle)
+	_transform.tween_property(self, "scale", _rest_scale * state.stretch, state.stretch_seconds).set_trans(Tween.TRANS_SINE)
+	_transform.tween_property(self, "scale", _rest_scale, state.settle_seconds).set_trans(Tween.TRANS_BACK)
 
 
 ## Quality off finished every live effect (and a raised tier must start it again): the look effect follows the setting.

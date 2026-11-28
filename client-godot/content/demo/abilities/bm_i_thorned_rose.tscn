@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_mstpw"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ooaok"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_06d8t"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_i_strike.tres" id="4_gut06"]
+
+[sub_resource type="Resource" id="Resource_0hk5u"]
+script = ExtResource("2_ooaok")
+id = &"strike"
+effect = ExtResource("3_06d8t")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 4000
+toughness_x100 = 1500
+
+[node name="BmIThornedRose" type="Node" unique_id=1670653126]
+script = ExtResource("1_mstpw")
+targeting = 8
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+executions = Array[ExtResource("2_ooaok")]([SubResource("Resource_0hk5u")])
+animation = ExtResource("4_gut06")
+description = "When you are healed: a 40% ATK Physical follow-up on a random enemy."
+ability_name = "Thorned Rose"
+ability_tag = &"Ability.Passive.Ithornedrose"
+trigger_event_tag = &"Event.Heal.Received"

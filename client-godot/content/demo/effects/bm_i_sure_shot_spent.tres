@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_qxljb"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_6ddhn"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_8iugn"]
+
+[resource]
+script = ExtResource("3_8iugn")
+remove_effects_with_tags = Array[StringName]([&"State.SureShot"])

@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_itkey"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_3bapf"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_nhnwm"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_red_tide.tres" id="4_y8qem"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_hp_cost_15_0.tres" id="5_b28u8"]
+
+[sub_resource type="Resource" id="Resource_8ou2l"]
+script = ExtResource("2_3bapf")
+id = &"tide"
+effect = ExtResource("3_nhnwm")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 18000
+toughness_x100 = 3000
+
+[node name="BmRedTide2" type="Node" unique_id=85137317]
+script = ExtResource("1_itkey")
+targeting = 1
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle", &"Ability.Type.RedTide"])
+executions = Array[ExtResource("2_3bapf")]([SubResource("Resource_8ou2l")])
+animation = ExtResource("4_y8qem")
+description = "Costs 15% max HP. 180% ATK Physical to every enemy; the party heals 12% of max HP."
+ability_name = "Red Tide II"
+ability_tag = &"Ability.Redtide2"
+cost_effect = ExtResource("5_b28u8")

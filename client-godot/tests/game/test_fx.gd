@@ -471,6 +471,25 @@ func test_shake_moves_a_control_and_restores_it() -> void:
 	check(not handle.is_playing(), "ends")
 
 
+## Spec second-pack 2.6 (found in the Werewolf transform demo): a shake whose target is freed while it runs (the window closed)
+## goes on and ends without "Trying to assign invalid previously freed instance".
+func test_shake_survives_its_target_being_freed() -> void:
+	var service := _service()
+	var shake := FxShakeLayer.new()
+	shake.id = &"shake"
+	shake.seconds = 0.4
+	var def := _def(&"fx.shake_freed", [shake], [], FxDefinition.Space.UI)
+	service.register(def)
+	var control := Control.new()
+	host.add_child(control)
+	var handle := service.play(def, FxAnchor.control(control))
+	service.advance(0.05)
+	control.free()
+	service.advance(0.05)
+	service.advance(1.0)
+	check(not handle.is_playing(), "the shake still ends")
+
+
 func test_shake_moves_the_camera_for_a_screen_anchor() -> void:
 	var service := _service()
 	var shake := FxShakeLayer.new()

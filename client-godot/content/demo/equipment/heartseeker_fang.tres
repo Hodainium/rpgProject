@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_fdivl"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_heartseeker_fang.tres" id="2_dniup"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_m1e5s"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="4_pi6t8"]
+
+[sub_resource type="Resource" id="Resource_1pgyu"]
+script = ExtResource("3_m1e5s")
+effects = Array[ExtResource("1_fdivl")]([ExtResource("2_dniup")])
+
+[resource]
+script = ExtResource("4_pi6t8")
+id = &"demo.equipment.heartseeker_fang"
+display_name = "Heartseeker Fang"
+description = "+20% lifesteal; +15% crit rate."
+slot = &"Equipment.Slot.Weapon"
+grants = SubResource("Resource_1pgyu")
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Lifesteal", &"Item.Fit.Damage", &"Item.Fit.Survival", &"Item.Fit.Crit"])
+price = 9

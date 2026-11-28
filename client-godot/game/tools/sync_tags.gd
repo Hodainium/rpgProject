@@ -35,6 +35,10 @@ const SYSTEM_TAGS: Array[StringName] = [
 	&"Event.Ally.Damage.Taken", &"Event.Ally.Ability.Used.Ultimate", &"Event.Damage.Dealt.Dot", &"Event.Damage.Taken.Dot",
 	&"Event.Ability.Used.Skill", &"Event.Unit.Dying", &"Hit.Echo", &"Event.Damage.Dealt.Echo", &"Event.Damage.Taken.Echo",
 	&"Ability.Type.Echo", &"Ability.Type.Strike", &"State.DeathSaved", &"Data.Event.Amount", &"Data.Echo.Scale",
+	# Spec second-pack: HP cost, heal, meter and low-HP events and states (B1, B2, B3, B5).
+	&"Event.Cost.Hp", &"Event.Ally.Cost.Hp", &"Event.Heal.Given", &"Event.Heal.Received", &"Event.Ally.Heal.Received",
+	&"Event.Meter.Full", &"Hit.Meter", &"State.Health.Low", &"State.Health.Critical", &"State.Health.Tracked",
+	&"Event.Health.Low", &"Event.Health.Critical", &"Event.Ally.Health.Low",
 	# Spec ui-framework: the layers the framework pushes to by name (confirm dialogs, UIPushButton's default).
 	&"UI.Layer.Menu", &"UI.Layer.Modal",
 	# Spec keys-and-gear: where abilities work, and the run modifier tags the run reads from held items.

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_alphas_mark.tscn" id="1_k2nj0"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_mw0c3"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_alphas_mark.tres" id="3_7u4y1"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_iqvkf"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_378b0"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_gmk4d"]
+
+[sub_resource type="Resource" id="Resource_uw464"]
+script = ExtResource("4_iqvkf")
+abilities = Array[PackedScene]([ExtResource("1_k2nj0")])
+effects = Array[ExtResource("2_mw0c3")]([ExtResource("3_7u4y1")])
+
+[resource]
+script = ExtResource("6_gmk4d")
+id = &"demo.item.alphas_mark"
+display_name = "Alpha's Mark"
+description = "Your follow-ups +25% damage; each follow-up has a 30% chance to also strike a second random enemy (50% ATK)."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Bloodmoon", &"Item.Fit.FollowUp", &"Item.Grants.FollowUp", &"Item.Fit.Break"])
+price = 12
+grants = SubResource("Resource_uw464")

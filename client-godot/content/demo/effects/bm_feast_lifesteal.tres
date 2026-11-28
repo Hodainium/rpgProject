@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_rk6d8"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_gkcu7"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_3fbmg"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_qhil3"]
+
+[sub_resource type="Resource" id="Resource_fl03u"]
+script = ExtResource("3_3fbmg")
+value_x100 = 3000
+attribute_name = "lifesteal"
+
+[resource]
+script = ExtResource("4_qhil3")
+policy = 3
+duration_turns = 2
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff", &"Cue.Sfx.Apply.Buff"])
+modifiers = Array[ExtResource("2_gkcu7")]([SubResource("Resource_fl03u")])
+granted_tags = Array[StringName]([&"Status.Buff.Lifesteal"])

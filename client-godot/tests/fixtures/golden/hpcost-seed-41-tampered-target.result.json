@@ -1,0 +1,1 @@
+{"schemaVersion":1,"battleId":"hpcost-seed-41","verdict":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"TurnMismatch","turn":62,"detail":"log entry says turn 63, P1 acts on turn 62"},"outcome":"Ongoing","turns":62,"finalStateHash":"a6e5ee328af2b98de61e29d382b28eae645ee7dfe59dc0056e7e0671f21bead1","engineVersion":"4.7.2.stable.mono.official.ed1daf0bf"}

@@ -2,7 +2,8 @@
 
 Status: **spec written 2026-11-22; the Vampire Hunter and its items 2026-11-26 (D8-D14); the roster changed the same
 day (D15-D23): the Lifebinder moves to the Descent Pack in its own slice after this one, the Bloodbinder, the Werewolf and
-the Bloodletter join (kits approved); all five looks approved (2.6). Ready for `/implement`.** The last of four slices the user asked for on
+the Bloodletter join (kits approved); all five looks approved (2.6). Built 2026-11-27 on `feat/second-pack` and synced
+the same day (2.8 lists what the build changed, approved by the user); awaiting the user's playtest.** The last of four slices the user asked for on
 2026-11-22: `bot-play`, `item-power`, `level-cap`, `second-pack` (this). A second card pack, **Blood Moon**, with five
 new characters that bring a new playstyle and still fit existing teams, and a set of items built around them.
 Builds on `specs/card-collection.md`, `specs/pack-shop.md` and `specs/card-ui.md` (sets, packs, odds, pity, the
@@ -17,7 +18,8 @@ catalog, the Shop and pack reveal), `specs/class-pick.md` (the class pick, prese
 1. **The Vampire, Vlad** (user, 2026-11-22; shown as "Vlad", D23): every hit it deals heals it, and its moves cost **HP**, not SP. A damage dealer that
    lives on the edge: strong while it keeps hitting, in danger when it can't.
 2. **The Bloodbinder** (user, 2026-11-26; 2.3): a blood support that pays **HP** to heal and buff others, gives the party
-   lifesteal, heals harder the lower it is, and keeps a **Blood Pool** that fills with the HP the party loses and bursts as a
+   lifesteal, heals harder the lower it is, and its **ult bar is a Blood Pool** that fills with the HP the party loses and casts
+   its ult by itself when full (D29), a
    party heal. (The Lifebinder, the first support drafted here, moves to the Descent Pack as it is, 2.3b, D15.)
 3. **The Vampire Hunter** (user, 2026-11-26; 2.4): the first crit-focused class. Hits that don't crit build **Focus**
    (crit rate and crit damage), a crit spends it, and its crits **Silver** enemies (half healing received), which counters
@@ -34,7 +36,9 @@ Each character has the full level rhythm of `level-cap` (2.3 there: similar, not
   server's `CardSeeder` adds them (it only refuses a file that takes a core card away).
 - **Pack type:** a second entry in `infra/economy/card_economy.json` (`bloodmoon-pack`), seeded only where no row exists
   (an admin's edit is never overwritten); every pack-type rule of spec `pack-shop` applies, including the openability
-  check (every rarity the pack can give by odds, pity or a first-pack guarantee must have an eligible card and a rate).
+  check as built (some rarity with odds has an eligible card, and every rarity the pack can give by odds, pity or a
+  first-pack guarantee has a card rate; D28: a set missing a rarity is kept out by the catalog and the validator, not by the
+  server).
 - **Postgres:** catalog and pack-type rows through the seeders; buys, opens, dust and craft as today
   (`pack_inventory`, `pack_ledger`, `card_ledger`, the outbox events `PackPurchased`, `PackOpened`, ...).
 - **Redis:** `catalog:cards` and `catalog:packs` refresh by their TTL (1 h); the deploy notes say to delete both keys
@@ -56,11 +60,11 @@ tampered goldens).
 |---|---|---|
 | B1 | **HP costs** | An ability's cost effect may lower `hp` (a cost modifier or cost ExecCalc on `hp`, read by `CostReader.cost_of` as `{hp: n}` beside SP). `CombatASC.can_activate_ability` refuses an HP-cost ability when the cost is **at or above the caster's current HP** (a move never kills its user). `AbilityHint` shows "HP" and the cost; the battle HUD's command window previews it on the HP bar like the SP bar's preview. Paying an HP cost sends `Event.Cost.Hp` to the caster and `Event.Ally.Cost.Hp` to its living allies, payload `{source, amount}` (the HP paid), so the Bloodbinder's Blood Pool and Bloodstone see it (an HP cost sends no `Damage.Taken`, K1). |
 | B2 | **Heal events** | Whenever a unit's HP rises from an effect (instant heals, HoT ticks, lifesteal, revives' HP), the battle sends `Event.Heal.Given` to the source and `Event.Heal.Received` to the target, payload `{source, target, amount}` where `amount` is the HP actually restored (overheal excluded), and, through item-power's K1, `Event.Ally.Heal.Received` to the target's living allies. HoT stacks send one event per stack tick. New tags; Thorned Rose listens (2.5). |
-| B3 | **Meters** | A triggered ability may name a meter: `BattleAbility.meter_attribute` (an attribute name) and `meter_threshold` (×100; or `meter_threshold_of`, an attribute of the owner and a percent, e.g. 50% of its max HP). After each trigger drain the battle checks every living unit's meter abilities in unit order: while the attribute is at or above the threshold, it subtracts the threshold and queues the ability once (at most 3 fires per check, so a huge heal cannot fire forever). Meters fill through ordinary effects (the Bloodbinder's Blood Pool: passives on `Event.Damage.Taken`, `Event.Ally.Damage.Taken`, `Event.Cost.Hp` and `Event.Ally.Cost.Hp` adding `Data.Event.Amount` to the meter through K6). Heals made by a meter-fired ability carry `Hit.Meter` and **never fill meters**, so a meter heal cannot feed itself. |
+| B3 | **Meters** | A triggered ability may name a meter: `BattleAbility.meter_attribute` (an attribute name) and `meter_threshold` (×100; or `meter_threshold_of`, an attribute of the owner and a percent, e.g. 50% of its max HP). After each trigger drain the battle checks every living unit's meter abilities in unit order: while the attribute is at or above the threshold, it subtracts the threshold and queues the ability once (at most 3 fires per check, so a huge heal cannot fire forever). Meters fill through ordinary effects (the Bloodbinder's Blood Pool: passives on `Event.Damage.Taken`, `Event.Ally.Damage.Taken`, `Event.Cost.Hp` and `Event.Ally.Cost.Hp` adding `Data.Event.Amount` to the meter through K6). Heals made by a meter-fired ability carry `Hit.Meter` and **never fill meters**, so a meter heal cannot feed itself. **The Bloodbinder's meter is its ult charge** (D29): its ult is a meter ability on `energy` at 100% of `max_energy`, so it fires by itself when the bar is full, without a cost effect of its own (B3 takes the charge off). A meter-fired ult is a passive: it is never pressed, never counts toward `ULTS_PER_TURN` and sends no `Event.Ability.Used.Ultimate`. |
 | B5 | **HP threshold states** | A unit whose definition sets `UnitDefinition.health_states` (off by default, so no existing unit, hash or golden changes) carries `State.Health.Low` while its HP is under 50% of max and `State.Health.Critical` while under 25%, set after every HP change (settled with the death check); crossing into one sends `Event.Health.Low` / `Event.Health.Critical` to it once per crossing, and `Event.Ally.Health.Low` to its living allies (K1; Pool Chalice). A unit is also tracked while it carries `State.Health.Tracked`, which every item that reads these states grants at battle start (D26: "under 50% HP" items work on any holder); the low line is 50% of max HP, or 60% for a holder of Moonstone Pendant (`health_low_at`). Passives gate on the tags with their activation query (the Werewolf's Wolf Form, the Vampire's Undying Hunger); the tags are hashed like any tag. |
 | B6 | **Bleed on hit** | One new attribute in the generated `Unit` AttributeSet, `bleed_chance` (×100, 0 by default; a `godot_gas/attributes_draft.cfg` edit, then `generate_attributes.tscn`). After each damaging hit (never a DoT tick, never an HP cost) a unit whose `bleed_chance` is above 0 rolls once on the battle RNG (`randi_range(0, 9999) < bleed_chance`) and on success applies one stack of the content's Bleed effect (a content setting names it) to the target. Items add to it with ordinary stat modifiers, so every Bleed item's chance simply adds up (three +5% items: one 15% roll). Off unless content uses it; whether a 0 attribute changes old hashes is checked with B4's. |
 | B7 | **Lifesteal stat** | One new attribute in the generated `Unit` AttributeSet, `lifesteal` (×100, 0 by default). After each damaging hit (never a DoT tick, never an HP cost) a unit with `lifesteal` above 0 heals `lifesteal`% of the damage dealt, one heal through K6 that sends B2's heal events (so it fills meters and counts for Thorned Rose). Items, statuses and passives add to it with ordinary stat modifiers, so all lifesteal adds up (D27). Vlad's own per-move healing (Bite 30%, Blood Lance 40%, ...) stays on its moves, on top. Off unless content uses it. |
-| B4 | **Meter attribute** | One new attribute in the generated `Unit` AttributeSet: `meter` (snake_case, starts at 0 each battle, never negative, never carried between battles). It is a `godot_gas/attributes_draft.cfg` edit (prompts), then `generate_attributes.tscn`. Shown on the battle HUD's party window as a thin bar under SP for units with a meter ability. |
+| B4 | ~~Meter attribute~~ | **Dropped (D29):** the Bloodbinder's meter is its ult bar (`energy`), so no `meter` attribute and no extra HUD bar. (The fixtures keep a `meter` attribute of their own to test B3 in general.) |
 
 Lifesteal is the B7 stat (D27); Vlad's per-move heals are passives on `Event.Damage.Dealt` healing `Data.Event.Amount` × a
 percent (item-power K6).
@@ -71,6 +75,10 @@ Focus and Silvered (2.4) need no new hook either: `Battle._send_damage_events` s
 in `exec_calc_standard_damage.gd` before either event, so the crit itself gets the full bonus. DoT ticks send only
 `Event.Damage.Dealt.Dot` (K2, checked 2026-11-26), never `Event.Damage.Dealt`, so they never build Focus. Silvered is a
 `heal_taken` modifier, which every heal ExecCalc and the drained hit already read.
+
+**Numbers (sync 2026-11-27):** the move, item and level-row tables below are the first proposals. The built and tuned values
+live in the content under `client-godot/content/demo/` (made by `game/tools/build_second_pack.tscn`), which is the source of
+truth; 2.8 lists where the build differs in behaviour.
 
 ### 2.2 The Vampire, Vlad (`demo.character.vampire`)
 
@@ -92,7 +100,7 @@ the party a share of the damage), 35 Thirst II, 40 Undying Hunger (passive: belo
 Sanguine Tide II, 50 Night Feast III.
 
 Synergy with today's classes: the Cleric and Bulwark keep it above its HP costs; the Bloodbinder's Blood Pool fills from its
-HP costs and its Blood Rite gives the whole party lifesteal; item-power's on-hit items (Chain Bell, Static Ring) add hits that each heal it.
+HP costs (its ult bar) and its Blood Rite gives the whole party lifesteal; item-power's on-hit items (Chain Bell, Static Ring) add hits that each heal it.
 
 ### 2.3 The Bloodbinder (`demo.character.bloodbinder`)
 
@@ -109,9 +117,9 @@ gives no SP (`sp_basic` 0).
 | Blood Bolt | basic | 80% ATK Physical; heals itself 20% of the damage. |
 | Transfusion | skill | Costs 10% max HP. One ally heals 30% of the Bloodbinder's max HP. |
 | Blood Rite | skill | Costs 15% max HP. The party gets **+20% lifesteal** (B7) for 2 turns. |
-| Crimson Communion | ult | Every ally heals 25% of their max HP and is cleansed of one debuff; the Blood Pool fills by half its threshold. |
+| Crimson Communion | ult (auto) | **Cast by itself when the ult bar is full** (B3 on `energy`, D29): every ally heals 25% of their max HP, is cleansed of one debuff and gets +10% lifesteal for 2 turns. |
 | Martyr's Grace | passive | Its heals +1% for every 2% of its max HP missing (up to +40%). |
-| Blood Pool | passive (meter, B3) | Fills with every HP the party loses: hits taken (`Event.Damage.Taken`, `Event.Ally.Damage.Taken`) and HP costs paid (`Event.Cost.Hp`, `Event.Ally.Cost.Hp`, B1). At 60% of the Bloodbinder's max HP, **Sanguine Surge**: every ally heals 10% of their max HP (a meter heal, `Hit.Meter`). |
+| Blood Pool | passive | **Its ult bar is the Blood Pool** (D29): besides normal ult charge, every HP the party loses fills it: hits taken (`Event.Damage.Taken`, `Event.Ally.Damage.Taken`) and HP costs paid (`Event.Cost.Hp`, `Event.Ally.Cost.Hp`, B1), as ult charge (EVENT_AMOUNT rows on `energy`; the share is tuned in the build and 5c). Sanguine Surge is folded into the ult. |
 
 Level rows (`level-cap` 2.3 rhythm):
 
@@ -123,10 +131,10 @@ Level rows (`level-cap` 2.3 rhythm):
 | 9 | Transfusion III | rank | |
 | 12 | Coagulate | skill | Costs HP; a Ward on one ally. |
 | 15 | Crimson Communion II | rank | |
-| 20 | Deep Pool | passive | The Pool bursts at 50%. |
+| 20 | Deep Pool | passive | The Pool fills 25% faster (HP lost gives more ult charge). |
 | 25 | Blood Rite II | rank | 3 turns. |
 | 30 | Red Tide | signature | 140% ATK Physical on every enemy; the party heals 50% of the damage. |
-| 35 | Deep Pool II | rank | 40%. |
+| 35 | Deep Pool II | rank | 50% faster. |
 | 40 | Last Drop | passive | Once per battle, when an ally would die (`Event.Unit.Dying`, K5), the Bloodbinder pays 20% max HP and the ally stays at 1 HP (not when the payment would kill it, B1). |
 | 45 | Red Tide II | rank | |
 | 50 | Crimson Communion III | rank | |
@@ -140,7 +148,8 @@ The user likes the Lifebinder's design and playstyle as they are, but its nature
 nor its playstyle (2026-11-26). It moves, unchanged, to the **Descent Pack** (which has no healer: its supports are the
 Shatterweaver and the Plaguewright) in its own quick slice after this one (roadmap 5j2), with its three items (Seedling
 Charm, Verdant Heart, Lifebloom Crown) and its approved look (the `bm_lifebinder_*` shapes of PR #95, renamed there). It
-needs B2-B4, which this slice builds. Its kit, kept here as the record for that slice:
+needs B2 and B3, which this slice builds; its meter becomes its ult bar too (D29: healing received fills its ult charge and
+Verdant Lash rides on its auto-cast ult; settled in that slice). Its kit, kept here as the record for that slice:
 
 Roles `Unit.Role.Healer`, `Unit.Role.Support`, `Unit.Role.FollowUp`. Growth: `growth_support` bands. Uses SP.
 
@@ -314,7 +323,7 @@ Treasure). They appear in a run only when the player owns them (the card pool, a
 | Crimson Accord | Legendary | Your heals are 20% stronger on allies under 50% HP; once per turn, a heal that brings an ally back above 50% gives the party +15% ATK for 2 turns. | Boss |
 | Silver Bolt Case | Rare | +5% crit rate; your first hit in each battle is a crit. | Treasure, Shop |
 | Blood Moon Amulet | Epic | While under 50% HP (B5): +10% damage dealt and +10% healing received. | Treasure |
-| Crimson Eclipse | Epic | At battle start, pay 10% of your max HP (an HP cost, B1: it fills a Blood Pool and Bloodstone) and gain +20% ATK for 3 turns. | Treasure |
+| Crimson Eclipse | Epic | At battle start, pay 10% of your max HP (an HP cost, B1: it fills a Bloodbinder's ult bar and Bloodstone) and gain +20% ATK for 3 turns. | Treasure |
 | Moonfang Charm | Common | +15% toughness damage. | Treasure, Shop, Chest |
 | Rending Claws (weapon) | Rare | +25 ATK; your follow-ups deal +20% toughness damage. | Treasure |
 | Pack Sigil | Rare | When you break an enemy, your next follow-up hits twice. | Treasure, Shop |
@@ -377,13 +386,15 @@ Presentation (the user's folders; new files only, on the user's go-ahead):
   | Vlad (Vampire) | pale (0.93, 0.9, 0.9) | `bm_vampire_cloak` C, `bm_vampire_collar` T, `bm_vampire_hair` T, `bm_vampire_peak` F, `bm_face_vampire_a` F, `bm_vampire_cravat` F | a black cloud (previewed: `void_smoke`, colour (0.04, 0.02, 0.03), embers black) |
   | Vampire Hunter | slate (0.24, 0.27, 0.36) | `bm_hunter_coat` C, `bm_hunter_tricorne` T, `bm_face_hunter_d` F, `bm_hunter_bandolier` F, `bm_hunter_hip_flask` L, `bm_hunter_crossbow` R offset (-0.14, -0.04, 0) | none (user, 2026-11-26) |
   | Bloodbinder | pale grey (0.8, 0.79, 0.82) | `bm_bb_hood` C, `bm_bb_robe` C, `bm_face_bb_a` F, `bm_bb_crystal` L offset (0.24, 0.05, 0) and R offset (-0.24, 0.05, 0), both bobbing (BOB, 0.45 /s, 0.06) | dark red smoke (previewed: `void_smoke`, colour (0.45, 0, 0.05), embers black) |
-  | Werewolf | grey (0.45, 0.43, 0.42) | `bm_ww_ears_grey` T, `bm_ww_mane_grey` C, `bm_ww_snout_grey` F, `bm_ww_eyes_gold` F, `bm_ww_tail_grey` B, `bm_ww_claws` C | none |
-  | Werewolf, rage form (Wolf Form, P1) | black (0.12, 0.1, 0.1) by a colour override, **roughness 1** (a glossy black top reads pale under the top light) | `bm_ww_ears_black` T, `bm_ww_mane_black` C, `bm_ww_snout_black` F, `bm_ww_eyes_red` F, `bm_ww_tail_black` B, `bm_ww_claws` C | none |
+  | Werewolf | grey (0.45, 0.43, 0.42) | `bm_ww_ears_grey` T, `bm_ww_mane_grey` C, `bm_ww_snout_grey` F, `bm_ww_eyes_gold` F, `bm_ww_tail_grey` B (`bm_ww_claws` removed from both forms, user 2026-11-27) | none |
+  | Werewolf, rage form (Wolf Form, P1) | black (0.12, 0.1, 0.1) by a colour override, **roughness 1** (a glossy black top reads pale under the top light) | `bm_ww_ears_black` T, `bm_ww_mane_black` C, `bm_ww_snout_black` F, `bm_ww_eyes_red` F, `bm_ww_tail_black` B | none |
   | Bloodletter | pale grey (0.68, 0.66, 0.66) | `bm_bl_scalp` T, `bm_bl_cage` T, `bm_bl_coat` C, `bm_bl_goggles` F, `bm_bl_vials` C, `bm_bl_mouth_stitched` F | one combined effect: a red floor glow and red orbs (previewed: `golden_glow` + `wisp_motes`, colour (0.85, 0.02, 0.06) / (0.9, 0.05, 0.1); a look holds one effect) |
   | Lifebinder (moves to Descent, 2.3b) | sage (0.45, 0.78, 0.58) | `bm_lifebinder_crown` T, `bm_face_lifebinder_a` F, `bm_lifebinder_staff` R offset (-0.14, -0.1, 0) | one combined effect: a green floor glow and green orbs |
 
   No effect may carry particles the effect's colour does not reach (the user turned down white motes from `holy_ground` and
   blue embers from `void_smoke`'s default `ember_color`).
+- **The Bloodbinder's ULT bar** (D29): the battle HUD's party window shows its ULT bar filling from the Pool's sources too; its ULT
+  button reads AUTO and cannot be pressed (the ult casts itself at 100%). A live presentation demo first (user, 2026-11-26).
 - **P1, state looks (presentation hook, the Werewolf's wolf form, D21):** a look that replaces a unit's own look while the
   unit carries a tag (the Wolf Form status, or `State.Health.Low` for the Werewolf), swapped by `UnitAnimator.restyle()`
   when the tag comes or goes, with a short transform effect (approved 2026-11-26 in a live demo: the cube squashes to
@@ -395,17 +406,24 @@ Presentation (the user's folders; new files only, on the user's go-ahead):
   a hash or upload); a replay or a headless run loads no look.
 - Known bug found in the demo (fix in the build): an `FxShakeLayer` still running when the window closes raises "Trying
   to assign invalid previously freed instance" (`fx_shake_layer.gd` `ended` / `update`), so its target must be checked.
-- Animations from the default set; sounds from the bank by the audio pass's rules (new ult sounds picked by the user).
+- Animations from the default set; sounds from the bank by the audio pass's rules. Built 2026-11-27 (the user asked Claude to pick):
+  each ult its own new signature sound from Pixel Combat (CC BY): Night Feast `ult.night_feast` (Bats Flying), Dawnbreak
+  `ult.dawnbreak` (Flare Nova), Moonfall Frenzy `ult.moonfall_frenzy` (Flying Blades), Crimson Letting `ult.crimson_letting`
+  (Thousand Needles), Crimson Communion `ult.crimson_communion` (Shimmering Winds); Night Feast plays its own copy of `crush`
+  (`bm_night_feast.tres`). Vlad and the Bloodbinder keep the shared `void_smoke` floor effect, recoloured (user, 2026-11-27).
 - Class pick: the five join the turntable when owned; one new preset per character in `party_presets.tres` (an edit).
 
 ### 2.7 Bots
 
-- Role tags as in 2.2-2.4c; fit and grant tags on the 23 items (`bot-play` 2.3; HP-cost items as `Item.Fit.Survival` +
-  a new `Item.Fit.HpCost`, Wolf Form items as `Item.Fit.FollowUp`, lifesteal items as `Item.Fit.Lifesteal` (new, D27, gathered on one holder like Bleed), Bleed items as `Item.Fit.Bleed` (new, D25) + `Item.Fit.Dot`
+- Role tags as in 2.2-2.4c; fit and grant tags on the 23 items (`bot-play` 2.3; HP-cost payoff items as a new
+  `Item.Fit.HpCost` beside their own fits, without `Item.Fit.Survival` (user, 2026-11-27, D31: Bloodstone and Crimson Eclipse
+  are ATK buffs; Survival would send them to the frailest), worth `hp_cost_other_percent` (25%) on a class with no HP-cost move;
+  Wolf Form items as `Item.Fit.FollowUp`, lifesteal items as `Item.Fit.Lifesteal` (new, D27, gathered on one holder like Bleed), Bleed items as `Item.Fit.Bleed` (new, D25) + `Item.Fit.Dot`
   (the chance stacks per holder, so `LootScorer` gathers Bleed items on one carrier: the Bloodletter, the Vampire once it has
   Hemorrhage, or whoever holds the most Bleed already; bot-play's CARRY mode for that tag), crit items as `Item.Fit.Damage` + a
   new `Item.Fit.Crit`, which `LootScorer` weighs up for a unit whose base crit rate is above the default 5% (the Hunter,
-  the Ranger) or that holds Focus; Silvered sources and payoffs as `Item.Fit.Damage`). Hunter's Focus grants
+  the Ranger) or that holds Focus (built: `crit_holder_percent` 150% of its weight, `crit_holder_abilities`, and CARRY stacking
+  in the smart profile; 13 items carry it); Silvered sources and payoffs as `Item.Fit.Damage`). Hunter's Focus grants
   `Item.Grants.Damage`.
 - Silvered and Focus need nothing from `AutoPolicy` beyond today's damage scoring; Stake is scored as a damage skill.
 - `AutoPolicy` and the smart controller learn HP costs: an HP-cost move is scored like an SP move, refused while it
@@ -414,12 +432,57 @@ Presentation (the user's folders; new files only, on the user's go-ahead):
   Bloodbinder's HP-cost heals go through `AutoPolicy._heal` with HP as the cost (spec `auto-support`), and Blood Rite counts
   as a party buff. Meters and Wolf Form need nothing from the bots (they fire on their own).
 
+### 2.8 As built (sync 2026-11-27, approved by the user)
+
+**Tuned in the balance gate** (the numbers live in content; first proposals in the tables above): Vlad 1000 max HP and 20%
+innate lifesteal; the Bloodbinder 950 max HP and 10%; the Werewolf 1050, the Bloodletter 900, the Hunter 850 (crit 10 / 60);
+Blood Rite +12% party lifesteal; Transfusion heals 25 / 31 / 37% of the **target's** max HP (not the Bloodbinder's); Crimson
+Communion heals 20 / 26 / 32% and cleanses fully; Leeching Wounds heals 20% of the tick.
+
+**Behaviour that differs from the tables:**
+- Items: Siphon and Burst Vein heal a fixed share per ally (12.5% and 7.5% each, so 50% and 30% in a party of four);
+  Bloodletting Bowl spreads on any kill; Rosary of Vigil gives +5% party crit rate per crit on a Silvered enemy (up to +15%);
+  Martyr's Vial has no cap; a Ward is a shield (`shield` attribute, absorbed first by the damage ExecCalc; Coagulate, Sanguine
+  Ward, Velvet Fangs); Hunter's Longcoat cleanses every debuff; Alpha's Mark's second strike is 50% ATK; Moonstone Pendant
+  overrides the low-HP line; Night's Embrace keeps its own once-per-battle flag; Stake of Dawn marks its crit turn.
+- Moves: Dawnbreak has no "Focus counts double"; Pounce's speed-up comes on any break; Silvered is not limited to enemies;
+  Moonfall Frenzy and Lunar Rampage claw through RANDOM rows (below), not K4 targeting.
+- Level rows: Pack Instinct is `broken_dmg` +15; Clotting is always on (+10 / +20% healing received); Last Drop is a shield
+  when an ally drops under 50% HP (`Event.Ally.Health.Low`), not a death save; Blood Frenzy heals 12% on a kill instead of
+  refunding the HP cost; Exsanguinate applies a fresh Bleed instead of spreading a stack.
+
+**Kernel pieces beyond 2.1** (system code in `combat/`, each off unless content uses it): `BattleRules`
+(`combat/battle_rules.gd`, one per content root: the low and critical lines, `bleed_effect`, `lifesteal_effect`, `bleed_stacks`
+(a stack count, raw like `max_stacks`), `overheal_effect`); `ExecutionRow.Targets.RANDOM` (one draw per row among the targets
+that are up; none in field mode); `BattleAbility.Targeting.LOWEST_ALLY` (no draw, ties to the lowest slot);
+`BattleAbility.subject_query` (a trigger fires only when the event's subject matches); a `State.OneMore` grant queues a One
+More; the Bleed cap (`bleed_stacks` + the source's `bleed_stacks`; at the cap a Bleed refreshes every Bleed's turns instead of
+adding a stack); lifesteal past full HP becomes a shield (`overheal_shield`, counted from what the heal really restores,
+the lifesteal calc's `amount_for`); a hit's damage includes what a shield soaked; `ExecCalcDetonate` (a Bleed's remaining
+ticks at once, `Hit.Detonate`); `Event.Attack.FollowUp` carries `primary` and `targets`; the health states add and remove
+only the battle's own tag reference; a meter that is turned down is not queued again in the same drain, and meters wait out a
+death-save window.
+
+**Presentation:** P1 is `StyleRegistry.state_looks` (a list of `StateLook`: unit id, tags, look, the transform's colours,
+burst, shake and timings), read by `UnitAnimator.watch_state_looks` from its battle unit's tags (`Status.WolfForm` or
+`State.WolfForm`), wired by the room view at battle start and undone at its end. Four ult cast cues (`Cue.Fx.Ult.Nightfeast`,
+`Dawnbreak`, `Moonfallfrenzy`, `Crimsonletting`) with their own signatures, the Bloodletter's `fx.blood_glow`, by
+`game/tools/build_vfx_bloodmoon.tscn`; the pack's `CardPackLook` (crimson foil, the `moon-bats` glyph) and set mark.
+
+**Bots:** `AutoPolicy` refuses an HP-cost move under `Options.danger_hp_x100` unless the lifesteal on its damage estimate
+(damage rows only, capped at each target's HP) brings it back; a heal's cost is its SP and HP cost, each as a share of its
+pool; a RANDOM row is scored once over its pool.
+
 ## 3. Data contracts
 
 No new C# records: the catalog rows, the pack type and the card events use the existing shapes (`CardCatalogFile`,
 `PackTypeRequest` / seed file, `PackPurchased`, `PackOpened`, ...). The new set id `bloodmoon` is data. Godot fields:
 `BattleAbility.meter_attribute`, `meter_threshold`, `meter_threshold_of`; `CostReader` returns `hp`; `AbilityHint`
-gains `hpCostX100`; `UnitDefinition.health_states`, `health_low_at` (B5); the presentation's state looks (P1).
+gains `hpCostX100` (not built yet: the hint shows the HP cost as text); `UnitDefinition.health_states`, and `health_low_at`
+as an attribute (B5; the default line is `BattleRules`); the presentation's state looks (P1, 2.8). New attributes in the
+`Unit` set (`godot_gas/attributes_draft.cfg`): `bleed_chance`, `lifesteal`, `health_low_at`, `bleed_dmg`, `bleed_stacks`,
+`bleed_turns`, `bleed_lifesteal`, `silvered_dmg`, `silvered_crit_dmg`, `follow_up_dmg`, `follow_up_tough`, `shield`,
+`overheal_shield`.
 
 ## 4. Failure modes
 
@@ -443,7 +506,9 @@ Existing metrics, no new names: `rpg_packs_bought_total{pack}`, `rpg_packs_opene
 `rpg_pack_cards_total{pack,rarity}`, `rpg_pack_pity_triggers_total`, `rpg_packs_owned`; the Grafana card panels gain the
 second pack's series automatically. The play report adds per-class rows for the five, `hpCostSpent`, `meterFires`,
 and for crits `critRate` per class (crits ÷ damaging hits), `focusAtCrit` (the mean stacks a crit spent) and
-`silveredHealCut` (healing Silvered took away), `wolfFormActions` and `bleedHealing`.
+`silveredHealCut` (healing Silvered took away), `wolfFormActions` and `bleedHealing`. **Not built yet** (2026-11-27): the play
+report has none of these fields; the per-class rows come from the existing report, and a LOWEST_ALLY proc is counted under its
+own label (`lowest ally`), not K4.
 
 ## 6. Test plan
 
@@ -452,7 +517,8 @@ Godot (fixtures for the hooks; content tests for the characters):
 - B2: instant heals, HoT ticks and lifesteal send `Heal.Given` / `Received` / `Ally.Heal.Received` with the restored
   amount; overheal is excluded.
 - B3: a meter fills, fires at the threshold, subtracts it, fires at most 3 times per check; meter heals never fill it.
-- B4: the attribute starts at 0 each battle and is never carried.
+- B3 on the ult charge: a Bloodbinder's ult fires by itself at a full bar, takes the charge off, never counts toward
+  `ULTS_PER_TURN`, and the HUD's ULT button shows it as automatic.
 - B6: a unit's Bleed chance from several items is one roll per hit at their sum; DoT ticks never roll.
 - B7: lifesteal from several sources adds up; one heal per hit with B2 events; DoT ticks and HP costs never heal.
 - B5 for items: a holder of a low-HP item is tracked though its class does not set `health_states`.
@@ -460,6 +526,8 @@ Godot (fixtures for the hooks; content tests for the characters):
 - B5: a unit with `health_states` gains and loses `State.Health.Low` / `Critical` as its HP crosses the lines and sends
   each event once per crossing; a unit without it never carries them; every existing golden replays unchanged.
 - New goldens `hpcost-seed-*`, `meter-seed-*`, `health-seed-*`, each with a trace and a tampered copy; every existing golden replays.
+  Built: `meter-seed-31`, `bleed-seed-37`, `hpcost-seed-41`, `health-seed-43`, `crit-seed-47` (fixture sharpshooter), each with
+  a `-tampered-target` copy; `proc-seed-17`'s committed trace was already stale on main and is refreshed (its result unchanged).
 - Content: the five characters and 23 items validate; card faces render ("Unknown card" never shows); the catalog is in
   sync (`tools/check_card_catalog.sh`).
 - Auto: the Vampire and the Bloodbinder never cast a move they cannot survive; they use their basic when low.
@@ -507,7 +575,7 @@ worker.
 **Decisions (user, 2026-11-26, the roster):**
 - D15. The **Lifebinder moves to the Descent Pack** unchanged (design, playstyle, its three items, its approved look), in
   its own quick slice after this one (roadmap 5j2); its nature theme fits neither Blood Moon nor its playstyle.
-- D16. The pack's support is the **Bloodbinder** (2.3): HP-cost heals and buffs, party lifesteal, the Blood Pool (B3/B4 stay
+- D16. The pack's support is the **Bloodbinder** (2.3): HP-cost heals and buffs, party lifesteal, the Blood Pool (B3 stays
   in this slice for it; B1 sends cost events). Its three replacement items are approved.
 - D17. A fourth character, the **Werewolf** (2.4b): break and follow-ups, Wolf Form under 50% HP; B5 is added for it and
   the Vampire's Undying Hunger. Kit approved as drafted.
@@ -531,6 +599,20 @@ worker.
 - D27. Lifesteal is one stacking stat (B7); every lifesteal item gives some (Rare, Epic and Legendary givers included), and
   lifesteal items carry `Item.Fit.Lifesteal`.
 
+- D28. The pack-shop openability rule stays as built (a card rate for every rarity the pack can give, an eligible card for
+  some rarity with odds); the set's completeness is the catalog's and the validator's job (user, 2026-11-26, found in the
+  build's review).
+- D29. The Bloodbinder's Blood Pool **is its ult bar** (user, 2026-11-26): HP the party loses fills its ult charge on top of the
+  normal charge, and Crimson Communion casts itself at 100%; Sanguine Surge is folded into the ult; no `meter` attribute (B4
+  dropped) and no extra HUD bar. The Lifebinder gets the same treatment in its slice.
+
+**Decisions (user, 2026-11-27, in the build):**
+- D30. The Reflection (`demo.enemy.reflection`) gets the bosses' overtime clock (turn 50, `enrage.tres` and `exhaustion.tres`):
+  a party with lifesteal against its own mirror stalled to the turn limit (seed 991827).
+- D31. HP-cost payoff items carry `Item.Fit.HpCost` without `Item.Fit.Survival` (2.7); Burst Vein and Crimson Signet carry
+  `Item.Fit.Crit` too.
+- D32. Every build difference in 2.8 is approved; the Werewolf wears no claws in either form.
+
 **Open questions:** none for the design. Numbers are first proposals, tuned in the build's
 playtest and 5c.
 
@@ -540,3 +622,24 @@ events can come with 5c or a later event pass).
 ## 8. Measurements
 
 To be filled by the build: per-class win rates for the five, `hpCostSpent`, `meterFires`, pairs with lift.
+
+**Measured 2026-11-27** (the smart gate, `game/dev/balance_seeds.json`, 600 seeds, party size 4, after the review fixes and
+the bot changes): **346 of 600 won (57.67%)**; main before this slice 296 (49.33%); the first build of this slice 337
+(56.17%); the old roster alone, on the first 100 seeds, 40%. Per class (wins / runs):
+
+| Class | Won | Class | Won |
+|---|---|---|---|
+| Bloodbinder | 111/141 (79%) | Ranger | 86/151 (57%) |
+| Cleric | 105/141 (74%) | Werewolf | 86/152 (57%) |
+| Bard | 92/146 (63%) | Shatterweaver | 77/145 (53%) |
+| Vlad | 88/148 (59%) | Vampire Hunter | 88/167 (53%) |
+| Warrior | 82/140 (59%) | Cryomancer | 81/158 (51%) |
+| Bloodletter | 94/161 (58%) | Pyromancer | 73/144 (51%) |
+| Bulwark | 89/155 (57%) | Arcanist | 71/145 (49%) |
+| Plaguewright | 93/163 (57%) | Ember Knight | 68/143 (48%) |
+
+The Bloodbinder is the strongest class (a healer, like the Cleric); left for 5c. One violation: a turn limit on seed 211944
+(floor 9, `demo.encounter.familiars`): a lone Pyromancer against the Bound Demon (`Drain.Fire`) can only feed the drain, so
+Auto guards to the cap, main's open drain stalemate on a regular encounter (no overtime clock there); not a hook of this
+slice. Fixed later by roadmap 5j3 `overtime-all` (user, 2026-11-27: every enemy gets an overtime clock). The chain cap was hit 433 times in 61514 battles (as before this slice: the counter and Fire items); the run hash
+averages 1.7 ms (max 18 ms, budget 3 ms). `hpCostSpent`, `meterFires` and pair lift are not in the report yet (section 5).

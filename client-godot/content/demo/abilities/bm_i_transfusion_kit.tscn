@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_3nq7m"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_b5k5u"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_lifesteal_heal.tres" id="3_dg7h1"]
+[ext_resource type="Animation" path="res://content/demo/animations/mend.tres" id="4_vewci"]
+
+[sub_resource type="Resource" id="Resource_e3v4j"]
+script = ExtResource("2_b5k5u")
+id = &"regen"
+effect = ExtResource("3_dg7h1")
+damage_mode = 3
+multiplier_x100 = 4000
+
+[node name="BmITransfusionKit" type="Node" unique_id=1190781365]
+script = ExtResource("1_3nq7m")
+targeting = 11
+asset_tags = Array[StringName]([&"Ability.Type.FollowUp"])
+executions = Array[ExtResource("2_b5k5u")]([SubResource("Resource_e3v4j")])
+animation = ExtResource("4_vewci")
+description = "Your heals also heal the most hurt ally 40% as much."
+ability_name = "Transfusion Kit"
+ability_tag = &"Ability.Passive.Itransfusionkit"
+trigger_event_tag = &"Event.Heal.Given"

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_g63rs"]
+[ext_resource type="Script" path="res://content/demo/exec_calcs/exec_calc_percent_of_max.gd" id="2_jvewl"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="3_eqka0"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_4efdw"]
+
+[sub_resource type="Resource" id="Resource_tjvag"]
+script = ExtResource("2_jvewl")
+attribute = "shield"
+percent_x100 = 2000
+
+[resource]
+script = ExtResource("4_4efdw")
+application_cue_tags = Array[StringName]([&"Cue.Fx.Apply.Buff", &"Cue.Sfx.Apply.Buff"])
+executions = Array[ExtResource("1_g63rs")]([SubResource("Resource_tjvag")])

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_xanhk"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_hunters_whetstone.tres" id="2_hj1p4"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_th5aj"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_jktsy"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_84pql"]
+
+[sub_resource type="Resource" id="Resource_4kgtu"]
+script = ExtResource("3_th5aj")
+effects = Array[ExtResource("1_xanhk")]([ExtResource("2_hj1p4")])
+
+[resource]
+script = ExtResource("5_84pql")
+id = &"demo.item.hunters_whetstone"
+display_name = "Hunter's Whetstone"
+description = "+15% crit damage."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Common", &"Card.Set.Bloodmoon", &"Item.Fit.Damage", &"Item.Fit.Crit"])
+price = 5
+grants = SubResource("Resource_4kgtu")

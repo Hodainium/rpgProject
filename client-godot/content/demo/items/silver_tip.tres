@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_dtgkf"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_silver_tip.tres" id="2_2tpya"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="3_ok1du"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="4_fpmpa"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="5_k3v1l"]
+
+[sub_resource type="Resource" id="Resource_4sbm1"]
+script = ExtResource("3_ok1du")
+effects = Array[ExtResource("1_dtgkf")]([ExtResource("2_2tpya")])
+
+[resource]
+script = ExtResource("5_k3v1l")
+id = &"demo.item.silver_tip"
+display_name = "Silver Tip"
+description = "+8% crit rate."
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Shop", &"Pool.Chest", &"Item.Rarity.Common", &"Card.Set.Bloodmoon", &"Item.Fit.Damage", &"Item.Fit.Crit"])
+price = 5
+grants = SubResource("Resource_4sbm1")

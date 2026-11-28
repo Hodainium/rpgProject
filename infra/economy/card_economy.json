@@ -19,6 +19,18 @@
       "pityPacks": { "epic": 10, "legendary": 20, "mythic": 30 },
       "firstGuarantees": { "epic": 5, "legendary": 10, "mythic": 15 },
       "minRarityPerPack": "rare"
+    },
+    {
+      "packId": "bloodmoon-pack",
+      "name": "Blood Moon Pack",
+      "priceGems": 100,
+      "cardCount": 5,
+      "oddsPer10000": { "common": 7210, "rare": 2200, "epic": 450, "legendary": 100, "mythic": 40 },
+      "setIds": [ "bloodmoon" ],
+      "retired": false,
+      "pityPacks": { "epic": 10, "legendary": 20, "mythic": 30 },
+      "firstGuarantees": { "epic": 5, "legendary": 10, "mythic": 15 },
+      "minRarityPerPack": "rare"
     }
   ]
 }

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_surgeons_apron.tscn" id="1_ubeby"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="2_4ddh0"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_apron_stats.tres" id="3_bvr6y"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_30fr5"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="5_pvai8"]
+
+[sub_resource type="Resource" id="Resource_x0l4i"]
+script = ExtResource("4_30fr5")
+abilities = Array[PackedScene]([ExtResource("1_ubeby")])
+effects = Array[ExtResource("2_4ddh0")]([ExtResource("3_bvr6y")])
+
+[resource]
+script = ExtResource("5_pvai8")
+id = &"demo.equipment.surgeons_apron"
+display_name = "Surgeon's Apron"
+description = "+60 max HP, +5% Bleed chance; each Bleed tick you cause heals the most hurt ally 10% of the tick."
+slot = &"Equipment.Slot.Body"
+grants = SubResource("Resource_x0l4i")
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Bleed", &"Item.Fit.Dot", &"Item.Fit.Healing", &"Item.Fit.Survival"])
+price = 9

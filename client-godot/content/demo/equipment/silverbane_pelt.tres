@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_i3ouq"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_pelt_hp.tres" id="2_q8etj"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_silverbane_pelt.tres" id="3_abpka"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_tracked.tres" id="4_ln3a3"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="5_7ndo5"]
+[ext_resource type="Script" path="res://combat/equipment_definition.gd" id="6_tivav"]
+
+[sub_resource type="Resource" id="Resource_5sbdc"]
+script = ExtResource("5_7ndo5")
+effects = Array[ExtResource("1_i3ouq")]([ExtResource("2_q8etj"), ExtResource("3_abpka"), ExtResource("4_ln3a3")])
+
+[resource]
+script = ExtResource("6_tivav")
+id = &"demo.equipment.silverbane_pelt"
+display_name = "Silverbane Pelt"
+description = "+60 max HP; take 10% less damage while under 50% HP."
+slot = &"Equipment.Slot.Body"
+grants = SubResource("Resource_5sbdc")
+tags = Array[StringName]([&"Pool.Treasure", &"Pool.Chest", &"Item.Rarity.Rare", &"Card.Set.Bloodmoon", &"Item.Fit.Survival"])
+price = 7

@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_rqss8"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_s02ys"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_f3kl8"]
+[ext_resource type="Animation" path="res://content/demo/animations/execute.tres" id="4_vua0f"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_hp_cost_12_0.tres" id="5_6qh3e"]
+
+[sub_resource type="Resource" id="Resource_meaoq"]
+script = ExtResource("2_s02ys")
+id = &"execute"
+effect = ExtResource("3_f3kl8")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 30000
+toughness_x100 = 6000
+
+[node name="BmBloodLance3" type="Node" unique_id=1550675618]
+script = ExtResource("1_rqss8")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_s02ys")]([SubResource("Resource_meaoq")])
+animation = ExtResource("4_vua0f")
+description = "Costs 12% max HP. 300% ATK Physical to one enemy."
+ability_name = "Blood Lance III"
+ability_tag = &"Ability.Bloodlance3"
+cost_effect = ExtResource("5_6qh3e")

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_accord_start.tscn" id="1_j0gmj"]
+[ext_resource type="PackedScene" path="res://content/demo/abilities/bm_i_accord_rally.tscn" id="2_bxd7h"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="3_cmkyt"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_0ekgs"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_7gsfb"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_situa"]
+
+[sub_resource type="Resource" id="Resource_d8bj5"]
+script = ExtResource("4_0ekgs")
+abilities = Array[PackedScene]([ExtResource("1_j0gmj"), ExtResource("2_bxd7h")])
+
+[resource]
+script = ExtResource("6_situa")
+id = &"demo.item.crimson_accord"
+display_name = "Crimson Accord"
+description = "Your heals are 20% stronger on allies under 50% HP; once per turn, a heal that leaves an ally above 50% gives the party +15% ATK for 2 turns."
+tags = Array[StringName]([&"Pool.Boss", &"Item.Rarity.Legendary", &"Card.Set.Bloodmoon", &"Item.Fit.Healing", &"Item.Fit.Party", &"Item.Fit.Damage", &"Item.Fit.Survival"])
+price = 12
+grants = SubResource("Resource_d8bj5")

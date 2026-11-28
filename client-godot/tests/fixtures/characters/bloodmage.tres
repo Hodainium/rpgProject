@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/chant_jab.tscn" id="1_3iktc"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/bp_lance.tscn" id="2_uqebr"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/bp_pool_taken.tscn" id="3_tee0w"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/bp_pool_ally.tscn" id="4_i31ww"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/bp_pool_cost.tscn" id="5_gt64u"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/bp_pool_ally_cost.tscn" id="6_ug1gn"]
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/bp_surge.tscn" id="7_pbgui"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_blood_attribute_set.gd" id="8_7h8hr"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="9_dk7rg"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="10_h3un1"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="11_e1t5j"]
+
+[resource]
+script = ExtResource("11_e1t5j")
+id = &"fixture.character.bloodmage"
+attribute_set = ExtResource("8_7h8hr")
+abilities = Array[PackedScene]([ExtResource("1_3iktc"), ExtResource("2_uqebr"), ExtResource("3_tee0w"), ExtResource("4_i31ww"), ExtResource("5_gt64u"), ExtResource("6_ug1gn"), ExtResource("7_pbgui")])
+display_name = "Bloodmage"
+display_color = Color(0.54509807, 0, 0, 1)
+tags = Array[StringName]([&"Fixture.Character.Bloodmage"])
+health_states = true
+stats_x100 = Dictionary[String, int]({
+"atk": 30000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 25000,
+"energy": 0,
+"hp": 100000,
+"max_hp": 100000,
+"max_mp": 6000,
+"max_toughness": 0,
+"mp": 6000,
+"sp_basic": 0,
+"spd": 12000,
+"toughness": 0,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

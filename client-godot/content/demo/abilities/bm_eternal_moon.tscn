@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_ix3en"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_y8fh5"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_eternal_moon.tres" id="3_0jhap"]
+[ext_resource type="Animation" path="res://content/demo/animations/siphon_sigil.tres" id="4_2fc7l"]
+
+[sub_resource type="Resource" id="Resource_fgfhi"]
+script = ExtResource("2_y8fh5")
+id = &"charge"
+effect = ExtResource("3_0jhap")
+
+[node name="BmEternalMoon" type="Node" unique_id=1575340805]
+script = ExtResource("1_ix3en")
+targeting = 5
+executions = Array[ExtResource("2_y8fh5")]([SubResource("Resource_fgfhi")])
+animation = ExtResource("4_2fc7l")
+description = "Always in Wolf Form, whatever its HP."
+ability_name = "Eternal Moon"
+ability_tag = &"Ability.Passive.Eternalmoon"
+trigger_event_tag = &"Event.Battle.Start"

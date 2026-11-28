@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://tests/fixtures/abilities/chant_jab.tscn" id="1_nxlk2"]
+[ext_resource type="Script" path="res://tests/fixtures/attributes/fixture_blood_attribute_set.gd" id="2_dckid"]
+[ext_resource type="Script" path="res://game/defs/growth_band.gd" id="3_u3bun"]
+[ext_resource type="Script" path="res://combat/level_skill.gd" id="4_ufs41"]
+[ext_resource type="Script" path="res://game/defs/character_definition.gd" id="5_3wvsd"]
+
+[resource]
+script = ExtResource("5_3wvsd")
+id = &"fixture.character.leecher"
+attribute_set = ExtResource("2_dckid")
+abilities = Array[PackedScene]([ExtResource("1_nxlk2")])
+display_name = "Leecher"
+display_color = Color(0.8627451, 0.078431375, 0.23529412, 1)
+tags = Array[StringName]([&"Fixture.Character.Leecher"])
+stats_x100 = Dictionary[String, int]({
+"atk": 38000,
+"broken_dmg": 0,
+"crit_dmg": 5000,
+"crit_rate": 0,
+"def": 25000,
+"energy": 0,
+"hp": 110000,
+"max_hp": 110000,
+"max_mp": 6000,
+"max_toughness": 0,
+"mp": 6000,
+"sp_basic": 0,
+"spd": 11000,
+"toughness": 0,
+"toughness_dmg": 0,
+"weakness_dmg": 15000
+})

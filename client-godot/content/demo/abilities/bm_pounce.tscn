@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_g3cag"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_1d1v5"]
+[ext_resource type="Resource" path="res://content/demo/effects/damage.tres" id="3_koror"]
+[ext_resource type="Animation" path="res://content/demo/animations/bite.tres" id="4_4lowh"]
+[ext_resource type="Resource" path="res://content/demo/effects/sp_cost_43.tres" id="5_504f7"]
+
+[sub_resource type="Resource" id="Resource_xymsg"]
+script = ExtResource("2_1d1v5")
+id = &"bite"
+effect = ExtResource("3_koror")
+damage_mode = 2
+tags = Array[StringName]([&"Damage.Type.Physical"])
+multiplier_x100 = 18000
+toughness_x100 = 9000
+
+[node name="BmPounce" type="Node" unique_id=521358087]
+script = ExtResource("1_g3cag")
+asset_tags = Array[StringName]([&"Ability.Role.Damage", &"Ability.Usage.Battle"])
+executions = Array[ExtResource("2_1d1v5")]([SubResource("Resource_xymsg")])
+animation = ExtResource("4_4lowh")
+description = "180% ATK Physical to one enemy. Breaking an enemy brings its next action 15% sooner."
+ability_name = "Pounce"
+ability_tag = &"Ability.Pounce"
+cost_effect = ExtResource("5_504f7")

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="1_dfo1q"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_full_moon_charm.tres" id="2_5evyc"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_i_tracked.tres" id="3_yonta"]
+[ext_resource type="Script" path="res://combat/ability_set.gd" id="4_yg4du"]
+[ext_resource type="Script" path="res://game/defs/outcomes/run_outcome.gd" id="5_nbsn3"]
+[ext_resource type="Script" path="res://game/defs/item_definition.gd" id="6_neiwo"]
+
+[sub_resource type="Resource" id="Resource_dd2qu"]
+script = ExtResource("4_yg4du")
+effects = Array[ExtResource("1_dfo1q")]([ExtResource("2_5evyc"), ExtResource("3_yonta")])
+
+[resource]
+script = ExtResource("6_neiwo")
+id = &"demo.item.full_moon_charm"
+display_name = "Full Moon Charm"
+description = "+15% crit rate while under 50% HP."
+tags = Array[StringName]([&"Pool.Treasure", &"Item.Rarity.Epic", &"Card.Set.Bloodmoon", &"Item.Fit.Damage", &"Item.Fit.Crit"])
+price = 9
+grants = SubResource("Resource_dd2qu")

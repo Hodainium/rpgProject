@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_82wsn"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_mb445"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_last_drop_shield.tres" id="3_oxpbn"]
+[ext_resource type="Resource" path="res://content/demo/effects/bm_last_drop_used.tres" id="4_sdywp"]
+[ext_resource type="Animation" path="res://content/demo/animations/bm_last_drop.tres" id="5_jjp4o"]
+[ext_resource type="Script" path="res://addons/GodotGAS/gameplay_tag/gameplay_tag_query.gd" id="6_e52t2"]
+
+[sub_resource type="Resource" id="Resource_nyrfa"]
+script = ExtResource("2_mb445")
+id = &"ward"
+effect = ExtResource("3_oxpbn")
+
+[sub_resource type="Resource" id="Resource_fhifu"]
+script = ExtResource("2_mb445")
+id = &"used"
+effect = ExtResource("4_sdywp")
+
+[sub_resource type="Resource" id="Resource_xq7jw"]
+script = ExtResource("6_e52t2")
+ignore_tags = Array[StringName]([&"State.LastDropUsed"])
+
+[node name="BmLastDrop" type="Node" unique_id=1765877074]
+script = ExtResource("1_82wsn")
+targeting = 3
+executions = Array[ExtResource("2_mb445")]([SubResource("Resource_nyrfa"), SubResource("Resource_fhifu")])
+animation = ExtResource("5_jjp4o")
+description = "Once per battle, when an ally drops under 50% HP: they get a shield of 25% of their max HP."
+ability_name = "Last Drop"
+ability_tag = &"Ability.Passive.Lastdrop"
+activation_query = SubResource("Resource_xq7jw")
+trigger_event_tag = &"Event.Ally.Health.Low"

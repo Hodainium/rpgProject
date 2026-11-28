@@ -137,6 +137,13 @@ static func validate(registry: StyleRegistry, content: ContentIndex, path: Strin
 		elif content != null and not content.units.has(id):
 			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "style_look_unknown_unit", where + "::looks[%s]" % id,
 				"no unit '%s' in the content" % id))
+	for index in registry.state_looks.size():  # spec second-pack P1
+		var state := registry.state_looks[index]
+		var at := where + "::state_looks[%d]" % index
+		if state == null or state.look == null or state.tags.is_empty():
+			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "style_state_look_empty", at, "a state look needs a look and at least one tag"))
+		elif content != null and not content.units.has(state.unit_id):
+			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "style_state_look_unknown_unit", at, "no unit '%s' in the content" % state.unit_id))
 	for id in registry.moods:
 		if registry.moods[id] == null:
 			issues.append(ValidationIssue.new(ValidationIssue.ERROR, "style_mood_empty", where + "::moods[%s]" % id, "an empty mood"))

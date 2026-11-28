@@ -228,7 +228,7 @@ func statuses() -> Array[Dictionary]:
 			if String(tag).begins_with("Status."):
 				var turn_based := effect.policy == GameplayEffect.DurationPolicy.TURN_BASED
 				result.append({"tag": String(tag), "turns": active_effect.spec.remaining_turns if turn_based else -1,
-					"stacks": active_effect.stack_count})
+					"stacks": active_effect.stack_count, "effect": effect.resource_path})  # effect: which one, for the UI's merge
 	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["tag"] < b["tag"])  # sort-ok: "tag" holds a String
 	return result
 

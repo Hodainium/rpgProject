@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_d8nfh"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_bhyb4"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/bp3_focus.tres" id="3_l8vqk"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/bp3_focus.tres" id="4_sk15t"]
+
+[sub_resource type="Resource" id="Resource_io4y1"]
+script = ExtResource("2_bhyb4")
+id = &"focus"
+effect = ExtResource("3_l8vqk")
+
+[node name="Bp3Focus" type="Node" unique_id=1864245460]
+script = ExtResource("1_d8nfh")
+targeting = 5
+executions = Array[ExtResource("2_bhyb4")]([SubResource("Resource_io4y1")])
+animation = ExtResource("4_sk15t")
+ability_tag = &"Fixture.Ability.Bp3Focus"
+trigger_event_tag = &"Event.Damage.Dealt"

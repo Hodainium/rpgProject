@@ -6,6 +6,18 @@
 script = ExtResource("1_bot")
 id = "smart"
 stack = {
+&"Item.Fit.Bleed": {
+"mode": 2,
+"step": 25
+},
+&"Item.Fit.Lifesteal": {
+"mode": 2,
+"step": 25
+},
+&"Item.Fit.Crit": {
+"mode": 2,
+"step": 25
+},
 &"Item.Fit.Survival": {
 "mode": 0,
 "step": 25
