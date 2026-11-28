@@ -172,7 +172,59 @@ color = Color(0.45, 0.43, 0.42, 1)
 roughness = 0.9
 tintable = false
 
+[sub_resource type="Resource" id="Resource_root0"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.0
+radius_top = 0.075
+height = 0.12
+segments = 8
+position = Vector3(0.3196, 0.3481, 0.3196)
+rotation_degrees = Vector3(114.2277, 0, -42.3624)
+color = Color(0.45, 0.43, 0.42, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_root1"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.0
+radius_top = 0.075
+height = 0.12
+segments = 8
+position = Vector3(0.3196, 0.3481, -0.3196)
+rotation_degrees = Vector3(-114.2277, 0, -42.3624)
+color = Color(0.45, 0.43, 0.42, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_root2"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.0
+radius_top = 0.075
+height = 0.12
+segments = 8
+position = Vector3(-0.3196, 0.3481, -0.3196)
+rotation_degrees = Vector3(-114.2277, 0, 42.3624)
+color = Color(0.45, 0.43, 0.42, 1)
+roughness = 0.9
+tintable = false
+
+[sub_resource type="Resource" id="Resource_root3"]
+script = ExtResource("1_part")
+kind = 1
+radius_bottom = 0.0
+radius_top = 0.075
+height = 0.12
+segments = 8
+position = Vector3(-0.3196, 0.3481, 0.3196)
+rotation_degrees = Vector3(114.2277, 0, 42.3624)
+color = Color(0.45, 0.43, 0.42, 1)
+roughness = 0.9
+tintable = false
+
 [resource]
 script = ExtResource("2_shape")
 display_name = "Wolf mane grey"
-parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6"), SubResource("Resource_p7"), SubResource("Resource_p8"), SubResource("Resource_p9"), SubResource("Resource_p10"), SubResource("Resource_p11"), SubResource("Resource_p12")])
+parts = Array[ExtResource("1_part")]([SubResource("Resource_p0"), SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6"), SubResource("Resource_p7"), SubResource("Resource_p8"), SubResource("Resource_p9"), SubResource("Resource_p10"), SubResource("Resource_p11"), SubResource("Resource_p12"), SubResource("Resource_root0"), SubResource("Resource_root1"), SubResource("Resource_root2"), SubResource("Resource_root3")])
