@@ -48,7 +48,7 @@ func start(node: Node) -> void:
 		_:
 			var holder: Node = anchor.node if anchor.node != null else node
 			targets["camera"] = holder.get_viewport().get_camera_3d() if holder.is_inside_tree() else null
-	var camera: Camera3D = targets.get("camera")
+	var camera := _live(targets, "camera") as Camera3D
 	if camera != null:
 		targets["camera_origin"] = FxLayer.acquire_original(camera, "shake:camera", Vector2(camera.h_offset, camera.v_offset))
 	node.set_meta(TARGETS, targets)
@@ -62,17 +62,17 @@ func update(node: Node, local_time: float, length_seconds: float, params: Dictio
 	var wobble := Vector2(sin(local_time * rate + 1.3), cos(local_time * rate * 1.17)) * amount
 	var px: float = float(node.get(&"strength_px"))
 	var world: float = float(node.get(&"strength_world"))
-	var control: Control = targets.get("control")
-	if control != null and is_instance_valid(control):
+	var control := _live(targets, "control") as Control
+	if control != null:
 		control.position = targets["control_origin"] + wobble * px
-	var viewport: Viewport = targets.get("viewport")
-	if viewport != null and is_instance_valid(viewport):
+	var viewport := _live(targets, "viewport") as Viewport
+	if viewport != null:
 		viewport.canvas_transform = Transform2D(0.0, wobble * px) * (targets["canvas_origin"] as Transform2D)
 	for entry in targets.get("layers", []):
 		if is_instance_valid(entry[0]):
 			entry[0].offset = entry[1] + wobble * px
-	var camera: Camera3D = targets.get("camera")
-	if camera != null and is_instance_valid(camera):
+	var camera := _live(targets, "camera") as Camera3D
+	if camera != null:
 		var origin: Vector2 = targets["camera_origin"]
 		camera.h_offset = origin.x + wobble.x * world
 		camera.v_offset = origin.y + wobble.y * world
@@ -81,22 +81,29 @@ func update(node: Node, local_time: float, length_seconds: float, params: Dictio
 
 func ended(node: Node) -> void:
 	var targets: Dictionary = FxLayer.meta_of(node, TARGETS) if node.has_meta(TARGETS) else {}
-	var control: Control = targets.get("control")
-	if control != null and is_instance_valid(control) and FxLayer.release_original(control, "shake:position")["last"]:
+	var control := _live(targets, "control") as Control
+	if control != null and FxLayer.release_original(control, "shake:position")["last"]:
 		control.position = targets["control_origin"]
-	var viewport: Viewport = targets.get("viewport")
-	if viewport != null and is_instance_valid(viewport) and FxLayer.release_original(viewport, "shake:canvas")["last"]:
+	var viewport := _live(targets, "viewport") as Viewport
+	if viewport != null and FxLayer.release_original(viewport, "shake:canvas")["last"]:
 		viewport.canvas_transform = targets["canvas_origin"]
 	for entry in targets.get("layers", []):
 		if is_instance_valid(entry[0]) and FxLayer.release_original(entry[0], "shake:layer")["last"]:
 			entry[0].offset = entry[1]
-	var camera: Camera3D = targets.get("camera")
-	if camera != null and is_instance_valid(camera) and FxLayer.release_original(camera, "shake:camera")["last"]:
+	var camera := _live(targets, "camera") as Camera3D
+	if camera != null and FxLayer.release_original(camera, "shake:camera")["last"]:
 		var origin: Vector2 = targets["camera_origin"]
 		camera.h_offset = origin.x
 		camera.v_offset = origin.y
 	node.set_meta(TARGETS, null)
 	super(node)
+
+
+## A target that is still alive, else null. Read untyped first: a freed node (the window closed while the shake ran) cannot be
+## assigned to a typed variable ("Trying to assign invalid previously freed instance").
+static func _live(targets: Dictionary, key: String) -> Object:
+	var value: Variant = targets.get(key)
+	return value if value != null and is_instance_valid(value) else null
 
 
 ## Every CanvasLayer in the viewport's tree (not inside other viewports).

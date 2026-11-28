@@ -14,6 +14,8 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 // @uniform fade_out   fraction of the layer spent fading out
 // @uniform depth_fade world units in front of the scene over which the effect fades out where it passes into it (soft particles), instead of a hard line
 // @uniform fx_scene_depth the scene depth buffer, read for the depth fade (filled by the engine)
+// @uniform floor_below world units under the quad's centre where the floor is (a burst centred on a unit's hit point: about that point's height)
+// @uniform floor_fade world units above that floor over which the rays fade out, so a burst centred low never cuts into the floor (0 = off)
 uniform float progress = 0.0;
 uniform float time = 0.0;
 uniform float fade = 1.0;
@@ -24,6 +26,8 @@ uniform float spin = 0.08;
 uniform float sharpness = 3.0;
 uniform float falloff = 1.8;
 uniform float fade_out = 0.4;
+uniform float floor_below = 0.4;
+uniform float floor_fade = 0.0;
 
 #include "res://game/fx/shaders/fx_stencil_depth.gdshaderinc"
 
@@ -37,4 +41,9 @@ void fragment() {
 	ALBEDO = color.rgb * intensity;
 	ALPHA = clamp(rays * radial * envelope, 0.0, 1.0) * fade;
 	ALPHA *= fx_depth_fade(VERTEX, SCREEN_UV, INV_PROJECTION_MATRIX);
+	if (floor_fade > 0.0) {
+		float floor_y = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).y - floor_below;
+		float height = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).y - floor_y;
+		ALPHA *= smoothstep(0.0, floor_fade, height);
+	}
 }

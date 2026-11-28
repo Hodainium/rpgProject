@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_vut0u"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_8aues"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/bp2_heal.tres" id="3_f3uli"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/bp2_mend.tres" id="4_2150q"]
+
+[sub_resource type="Resource" id="Resource_hp7eb"]
+script = ExtResource("2_8aues")
+id = &"heal"
+effect = ExtResource("3_f3uli")
+
+[node name="Bp2Mend" type="Node" unique_id=1567911144]
+script = ExtResource("1_vut0u")
+targeting = 11
+executions = Array[ExtResource("2_8aues")]([SubResource("Resource_hp7eb")])
+animation = ExtResource("4_2150q")
+ability_tag = &"Fixture.Ability.Bp2Mend"
+trigger_event_tag = &"Event.Ability.Used.Basic"

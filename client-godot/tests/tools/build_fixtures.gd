@@ -13,6 +13,8 @@ const RUN_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_run_
 const BREAK_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_break_attribute_set.gd")
 const STATUS_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_status_attribute_set.gd")
 const SP_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_sp_attribute_set.gd")
+const BLOOD_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_blood_attribute_set.gd")
+const BLOOD2_ATTRIBUTE_SET := preload("res://tests/fixtures/attributes/fixture_blood2_attribute_set.gd")
 const SP_RESTORE_SCRIPT := preload("res://tests/fixtures/exec_calcs/fixture_sp_restore.gd")
 const SP_COST_SCRIPT := preload("res://tests/fixtures/exec_calcs/fixture_sp_cost.gd")
 const RESTORE_SCRIPT := preload("res://tests/fixtures/exec_calcs/fixture_restore.gd")
@@ -57,6 +59,7 @@ func _ready() -> void:
 	_build_item_power()
 	_build_level_cap()
 	_build_auto_support()
+	_build_second_pack()
 	_build_views()
 	print("Fixtures under %s: %d file(s) written" % [ROOT, _written])
 	get_tree().quit(0)
@@ -175,6 +178,12 @@ func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, row
 	if not _should_write(path):
 		_abilities[name] = load(path)
 		return
+	# Review fix: two keys at one time collapse into one (track_insert_key replaces), so a row would silently never run.
+	var times := {}
+	for key in execute_keys + other_keys:
+		if times.has(key[0]):
+			push_error("build_fixtures: %s has two keys at %s" % [name, key[0]])
+		times[key[0]] = true
 	var animation := Animation.new()
 	animation.resource_name = name
 	animation.length = 1.5
@@ -202,6 +211,10 @@ func _ability(name: String, tag: String, targeting: BattleAbility.Targeting, row
 	ability.asset_tags.assign(extras.get("asset_tags", []))
 	ability.trigger_chance_x100 = Fixed.from_typed(extras.get("chance", 0))
 	ability.echo_scale_x100 = Fixed.from_typed(extras.get("echo", 0))
+	ability.meter_attribute = extras.get("meter", "")
+	ability.meter_threshold_of = extras.get("meter_of", "")
+	ability.meter_threshold_percent_x100 = Fixed.from_typed(extras.get("meter_percent", 0))
+	ability.subject_query = extras.get("subject")
 	if not ability.is_triggered():
 		ability.asset_tags.append_array(ROLE_OVERRIDES.get(name, RolePass.roles_of(ability)))
 	var scene := PackedScene.new()
@@ -858,6 +871,150 @@ func _build_skill_points() -> void:
 		slot.level_bonus = bonus
 		trial.slots.append(slot)
 	_save_world("encounters", "sp_trial", trial)
+
+
+## Spec second-pack B1-B7: the blood mage (an HP-cost lance, a Blood Pool filled by hits and HP costs (its own and its
+## ally's), a meter heal at 30% of its max HP, low-HP states) and the leecher (a plain basic), on FixtureBloodAttributeSet;
+## items for lifesteal, Bleed chance and low-HP tracking; the fixture battle rules (the Bleed stack and the lifesteal heal). No
+## pool, run or older encounter names them, and the older units have no lifesteal or Bleed chance, so no older golden changes.
+func _build_second_pack() -> void:
+	var D := ExecutionRow.DamageMode
+	var T := ExecutionRow.Targets
+	var B := BattleAbility.Targeting
+	var physical := [&"Damage.Type.Physical"]
+	_save_effect("bp_hp_cost", _instant("hp", -150))
+	var fill := GameplayEffect.new()
+	fill.policy = GameplayEffect.DurationPolicy.INSTANT
+	var into_meter := _modifier("meter", GameplayEffectModifier.Operation.ADD, 0)
+	into_meter.magnitude_calculation = GameplayEffectModifier.MagnitudeCalculationType.SET_BY_CALLER
+	into_meter.set_by_caller_tag = ExecutionRow.EVENT_AMOUNT_TAG
+	fill.modifiers.append(into_meter)
+	_save_effect("bp_meter_fill", fill)
+	var bleed := _status(2, [&"Status.Debuff.Bleed"])
+	bleed.period = 1.0
+	bleed.modifiers.append(_modifier("hp", GameplayEffectModifier.Operation.ADD, -10))  # 10 HP per stack per tick
+	bleed.max_stacks = 5
+	_save_effect("bp_bleed", bleed)
+	_save_effect("bp_lifesteal_stat", _infinite("lifesteal", GameplayEffectModifier.Operation.ADD, 50))
+	_save_effect("bp_bleed_stat", _infinite("bleed_chance", GameplayEffectModifier.Operation.ADD, 50))
+	_save_effect("bp_tracked", _granting([Battle.HEALTH_TRACKED_TAG]))
+	_save_effect("bp_low_line", _infinite("health_low_at", GameplayEffectModifier.Operation.ADD, 60))
+	var rules_path := ROOT + "scaling/fixture_battle_rules.tres"
+	if _should_write(rules_path):
+		var rules := BattleRules.new()
+		rules.id = &"fixture.battle_rules"
+		rules.bleed_effect = _effects["bp_bleed"]
+		rules.lifesteal_effect = _effects["ip_event_heal"]
+		rules.health_low_x100 = Fixed.from_typed(50)
+		rules.health_critical_x100 = Fixed.from_typed(25)
+		_save(rules, rules_path)
+
+	_ability("bp_lance", "Fixture.Ability.BpLance", B.SINGLE_ENEMY, [_row("hit", "damage", D.FLAT, 50, T.ALL, physical)],
+		[[0.1, "hit"]], [], null, {"cost": _effects["bp_hp_cost"]})
+	for pool in [["bp_pool_taken", "BpPoolTaken", Battle.EVENT_DAMAGE_TAKEN], ["bp_pool_ally", "BpPoolAlly", Battle.EVENT_ALLY_DAMAGE_TAKEN],
+			["bp_pool_cost", "BpPoolCost", Battle.EVENT_COST_HP], ["bp_pool_ally_cost", "BpPoolAllyCost", Battle.EVENT_ALLY_COST_HP]]:
+		var row := _row("fill", "bp_meter_fill", D.EVENT_AMOUNT, 0, T.ALL)
+		row.multiplier_x100 = Fixed.from_typed(100)
+		_ability(pool[0], "Fixture.Ability." + pool[1], B.SELF, [row], [[0.0, "fill"]], [], null, {"trigger": pool[2]})
+	_ability("bp_surge", "Fixture.Ability.BpSurge", B.ALL_ALLIES, [_row("heal", "heal", D.USE_EFFECT, 0, T.ALL)], [[0.1, "heal"]],
+		[], null, {"meter": "meter", "meter_of": "max_hp", "meter_percent": 30})
+	var stats := {"crit_rate": 0, "crit_dmg": 50, "max_mp": 60, "mp": 60, "energy": 0, "sp_basic": 0, "max_toughness": 0,
+		"toughness": 0, "weakness_dmg": 150, "toughness_dmg": 0, "broken_dmg": 0}
+	var mage := CharacterDefinition.new()
+	_fill_unit(mage, "fixture.character.bloodmage", {"max_hp": 1000, "hp": 1000, "atk": 300, "def": 250, "spd": 120}, stats,
+		["chant_jab", "bp_lance", "bp_pool_taken", "bp_pool_ally", "bp_pool_cost", "bp_pool_ally_cost", "bp_surge"],
+		Color.DARK_RED, BLOOD_ATTRIBUTE_SET)
+	mage.tags.assign([&"Fixture.Character.Bloodmage"])
+	mage.health_states = true
+	_save_world("characters", "bloodmage", mage)
+	var leecher := CharacterDefinition.new()
+	_fill_unit(leecher, "fixture.character.leecher", {"max_hp": 1100, "hp": 1100, "atk": 380, "def": 250, "spd": 110}, stats,
+		["chant_jab"], Color.CRIMSON, BLOOD_ATTRIBUTE_SET)
+	leecher.tags.assign([&"Fixture.Character.Leecher"])
+	_save_world("characters", "leecher", leecher)
+	# The bleeder: the leecher with a battle-start passive that gives it lifesteal, Bleed chance and tracked low-HP states (no
+	# items, so the fixture run world's pickup draws never see any of this).
+	_ability("bp_blood_oath", "Fixture.Ability.BpBloodOath", B.SELF, [_row("leech", "bp_lifesteal_stat", D.USE_EFFECT, 0, T.ALL),
+		_row("bleed", "bp_bleed_stat", D.USE_EFFECT, 0, T.ALL), _row("track", "bp_tracked", D.USE_EFFECT, 0, T.ALL),
+		_row("line", "bp_low_line", D.USE_EFFECT, 0, T.ALL)], [[0.0, "leech"], [0.05, "bleed"], [0.1, "track"], [0.15, "line"]],
+		[], null, {"trigger": Battle.EVENT_BATTLE_START})
+	var bleeder := CharacterDefinition.new()
+	_fill_unit(bleeder, "fixture.character.bleeder", {"max_hp": 1100, "hp": 1100, "atk": 380, "def": 250, "spd": 110}, stats,
+		["chant_jab", "bp_blood_oath"], Color.FIREBRICK, BLOOD_ATTRIBUTE_SET)
+	bleeder.tags.assign([&"Fixture.Character.Bleeder"])
+	_save_world("characters", "bleeder", bleeder)
+	_build_second_pack_items()
+
+
+## Spec second-pack step 3: the item hooks on one unit, the binder (FixtureBlood2AttributeSet): a flurry of RANDOM rows, a
+## follow-up on what its basic aimed at, a heal on the most hurt ally, a hit only on Bleeding targets, a One More grant. No
+## encounter, pool or run names it, so no golden sees it.
+func _build_second_pack_items() -> void:
+	var D := ExecutionRow.DamageMode
+	var T := ExecutionRow.Targets
+	var B := BattleAbility.Targeting
+	var physical := [&"Damage.Type.Physical"]
+	var one_more := _status(1, [Battle.ONE_MORE_GRANT_TAG])
+	_save_effect("bp2_one_more", one_more)
+	_save_effect("bp2_heal", _instant("hp", 40))
+	var rows: Array = []
+	var keys: Array = []
+	for index in 3:
+		rows.append(_row("c%d" % index, "damage", D.FLAT, 20, T.RANDOM, physical))
+		keys.append([0.1 * (index + 1), "c%d" % index])
+	_ability("bp2_flurry", "Fixture.Ability.Bp2Flurry", B.ALL_ENEMIES, rows, keys)
+	_ability("bp2_claw", "Fixture.Ability.Bp2Claw", B.SINGLE_ENEMY, [_row("claw", "damage", D.FLAT, 7, T.ALL, physical)],
+		[[0.1, "claw"]], [], null, {"trigger": &"Event.Ability.Used.Basic", "asset_tags": [BattleAbility.FOLLOW_UP_TAG]})
+	_ability("bp2_mend", "Fixture.Ability.Bp2Mend", B.LOWEST_ALLY, [_row("heal", "bp2_heal", D.USE_EFFECT, 0, T.ALL)],
+		[[0.1, "heal"]], [], null, {"trigger": &"Event.Ability.Used.Basic"})
+	var bleeding := GameplayTagQuery.new()
+	bleeding.require_any_tags.assign([Battle.BLEED_TAG])
+	_ability("bp2_finisher", "Fixture.Ability.Bp2Finisher", B.SINGLE_ENEMY, [_row("cut", "damage", D.FLAT, 3, T.ALL, physical)],
+		[[0.1, "cut"]], [], null, {"trigger": Battle.EVENT_DAMAGE_DEALT, "subject": bleeding})
+	var binder := CharacterDefinition.new()
+	var stats := {"crit_rate": 0, "crit_dmg": 50, "max_mp": 60, "mp": 60, "energy": 0, "sp_basic": 0, "max_toughness": 0,
+		"toughness": 0, "weakness_dmg": 150, "toughness_dmg": 0, "broken_dmg": 0}
+	_fill_unit(binder, "fixture.character.binder", {"max_hp": 1000, "hp": 1000, "atk": 300, "def": 250, "spd": 130}, stats,
+		["chant_jab", "bp2_flurry", "bp2_claw", "bp2_mend", "bp2_finisher"], Color.MAROON, BLOOD2_ATTRIBUTE_SET)
+	binder.tags.assign([&"Fixture.Character.Binder"])
+	binder.selectable = false  # a unit for the kernel hooks only: never in a drawn party
+	_save_world("characters", "binder", binder)
+	_build_sharpshot()
+
+
+## Spec second-pack 6 (crit-seed golden): the Vampire Hunter's Focus and Silvered as fixture passives. Every hit adds a Focus
+## stack (+10% crit rate, at most 5); a crit then spends them all and Silvers its target. Event.Damage.Dealt comes before
+## Event.Damage.Dealt.Critical for the same hit, so a hit that does not crit adds one and a crit nets to none.
+func _build_sharpshot() -> void:
+	var T := ExecutionRow.Targets
+	var B := BattleAbility.Targeting
+	var D := ExecutionRow.DamageMode
+	var focus := GameplayEffect.new()
+	focus.policy = GameplayEffect.DurationPolicy.TURN_BASED
+	focus.duration_turns = 99
+	focus.max_stacks = 5
+	focus.modifiers.append(_modifier("crit_rate", GameplayEffectModifier.Operation.ADD, 10))
+	focus.granted_tags.assign([&"Fixture.Status.Focus"])
+	_save_effect("bp3_focus", focus)
+	var spend := GameplayEffect.new()
+	spend.policy = GameplayEffect.DurationPolicy.INSTANT
+	spend.remove_effects_with_tags.assign([&"Fixture.Status.Focus"])
+	_save_effect("bp3_spend", spend)
+	_save_effect("bp3_silvered", _status(2, [&"Fixture.Status.Silvered"]))
+	_ability("bp3_focus", "Fixture.Ability.Bp3Focus", B.SELF, [_row("focus", "bp3_focus", D.USE_EFFECT, 0, T.ALL)],
+		[[0.1, "focus"]], [], null, {"trigger": Battle.EVENT_DAMAGE_DEALT})
+	_ability("bp3_spend", "Fixture.Ability.Bp3Spend", B.SELF, [_row("spend", "bp3_spend", D.USE_EFFECT, 0, T.ALL)],
+		[[0.1, "spend"]], [], null, {"trigger": &"Event.Damage.Dealt.Critical"})
+	_ability("bp3_silver", "Fixture.Ability.Bp3Silver", B.SINGLE_ENEMY, [_row("silver", "bp3_silvered", D.USE_EFFECT, 0, T.ALL)],
+		[[0.1, "silver"]], [], null, {"trigger": &"Event.Damage.Dealt.Critical"})
+	var sharpshot := CharacterDefinition.new()
+	var stats := {"crit_rate": 20, "crit_dmg": 60, "max_mp": 60, "mp": 60, "energy": 0, "sp_basic": 0, "max_toughness": 0,
+		"toughness": 0, "weakness_dmg": 150, "toughness_dmg": 0, "broken_dmg": 0}
+	_fill_unit(sharpshot, "fixture.character.sharpshot", {"max_hp": 900, "hp": 900, "atk": 320, "def": 220, "spd": 125}, stats,
+		["chant_jab", "bp3_focus", "bp3_spend", "bp3_silver"], Color.SLATE_GRAY, BLOOD2_ATTRIBUTE_SET)
+	sharpshot.tags.assign([&"Fixture.Character.Sharpshot"])
+	sharpshot.selectable = false  # a unit for the kernel goldens only: never in a drawn party
+	_save_world("characters", "sharpshot", sharpshot)
 
 
 ## Spec auto-support 6: a healer (the psalmist: a small, a big (its SP gain as a source bonus), a party, a HoT and a

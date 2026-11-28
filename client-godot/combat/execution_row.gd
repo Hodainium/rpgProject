@@ -17,6 +17,7 @@ enum Targets {
 	ALL,       ## The ability's full target list.
 	PRIMARY,   ## Only the primary target (or the first target when the ability has none).
 	ADJACENT,  ## Everyone in the target list except the primary (blast neighbours).
+	RANDOM,    ## Spec second-pack: one unit of the target list that is up, drawn for this row on the battle RNG (a flurry).
 }
 
 ## SetByCaller tags the damage ExecCalc reads (values stored ×100).

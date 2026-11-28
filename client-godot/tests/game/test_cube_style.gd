@@ -1054,3 +1054,63 @@ func test_a_restyle_keeps_a_running_skin_on_the_new_hat() -> void:
 		"and loses it when the skin ends")
 	service.free()
 	view.queue_free()
+
+
+## Spec second-pack P1: a state look replaces the unit's own look while its battle unit carries one of its tags, swapped with a
+## transform (the cube squashes, then settles back to its own scale), and goes back when the tag goes or the battle ends.
+func test_a_state_look_follows_its_tags() -> void:
+	var registry := _registry()
+	var state := StateLook.new()
+	state.unit_id = &"u.exact"
+	state.tags.assign([&"Status.WolfForm"])
+	state.look = _look(-1.0, Color.RED)
+	state.squash_seconds = 0.02
+	state.stretch_seconds = 0.02
+	state.settle_seconds = 0.02
+	registry.state_looks.append(state)
+	UnitStyle.use(registry, "test")
+	eq(registry.state_looks_for(&"u.exact").size(), 1, "the unit's state looks")
+	eq(registry.state_looks_for(&"u.other").size(), 0, "none for another unit")
+	var view: UnitAnimator = UnitAnimator.instantiate_for(_unit(&"u.exact"), load(PROBE_VIEW) as PackedScene)
+	host.add_child(view)
+	var asc := AbilitySystemComponent.new()
+	host.add_child(asc)
+	view.watch_state_looks(asc)
+	eq(view.body_color(), Color.BLUE, "its own look first")
+	asc.add_tag(&"Status.WolfForm")
+	check(view.state_look() == state, "the tag puts the state look on")
+	await host.get_tree().create_timer(0.3).timeout
+	eq(view.body_color(), Color.RED, "swapped during the transform")
+	check(view.scale.is_equal_approx(Vector3.ONE), "and back to its own scale once it settles")
+	asc.remove_tag(&"Status.WolfForm")
+	await host.get_tree().create_timer(0.3).timeout
+	eq(view.body_color(), Color.BLUE, "the tag gone: its own look again")
+	asc.add_tag(&"Status.WolfForm")
+	view.unwatch_state_looks()
+	eq(view.body_color(), Color.BLUE, "the battle over: its own look at once")
+	check(view.scale.is_equal_approx(Vector3.ONE), "with no transform left half done")
+	asc.free()
+	view.queue_free()
+
+
+func test_state_looks_stay_out_of_combat_and_validate() -> void:
+	if skip_in_export():
+		return
+	for path in _scripts("res://combat/"):
+		check(not FileAccess.get_file_as_string(path).contains("StateLook"), "%s never names a state look" % path)
+	var registry := _registry()
+	var state := StateLook.new()
+	state.unit_id = &"u.missing"
+	state.tags.assign([&"Status.WolfForm"])
+	state.look = _look()
+	registry.state_looks.append(state)
+	registry.state_looks.append(StateLook.new())
+	var codes := StyleValidator.validate(registry, ContentIndex.new("res://tests/fixtures/"), "test").map(
+		func(issue: ValidationIssue) -> String: return issue.code)
+	check(codes.has("style_state_look_unknown_unit"), "a state look for a unit the content lacks: %s" % [codes])
+	check(codes.has("style_state_look_empty"), "a state look with no look or tags")
+	var demo := load("res://presentation/demo/style/style_registry.tres") as StyleRegistry
+	var wolf := demo.state_looks_for(&"demo.character.werewolf")
+	eq(wolf.size(), 1, "the demo Werewolf has its wolf form look")
+	if not wolf.is_empty():
+		check(wolf[0].tags.has(&"Status.WolfForm") and wolf[0].tags.has(&"State.WolfForm"), "on the timed status and the low-HP part")

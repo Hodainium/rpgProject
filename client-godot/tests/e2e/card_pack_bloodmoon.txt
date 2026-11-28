@@ -1,0 +1,32 @@
+# Spec second-pack 6 end to end, on the real demo content and the real stack: a card-enabled server seeds the Blood Moon Pack
+# beside the Descent Pack. A first run pays gems; the player buys and opens a Blood Moon Pack (a version with commons only, so
+# the open can never already hold the Vampire and the craft below is certain), dusts one of its cards, crafts the Vampire with
+# that dust (the mythic craft cost lowered through the admin path), and starts a second run with Vlad, which the server allows
+# only because the account now owns him. Every battle of that run is replayed by the real worker (HP costs, lifesteal, the
+# Blood Moon items in the pool) to the client's own hash.
+#! worker
+#! content real
+#! cards
+#! env Monitors__Interval=00:00:01
+server reward boss demo.enemy.rat_king 300
+server reward boss demo.enemy.golem 300
+new demo.character.warrior,demo.character.cleric run=demo.run.one_floor
+wait run
+autorun policy=smart
+wait ended 180
+wait verdict all 300
+wait gems 100 180
+packs
+server pack-type bloodmoon-pack odds=common:10000 pity= first= min=none
+packs buy bloodmoon-pack 1
+packs open bloodmoon-pack
+server card-rate mythic 1 2
+dust first
+craft demo.character.vampire
+cards
+new demo.character.vampire,demo.character.cleric run=demo.run.one_floor
+wait run
+autorun policy=smart
+wait ended 180
+wait verdict all 300
+e2e redpanda-check 90

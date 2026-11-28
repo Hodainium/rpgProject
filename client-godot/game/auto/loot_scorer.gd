@@ -32,8 +32,17 @@ const FIT_ULT: StringName = &"Item.Fit.Ult"
 const FIT_CONTROL: StringName = &"Item.Fit.Control"
 const FIT_PARTY: StringName = &"Item.Fit.Party"
 const FIT_RUN: StringName = &"Item.Fit.Run"
+## Spec second-pack 2.7: Bleed chance and lifesteal add up per holder, so the bots gather them on one carrier (CARRY).
+const FIT_BLEED: StringName = &"Item.Fit.Bleed"
+const FIT_LIFESTEAL: StringName = &"Item.Fit.Lifesteal"
+## Spec second-pack 2.7: crit items, worth more on a holder with a high base crit rate or Focus (BotProfile.crit_*), and items that
+## pay off HP costs, worth little to a class with no HP-cost move.
+const FIT_CRIT: StringName = &"Item.Fit.Crit"
+const FIT_HP_COST: StringName = &"Item.Fit.HpCost"
+## The base crit rate (×100) above which a class counts as a crit holder: the default 5%.
+const DEFAULT_CRIT_RATE: int = 500
 const FITS: Array[StringName] = [FIT_DAMAGE, FIT_FOLLOW_UP, FIT_DOT, FIT_BREAK, FIT_HEALING, FIT_SURVIVAL, FIT_SPEED,
-	FIT_SP, FIT_ULT, FIT_CONTROL, FIT_PARTY, FIT_RUN]
+	FIT_SP, FIT_ULT, FIT_CONTROL, FIT_PARTY, FIT_RUN, FIT_BLEED, FIT_LIFESTEAL, FIT_CRIT, FIT_HP_COST]
 ## The damage kinds: a carry is the member who piles these up (placement report, carry_seed).
 const DAMAGE_FITS: Array[StringName] = [FIT_DAMAGE, FIT_FOLLOW_UP, FIT_DOT, FIT_BREAK]
 
@@ -53,7 +62,7 @@ const CURSE_TAG: StringName = &"Item.Curse"
 const ALL_TAGS: Array[StringName] = [
 	ROLE_DAMAGE, ROLE_FOLLOW_UP, ROLE_DOT, ROLE_BREAK, ROLE_HEALER, ROLE_SUPPORT, ROLE_TANK, ROLE_CONTROL,
 	FIT_DAMAGE, FIT_FOLLOW_UP, FIT_DOT, FIT_BREAK, FIT_HEALING, FIT_SURVIVAL, FIT_SPEED, FIT_SP, FIT_ULT, FIT_CONTROL,
-	FIT_PARTY, FIT_RUN,
+	FIT_PARTY, FIT_RUN, FIT_BLEED, FIT_LIFESTEAL, FIT_CRIT, FIT_HP_COST,
 	GRANT_DAMAGE, GRANT_FOLLOW_UP, GRANT_DOT, GRANT_BREAK, GRANT_HEALER, GRANT_SUPPORT, GRANT_TANK, GRANT_CONTROL,
 ]
 ## The weight key a role-less member (or one whose roles a fit does not name) is scored with.
@@ -164,6 +173,10 @@ static func value(ctx: Dictionary, tags: Array, slot: int, thing_id: StringName 
 		var part := profile.weight(fit, roles) * stack_factor(profile, fit, held) / 100
 		if fit == FIT_SURVIVAL:
 			part = part * frailty(ctx, slot) / 100
+		elif fit == FIT_CRIT and crit_holder(run, slot, profile):
+			part = part * profile.crit_holder_percent / 100
+		elif fit == FIT_HP_COST and not pays_hp(run, slot):
+			part = part * profile.hp_cost_other_percent / 100
 		total += part
 	for tag in tags:
 		if String(tag).begins_with(GRANT_PREFIX):
@@ -191,6 +204,52 @@ static func stack_factor(profile: BotProfile, fit: StringName, held: Array) -> i
 	if mode == BotProfile.SPREAD:
 		return maxi(SPREAD_FLOOR, 100 - step * count)
 	return mini(CARRY_CAP, 100 + step * count)
+
+
+## Spec second-pack 2.7: whether the member's class is a crit holder: a base crit rate above the default 5% (the Hunter, the
+## Ranger), or one of the profile's crit_holder_abilities among its class abilities (Focus).
+static func crit_holder(run: RunController, slot: int, profile: BotProfile) -> bool:
+	var member := run.state.member(slot)
+	var character: UnitDefinition = run.content.units.get(member.get("character", &"")) if not member.is_empty() else null
+	if character == null:
+		return false
+	if int(character.stats_x100.get("crit_rate", 0)) > DEFAULT_CRIT_RATE:
+		return true
+	return _class_abilities(character).any(func(tag: StringName) -> bool: return profile.crit_holder_abilities.has(tag))
+
+
+## Spec second-pack 2.7: whether the member's class has a move that costs HP (CostReader names an hp cost).
+static func pays_hp(run: RunController, slot: int) -> bool:
+	var member := run.state.member(slot)
+	var character: UnitDefinition = run.content.units.get(member.get("character", &"")) if not member.is_empty() else null
+	if character == null:
+		return false
+	if not _hp_payers.has(character.id):
+		var pays := false
+		for scene in character.abilities:
+			var ability := scene.instantiate() as BattleAbility if scene != null else null
+			if ability != null:
+				pays = pays or CostReader.cost_of(ability, null).has(BattleUnit.HP)
+				ability.free()
+		_hp_payers[character.id] = pays
+	return _hp_payers[character.id]
+
+
+## A class's ability tags, read once per definition (the scenes are instantiated only here).
+static func _class_abilities(character: UnitDefinition) -> Array[StringName]:
+	if not _ability_tags.has(character.id):
+		var tags: Array[StringName] = []
+		for scene in character.abilities:
+			var ability := scene.instantiate() as BattleAbility if scene != null else null
+			if ability != null:
+				tags.append(ability.ability_tag)
+				ability.free()
+		_ability_tags[character.id] = tags
+	return _ability_tags[character.id]
+
+
+static var _hp_payers: Dictionary = {}
+static var _ability_tags: Dictionary = {}
 
 
 ## Item.Fit.Survival's extra (percent): the party's highest max HP × 100 / the member's, capped at 200; the frailest first.

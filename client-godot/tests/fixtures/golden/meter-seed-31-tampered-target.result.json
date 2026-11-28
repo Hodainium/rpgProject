@@ -1,0 +1,1 @@
+{"schemaVersion":1,"battleId":"meter-seed-31","verdict":"Rejected","errorCode":2002,"error":"ReplayMismatch","mismatch":{"reason":"TurnMismatch","turn":33,"detail":"log entry says turn 34, P2 acts on turn 33"},"outcome":"Ongoing","turns":33,"finalStateHash":"c9558008acdb17fb2b410b581d12e1078e8d77f416e4c9b7436bfdb7f55a55c5","engineVersion":"4.7.2.stable.mono.official.ed1daf0bf"}

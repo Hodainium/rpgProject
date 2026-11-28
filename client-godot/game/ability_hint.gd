@@ -15,6 +15,7 @@ const TARGET_TEXT := {
 	BattleAbility.Targeting.RANDOM_ENEMY: "A RANDOM ENEMY",
 	BattleAbility.Targeting.RANDOM_OTHER_ENEMY: "ANOTHER RANDOM ENEMY",
 	BattleAbility.Targeting.OTHER_ENEMIES: "EVERY OTHER ENEMY",
+	BattleAbility.Targeting.LOWEST_ALLY: "THE MOST HURT ALLY",
 }
 ## Spec keys-and-gear 2.6: from BattleAbility.usage() (the Ability.Usage.* tags; untagged: ff7-ui F14's rule).
 const USAGE_FIELD := "[Field Only]"

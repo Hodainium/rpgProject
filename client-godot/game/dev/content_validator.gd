@@ -580,20 +580,33 @@ func _check_procs(ability: BattleAbility, path: String) -> void:
 	var trigger := String(ability.trigger_event_tag)
 	if ability.trigger_chance_x100 > 0 and not ability.is_triggered():
 		_error("trigger_chance_on_action", path, "%s has a trigger chance but no trigger" % ability.ability_tag)
+	# Spec second-pack B3 (review fix): a meter fires from its meter alone, and needs a threshold, or it silently never fires.
+	if ability.is_meter():
+		if trigger != "":
+			_error("meter_with_trigger", path, "%s is a meter ability and also names a trigger event" % ability.ability_tag)
+		var no_flat := ability.meter_threshold_of == "" and ability.meter_threshold_x100 <= 0
+		var no_share := ability.meter_threshold_of != "" and ability.meter_threshold_percent_x100 <= 0
+		if no_flat or no_share:
+			_error("meter_threshold_missing", path, "%s: a meter needs a threshold (meter_threshold, or meter_threshold_of and a percent)"
+				% ability.ability_tag)
 	var echo_tag := ability.asset_tags.has(BattleAbility.ECHO_TAG)
 	if echo_tag or ability.echo_scale_x100 > 0:
-		var used := trigger.begins_with(String(Battle.EVENT_ABILITY_USED)) or trigger == String(Battle.EVENT_ALLY_ULTIMATE)
+		var used := trigger.begins_with(String(Battle.EVENT_ABILITY_USED)) or trigger == String(Battle.EVENT_ALLY_ULTIMATE) \
+				or trigger == String(Battle.EVENT_ATTACK_FOLLOW_UP)  # spec second-pack: Twin Blades repeats a follow-up
 		if not used or not echo_tag or ability.echo_scale_x100 <= 0:
 			_error("echo_without_trigger", path, "%s: an echo needs a trigger on %s*, the tag %s and an echo scale" % [
 				ability.ability_tag, Battle.EVENT_ABILITY_USED, BattleAbility.ECHO_TAG])
 	for row in ability.executions:
 		if row == null:
 			continue
-		if ability.picks_own_targets() and row.effect != null and (FitProposal._heals(row.effect)
+		if ability.picks_own_targets() and ability.targets_enemies() and row.effect != null and (FitProposal._heals(row.effect)
 				or row.effect.granted_tags.any(func(tag) -> bool: return String(tag).begins_with("Status.Buff."))):
 			_error("random_target_on_ally", path, "%s's row %s helps its target, but it aims at enemies" % [ability.ability_tag, row.id])
+		# Spec second-pack: HP costs (B1) and heals (B2) carry the amount paid or restored too.
 		if row.damage_mode == ExecutionRow.DamageMode.EVENT_AMOUNT and not (trigger.begins_with(String(Battle.EVENT_DAMAGE_DEALT))
-				or trigger.begins_with(String(Battle.EVENT_DAMAGE_TAKEN)) or trigger == String(Battle.EVENT_ALLY_DAMAGE_TAKEN)):
+				or trigger.begins_with(String(Battle.EVENT_DAMAGE_TAKEN)) or trigger == String(Battle.EVENT_ALLY_DAMAGE_TAKEN)
+				or trigger in [String(Battle.EVENT_COST_HP), String(Battle.EVENT_ALLY_COST_HP), String(Battle.EVENT_HEAL_GIVEN),
+					String(Battle.EVENT_HEAL_RECEIVED), String(Battle.EVENT_ALLY_HEAL_RECEIVED)]):
 			_error("event_amount_outside_trigger", path, "%s's row %s reads the event's amount, but %s carries none" % [
 				ability.ability_tag, row.id, "no event" if trigger == "" else trigger])
 		if row.event_effect and not trigger.ends_with(".Dot"):
@@ -644,7 +657,11 @@ func _battle_events() -> Dictionary:
 			Battle.EVENT_DAMAGE_TAKEN, Battle.EVENT_UNIT_DIED, Battle.EVENT_ABILITY_USED, Battle.EVENT_ATTACK_FOLLOW_UP,
 			Battle.EVENT_UNIT_KILLED, Battle.EVENT_ONE_MORE, Battle.EVENT_TURN_SKIPPED, Battle.EVENT_STATUS_RESISTED,
 			Battle.EVENT_BATTLE_INTERRUPT, Battle.EVENT_PHASE_CHANGED, Battle.EVENT_ALLY_DAMAGE_TAKEN, Battle.EVENT_ALLY_ULTIMATE,
-			Battle.EVENT_DOT_DEALT, Battle.EVENT_DOT_TAKEN, Battle.EVENT_SKILL_USED, Battle.EVENT_UNIT_DYING]:
+			Battle.EVENT_DOT_DEALT, Battle.EVENT_DOT_TAKEN, Battle.EVENT_SKILL_USED, Battle.EVENT_UNIT_DYING,
+			# Spec second-pack B1, B2, B3, B5.
+			Battle.EVENT_COST_HP, Battle.EVENT_ALLY_COST_HP, Battle.EVENT_HEAL_GIVEN, Battle.EVENT_HEAL_RECEIVED,
+			Battle.EVENT_ALLY_HEAL_RECEIVED, Battle.EVENT_METER_FULL, Battle.EVENT_HEALTH_LOW, Battle.EVENT_HEALTH_CRITICAL,
+			Battle.EVENT_ALLY_HEALTH_LOW]:
 		_known_events[tag] = true
 	var kinds: Array = [Battle.HIT_BREAK, Battle.HIT_FOLLOW_UP, Battle.HIT_DRAINED, Battle.HIT_ECHO, BattleAbility.ULTIMATE_TAG,
 		BattleAbility.FOLLOW_UP_TAG]

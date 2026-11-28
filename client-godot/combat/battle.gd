@@ -137,6 +137,37 @@ const HIT_ECHO: StringName = &"Hit.Echo"
 ## Spec item-power (user, 2026-11-23): a unit casts at most this many ults until the next turn (anyone's) starts. Ults use no turn,
 ## so charge refunds that add up to a full bar would otherwise cast for ever.
 const ULTS_PER_TURN: int = 3
+## Spec second-pack B1: an HP cost paid (the caster) and paid by an ally (the caster's living allies, K1).
+const EVENT_COST_HP: StringName = &"Event.Cost.Hp"
+const EVENT_ALLY_COST_HP: StringName = &"Event.Ally.Cost.Hp"
+## Spec second-pack B2: HP an effect restored (overheal left out): to its source, its target and the target's living allies.
+const EVENT_HEAL_GIVEN: StringName = &"Event.Heal.Given"
+const EVENT_HEAL_RECEIVED: StringName = &"Event.Heal.Received"
+const EVENT_ALLY_HEAL_RECEIVED: StringName = &"Event.Ally.Heal.Received"
+## Spec second-pack B3: a meter ability's queue entries come from this event; their hits and heals carry Hit.Meter.
+const EVENT_METER_FULL: StringName = &"Event.Meter.Full"
+const HIT_METER: StringName = &"Hit.Meter"
+const METER_FIRES_PER_CHECK: int = 3
+## Spec second-pack B5: HP threshold states (only on tracked units).
+const HEALTH_LOW_TAG: StringName = &"State.Health.Low"
+## Spec second-pack: the Bleed status tag (B6's stack room, Bleed turns, lifesteal on Bleeding targets).
+const BLEED_TAG: StringName = &"Status.Debuff.Bleed"
+## Spec second-pack (Stake of Dawn): an effect that grants this tag earns its unit a One More.
+const ONE_MORE_GRANT_TAG: StringName = &"State.OneMore"
+const BLEED_LIFESTEAL: String = "bleed_lifesteal"
+const BLEED_STACKS: String = "bleed_stacks"
+const BLEED_TURNS: String = "bleed_turns"
+const OVERHEAL_SHIELD: String = "overheal_shield"
+const SHIELD: String = "shield"
+const HEALTH_CRITICAL_TAG: StringName = &"State.Health.Critical"
+const HEALTH_TRACKED_TAG: StringName = &"State.Health.Tracked"
+const EVENT_HEALTH_LOW: StringName = &"Event.Health.Low"
+const EVENT_HEALTH_CRITICAL: StringName = &"Event.Health.Critical"
+const EVENT_ALLY_HEALTH_LOW: StringName = &"Event.Ally.Health.Low"
+## Spec second-pack attribute names the kernel reads (absent on an AttributeSet that lacks them: read as 0).
+const HEALTH_LOW_AT: String = "health_low_at"
+const BLEED_CHANCE: String = "bleed_chance"
+const LIFESTEAL: String = "lifesteal"
 
 ## The battle's single seeded RNG. Combat draws from nothing else.
 var rng := RandomNumberGenerator.new()
@@ -184,11 +215,18 @@ var _refill_effect: GameplayEffect
 var _started: bool = false
 ## Spec item-power K5: the units whose Event.Unit.Dying triggers are resolving: at 0 HP, still able to react and be healed.
 var _dying: Array[BattleUnit] = []
+## Review fix (spec second-pack B3): meter entries turned down in the current outermost drain (_meter_key), and whether one runs.
+var _meters_refused: Dictionary = {}
+var _meter_drain: bool = false
+## Review fix (spec second-pack B5): the health-state tags the battle itself granted ("<unit id>|<tag>").
+var _health_granted: Dictionary = {}
 ## Ults each unit has cast since the last turn (or One More) started: BattleUnit -> count (ULTS_PER_TURN). Not hashed: replay
 ## recounts it.
 var _ults_cast: Dictionary = {}
 ## Spec item-power 5: trigger chains the depth cap stopped (reported; never hashed).
 var chain_cap_hits: int = 0
+## Spec second-pack B6 / B7: the content's battle rules (null: no Bleed on hit, no lifesteal).
+var rules: BattleRules = null
 
 
 ## Builds the battle from a snapshot dictionary (BattleSnapshot JSON shape). Returns "" or a runner error.
@@ -246,6 +284,7 @@ func _setup_common(snapshot: Dictionary, content: ContentIndex, presentation_gat
 	if not seed_text.is_valid_int() or seed_text.begins_with("-") or seed_text.begins_with("+"):
 		return _fail("seed must be a decimal string, got '%s'" % seed_text)
 	rng.seed = seed_text.to_int()
+	rules = content.battle_rules_first()
 	return ""
 
 
@@ -515,6 +554,7 @@ func _finish_setup() -> String:
 		(unit.asc as CombatASC).tick_started.connect(_on_tick_started.bind(unit))
 		(unit.asc as CombatASC).tick_finished.connect(_on_tick_finished.bind(unit))
 		(unit.asc as CombatASC).stack_damaged.connect(_on_stack_damaged.bind(unit))
+		unit.asc.tag_added.connect(_on_tag_added.bind(unit))
 	if schema_version >= 2:
 		for unit in _units:
 			if unit.stat(BattleUnit.HP) <= 0:
@@ -555,6 +595,8 @@ func reject(reason: String, detail: String) -> void:
 func run(controller: Object) -> void:
 	if not _started:
 		_started = true
+		for unit in _units:
+			_update_health_state(unit, false)  # spec second-pack B5: the states a unit starts in, never announced
 		for unit in _units:
 			if unit.alive:
 				unit.asc.send_gameplay_event(EVENT_BATTLE_START, {"source": unit, "target": unit})
@@ -938,6 +980,13 @@ func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionR
 			for target in all_targets:
 				if target != primary:
 					hit.append(target)
+		ExecutionRow.Targets.RANDOM:  # spec second-pack: one draw per row, only when some target is up
+			var pool: Array[BattleUnit] = []
+			for target in all_targets:
+				if target.is_up():
+					pool.append(target)
+			if not pool.is_empty():  # review fix: field mode never draws from the battle RNG (the first unit that is up)
+				hit.append(pool[0] if field_mode else pool[rng.randi_range(0, pool.size() - 1)])
 		_:
 			hit = all_targets.duplicate()
 	var hit_ids: Array[StringName] = []
@@ -951,6 +1000,7 @@ func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionR
 		elif not target.is_up() and not _dying.has(target):
 			continue
 		var hp_before := target.stat(BattleUnit.HP)
+		var shield_before := target.stat(SHIELD) if target.asc.has_attribute(SHIELD) else 0
 		var toughness_before := target.stat(TOUGHNESS)
 		# One spec per target: turn-based effects keep their spec, so sharing one would share the countdown.
 		var context := GameplayEffectContext.new(unit, unit)
@@ -970,12 +1020,17 @@ func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionR
 			spec.inject_tag(HIT_FOLLOW_UP)
 		if echo_scale > 0:
 			spec.inject_tag(HIT_ECHO)
+		if event is Dictionary and event.get("meter", false):
+			spec.inject_tag(HIT_METER)  # spec second-pack B3: what a meter fires never fills a meter
 		hit_ids.append(target.unit_id)
 		if not _status_lands(unit, target, row, effect):
 			continue
 		_extend_debuff(unit, spec)
 		if spread_turns > 0:
 			spec.remaining_turns = spread_turns
+		if not field_mode and not _bleed_has_room(unit, target, effect):
+			_refresh_bleed(target, spec.remaining_turns)  # review fix: at the cap it still refreshes, without a stack
+			continue
 		_row_targets[target.unit_id] = int(_row_targets.get(target.unit_id, 0)) + 1
 		var landed := unit.asc.apply_effect_spec_to_target(spec, target.asc)
 		_row_targets[target.unit_id] -= 1
@@ -995,10 +1050,13 @@ func resolve_execution(unit: BattleUnit, ability: BattleAbility, row: ExecutionR
 				and target.stat(BattleUnit.HP) > 0 and not target.asc.has_tag_exact(DOWNED_TAG) and not field_mode:
 			_down(target, unit)
 		var damage := hp_before - target.stat(BattleUnit.HP)
+		if shield_before > 0 and not spec.dynamic_tags.has(HIT_DRAINED):
+			damage += shield_before - target.stat(SHIELD)  # review fix: what a shield soaked is still the hit's damage
 		if spec.dynamic_tags.has(HIT_DRAINED):
 			_send_drain_events(unit, target, -damage, row, spec)
 		elif damage > 0:
 			_send_damage_events(unit, target, damage, row, spec)
+			_after_hit(unit, target, damage, spec.dynamic_tags.has(HIT_METER), spec.dynamic_tags.has(HIT_FOLLOW_UP))
 	execution_resolved.emit(unit.unit_id, row.id, hit_ids)
 	if schema_version >= 2:
 		_check_revives()
@@ -1033,6 +1091,8 @@ func _extend_debuff(source: BattleUnit, spec: GameplayEffectSpec) -> void:
 			or not ExecutionRow.is_debuff(spec.effect_def):
 		return
 	var extra := source.stat(DEBUFF_TURNS) / 100
+	if spec.effect_def.granted_tags.has(BLEED_TAG):
+		extra += source.stat(BLEED_TURNS) / 100  # spec second-pack (Barbed Lancet)
 	if extra > 0:
 		spec.remaining_turns += extra
 
@@ -1085,11 +1145,103 @@ func _send_damage_events(source: BattleUnit, target: BattleUnit, damage: int, ro
 	damage_dealt.emit(source.unit_id, target.unit_id, damage, signal_tags)
 
 
+## Spec second-pack B7 then B6, after a damaging hit (never a DoT tick, never an HP cost; those are not executions): the source
+## heals its `lifesteal` share of the damage through the rules' lifesteal effect, then, with `bleed_chance` above 0, one roll on
+## the battle RNG applies one Bleed stack to the target as the source's own DoT (no roll against a target its query refuses). Nothing happens (and nothing is drawn) for a unit
+## without the attributes, so battles without them are unchanged.
+func _after_hit(source: BattleUnit, target: BattleUnit, damage: int, meter_hit: bool = false, follow_up_hit: bool = false) -> void:
+	if field_mode or rules == null:
+		return
+	var share := source.stat(LIFESTEAL)
+	if target.asc.has_tag(BLEED_TAG):
+		share += source.stat(BLEED_LIFESTEAL)  # spec second-pack (Crimson Letting): hits on a Bleeding enemy heal more
+	if rules.lifesteal_effect != null and share > 0 and source.is_up():
+		var heal := Fixed.pct(damage, share)
+		var missing := source.stat(BattleUnit.MAX_HP) - source.stat(BattleUnit.HP)
+		_overheal(source, _lifesteal_restores(source, heal) - missing)  # review fix: what the heal really restores
+		if heal > 0:
+			var heal_spec := GameplayEffectSpec.new(rules.lifesteal_effect, GameplayEffectContext.new(source, source),
+				source.effect_level)
+			heal_spec.set_set_by_caller_magnitude(ExecutionRow.EVENT_AMOUNT_TAG, float(heal))
+			if meter_hit:
+				heal_spec.inject_tag(HIT_METER)  # a meter's hit heals like a meter: it never fills a meter
+			if follow_up_hit:
+				heal_spec.inject_tag(HIT_FOLLOW_UP)  # a follow-up's heal feeds no follow-up (Thorned Rose)
+			source.asc.apply_effect_spec(heal_spec)
+	var chance := source.stat(BLEED_CHANCE)
+	if rules.bleed_effect != null and chance > 0 and target.is_up():
+		var query := rules.bleed_effect.application_query
+		if query != null and not query.matches(target.asc):
+			return  # a target that refuses Bleed draws nothing, as a status row's (_status_lands)
+		if chance < Fixed.ONE_HUNDRED_PERCENT and rng.randi_range(0, 9999) >= chance:
+			return
+		var context := GameplayEffectContext.new(source, source)
+		context.target_data.append_node(target)
+		var bleed := GameplayEffectSpec.new(rules.bleed_effect, context, source.effect_level)
+		_extend_debuff(source, bleed)
+		if _bleed_has_room(source, target, rules.bleed_effect):
+			source.asc.apply_effect_spec_to_target(bleed, target.asc)
+		else:
+			_refresh_bleed(target, bleed.remaining_turns)
+
+
+## What the rules' lifesteal effect restores on `source` for an amount `heal` (×100): each of its execution calcs that offers
+## amount_for (the content's ExecCalcEventAmount: heal_taken) scales it, the way cost_of reads a cost. None: `heal` as is.
+func _lifesteal_restores(source: BattleUnit, heal: int) -> int:
+	for execution in rules.lifesteal_effect.executions:
+		if execution != null and execution.has_method("amount_for"):
+			heal = int(execution.amount_for(heal, source.asc, source.asc))
+	return heal
+
+
+## Spec second-pack (Velvet Fangs): lifesteal past full HP becomes shield, up to the source's overheal_shield share of its
+## max HP in all, through the rules' overheal effect (an instant +amount to `shield`).
+func _overheal(source: BattleUnit, excess: int) -> void:
+	var cap := Fixed.pct(source.stat(BattleUnit.MAX_HP), source.stat(OVERHEAL_SHIELD))
+	if excess <= 0 or cap <= 0 or rules.overheal_effect == null or not source.asc.has_attribute(SHIELD):
+		return
+	var amount := mini(excess, cap - source.stat(SHIELD))
+	if amount <= 0:
+		return
+	var spec := GameplayEffectSpec.new(rules.overheal_effect, GameplayEffectContext.new(source, source), source.effect_level)
+	spec.set_set_by_caller_magnitude(ExecutionRow.EVENT_AMOUNT_TAG, float(amount))
+	source.asc.apply_effect_spec(spec)
+
+
+## Spec second-pack (Clotted Phial): Bleed holds the rules' bleed_stacks plus the source's bleed_stacks on one target, counted
+## over every effect that grants Bleed. Rules without bleed_stacks (0) leave it to the effects' own max_stacks.
+func _bleed_has_room(source: BattleUnit, target: BattleUnit, effect: GameplayEffect) -> bool:
+	if rules == null or rules.bleed_stacks <= 0 or effect == null or not effect.granted_tags.has(BLEED_TAG):
+		return true
+	var held := 0
+	for active_effect in target.asc._active_effects:
+		if active_effect.get_effect_def().granted_tags.has(BLEED_TAG):
+			held += active_effect.stack_count
+	return held < rules.bleed_stacks + source.stat(BLEED_STACKS) / 100
+
+
+## Review fix: a Bleed refused at the stack cap still refreshes, as a REFRESH_DURATION effect would: every active Bleed on
+## `target` (whatever effect granted it, as the cap counts them all) keeps at least `turns` turns left. No stack is added.
+func _refresh_bleed(target: BattleUnit, turns: int) -> void:
+	for active_effect in target.asc._active_effects:
+		if active_effect.get_effect_def().granted_tags.has(BLEED_TAG) and active_effect.spec.remaining_turns < turns:
+			active_effect.spec.remaining_turns = turns
+
+
+## Spec second-pack B1: `unit` paid `amount` HP for an ability: Event.Cost.Hp to it, Event.Ally.Cost.Hp to its living allies.
+func on_hp_cost(unit: BattleUnit, amount: int) -> void:
+	if field_mode or not _started:
+		return
+	var payload := {"source": unit, "target": unit, "amount": amount}
+	unit.asc.send_gameplay_event(EVENT_COST_HP, payload)
+	_send_to_allies(unit, EVENT_ALLY_COST_HP, payload)
+
+
 ## Spec item-power K1: sends an event about `unit` to every other living unit on its side, in slot order.
 func _send_to_allies(unit: BattleUnit, event_tag: StringName, payload: Dictionary) -> void:
 	var allies: Array[BattleUnit] = []
 	for other in _units:
-		if other != unit and other.alive and other.side == unit.side:
+		if other != unit and is_instance_valid(other) and other.alive and other.side == unit.side:
 			allies.append(other)
 	allies.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.slot < b.slot)  # sort-ok: slot is an int
 	for ally in allies:
@@ -1314,7 +1466,20 @@ func _expand_targets(actor: BattleUnit, ability: BattleAbility, target: BattleUn
 				targets.append(primary)
 		BattleAbility.Targeting.OTHER_ENEMIES:
 			targets = _own_target_pool(actor, ability, event)
+		BattleAbility.Targeting.LOWEST_ALLY:  # spec second-pack: no draw; the pool is in slot order, so a tie goes to the lowest slot
+			for candidate in _own_target_pool(actor, ability, event):
+				if primary == null or _hp_share(candidate) < _hp_share(primary):
+					primary = candidate
+			if primary != null:
+				targets.append(primary)
 	return {"primary": primary, "targets": targets}
+
+
+## HP as a share of max HP, ×100 percent (0 for a unit without max HP).
+@warning_ignore("integer_division")
+static func _hp_share(unit: BattleUnit) -> int:
+	var most := unit.stat(BattleUnit.MAX_HP)
+	return unit.stat(BattleUnit.HP) * Fixed.ONE_HUNDRED_PERCENT / most if most > 0 else 0
 
 
 ## Spec item-power K4: the opposing units that are up, in slot order, without the one the event is about for the *_OTHER_*
@@ -1480,10 +1645,81 @@ func _check_revives() -> void:
 			unit_revived.emit(unit.unit_id)
 
 
-## Runs queued triggered passives in FIFO order, awaiting each (spec game-skeleton 3.4, decision 10).
+## Runs queued triggered passives in FIFO order, awaiting each (spec game-skeleton 3.4, decision 10). Spec second-pack B3: when
+## the queue is empty, full meters queue their abilities and the drain goes on, at most TriggerQueue.MAX_DEPTH rounds.
 func _drain_triggers() -> void:
 	triggers.draining = true
 	triggers.attacks = 0
+	var outer := not _meter_drain
+	if outer:
+		_meter_drain = true
+	for meter_round in TriggerQueue.MAX_DEPTH + 1:
+		await _drain_queue()
+		triggers.current_depth = 0  # a meter starts its own chain, whatever filled it
+		# Review fix: no meter inside a death-save window (_settle_deaths drains with _dying set); they wait for the outer drain.
+		if not is_running() or not _dying.is_empty() or not _queue_meters():
+			break
+		if meter_round == TriggerQueue.MAX_DEPTH:
+			chain_cap_hits += 1
+			var warning := "meter chain longer than %d stopped" % TriggerQueue.MAX_DEPTH
+			if not content_warnings.has(warning):
+				content_warnings.append(warning)
+			triggers.clear()
+	triggers.draining = false
+	triggers.current_depth = 0
+	if outer:
+		_meter_drain = false
+		_meters_refused.clear()
+
+
+## Spec second-pack B3: every living unit's meter abilities that can activate now, in unit then grant order: once per full
+## threshold the meter holds (at most METER_FIRES_PER_CHECK), queue the ability. The threshold is taken off only when the entry
+## activates (_drain_queue), so a refused or dropped entry costs nothing. Battles only. True when one was queued.
+func _queue_meters() -> bool:
+	if field_mode:
+		return false
+	var queued := false
+	for unit in _units:
+		if not unit.is_up():
+			continue
+		for ability in unit.abilities():
+			if not ability.is_meter() or not unit.asc.has_attribute(ability.meter_attribute) \
+					or not unit.asc.can_activate_ability(ability):
+				continue
+			var threshold := ability.meter_threshold_for(unit)
+			if threshold <= 0 or _meters_refused.has(_meter_key(unit, ability)):
+				continue
+			var fires := mini(unit.stat(ability.meter_attribute) / threshold, METER_FIRES_PER_CHECK)
+			for fire in fires:
+				triggers.push(unit, ability, EVENT_METER_FULL, {"source": unit, "target": unit, "meter": true,
+					"attribute": ability.meter_attribute, "spend": threshold})
+				queued = true
+	return queued
+
+
+## Review fix: a meter entry that did not activate (no target, a failed roll or query, a refused activation) is not queued again in
+## the same drain, so a full meter rolls once per check instead of once per round up to the chain cap. Not hashed: a set of keys
+## that lives for one drain.
+static func _meter_key(unit: BattleUnit, ability: BattleAbility) -> String:
+	return "%s|%d" % [unit.unit_id, ability.get_instance_id()]  # each granted copy apart (K8); never hashed
+
+
+## Takes `amount` off a unit's meter through an instant effect built in code (never persisted, so never hashed as an effect).
+func _spend_meter(unit: BattleUnit, attribute_name: String, amount: int) -> void:
+	var effect := GameplayEffect.new()
+	effect.policy = GameplayEffect.DurationPolicy.INSTANT
+	var modifier := GameplayEffectModifier.new()
+	modifier.attribute_name = attribute_name
+	modifier.magnitude_calculation = GameplayEffectModifier.MagnitudeCalculationType.SET_BY_CALLER
+	modifier.set_by_caller_tag = ExecutionRow.EVENT_AMOUNT_TAG
+	effect.modifiers.append(modifier)
+	var spec := GameplayEffectSpec.new(effect, GameplayEffectContext.new(unit, unit), unit.effect_level)
+	spec.set_set_by_caller_magnitude(ExecutionRow.EVENT_AMOUNT_TAG, float(-amount))
+	unit.asc.apply_effect_spec(spec)
+
+
+## One pass over the queue (the body of _drain_triggers before spec second-pack).
+func _drain_queue() -> void:
 	while is_running() and not triggers.is_empty():
 		var entry := triggers.pop()
 		if int(entry["depth"]) > TriggerQueue.MAX_DEPTH:
@@ -1496,8 +1732,17 @@ func _drain_triggers() -> void:
 		triggers.current_depth = int(entry["depth"])
 		var unit: BattleUnit = entry["unit"]
 		var ability: BattleAbility = entry["ability"]
+		var meter_key := ""
+		if StringName(entry["event_tag"]) == EVENT_METER_FULL and is_instance_valid(ability):
+			meter_key = _meter_key(unit, ability)
+			_meters_refused[meter_key] = true  # until it activates (below)
 		if not is_instance_valid(ability) or not (unit.is_up() or _dying.has(unit)) \
 				or not unit.asc.can_activate_ability(ability):
+			continue
+		# Review fix: a meter entry its meter can no longer pay (a copy or an earlier fire spent it) is dropped before any roll or
+		# target draw, so it costs nothing, the RNG included; it is not a refusal either.
+		if meter_key != "" and unit.stat(String(entry["payload"].get("attribute", ""))) < int(entry["payload"].get("spend", 0)):
+			_meters_refused.erase(meter_key)
 			continue
 		# Spec item-pass 3.1 (HSR): a follow-up never fires from a follow-up's own hit, so follow-ups can't feed each other.
 		if ability.is_follow_up() and entry["payload"] is Dictionary \
@@ -1517,6 +1762,10 @@ func _drain_triggers() -> void:
 			continue
 		if ability.is_follow_up() and _aims_at_the_fallen(unit, ability, target):
 			continue
+		if ability.subject_query != null:  # spec second-pack: "a Bleeding enemy", "a Silvered target"
+			var subject := _event_subject(unit, entry["payload"])
+			if subject == null or not ability.subject_query.matches(subject.asc):
+				continue
 		if not _trigger_fires(ability):
 			continue
 		var payload := _expand_targets(unit, ability, target, entry["payload"])
@@ -1526,17 +1775,30 @@ func _drain_triggers() -> void:
 		payload["battle"] = self
 		payload["unit"] = unit
 		payload["event"] = entry["payload"]
+		# Spec second-pack B3: a meter entry takes its threshold off as it activates (and gives it back if it does not).
+		var meter_spend := 0
+		if StringName(entry["event_tag"]) == EVENT_METER_FULL:
+			meter_spend = int(entry["payload"].get("spend", 0))
+			var meter_attribute := String(entry["payload"].get("attribute", ""))
+			if unit.stat(meter_attribute) < meter_spend:
+				_meters_refused.erase(meter_key)  # review fix: only spent already (by a copy or an earlier fire), not refused
+				continue
+			_spend_meter(unit, meter_attribute, meter_spend)
 		var activated: bool = await ability.try_activate(payload)
+		if not activated and meter_spend > 0:
+			_spend_meter(unit, String(entry["payload"]["attribute"]), -meter_spend)
 		BattleLog.line(self, "  trigger %s %s on %s%s" % [unit.unit_id, ability.ability_tag, entry["event_tag"],
 			"" if activated else " (did not activate)"])
 		if not activated:
 			continue
+		if meter_key != "":
+			_meters_refused.erase(meter_key)
 		trigger_activated.emit(unit.unit_id, ability.ability_tag, StringName(entry["event_tag"]))
 		if ability.is_follow_up():
 			var aimed: BattleUnit = payload["primary"] if payload["primary"] != null else unit
-			unit.asc.send_gameplay_event(EVENT_ATTACK_FOLLOW_UP, {"source": unit, "target": aimed, "ability": ability.ability_tag})
-	triggers.draining = false
-	triggers.current_depth = 0
+			# Spec second-pack: what the follow-up hit, so an echo can repeat it (Twin Blades, Pack Sigil).
+			unit.asc.send_gameplay_event(EVENT_ATTACK_FOLLOW_UP, {"source": unit, "target": aimed, "ability": ability.ability_tag,
+				"primary": payload["primary"], "targets": payload["targets"]})
 
 
 ## Spec item-power D20: a follow-up never fires at enemies that are all at 0 HP: no attack, no roll, no Event.Attack.FollowUp.
@@ -1581,6 +1843,11 @@ func _trigger_target(unit: BattleUnit, ability: BattleAbility, event_payload: Va
 	if not ability.needs_target():
 		return null
 	var other: BattleUnit = null
+	if event_payload is Dictionary and event_payload.get("primary") is BattleUnit and event_payload.get("source") == unit:
+		# Spec second-pack: what the unit's own action was aimed at (Event.Ability.Used.*), e.g. the Werewolf's Claw.
+		var aimed: BattleUnit = event_payload["primary"]
+		if target_candidates(unit, ability).has(aimed) and aimed.is_up():
+			return aimed
 	if event_payload is Dictionary:
 		other = event_payload.get("target") if event_payload.get("source") == unit else event_payload.get("source")
 		if not ability.targets_enemies() and String(event_tag).begins_with(ALLY_EVENT_PREFIX):
@@ -1630,6 +1897,11 @@ func _on_attribute_changed(attribute_name: String, old_value: float, new_value: 
 	elif attribute_name == BattleUnit.HP and new_value < old_value and spec != null and spec.context != null:
 		# The unit itself counts too (a dev kill, an HP cost), so an earlier attacker isn't credited with that death.
 		unit.last_hit_by = spec.context.instigator as BattleUnit
+	# Spec second-pack: heal events and health states only while the battle runs (never while its units are torn down).
+	if attribute_name == BattleUnit.HP and new_value > old_value and _started and not field_mode and is_running():
+		_send_heal_events(unit, int(new_value - old_value), spec)
+	if attribute_name in [BattleUnit.HP, BattleUnit.MAX_HP, HEALTH_LOW_AT] and _started and not field_mode and is_running():
+		_update_health_state(unit, true)
 	if attribute_name == BattleUnit.HP and not field_mode and new_value != old_value \
 			and not (new_value < old_value and _row_targets.has(unit.unit_id)):
 		var cause := _status_tags_of(spec)
@@ -1639,6 +1911,73 @@ func _on_attribute_changed(attribute_name: String, old_value: float, new_value: 
 			_tick_open[unit.unit_id]["cause"] = cause
 		else:
 			hp_changed.emit(unit.unit_id, int(new_value - old_value), cause)
+
+
+## Spec second-pack B2: `amount` HP an effect restored on `unit` (the attribute change, so overheal is already left out):
+## Event.Heal.Given to the effect's source, Event.Heal.Received to `unit`, Event.Ally.Heal.Received to its living allies. A heal
+## carrying Hit.Meter (a meter ability's, or the lifesteal of its hit) sends none, so it can never fill a meter; a drained hit
+## is no heal (Event.Damage.*.Drained covers it).
+func _send_heal_events(unit: BattleUnit, amount: int, spec: GameplayEffectSpec) -> void:
+	if spec == null or spec.context == null or spec.dynamic_tags.has(HIT_METER) or spec.dynamic_tags.has(HIT_DRAINED):
+		return
+	var source: BattleUnit = spec.context.instigator as BattleUnit
+	if source == null:
+		source = unit
+	var payload := {"source": source, "target": unit, "amount": amount, "hit_tags": Battle.hit_tags_of(spec)}
+	if source.alive:
+		source.asc.send_gameplay_event(EVENT_HEAL_GIVEN, payload)
+	unit.asc.send_gameplay_event(EVENT_HEAL_RECEIVED, payload)
+	_send_to_allies(unit, EVENT_ALLY_HEAL_RECEIVED, payload)
+
+
+## Spec second-pack B5: sets or clears State.Health.Low / Critical on a tracked unit from its HP share; with `announce`, crossing
+## into a state sends its event once (and Event.Ally.Health.Low to its living allies). Untracked units never carry the tags.
+func _update_health_state(unit: BattleUnit, announce: bool) -> void:
+	var definition := unit.definition
+	if rules == null or not ((definition != null and definition.health_states) or unit.asc.has_tag_exact(HEALTH_TRACKED_TAG)):
+		return
+	var max_hp := unit.stat(BattleUnit.MAX_HP)
+	if max_hp <= 0:
+		return
+	var low_at := unit.stat(HEALTH_LOW_AT)
+	if low_at <= 0:
+		low_at = rules.health_low_x100
+	var hp := unit.stat(BattleUnit.HP)
+	var low := hp < Fixed.pct(max_hp, low_at)
+	var critical := hp < Fixed.pct(max_hp, rules.health_critical_x100)
+	var payload := {"source": unit, "target": unit}
+	announce = announce and unit.is_up()  # a killing blow announces no crossing: the unit dies at the death check
+	if _set_state(unit, HEALTH_LOW_TAG, low) and announce:
+		unit.asc.send_gameplay_event(EVENT_HEALTH_LOW, payload)
+		_send_to_allies(unit, EVENT_ALLY_HEALTH_LOW, payload)
+	if _set_state(unit, HEALTH_CRITICAL_TAG, critical) and announce:
+		unit.asc.send_gameplay_event(EVENT_HEALTH_CRITICAL, payload)
+
+
+## Spec second-pack B5: a unit that starts being tracked (State.Health.Tracked from an item, usually at battle start) gets its
+## states at once, unannounced, so a gated passive works before its HP next changes.
+func _on_tag_added(tag: StringName, unit: BattleUnit) -> void:
+	if tag == HEALTH_TRACKED_TAG and _started and not field_mode:
+		_update_health_state(unit, false)
+	# Spec second-pack (Stake of Dawn): an effect granting State.OneMore earns its unit a One More, like a break.
+	if tag == ONE_MORE_GRANT_TAG and _started and not field_mode and unit.is_up() and not one_more_queue.has(unit):
+		one_more_queue.append(unit)
+
+
+## Adds or clears a loose state tag; true when it was just added.
+## Review fix: the battle adds and removes only its own reference to the tag (GAS counts tags), so an effect that also grants it
+## keeps it. True when the battle's own reference was just added (a crossing).
+func _set_state(unit: BattleUnit, tag: StringName, on: bool) -> bool:
+	var key := "%s|%s" % [unit.unit_id, tag]
+	var has := _health_granted.has(key)
+	if on and not has:
+		_health_granted[key] = true
+		unit.asc.add_tag(tag)
+		return true
+	if not on and has:
+		_health_granted.erase(key)
+		unit.asc.remove_tag(tag)
+	return false
 
 
 func _status_tags_of(spec: GameplayEffectSpec) -> Array[StringName]:

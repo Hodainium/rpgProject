@@ -25,6 +25,7 @@ var layouts: Dictionary = {}     # StringName -> FloorLayout
 var chests: Dictionary = {}      # StringName -> ChestDefinition (spec keys-and-gear)
 var challenges: Dictionary = {}  # StringName -> ChallengeDefinition (spec economy-challenges)
 var card_rules: Dictionary = {}  # StringName -> CardRules (spec card-collection; none = no card checks)
+var battle_rules: Dictionary = {}  # StringName -> BattleRules (spec second-pack B6 / B7; none = no Bleed on hit, no lifesteal)
 var problems := PackedStringArray()
 
 
@@ -48,7 +49,7 @@ func overlay(resources: Array) -> ContentIndex:
 	var copy := ContentIndex.new("")
 	copy.root = root
 	for name in ["units", "characters", "encounters", "loadouts", "variants", "equipment", "items", "events", "rooms",
-			"chapters", "scaling", "floor_rules", "runs", "layouts", "chests", "challenges", "card_rules"]:
+			"chapters", "scaling", "floor_rules", "runs", "layouts", "chests", "challenges", "card_rules", "battle_rules"]:
 		copy.set(name, get(name).duplicate())
 	copy.problems = problems.duplicate()
 	for resource in resources:
@@ -104,7 +105,18 @@ func _table_for(resource: Resource) -> Array:
 		return [challenges, "challenge"]
 	if resource is CardRules:
 		return [card_rules, "card rules"]
+	if resource is BattleRules:
+		return [battle_rules, "battle rules"]
 	return []
+
+
+## Spec second-pack B6 / B7: the content's battle rules, the first by id (by name, never by StringName pointer); null when none.
+func battle_rules_first() -> BattleRules:
+	if battle_rules.is_empty():
+		return null
+	var ids: Array = battle_rules.keys()
+	ids.sort_custom(func(a, b) -> bool: return String(a) < String(b))
+	return battle_rules[ids[0]]
 
 
 ## The challenges played on `encounter_id`, in id order (spec economy-challenges).

@@ -59,9 +59,12 @@ class Options:
 	var ults: bool = true
 	## Use CONSUMABLE items too (A4: off for players).
 	var consumables: bool = false
+	## Spec second-pack 2.7: an HP-cost move is refused while it would leave the caster under this share of its max HP (×100),
+	## unless its lifesteal on the expected damage would bring it back above.
+	var danger_hp_x100: int = 2500
 
 	func _to_string() -> String:
-		return "ults=%s consumables=%s" % [ults, consumables]
+		return "ults=%s consumables=%s danger_hp=%d" % [ults, consumables, danger_hp_x100]
 
 
 var options: Options
@@ -145,7 +148,9 @@ func _choose(battle: Battle, unit: BattleUnit) -> Dictionary:
 	if not ult.is_empty():
 		last_reason = "ult"
 		return ult
-	var actions := _activatable(unit)
+	var actions := _activatable(unit, battle)
+	if actions.is_empty():
+		actions = _activatable(unit)  # review fix: every move costs HP it cannot spare: still a move (Auto always returns one)
 	if _fallback:
 		_fallback = false
 		last_reason = "fallback"
@@ -283,21 +288,25 @@ static func score_of(battle: Battle, unit: BattleUnit, ability: BattleAbility, t
 	var hit: Array[BattleUnit] = [target]
 	if ability.targeting == BattleAbility.Targeting.ALL_ENEMIES:
 		hit = _enemies_of(battle, unit)
+	var neighbours: Array[BattleUnit] = []
+	if ability.targeting == BattleAbility.Targeting.BLAST_ENEMY:
+		neighbours = _neighbours(battle, unit, target)
+	var pool := maxi(hit.size() + neighbours.size(), 1)  # spec second-pack: a RANDOM row lands on one of these
 	var total := 0
 	for index in hit.size():
 		var other := hit[index]
-		var value := _value_on(unit, ability, other)
+		var value := _value_on(unit, ability, other, pool)
 		if ability.targeting == BattleAbility.Targeting.BLAST_ENEMY and other != target:
 			value /= 2
 		total += value
-	if ability.targeting == BattleAbility.Targeting.BLAST_ENEMY:
-		for other in _neighbours(battle, unit, target):
-			total += _value_on(unit, ability, other) / 2
+	for other in neighbours:
+		total += _value_on(unit, ability, other, pool) / 2
 	return total
 
 
 @warning_ignore("integer_division")
-static func _value_on(unit: BattleUnit, ability: BattleAbility, target: BattleUnit) -> int:
+## `pool`: how many units the score is summed over; a RANDOM row (spec second-pack: one draw among them) counts 1/pool on each.
+static func _value_on(unit: BattleUnit, ability: BattleAbility, target: BattleUnit, pool: int = 1) -> int:
 	var damage := 0
 	var breaks := false
 	var status_value := 0
@@ -309,6 +318,8 @@ static func _value_on(unit: BattleUnit, ability: BattleAbility, target: BattleUn
 			base = unit.stat("atk") * row.multiplier_x100 / 10000
 		elif row.damage_mode == ExecutionRow.DamageMode.FLAT:
 			base = row.flat_damage_x100
+		if row.targets == ExecutionRow.Targets.RANDOM:
+			base /= maxi(pool, 1)
 		if base > 0:
 			var kind := damage_type(row)
 			if kind != "" and target.asc.has_tag_exact(StringName("Drain." + kind)):
@@ -460,7 +471,7 @@ func _heal(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -> D
 		var ability := actions[order]
 		if not has_role(ability, ROLE_HEAL) or ability.targets_enemies() or ability.targets_dead():
 			continue
-		var cost := CostReader.sp_cost(ability, unit.asc)
+		var cost := heal_cost(ability, unit)
 		var cleanses := has_role(ability, ROLE_CLEANSE)
 		if ability.needs_target():
 			for target in battle.target_candidates(unit, ability):
@@ -512,6 +523,21 @@ func _heal(battle: Battle, unit: BattleUnit, actions: Array[BattleAbility]) -> D
 	last_healing = int(best["healing"])
 	last_detail = "E=%d" % (last_healing / 100)
 	return {"ability": best["ability"], "target": best["target"]}
+
+
+## Spec second-pack 2.7: what a heal costs its caster for the heal choice, on one scale: its SP cost as a share of max SP plus its
+## HP cost as a share of max HP (×100 percent each; review fix: raw SP and HP are different units), so a heal paid in HP (the
+## Bloodbinder's Transfusion) is weighed by what it takes, like an SP heal, and a costlier one must still reach HEAL_STEP.
+@warning_ignore("integer_division")
+static func heal_cost(ability: BattleAbility, unit: BattleUnit) -> int:
+	var costs := CostReader.cost_of(ability, unit.asc)
+	var share := 0
+	for pair in [[BattleUnit.MP, "max_mp"], [BattleUnit.HP, BattleUnit.MAX_HP]]:
+		var cost := int(costs.get(pair[0], 0))
+		var most := unit.stat(pair[1]) if unit.asc.has_attribute(pair[1]) else 0
+		if cost > 0:
+			share += cost * Fixed.ONE_HUNDRED_PERCENT / most if most > 0 else cost
+	return share
 
 
 ## One heal candidate: `reached` the living allies it heals (the first is its primary, or its first target), `target` its
@@ -575,6 +601,13 @@ static func _reached(battle: Battle, unit: BattleUnit, ability: BattleAbility) -
 	if ability.targeting == BattleAbility.Targeting.SELF:
 		var own: Array[BattleUnit] = [unit]
 		return own
+	if ability.targeting == BattleAbility.Targeting.LOWEST_ALLY:  # review fix: only the most hurt living ally (slot order on ties)
+		var lowest: Array[BattleUnit] = []
+		for ally in _party(battle):
+			if ally.is_up() and (lowest.is_empty() or Battle._hp_share(ally) < Battle._hp_share(lowest[0])):
+				lowest.clear()
+				lowest.append(ally)
+		return lowest
 	return _party(battle)
 
 
@@ -625,13 +658,75 @@ func _best_ult_target(battle: Battle, unit: BattleUnit, ability: BattleAbility) 
 
 # --- Helpers ---------------------------------------------------------------------------------------------------------------
 
-## The unit's action abilities that can activate now and that the options allow.
-func _activatable(unit: BattleUnit) -> Array[BattleAbility]:
+## The unit's action abilities that can activate now and that the options allow; with `battle`, also only those whose HP cost
+## it survives (spec second-pack 2.7).
+func _activatable(unit: BattleUnit, battle: Battle = null) -> Array[BattleAbility]:
 	var result: Array[BattleAbility] = []
 	for ability in unit.action_abilities():
-		if unit.asc.can_activate_ability(ability) and _allowed(unit, ability) and not ability.asset_tags.has(ROLE_GUARD):
+		if unit.asc.can_activate_ability(ability) and _allowed(unit, ability) and not ability.asset_tags.has(ROLE_GUARD) \
+				and (battle == null or hp_cost_survivable(battle, unit, ability, options.danger_hp_x100)):
 			result.append(ability)
 	return result
+
+
+## Spec second-pack 2.7: true unless paying the ability's HP cost would leave the caster under `danger_x100` of its max HP
+## and the lifesteal on its best expected damage (damage_estimate over its targets) would not bring it back above.
+static func hp_cost_survivable(battle: Battle, unit: BattleUnit, ability: BattleAbility, danger_x100: int) -> bool:
+	var cost := int(CostReader.cost_of(ability, unit.asc).get(BattleUnit.HP, 0))
+	if cost <= 0:
+		return true
+	var line := Fixed.pct(unit.stat(BattleUnit.MAX_HP), danger_x100)
+	var after := unit.stat(BattleUnit.HP) - cost
+	if after >= line:
+		return true
+	if not ability.targets_enemies() or not unit.asc.has_attribute("lifesteal"):
+		return false
+	var lifesteal := maxi(unit.stat("lifesteal"), 0)
+	if lifesteal == 0 or battle == null:
+		return false
+	var best := 0
+	for target in _targets(battle, unit, ability):
+		best = maxi(best, damage_estimate(battle, unit, ability, target))
+	return after + Fixed.pct(best, lifesteal) >= line
+
+
+## Review fix (spec second-pack 2.7): the damage a move is expected to deal aimed at `target`, for its lifesteal: its damage
+## rows only (no debuff value, break or kill bonus), weakness ×2 and resist ÷2, a RANDOM row once over its pool, each target's
+## share capped at its HP (no overkill), blast neighbours at half. Before defence, so still an upper bound.
+@warning_ignore("integer_division")
+static func damage_estimate(battle: Battle, unit: BattleUnit, ability: BattleAbility, target: BattleUnit) -> int:
+	var hit: Array[BattleUnit] = [target]
+	if ability.targeting == BattleAbility.Targeting.ALL_ENEMIES:
+		hit = _enemies_of(battle, unit)
+	var neighbours: Array[BattleUnit] = []
+	if ability.targeting == BattleAbility.Targeting.BLAST_ENEMY:
+		neighbours = _neighbours(battle, unit, target)
+	var pool := maxi(hit.size() + neighbours.size(), 1)
+	var total := 0
+	for other in hit + neighbours:
+		var damage := 0
+		for row in ability.executions:
+			if row == null:
+				continue
+			var base := 0
+			if row.damage_mode == ExecutionRow.DamageMode.SCALED:
+				base = unit.stat("atk") * row.multiplier_x100 / 10000
+			elif row.damage_mode == ExecutionRow.DamageMode.FLAT:
+				base = row.flat_damage_x100
+			if row.targets == ExecutionRow.Targets.RANDOM:
+				base /= pool
+			var kind := damage_type(row)
+			if kind != "" and other.asc.has_tag_exact(StringName("Drain." + kind)):
+				base = 0
+			elif kind != "" and other.asc.has_tag_exact(StringName("Weakness." + kind)):
+				base *= 2
+			elif kind != "" and other.asc.has_tag_exact(StringName("Resist." + kind)):
+				base /= 2
+			damage += base
+		if neighbours.has(other):
+			damage /= 2
+		total += mini(damage, other.stat(BattleUnit.HP))
+	return total
 
 
 ## False for a CONSUMABLE item's ability unless Options.consumables (spec auto-battle A4).

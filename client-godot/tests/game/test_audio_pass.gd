@@ -551,3 +551,35 @@ func test_the_board_plays_run_messages() -> void:
 	if not heard.is_empty():
 		eq(int(heard[0]), 2, "carrying the levels gained in all")
 	game.free()
+
+
+## Spec audio-pass 3.4 / second-pack 2.6: every ultimate (pressed, or cast by itself from its ult bar) plays its own signature sound
+## (a `ult.*` bank entry no other ultimate uses); a rank (`_2`, `_3`) shares its first rank's.
+func test_every_ultimate_has_its_own_sound() -> void:
+	if skip_in_export():
+		return
+	var owner_of := {}
+	for file in DirAccess.get_files_at("res://content/demo/abilities/"):
+		if not file.ends_with(".tscn"):
+			continue
+		var base := file.get_basename().trim_suffix("_2").trim_suffix("_3")
+		if base != file.get_basename() and ResourceLoader.exists("res://content/demo/abilities/" + base + ".tscn"):
+			continue  # a rank: checked through its first rank
+		var ability := (load("res://content/demo/abilities/" + file) as PackedScene).instantiate() as BattleAbility
+		if ability == null:
+			continue
+		var ultimate := ability.is_ultimate() or (ability.is_meter() and ability.meter_attribute == BattleUnit.ENERGY)
+		if ultimate and ability.animation != null:
+			var sounds: Array[String] = []
+			for track in ability.animation.get_track_count():
+				if ability.animation.track_get_type(track) == Animation.TYPE_AUDIO:
+					for key in ability.animation.track_get_key_count(track):
+						var stream := ability.animation.audio_track_get_key_stream(track, key)
+						if stream != null and stream.resource_path.get_file().begins_with("ult."):
+							sounds.append(stream.resource_path.get_file())
+			check(not sounds.is_empty(), "%s plays a signature (ult.*) sound" % file)
+			for sound in sounds:
+				check(not owner_of.has(sound) or owner_of[sound] == file, "%s shares %s with %s" % [file, sound, owner_of.get(sound, "")])
+				owner_of[sound] = file
+		ability.free()
+	check(owner_of.size() >= 29, "every ultimate checked (%d sounds)" % owner_of.size())

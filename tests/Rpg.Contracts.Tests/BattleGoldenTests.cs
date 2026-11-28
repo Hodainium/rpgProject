@@ -63,9 +63,11 @@ public class BattleGoldenTests
         // and playable-demo's mirror boss (a v2 snapshot whose boss copies the party's items), and auto-battle's battle
         // played by the player's Auto with its tampered copy (an entry dropped: TurnMismatch), and skill-points' battle
         // (SP gained on basics, scaled costs, level skills) with two tampered copies (an unaffordable and an unlearned
-        // ability: IllegalAbility), and item-power's four kernel-hook battles (procs, dying, echo, copies), each with a tampered copy.
-        Assert.Equal(26, Requests().Count);
-        Assert.Equal(26, Results().Count);
+        // ability: IllegalAbility), and item-power's four kernel-hook battles (procs, dying, echo, copies), each with a tampered copy,
+        // and second-pack's five (meter, bleed, hpcost, health, crit: HP costs, heal events, meters, low-HP states, Bleed,
+        // lifesteal, Focus and Silvered), each with a tampered copy.
+        Assert.Equal(36, Requests().Count);
+        Assert.Equal(36, Results().Count);
     }
 
     private static TheoryData<string> Files(Func<string, bool> filter)

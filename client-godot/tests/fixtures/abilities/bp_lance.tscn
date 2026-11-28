@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://combat/battle_ability.gd" id="1_vbtx7"]
+[ext_resource type="Script" path="res://combat/execution_row.gd" id="2_ry4d2"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/damage.tres" id="3_7wedi"]
+[ext_resource type="Animation" path="res://tests/fixtures/animations/bp_lance.tres" id="4_jl5rc"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/bp_hp_cost.tres" id="5_boa8i"]
+
+[sub_resource type="Resource" id="Resource_7skhi"]
+script = ExtResource("2_ry4d2")
+id = &"hit"
+effect = ExtResource("3_7wedi")
+damage_mode = 1
+tags = Array[StringName]([&"Damage.Type.Physical"])
+flat_damage_x100 = 5000
+
+[node name="BpLance" type="Node" unique_id=522610050]
+script = ExtResource("1_vbtx7")
+asset_tags = Array[StringName]([&"Ability.Role.Damage"])
+executions = Array[ExtResource("2_ry4d2")]([SubResource("Resource_7skhi")])
+animation = ExtResource("4_jl5rc")
+ability_tag = &"Fixture.Ability.BpLance"
+cost_effect = ExtResource("5_boa8i")

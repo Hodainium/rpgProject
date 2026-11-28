@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BattleRules" format=3]
+
+[ext_resource type="Resource" path="res://tests/fixtures/effects/bp_bleed.tres" id="1_oisiq"]
+[ext_resource type="Resource" path="res://tests/fixtures/effects/ip_event_heal.tres" id="2_ffcue"]
+[ext_resource type="Script" path="res://combat/battle_rules.gd" id="3_4uldh"]
+
+[resource]
+script = ExtResource("3_4uldh")
+id = &"fixture.battle_rules"
+bleed_effect = ExtResource("1_oisiq")
+lifesteal_effect = ExtResource("2_ffcue")
+health_low_x100 = 5000
+health_critical_x100 = 2500

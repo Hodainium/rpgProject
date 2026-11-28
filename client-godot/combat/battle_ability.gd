@@ -18,6 +18,7 @@ enum Targeting {
 	RANDOM_ENEMY,        ## Spec item-power K4: one opposing unit that is up, drawn on the battle RNG at activation.
 	RANDOM_OTHER_ENEMY,  ## The same draw among the opposing units other than the one the triggering event is about.
 	OTHER_ENEMIES,       ## Every opposing unit other than the one the triggering event is about (no draw).
+	LOWEST_ALLY,         ## Spec second-pack: the living ally (the actor included) with the lowest HP share; ties to the lowest slot.
 }
 
 ## A triggered ability with this asset tag is a follow-up attack (spec item-pass 3.1): its hits carry Hit.FollowUp and
@@ -61,9 +62,27 @@ const USAGE_BOTH: int = 3
 		return Fixed.to_display(echo_scale_x100)
 	set(typed):
 		echo_scale_x100 = Fixed.from_typed(typed)
+## Spec second-pack B3: a meter ability. While its owner's `meter_attribute` is at or above the threshold, the battle takes the
+## threshold off and fires the ability (a passive: never an action, never logged; at most Battle.METER_FIRES_PER_CHECK times per
+## check). The threshold is a flat value (`meter_threshold`), or a percent (`meter_threshold_percent`) of an attribute of the
+## owner (`meter_threshold_of`, e.g. "max_hp"). Its heals carry Hit.Meter and never fill a meter.
+@export var meter_attribute: String = ""
+@export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR) var meter_threshold: float:
+	get:
+		return Fixed.to_display(meter_threshold_x100)
+	set(typed):
+		meter_threshold_x100 = Fixed.from_typed(typed)
+@export var meter_threshold_of: String = ""
+@export_custom(PROPERTY_HINT_NONE, "suffix:%", PROPERTY_USAGE_EDITOR) var meter_threshold_percent: float:
+	get:
+		return Fixed.to_display(meter_threshold_percent_x100)
+	set(typed):
+		meter_threshold_percent_x100 = Fixed.from_typed(typed)
 ## Saved forms (×100 whole numbers).
 @export_storage var trigger_chance_x100: int = 0
 @export_storage var echo_scale_x100: int = 0
+@export_storage var meter_threshold_x100: int = 0
+@export_storage var meter_threshold_percent_x100: int = 0
 ## What each hit does. The animation decides which rows run, how often and when.
 @export var executions: Array[ExecutionRow] = []
 ## Required. Its `execute(&"<row id>")` method-track keys are the source of truth for the execution sequence.
@@ -71,6 +90,9 @@ const USAGE_BOTH: int = 3
 ## Spec ff7-ui 2.6: what the ability does, for the player (battle hints, the Status screen). Text only: never read by
 ## combat, never in a log or the state hash.
 @export_multiline var description: String = ""
+## Spec second-pack: a triggered ability fires only when the other unit its event is about (the hit target, the attacker,
+## what an action was aimed at) matches this query, e.g. "a Bleeding enemy". Null = any.
+@export var subject_query: GameplayTagQuery
 
 
 ## True when this targeting needs a target unit id in the action.
@@ -91,7 +113,7 @@ func targets_enemies() -> bool:
 
 ## Spec item-power K4: the battle picks the targets itself (a draw, or every enemy but one).
 func picks_own_targets() -> bool:
-	return targeting in [Targeting.RANDOM_ENEMY, Targeting.RANDOM_OTHER_ENEMY, Targeting.OTHER_ENEMIES]
+	return targeting in [Targeting.RANDOM_ENEMY, Targeting.RANDOM_OTHER_ENEMY, Targeting.OTHER_ENEMIES, Targeting.LOWEST_ALLY]
 
 
 ## Spec item-power K4: never the unit the triggering event is about.
@@ -99,9 +121,22 @@ func spares_event_target() -> bool:
 	return targeting in [Targeting.RANDOM_OTHER_ENEMY, Targeting.OTHER_ENEMIES]
 
 
-## A passive that fires from a gameplay event (GodotGAS trigger_event_tag). Never chosen as an action.
+## A passive that fires from a gameplay event (GodotGAS trigger_event_tag) or a full meter (spec second-pack B3). Never chosen
+## as an action.
 func is_triggered() -> bool:
-	return trigger_event_tag != &""
+	return trigger_event_tag != &"" or is_meter()
+
+
+## Spec second-pack B3: fired by a meter.
+func is_meter() -> bool:
+	return meter_attribute != ""
+
+
+## Spec second-pack B3: the meter value that fires this ability for `unit` (×100; 0 = never).
+func meter_threshold_for(unit: BattleUnit) -> int:
+	if meter_threshold_of != "":
+		return Fixed.pct(unit.stat(meter_threshold_of), meter_threshold_percent_x100)
+	return meter_threshold_x100
 
 
 ## A triggered passive tagged Ability.Type.FollowUp.
@@ -160,7 +195,12 @@ func _activate_ability() -> bool:
 	var action: Dictionary = current_event_payload
 	var battle: Battle = action["battle"]
 	var unit: BattleUnit = action["unit"]
+	var hp_before := unit.stat(BattleUnit.HP)
 	commit_ability()
+	# Spec second-pack B1: an HP cost is announced (the Blood Pool and Bloodstone read it; it never sends Damage.Taken).
+	var paid := hp_before - unit.stat(BattleUnit.HP)
+	if paid > 0:
+		battle.on_hp_cost(unit, paid)
 	# Spec item-power K7: an echo plays and resolves the ability it repeats.
 	var played: BattleAbility = action.get("echo", self)
 	if not played.cast_cue_tags.is_empty() and owner_asc != null:

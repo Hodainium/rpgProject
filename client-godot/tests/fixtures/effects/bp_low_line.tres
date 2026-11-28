@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GameplayEffect" format=3]
+
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_execution_calculation.gd" id="1_8q5f7"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect_modifier.gd" id="2_fdg12"]
+[ext_resource type="Script" path="res://combat/combat_modifier.gd" id="3_li6dj"]
+[ext_resource type="Script" path="res://addons/GodotGAS/effects/gameplay_effect.gd" id="4_w58xw"]
+
+[sub_resource type="Resource" id="Resource_hpm5g"]
+script = ExtResource("3_li6dj")
+value_x100 = 6000
+attribute_name = "health_low_at"
+
+[resource]
+script = ExtResource("4_w58xw")
+policy = 2
+modifiers = Array[ExtResource("2_fdg12")]([SubResource("Resource_hpm5g")])
