@@ -106,7 +106,7 @@ func _chips(unit: BattleUnit) -> Array:
 		chips.append(broken_chip)
 	if unit.asc.has_tag_exact(Battle.DOWNED_TAG):
 		chips.append(downed_chip)
-	for status in unit.statuses():
+	for status in merged_statuses(unit.statuses()):
 		var tag := String(status["tag"])
 		var text := tag.get_slice(".", tag.get_slice_count(".") - 1).to_upper()
 		if int(status["stacks"]) > 1:
@@ -115,6 +115,33 @@ func _chips(unit: BattleUnit) -> Array:
 			text += " %d" % status["turns"]
 		chips.append(text)
 	return chips
+
+
+## One entry per status tag (user, 2026-11-27): several effects granting the same status (Blood Rite, Crimson Communion and Night
+## Feast all give Status.Buff.Lifesteal; Howl and Moonfall Frenzy both give Wolf Form) show as one chip, with the most turns left
+## (-1, no end, wins). Stacks: the same effect from several sources adds up (the Bloodletter's 3 Bleed and Vlad's 2 show ×5, as all
+## five tick), and of different effects granting the tag the highest counts (three lifesteal buffs show no ×3). The number after a
+## chip's name is the turns left, not a rank. Keeps the input's tag order.
+static func merged_statuses(statuses: Array) -> Array[Dictionary]:
+	var merged: Array[Dictionary] = []
+	var at := {}
+	var per_effect := {}  # tag -> {effect path -> stacks summed over its sources}
+	for status in statuses:
+		var tag := String(status["tag"])
+		var effect := String(status.get("effect", ""))
+		var turns := int(status["turns"])
+		if not at.has(tag):
+			at[tag] = merged.size()
+			merged.append({"tag": tag, "turns": turns, "stacks": 0})
+			per_effect[tag] = {}
+		var entry: Dictionary = merged[at[tag]]
+		if entry["turns"] >= 0 and (turns < 0 or turns > entry["turns"]):
+			entry["turns"] = turns
+		var sums: Dictionary = per_effect[tag]
+		var key := effect if effect != "" else "#%d" % sums.size()  # an effect with no file counts on its own
+		sums[key] = int(sums.get(key, 0)) + int(status["stacks"])
+		entry["stacks"] = maxi(entry["stacks"], sums[key])
+	return merged
 
 
 static func _name(unit: BattleUnit) -> String:
